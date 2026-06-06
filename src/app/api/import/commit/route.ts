@@ -18,6 +18,45 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+/**
+ * 把世界书词条的 content 和 subFields 合并成一个不丢数据的字符串。
+ * subFields 中的子字段用 【】 标注标题，确保结构化信息不丢失。
+ */
+function buildLoreContent(entry: Record<string, unknown>): string {
+  const mainContent = String(entry.content || "");
+  const subFields = entry.subFields as Record<string, unknown> | undefined;
+
+  if (!subFields || Object.keys(subFields).length === 0) return mainContent;
+
+  const fieldLabels: Record<string, string> = {
+    eraAndTech: "时代与技术背景",
+    fundamentalLaw: "世界根本法则",
+    coreConflictSource: "核心冲突源",
+    powerSystem: "力量体系",
+    factionDetails: "势力详情",
+    factionRelations: "势力关系",
+    combatLogic: "战斗逻辑",
+    rareResources: "稀有资源与传承",
+    geographyAndCulture: "地理与人文",
+    culturalImpact: "文化影响",
+    historicalEvents: "重大历史事件",
+    hiddenTruths: "被掩埋的真相",
+  };
+
+  const parts: string[] = [];
+  if (mainContent) parts.push(mainContent);
+
+  for (const [key, value] of Object.entries(subFields)) {
+    const v = String(value || "").trim();
+    if (v) {
+      const label = fieldLabels[key] || key;
+      parts.push(`【${label}】${v}`);
+    }
+  }
+
+  return parts.join("\n\n");
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -164,7 +203,7 @@ export async function POST(request: Request) {
           abilities: Array.isArray(char.abilities) ? char.abilities.filter(Boolean) : [],
           hiddenMotives: Array.isArray(char.hiddenMotives) ? char.hiddenMotives.filter(Boolean) : [],
           currentStatus: "alive",
-          relationships: [],
+          relationships: Array.isArray(char.relationships) ? char.relationships : [],
           tags: ["📥导入"],
         },
       });
@@ -182,7 +221,7 @@ export async function POST(request: Request) {
           title: String(entry.title || ""),
           category: String(entry.category || "custom"),
           keys: Array.isArray(entry.keys) ? entry.keys.filter(Boolean) : [String(entry.title || "")],
-          content: String(entry.content || ""),
+          content: buildLoreContent(entry),
           insertionOrder: 50,
           enabled: true,
         },

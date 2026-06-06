@@ -54,7 +54,7 @@ function buildPrompt(projectName: string, genre: string[], text: string, mode: s
   return `${header}
 
 【文本】
-${text.slice(0, 40000)}
+${text}
 
 【输出格式——纯JSON，不设数量上限】
 {
@@ -180,29 +180,47 @@ export async function POST(request: Request) {
 
         send({ type: "progress", stage: "analyzing", message: "V4 Pro 正在深度分析文本——抽取角色、世界观、文风..." });
 
-        // 阶段3：调用LLM（非流式，等完整JSON）
+        // 阶段3：调用LLM（AbortController 超时 120 秒）
         const llmStart = Date.now();
-        const resp = await fetch(`${baseURL}/chat/completions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${config.apiKey}`,
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: buildSystemPrompt() },
-              { role: "user", content: prompt },
-            ],
-            temperature: 0.25,
-            max_tokens: 16384,
-            stream: false,
-          }),
-        });
+        const abortCtrl = new AbortController();
+        const timeoutId = setTimeout(() => abortCtrl.abort(), 300000); // 5分钟
+
+        let resp: Response;
+        try {
+          resp = await fetch(`${baseURL}/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: buildSystemPrompt() },
+                { role: "user", content: prompt },
+              ],
+              temperature: 0.25,
+              max_tokens: 16384,
+              stream: false,
+            }),
+            signal: abortCtrl.signal,
+          });
+        } catch (fetchErr: unknown) {
+          clearTimeout(timeoutId);
+          const errName = (fetchErr as Error)?.name || "";
+          if (errName === "AbortError") {
+            send({ type: "error", message: `API调用超时（>120秒）。文本${textLen}字符可能过大，V4 Pro推理时间超出限制。建议：1) 重试 2) 减少文本量到30000字以内` });
+          } else {
+            send({ type: "error", message: `网络请求失败: ${String(fetchErr).slice(0, 300)}` });
+          }
+          controller.close();
+          return;
+        }
+        clearTimeout(timeoutId);
 
         if (!resp.ok) {
-          const errText = await resp.text();
-          send({ type: "error", message: `API调用失败(${resp.status}): ${errText.slice(0, 300)}` });
+          const errText = await resp.text().catch(() => "无法读取错误响应");
+          send({ type: "error", message: `API返回错误 ${resp.status}: ${errText.slice(0, 400)}` });
           controller.close();
           return;
         }
@@ -210,23 +228,26 @@ export async function POST(request: Request) {
         const llmTime = ((Date.now() - llmStart) / 1000).toFixed(1);
         send({ type: "progress", stage: "received", message: `V4 Pro 分析完成（耗时${llmTime}秒），正在解析结果...` });
 
-        const data = await resp.json();
-        const content = data.choices?.[0]?.message?.content || "";
+        const data = await resp.json().catch(() => null);
+        if (!data || !data.choices?.[0]?.message?.content) {
+          send({ type: "error", message: `API返回了空内容。响应结构: ${JSON.stringify(data).slice(0, 300)}` });
+          controller.close();
+          return;
+        }
+
+        const content = data.choices[0].message.content;
+        send({ type: "progress", stage: "received", message: `收到回复（约${content.length}字符），正在解析...` });
 
         // 阶段4：解析JSON
-        let charCount = 0, loreCount = 0;
         try {
           const parsed = parseJSON(content);
           const chars = Array.isArray(parsed.characters) ? parsed.characters.map(normChar) : [];
           const lore = Array.isArray(parsed.lore) ? parsed.lore.map(normLore) : [];
           const style = (typeof parsed.style === "object" && parsed.style !== null) ? parsed.style : {};
-
-          charCount = chars.length;
-          loreCount = lore.length;
+          const charCount = chars.length, loreCount = lore.length;
 
           send({ type: "progress", stage: "parsing", message: `解析完成：${charCount}个角色，${loreCount}个词条` });
 
-          // 阶段5：返回完整结果
           send({
             type: "done",
             detectedChapters: importMode === "settings" ? [] : chapters,
@@ -236,15 +257,15 @@ export async function POST(request: Request) {
             meta: {
               importMode, chapterCount: chapters.length, characterCount: charCount, loreCount: loreCount,
               inputTokens, rawCharCount: textLen, modelUsed: model, llmTimeSeconds: parseFloat(llmTime),
+              outputLength: content.length,
             },
           });
         } catch (parseErr) {
-          // JSON解析失败但API调用成功——返回原始内容让用户检查
           send({
             type: "error",
-            message: `JSON解析失败: ${String(parseErr).slice(0, 200)}`,
-            rawOutput: content.slice(0, 1000),
-            hint: "LLM输出格式异常，可重试或检查设定文本格式",
+            message: `JSON解析失败——LLM输出格式不标准。错误: ${String(parseErr).slice(0, 200)}`,
+            rawOutput: content.slice(0, 2000),
+            hint: "可以重试，或检查设定文本是否有特殊格式干扰了LLM输出",
           });
         }
       } catch (err) {
