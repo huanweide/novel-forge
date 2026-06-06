@@ -10,6 +10,7 @@ import { EntityDetector } from "@/components/editor/EntityDetector";
 import { ContextPreview } from "@/components/editor/ContextPreview";
 import { OutlineGenerator } from "@/components/editor/OutlineGenerator";
 import { ImportWizard } from "@/components/editor/ImportWizard";
+import { CardUpdater } from "@/components/editor/CardUpdater";
 import type { StyleTemplate } from "@/core/templates";
 
 // ─── 类型 ────────────────────────────────────────────────────
@@ -139,6 +140,11 @@ export default function WorkspacePage() {
   // 分卷视图开关
   const [volumeView, setVolumeView] = useState(true);
 
+  // 章节更新系统
+  const [showCardUpdater, setShowCardUpdater] = useState(false);
+  const [lastChapterContent, setLastChapterContent] = useState("");
+  const [lastChapterTitle, setLastChapterTitle] = useState("");
+
   // 生成中断控制
   const abortRef = useRef<AbortController | null>(null);
 
@@ -243,6 +249,9 @@ export default function WorkspacePage() {
                 issues: event.issues || [],
               });
             } else if (event.type === "done") {
+              // 保存最后生成的内容用于卡面更新
+              setLastChapterContent(streamContent);
+              setLastChapterTitle(selectedNode?.title || "");
               // 刷新数据
               loadProject();
             } else if (event.type === "error") {
@@ -379,6 +388,9 @@ export default function WorkspacePage() {
             if (event.type === "token") {
               setStreamContent((prev) => prev + event.content);
             } else if (event.type === "done") {
+              // 保存最后生成的内容用于卡面更新
+              setLastChapterContent(streamContent);
+              setLastChapterTitle(selectedNode?.title || "");
               setLastGeneratedText((prev) => prev + streamContent);
               loadProject();
               setContextRefreshKey((k) => k + 1);
@@ -490,6 +502,7 @@ export default function WorkspacePage() {
           projectId={project.id}
           lastGeneratedText={lastGeneratedText}
           onEntitiesCreated={loadProject}
+          onOpenCardUpdater={() => setShowCardUpdater(true)}
         />
 
         {/* 右栏：上下文监控面板 */}
@@ -576,6 +589,17 @@ export default function WorkspacePage() {
           projectId={project.id}
           onClose={() => setShowImportWizard(false)}
           onImported={loadProject}
+        />
+      )}
+
+      {/* 章节卡面更新 */}
+      {showCardUpdater && (
+        <CardUpdater
+          projectId={project.id}
+          chapterContent={lastChapterContent}
+          chapterTitle={lastChapterTitle}
+          onApplied={loadProject}
+          onClose={() => setShowCardUpdater(false)}
         />
       )}
     </div>
@@ -1182,6 +1206,7 @@ function CenterPanel({
   projectId,
   lastGeneratedText,
   onEntitiesCreated,
+  onOpenCardUpdater,
 }: {
   selectedNode: StoryNodeData | null;
   streamContent: string;
@@ -1198,6 +1223,7 @@ function CenterPanel({
   projectId: string;
   lastGeneratedText: string;
   onEntitiesCreated: () => void;
+  onOpenCardUpdater: () => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -1355,6 +1381,17 @@ function CenterPanel({
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium px-6 py-2 text-sm"
                       >
                         ✨ 继续写下一节
+                      </Button>
+                    </div>
+
+                    {/* 卡面更新 */}
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={onOpenCardUpdater}
+                        variant="outline"
+                        className="text-xs border-amber-700 text-amber-400 hover:text-amber-300"
+                      >
+                        🔄 AI 分析本章变化 · 更新三卡
                       </Button>
                     </div>
 
