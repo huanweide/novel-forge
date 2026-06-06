@@ -151,9 +151,16 @@ export async function POST(request: Request) {
           gender: String(char.gender || "未知"),
           role: String(char.role || "supporting"),
           appearance: (char.appearance || {}) as any,
-          personality: Array.isArray(char.personality) ? char.personality.filter(Boolean) : [],
+          personality: (char.personality || []) as any,  // 支持结构化对象或数组
           dialogueStyle: (char.dialogueStyle || {}) as any,
-          background: String(char.background || ""),
+          background: typeof char.background === "object" && char.background !== null
+            ? [
+                (char.background as Record<string, unknown>).origin,
+                (char.background as Record<string, unknown>).currentSituation,
+                (char.background as Record<string, unknown>).shortTermGoal,
+                (char.background as Record<string, unknown>).longTermDesire,
+              ].filter(Boolean).join(" | ")
+            : String(char.background || ""),
           abilities: Array.isArray(char.abilities) ? char.abilities.filter(Boolean) : [],
           hiddenMotives: Array.isArray(char.hiddenMotives) ? char.hiddenMotives.filter(Boolean) : [],
           currentStatus: "alive",

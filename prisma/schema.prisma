@@ -49,7 +49,7 @@ model CharacterCard {
 
   // 结构化数据 (JSON存储)
   appearance      Json @default("{}")    // CharacterAppearance
-  personality     String[] @default([])
+  personality     Json @default("[]")    // 结构化性格: {dominant, drive, contradiction, habits, socialMask} 或旧格式 string[]
   dialogueStyle   Json @default("{}")    // DialogueStyle
   background      String @default("")
   abilities       String[] @default([])  // 能力/技能
