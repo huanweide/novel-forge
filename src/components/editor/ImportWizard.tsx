@@ -84,6 +84,10 @@ export function ImportWizard({
   const [selectedChars, setSelectedChars] = useState<Set<number>>(new Set());
   const [selectedLore, setSelectedLore] = useState<Set<number>>(new Set());
 
+  // SSE进度跟踪
+  const [progressSteps, setProgressSteps] = useState<Array<{ stage: string; message: string; time: string }>>([]);
+  const [currentStage, setCurrentStage] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── 文件拖放 ──────────────────────────────────────────
@@ -112,7 +116,7 @@ export function ImportWizard({
     reader.readAsText(file);
   };
 
-  // ─── 开始解析 ──────────────────────────────────────────
+  // ─── SSE 流式解析 ──────────────────────────────────────
 
   const handleParse = async () => {
     if (rawText.trim().length < 50) {
@@ -122,6 +126,8 @@ export function ImportWizard({
 
     setStep("parsing");
     setError("");
+    setProgressSteps([]);
+    setCurrentStage("connecting");
 
     try {
       const res = await fetch("/api/import/parse", {
@@ -130,26 +136,69 @@ export function ImportWizard({
         body: JSON.stringify({ projectId, rawText, volumeMode, importMode }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "解析失败");
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        setError(errData.error || "请求失败");
         setStep("input");
         return;
       }
 
-      setResult(data);
-      setEditedChapters(data.detectedChapters || []);
-      setEditedCharacters(data.extractedCharacters || []);
-      setEditedLore(data.extractedLoreEntries || []);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("无法获取响应流");
 
-      // 默认全选
-      setSelectedChapters(new Set((data.detectedChapters || []).map((_: DetectedChapter, i: number) => i)));
-      setSelectedChars(new Set((data.extractedCharacters || []).map((_: ExtractedChar, i: number) => i)));
-      setSelectedLore(new Set((data.extractedLoreEntries || []).map((_: ExtractedLore, i: number) => i)));
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      setStep("preview");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+
+          try {
+            const event = JSON.parse(trimmed.slice(6));
+
+            if (event.type === "progress") {
+              setProgressSteps((prev) => [...prev, {
+                stage: event.stage || "",
+                message: event.message || "",
+                time: new Date().toLocaleTimeString("zh-CN"),
+              }]);
+              setCurrentStage(event.stage || "");
+            } else if (event.type === "done") {
+              setResult(event);
+              setEditedChapters(event.detectedChapters || []);
+              setEditedCharacters(event.extractedCharacters || []);
+              setEditedLore(event.extractedLoreEntries || []);
+              setSelectedChapters(new Set((event.detectedChapters || []).map((_: unknown, i: number) => i)));
+              setSelectedChars(new Set((event.extractedCharacters || []).map((_: unknown, i: number) => i)));
+              setSelectedLore(new Set((event.extractedLoreEntries || []).map((_: unknown, i: number) => i)));
+              setProgressSteps((prev) => [...prev, {
+                stage: "complete",
+                message: `✅ 完成！提取了${(event.extractedCharacters || []).length}个角色，${(event.extractedLoreEntries || []).length}个词条`,
+                time: new Date().toLocaleTimeString("zh-CN"),
+              }]);
+              setTimeout(() => setStep("preview"), 500);
+            } else if (event.type === "error") {
+              setError(event.message || "分析失败");
+              if (event.rawOutput) {
+                setError((prev) => prev + `\n\n原始输出预览：\n${event.rawOutput}`);
+              }
+              setStep("input");
+            }
+          } catch {
+            // 跳过解析失败的行
+          }
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "网络错误");
+      setError(err instanceof Error ? err.message : "网络中断");
       setStep("input");
     }
   };
@@ -326,10 +375,59 @@ export function ImportWizard({
 
           {/* Step 2: 解析中 */}
           {step === "parsing" && (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-              <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-zinc-400">AI 正在分析文本...</p>
-              <p className="text-xs text-zinc-600">正则分章 → 角色抽取 → 世界观提取 → 文风量化</p>
+            <div className="flex flex-col items-center py-8 space-y-4">
+              {/* 大状态 */}
+              <div className="flex items-center gap-3">
+                {currentStage === "complete" ? (
+                  <span className="text-3xl">✅</span>
+                ) : (
+                  <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                )}
+                <div>
+                  <p className="text-sm text-zinc-200 font-medium">
+                    {currentStage === "connecting" && "正在连接 V4 Pro..."}
+                    {currentStage === "segment" && "文本拆分完成"}
+                    {currentStage === "sending" && "正在发送分析请求..."}
+                    {currentStage === "analyzing" && "V4 Pro 深度分析中"}
+                    {currentStage === "received" && "收到回复，解析中..."}
+                    {currentStage === "parsing" && "结构化提取中..."}
+                    {currentStage === "complete" && "分析完成！"}
+                    {!currentStage && "准备中..."}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {rawText.length > 0 && `文本 ${rawText.length.toLocaleString()} 字符 · V4 Pro 推理模型`}
+                  </p>
+                </div>
+              </div>
+
+              {/* 进度步骤列表 */}
+              {progressSteps.length > 0 && (
+                <div className="w-full max-w-md space-y-1.5">
+                  {progressSteps.map((step, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-start gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
+                        i === progressSteps.length - 1
+                          ? "bg-indigo-950/40 border border-indigo-800/30"
+                          : "text-zinc-500"
+                      }`}
+                    >
+                      <span className="text-zinc-600 font-mono shrink-0 w-14">{step.time}</span>
+                      <span className="flex-1">{step.message}</span>
+                      {i < progressSteps.length - 1 && (
+                        <span className="text-green-500 shrink-0">✓</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 等待提示 */}
+              {currentStage === "analyzing" && (
+                <p className="text-xs text-zinc-600 animate-pulse">
+                  V4 Pro 正在推理分析，大文本可能需要 30-90 秒，请耐心等待...
+                </p>
+              )}
             </div>
           )}
 
