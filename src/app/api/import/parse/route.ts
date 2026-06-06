@@ -1,13 +1,11 @@
 /**
  * POST /api/import/parse
  *
- * 智能导入解析 —— 内置深度分析框架：
- *   人物卡：外貌·性格·背景·能力·人际关系·人物弧光
- *   世界卡：世界观基石·势力版图·战斗体系·地理人文·历史暗线
- *   风格卡：语言风格·文笔文风·写作技术参数
- *
- * 支持三种模式 + >20K字分批 + 非推理模型加速。
+ * 智能导入解析 —— 内置深度分析框架。
+ * 支持三种模式 + 大文本分批 + 非推理模型加速。
  */
+
+export const maxDuration = 60; // Vercel Hobby 上限
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -28,7 +26,7 @@ interface DetectedChapter {
 }
 interface TextBatch { index: number; text: string; label: string; }
 
-function splitIntoBatches(rawText: string, maxChars = 15000): TextBatch[] {
+function splitIntoBatches(rawText: string, maxChars = 8000): TextBatch[] {
   if (rawText.length <= maxChars) return [{ index: 0, text: rawText, label: "全文" }];
   const batches: TextBatch[] = [];
   const blocks = rawText.split(/\n\n+/);
@@ -75,140 +73,45 @@ function detectImportMode(rawText: string, chapterCount: number): "chapters" | "
 // ═══════════════════════════════════════════════════════════════
 
 function buildSystemPrompt(): string {
-  return `你是一位资深小说编辑和设定分析师。你的任务是将用户提供的文本（可能是世界观设定、角色档案、或叙事章节）转化为结构化的三卡数据。
+  return `你是小说设定分析引擎。穷尽提取文本中所有角色/世界观/文风信息，只输出纯 JSON。
 
-═══ 核心原则 ═══
-1. 穷尽原则：文本中出现的每一个角色、地点、组织、能力、物品都要提取
-2. 深度原则：不止识别名字，要推断性格矛盾、隐藏动机、人际关系网
-3. 合理推断：文本没说的，根据上下文合理推断；实在不确定的字段留空，不要瞎编
-4. 防止OOC：推断必须基于文本依据，不得凭空赋予与文本质感不符的特征
-
-输出纯 JSON，不要 markdown 标记。`;
+规则：
+1. 每个角色/设定都要提取，不设上限
+2. 字段尽可能填满——有原文用原文，没原文从上下文推断，推断不了的留 null
+3. 推断必须基于文本证据，不瞎编`;
 }
 
 function buildExtractionTemplate(): string {
   return `
-═══ 输出 JSON 结构 ═══
-
+【输出格式】
 {
-  "characters": [
-    {
-      "name": "姓名",
-      "aliases": ["别名", "称号"],
-      "role": "protagonist/antagonist/supporting/mentor/love_interest/comic_relief/catalyst/background",
-      "age": "年龄或年龄段",
-      "gender": "性别",
-
-      "appearance": {
-        "hair": "发色发型",
-        "eyes": "瞳色",
-        "height": "身高",
-        "build": "体型",
-        "features": "特殊印记/疤痕/纹身",
-        "attire": "标志性着装风格"
-      },
-
-      "personality": {
-        "dominant": "主导人格（如：外冷内热、偏执机敏、豪爽粗犷）",
-        "drive": "内在驱动力（渴望什么/恐惧什么/执念）",
-        "contradiction": "性格矛盾点（如：极度自尊又渴望认可）",
-        "habits": ["行为习惯", "口头禅"],
-        "socialMask": "社交面具 vs 真实自我"
-      },
-
-      "background": {
-        "origin": "出身/来历",
-        "currentSituation": "此刻所在位置与境遇",
-        "shortTermGoal": "当前短期目标",
-        "longTermDesire": "长期欲望/终极目标"
-      },
-
-      "abilities": ["能力/功法/特长", "附带初期级别或成长路径"],
-
-      "relationships": [
-        {
-          "targetName": "关联角色名",
-          "relation": "关系（师徒/宿敌/暗恋/血仇）",
-          "dynamic": "关系动态（从敌对逐渐转为信任）",
-          "notes": "备注"
-        }
-      ],
-
-      "hiddenMotives": ["隐藏动机"],
-      "dialogueStyle": {
-        "description": "说话风格概述",
-        "examples": ["代表性台词"],
-        "vocabulary": ["常用词汇"],
-        "speechPatterns": ["句式特征"]
-      },
-
-      "arcPotential": "人物弧光预登记：可能发生的信念动摇、蜕变或堕落方向",
-      "tags": ["自定义标签"]
-    }
-  ],
-
-  "lore": [
-    {
-      "title": "词条名",
-      "category": "geography/faction/magic_system/history/culture/creature/item/law/custom",
-
-      "type": "基石/势力/战斗体系/地理/历史",
-
-      "keys": ["触发关键词", "同义词", "简称", "别称"],
-
-      "content": "设定详细内容",
-
-      "subFields": {
-        "eraAndTech": "时代与技术背景",
-        "fundamentalLaw": "世界根本法则",
-        "coreConflictSource": "核心冲突源",
-        "factionDetails": "势力详情（纲领/首领/内部派系）",
-        "factionRelations": "势力间明暗关系",
-        "powerSystem": "力量体系树（境界/职业/异能分类+晋升条件与代价）",
-        "combatLogic": "战斗逻辑（技巧至上/暴力碾压/规则博弈）",
-        "rareResources": "稀有资源与传承方式",
-        "geographyAndCulture": "关键地域风土禁忌与传说",
-        "culturalImpact": "文化风俗对人物行为的影响",
-        "historicalEvents": "影响当下的重大历史事件",
-        "hiddenTruths": "被掩埋的真相与预言"
-      },
-
-      "insertionOrder": 50,
-      "enabled": true
-    }
-  ],
-
+  "characters": [{
+    "name":"", "aliases":[], "role":"protagonist/antagonist/supporting/mentor/love_interest/background",
+    "age":"", "gender":"",
+    "appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},
+    "personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},
+    "background":{"origin":"","currentSituation":"","shortTermGoal":"","longTermDesire":""},
+    "abilities":[], "hiddenMotives":[],
+    "relationships":[{"targetName":"","relation":"","dynamic":"","notes":""}],
+    "dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},
+    "arcPotential":"", "tags":[]
+  }],
+  "lore": [{
+    "title":"", "category":"geography/faction/magic_system/history/culture/creature/item/custom",
+    "keys":["触发词+同义词+简称"],
+    "content":"详细设定",
+    "subFields":{"eraAndTech":"","fundamentalLaw":"","powerSystem":"","factionDetails":"","geographyAndCulture":"","historicalEvents":"","hiddenTruths":""}
+  }],
   "style": {
-    "language": {
-      "baseTone": "底色调（冷峻/诙谐/华美/枯淡）",
-      "sentenceFeature": "句式特征（长句意境/短句快打/骈散结合）",
-      "eraLexicon": "时代感词库（禁用现代词/古风措辞/修辞偏好）"
-    },
-    "writingDensity": {
-      "descriptionDensity": "描写密度（重白描动作/重心理潜流/环境氛围淹染）",
-      "narrativeDistance": "叙事距离（紧贴人物感知/上帝远观/交替）",
-      "imagerySystem": ["意象系统（如：剑、镜、雨、骨）"]
-    },
-    "technique": {
-      "povType": "first_person/third_person_limited/third_person_omniscient",
-      "infoRelease": "信息释放节奏（悬疑式剥茧/直给后展开/预言倒叙）",
-      "dialogueStyle": "对话风格总述",
-      "combatStyle": "打斗描写风格（写意/硬核拆招/法则对撞）"
-    },
-    "forbiddenPatterns": ["禁用词"],
-    "styleDescription": "一句话概括文风",
-    "sampleText": "代表性段落"
+    "styleDescription":"",
+    "forbiddenPatterns":[],
+    "povType":"third_person_limited",
+    "dialogueRatio":0.3, "descriptionRatio":0.3, "actionRatio":0.25
   }
 }
-
-═══ 字段填写规则 ═══
-
-● 人物卡 personality 必须写成 JSON 对象（不是数组！），包含 dominant/drive/contradiction/habits/socialMask 五个子字段
-● 人物卡 background 必须写成 JSON 对象（不是字符串！），包含 origin/currentSituation/shortTermGoal/longTermDesire
-● 世界观词条的 subFields 根据 category 选填相关子字段，不相关的省略
-● 人际关系 relationships 中 targetName 填写文本中提到过的其他角色名
-● 所有推断字段如有不确定，标注 "（推断）" 前缀
-● 实在无法推断的字段，填 null 或省略`;
+- personality 和 background 必须是对象格式
+- 不确定的字段填 null，不要省略
+- 推断字段前缀加"（推断）"`;
 }
 
 // ─── 设定模式 Prompt ───────────────────────────────────────
@@ -318,8 +221,8 @@ async function analyzeBatch(
       { role: "system", content: buildSystemPrompt() },
       { role: "user", content: userPrompt },
     ],
-    temperature: 0.4, // 略微升温，促进合理推断
-    maxTokens: 16384,
+    temperature: 0.35,
+    maxTokens: 8192,
   });
   const parsed = parseLLMJSON(resp.content);
   return {
@@ -416,8 +319,10 @@ export async function POST(request: Request) {
     let allLore: Record<string, unknown>[] = [];
     let finalStyle: Record<string, unknown> = {};
 
+    const batchErrors: string[] = [];
+
     if (importMode === "settings" || importMode === "auto") {
-      const batches = splitIntoBatches(rawText, 15000);
+      const batches = splitIntoBatches(rawText, 8000);
       const batchResults: Array<{ characters: Record<string, unknown>[]; lore: Record<string, unknown>[] }> = [];
 
       for (const batch of batches) {
@@ -431,7 +336,9 @@ export async function POST(request: Request) {
             finalStyle = r.style;
           }
         } catch (err) {
-          console.error(`批次${batch.index + 1}失败:`, String(err).slice(0, 200));
+          const msg = `批次${batch.index + 1}/${batches.length} 失败: ${String(err).slice(0, 150)}`;
+          console.error(msg);
+          batchErrors.push(msg);
         }
       }
 
@@ -469,7 +376,8 @@ export async function POST(request: Request) {
         inputTokens,
         volumeMode,
         rawCharCount: rawText.length,
-        batchesUsed: importMode !== "chapters" ? Math.ceil(rawText.length / 15000) : 1,
+        batchesUsed: importMode !== "chapters" ? Math.ceil(rawText.length / 8000) : 1,
+        batchErrors: batchErrors.length > 0 ? batchErrors : undefined,
         modelUsed: extractorModel,
       },
     });

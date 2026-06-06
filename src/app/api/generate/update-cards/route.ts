@@ -1,23 +1,9 @@
 /**
  * POST /api/generate/update-cards
- *
- * 章节更新系统 —— 写完整章后，AI 比对新内容与现有卡面，生成差异更新建议。
- *
- * 请求体：
- * {
- *   projectId: string;
- *   chapterContent: string;    // 刚完成的章节正文
- *   chapterTitle?: string;
- * }
- *
- * 响应：
- * {
- *   characterUpdates: [{ characterId?, name, fields: { 位置→, 情绪→, 能力+, 新关系, ... } }],
- *   newLoreEntries: [{ title, category, keys, content, evidence }],
- *   styleShift?: { old, new, description },
- *   newForeshadowings: [{ description, relatedCharacter?, relatedLore? }]
- * }
+ * 章节更新系统 —— AI 比对新内容与现有卡面，生成差异更新建议。
  */
+
+export const maxDuration = 60;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
