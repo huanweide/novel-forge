@@ -276,6 +276,7 @@ export interface LLMConfig {
   writerModel: string;            // Agent C 主笔模型（推荐：deepseek-chat，长上下文）
   reviewerModel: string;          // Agent D 审校模型（推荐：deepseek-chat）
   summarizeModel: string;         // 摘要压缩模型（可用更便宜的）
+  extractorModel: string;         // 三卡抽取模型（推荐非推理模型，快且稳）
   baseURL: string;                // API地址
   apiKey: string;                 // API密钥（运行时从环境变量读取）
   defaultTemperature: number;     // 默认温度 (0.6-1.0)

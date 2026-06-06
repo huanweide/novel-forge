@@ -52,6 +52,7 @@ model CharacterCard {
   personality     String[] @default([])
   dialogueStyle   Json @default("{}")    // DialogueStyle
   background      String @default("")
+  abilities       String[] @default([])  // 能力/技能
   hiddenMotives   String[] @default([])
   relationships   Json @default("[]")    // CharacterRelationship[]
 

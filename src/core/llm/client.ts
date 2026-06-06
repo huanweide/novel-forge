@@ -185,6 +185,8 @@ export function getDefaultLLMConfig(): LLMConfig {
     writerModel: process.env.WRITER_MODEL || "deepseek-chat",
     reviewerModel: process.env.REVIEWER_MODEL || "deepseek-chat",
     summarizeModel: process.env.SUMMARIZE_MODEL || "deepseek-chat",
+    // 分析提取用非推理模型（快、便宜、JSON稳）
+    extractorModel: process.env.EXTRACTOR_MODEL || process.env.WRITER_MODEL || "deepseek-chat",
     baseURL: process.env.LLM_BASE_URL || "https://api.deepseek.com/v1",
     apiKey: process.env.LLM_API_KEY || "",
     defaultTemperature: parseFloat(process.env.DEFAULT_TEMPERATURE || "0.8"),

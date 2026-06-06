@@ -154,6 +154,7 @@ export async function POST(request: Request) {
           personality: Array.isArray(char.personality) ? char.personality.filter(Boolean) : [],
           dialogueStyle: (char.dialogueStyle || {}) as any,
           background: String(char.background || ""),
+          abilities: Array.isArray(char.abilities) ? char.abilities.filter(Boolean) : [],
           hiddenMotives: Array.isArray(char.hiddenMotives) ? char.hiddenMotives.filter(Boolean) : [],
           currentStatus: "alive",
           relationships: [],
