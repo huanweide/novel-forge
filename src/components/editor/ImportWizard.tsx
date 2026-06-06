@@ -71,6 +71,7 @@ export function ImportWizard({
   const [step, setStep] = useState<Step>("input");
   const [rawText, setRawText] = useState("");
   const [volumeMode, setVolumeMode] = useState(true);
+  const [importMode, setImportMode] = useState<"auto" | "chapters" | "settings">("auto");
   const [result, setResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -126,7 +127,7 @@ export function ImportWizard({
       const res = await fetch("/api/import/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, rawText, volumeMode }),
+        body: JSON.stringify({ projectId, rawText, volumeMode, importMode }),
       });
 
       const data = await res.json();
@@ -219,20 +220,58 @@ export function ImportWizard({
                 粘贴小说文本或拖入 .txt/.md 文件。系统会自动识别分卷/分章结构，并用 AI 抽取角色、世界观和文风。
               </p>
 
-              <div className="flex items-center gap-3 mb-2">
-                <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={volumeMode}
-                    onChange={(e) => setVolumeMode(e.target.checked)}
-                    className="rounded accent-indigo-600"
-                  />
-                  自动识别分卷（检测"第X卷"标记）
-                </label>
-                <span className="text-zinc-600 text-xs">
-                  {volumeMode ? "会按卷 → 章两层结构导入" : "所有章节平铺在根节点下"}
-                </span>
+              {/* 导入模式 */}
+              <div>
+                <label className="text-sm text-zinc-400 mb-2 block">导入类型</label>
+                <div className="flex gap-2">
+                  {[
+                    { key: "auto", label: "🤖 自动检测", desc: "智能识别" },
+                    { key: "chapters", label: "📖 章节正文", desc: "叙事文本" },
+                    { key: "settings", label: "📋 设定文本", desc: "角色/世界观/风格" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setImportMode(opt.key as typeof importMode)}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
+                        importMode === opt.key
+                          ? "bg-indigo-600 text-white border-2 border-indigo-400 shadow-lg"
+                          : "bg-zinc-800 text-zinc-400 border-2 border-zinc-700 hover:border-zinc-600"
+                      }`}
+                    >
+                      <div>{opt.label}</div>
+                      <div className="text-xs opacity-70 mt-0.5">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+                {importMode === "settings" && (
+                  <p className="text-xs text-amber-400 mt-2">
+                    ⚡ 设定模式：不限角色/词条数量上限，穷尽提取文本中的全部设定。不创建章节节点，仅导入三卡。
+                  </p>
+                )}
+                {importMode === "chapters" && (
+                  <p className="text-xs text-blue-400 mt-2">
+                    📖 章节模式：自动识别分章标记，提取叙事中的角色和世界观。同时创建章节大纲节点。
+                  </p>
+                )}
               </div>
+
+              {/* 分卷开关（仅章节模式显示） */}
+              {importMode !== "settings" && (
+                <div className="flex items-center gap-3 mb-2">
+                  <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={volumeMode}
+                      onChange={(e) => setVolumeMode(e.target.checked)}
+                      className="rounded accent-indigo-600"
+                    />
+                    自动识别分卷（检测"第X卷"标记）
+                  </label>
+                  <span className="text-zinc-600 text-xs">
+                    {volumeMode ? "会按卷 → 章两层结构导入" : "所有章节平铺在根节点下"}
+                  </span>
+                </div>
+              )}
 
               <div
                 className="border-2 border-dashed border-zinc-700 rounded-xl p-4 hover:border-indigo-600 transition-colors cursor-pointer"

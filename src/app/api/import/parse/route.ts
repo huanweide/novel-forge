@@ -2,20 +2,14 @@
  * POST /api/import/parse
  *
  * 智能导入解析 —— 正则分章 + LLM 三卡抽取。
+ * 支持三种模式：章节正文 / 设定文本 / 自动检测
  *
  * 请求体：
  * {
  *   projectId: string;
- *   rawText: string;          // 要导入的原始文本（可以是整本书）
- *   volumeMode?: boolean;     // 是否启用分卷识别（默认true）
- * }
- *
- * 响应：
- * {
- *   detectedChapters: [{ volumeTitle?, chapterTitle, order, wordCount, contentSnippet }],
- *   extractedCharacters: CharacterCard[],
- *   extractedLoreEntries: LorebookEntry[],
- *   extractedStyle: StyleFeatures
+ *   rawText: string;
+ *   volumeMode?: boolean;     // 是否启用分卷识别
+ *   importMode?: "auto" | "chapters" | "settings";  // 导入模式
  * }
  */
 
@@ -30,19 +24,18 @@ const VOLUME_PATTERN = /^\s*(第\s*[一二三四五六七八九十百千\d]+\s*�
 const CHAPTER_PATTERN = /^\s*(第\s*[一二三四五六七八九十百千\d]+\s*章|楔子|楔子|序章|序言|引子|引章|尾声|终章|番外|番外篇|序幕|幕间)\s*(.*)/;
 const SECTION_PATTERN = /^\s*(第\s*[一二三四五六七八九十百千\d]+\s*[节話回])\s*(.*)/;
 
+// 设定文本的标记特征（用于自动检测模式）
+const SETTINGS_MARKERS = /角色[介绍设定说明]|人物[介绍设定说明]|世界[观设定说明]|设定[书集]|背景[介绍说明]|势力[介绍说明]|能力[体系设定]|规则[设定说明]/;
+
 interface DetectedChapter {
   volumeTitle?: string;
   chapterTitle: string;
   order: number;
   content: string;
   wordCount: number;
-  contentSnippet: string; // 前100字预览
+  contentSnippet: string;
 }
 
-/**
- * 用正则状态机切分章节。
- * 状态流转：无标题文本 → 遇到分卷标记 → 遇到分章标记 → 正文
- */
 function segmentChapters(rawText: string, volumeMode: boolean): DetectedChapter[] {
   const lines = rawText.split(/\n/);
   const chapters: DetectedChapter[] = [];
@@ -55,7 +48,7 @@ function segmentChapters(rawText: string, volumeMode: boolean): DetectedChapter[
     const content = currentContent.join("\n").trim();
     if (content.length < 10) {
       currentContent = [];
-      return; // 空章节跳过
+      return;
     }
     chapters.push({
       volumeTitle: volumeMode && currentVolume ? currentVolume : undefined,
@@ -74,7 +67,6 @@ function segmentChapters(rawText: string, volumeMode: boolean): DetectedChapter[
     const secMatch = line.match(SECTION_PATTERN);
 
     if (volMatch && volumeMode) {
-      // 遇到新分卷，把上一章收尾
       if (currentContent.length > 0) flushChapter();
       currentVolume = (volMatch[1] + (volMatch[2] ? " " + volMatch[2] : "")).trim();
       currentChapterTitle = "";
@@ -87,13 +79,11 @@ function segmentChapters(rawText: string, volumeMode: boolean): DetectedChapter[
     }
   }
 
-  // 收尾最后一章
   if (currentContent.length > 0) flushChapter();
 
-  // 如果什么都没识别到，整段当一章
   if (chapters.length === 0) {
     chapters.push({
-      chapterTitle: "第一章",
+      chapterTitle: "导入文本",
       order: 0,
       content: rawText.trim(),
       wordCount: rawText.trim().length,
@@ -104,85 +94,172 @@ function segmentChapters(rawText: string, volumeMode: boolean): DetectedChapter[
   return chapters;
 }
 
-// ─── LLM 三卡抽取 Prompt ──────────────────────────────────
+/**
+ * 自动检测文本类型：
+ * - 如果能识别到章节标记 → "chapters"
+ * - 如果全是设定/角色/世界描述 → "settings"
+ * - 都有 → "auto"（两阶段分析）
+ */
+function detectImportMode(rawText: string, chapterCount: number): "chapters" | "settings" | "auto" {
+  const hasChapters = chapterCount > 0;
+  const hasSettings = SETTINGS_MARKERS.test(rawText.slice(0, 3000));
 
-function buildExtractionPrompt(
+  if (hasChapters && !hasSettings) return "chapters";
+  if (!hasChapters && hasSettings) return "settings";
+  if (hasChapters && hasSettings) return "auto";
+  // 都没有明确特征 → 按章节处理（可能是纯叙事文本）
+  return "chapters";
+}
+
+// ─── 设定模式 Prompt：全量抽取，不设上限 ─────────────────
+
+function buildSettingsExtractionPrompt(
+  projectName: string,
+  genre: string[],
+  fullText: string
+): string {
+  return `【任务】从以下小说设定文本中，全部提取所有角色、世界观词条和文风要求。不设数量上限——文本里提到多少就提取多少。
+
+【作品信息】
+名称：${projectName}
+类型：${genre.join("、")}
+
+【设定文本（全量）】
+${fullText}
+
+【提取要求——数量无上限，穷尽文本中的每一个设定】
+
+1. characters[]: 文本中出现的每一个角色，哪怕只提了一句名字也要录入：
+   - name, aliases, role (protagonist/antagonist/supporting/mentor/love_interest/background/comic_relief/catalyst)
+   - age, gender
+   - personality: 性格关键词数组，能推断多少写多少
+   - appearance: { hair, eyes, height, build, features, attire }
+   - background: 角色背景简述
+   - dialogueStyle: { description, examples: [代表性台词], vocabulary: [常用词], speechPatterns: [说话习惯] }
+   - hiddenMotives: 隐藏动机数组
+   - currentStatus: 当前状态 (alive/dead/missing/incapacitated)
+
+2. lore[]: 文本中的每一个世界观设定——地名、组织、魔法/能力体系、历史事件、文化规则、物品、法则，全部提取：
+   - title, category (geography/faction/magic_system/history/culture/creature/item/law/custom)
+   - keys: 触发关键词数组，生成最容易在写作中被提到的词（含同义词、简称、别称）
+   - content: 设定内容概述
+
+3. style: 如果文本中包含文风/写作要求，提取：
+   - styleDescription: 文风描述
+   - forbiddenPatterns: 禁用词/句式列表
+   - recommendedStyle: 推荐的写作风格要点
+
+输出纯 JSON，不要 markdown 标记。格式：
+{"characters": [...], "lore": [...], "style": {...}}`;
+}
+
+// ─── 章节模式 Prompt：原版逻辑 ──────────────────────────
+
+function buildChapterExtractionPrompt(
   projectName: string,
   genre: string[],
   chapters: DetectedChapter[],
   volumeMode: boolean
 ): string {
-  // 拼接代表性文本：前2章全文 + 其余章节各取前500字
-  const samples = chapters.slice(0, 2).map((c) => c.content).join("\n\n---\n\n");
-  const snippets = chapters.slice(2).map((c) =>
+  // 前3章全文 + 其余各取前500字
+  const samples = chapters.slice(0, 3).map((c) => c.content).join("\n\n---\n\n");
+  const snippets = chapters.slice(3).map((c) =>
     `【${c.chapterTitle}】${c.content.slice(0, 500)}`
   ).join("\n\n");
   const allText = samples + (snippets ? "\n\n---\n\n" + snippets : "");
 
-  // Token 预算管理：最多送8000字的文本给 LLM 分析
-  const truncatedText = allText.length > 8000 ? allText.slice(0, 8000) + "\n\n[...后续文本已截断]" : allText;
+  // 增加到 16000 字输入
+  const truncatedText = allText.length > 16000 ? allText.slice(0, 16000) + "\n\n[...后续已截断]" : allText;
 
-  return `你是一个专业的小说编辑和分析师。请仔细阅读以下小说文本，提取三方面的结构化信息。
+  return `【任务】从以下小说文本中，全部提取所有角色、世界观设定和文风特征。不设数量上限——文本中出现的每一个角色、每一个地点/组织/设定，都要提取。
 
 【作品信息】
 名称：${projectName}
 类型：${genre.join("、")}
-分卷模式：${volumeMode ? "是（已识别分卷结构）" : "否（纯章节结构）"}
-已识别章节数：${chapters.length}
+已识别章节：${chapters.length}
 
-【已识别的章节目录】
-${chapters.map((c) => `- ${c.volumeTitle ? `[${c.volumeTitle}] ` : ""}${c.chapterTitle}`).join("\n")}
+【章节目录】
+${chapters.map((c) => `- ${c.volumeTitle ? `[${c.volumeTitle}] ` : ""}${c.chapterTitle} (${c.wordCount}字)`).join("\n")}
 
-【待分析文本】
+【文本内容】
 ${truncatedText}
 
-请输出一个严格符合 JSON 格式的结构化分析结果，包含三个部分：
+【提取要求——穷尽所有的】
 
-1. characters: 角色列表，每个角色包含：
-   - name: 角色名
-   - aliases: 别名数组
-   - role: 角色定位 (protagonist/antagonist/supporting/mentor/love_interest/background)
-   - personality: 性格关键词数组(3-7个)
+1. characters[]: 文本中出现的每一个角色：
+   - name, aliases, role, age, gender
+   - personality: 性格关键词(从行为推断)
    - appearance: { hair, eyes, height, build, features, attire }
-   - background: 背景简述(≤200字)
-   - dialogueStyle: { description, examples: [3句台词], vocabulary: [常用词], speechPatterns: [句式特征] }
-   - hiddenMotives: 隐藏动机数组
-   - age: 年龄描述
-   - gender: 性别
+   - background: 角色背景
+   - dialogueStyle: { description, examples: [代表性台词], vocabulary, speechPatterns }
+   - hiddenMotives: 隐藏动机
 
-2. lore: 世界观词条列表，每个词条包含：
-   - title: 词条标题
-   - category: 分类 (geography/faction/magic_system/history/culture/creature/item/custom)
-   - keys: 触发关键词数组(3-8个)——自动生成最容易在续写中被提到的词
-   - content: 设定内容(≤200字)
+2. lore[]: 所有的地点、组织、能力体系、历史事件、文化规则、关键物品：
+   - title, category, keys: [触发关键词+同义词+简称], content
 
-3. style: 文风量化分析：
-   - avgSentenceLength: 平均句子长度(字)
-   - shortSentenceRatio: 短句占比(<15字)
-   - longSentenceRatio: 长句占比(>40字)
-   - dialogueRatio: 对话占比
-   - descriptionRatio: 环境描写占比
-   - actionRatio: 动作描写占比
-   - innerThoughtRatio: 内心独白占比
-   - povType: 叙事视角 (first_person/third_person_limited/third_person_omniscient/second_person)
-   - narrativeDistance: 叙事距离 (close/medium/far)
-   - tonalMarkers: 语气特征对象 {coldness, satire, tragedy, humor, warmth, suspense, grandeur}
-   - lexicalFeatures: 词汇特征对象 {classicalRatio, modernRatio, termDensity, idiomsDensity}
-   - styleDescription: 一句话概括文风(≤50字)
-   - sampleText: 选择一段最能代表文风的原文(约200字)
+3. style: 文风量化：
+   - avgSentenceLength, shortSentenceRatio, longSentenceRatio
+   - dialogueRatio, descriptionRatio, actionRatio, innerThoughtRatio
+   - povType, narrativeDistance
+   - tonalMarkers: {coldness, satire, tragedy, humor, warmth, suspense, grandeur}
+   - lexicalFeatures: {classicalRatio, modernRatio, termDensity, idiomsDensity}
+   - styleDescription, sampleText
 
-输出格式必须是纯 JSON，不要任何 markdown 标记或解释文字：
-{"characters": [...], "lore": [...], "style": {...}}`;
+输出纯 JSON，不要 markdown 标记。`;
 }
 
-function buildExtractionSystemPrompt(): string {
-  return `你是一个专业的小说结构化分析引擎。你的唯一任务是从小说文本中提取角色、世界观和文风信息，输出严格 JSON。
+// ─── 混合模式（auto）：两阶段分析 ───────────────────────
 
-规则：
-1. 角色：从文本中识别所有有名有姓或有明确对话的角色。依上下文推断性格、动机和对话风格。如果文中提到角色的外貌特征(发色/瞳色/体型等)，一定要记录。
-2. 世界观词条：识别文本中的特殊地名、组织、能力体系、历史事件、文化规则、关键物品。为每个词条自动生成触发关键词(别只用标题，要加同义词和缩写)。
-3. 文风：基于全篇文本量化分析。对话占比通过统计引号包围的文本比例估算。不要乱填——仔细读文本。
-4. 只输出 JSON，不要任何额外文字。`;
+function buildHybridExtractionPrompt(
+  projectName: string,
+  genre: string[],
+  chapters: DetectedChapter[],
+  volumeMode: boolean
+): string {
+  // 把前半段文本（可能是设定）和后半段（可能是章节）都送进去
+  const halfIdx = Math.max(1, Math.floor(chapters.length / 2));
+  const firstHalf = chapters.slice(0, halfIdx).map((c) => `【${c.chapterTitle}】\n${c.content.slice(0, 2000)}`).join("\n\n");
+  const secondHalf = chapters.slice(halfIdx).map((c) => `【${c.chapterTitle}】\n${c.content.slice(0, 800)}`).join("\n\n");
+
+  return `【任务】从以下小说文本中，穷尽提取所有角色、世界观设定和文风特征。文本可能混合了设定描述和叙事章节。
+
+【作品信息】
+名称：${projectName}
+类型：${genre.join("、")}
+
+【文本前半段（可能是设定/背景描述）】
+${firstHalf}
+
+【文本后半段（可能是叙事章节）】
+${secondHalf}
+
+【提取要求——不设数量上限】
+
+1. characters[]: 所有角色
+2. lore[]: 所有世界观设定
+3. style: 文风量化分析
+
+输出纯 JSON。`;
+}
+
+// ─── System Prompts ──────────────────────────────────────
+
+function buildSystemPrompt(mode: "chapters" | "settings" | "auto"): string {
+  const base = `你是专业的小说结构化分析引擎。唯一任务是从文本中提取角色、世界观和文风信息。
+
+核心原则：
+- 穷尽原则：文本中出现的每一个角色、每一个地点、每一个设定都要提取，不管多小
+- 数量不设上限：输出尽可能多的条目。不要因为"够了"就停止
+- 推断但不编造：如果文本提到"她是剑宗掌门"，可以推断性格"威严""护短"，但不要凭空编造没提到的角色
+- 自动生成触发词：每个词条生成 4-8 个关键词，包含同义词、简称、别称
+
+只输出 JSON，不要任何额外文字。`;
+
+  if (mode === "settings") {
+    return base + `\n\n当前是设定文本分析模式。文本不包含叙事章节，只有世界观描述、角色设定、势力介绍等。请逐段扫描，把每一个被提到名字的实体都提取出来。`;
+  }
+
+  return base;
 }
 
 // ─── POST 处理器 ──────────────────────────────────────────
@@ -190,7 +267,7 @@ function buildExtractionSystemPrompt(): string {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectId, rawText, volumeMode = true } = body;
+    const { projectId, rawText, volumeMode = true, importMode: userMode } = body;
 
     if (!projectId || !rawText) {
       return NextResponse.json(
@@ -199,9 +276,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (rawText.length < 50) {
+    if (rawText.length < 30) {
       return NextResponse.json(
-        { error: "文本太短（最少50字），无法导入" },
+        { error: "文本太短（最少30字），无法分析" },
         { status: 400 }
       );
     }
@@ -215,26 +292,48 @@ export async function POST(request: Request) {
     // Step 1: 正则分章
     const chapters = segmentChapters(rawText, volumeMode);
 
-    // Step 2: LLM 三卡抽取
+    // Step 2: 确定导入模式
+    const detectedMode = detectImportMode(rawText, chapters.filter(c => c.chapterTitle !== "导入文本").length);
+    const importMode = userMode || detectedMode;
+
+    // Step 3: 根据模式构建 Prompt
     const client = getDefaultClient();
-    const extractionPrompt = buildExtractionPrompt(
-      project.name,
-      project.genre,
-      chapters,
-      volumeMode
-    );
+    const model = (project.llmConfig as Record<string, unknown>)?.architectModel as string || "deepseek-ai/DeepSeek-V4-Pro";
+
+    let extractionPrompt: string;
+    let maxTokens: number;
+
+    if (importMode === "settings") {
+      // 设定模式：全量文本 + 大Token输出
+      extractionPrompt = buildSettingsExtractionPrompt(
+        project.name,
+        project.genre,
+        rawText.length > 20000 ? rawText.slice(0, 20000) : rawText
+      );
+      maxTokens = 16384;
+    } else if (importMode === "auto") {
+      extractionPrompt = buildHybridExtractionPrompt(
+        project.name, project.genre, chapters, volumeMode
+      );
+      maxTokens = 16384;
+    } else {
+      extractionPrompt = buildChapterExtractionPrompt(
+        project.name, project.genre, chapters, volumeMode
+      );
+      maxTokens = 12288;
+    }
 
     const response = await client.chat({
-      model: (project.llmConfig as Record<string, unknown>)?.architectModel as string || "deepseek-ai/DeepSeek-V4-Pro",
+      model,
       messages: [
-        { role: "system", content: buildExtractionSystemPrompt() },
+        { role: "system", content: buildSystemPrompt(importMode) },
         { role: "user", content: extractionPrompt },
       ],
-      temperature: 0.3, // 低温确保稳定输出
-      maxTokens: 8192,
+      temperature: 0.2,
+      maxTokens,
     });
 
-    // 解析 LLM 输出的 JSON
+    // 解析 JSON
     let extracted: {
       characters: Record<string, unknown>[];
       lore: Record<string, unknown>[];
@@ -242,24 +341,35 @@ export async function POST(request: Request) {
     } = { characters: [], lore: [], style: {} };
 
     try {
-      // 尝试提取 JSON（有时 LLM 会包在 ```json ``` 里）
       let jsonStr = response.content.trim();
+      // 剥离 markdown 代码块
       const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) jsonStr = jsonMatch[1].trim();
       extracted = JSON.parse(jsonStr);
-    } catch {
-      // JSON 解析失败，返回空结果，但章节分割结果保留
-      console.warn("LLM 三卡抽取 JSON 解析失败，返回空卡面");
+    } catch (err) {
+      console.warn("LLM 三卡抽取 JSON 解析失败:", String(err).slice(0, 200));
+      // 尝试截断后重试
+      try {
+        let jsonStr = response.content.trim();
+        // 有时候 JSON 后面有额外文本，尝试截断到最后一个 }
+        const lastBrace = jsonStr.lastIndexOf("}");
+        if (lastBrace > 0) {
+          jsonStr = jsonStr.slice(0, lastBrace + 1);
+          extracted = JSON.parse(jsonStr);
+        }
+      } catch {
+        // 彻底失败，返回空
+      }
     }
 
-    // 计算输入 Token
     const inputTokens = countTokens(extractionPrompt);
+    const charCount = (extracted.characters || []).length;
+    const loreCount = (extracted.lore || []).length;
 
     return NextResponse.json({
-      detectedChapters: chapters,
+      detectedChapters: importMode === "settings" ? [] : chapters,
       extractedCharacters: (extracted.characters || []).map((c) => ({
         ...c,
-        // 确保必填字段有默认值
         personality: (c.personality as string[]) || [],
         aliases: (c.aliases as string[]) || [],
         hiddenMotives: (c.hiddenMotives as string[]) || [],
@@ -278,11 +388,13 @@ export async function POST(request: Request) {
       })),
       extractedStyle: (extracted.style || {}) as Record<string, unknown>,
       meta: {
+        importMode,
         chapterCount: chapters.length,
-        characterCount: (extracted.characters || []).length,
-        loreCount: (extracted.lore || []).length,
+        characterCount: charCount,
+        loreCount: loreCount,
         inputTokens,
         volumeMode,
+        rawCharCount: rawText.length,
       },
     });
   } catch (err) {
