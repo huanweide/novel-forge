@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── 项目 (Project) ────────────────────────────────────────
+
+model Project {
+  id             String   @id @default(uuid())
+  name           String
+  description    String   @default("")
+  genre          String[]               // 类型标签
+  targetWordCount Int     @default(100000)
+  synopsis       String   @default("")  // 主线总纲
+  toneKeywords   String[] @default([])  // 基调关键词
+  povCharacterId String?                 // 当前视角主角
+
+  // LLM配置 (JSON存储)
+  llmConfig Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  characters    CharacterCard[]
+  lorebookEntries LorebookEntry[]
+  storyNodes    StoryNode[]
+  storyBranches StoryBranch[]
+  chapterSummaries ChapterSummary[]
+  storyBeats    StoryBeat[]
+  styleCards    StyleCard[]
+}
+
+// ─── 人物卡 (Character Card) ───────────────────────────────
+
+model CharacterCard {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name     String
+  aliases  String[] @default([])
+  age      String   @default("未知")
+  gender   String   @default("未知")
+  role     String   @default("supporting") // CharacterRole枚举
+
+  // 结构化数据 (JSON存储)
+  appearance      Json @default("{}")    // CharacterAppearance
+  personality     String[] @default([])
+  dialogueStyle   Json @default("{}")    // DialogueStyle
+  background      String @default("")
+  hiddenMotives   String[] @default([])
+  relationships   Json @default("[]")    // CharacterRelationship[]
+
+  currentStatus   String @default("alive") // CharacterStatus
+  arcProgress     String @default("")
+  tags            String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+// ─── 世界书词条 (Lorebook Entry) ───────────────────────────
+
+model LorebookEntry {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title           String
+  category        String @default("custom") // LoreCategory
+  keys            String[]                  // 触发关键词
+  content         String                    // 设定内容 ≤200 Token
+  insertionOrder  Int @default(50)          // 0-100
+  enabled         Boolean @default(true)
+  parentId        String?                   // 父词条
+  relatedEntryIds String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([enabled])
+}
+
+// ─── 故事节点 (Story Node) —— 章节树 ──────────────────────
+
+model StoryNode {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  parentId String?        // 父节点（根节点=null）
+  type     String         // StoryNodeType: volume/chapter/section/scene
+  title    String
+  order    Int @default(0)
+  status   String @default("outline_only") // ContentStatus
+
+  // 内容
+  outline   String?      // 大纲
+  content   String?      // 正文
+  wordCount Int @default(0)
+
+  // 分支
+  branchId           String?
+  isMainBranch       Boolean @default(true)
+  previousVersionId  String?
+
+  // 元数据
+  activeCharacters  String[] @default([])
+  activeLoreIds     String[] @default([])
+  coreConflict      String?
+  settingDescription String?
+  notes             String?
+
+  // 审校
+  reviewLogs    Json @default("[]")       // ReviewLog[]
+  revisionCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 自引用
+  parent   StoryNode?  @relation("NodeTree", fields: [parentId], references: [id])
+  children StoryNode[] @relation("NodeTree")
+
+  // 分支关联
+  branch StoryBranch? @relation(fields: [branchId], references: [id])
+
+  @@index([projectId])
+  @@index([parentId])
+  @@index([branchId])
+}
+
+// ─── 故事分支 (Story Branch) ───────────────────────────────
+
+model StoryBranch {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String @default("")
+  parentBranchId  String?
+  forkPointNodeId String
+  isActive        Boolean @default(true)
+
+  nodes StoryNode[]
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ─── 章节摘要 (Chapter Summary) —— 中期记忆 ───────────────
+
+model ChapterSummary {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  chapterId    String
+  chapterTitle String
+  summary      String                    // AI压缩摘要 ≤200 Token
+  keyEvents    String[] @default([])
+  characterStates Json @default("[]")    // CharacterStateSnapshot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([chapterId])
+}
+
+// ─── 关键转折点 (Story Beat) —— 长期记忆索引 ──────────────
+
+model StoryBeat {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  nodeId        String
+  description   String
+  chapterNumber Int
+  impact        String @default("minor") // "major" | "minor"
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ─── 文风卡 (Style Card) —— 量化导入文本的笔触特征 ──────────
+
+model StyleCard {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 量化句型特征
+  avgSentenceLength    Float @default(25)     // 平均句子长度（字数）
+  shortSentenceRatio   Float @default(0.3)   // 短句占比 (<15字)
+  longSentenceRatio    Float @default(0.15)  // 长句占比 (>40字)
+
+  // 叙事比例 (总和≈1.0)
+  dialogueRatio        Float @default(0.35)  // 对话占比
+  descriptionRatio     Float @default(0.25)  // 环境描写占比
+  actionRatio          Float @default(0.25)  // 动作占比
+  innerThoughtRatio    Float @default(0.15)  // 内心独白占比
+
+  // 视角
+  povType              String @default("third_person_limited") // 叙事视角
+  narrativeDistance    String @default("medium")               // 叙事距离
+
+  // 语气与词汇特征 (JSON)
+  tonalMarkers         Json @default("{}")     // {coldness, satire, tragedy, humor, warmth...}
+  lexicalFeatures      Json @default("{}")     // {classicalRatio, modernRatio, termDensity, idiomsDensity}
+
+  // 概要说明
+  styleDescription     String @default("")
+
+  // 代表性原文样本
+  sampleText           String?
+
+  // 来源章节数
+  sourceChapterCount   Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
