@@ -140,27 +140,13 @@ function normLore(l: Record<string, unknown>): Record<string, unknown> {
 // ═══════════════════════════════════════════════════════════════
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try { body = await request.json(); } catch {
+    return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
+  }
   const { projectId, rawText, volumeMode = true, importMode: userMode } = body;
 
-  if (!projectId || !rawText) return NextResponse.json({ error: "缺少 projectId 或 rawText" }, { status: 400 });
-  if (rawText.length < 30) return NextResponse.json({ error: "文本太短" }, { status: 400 });
-
-  const project = await prisma.project.findUnique({ where: { id: projectId } });
-  if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
-
-  const chapters = segmentChapters(rawText, volumeMode);
-  const realCh = chapters.filter(c => c.chapterTitle !== "导入文本");
-  const detectedMode = SETTINGS_SIGNAL.test(rawText.slice(0, 3000)) && realCh.length === 0 ? "settings"
-    : realCh.length > 0 ? "chapters" : "settings";
-  const importMode = userMode || detectedMode;
-
-  const config = getDefaultLLMConfig();
-  // 用户要求用 V4 Pro
-  const model = "deepseek-ai/DeepSeek-V4-Pro";
-  const textLen = rawText.length;
-  const inputTokens = countTokens(rawText);
-
+  // 所有错误都走 SSE，防止客户端卡在"连接中"
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -169,106 +155,85 @@ export async function POST(request: Request) {
       };
 
       try {
-        // 阶段1：分章完成
-        send({ type: "progress", stage: "segment", message: `文本拆分完成：${chapters.length}个章节块，${textLen}字符`, chapters: importMode === "settings" ? 0 : chapters.length });
+        // ── 校验 ──
+        if (!projectId || !rawText) {
+          send({ type: "error", message: "缺少 projectId 或 rawText" }); controller.close(); return;
+        }
+        const text = rawText as string;
+        if (text.length < 30) {
+          send({ type: "error", message: "文本太短（最少30字）" }); controller.close(); return;
+        }
 
-        // 阶段2：发送LLM请求
+        // ── 加载项目 ──
+        send({ type: "progress", stage: "connecting", message: "正在连接数据库..." });
+        const project = await prisma.project.findUnique({ where: { id: projectId as string } });
+        if (!project) {
+          send({ type: "error", message: "项目不存在，请先创建项目" }); controller.close(); return;
+        }
+
+        // ── 分章 ──
+        const chapters = segmentChapters(text, volumeMode as boolean);
+        const realCh = chapters.filter(c => c.chapterTitle !== "导入文本");
+        const detectedMode = SETTINGS_SIGNAL.test(text.slice(0, 3000)) && realCh.length === 0 ? "settings" : realCh.length > 0 ? "chapters" : "settings";
+        const importMode = (userMode as string) || detectedMode;
+        const config = getDefaultLLMConfig();
+        const model = "deepseek-ai/DeepSeek-V4-Pro";
+        const textLen = text.length;
+        const inputTokens = countTokens(text);
+
+        send({ type: "progress", stage: "segment", message: `文本拆分完成：${chapters.length}个章节块，${textLen}字符`, chapters: importMode === "settings" ? 0 : chapters.length });
         send({ type: "progress", stage: "sending", message: `正在调用 DeepSeek V4 Pro（约${(inputTokens / 1000).toFixed(1)}K tokens）...` });
 
-        const baseURL = config.baseURL.replace(/\/+$/, "");
-        const prompt = buildPrompt(project.name, project.genre, rawText, importMode);
-
+        // ── 调用 V4 Pro ──
+        const prompt = buildPrompt(project.name, project.genre, text as string, importMode);
         send({ type: "progress", stage: "analyzing", message: "V4 Pro 正在深度分析文本——抽取角色、世界观、文风..." });
 
-        // 阶段3：调用LLM（AbortController 超时 120 秒）
         const llmStart = Date.now();
         const abortCtrl = new AbortController();
-        const timeoutId = setTimeout(() => abortCtrl.abort(), 300000); // 5分钟
+        const timeoutId = setTimeout(() => abortCtrl.abort(), 300000);
 
         let resp: Response;
         try {
-          resp = await fetch(`${baseURL}/chat/completions`, {
+          resp = await fetch(`${config.baseURL}/chat/completions`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${config.apiKey}`,
-            },
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: "system", content: buildSystemPrompt() },
-                { role: "user", content: prompt },
-              ],
-              temperature: 0.25,
-              max_tokens: 16384,
-              stream: false,
-            }),
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+            body: JSON.stringify({ model, messages: [{ role: "system", content: buildSystemPrompt() }, { role: "user", content: prompt }], temperature: 0.25, max_tokens: 16384, stream: false }),
             signal: abortCtrl.signal,
           });
         } catch (fetchErr: unknown) {
           clearTimeout(timeoutId);
-          const errName = (fetchErr as Error)?.name || "";
-          if (errName === "AbortError") {
-            send({ type: "error", message: `API调用超时（>120秒）。文本${textLen}字符可能过大，V4 Pro推理时间超出限制。建议：1) 重试 2) 减少文本量到30000字以内` });
-          } else {
-            send({ type: "error", message: `网络请求失败: ${String(fetchErr).slice(0, 300)}` });
-          }
-          controller.close();
-          return;
+          const msg = (fetchErr as Error)?.name === "AbortError" ? `API调用超时（>5分钟）。${textLen}字文本V4 Pro未能在300秒内完成，建议减少文本量` : `网络请求失败: ${String(fetchErr).slice(0, 300)}`;
+          send({ type: "error", message: msg }); controller.close(); return;
         }
         clearTimeout(timeoutId);
 
         if (!resp.ok) {
           const errText = await resp.text().catch(() => "无法读取错误响应");
-          send({ type: "error", message: `API返回错误 ${resp.status}: ${errText.slice(0, 400)}` });
-          controller.close();
-          return;
+          send({ type: "error", message: `API返回错误 ${resp.status}: ${errText.slice(0, 400)}` }); controller.close(); return;
         }
 
         const llmTime = ((Date.now() - llmStart) / 1000).toFixed(1);
         send({ type: "progress", stage: "received", message: `V4 Pro 分析完成（耗时${llmTime}秒），正在解析结果...` });
 
         const data = await resp.json().catch(() => null);
-        if (!data || !data.choices?.[0]?.message?.content) {
-          send({ type: "error", message: `API返回了空内容。响应结构: ${JSON.stringify(data).slice(0, 300)}` });
-          controller.close();
-          return;
+        if (!data?.choices?.[0]?.message?.content) {
+          send({ type: "error", message: `API返回空内容。响应: ${JSON.stringify(data).slice(0, 300)}` }); controller.close(); return;
         }
 
-        const content = data.choices[0].message.content;
+        const content: string = data.choices[0].message.content;
         send({ type: "progress", stage: "received", message: `收到回复（约${content.length}字符），正在解析...` });
 
-        // 阶段4：解析JSON
-        try {
-          const parsed = parseJSON(content);
-          const chars = Array.isArray(parsed.characters) ? parsed.characters.map(normChar) : [];
-          const lore = Array.isArray(parsed.lore) ? parsed.lore.map(normLore) : [];
-          const style = (typeof parsed.style === "object" && parsed.style !== null) ? parsed.style : {};
-          const charCount = chars.length, loreCount = lore.length;
+        // ── 解析 JSON ──
+        const parsed = parseJSON(content);
+        const chars = Array.isArray(parsed.characters) ? parsed.characters.map(normChar) : [];
+        const lore = Array.isArray(parsed.lore) ? parsed.lore.map(normLore) : [];
+        const style = (typeof parsed.style === "object" && parsed.style !== null) ? parsed.style : {};
 
-          send({ type: "progress", stage: "parsing", message: `解析完成：${charCount}个角色，${loreCount}个词条` });
+        send({ type: "progress", stage: "parsing", message: `解析完成：${chars.length}个角色，${lore.length}个词条` });
+        send({ type: "done", detectedChapters: importMode === "settings" ? [] : chapters, extractedCharacters: chars, extractedLoreEntries: lore, extractedStyle: style, meta: { importMode, chapterCount: chapters.length, characterCount: chars.length, loreCount: lore.length, inputTokens, rawCharCount: textLen, modelUsed: model, llmTimeSeconds: parseFloat(llmTime), outputLength: content.length } });
 
-          send({
-            type: "done",
-            detectedChapters: importMode === "settings" ? [] : chapters,
-            extractedCharacters: chars,
-            extractedLoreEntries: lore,
-            extractedStyle: style,
-            meta: {
-              importMode, chapterCount: chapters.length, characterCount: charCount, loreCount: loreCount,
-              inputTokens, rawCharCount: textLen, modelUsed: model, llmTimeSeconds: parseFloat(llmTime),
-              outputLength: content.length,
-            },
-          });
-        } catch (parseErr) {
-          send({
-            type: "error",
-            message: `JSON解析失败——LLM输出格式不标准。错误: ${String(parseErr).slice(0, 200)}`,
-            rawOutput: content.slice(0, 2000),
-            hint: "可以重试，或检查设定文本是否有特殊格式干扰了LLM输出",
-          });
-        }
       } catch (err) {
+        // 外层兜底：JSON解析失败等所有未预料的错误
         send({ type: "error", message: err instanceof Error ? err.message : String(err) });
       } finally {
         controller.close();
