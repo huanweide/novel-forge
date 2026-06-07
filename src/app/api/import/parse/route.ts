@@ -1,18 +1,22 @@
 /**
  * POST /api/import/parse
  *
- * SSE 流式导入解析 —— 一次调用 V4 Pro，实时推送进度。
- * 不拆分、不设上限、不超时焦虑。
+ * SSE 流式导入解析 —— Flash 双路并行：
+ * 1. A路：V4 Flash 直接提取全部人物卡
+ * 2. B路：V4 Flash 直接提取全部世界书 + 风格卡
+ * 3. JSON 解析 + 去重
+ *
+ * 无 Scan 阶段、不分块。Flash 速度 ≈ Pro 的 1/3，两路并行 = 最慢那路 ≈ 15-30s
  */
-
-export const maxDuration = 60;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getDefaultLLMConfig } from "@/core/llm/client";
 import { countTokens } from "@/core/assembly/tokenizer";
 
-// ─── 正则分章（仅章节模式用）─────────────────────────────
+export const maxDuration = 300;
+
+// ─── 正则分章 ─────────────────────────────────────────────
 
 const VOL_PAT = /^\s*(第\s*[一二三四五六七八九十百千\d]+\s*卷)\s*(.*)/;
 const CH_PAT = /^\s*(第\s*[一二三四五六七八九十百千\d]+\s*章|楔子|序章|序言|引子|尾声|终章|番外|番外篇|序幕|幕间)\s*(.*)/;
@@ -43,100 +47,279 @@ function segmentChapters(rawText: string, volumeMode: boolean): DetectedChapter[
   return chapters.length > 0 ? chapters : [{ chapterTitle: "导入文本", order: 0, content: rawText.trim(), wordCount: rawText.trim().length, contentSnippet: rawText.trim().slice(0, 100) }];
 }
 
-// ─── 分析 Prompt（精华版，保留完整框架但省 Token）──────
+// ─── 智能分块：按自然段边界，每块 ≤ 6000 字符 ──────────
 
-function buildPrompt(projectName: string, genre: string[], text: string, mode: string): string {
-  const isSettings = mode === "settings";
-  const header = isSettings
-    ? `【任务】穷尽分析以下设定文本中的全部角色、世界观和文风。数量无上限。\n【作品】${projectName} | ${genre.join("、")} | 文本约${text.length}字`
-    : `【任务】穷尽分析以下小说文本中的全部角色、世界观和文风。\n【作品】${projectName} | ${genre.join("、")}`;
+const CHUNK_SIZE = 6000;
 
-  return `${header}
+function smartChunk(text: string): string[] {
+  if (text.length <= CHUNK_SIZE) return [text];
+  const paragraphs = text.split(/\n\n+/); // 按空行分自然段
+  const raw: string[] = [];
+  let buf = "";
+  for (const p of paragraphs) {
+    if (buf && buf.length + p.length > CHUNK_SIZE) {
+      raw.push(buf.trim());
+      buf = p;
+    } else {
+      buf += (buf ? "\n\n" : "") + p;
+    }
+  }
+  if (buf.trim()) raw.push(buf.trim());
 
-【文本】
+  // 尾块太短 → 合并到前一块，不丢内容也不浪费 Flash 调用
+  const chunks: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i].trim();
+    if (!c) continue;
+    // 短尾块（< 200 字且是最后一块）→ 并入上一块
+    if (c.length < 200 && chunks.length > 0 && i === raw.length - 1) {
+      chunks[chunks.length - 1] += "\n\n" + c;
+    } else if (c.length >= 20) {
+      chunks.push(c);
+    }
+    // < 20 字的中间块直接丢弃（不可能是正文内容）
+  }
+  return chunks.length > 0 ? chunks : [text];
+}
+
+// ─── 单路 Prompt（人物+词条+风格合并，减少 API 调用）──
+
+function buildChunkPrompt(projectName: string, genre: string[], text: string, chunkNum: number, totalChunks: number): string {
+  return `从以下小说文本中提取所有出场人物和世界观设定。这段是${chunkNum}/${totalChunks}块文本。
+
+【作品】${projectName} | 类型：${genre.join("、")}
+
+【文本——第${chunkNum}块】
 ${text}
 
-【输出格式——纯JSON，不设数量上限】
+【输出格式——纯JSON】
 {
-  "characters": [{
-    "name":"","aliases":[],"role":"protagonist/antagonist/supporting/mentor/love_interest/background","age":"","gender":"",
-    "appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},
-    "personality":{"dominant":"主导人格","drive":"驱动力","contradiction":"性格矛盾","habits":[],"socialMask":""},
-    "background":{"origin":"出身","currentSituation":"境遇","shortTermGoal":"短期目标","longTermDesire":"终极欲望"},
-    "abilities":[],"hiddenMotives":[],
-    "relationships":[{"targetName":"","relation":"","dynamic":""}],
-    "dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},
-    "arcPotential":""
-  }],
-  "lore": [{
-    "title":"","category":"geography/faction/magic_system/history/culture/creature/item/custom",
-    "keys":["触发词+同义词+简称"],"content":"设定详述",
-    "subFields":{"eraAndTech":"","fundamentalLaw":"","powerSystem":"","factionDetails":"","geographyAndCulture":"","historicalEvents":"","hiddenTruths":""}
-  }],
+  "characters": [
+    {
+      "name": "姓名", "aliases": ["别名"], "role": "protagonist/antagonist/supporting/mentor/love_interest/background",
+      "age": "年龄", "gender": "男/女/未知",
+      "appearance": {"hair":"","eyes":"","height":"","build":"","features":"","attire":""},
+      "personality": {"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},
+      "background": "", "abilities": [], "hiddenMotives": [],
+      "relationships": [{"targetName":"","relation":"","dynamic":""}],
+      "dialogueStyle": {"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},
+      "timeline": [{"age":0,"event":"","era":""}],
+      "arcProgress": "", "currentStatus": "alive"
+    }
+  ],
+  "lore": [
+    {"title":"词条标题","category":"geography/faction/magic_system/history/culture/creature/item/custom","keys":["触发词"],"content":"设定详述","subFields":{}}
+  ],
   "style": {
-    "styleDescription":"","forbiddenPatterns":[],"povType":"third_person_limited",
-    "dialogueRatio":0.3,"descriptionRatio":0.3,"actionRatio":0.25
+    "styleDescription": "文风描述", "povType": "third_person_limited", "narrativeDistance": "medium",
+    "dialogueRatio": 0.35, "descriptionRatio": 0.25, "actionRatio": 0.25, "innerThoughtRatio": 0.15,
+    "tonalMarkers": {}, "lexicalFeatures": {}, "sampleText": ""
   }
 }
 
-规则：
-- 每个角色、每个设定都要提取，不设上限
-- personality和background必须是对象格式（不是数组/字符串）
-- 有原文用原文，没有的推断，推断不了的填null
-- 字段宁可填null也不要省略
-- 只输出JSON，不要markdown`;
-
-  return header;
+【规则】原文有的就填，没有的写"无"。有名字有描写的角色都提取，路人NPC不提取。只输出JSON。`;
 }
 
-function buildSystemPrompt(): string {
-  return `你是小说设定分析引擎。穷尽提取文本中所有角色/世界观/文风，只输出纯JSON。personality和background必须是JSON对象格式。推断标注"（推断）"。`;
+const CHUNK_SYSTEM = "从小说文本中提取人物、世界观设定和文风。按JSON模板输出。原文有的填，没有的写'无'。只输出JSON。";
+
+// ─── JS 去重合并（不调 Flash，秒级）─────────────────────
+
+function mergeCharCards(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
+  // 互补合并：有值的覆盖空的/短的
+  const pick = (aVal: unknown, bVal: unknown): unknown => {
+    if (aVal === undefined || aVal === null || aVal === "" || aVal === "无" || aVal === "未知") return bVal;
+    if (Array.isArray(aVal) && Array.isArray(bVal)) {
+      const merged = [...aVal, ...bVal.filter(v => !aVal.includes(v))];
+      return merged;
+    }
+    if (typeof aVal === "object" && aVal !== null && typeof bVal === "object" && bVal !== null) {
+      return { ...(aVal as Record<string, unknown>), ...(bVal as Record<string, unknown>) };
+    }
+    // 字符串：选更长的
+    if (typeof aVal === "string" && typeof bVal === "string" && bVal.length > aVal.length) return bVal;
+    return aVal || bVal;
+  };
+
+  const merged: Record<string, unknown> = { ...a };
+  for (const key of Object.keys(b)) {
+    merged[key] = pick(a[key], b[key]);
+  }
+  return merged;
 }
 
-// ─── JSON 解析降级 ──────────────────────────────────────
+function mergeLoreCards(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
+  const content = String(a.content || "") + (String(b.content || "") && !String(a.content || "").includes(String(b.content || "")) ? "\n" + String(b.content || "") : "");
+  const keys = [...new Set([...(Array.isArray(a.keys) ? a.keys as string[] : []), ...(Array.isArray(b.keys) ? b.keys as string[] : [])])];
+  const subFields = { ...(a.subFields as Record<string, unknown> || {}), ...(b.subFields as Record<string, unknown> || {}) };
+  return { ...a, ...b, content, keys, subFields, title: a.title || b.title };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// JSON 解析降级
+// ═══════════════════════════════════════════════════════════════
 
 function parseJSON(raw: string): Record<string, unknown> {
   let s = raw.trim();
-  try { return JSON.parse(s) as Record<string, unknown>; } catch {}
+  try { return JSON.parse(s) as Record<string, unknown>; } catch { /* continue */ }
   const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (md) try { return JSON.parse(md[1].trim()) as Record<string, unknown>; } catch {}
+  if (md) try { return JSON.parse(md[1].trim()) as Record<string, unknown>; } catch { /* continue */ }
   const a = s.indexOf("{"), b = s.lastIndexOf("}");
-  if (a >= 0 && b > a) try { return JSON.parse(s.slice(a, b + 1)) as Record<string, unknown>; } catch {}
-  throw new Error("JSON解析失败");
+  if (a >= 0 && b > a) try { return JSON.parse(s.slice(a, b + 1)) as Record<string, unknown>; } catch { /* continue */ }
+  throw new Error(`JSON解析失败。原始输出前500字：${s.slice(0, 500)}`);
 }
 
-// ─── 标准化 ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// 标准化
+// ═══════════════════════════════════════════════════════════════
 
 function normChar(c: Record<string, unknown>): Record<string, unknown> {
   const p = c.personality;
   const personality = (typeof p === "object" && p !== null && !Array.isArray(p)) ? p : { dominant: "", drive: "", contradiction: "", habits: [], socialMask: "" };
-  const b = c.background;
-  const background = (typeof b === "object" && b !== null && !Array.isArray(b)) ? b : { origin: "", currentSituation: "", shortTermGoal: "", longTermDesire: "" };
+  const bg = c.background;
+  const background = typeof bg === "string" ? bg : (typeof bg === "object" && bg !== null ? JSON.stringify(bg) : "");
+  const abilities = Array.isArray(c.abilities) ? c.abilities.filter((a: unknown) => typeof a === "string") : [];
+  const abilityMeta = typeof c.abilityMeta === "string" ? c.abilityMeta : "";
+  if (abilityMeta) abilities.push(abilityMeta);
+  const arcProgress = typeof c.arcProgress === "string" ? c.arcProgress : "";
+  const app = c.appearance;
+  const appearance = (typeof app === "object" && app !== null && !Array.isArray(app)) ? app : {};
+  const ds = c.dialogueStyle;
+  const dialogueStyle = (typeof ds === "object" && ds !== null && !Array.isArray(ds)) ? ds : {};
+  const rels = Array.isArray(c.relationships) ? c.relationships : [];
+  const tags = Array.isArray(c.tags) ? c.tags.filter((t: unknown) => typeof t === "string") : ["📥导入"];
+  const timeline = Array.isArray(c.timeline) ? c.timeline.map((t: unknown) => {
+    if (typeof t === "object" && t !== null) {
+      const tt = t as Record<string, unknown>;
+      return { age: tt.age ?? 0, event: String(tt.event || ""), era: String(tt.era || "") };
+    }
+    return { age: 0, event: "", era: "" };
+  }) : [];
+
   return {
     name: String(c.name || ""),
     aliases: Array.isArray(c.aliases) ? c.aliases.filter((a: unknown) => typeof a === "string") : [],
-    role: String(c.role || "supporting"), age: String(c.age || "未知"), gender: String(c.gender || "未知"),
-    appearance: (typeof c.appearance === "object" && c.appearance !== null && !Array.isArray(c.appearance)) ? c.appearance : {},
-    personality, background,
-    abilities: Array.isArray(c.abilities) ? c.abilities.filter((a: unknown) => typeof a === "string") : [],
+    role: String(c.role || "supporting"),
+    age: String(c.age || "未知"),
+    gender: String(c.gender || "未知"),
+    appearance,
+    personality,
+    background,
+    abilities,
     hiddenMotives: Array.isArray(c.hiddenMotives) ? c.hiddenMotives.filter((a: unknown) => typeof a === "string") : [],
-    relationships: Array.isArray(c.relationships) ? c.relationships : [],
-    dialogueStyle: (typeof c.dialogueStyle === "object" && c.dialogueStyle !== null && !Array.isArray(c.dialogueStyle)) ? c.dialogueStyle : {},
-    arcPotential: String(c.arcPotential || ""), tags: Array.isArray(c.tags) ? c.tags.filter((a: unknown) => typeof a === "string") : [],
+    relationships: rels,
+    dialogueStyle,
+    timeline,
+    arcProgress,
+    currentStatus: String(c.currentStatus || "alive"),
+    tags,
+    abilityMeta: abilityMeta || undefined,
   };
 }
 
 function normLore(l: Record<string, unknown>): Record<string, unknown> {
+  const subFields = (typeof l.subFields === "object" && l.subFields !== null && !Array.isArray(l.subFields)) ? l.subFields : {};
   return {
-    title: String(l.title || ""), category: String(l.category || "custom"),
+    title: String(l.title || ""),
+    category: String(l.category || "custom"),
     keys: Array.isArray(l.keys) ? l.keys.filter((k: unknown) => typeof k === "string") : [String(l.title || "")],
     content: String(l.content || ""),
-    subFields: (typeof l.subFields === "object" && l.subFields !== null && !Array.isArray(l.subFields)) ? l.subFields : {},
+    subFields,
   };
 }
 
 // ═══════════════════════════════════════════════════════════════
-// POST —— SSE 流式进度
+// 通用 API 调用
+// ═══════════════════════════════════════════════════════════════
+
+interface APICallOpts {
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  temperature?: number;
+  stream?: boolean;
+  timeoutMs?: number;
+  label: string;
+  lane?: string;
+}
+
+interface APIResult {
+  raw?: string;
+  error?: string;
+  reasoningLen?: number;
+}
+
+async function callLLM(
+  config: ReturnType<typeof getDefaultLLMConfig>,
+  opts: APICallOpts,
+  send: (data: Record<string, unknown>) => void,
+): Promise<APIResult> {
+  const { model, systemPrompt, userPrompt, temperature = 0.15, stream = true, label, lane } = opts;
+
+  try {
+    const r = await fetch(`${config.baseURL}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature,
+        stream,
+      }),
+    });
+
+    if (!r.ok) {
+      const e = await r.text().catch(() => "");
+      return { error: `HTTP ${r.status}: ${e.slice(0, 200)}` };
+    }
+
+    if (!stream) {
+      const d = await r.json().catch(() => null);
+      const raw = d?.choices?.[0]?.message?.content;
+      return raw ? { raw } : { error: "非流式返回为空" };
+    }
+
+    // 流式读取
+    const reader = r.body!.getReader();
+    const decoder = new TextDecoder();
+    let raw = "", lastReport = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6);
+        if (jsonStr === "[DONE]") continue;
+        try {
+          const delta = JSON.parse(jsonStr)?.choices?.[0]?.delta;
+          if (delta?.content) raw += delta.content;
+        } catch { /* skip malformed chunks */ }
+      }
+      if (raw.length - lastReport >= 500) {
+        lastReport = raw.length;
+        send({
+          type: "progress", stage: "streaming", lane: lane || "extract",
+          message: `${label}：${raw.length}字符`,
+        });
+      }
+    }
+    // 流式完成后立刻通知
+    send({
+      type: "progress", stage: "received", lane: lane || "extract",
+      message: `${label} 流式完成（${raw.length}字符），解析JSON...`,
+    });
+    return { raw: raw || undefined };
+  } catch (e) {
+    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 300) };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POST —— 智能分块 + N 路并行 + 汇总合并
 // ═══════════════════════════════════════════════════════════════
 
 export async function POST(request: Request) {
@@ -146,7 +329,6 @@ export async function POST(request: Request) {
   }
   const { projectId, rawText, volumeMode = true, importMode: userMode } = body;
 
-  // 所有错误都走 SSE，防止客户端卡在"连接中"
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -154,8 +336,9 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
+      const errors: string[] = [];
+
       try {
-        // ── 校验 ──
         if (!projectId || !rawText) {
           send({ type: "error", message: "缺少 projectId 或 rawText" }); controller.close(); return;
         }
@@ -164,77 +347,125 @@ export async function POST(request: Request) {
           send({ type: "error", message: "文本太短（最少30字）" }); controller.close(); return;
         }
 
-        // ── 加载项目 ──
-        send({ type: "progress", stage: "connecting", message: "正在连接数据库..." });
+        send({ type: "progress", stage: "connecting", message: "连接数据库..." });
         const project = await prisma.project.findUnique({ where: { id: projectId as string } });
-        if (!project) {
-          send({ type: "error", message: "项目不存在，请先创建项目" }); controller.close(); return;
-        }
+        if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
 
-        // ── 分章 ──
         const chapters = segmentChapters(text, volumeMode as boolean);
         const realCh = chapters.filter(c => c.chapterTitle !== "导入文本");
         const detectedMode = SETTINGS_SIGNAL.test(text.slice(0, 3000)) && realCh.length === 0 ? "settings" : realCh.length > 0 ? "chapters" : "settings";
         const importMode = (userMode as string) || detectedMode;
         const config = getDefaultLLMConfig();
-        const model = "deepseek-ai/DeepSeek-V4-Pro";
+        const flashModel = "deepseek-ai/DeepSeek-V4-Flash";
         const textLen = text.length;
         const inputTokens = countTokens(text);
 
-        send({ type: "progress", stage: "segment", message: `文本拆分完成：${chapters.length}个章节块，${textLen}字符`, chapters: importMode === "settings" ? 0 : chapters.length });
-        send({ type: "progress", stage: "sending", message: `正在调用 DeepSeek V4 Pro（约${(inputTokens / 1000).toFixed(1)}K tokens）...` });
+        // ── 分块 ──
+        const chunks = smartChunk(text);
+        const totalChunks = chunks.length;
+        send({ type: "progress", stage: "segment", message: `文本：${textLen}字符 ≈ ${inputTokens} tokens → ${totalChunks}块（每块≤${CHUNK_SIZE}字）`, chunks: totalChunks, chapters: importMode === "settings" ? 0 : chapters.length });
 
-        // ── 调用 V4 Pro ──
-        const prompt = buildPrompt(project.name, project.genre, text as string, importMode);
-        send({ type: "progress", stage: "analyzing", message: "V4 Pro 正在深度分析文本——抽取角色、世界观、文风..." });
+        const totalStart = Date.now();
 
-        const llmStart = Date.now();
-        const abortCtrl = new AbortController();
-        const timeoutId = setTimeout(() => abortCtrl.abort(), 300000);
+        // ════════════════════════════════════════════════════
+        // N 路并行：每块 1 路 Flash（人物+词条+风格）
+        // ════════════════════════════════════════════════════
 
-        let resp: Response;
-        try {
-          resp = await fetch(`${config.baseURL}/chat/completions`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-            body: JSON.stringify({ model, messages: [{ role: "system", content: buildSystemPrompt() }, { role: "user", content: prompt }], temperature: 0.25, max_tokens: 16384, stream: false }),
-            signal: abortCtrl.signal,
-          });
-        } catch (fetchErr: unknown) {
-          clearTimeout(timeoutId);
-          const msg = (fetchErr as Error)?.name === "AbortError" ? `API调用超时（>5分钟）。${textLen}字文本V4 Pro未能在300秒内完成，建议减少文本量` : `网络请求失败: ${String(fetchErr).slice(0, 300)}`;
-          send({ type: "error", message: msg }); controller.close(); return;
+        send({ type: "progress", stage: "extracting", message: `${totalChunks}块并行提取 → Flash 每块6000字快速扫描...`, chunk: 0, totalChunks });
+
+        const extractStart = Date.now();
+        let chunksDone = 0;
+
+        const chunkResults = await Promise.all(
+          chunks.map((chunk, i) =>
+            callLLM(config, {
+              model: flashModel,
+              systemPrompt: CHUNK_SYSTEM,
+              userPrompt: buildChunkPrompt(project.name, project.genre, chunk, i + 1, totalChunks),
+              temperature: 0.1,
+              stream: true,
+              label: `块${i + 1}/${totalChunks}`,
+              lane: `chunk-${i + 1}`,
+            }, send).then(r => {
+              chunksDone++;
+              send({ type: "progress", stage: "chunk-done", message: `块${i + 1}/${totalChunks} 完成`, chunk: chunksDone, totalChunks });
+              return { ...r, chunkIdx: i };
+            })
+          )
+        );
+
+        // 收集各块结果 → JS 去重（不调 Flash，秒级完成）
+        const charsMap = new Map<string, Record<string, unknown>>();
+        const loreMap = new Map<string, Record<string, unknown>>();
+        let style: Record<string, unknown> = {};
+
+        for (const r of chunkResults) {
+          if (r.error) { errors.push(`块${r.chunkIdx + 1}: ${r.error}`); continue; }
+          if (!r.raw) continue;
+          try {
+            const parsed = parseJSON(r.raw);
+            const parsedChars = Array.isArray(parsed.characters) ? parsed.characters.map(normChar) : [];
+            const parsedLore = Array.isArray(parsed.lore) ? parsed.lore.map(normLore) : [];
+            send({ type: "progress", stage: "chunk-parsed", message: `块${r.chunkIdx + 1} 解析：${parsedChars.length}角色 ${parsedLore.length}词条` });
+
+            // 按 name 去重合并角色（同名→信息互补）
+            for (const ch of parsedChars) {
+              const key = String((ch as Record<string, unknown>).name || "").toLowerCase();
+              if (!key) continue;
+              const existing = charsMap.get(key);
+              if (existing) {
+                // 合并：有值的覆盖空的
+                charsMap.set(key, mergeCharCards(existing, ch as Record<string, unknown>));
+              } else {
+                charsMap.set(key, ch as Record<string, unknown>);
+              }
+            }
+
+            // 按 title 去重合并词条
+            for (const l of parsedLore) {
+              const key = String((l as Record<string, unknown>).title || "").toLowerCase();
+              if (!key) continue;
+              const existing = loreMap.get(key);
+              if (existing) {
+                loreMap.set(key, mergeLoreCards(existing, l as Record<string, unknown>));
+              } else {
+                loreMap.set(key, l as Record<string, unknown>);
+              }
+            }
+
+            // 风格卡：取第一个非空的
+            if (Object.keys(style).length === 0 && typeof parsed.style === "object" && parsed.style !== null) {
+              style = parsed.style as Record<string, unknown>;
+            }
+          } catch { errors.push(`块${r.chunkIdx + 1} JSON解析失败`); }
         }
-        clearTimeout(timeoutId);
 
-        if (!resp.ok) {
-          const errText = await resp.text().catch(() => "无法读取错误响应");
-          send({ type: "error", message: `API返回错误 ${resp.status}: ${errText.slice(0, 400)}` }); controller.close(); return;
-        }
+        const chars = [...charsMap.values()];
+        const lore = [...loreMap.values()];
 
-        const llmTime = ((Date.now() - llmStart) / 1000).toFixed(1);
-        send({ type: "progress", stage: "received", message: `V4 Pro 分析完成（耗时${llmTime}秒），正在解析结果...` });
+        const extractTime = ((Date.now() - extractStart) / 1000).toFixed(1);
+        const totalTime = ((Date.now() - totalStart) / 1000).toFixed(1);
 
-        const data = await resp.json().catch(() => null);
-        if (!data?.choices?.[0]?.message?.content) {
-          send({ type: "error", message: `API返回空内容。响应: ${JSON.stringify(data).slice(0, 300)}` }); controller.close(); return;
-        }
+        send({ type: "progress", stage: "merged", message: `JS去重完成：${chars.length}角色 ${lore.length}词条（${extractTime}s）` });
 
-        const content: string = data.choices[0].message.content;
-        send({ type: "progress", stage: "received", message: `收到回复（约${content.length}字符），正在解析...` });
-
-        // ── 解析 JSON ──
-        const parsed = parseJSON(content);
-        const chars = Array.isArray(parsed.characters) ? parsed.characters.map(normChar) : [];
-        const lore = Array.isArray(parsed.lore) ? parsed.lore.map(normLore) : [];
-        const style = (typeof parsed.style === "object" && parsed.style !== null) ? parsed.style : {};
-
-        send({ type: "progress", stage: "parsing", message: `解析完成：${chars.length}个角色，${lore.length}个词条` });
-        send({ type: "done", detectedChapters: importMode === "settings" ? [] : chapters, extractedCharacters: chars, extractedLoreEntries: lore, extractedStyle: style, meta: { importMode, chapterCount: chapters.length, characterCount: chars.length, loreCount: lore.length, inputTokens, rawCharCount: textLen, modelUsed: model, llmTimeSeconds: parseFloat(llmTime), outputLength: content.length } });
+        const finalChapters = importMode === "settings" ? [] : chapters;
+        send({
+          type: "done",
+          detectedChapters: finalChapters,
+          extractedCharacters: chars,
+          extractedLoreEntries: lore,
+          extractedStyle: style,
+          meta: {
+            importMode, chapterCount: chapters.length, characterCount: chars.length, loreCount: lore.length,
+            inputTokens, rawCharCount: textLen, modelUsed: flashModel,
+            chunkCount: totalChunks, extractTimeSeconds: parseFloat(extractTime),
+            totalTimeSeconds: parseFloat(totalTime),
+            errors: errors.length > 0 ? errors : undefined,
+          },
+        });
 
       } catch (err) {
-        // 外层兜底：JSON解析失败等所有未预料的错误
-        send({ type: "error", message: err instanceof Error ? err.message : String(err) });
+        send({ type: "error", message: (err instanceof Error ? err.message : String(err)) });
       } finally {
         controller.close();
       }
@@ -242,10 +473,6 @@ export async function POST(request: Request) {
   });
 
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
   });
 }
