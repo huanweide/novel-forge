@@ -1,29 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { AgentOrchestrator } from "@/core/agents";
 import { safeJoin } from "@/lib/utils";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 /**
  * POST /api/generate/outline
  *
- * 生成小说大纲——返回预览，不写入DB。确认后由 PUT 写入。
- *
- * 请求体：
- * {
- *   projectId: string;
- *   chapterCount?: number;       // 4 / 8 / 12 / 自定义 (默认8)
- *   customPrompt?: string;       // 用户自定义提示词（非空则走 V4 Flash）
- *   useFlash?: boolean;          // 是否用 Flash 模型
- * }
- *
- * 响应：
- * {
- *   chapters: [{ title, summary, coreConflict, characters }],
- *   rawOutline: "完整大纲原文",
- *   modelUsed: "v4-pro" | "v4-flash"
- * }
+ * 硅基流动 DeepSeek V4 Pro 生成章纲。
+ * 全量角色+世界书送入，不省 token。
+ * 返回预览，确认后才由 PUT 写入。
  */
 export async function POST(request: Request) {
   try {
@@ -43,138 +29,103 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "项目不存在" }, { status: 404 });
     }
 
-    // 构建角色/世界书摘要
-    // 精简角色摘要（前30个主角/反派/导师，避免 prompt 炸）
+    // ── 全量角色（每人一行，不砍）──
     const allChars = (project.characters || []) as any[];
-    const priorityRoles = ["protagonist", "antagonist", "mentor", "love_interest"];
-    const priorityChars = allChars.filter((c: any) => priorityRoles.includes(c.role));
-    const otherChars = allChars.filter((c: any) => !priorityRoles.includes(c.role));
-    const slimChars = [...priorityChars, ...otherChars].slice(0, 30);
-    const characterBriefs = slimChars
-      .map((c: any) => `[${c.name}] ${c.role} | ${safeJoin(c.personality)}`)
+    const characterBriefs = allChars
+      .map((c: any) => {
+        const p = typeof c.personality === "object" && !Array.isArray(c.personality)
+          ? (c.personality as Record<string, unknown>).dominant || ""
+          : Array.isArray(c.personality) ? (c.personality as string[]).slice(0, 2).join("、") : "";
+        const role = c.role || "supporting";
+        const status = c.currentStatus === "alive" ? "" : `[${c.currentStatus}]`;
+        return `[${c.name}] ${role}${status} ${p}`.trim();
+      })
       .join("\n");
 
+    // ── 全量世界书词条 ──
     const loreEntries = (project.lorebookEntries || []) as any[];
+    const loreBriefs = loreEntries
+      .map((l: any) => `[${l.title}](${l.category}) ${(l.content || "").slice(0, 120)}`)
+      .join("\n");
 
-    // 构建文风描述
+    // ── 文风 ──
     const styleCards = (project.styleCards || []) as any[];
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
     let styleText = "";
     if (styleCards.length > 0) {
       const s = styleCards[0];
-      styleText = `【文风设定】
-- 平均句长：${s.avgSentenceLength || 25}字（短句<15字占${Math.round((s.shortSentenceRatio || 0.3) * 100)}%，长句>40字占${Math.round((s.longSentenceRatio || 0.15) * 100)}%）
-- 对话占比：${Math.round((s.dialogueRatio || 0.35) * 100)}%，描写：${Math.round((s.descriptionRatio || 0.25) * 100)}%，动作：${Math.round((s.actionRatio || 0.25) * 100)}%
-- 视角：${s.povType || "第三人称限知"}，叙事距离：${s.narrativeDistance || "中等"}`
-        + (s.styleDescription ? `\n- 风格说明：${s.styleDescription}` : "");
+      styleText = [
+        `文风：${s.styleDescription || ""}`,
+        `视角：${s.povType || "third_person_limited"}`,
+        `句长：${s.avgSentenceLength || 25}字`,
+        `对话${Math.round((s.dialogueRatio || 0.35) * 100)}% 描写${Math.round((s.descriptionRatio || 0.25) * 100)}% 动作${Math.round((s.actionRatio || 0.25) * 100)}%`,
+      ].join(" · ");
     }
     if (llmConfig.customStyleNotes) {
-      styleText += `\n- 自定义风格：${llmConfig.customStyleNotes}`;
+      styleText += "\n" + String(llmConfig.customStyleNotes).slice(0, 300);
     }
 
-    // ═══════════════════════════════════════════════
-    // 模型选择 —— 自动检测 Provider 命名约定
-    // ═══════════════════════════════════════════════
-
+    // ── 硅基流动固定配置 ──
     const baseURL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1");
     const apiKey = process.env.LLM_API_KEY || "";
-    // 检测 API 提供商 → 选择正确的模型命名
-    const isDeepSeekOfficial = baseURL.includes("api.deepseek.com");
-    const PRO_MODEL = isDeepSeekOfficial ? "deepseek-v4-pro" : "deepseek-ai/DeepSeek-V4-Pro";
-    const FLASH_MODEL = isDeepSeekOfficial ? "deepseek-v4-flash" : "deepseek-ai/DeepSeek-V4-Flash";
-
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
     const shouldUseFlash = useFlash || hasCustomPrompt;
-    // 环境变量优先，否则用自动检测的命名
     const model = shouldUseFlash
-      ? (process.env.FLASH_MODEL || process.env.EXTRACTOR_MODEL || FLASH_MODEL)
-      : (process.env.ARCHITECT_MODEL || process.env.WRITER_MODEL || PRO_MODEL);
+      ? (process.env.FLASH_MODEL || process.env.EXTRACTOR_MODEL || "deepseek-ai/DeepSeek-V4-Flash")
+      : (process.env.ARCHITECT_MODEL || "deepseek-ai/DeepSeek-V4-Pro");
 
-    let chapters: any[] = [];
-    let rawOutline = "";
-
-    // ── 构建 Prompt ──
-
-    const chineseNumbers = Array.from({ length: chapterCount }, (_, i) => {
-      const n = i + 1;
-      // 简单中文数字（章节标题用）
-      const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
+    // ── 中文数字 ──
+    const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
+    const cn = (n: number) => {
       if (n <= 12) return digits[n];
       if (n < 20) return "十" + digits[n - 10];
       if (n % 10 === 0) return digits[n / 10] + "十";
       return digits[Math.floor(n / 10)] + "十" + digits[n % 10];
-    });
+    };
 
+    // ── Prompt ──
     const systemPrompt = hasCustomPrompt
-      ? `你是小说大纲拆解专家。用户提供了具体提示词，请严格按照提示词的要求，将小说大纲拆解为${chapterCount}章。
-输出严格 JSON：
-{
-  "chapters": [
-    {
-      "title": "第X章：标题（简短有力，8-15字）",
-      "summary": "本章梗概（2-3句话，不超过100字。写清楚发生了什么、核心冲突是什么）",
-      "coreConflict": "核心冲突（一句话）",
-      "characters": ["出场角色名"]
-    }
-  ],
-  "rawOutline": "生成的大纲总览（200字以内）"
-}
-只输出 JSON，不要额外文字。`
-      : `你是小说大纲拆解专家。根据作品的类型、基调、角色设定和世界观，将主线总纲拆解为${chapterCount}章的详细大纲。
-输出严格 JSON：
-{
-  "chapters": [
-    {
-      "title": "第X章：标题（简短有力，8-15字）",
-      "summary": "本章梗概（2-3句话，不超过100字。写清楚发生了什么、核心冲突是什么）",
-      "coreConflict": "核心冲突（一句话）",
-      "characters": ["出场角色名"]
-    }
-  ],
-  "rawOutline": "生成的大纲总览（200字以内）"
-}
-只输出 JSON，不要额外文字。`;
+      ? `你是小说大纲拆解专家。严格按照用户提示词将大纲拆为${chapterCount}章。输出纯JSON：
+{"chapters":[{"title":"第X章：标题（8-15字）","summary":"梗概（2-3句，≤100字）","coreConflict":"核心冲突","characters":["出场角色"]}],"rawOutline":"总览≤200字"}`
+      : `你是小说大纲拆解专家。基于作品设定将总纲拆为${chapterCount}章详细大纲。输出纯JSON：
+{"chapters":[{"title":"第X章：标题（8-15字）","summary":"梗概（2-3句，≤100字）","coreConflict":"核心冲突","characters":["出场角色"]}],"rawOutline":"总览≤200字"}`;
 
     const userPrompt = hasCustomPrompt
-      ? `【用户提示词——最高优先级，据此生成章纲】
+      ? `【用户提示词——最高优先级】
 ${customPrompt}
 
-【小说背景——作为补充参考】
-作品名：${project.name}
-类型：${project.genre.join("、")}
+【作品背景】
+${project.name} · ${project.genre.join("、")}
 总纲：${project.synopsis}
 基调：${project.toneKeywords.join("、")}
 ${styleText}
 
-【已有角色（共${allChars.length}人，展示${slimChars.length}位核心角色）】
+【全量角色（${allChars.length}人）】
 ${characterBriefs}
 
-【世界观词条（${(project.lorebookEntries || []).length}条）】
-${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\n")}
+【世界观（${loreEntries.length}条）】
+${loreBriefs}
 
-请优先按照用户提示词的指示生成${chapterCount}章大纲。输出 JSON。`
-      : `【小说设定】
-作品名：${project.name}
-类型：${project.genre.join("、")}
-目标字数：${project.targetWordCount.toLocaleString()}字
-主线总纲：${project.synopsis}
+按用户提示词生成${chapterCount}章大纲。只输出JSON。`
+      : `【作品设定】
+${project.name} · ${project.genre.join("、")} · 目标${project.targetWordCount.toLocaleString()}字
+总纲：${project.synopsis}
 基调：${project.toneKeywords.join("、")}
 ${styleText}
 
-【角色设定（共${allChars.length}人，展示${slimChars.length}位核心）】
+【全量角色（${allChars.length}人）】
 ${characterBriefs}
 
-【世界观设定（${(project.lorebookEntries || []).length}条）】
-${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\n")}
+【世界观（${loreEntries.length}条）】
+${loreBriefs}
 
-请基于上述设定生成${chapterCount}章大纲。从"第一章"开始，按剧情推进自然编号。输出 JSON。`;
+生成${chapterCount}章大纲，从"第一章"开始顺序编号。只输出JSON。`;
 
-    // ── 调用 LLM ──
+    // ── 调用硅基流动 ──
+    const url = baseURL.endsWith("/v1") ? `${baseURL}/chat/completions` : `${baseURL}/v1/chat/completions`;
 
     let structuredContent = "";
-
     try {
-      const url = baseURL.endsWith("/v1") ? `${baseURL}/chat/completions` : `${baseURL}/v1/chat/completions`;
       const llmRes = await fetch(url, {
         method: "POST",
         headers: {
@@ -188,7 +139,7 @@ ${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\
             { role: "user", content: userPrompt },
           ],
           temperature: hasCustomPrompt ? 0.7 : 0.4,
-          max_tokens: 8192,
+          max_tokens: 16384,
           stream: false,
         }),
       });
@@ -196,7 +147,7 @@ ${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\
       if (!llmRes.ok) {
         const err = await llmRes.text().catch(() => "");
         return NextResponse.json(
-          { error: `LLM API ${llmRes.status}: ${err.slice(0, 200)}` },
+          { error: `API ${llmRes.status}: ${err.slice(0, 300)}` },
           { status: 502 }
         );
       }
@@ -205,68 +156,68 @@ ${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\
       structuredContent = data.choices?.[0]?.message?.content || "";
     } catch (err) {
       return NextResponse.json(
-        { error: `模型调用失败：${err instanceof Error ? err.message : String(err)}` },
+        { error: `调用失败：${err instanceof Error ? err.message : String(err)}` },
         { status: 502 }
       );
     }
 
-    // ── 解析 JSON 响应 ──
+    if (!structuredContent || structuredContent.length < 20) {
+      return NextResponse.json(
+        { error: "模型返回空内容，请重试" },
+        { status: 502 }
+      );
+    }
+
+    // ── 解析 JSON ──
+    let chapters: any[] = [];
+    let rawOutline = "";
 
     try {
       let jsonStr = structuredContent.trim();
-      if (jsonStr.startsWith("```json")) jsonStr = jsonStr.slice(7);
-      if (jsonStr.startsWith("```")) jsonStr = jsonStr.slice(3);
-      if (jsonStr.endsWith("```")) jsonStr = jsonStr.slice(0, -3);
-      const parsed = JSON.parse(jsonStr.trim());
+      const md = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (md) jsonStr = md[1].trim();
+      else {
+        const a = jsonStr.indexOf("{"), b = jsonStr.lastIndexOf("}");
+        if (a >= 0 && b > a) jsonStr = jsonStr.slice(a, b + 1);
+      }
+      const parsed = JSON.parse(jsonStr);
       chapters = parsed.chapters || [];
       rawOutline = parsed.rawOutline || "";
-
-      // 确保标题从"第一章"开始，按顺序编号
-      if (chapters.length > 0) {
-        chapters = chapters.map((ch: any, i: number) => {
-          const cn = chineseNumbers[i];
-          const rawTitle = (ch.title || `第${cn}章`).replace(/^第[^章]*章[：:]?\s*/, "");
-          return {
-            title: `第${cn}章：${rawTitle}`,
-            summary: ch.summary || "",
-            coreConflict: ch.coreConflict || "",
-            characters: ch.characters || [],
-          };
-        });
-      }
     } catch {
-      // JSON 解析失败 → 用正则从原文拆
-      console.warn("结构化大纲解析失败，使用正则回退");
-      const chapterPattern = /第[一二三四五六七八九十百千\d]+章[：:]\s*(.+)/g;
-      let match;
-      const titles: string[] = [];
-      while ((match = chapterPattern.exec(structuredContent)) !== null) {
-        titles.push(match[1] || match[0]);
+      // 正则回退
+      const re = /第[一二三四五六七八九十百千\d]+章[：:]\s*(.+)/g;
+      let m;
+      while ((m = re.exec(structuredContent)) !== null) {
+        chapters.push({ title: m[0].trim(), summary: "", coreConflict: "", characters: [] });
       }
-      chapters = titles.slice(0, chapterCount).map((t, i) => ({
-        title: `第${chineseNumbers[i]}章：${t.trim().slice(0, 50)}`,
-        summary: "",
-        coreConflict: "",
-        characters: [],
-      }));
       rawOutline = structuredContent.slice(0, 500);
     }
 
-    // ── 兜底：如果解析结果为空 ──
+    // ── 兜底 ──
     if (chapters.length === 0) {
       chapters = Array.from({ length: chapterCount }, (_, i) => ({
-        title: `第${chineseNumbers[i]}章`,
+        title: `第${cn(i + 1)}章`,
         summary: "故事继续推进",
         coreConflict: "",
         characters: [],
       }));
-      rawOutline = structuredContent.slice(0, 500);
     }
 
+    // ── 标题规范化：确保从"第一章"开始 ──
+    chapters = chapters.slice(0, chapterCount).map((ch: any, i: number) => {
+      const rawTitle = (ch.title || `第${cn(i + 1)}章`).replace(/^第[^章]*章[：:]?\s*/, "");
+      return {
+        title: `第${cn(i + 1)}章：${rawTitle}`,
+        summary: ch.summary || "",
+        coreConflict: ch.coreConflict || "",
+        characters: ch.characters || [],
+      };
+    });
+
     return NextResponse.json({
-      chapters: chapters.slice(0, chapterCount),
+      chapters,
       rawOutline: rawOutline || structuredContent.slice(0, 500),
-      totalGenerated: Math.min(chapters.length, chapterCount),
+      totalGenerated: chapters.length,
       modelUsed: shouldUseFlash ? "v4-flash" : "v4-pro",
     });
   } catch (err) {
@@ -278,16 +229,7 @@ ${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\
 }
 
 /**
- * PUT /api/generate/outline
- *
- * 用户确认后将章节写入 StoryNode。
- *
- * 请求体：
- * {
- *   projectId: string;
- *   chapters: [{ title, summary, coreConflict, characters }];
- *   replaceAll?: boolean;     // 是否替换所有已有大纲节点（默认 true）
- * }
+ * PUT /api/generate/outline —— 确认后写入 StoryNode
  */
 export async function PUT(request: Request) {
   try {
@@ -297,20 +239,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "缺少参数" }, { status: 400 });
     }
 
-    // 可选：删除旧大纲节点（仅删除 root 级别章节，保留子节点）
     if (replaceAll) {
       const oldRootNodes = await prisma.storyNode.findMany({
         where: { projectId, parentId: null, type: { not: "volume" } },
       });
       if (oldRootNodes.length > 0) {
-        // 级联删除旧节点（Prisma 会因 onDelete: Cascade 自动删子节点）
         await prisma.storyNode.deleteMany({
           where: { id: { in: oldRootNodes.map((n) => n.id) } },
         });
       }
     }
 
-    // 获取当前最大 order
     const lastNode = await prisma.storyNode.findFirst({
       where: { projectId },
       orderBy: { order: "desc" },
