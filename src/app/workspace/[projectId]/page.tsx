@@ -8,72 +8,14 @@ import { StyleSelector } from "@/components/editor/StyleSelector";
 import { StyleEditor } from "@/components/editor/StyleEditor";
 import { EntityDetector } from "@/components/editor/EntityDetector";
 import { ContextPreview } from "@/components/editor/ContextPreview";
-import { OutlineGenerator } from "@/components/editor/OutlineGenerator";
+
 import { ImportWizard } from "@/components/editor/ImportWizard";
 import { CardUpdater } from "@/components/editor/CardUpdater";
+import { CharacterList } from "@/components/workspace/CharacterList";
+import { LorebookList } from "@/components/workspace/LorebookList";
+import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
+import { categoryLabel } from "@/components/workspace/types";
 import type { StyleTemplate } from "@/core/templates";
-
-// ─── 类型 ────────────────────────────────────────────────────
-
-interface ProjectData {
-  id: string;
-  name: string;
-  genre: string[];
-  synopsis: string;
-  toneKeywords: string[];
-  characters: CharacterData[];
-  lorebookEntries: LorebookData[];
-  storyNodes: StoryNodeData[];
-}
-
-interface CharacterData {
-  id: string;
-  name: string;
-  role: string;
-  personality: string[];
-  age: string;
-  gender: string;
-  currentStatus: string;
-}
-
-interface LorebookData {
-  id: string;
-  title: string;
-  category: string;
-  keys: string[];
-  content: string;
-  enabled: boolean;
-}
-
-interface StoryNodeData {
-  id: string;
-  title: string;
-  type: string;
-  status: string;
-  outline: string | null;
-  content: string | null;
-  wordCount: number;
-  order: number;
-  parentId: string | null;
-  activeCharacters: string[];
-}
-
-interface ReviewIssue {
-  type: string;
-  severity: string;
-  description: string;
-}
-
-interface SSEEvent {
-  type: string;
-  content: string;
-  severity?: string;
-  passed?: boolean;
-  issues?: ReviewIssue[];
-  usage?: { completionTokens: number; totalTokens: number };
-  nodeId?: string;
-  status?: string;
-}
 
 // ─── 页面组件 ────────────────────────────────────────────────
 
@@ -113,9 +55,6 @@ export default function WorkspacePage() {
   // 设定导入
   const [showSettingsImport, setShowSettingsImport] = useState(false);
 
-  // 大纲生成弹窗
-  const [showOutlineGenerator, setShowOutlineGenerator] = useState(false);
-
   // 文风编辑弹窗
   const [showStyleEditor, setShowStyleEditor] = useState(false);
 
@@ -144,6 +83,11 @@ export default function WorkspacePage() {
   const [showCardUpdater, setShowCardUpdater] = useState(false);
   const [lastChapterContent, setLastChapterContent] = useState("");
   const [lastChapterTitle, setLastChapterTitle] = useState("");
+  // 自动检测通知
+  const [autoUpdateNotification, setAutoUpdateNotification] = useState<{
+    summary: string; charCount: number; newCharCount: number; loreCount: number;
+  } | null>(null);
+  const [autoAnalyzing, setAutoAnalyzing] = useState(false);
 
   // 生成中断控制
   const abortRef = useRef<AbortController | null>(null);
@@ -152,9 +96,17 @@ export default function WorkspacePage() {
 
   const loadProject = useCallback(async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [projRes, styleRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}`),
+        fetch(`/api/projects/${projectId}/style`).catch(() => null),
+      ]);
+      if (projRes.ok) {
+        const data = await projRes.json();
+        // 加载风格卡
+        if (styleRes?.ok) {
+          const styleData = await styleRes.json();
+          if (!styleData.error) data.styleCard = styleData;
+        }
         setProject(data);
         // 默认选第一个没有内容的节点
         if (data.storyNodes?.length > 0) {
@@ -173,26 +125,143 @@ export default function WorkspacePage() {
     }
   }, [projectId, router]);
 
+  // ── 自动分析章节变化（生成完成后后台运行）──────
+
+  const autoAnalyzeChapter = useCallback(async (content: string, title: string) => {
+    if (!content || content.length < 200) return; // 太短不分析
+    setAutoAnalyzing(true);
+
+    try {
+      const res = await fetch("/api/generate/update-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, chapterContent: content, chapterTitle: title }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const charCount = (data.characterUpdates || []).length;
+      const newCharCount = (data.newCharacters || []).length;
+      const loreCount = (data.newLoreEntries || []).length;
+      const total = charCount + newCharCount + loreCount;
+
+      // 只有检测到变化才弹通知
+      if (total > 0) {
+        setAutoUpdateNotification({
+          summary: data.summary || `检测到 ${total} 条变化`,
+          charCount,
+          newCharCount,
+          loreCount,
+        });
+      }
+    } catch {
+      // 静默失败，不影响写作流
+    } finally {
+      setAutoAnalyzing(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     loadProject();
   }, [loadProject]);
 
-  // ─── 大纲生成 ─────────────────────────────────────────────
+  // ─── 大纲生成对话框 ─────────────────────────────────────
+  const [showOutlineDialog, setShowOutlineDialog] = useState(false);
+  const [outlineChapterCount, setOutlineChapterCount] = useState(8);
+  const [outlineCustomChapterCount, setOutlineCustomChapterCount] = useState("");
+  const [outlineCustomPrompt, setOutlineCustomPrompt] = useState("");
+  const [outlineGenerating, setOutlineGenerating] = useState(false);
+  const [outlinePreviewChapters, setOutlinePreviewChapters] = useState<
+    { title: string; summary: string; coreConflict: string; characters: string[] }[]
+  >([]);
+  const [outlineModelUsed, setOutlineModelUsed] = useState("");
+  const [outlineRaw, setOutlineRaw] = useState("");
+  const [outlineError, setOutlineError] = useState("");
+  const [outlineUseFlash, setOutlineUseFlash] = useState(false);
 
-  const handleGenerateOutline = async () => {
+  /** 获取实际章节数（含自定义） */
+  const getEffectiveChapterCount = () => {
+    if (outlineChapterCount === -1) {
+      const n = parseInt(outlineCustomChapterCount);
+      return isNaN(n) || n < 1 ? 4 : Math.min(n, 30);
+    }
+    return outlineChapterCount;
+  };
+
+  /** 生成大纲预览（不写入DB） */
+  const handleGenerateOutlinePreview = async () => {
     if (!project) return;
+    setOutlineGenerating(true);
+    setOutlineError("");
+    setOutlinePreviewChapters([]);
+    setOutlineRaw("");
+    setOutlineModelUsed("");
+
+    const hasCustomPrompt = outlineCustomPrompt.trim().length > 0;
+
     try {
       const res = await fetch("/api/generate/outline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id }),
+        body: JSON.stringify({
+          projectId: project.id,
+          chapterCount: getEffectiveChapterCount(),
+          customPrompt: hasCustomPrompt ? outlineCustomPrompt : undefined,
+          useFlash: outlineUseFlash || hasCustomPrompt,
+        }),
       });
-      if (res.ok) {
-        await loadProject();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "未知错误" }));
+        setOutlineError(err.error || `HTTP ${res.status}`);
+        return;
       }
+      const data = await res.json();
+      const chapters = data.chapters || [];
+      if (chapters.length === 0) {
+        setOutlineError("未生成任何章节，请检查角色和世界书是否有内容");
+        return;
+      }
+      setOutlinePreviewChapters(chapters);
+      setOutlineRaw(data.rawOutline || "");
+      setOutlineModelUsed(data.modelUsed || "未知");
     } catch (err) {
-      console.error("生成大纲失败:", err);
+      setOutlineError(err instanceof Error ? err.message : "网络错误");
+    } finally {
+      setOutlineGenerating(false);
     }
+  };
+
+  /** 确认写入大纲到DB */
+  const handleConfirmOutline = async () => {
+    if (!project || outlinePreviewChapters.length === 0) return;
+    setOutlineGenerating(true);
+    try {
+      const putRes = await fetch("/api/generate/outline", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, chapters: outlinePreviewChapters, replaceAll: true }),
+      });
+      if (!putRes.ok) {
+        const err = await putRes.json().catch(() => ({ error: "创建失败" }));
+        alert("创建章节节点失败: " + (err.error || putRes.status));
+        return;
+      }
+      setShowOutlineDialog(false);
+      setOutlinePreviewChapters([]);
+      setOutlineCustomPrompt("");
+      await loadProject();
+    } catch (err) {
+      alert("写入大纲出错: " + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setOutlineGenerating(false);
+    }
+  };
+
+  /** 修改预览中的某一章 */
+  const updatePreviewChapter = (index: number, field: string, value: string) => {
+    setOutlinePreviewChapters((prev) =>
+      prev.map((ch, i) => (i === index ? { ...ch, [field]: value } : ch))
+    );
   };
 
   // ─── 正文生成 (SSE 流式) ──────────────────────────────────
@@ -250,10 +319,13 @@ export default function WorkspacePage() {
               });
             } else if (event.type === "done") {
               // 保存最后生成的内容用于卡面更新
-              setLastChapterContent(streamContent);
+              const finalContent = streamContent + (event.content || "");
+              setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
               // 刷新数据
               loadProject();
+              // 自动检测章节变化
+              autoAnalyzeChapter(finalContent, selectedNode?.title || "");
             } else if (event.type === "error") {
               console.error("生成错误:", event.content);
             }
@@ -445,17 +517,19 @@ export default function WorkspacePage() {
       <Toolbar
         projectName={project.name}
         onBack={() => router.push("/")}
-        onGenerateOutline={() => setShowOutlineGenerator(true)}
+        onGenerateOutline={() => setShowOutlineDialog(true)}
         onSummarize={handleSummarize}
         onImportSettings={() => setShowSettingsImport(true)}
         onImportChapters={() => setShowImportWizard(true)}
         onEditStyle={() => setShowStyleEditor(true)}
         onExport={handleExport}
         isGenerating={isGenerating || continueLoading}
+        outlineGenerating={outlineGenerating}
         summarizing={summarizing}
         projectId={project.id}
         styleTemplateId={styleTemplateId}
         onStyleSelect={(t) => setStyleTemplateId(t.id)}
+        styleCard={project.styleCard}
       />
 
       {/* 三栏主区 */}
@@ -564,15 +638,6 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* 大纲生成器 */}
-      {showOutlineGenerator && (
-        <OutlineGenerator
-          projectId={project.id}
-          onChaptersCreated={loadProject}
-          onClose={() => setShowOutlineGenerator(false)}
-        />
-      )}
-
       {/* 文风编辑器 */}
       {showStyleEditor && (
         <StyleEditor
@@ -592,14 +657,88 @@ export default function WorkspacePage() {
         />
       )}
 
+      {/* 自动检测通知横幅 */}
+      {autoUpdateNotification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-950/95 to-purple-950/95 border border-indigo-700/60 shadow-2xl backdrop-blur">
+            <div className="flex items-center gap-2">
+              {autoAnalyzing ? (
+                <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="text-lg">🔍</span>
+              )}
+              <div>
+                <p className="text-sm text-zinc-200 font-medium">
+                  {autoAnalyzing ? "正在分析本章变化..." : autoUpdateNotification.summary}
+                </p>
+                {!autoAnalyzing && (
+                  <p className="text-xs text-zinc-500">
+                    {autoUpdateNotification.charCount > 0 && `🔄 ${autoUpdateNotification.charCount}角色更新 `}
+                    {autoUpdateNotification.newCharCount > 0 && `🆕 ${autoUpdateNotification.newCharCount}新角色 `}
+                    {autoUpdateNotification.loreCount > 0 && `🌍 ${autoUpdateNotification.loreCount}新设定`}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setAutoUpdateNotification(null);
+                  setShowCardUpdater(true);
+                }}
+                disabled={autoAnalyzing}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+              >
+                查看详情
+              </button>
+              <button
+                onClick={() => setAutoUpdateNotification(null)}
+                className="px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                忽略
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 章节卡面更新 */}
       {showCardUpdater && (
         <CardUpdater
           projectId={project.id}
           chapterContent={lastChapterContent}
           chapterTitle={lastChapterTitle}
-          onApplied={loadProject}
+          onApplied={() => { loadProject(); setAutoUpdateNotification(null); }}
           onClose={() => setShowCardUpdater(false)}
+        />
+      )}
+
+      {/* 大纲生成对话框 */}
+      {showOutlineDialog && (
+        <OutlineDialog
+          projectName={project.name}
+          chapterCount={outlineChapterCount}
+          customChapterCount={outlineCustomChapterCount}
+          customPrompt={outlineCustomPrompt}
+          useFlash={outlineUseFlash}
+          previewChapters={outlinePreviewChapters}
+          modelUsed={outlineModelUsed}
+          rawOutline={outlineRaw}
+          error={outlineError}
+          isGenerating={outlineGenerating}
+          onChapterCountChange={setOutlineChapterCount}
+          onCustomChapterCountChange={setOutlineCustomChapterCount}
+          onCustomPromptChange={setOutlineCustomPrompt}
+          onUseFlashChange={setOutlineUseFlash}
+          onGenerate={handleGenerateOutlinePreview}
+          onConfirm={handleConfirmOutline}
+          onUpdateChapter={updatePreviewChapter}
+          onClose={() => {
+            setShowOutlineDialog(false);
+            setOutlinePreviewChapters([]);
+            setOutlineError("");
+            setOutlineRaw("");
+          }}
         />
       )}
     </div>
@@ -622,10 +761,12 @@ function Toolbar({
   onEditStyle,
   onExport,
   isGenerating,
+  outlineGenerating,
   summarizing,
   projectId,
   styleTemplateId,
   onStyleSelect,
+  styleCard,
 }: {
   projectName: string;
   onBack: () => void;
@@ -636,50 +777,76 @@ function Toolbar({
   onEditStyle: () => void;
   onExport: (format: "markdown" | "txt") => void;
   isGenerating: boolean;
+  outlineGenerating?: boolean;
   summarizing: boolean;
   projectId: string;
   styleTemplateId?: string;
   onStyleSelect: (t: StyleTemplate) => void;
+  styleCard?: ProjectData["styleCard"];
 }) {
   const [showExport, setShowExport] = useState(false);
 
+  const povLabel = (p?: string) => {
+    if (!p) return "";
+    if (p === "first_person") return "第一人称";
+    if (p === "third_person_limited") return "第三人称限制";
+    if (p === "third_person_omniscient") return "第三人称全知";
+    return p;
+  };
+
   return (
     <header className="h-12 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4 shrink-0 relative">
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className="text-zinc-500 hover:text-zinc-300 text-sm">
+      <div className="flex items-center gap-3 min-w-0">
+        <button onClick={onBack} className="text-zinc-500 hover:text-zinc-300 text-sm shrink-0">
           ← 返回
         </button>
-        <span className="text-zinc-700">|</span>
-        <span className="font-medium text-sm">{projectName}</span>
+        <span className="text-zinc-700 shrink-0">|</span>
+        <span className="font-medium text-sm truncate">{projectName}</span>
       </div>
 
       <div className="flex items-center gap-1.5">
+        {/* 风格卡可视化指示器 */}
+        {styleCard?.styleDescription && (
+          <button
+            onClick={onEditStyle}
+            disabled={isGenerating}
+            className="flex items-center gap-1.5 text-xs border border-amber-700/50 rounded px-2 py-1 bg-amber-950/20 hover:bg-amber-950/40 transition-colors shrink-0"
+            title={`${styleCard.styleDescription}\n${povLabel(styleCard.povType)} · 对话${((styleCard.dialogueRatio||0)*100).toFixed(0)}% · 描写${((styleCard.descriptionRatio||0)*100).toFixed(0)}%`}
+          >
+            <span>🎨</span>
+            <span className="text-amber-300 max-w-[80px] truncate">{styleCard.styleDescription}</span>
+            <span className="text-zinc-500">·</span>
+            <span className="text-zinc-400 whitespace-nowrap">{povLabel(styleCard.povType)}</span>
+          </button>
+        )}
+        {!styleCard?.styleDescription && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onEditStyle}
+            disabled={isGenerating}
+            className="text-xs border-zinc-700 h-7"
+            title="文风卡（未设定）"
+          >
+            🎨 文风
+          </Button>
+        )}
+
+        <span className="text-zinc-800 mx-0.5">|</span>
+
         <StyleSelector
           projectId={projectId}
           currentStyleId={styleTemplateId}
           onSelect={onStyleSelect}
         />
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onEditStyle}
-          disabled={isGenerating}
-          className="text-xs border-zinc-700 h-7"
-          title="编辑文风细节"
-        >
-          ⚙️
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
+        <button
           onClick={onGenerateOutline}
-          disabled={isGenerating}
-          className="text-xs border-zinc-700 h-7"
+          disabled={isGenerating || outlineGenerating}
+          className="text-xs border border-zinc-700 rounded px-2.5 h-7 text-zinc-300 hover:bg-zinc-700/80 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          🤖 大纲
-        </Button>
+          {outlineGenerating ? "⏳" : "🤖"} 大纲
+        </button>
 
         <Button
           size="sm"
@@ -698,17 +865,7 @@ function Toolbar({
           disabled={isGenerating}
           className="text-xs border-purple-700 text-purple-400 hover:text-purple-300 h-7"
         >
-          📥 导入章节
-        </Button>
-
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onImportSettings}
-          disabled={isGenerating}
-          className="text-xs border-indigo-700 text-indigo-400 hover:text-indigo-300 h-7"
-        >
-          📋 设定
+          📥 导入
         </Button>
 
         <div className="relative">
@@ -719,7 +876,7 @@ function Toolbar({
             disabled={isGenerating}
             className="text-xs border-zinc-700 h-7"
           >
-            📥 导出
+            📤 导出
           </Button>
           {showExport && (
             <>
@@ -834,17 +991,20 @@ function LeftPanel({
         {activeTab === "characters" && (
           <CharacterList
             characters={project.characters}
+            projectId={project.id}
             onEdit={onEditCharacter}
             onDelete={async (id) => {
               await fetch(`/api/characters/${id}`, { method: "DELETE" });
               loadProject();
             }}
             onNew={onNewCharacter}
+            onExpanded={loadProject}
           />
         )}
 
         {activeTab === "lorebook" && (
           <LorebookList
+            projectId={project.id}
             entries={project.lorebookEntries}
             onEdit={onEditLore}
             onDelete={async (id) => {
@@ -852,6 +1012,7 @@ function LeftPanel({
               loadProject();
             }}
             onNew={onNewLore}
+            onRefresh={loadProject}
           />
         )}
       </div>
@@ -1097,93 +1258,6 @@ function NodeTreeItem({
           depth={depth + 1}
         />
       ))}
-    </div>
-  );
-}
-
-// ─── 角色列表 ───────────────────────────────────────────────
-
-function CharacterList({
-  characters,
-  onEdit,
-  onDelete,
-  onNew,
-}: {
-  characters: CharacterData[];
-  onEdit: (c: CharacterData) => void;
-  onDelete: (id: string) => void;
-  onNew: () => void;
-}) {
-  return (
-    <div className="space-y-1">
-      {characters.map((c) => (
-        <div
-          key={c.id}
-          onClick={() => onEdit(c)}
-          className="flex items-center gap-2 py-1.5 px-2 rounded text-xs cursor-pointer text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300 group"
-        >
-          <span className="w-5 h-5 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] shrink-0">
-            {c.name[0]}
-          </span>
-          <span className="flex-1 truncate">{c.name}</span>
-          <span className="text-zinc-600 text-[10px]">
-            {c.role === "protagonist" ? "主角" : c.role === "antagonist" ? "反派" : "配角"}
-          </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm(`删除角色「${c.name}」？`)) onDelete(c.id);
-            }}
-            className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-
-      <button
-        onClick={onNew}
-        className="w-full text-left text-xs text-indigo-400 hover:text-indigo-300 py-1 px-2"
-      >
-        + 添加角色
-      </button>
-    </div>
-  );
-}
-
-// ─── 世界书列表 ─────────────────────────────────────────────
-
-function LorebookList({
-  entries,
-  onEdit,
-  onDelete,
-  onNew,
-}: {
-  entries: LorebookData[];
-  onEdit: (l: LorebookData) => void;
-  onDelete: (id: string) => void;
-  onNew: () => void;
-}) {
-  return (
-    <div className="space-y-1">
-      {entries.map((e) => (
-        <div
-          key={e.id}
-          onClick={() => onEdit(e)}
-          className="flex items-center gap-2 py-1.5 px-2 rounded text-xs cursor-pointer text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300 group"
-        >
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${e.enabled ? "bg-green-500" : "bg-zinc-700"}`} />
-          <span className="flex-1 truncate">{e.title}</span>
-          <span className="text-zinc-600 text-[10px]">{e.category}</span>
-        </div>
-      ))}
-
-      <button
-        onClick={onNew}
-        className="w-full text-left text-xs text-indigo-400 hover:text-indigo-300 py-1 px-2"
-      >
-        + 添加词条
-      </button>
     </div>
   );
 }
@@ -1514,7 +1588,7 @@ function StatRow({ label, value }: { label: string; value: string }) {
 // 编辑弹窗
 // ═══════════════════════════════════════════════════════════════
 
-// ─── 角色编辑弹窗 ───────────────────────────────────────────
+// ─── 角色编辑弹窗（完整模板字段）────────────────────────
 
 function CharacterEditDialog({
   character,
@@ -1527,72 +1601,261 @@ function CharacterEditDialog({
   onClose: () => void;
   onSave: () => void;
 }) {
+  // 人格对象 → 可读文本
+  const toText = (p: unknown) => {
+    if (typeof p === "object" && p !== null && !Array.isArray(p)) {
+      const o = p as Record<string, unknown>;
+      const lines: string[] = [];
+      if (o.dominant) lines.push(`主导：${o.dominant}`);
+      if (o.drive) lines.push(`驱动：${o.drive}`);
+      if (o.contradiction) lines.push(`矛盾：${o.contradiction}`);
+      if (Array.isArray(o.habits) && o.habits.length) lines.push(`习惯：${(o.habits as string[]).join("、")}`);
+      if (o.socialMask) lines.push(`面具：${o.socialMask}`);
+      return lines.join("\n") || "";
+    }
+    if (Array.isArray(p)) return (p as string[]).join("、");
+    return String(p || "");
+  };
+  // 可读文本 → 人格对象
+  const fromText = (text: string): Record<string, unknown> => {
+    const lines = text.split("\n");
+    let dominant = "", drive = "", contradiction = "", habits: string[] = [], socialMask = "";
+    for (const line of lines) {
+      if (line.startsWith("主导：") || line.startsWith("主导:")) dominant = line.replace(/^主导[：:]\s*/, "").trim();
+      else if (line.startsWith("驱动：") || line.startsWith("驱动:")) drive = line.replace(/^驱动[：:]\s*/, "").trim();
+      else if (line.startsWith("矛盾：") || line.startsWith("矛盾:")) contradiction = line.replace(/^矛盾[：:]\s*/, "").trim();
+      else if (line.startsWith("习惯：") || line.startsWith("习惯:")) habits = line.replace(/^习惯[：:]\s*/, "").split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+      else if (line.startsWith("面具：") || line.startsWith("面具:")) socialMask = line.replace(/^面具[：:]\s*/, "").trim();
+      else if (line.trim()) { if (!dominant) dominant = line.trim(); else habits.push(line.trim()); }
+    }
+    return { dominant, drive, contradiction, habits, socialMask };
+  };
+
+  const app = (character.appearance || {}) as Record<string, unknown>;
+  const ds = (character.dialogueStyle || {}) as Record<string, unknown>;
+  const rels = Array.isArray(character.relationships) ? character.relationships.map((r: any) =>
+    [r.targetName, r.relation, r.dynamic].filter(Boolean).join("：")
+  ).join("\n") : "";
+
+  // 时间线 → 可读文本
+  const timelineToText = (tl?: { age: number; event: string; era: string }[]) => {
+    if (!tl || !tl.length) return "";
+    return tl.map(t => `${t.age}岁：${t.event}（${t.era}）`).join("\n");
+  };
+  // 文本 → 时间线
+  const textToTimeline = (text: string): { age: number; event: string; era: string }[] => {
+    return text.split("\n").filter(Boolean).map(line => {
+      const m = line.match(/^(\d+)\s*岁\s*[：:]\s*(.+?)\s*[（(]([^)）]*)[)）]\s*$/);
+      if (m) return { age: parseInt(m[1]), event: m[2].trim(), era: m[3].trim() };
+      // 不完整格式也接受
+      const m2 = line.match(/^(\d+)\s*岁\s*[：:]\s*(.+)$/);
+      if (m2) return { age: parseInt(m2[1]), event: m2[2].trim(), era: "" };
+      return { age: 0, event: line.trim(), era: "" };
+    });
+  };
+
   const [form, setForm] = useState({
-    name: character.name,
-    role: character.role,
-    age: character.age || "未知",
-    gender: character.gender || "未知",
-    personality: (character.personality || []).join("、"),
+    name: character.name || "",
+    aliases: (character.aliases || []).join("、"),
+    role: character.role || "supporting",
+    age: character.age || "",
+    gender: character.gender || "",
+    // 外貌
+    appearanceHair: String(app.hair || ""),
+    appearanceEyes: String(app.eyes || ""),
+    appearanceHeight: String(app.height || ""),
+    appearanceBuild: String(app.build || ""),
+    appearanceFeatures: String(app.features || ""),
+    appearanceAttire: String(app.attire || ""),
+    // 性格
+    personality: toText(character.personality),
+    // 背景
+    background: character.background || "",
+    // 能力
+    abilities: (character.abilities || []).join("、"),
+    // 隐藏动机
+    hiddenMotives: (character.hiddenMotives || []).join("、"),
+    // 关系
+    relationships: rels,
+    // 对话风格
+    dialogueDesc: String(ds.description || ""),
+    dialogueExamples: (Array.isArray(ds.examples) ? ds.examples as string[] : []).join("\n"),
+    dialogueVocab: (Array.isArray(ds.vocabulary) ? ds.vocabulary as string[] : []).join("、"),
+    dialoguePatterns: (Array.isArray(ds.speechPatterns) ? ds.speechPatterns as string[] : []).join("\n"),
+    // 经历时间线
+    timeline: timelineToText(character.timeline),
+    // 弧光
+    arcProgress: character.arcProgress || "",
+    // 状态
     currentStatus: character.currentStatus || "alive",
   });
 
   const handleSave = async () => {
+    const relLines = form.relationships.split("\n").filter(Boolean);
+    const relationships = relLines.map(line => {
+      const parts = line.split(/[：:]/);
+      return { targetName: parts[0]?.trim() || "", relation: parts[1]?.trim() || "", dynamic: parts[2]?.trim() || "" };
+    });
+
     await fetch(`/api/characters/${character.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
-        personality: form.personality.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
+        name: form.name,
+        aliases: form.aliases.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+        role: form.role,
+        age: form.age,
+        gender: form.gender,
+        appearance: {
+          hair: form.appearanceHair,
+          eyes: form.appearanceEyes,
+          height: form.appearanceHeight,
+          build: form.appearanceBuild,
+          features: form.appearanceFeatures,
+          attire: form.appearanceAttire,
+        },
+        personality: fromText(form.personality),
+        background: form.background,
+        abilities: form.abilities.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+        hiddenMotives: form.hiddenMotives.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+        relationships,
+        dialogueStyle: {
+          description: form.dialogueDesc,
+          examples: form.dialogueExamples.split("\n").filter(Boolean),
+          vocabulary: form.dialogueVocab.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+          speechPatterns: form.dialoguePatterns.split("\n").filter(Boolean),
+        },
+        timeline: textToTimeline(form.timeline),
+        arcProgress: form.arcProgress,
+        currentStatus: form.currentStatus,
       }),
     });
     onSave();
     onClose();
   };
 
+  const field = (label: string, value: string, set: (v: string) => void, opts?: { placeholder?: string; textarea?: boolean; rows?: number }) =>
+    <DialogField label={label}>
+      {opts?.textarea
+        ? <textarea className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm resize-y" style={{ minHeight: `${(opts.rows || 2) * 24}px` }} value={value} onChange={e => set(e.target.value)} placeholder={opts?.placeholder} />
+        : <DialogInput value={value} onChange={set} placeholder={opts?.placeholder} />}
+    </DialogField>;
+
   return (
     <DialogOverlay onClose={onClose}>
       <h3 className="text-lg font-semibold mb-4">编辑角色：{character.name}</h3>
-      <div className="space-y-3">
-        <DialogField label="姓名">
-          <DialogInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-        </DialogField>
-        <DialogField label="角色定位">
-          <select
-            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm"
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-          >
-            <option value="protagonist">主角</option>
-            <option value="antagonist">反派</option>
-            <option value="supporting">配角</option>
-            <option value="mentor">导师</option>
-            <option value="love_interest">恋爱对象</option>
-            <option value="background">背景角色</option>
-          </select>
-        </DialogField>
-        <DialogField label="年龄">
-          <DialogInput value={form.age} onChange={(v) => setForm({ ...form, age: v })} />
-        </DialogField>
-        <DialogField label="性别">
-          <DialogInput value={form.gender} onChange={(v) => setForm({ ...form, gender: v })} />
-        </DialogField>
-        <DialogField label="性格特征（逗号分隔）">
-          <DialogInput value={form.personality} onChange={(v) => setForm({ ...form, personality: v })} />
-        </DialogField>
-        <DialogField label="当前状态">
-          <select
-            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm"
-            value={form.currentStatus}
-            onChange={(e) => setForm({ ...form, currentStatus: e.target.value })}
-          >
-            <option value="alive">存活</option>
-            <option value="dead">死亡</option>
-            <option value="missing">失踪</option>
-            <option value="incapacitated">失去能力</option>
-          </select>
-        </DialogField>
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        {/* 基本标识 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">基本标识</h4>
+          <div className="space-y-2">
+            {field("姓名", form.name, v => setForm({ ...form, name: v }))}
+            {field("别名（逗号分隔）", form.aliases, v => setForm({ ...form, aliases: v }), { placeholder: "阿三, 剑圣, 老疯" })}
+            <div className="grid grid-cols-3 gap-2">
+              <DialogField label="角色定位">
+                <select className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                  <option value="protagonist">主角</option>
+                  <option value="antagonist">反派</option>
+                  <option value="supporting">配角</option>
+                  <option value="mentor">导师</option>
+                  <option value="love_interest">恋爱对象</option>
+                  <option value="background">背景角色</option>
+                </select>
+              </DialogField>
+              {field("年龄", form.age, v => setForm({ ...form, age: v }), { placeholder: "25岁" })}
+              {field("性别", form.gender, v => setForm({ ...form, gender: v }), { placeholder: "男" })}
+            </div>
+            <DialogField label="当前状态">
+              <select className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm" value={form.currentStatus} onChange={e => setForm({ ...form, currentStatus: e.target.value })}>
+                <option value="alive">存活</option>
+                <option value="dead">死亡</option>
+                <option value="missing">失踪</option>
+                <option value="incapacitated">失去能力</option>
+              </select>
+            </DialogField>
+          </div>
+        </div>
+
+        {/* 外貌 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">外貌</h4>
+          <div className="grid grid-cols-3 gap-2">
+            {field("发型发色", form.appearanceHair, v => setForm({ ...form, appearanceHair: v }), { placeholder: "黑长直" })}
+            {field("眼睛", form.appearanceEyes, v => setForm({ ...form, appearanceEyes: v }), { placeholder: "丹凤眼" })}
+            {field("身高", form.appearanceHeight, v => setForm({ ...form, appearanceHeight: v }), { placeholder: "178cm" })}
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {field("体型", form.appearanceBuild, v => setForm({ ...form, appearanceBuild: v }), { placeholder: "修长偏瘦" })}
+            {field("特殊印记", form.appearanceFeatures, v => setForm({ ...form, appearanceFeatures: v }), { placeholder: "左脸刀疤、虎口老茧" })}
+          </div>
+          <div className="mt-2">
+            {field("标志性着装", form.appearanceAttire, v => setForm({ ...form, appearanceAttire: v }), { placeholder: "黑色劲装, 腰间佩剑, 银质护腕" })}
+          </div>
+        </div>
+
+        {/* 性格 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">性格详析</h4>
+          {field("性格特征", form.personality, v => setForm({ ...form, personality: v }), {
+            textarea: true, rows: 5,
+            placeholder: "主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠，对熟人话多",
+          })}
+        </div>
+
+        {/* 背景 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">背景状态</h4>
+          {field("背景", form.background, v => setForm({ ...form, background: v }), {
+            textarea: true, rows: 4,
+            placeholder: "1)所在位置与境遇：xxx\n2)当前短期目标：xxx\n3)长期欲望：xxx\n4)所持资源与限制：xxx\n5)卷入核心事件的方式与态度：xxx",
+          })}
+        </div>
+
+        {/* 能力 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">能力/功法</h4>
+          {field("能力（逗号分隔）", form.abilities, v => setForm({ ...form, abilities: v }), { placeholder: "剑气决·入门, 医术·精湛, 潜行·大师" })}
+          {field("隐藏动机（逗号分隔）", form.hiddenMotives, v => setForm({ ...form, hiddenMotives: v }), { placeholder: "暗中寻找灭门仇人, 表面臣服实则谋反" })}
+        </div>
+
+        {/* 经历时间线 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">📅 经历时间线（防OOC——每行：X岁：事件（时间参照））</h4>
+          {field("时间线", form.timeline, v => setForm({ ...form, timeline: v }), {
+            textarea: true, rows: 5,
+            placeholder: "0岁：出生于青云镇铁匠铺（故事开始前18年）\n12岁：拜入青云宗外门（故事开始前6年）\n16岁：觉醒剑灵血脉（故事开始前2年）\n18岁：故事起点——宗门大比夺冠（第一卷）",
+          })}
+          <p className="text-xs text-zinc-500 mt-1">设定角色人生关键时间点，防止AI把前期角色写成后期状态。age 填该事件时角色的年龄。</p>
+        </div>
+
+        {/* 关系 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">人际关系（每行：人物名：关系：动态）</h4>
+          {field("关系", form.relationships, v => setForm({ ...form, relationships: v }), {
+            textarea: true, rows: 3,
+            placeholder: "张三：师徒：亦师亦友\n李四：宿敌：互相欣赏但立场对立\n王五：暗恋对象：尚未表白",
+          })}
+        </div>
+
+        {/* 对话风格 */}
+        <div className="border-b border-zinc-800 pb-3">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">对话风格</h4>
+          {field("风格描述", form.dialogueDesc, v => setForm({ ...form, dialogueDesc: v }), { placeholder: "冷漠寡言，但关键时字字千钧" })}
+          {field("典型台词（每行一句）", form.dialogueExamples, v => setForm({ ...form, dialogueExamples: v }), { textarea: true, rows: 2, placeholder: "哼，就这？\n我欠你一条命。" })}
+          {field("用词特点（逗号分隔）", form.dialogueVocab, v => setForm({ ...form, dialogueVocab: v }), { placeholder: "古风, 简洁, 偶带讽刺" })}
+          {field("句式模式（每行一种）", form.dialoguePatterns, v => setForm({ ...form, dialoguePatterns: v }), { textarea: true, rows: 2, placeholder: "多用反问句\n主语常省略\n偏爱四字短语" })}
+        </div>
+
+        {/* 弧光 */}
+        <div className="pb-2">
+          <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">人物弧光预登记</h4>
+          {field("弧光进度", form.arcProgress, v => setForm({ ...form, arcProgress: v }), {
+            textarea: true, rows: 2,
+            placeholder: "信念动摇触发点：xxx\n蜕变方向：xxx→xxx\n堕落风险：xxx",
+          })}
+        </div>
       </div>
-      <div className="flex justify-end gap-2 mt-5">
+      <div className="flex justify-end gap-2 mt-5 pt-3 border-t border-zinc-800">
         <Button variant="outline" onClick={onClose} className="border-zinc-700">取消</Button>
         <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500">保存</Button>
       </div>
@@ -1622,6 +1885,19 @@ function CharacterCreateDialog({
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
+    // 文本 → 人格对象
+    const lines = form.personality.split("\n");
+    let dominant = "", drive = "", contradiction = "", habits: string[] = [], socialMask = "";
+    for (const line of lines) {
+      if (line.startsWith("主导：") || line.startsWith("主导:")) dominant = line.replace(/^主导[：:]\s*/, "").trim();
+      else if (line.startsWith("驱动：") || line.startsWith("驱动:")) drive = line.replace(/^驱动[：:]\s*/, "").trim();
+      else if (line.startsWith("矛盾：") || line.startsWith("矛盾:")) contradiction = line.replace(/^矛盾[：:]\s*/, "").trim();
+      else if (line.startsWith("习惯：") || line.startsWith("习惯:")) habits = line.replace(/^习惯[：:]\s*/, "").split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+      else if (line.startsWith("面具：") || line.startsWith("面具:")) socialMask = line.replace(/^面具[：:]\s*/, "").trim();
+      else if (line.trim()) { if (!dominant) dominant = line.trim(); else habits.push(line.trim()); }
+    }
+    const personalityObj = { dominant, drive, contradiction, habits, socialMask };
+
     await fetch("/api/characters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1631,7 +1907,7 @@ function CharacterCreateDialog({
         role: form.role,
         age: form.age,
         gender: form.gender,
-        personality: form.personality.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
+        personality: personalityObj,
         currentStatus: form.currentStatus,
       }),
     });
@@ -1662,7 +1938,12 @@ function CharacterCreateDialog({
           </select>
         </DialogField>
         <DialogField label="性格特征（逗号分隔）">
-          <DialogInput value={form.personality} onChange={(v) => setForm({ ...form, personality: v })} placeholder="傲慢, 护短, 嗜酒" />
+          <textarea
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm min-h-[80px] resize-y"
+            value={form.personality}
+            onChange={(e) => setForm({ ...form, personality: e.target.value })}
+            placeholder={`主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠`}
+          />
         </DialogField>
       </div>
       <div className="flex justify-end gap-2 mt-5">
@@ -1820,6 +2101,270 @@ function LorebookCreateDialog({
         <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500" disabled={!form.title.trim()}>创建</Button>
       </div>
     </DialogOverlay>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 大纲生成对话框
+// ═══════════════════════════════════════════════════════════════
+
+function OutlineDialog({
+  projectName,
+  chapterCount,
+  customChapterCount,
+  customPrompt,
+  useFlash,
+  previewChapters,
+  modelUsed,
+  rawOutline,
+  error,
+  isGenerating,
+  onChapterCountChange,
+  onCustomChapterCountChange,
+  onCustomPromptChange,
+  onUseFlashChange,
+  onGenerate,
+  onConfirm,
+  onUpdateChapter,
+  onClose,
+}: {
+  projectName: string;
+  chapterCount: number;
+  customChapterCount: string;
+  customPrompt: string;
+  useFlash: boolean;
+  previewChapters: { title: string; summary: string; coreConflict: string; characters: string[] }[];
+  modelUsed: string;
+  rawOutline: string;
+  error: string;
+  isGenerating: boolean;
+  onChapterCountChange: (n: number) => void;
+  onCustomChapterCountChange: (s: string) => void;
+  onCustomPromptChange: (s: string) => void;
+  onUseFlashChange: (v: boolean) => void;
+  onGenerate: () => void;
+  onConfirm: () => void;
+  onUpdateChapter: (index: number, field: string, value: string) => void;
+  onClose: () => void;
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const hasPreview = previewChapters.length > 0;
+
+  const chapterOptions = [
+    { value: 4, label: "4 章" },
+    { value: 8, label: "8 章" },
+    { value: 12, label: "12 章" },
+    { value: -1, label: "自定义" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold">🤖 AI 生成大纲</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">《{projectName}》</p>
+          </div>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+        </div>
+
+        {/* 内容区——可滚动 */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* 章节数选择 */}
+          <div>
+            <label className="text-sm text-zinc-400 mb-2 block">章节数量</label>
+            <div className="flex gap-2 flex-wrap">
+              {chapterOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => onChapterCountChange(opt.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    chapterCount === opt.value
+                      ? "bg-indigo-600 text-white"
+                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {chapterCount === -1 && (
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={customChapterCount}
+                onChange={(e) => onCustomChapterCountChange(e.target.value)}
+                placeholder="输入章节数 (1-30)"
+                className="mt-2 w-32 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              />
+            )}
+          </div>
+
+          {/* 模型选择 + 提示词 */}
+          <div>
+            <label className="text-sm text-zinc-400 mb-2 flex items-center gap-3">
+              <span>自定义提示词（可选）</span>
+              <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useFlash}
+                  onChange={(e) => onUseFlashChange(e.target.checked)}
+                  className="rounded"
+                />
+                用 V4 Flash
+              </label>
+            </label>
+            <textarea
+              value={customPrompt}
+              onChange={(e) => onCustomPromptChange(e.target.value)}
+              placeholder={`不填则自动基于角色、世界书、总纲用 V4 Pro 生成。
+
+填写则按你的提示词生成章纲。例如：
+"重点写主角从懦弱到勇敢的转变过程，前三章铺垫，中间爆发，最后两章收尾"`}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-indigo-500"
+              rows={3}
+              disabled={isGenerating}
+            />
+            <p className="text-xs text-zinc-600 mt-1">
+              有提示词 → {useFlash ? "V4 Flash" : "V4 Pro"} 快速响应 · 无提示词 → V4 Pro 深度创作
+            </p>
+          </div>
+
+          {/* 错误提示 */}
+          {error && (
+            <div className="bg-red-950/40 border border-red-800 rounded-lg p-3 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
+          {/* 生成按钮 + 模型标注 */}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={onGenerate}
+              disabled={isGenerating || (chapterCount === -1 && !customChapterCount)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white"
+            >
+              {isGenerating ? "⏳ 生成中..." : "🚀 生成大纲预览"}
+            </Button>
+            {modelUsed && (
+              <span className="text-xs text-zinc-500">
+                模型：<span className={modelUsed === "v4-pro" ? "text-purple-400" : "text-cyan-400"}>{modelUsed}</span>
+              </span>
+            )}
+          </div>
+
+          {/* 总览文本 */}
+          {rawOutline && (
+            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3">
+              <p className="text-xs text-zinc-500 mb-1">📋 大纲总览</p>
+              <p className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">{rawOutline}</p>
+            </div>
+          )}
+
+          {/* 章节预览列表 */}
+          {hasPreview && (
+            <div>
+              <p className="text-sm text-zinc-400 mb-2">
+                📖 章节预览（{previewChapters.length} 章 · 点击可编辑）
+              </p>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {previewChapters.map((ch, i) => (
+                  <div
+                    key={i}
+                    className={`border rounded-lg p-3 transition-colors ${
+                      editingIndex === i
+                        ? "border-indigo-600 bg-indigo-950/20"
+                        : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
+                    }`}
+                  >
+                    {editingIndex === i ? (
+                      // 编辑模式
+                      <div className="space-y-2">
+                        <input
+                          className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+                          value={ch.title}
+                          onChange={(e) => onUpdateChapter(i, "title", e.target.value)}
+                          autoFocus
+                        />
+                        <textarea
+                          className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-300 resize-none focus:outline-none focus:border-indigo-500"
+                          rows={3}
+                          value={ch.summary}
+                          onChange={(e) => onUpdateChapter(i, "summary", e.target.value)}
+                          placeholder="本章梗概..."
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-400 focus:outline-none focus:border-indigo-500"
+                            value={ch.coreConflict}
+                            onChange={(e) => onUpdateChapter(i, "coreConflict", e.target.value)}
+                            placeholder="核心冲突（可选）"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingIndex(null)}
+                            className="text-xs border-zinc-700 h-7"
+                          >
+                            完成
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // 预览模式
+                      <div onClick={() => setEditingIndex(i)} className="cursor-pointer">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-sm font-medium text-zinc-200">{ch.title}</h4>
+                          <span className="text-[10px] text-zinc-600 shrink-0 mt-0.5">点击编辑</span>
+                        </div>
+                        {ch.summary && (
+                          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{ch.summary}</p>
+                        )}
+                        {ch.coreConflict && (
+                          <p className="text-xs text-amber-600 mt-1">冲突：{ch.coreConflict}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 底部按钮 */}
+        {hasPreview && (
+          <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-800 shrink-0 bg-zinc-900">
+            <p className="text-xs text-zinc-500">
+              可点击章节编辑标题和梗概，确认后写入大纲树
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                }}
+                className="border-zinc-700 text-sm"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={onConfirm}
+                disabled={isGenerating}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm"
+              >
+                ✅ 确认写入 ({previewChapters.length} 章)
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
