@@ -19,6 +19,7 @@ model Project {
   toneKeywords   String[] @default([])  // 基调关键词
   povCharacterId String?                 // 当前视角主角
 
+  globalPrompt String @default("")  // 世界书+风格卡缓存摘要——扩展角色时直接用
   // LLM配置 (JSON存储)
   llmConfig Json @default("{}")
 
@@ -52,10 +53,12 @@ model CharacterCard {
   personality     Json @default("[]")    // 结构化性格: {dominant, drive, contradiction, habits, socialMask} 或旧格式 string[]
   dialogueStyle   Json @default("{}")    // DialogueStyle
   background      String @default("")
+  quickImportContent String @default("")  // 快速导入原文（不做AI分析，直接抄写）
   abilities       String[] @default([])  // 能力/技能
   hiddenMotives   String[] @default([])
   relationships   Json @default("[]")    // CharacterRelationship[]
 
+  timeline        Json @default("[]")     // TimelineEvent[] 经历时间线
   currentStatus   String @default("alive") // CharacterStatus
   arcProgress     String @default("")
   tags            String[] @default([])

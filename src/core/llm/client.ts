@@ -21,6 +21,8 @@ export interface LLMRequest {
   topP?: number;
   maxTokens?: number;
   stream?: boolean;
+  /** 推理模式：仅 DeepSeek 官方 API 支持，硅基流动等第三方不用传 */
+  thinking?: { type: "enabled" | "disabled" };
 }
 
 export interface LLMResponse {
@@ -58,6 +60,7 @@ export function createLLMClient(config: LLMConfig) {
           top_p: request.topP ?? config.defaultTopP,
           max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
           stream: false,
+          ...(request.thinking ? { thinking: request.thinking } : {}),
         }),
       });
 
@@ -100,6 +103,7 @@ export function createLLMClient(config: LLMConfig) {
           top_p: request.topP ?? config.defaultTopP,
           max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
           stream: true,
+          ...(request.thinking ? { thinking: request.thinking } : {}),
         }),
       });
 

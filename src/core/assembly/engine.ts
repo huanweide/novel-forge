@@ -23,6 +23,7 @@ import type {
   TokenBudget,
 } from "@/core/types";
 import { countTokens, truncateByTokens } from "./tokenizer";
+import { safeJoin } from "@/lib/utils";
 
 // ─── 配置常量 ───────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ function buildGlobalMemorySection(memory: GlobalMemory, maxTokens: number): stri
   if (memory.currentProtagonist) {
     const p = memory.currentProtagonist;
     parts.push(
-      `【当前主角】${p.name}\n性格：${p.personality.join("、")}\n当前目标：${p.goal}\n当前状态：${p.status}`
+      `【当前主角】${p.name}\n性格：${safeJoin(p.personality)}\n当前目标：${p.goal}\n当前状态：${p.status}`
     );
   }
 

@@ -1,0 +1,334 @@
+/**
+ * POST /api/import/quick
+ *
+ * 快速批量导入——纯正则解析，不用AI。
+ *
+ * 格式：1.人名 / 1、人名 / 1)人名 这类带序号的名字行
+ * 名字后面所有文本抄进 quickImportContent，直接写DB。
+ *
+ * 智能去重：
+ *   - 同名 → 追加内容到已有角色
+ *   - 全名vs小名（如"苏挽月"与"挽月"）→ 包含关系检测 → 合并
+ *   - 带括号的（如"林羽（主角）"）→ 去掉括号后比较
+ *
+ * 结构：
+ *   parseCharacters → mergeSimilar(内部去重) → dbMerge(数据库去重+写入)
+ *   SSE 三阶段：解析 → 去重合并 → 写入
+ */
+
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+export const maxDuration = 60;
+
+// ─── 类型 ──────────────────────────────────────────
+
+interface ParsedChar {
+  name: string;
+  content: string;
+  contentPreview: string;
+}
+
+// ─── 名字相似度检测 ──────────────────────────────
+
+/** 标准化名字：去括号、去空格、小写 */
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[（(][^)）]*[)）]/g, "")  // 去括号及内容
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+/** 两个名字是否指向同一角色 */
+function isSameCharacter(a: string, b: string): boolean {
+  const na = normalizeName(a);
+  const nb = normalizeName(b);
+  if (!na || !nb) return false;
+  // 完全匹配
+  if (na === nb) return true;
+  // 包含关系：小名vs全名（"挽月" ⊂ "苏挽月"）
+  if (na.includes(nb) || nb.includes(na)) return true;
+  return false;
+}
+
+// ─── 阶段1：正则解析 ─────────────────────────────
+
+/**
+ * 从设定集文本中解析角色。
+ *
+ * 匹配行首 "数字. 名称" / "数字、名称" / "数字)名称" 等格式。
+ * 相邻两个角色名之间的文本归属前一个角色。
+ * 第一个角色名之前的文本忽略。
+ */
+function parseCharacters(text: string): ParsedChar[] {
+  const HEADER_RE = /^\s*(\d+)\s*[\.、．，)\）]\s*(.+)$/;
+
+  const lines = text.split("\n");
+  const chars: ParsedChar[] = [];
+  let currentName = "";
+  let currentLines: string[] = [];
+  let started = false;
+
+  for (const line of lines) {
+    const match = HEADER_RE.exec(line);
+
+    if (match) {
+      const name = match[2].trim();
+      // 过滤非人名：太长、太短、标题关键词
+      if (name.length >= 1 && name.length <= 30 && !/^(第|章|节|卷|部|篇)/.test(name)) {
+        // 保存上一个角色
+        if (started && currentName && currentLines.length > 0) {
+          const content = currentLines.join("\n").trim();
+          if (content.length > 10) {
+            chars.push({
+              name: currentName,
+              content,
+              contentPreview: content.slice(0, 80).replace(/\n/g, " "),
+            });
+          }
+        }
+        started = true;
+        currentName = name;
+        currentLines = [];
+        continue;
+      }
+    }
+
+    if (started && currentName) {
+      currentLines.push(line);
+    }
+  }
+
+  // 最后一个角色
+  if (started && currentName && currentLines.length > 0) {
+    const content = currentLines.join("\n").trim();
+    if (content.length > 10) {
+      chars.push({
+        name: currentName,
+        content,
+        contentPreview: content.slice(0, 80).replace(/\n/g, " "),
+      });
+    }
+  }
+
+  return chars;
+}
+
+// ─── 阶段2：内部去重（同一次导入内）─────────────
+
+/**
+ * 合并同一次导入中的相似角色。
+ * "苏挽月" 和 "挽月" → 保留全名，合并内容。
+ */
+function mergeSimilar(chars: ParsedChar[]): { merged: ParsedChar[]; mergeLog: string[] } {
+  const result: ParsedChar[] = [];
+  const mergeLog: string[] = [];
+
+  for (const c of chars) {
+    const existing = result.find(r => isSameCharacter(r.name, c.name));
+    if (existing) {
+      // 用更长的名字（全名优先）
+      if (c.name.length > existing.name.length) {
+        mergeLog.push(`${c.name} ← ${existing.name}`);
+        existing.name = c.name;
+      } else {
+        mergeLog.push(`${existing.name} ← ${c.name}`);
+      }
+      existing.content += "\n\n---\n\n" + c.content;
+      existing.contentPreview = existing.content.slice(0, 80).replace(/\n/g, " ");
+    } else {
+      result.push({ ...c });
+    }
+  }
+
+  return { merged: result, mergeLog };
+}
+
+// ─── 阶段3：数据库去重 + 写入 ────────────────────
+
+async function dbMerge(
+  projectId: string,
+  chars: ParsedChar[],
+): Promise<{ created: string[]; updated: string[]; mergeLog: string[] }> {
+  // 加载项目所有已有角色
+  const existing = await prisma.characterCard.findMany({
+    where: { projectId },
+    select: { id: true, name: true },
+  });
+
+  const created: string[] = [];
+  const updated: string[] = [];
+  const mergeLog: string[] = [];
+
+  for (const c of chars) {
+    // 在已有角色中找相似项
+    const match = existing.find(e => isSameCharacter(e.name, c.name));
+
+    if (match) {
+      // 追加内容到已有角色
+      await prisma.characterCard.update({
+        where: { id: match.id },
+        data: {
+          quickImportContent: {
+            // Prisma 不支持字符串拼接，先读再写
+            // 这里用原始 SQL 思路——但 Prisma 可以用 raw query
+          },
+        },
+      });
+
+      // Prisma update 不能直接做字符串拼接...
+      // 需要先读当前值，再写回去
+      const current = await prisma.characterCard.findUnique({
+        where: { id: match.id },
+        select: { quickImportContent: true, background: true, name: true },
+      });
+
+      const newQC = [current?.quickImportContent, c.content]
+        .filter(s => s && s.trim().length > 0)
+        .join("\n\n---\n\n")
+        .slice(0, 15000);
+
+      await prisma.characterCard.update({
+        where: { id: match.id },
+        data: {
+          quickImportContent: newQC,
+          background: current?.background || c.content.slice(0, 5000),
+          tags: { push: "📥快速导入" },  // 追加标签
+        },
+      });
+
+      updated.push(match.name);
+      mergeLog.push(`${match.name} ← 追加内容`);
+    } else {
+      // 新建角色
+      await prisma.characterCard.create({
+        data: {
+          projectId,
+          name: c.name,
+          background: c.content.slice(0, 5000),
+          quickImportContent: c.content.slice(0, 15000),
+          role: "supporting",
+          age: "未知",
+          gender: "未知",
+          tags: ["📥快速导入"],
+        },
+      });
+      created.push(c.name);
+    }
+  }
+
+  return { created, updated, mergeLog };
+}
+
+// ═══════════════════════════════════════════════
+// POST (SSE)
+// ═══════════════════════════════════════════════
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
+  }
+
+  const { projectId, rawText } = body;
+
+  if (!projectId || !rawText) {
+    return NextResponse.json({ error: "缺少 projectId 或 rawText" }, { status: 400 });
+  }
+  const text = rawText as string;
+  if (text.length < 20) {
+    return NextResponse.json({ error: "文本太短" }, { status: 400 });
+  }
+
+  const encoder = new TextEncoder();
+  const sse = new ReadableStream({
+    async start(controller) {
+      const send = (data: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      try {
+        const t0 = Date.now();
+
+        // ── 阶段1：正则解析 ──
+        send({ type: "progress", stage: "parse", message: `🔍 解析中... ${text.length.toLocaleString()} 字符`, pct: 10 });
+        await new Promise(r => setTimeout(r, 50));
+
+        const parsed = parseCharacters(text);
+
+        if (parsed.length === 0) {
+          send({ type: "error", message: "未识别到任何角色。格式：1.人名 + 描述" });
+          controller.close();
+          return;
+        }
+
+        // ── 阶段2：内部去重合并 ──
+        send({ type: "progress", stage: "merge", message: `🔗 内部去重... ${parsed.length} 个候选`, pct: 30 });
+
+        const { merged, mergeLog: internalMerges } = mergeSimilar(parsed);
+
+        if (internalMerges.length > 0) {
+          send({
+            type: "progress", stage: "merged",
+            message: `🔗 内部合并: ${internalMerges.join("、")}`,
+            pct: 40,
+            characters: merged.map(c => ({ name: c.name, preview: c.contentPreview })),
+          });
+        } else {
+          send({
+            type: "progress", stage: "merged",
+            message: `✅ ${merged.length} 个角色（无内部重复）`,
+            pct: 40,
+            characters: merged.map(c => ({ name: c.name, preview: c.contentPreview })),
+          });
+        }
+
+        await new Promise(r => setTimeout(r, 100));
+
+        // ── 阶段3：数据库去重 + 写入 ──
+        send({ type: "progress", stage: "write", message: `💾 对比已有角色...`, pct: 60 });
+
+        const { created, updated, mergeLog } = await dbMerge(projectId as string, merged);
+
+        const sec = ((Date.now() - t0) / 1000).toFixed(1);
+
+        // 构建消息
+        const parts: string[] = [];
+        if (created.length > 0) parts.push(`+${created.length} 新建`);
+        if (updated.length > 0) parts.push(`📎${updated.length} 追加`);
+
+        const message = `✅ ${parts.join(" · ")} · ${sec}s`;
+
+        send({
+          type: "done",
+          ok: true,
+          created: created.length,
+          updated: updated.length,
+          totalChars: created.length + updated.length,
+          timeSec: parseFloat(sec),
+          message,
+          characterNames: [...created, ...updated.map(n => `${n}(追加)`)],
+        });
+
+        controller.close();
+      } catch (err) {
+        send({
+          type: "error",
+          message: err instanceof Error ? err.message : String(err),
+        });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(sse, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}

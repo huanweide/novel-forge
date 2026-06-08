@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -38,6 +39,9 @@ export default function Dashboard() {
     targetWordCount: 100000,
   });
 
+  // 自动弹更新公告
+  const [showChangelog, setShowChangelog] = useState(false);
+
   // 加载项目列表
   const loadProjects = useCallback(async () => {
     try {
@@ -56,6 +60,16 @@ export default function Dashboard() {
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
+
+  // 自动弹更新公告（首次访问或版本更新后）
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem("novel-forge-last-version");
+      if (seen !== LATEST_VERSION) {
+        setShowChangelog(true);
+      }
+    } catch { /* localStorage 不可用 */ }
+  }, []);
 
   // 创建项目
   const handleCreate = async () => {
@@ -110,7 +124,12 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold tracking-tight">
               Novel Forge
             </h1>
-            <p className="text-sm text-zinc-500">AI 小说工坊</p>
+            <p className="text-sm text-zinc-500">
+              AI 小说工坊 ·{" "}
+              <a href="/changelog" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                更新公告
+              </a>
+            </p>
           </div>
           <Button
             onClick={() => setShowCreate(true)}
@@ -162,6 +181,43 @@ export default function Dashboard() {
           onConfirm={handleCreate}
           onCancel={() => setShowCreate(false)}
         />
+      )}
+
+      {/* 更新公告弹窗 */}
+      {showChangelog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-indigo-800/50 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">📋</span>
+              <h2 className="text-lg font-semibold">更新公告 · {LATEST_VERSION}</h2>
+            </div>
+            <ul className="space-y-2 mb-5">
+              {CHANGELOG_BRIEF.map((item, i) => (
+                <li key={i} className="text-sm text-zinc-400 flex items-start gap-2">
+                  <span className="text-indigo-400 mt-0.5 shrink-0">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-3">
+              <a
+                href="/changelog"
+                className="flex-1 text-center text-sm border border-zinc-700 rounded-lg py-2 text-zinc-300 hover:bg-zinc-800 transition-colors"
+              >
+                查看完整公告 →
+              </a>
+              <button
+                onClick={() => {
+                  try { localStorage.setItem("novel-forge-last-version", LATEST_VERSION); } catch {}
+                  setShowChangelog(false);
+                }}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+              >
+                知道了
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

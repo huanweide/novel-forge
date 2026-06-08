@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
 import { safeJoin } from "@/lib/utils";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * POST /api/generate/outline
@@ -44,7 +44,13 @@ export async function POST(request: Request) {
     }
 
     // 构建角色/世界书摘要
-    const characterBriefs = (project.characters as any[])
+    // 精简角色摘要（前30个主角/反派/导师，避免 prompt 炸）
+    const allChars = (project.characters || []) as any[];
+    const priorityRoles = ["protagonist", "antagonist", "mentor", "love_interest"];
+    const priorityChars = allChars.filter((c: any) => priorityRoles.includes(c.role));
+    const otherChars = allChars.filter((c: any) => !priorityRoles.includes(c.role));
+    const slimChars = [...priorityChars, ...otherChars].slice(0, 30);
+    const characterBriefs = slimChars
       .map((c: any) => `[${c.name}] ${c.role} | ${safeJoin(c.personality)}`)
       .join("\n");
 
@@ -67,21 +73,22 @@ export async function POST(request: Request) {
     }
 
     // ═══════════════════════════════════════════════
-    // 路线选择
+    // 模型选择 —— 自动检测 Provider 命名约定
     // ═══════════════════════════════════════════════
+
+    const baseURL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1");
+    const apiKey = process.env.LLM_API_KEY || "";
+    // 检测 API 提供商 → 选择正确的模型命名
+    const isDeepSeekOfficial = baseURL.includes("api.deepseek.com");
+    const PRO_MODEL = isDeepSeekOfficial ? "deepseek-v4-pro" : "deepseek-ai/DeepSeek-V4-Pro";
+    const FLASH_MODEL = isDeepSeekOfficial ? "deepseek-v4-flash" : "deepseek-ai/DeepSeek-V4-Flash";
 
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
     const shouldUseFlash = useFlash || hasCustomPrompt;
+    // 环境变量优先，否则用自动检测的命名
     const model = shouldUseFlash
-      ? (process.env.FLASH_MODEL || "deepseek-ai/DeepSeek-V4-Flash")
-      : (process.env.ARCHITECT_MODEL || "deepseek-ai/DeepSeek-V4-Pro");
-
-    const baseURL = shouldUseFlash
-      ? (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1")
-      : (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com");
-    const apiKey = shouldUseFlash
-      ? (process.env.LLM_API_KEY || "")
-      : (process.env.DEEPSEEK_API_KEY || process.env.LLM_API_KEY || "");
+      ? (process.env.FLASH_MODEL || process.env.EXTRACTOR_MODEL || FLASH_MODEL)
+      : (process.env.ARCHITECT_MODEL || process.env.WRITER_MODEL || PRO_MODEL);
 
     let chapters: any[] = [];
     let rawOutline = "";
@@ -139,7 +146,7 @@ ${customPrompt}
 基调：${project.toneKeywords.join("、")}
 ${styleText}
 
-【已有角色（${(project.characters || []).length}人）】
+【已有角色（共${allChars.length}人，展示${slimChars.length}位核心角色）】
 ${characterBriefs}
 
 【世界观词条（${(project.lorebookEntries || []).length}条）】
@@ -154,7 +161,7 @@ ${loreEntries.map((l: any) => `[${l.title}] ${l.content?.slice(0, 80)}`).join("\
 基调：${project.toneKeywords.join("、")}
 ${styleText}
 
-【角色设定（${(project.characters || []).length}人）】
+【角色设定（共${allChars.length}人，展示${slimChars.length}位核心）】
 ${characterBriefs}
 
 【世界观设定（${(project.lorebookEntries || []).length}条）】

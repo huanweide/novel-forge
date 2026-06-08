@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <bool name="enableNotification">false</bool>
+    <bool name="enableSiteSettingsShortcut">true</bool>
+    <color name="backgroundColor">#FFFFFF</color>
+    <color name="colorPrimary">#4F46E5</color>
+    <color name="colorPrimaryDark">#3730A3</color>
+    <color name="navigationColor">#4F46E5</color>
+    <color name="navigationColorDark">#3730A3</color>
+    <color name="navigationDividerColor">#4F46E5</color>
+    <color name="navigationDividerColorDark">#3730A3</color>
+    <color name="shortcut_background">#F5F5F5</color>
+    <integer name="splashScreenFadeOutDuration">200</integer>
+    <string name="appName" translatable="false">Novel Forge — AI小说工坊</string>
+    <string name="assetStatements">
+    [{
+        \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+        \"target\": {
+            \"namespace\": \"web\",
+            \"site\": \"https://novel-forge-nu.vercel.app\"
+        }
+    }]
+    
+  </string>
+    <string name="fallbackType" translatable="false">customtabs</string>
+    <string name="generatorApp" translatable="false">Novel Forge</string>
+    <string name="hostName" translatable="false">novel-forge-nu.vercel.app</string>
+    <string name="launchUrl" translatable="false">https://novel-forge-nu.vercel.apphttps://novel-forge-nu.vercel.app/</string>
+    <string name="launcherName" translatable="false">Novel Forge</string>
+    <string name="orientation" translatable="false">default</string>
+    <string name="providerAuthority" translatable="false">com.novelforge.app.fileprovider</string>
+    <string name="webManifestUrl" translatable="false">https://novel-forge-nu.vercel.app/manifest.json</string>
+</resources>

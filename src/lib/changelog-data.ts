@@ -20,17 +20,30 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.9.0";
+export const LATEST_VERSION = "v0.9.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📋 大纲生成: 可选4/8/12章或自定义数量，点选即切",
-  "✏️ 自定义提示词: 输入提示词走V4 Flash快速生成，不填走V4 Pro深度创作",
-  "👁 章节预览编辑: 生成后逐章预览，点击即可编辑标题和梗概",
+  "🐛 大纲生成修复: LLM_BASE_URL自动检测Provider命名约定，178角色项目prompt精简到30核心角色",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.9.1",
+    date: "2026-06-08",
+    title: "🐛 大纲生成修复",
+    sections: [
+      {
+        label: "🐛 大纲生成修复",
+        items: [
+          "LLM_BASE_URL自动检测Provider命名约定",
+          "178角色项目prompt精简到30核心角色",
+          "maxDuration加到120秒防超时",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.9.0",
     date: "2026-06-08",

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 /**
  * 大纲生成器 —— 控制生成章节数量，支持指令定制和逐章预览
@@ -31,6 +30,7 @@ export function OutlineGenerator({
 
   // 生成大纲
   const handleGenerate = async () => {
+    console.log("[outline] 开始生成, chapterCount:", chapterCount, "projectId:", projectId);
     setStep("generating");
     setError("");
 
@@ -45,17 +45,20 @@ export function OutlineGenerator({
         }),
       });
 
+      console.log("[outline] 响应状态:", res.status);
       if (!res.ok) {
         const err = await res.json();
+        console.error("[outline] API 错误:", err);
         throw new Error(err.error || "生成失败");
       }
 
       const data = await res.json();
+      console.log("[outline] 收到数据:", data.totalGenerated, "章");
       setChapters(data.chapters || []);
-      // 默认全选
       setSelectedChapters(new Set((data.chapters || []).map((_: any, i: number) => i)));
       setStep("preview");
     } catch (err) {
+      console.error("[outline] 异常:", err);
       setError(err instanceof Error ? err.message : "生成失败");
       setStep("config");
     }
@@ -203,12 +206,12 @@ export function OutlineGenerator({
                 </div>
               )}
 
-              <Button
+              <button
                 onClick={handleGenerate}
-                className="w-full bg-indigo-600 hover:bg-indigo-500"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
               >
                 🤖 开始生成
-              </Button>
+              </button>
             </div>
           )}
 
@@ -300,13 +303,13 @@ export function OutlineGenerator({
                 </div>
               )}
 
-              <Button
+              <button
                 onClick={handleCreate}
                 disabled={selectedChapters.size === 0}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 创建 {selectedChapters.size} 个章节节点
-              </Button>
+              </button>
             </div>
           )}
 

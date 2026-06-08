@@ -179,6 +179,7 @@ export interface ReviewIssue {
   severity: "critical" | "major" | "minor";
   description: string;            // 问题描述
   location: string | null;        // 问题所在位置（引用正文片段）
+  suggestion: string | null;      // 修改建议
   relatedCharacterId?: string;    // 涉及的角色
   relatedLoreId?: string;         // 涉及的世界观
 }

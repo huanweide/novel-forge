@@ -19,15 +19,18 @@ import type {
   CharacterCard,
   LorebookEntry,
   StoryNode,
+  StoryBeat,
   PromptContext,
   ChapterOutline,
   ChapterSummary,
   ReviewLog,
+  ReviewIssueType,
 } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
 import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
 import { assemblePrompt } from "@/core/assembly/engine";
 import { matchLoreEntries } from "@/core/assembly/trigger";
+import { safeJoin } from "@/lib/utils";
 import { countTokens } from "@/core/assembly/tokenizer";
 
 // ─── Prompt 模板 ─────────────────────────────────────────────
@@ -68,12 +71,23 @@ const SYSTEM_PROMPTS = {
 4. **连续性错误**：是否与之前的情节矛盾？（如已死角色复活、物品凭空出现）
 5. **时间线问题**：时间推进是否合理？
 
-对于每个发现的问题，请给出：
-- 严重程度（critical/major/minor）
-- 具体描述
-- 修改建议
+输出纯JSON——如果没有问题，passed=true且issues为空数组：
 
-如果没有发现问题，请明确表示"审校通过"。请严格——宁可误报也不要漏报。`,
+{
+  "passed": true/false,
+  "issues": [
+    {
+      "type": "ooc|logic_flaw|lore_conflict|timeline_error|continuity_error",
+      "severity": "critical|major|minor",
+      "description": "具体问题描述",
+      "location": "引用正文中出问题的片段",
+      "suggestion": "修改建议"
+    }
+  ],
+  "summary": "审校总结（一句话）"
+}
+
+请严格——宁可误报也不要漏报。只输出JSON。`,
 };
 
 // ─── 调度器主类 ─────────────────────────────────────────────
@@ -92,10 +106,11 @@ export class AgentOrchestrator {
   async generateOutline(
     project: Project,
     characters: CharacterCard[],
-    loreEntries: LorebookEntry[]
+    loreEntries: LorebookEntry[],
+    styleDescription = "",
   ): Promise<string> {
     const characterBriefs = characters
-      .map((c) => `[${c.name}] 身份：${c.role} | 性格：${c.personality.join("、")} | 动机：${c.hiddenMotives.join("、")}`)
+      .map((c) => `[${c.name}] 身份：${c.role} | 性格：${safeJoin(c.personality)} | 动机：${safeJoin(c.hiddenMotives)}`)
       .join("\n");
 
     const loreBriefs = loreEntries
@@ -117,6 +132,7 @@ export class AgentOrchestrator {
 目标字数：${project.targetWordCount.toLocaleString()}字
 主线总纲：${project.synopsis}
 基调：${project.toneKeywords.join("、")}
+${styleDescription}
 
 【角色设定】
 ${characterBriefs}
@@ -191,7 +207,7 @@ ${loreBriefs}
           ? c.dialogueStyle
           : {}) as Record<string, unknown>;
         const examples = Array.isArray(dialogue.examples) ? (dialogue.examples as string[]).join("；") : "";
-        return `[${c.name}] 性格：${(c.personality || []).join("、")} | 对话风格：${examples} | 动机：${(c.hiddenMotives || []).join("、")} | 状态：${c.currentStatus}`;
+        return `[${c.name}] 性格：${safeJoin(c.personality)} | 对话风格：${examples} | 动机：${safeJoin(c.hiddenMotives)} | 状态：${c.currentStatus}`;
       })
       .join("\n");
 
@@ -239,36 +255,52 @@ ${generatedContent}
     chapterContent: string,
     chapterTitle: string,
     characters: CharacterCard[]
-  ): Promise<{ summary: string; keyEvents: string[]; characterStates: string }> {
+  ): Promise<{
+    summary: string;
+    keyEvents: string[];
+    characterStates: string;
+    closingSnapshot: string;       // 章末快照：最后段落 + 情绪基调
+    characterImpulses: Array<{ name: string; impulse: string }>; // 角色脉搏
+  }> {
     const charNames = characters.map((c) => c.name).join("、");
+
+    // 截取章末 200 字作为快照原文
+    const lastParagraphs = chapterContent.slice(-200).trim();
 
     const response = await this.client.chat({
       model: this.config.summarizeModel,
       messages: [
         {
           role: "system",
-          content: `你是一个高效的文本摘要助手。请将以下章节内容压缩为简洁摘要。
-要求：
-1. 摘要不超过200 Token
-2. 提取不超过5个关键事件
-3. 记录每个角色的最终状态变化（情绪、位置、做出的决定）
+          content: `你是高效的文本摘要助手，擅长提取章节精华。
 
-请用以下格式输出：
+任务：
+1. 写一句摘要（≤200 Token）
+2. 提取关键事件（≤5个）
+3. 记录每个角色的**最终状态**（情绪、位置、关键决定）
+4. 分析章末氛围——前章最后一段的情绪基调是什么（如"压抑/释然/紧张/平静/悲伤"）
+5. 为每个角色写一句**当下冲动**——"我想要X，因为Y刚发生"。这是角色在下一章开头的行为驱动力，是区别于"大纲目标"的**即时欲望**。
+
+输出格式：
 ---
-摘要：[摘要内容]
+摘要：[摘要]
 关键事件：
 - [事件1]
 - [事件2]
-角色状态：[角色名]：[状态描述]；[角色名]：[状态描述]
+角色状态：[角色名]：[情绪]，[位置]，决定了[关键决定]
+章末氛围：[情绪基调标签]
+角色脉搏：
+- [角色名]：[一句话的当下冲动]
+- [角色名]：[一句话的当下冲动]
 ---`,
         },
         {
           role: "user",
-          content: `章节标题：${chapterTitle}\n出场角色：${charNames}\n\n正文：\n${chapterContent}`,
+          content: `章节标题：${chapterTitle}\n出场角色：${charNames}\n\n【章末原文——最后一段】\n${lastParagraphs}\n\n【完整正文】\n${chapterContent}`,
         },
       ],
       temperature: 0.3,
-      maxTokens: 1024,
+      maxTokens: 1536, // 加大，容纳脉搏数据
     });
 
     return this.parseSummaryResponse(response.content);
@@ -277,18 +309,51 @@ ${generatedContent}
   // ─── 私有方法 ─────────────────────────────────────────────
 
   private parseReviewResponse(response: string, nodeOutline: string): ReviewLog {
-    const passed = response.includes("审校通过") || response.includes("没有问题") || response.includes("未发现问题");
+    // 尝试 JSON 解析
+    try {
+      let s = response.trim();
+      const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (md) s = md[1].trim();
+      const a = s.indexOf("{"), b = s.lastIndexOf("}");
+      if (a >= 0 && b > a) s = s.slice(a, b + 1);
+
+      const parsed = JSON.parse(s) as Record<string, unknown>;
+      const passed = parsed.passed === true;
+      const rawIssues = Array.isArray(parsed.issues) ? parsed.issues as Record<string, unknown>[] : [];
+
+      const issues = rawIssues.map((iss) => ({
+        type: validateIssueType(String(iss.type || "logic_flaw")),
+        severity: validateSeverity(String(iss.severity || "major")),
+        description: String(iss.description || ""),
+        location: typeof iss.location === "string" ? iss.location : null,
+        suggestion: typeof iss.suggestion === "string" ? iss.suggestion : null,
+      }));
+
+      return {
+        id: "",
+        nodeId: "",
+        timestamp: new Date(),
+        passed,
+        issues: issues.length > 0 ? issues : [],
+        summary: String(parsed.summary || response.slice(0, 500)),
+        suggestion: passed ? null : issues.map(i => `[${i.severity}] ${i.description}`).join("\n"),
+      };
+    } catch {
+      // JSON 解析失败 → 回退到文本判断
+    }
+
+    // 文本回退
+    const passed = response.includes("审校通过") || response.includes("没有问题") || response.includes("未发现问题") || response.includes('"passed": true');
 
     const issues = passed
       ? []
-      : [
-          {
-            type: "logic_flaw" as const,
-            severity: "major" as const,
-            description: response,
-            location: null,
-          },
-        ];
+      : [{
+          type: "logic_flaw" as const,
+          severity: "major" as const,
+          description: response,
+          location: null,
+          suggestion: null,
+        }];
 
     return {
       id: "",
@@ -305,10 +370,14 @@ ${generatedContent}
     summary: string;
     keyEvents: string[];
     characterStates: string;
+    closingSnapshot: string;
+    characterImpulses: Array<{ name: string; impulse: string }>;
   } {
     const summaryMatch = response.match(/摘要[：:]\s*(.+)/);
     const eventsMatch = response.match(/关键事件[：:]\s*\n([\s\S]*?)(?=\n角色状态|$)/);
     const statesMatch = response.match(/角色状态[：:]\s*(.+)/);
+    const moodMatch = response.match(/章末氛围[：:]\s*(.+)/);
+    const impulsesMatch = response.match(/角色脉搏[：:]\s*\n([\s\S]*?)$/);
 
     const keyEvents = eventsMatch
       ? eventsMatch[1]
@@ -317,10 +386,26 @@ ${generatedContent}
           .filter(Boolean)
       : [];
 
+    // 解析角色脉搏：每行 "- 角色名：冲动描述"
+    const characterImpulses: Array<{ name: string; impulse: string }> = [];
+    if (impulsesMatch) {
+      const lines = impulsesMatch[1].split("\n");
+      for (const line of lines) {
+        const m = line.match(/^-\s*([^：:]+)[：:]\s*(.+)/);
+        if (m) {
+          characterImpulses.push({ name: m[1].trim(), impulse: m[2].trim() });
+        }
+      }
+    }
+
+    const closingSnapshot = moodMatch?.[1]?.trim() || "";
+
     return {
       summary: summaryMatch?.[1]?.trim() || response.slice(0, 200),
       keyEvents,
       characterStates: statesMatch?.[1]?.trim() || "",
+      closingSnapshot,
+      characterImpulses,
     };
   }
 }
@@ -334,9 +419,11 @@ export function buildPromptContext(params: {
   characters: CharacterCard[];
   loreEntries: LorebookEntry[];
   chapterSummaries: ChapterSummary[];
+  storyBeats?: StoryBeat[];
+  styleCard?: Record<string, unknown> | null;
   authorNote?: string;
 }): PromptContext {
-  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, authorNote } = params;
+  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], styleCard, authorNote } = params;
 
   // 主角极简卡
   const protagonist = characters.find((c) => c.role === "protagonist") || characters[0];
@@ -363,8 +450,69 @@ export function buildPromptContext(params: {
     matchScore: t.matchScore,
   }));
 
+  // 读取最近一章摘要的快照和脉搏
+  const lastSummary = chapterSummaries[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csData = (lastSummary?.characterStates || {}) as any;
+  const closingSnapshot = typeof csData.closingSnapshot === "string" ? csData.closingSnapshot : "";
+  const impulses: Array<{ name: string; impulse: string }> = Array.isArray(csData.impulses)
+    ? csData.impulses.filter((i: unknown) => i && typeof i === "object" && "name" in (i as object) && "impulse" in (i as object))
+    : [];
+
+  // 构建系统提示——合并文风卡设定
+  let systemPrompt = `你是一位顶级小说作家，正在撰写《${project.name}》——一部${project.genre.join("、")}作品。`;
+
+  if (styleCard) {
+    const styleParts: string[] = [];
+    const desc = typeof styleCard.styleDescription === "string" ? styleCard.styleDescription.trim() : "";
+    if (desc) styleParts.push(`文风：${desc}`);
+
+    const pov = typeof styleCard.povType === "string" ? styleCard.povType : "";
+    const nd = typeof styleCard.narrativeDistance === "string" ? styleCard.narrativeDistance : "";
+    if (pov) styleParts.push(`视角：${povLabel(pov)}`);
+    if (nd) styleParts.push(`叙事距离：${ndLabel(nd)}`);
+
+    const dr = Number(styleCard.dialogueRatio) || 0;
+    const descR = Number(styleCard.descriptionRatio) || 0;
+    const ar = Number(styleCard.actionRatio) || 0;
+    const itr = Number(styleCard.innerThoughtRatio) || 0;
+    if (dr + descR + ar + itr > 0) {
+      styleParts.push(`内容配比：对话${pct(dr)} 描写${pct(descR)} 动作${pct(ar)} 内心独白${pct(itr)}`);
+    }
+
+    if (typeof styleCard.avgSentenceLength === "number" && styleCard.avgSentenceLength > 0) {
+      styleParts.push(`平均句长：${Math.round(styleCard.avgSentenceLength)}字`);
+    }
+
+    // 语气标记
+    const tonal = styleCard.tonalMarkers as Record<string, number> | undefined;
+    if (tonal && Object.keys(tonal).length > 0) {
+      const topTonal = Object.entries(tonal)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([k]) => k)
+        .join("、");
+      if (topTonal) styleParts.push(`语气倾向：${topTonal}`);
+    }
+
+    if (styleParts.length > 0) {
+      systemPrompt += `\n\n【文风约束】\n${styleParts.join("\n")}`;
+    }
+  }
+
+  // 注入前章收尾氛围（章末快照）
+  if (closingSnapshot) {
+    systemPrompt += `\n\n【前章收尾氛围】\n${closingSnapshot}`;
+  }
+
+  // 注入角色当下冲动（角色脉搏）
+  if (impulses.length > 0) {
+    const impulseLines = impulses.map(i => `${i.name}：${i.impulse}`).join("\n");
+    systemPrompt += `\n\n【角色当下冲动——本章开头的行为驱动力】\n${impulseLines}`;
+  }
+
   return {
-    systemPrompt: `你是一位顶级小说作家，正在撰写《${project.name}》——一部${project.genre.join("、")}作品。`,
+    systemPrompt,
     globalMemory: {
       projectSynopsis: project.synopsis,
       currentProtagonist: characterBrief,
@@ -374,8 +522,41 @@ export function buildPromptContext(params: {
     slidingWindow: {
       shortTerm: previousNodes.slice(-4), // 最近4个小节
       mediumTerm: chapterSummaries.slice(-3), // 最近3章摘要
-      longTerm: [], // TODO: 从 StoryBeat 表检索
+      longTerm: storyBeats, // 从 StoryBeat 表读取的关键转折点
     },
     authorNote: authorNote || null,
   };
+}
+
+// ─── 标签辅助函数 ─────────────────────────────────────────────
+
+function povLabel(pov: string): string {
+  const map: Record<string, string> = {
+    first_person: "第一人称", third_person_limited: "第三人称有限",
+    third_person_omniscient: "第三人称全知", second_person: "第二人称",
+  };
+  return map[pov] || pov;
+}
+
+function ndLabel(nd: string): string {
+  const map: Record<string, string> = {
+    close: "近距离（深入内心）", medium: "中距离（平衡）", distant: "远距离（客观观察）",
+  };
+  return map[nd] || nd;
+}
+
+function pct(v: number): string {
+  return `${Math.round(v * 100)}%`;
+}
+
+// ─── 审校校验辅助 ─────────────────────────────────────────────
+
+function validateIssueType(t: string): ReviewIssueType {
+  const valid: ReviewIssueType[] = ["ooc", "logic_flaw", "lore_conflict", "timeline_error", "continuity_error", "character_resurrection", "item_teleport"];
+  return valid.includes(t as ReviewIssueType) ? (t as ReviewIssueType) : "logic_flaw";
+}
+
+function validateSeverity(s: string): "critical" | "major" | "minor" {
+  const valid = ["critical", "major", "minor"];
+  return valid.includes(s) ? (s as "critical" | "major" | "minor") : "major";
 }

@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.novelforge.app",
+    "sha256_cert_fingerprints": ["F8:C7:7F:57:C5:BC:F8:3E:E2:8A:55:1C:CF:22:61:A4:0D:6B:C8:A7:BD:E1:8F:72:C7:88:FC:8B:07:AE:66:3F"]
+  }
+}]

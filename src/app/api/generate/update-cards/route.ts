@@ -51,12 +51,26 @@ export async function POST(request: Request) {
     const contentSnippet = chapterContent.slice(0, 8000);
 
     // 构建 Prompt
-    const systemPrompt = `你是一位小说编辑，负责在每章写完后追踪故事的变化。你的任务是比对"现有卡面"和"新章节"，找出需要更新的地方。
+    const systemPrompt = `你是小说编辑，每章结束后追踪故事变化。核心职责：区分"大事"与"小事"。
 
-核心原则：
-1. 只报告真正发生变化的内容——状态改变、新能力展现、新关系建立、新地点/规则出现
-2. 没变化的不要报告
-3. 推断必须有文本依据，不确定的标注"（推断）"
+【必须记录——大事（对角色/世界观有持久影响）】
+✅ 获得/失去能力、技能升级
+✅ 性格信念明显转变（从懦弱变勇敢、从天真变世故）
+✅ 建立重要关系（师徒、恋人、宿敌、盟友）
+✅ 角色死亡/重伤/失踪
+✅ 世界观重大揭露（力量体系的秘密、历史真相）
+✅ 人物弧光推进（成长/堕落/醒悟的关键时刻）
+✅ 获得重要物品或身份
+
+【忽略——小事（没有持久影响）】
+❌ 换了件衣服、吃了顿饭、日常寒暄
+❌ 临时情绪波动（生气了一下马上好了）
+❌ 路过场景的细节描写
+❌ 与路人NPC的短暂互动
+❌ 普通战斗的擦伤（不改变状态）
+❌ 天气变化、房间摆设等环境细节
+
+判断标准：如果把这个变化写在角色卡上，一个月后再看还有意义吗？没有则不报。
 
 输出纯 JSON。`;
 
@@ -75,14 +89,16 @@ ${chapterTitle ? `标题：${chapterTitle}\n` : ""}
 ${contentSnippet}
 
 【任务】
-分析新章节中发生了哪些变化。输出 JSON：
+分析新章节的变化。只报告"大事"——有持久影响的才报。每个变化必须标注重要性。
+
+输出 JSON：
 
 {
   "characterUpdates": [
     {
       "name": "角色名",
-      "characterId": "如果现有角色中有同名则填ID，否则留空",
-      "isNew": false,
+      "characterId": "如果现有角色中有同名则填ID",
+      "significance": "high/medium/low",
       "changes": {
         "位置": "现在的所在地",
         "情绪": "当前情绪状态",
@@ -98,9 +114,10 @@ ${contentSnippet}
     {
       "name": "新角色名",
       "role": "推断角色定位",
+      "significance": "high/medium/low",
       "personality": {"dominant": "从本章言行推断"},
       "abilities": ["展现的能力"],
-      "evidence": "首次出场的文本片段"
+      "evidence": "出场片段"
     }
   ],
   "newLoreEntries": [
@@ -109,27 +126,21 @@ ${contentSnippet}
       "category": "geography/faction/magic_system/history/culture/creature/item/law/custom",
       "keys": ["触发关键词"],
       "content": "设定内容",
+      "significance": "high/medium/low",
       "evidence": "文本依据"
     }
   ],
   "styleShift": {
     "detected": false,
-    "description": "如果文风有变化，描述具体变化。没变化填 null"
+    "description": "如果有明显文风变化描述之，无则填null"
   },
-  "newForeshadowings": [
-    {
-      "description": "新埋下的伏笔或未解线索",
-      "relatedCharacters": ["相关角色名"],
-      "suggestedPayoff": "建议回收方式"
-    }
-  ],
   "summary": "一句话概括本章的主要变化"
 }
 
 注意：
-- characterUpdates 中的 changes 字段只填发生变化的部分，没变的省略
-- 如果某角色本章没有变化，不列入 characterUpdates
-- newCharacters 是新出场的、现有角色卡中没有的角色
+- significance 为 low 的项会被用户忽略，所以 trivial 的事干脆不要报
+- changes 字段只填发生变化的部分，没变的省略
+- 没变化不列入 characterUpdates
 - 所有推断标注文本依据`;
 
     // 调用 LLM

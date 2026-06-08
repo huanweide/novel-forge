@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     // 加载数据
-    const [project, currentNode, allNodes, characters, loreEntries, summaries] =
+    const [project, currentNode, allNodes, characters, loreEntries, summaries, storyBeats, styleCard] =
       await Promise.all([
         prisma.project.findUnique({ where: { id: projectId } }),
         prisma.storyNode.findUnique({ where: { id: currentNodeId } }),
@@ -53,6 +53,15 @@ export async function POST(request: Request) {
           where: { projectId },
           orderBy: { createdAt: "desc" },
           take: 5,
+        }),
+        prisma.storyBeat.findMany({
+          where: { projectId },
+          orderBy: { chapterNumber: "desc" },
+          take: 20,
+        }),
+        prisma.styleCard.findFirst({
+          where: { projectId },
+          orderBy: { updatedAt: "desc" },
         }),
       ]);
 
@@ -112,13 +121,34 @@ export async function POST(request: Request) {
       .filter((n) => n.order <= currentNode.order && n.content)
       .slice(-5);
 
-    // System Prompt 合并文风模板 + 自定义设置
+    // System Prompt 合并文风模板 + 自定义设置 + 风格卡
     let systemPrompt = `你是一位顶级小说作家，正在撰写《${project.name}》。`;
 
     // 读取项目的自定义文风设置
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
     const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
+
+    // 注入风格卡数据
+    if (styleCard) {
+      const styleParts: string[] = [];
+      const desc = typeof styleCard.styleDescription === "string" ? styleCard.styleDescription.trim() : "";
+      if (desc) styleParts.push(`文风：${desc}`);
+      const pov = typeof styleCard.povType === "string" ? styleCard.povType : "";
+      if (pov) {
+        const povMap: Record<string, string> = { first_person: "第一人称", third_person_limited: "第三人称有限", third_person_omniscient: "第三人称全知" };
+        styleParts.push(`视角：${povMap[pov] || pov}`);
+      }
+      const dr = Number(styleCard.dialogueRatio) || 0;
+      const descR = Number(styleCard.descriptionRatio) || 0;
+      const ar = Number(styleCard.actionRatio) || 0;
+      if (dr + descR + ar > 0) {
+        styleParts.push(`内容配比：对话${Math.round(dr * 100)}% 描写${Math.round(descR * 100)}% 动作${Math.round(ar * 100)}%`);
+      }
+      if (styleParts.length > 0) {
+        systemPrompt += `\n\n【文风约束】\n${styleParts.join("\n")}`;
+      }
+    }
 
     if (template) {
       systemPrompt = applyTemplate(template, systemPrompt);
@@ -143,6 +173,8 @@ export async function POST(request: Request) {
       characters: characters as any,
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
+      storyBeats: storyBeats as any,
+      styleCard: styleCard as any,
       authorNote,
     });
     promptContext.systemPrompt = systemPrompt;
@@ -172,6 +204,7 @@ export async function POST(request: Request) {
           let fullContent = "";
 
           // 流式生成
+          let saveCounter = 0;
           const generator = orchestrator.writeSection(
             promptContext,
             writingInstruction,
@@ -182,11 +215,63 @@ export async function POST(request: Request) {
             if (chunk.type === "token") {
               fullContent += chunk.content;
               send({ type: "token", content: chunk.content });
+
+              // 每 ~300 字 fire-and-forget 保存草稿
+              saveCounter += chunk.content.length;
+              if (saveCounter >= 300) {
+                saveCounter = 0;
+                const draft = fullContent;
+                prisma.storyNode.update({
+                  where: { id: nextNode.id },
+                  data: {
+                    content: draft + "\n\n[PARTIAL_DRAFT]",
+                    status: "drafting",
+                  },
+                }).catch(() => {}); // 静默失败，不阻塞流
+              }
             } else if (chunk.type === "error") {
               send({ type: "error", content: chunk.content });
               controller.close();
               return;
             }
+          }
+
+          // Phase 2: 审校
+          send({ type: "review_start", content: "" });
+
+          const activeCharIds = Array.isArray(nextNode.activeCharacters)
+            ? (nextNode.activeCharacters as string[])
+            : [];
+          const activeLoreIds = Array.isArray(nextNode.activeLoreIds)
+            ? (nextNode.activeLoreIds as string[])
+            : [];
+
+          const activeCharacters = characters.filter((c) =>
+            activeCharIds.includes(c.id)
+          );
+          const activeLore = loreEntries.filter((l) =>
+            activeLoreIds.includes(l.id)
+          );
+
+          const prevSummary = summaries.length > 0 ? summaries[0].summary : "";
+
+          let reviewPassed = true;
+          try {
+            const reviewLog = await orchestrator.reviewContent(
+              fullContent,
+              nextOutline || "",
+              activeCharacters as any,
+              activeLore as any,
+              prevSummary,
+            );
+
+            for (const issue of reviewLog.issues) {
+              send({ type: "review_issue", content: issue.description, severity: issue.severity });
+            }
+            send({ type: "review_result", content: reviewLog.passed ? "审校通过" : "审校未通过", passed: reviewLog.passed, issues: reviewLog.issues });
+            reviewPassed = reviewLog.passed;
+          } catch (reviewErr) {
+            send({ type: "review_error", content: String(reviewErr).slice(0, 100) });
           }
 
           // 保存内容
@@ -195,9 +280,51 @@ export async function POST(request: Request) {
             data: {
               content: fullContent,
               wordCount: fullContent.length,
-              status: "completed",
+              status: reviewPassed ? "completed" : "reviewing",
             },
           });
+
+          // Phase 3: 自动摘要（含章末快照+角色脉搏）
+          send({ type: "summarize_start", content: "" });
+          try {
+            const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses } =
+              await orchestrator.summarizeChapter(
+                fullContent,
+                nextTitle,
+                activeCharacters as any,
+              );
+
+            await prisma.chapterSummary.create({
+              data: {
+                projectId,
+                chapterId: nextNode.id,
+                chapterTitle: nextTitle,
+                summary,
+                keyEvents,
+                characterStates: {
+                  raw: characterStates,
+                  closingSnapshot,
+                  impulses: characterImpulses,
+                },
+              },
+            });
+
+            if (keyEvents.length > 0) {
+              await prisma.storyBeat.create({
+                data: {
+                  projectId,
+                  nodeId: nextNode.id,
+                  description: keyEvents.join("；"),
+                  chapterNumber: nextNode.order + 1,
+                  impact: "minor",
+                },
+              });
+            }
+
+            send({ type: "summarize_done", summary, keyEvents });
+          } catch (summaryErr) {
+            send({ type: "summarize_error", content: String(summaryErr).slice(0, 100) });
+          }
 
           send({
             type: "done",

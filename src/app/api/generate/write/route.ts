@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     // 加载所有需要的数据
-    const [project, currentNode, allNodes, characters, loreEntries, summaries] =
+    const [project, currentNode, allNodes, characters, loreEntries, summaries, storyBeats, styleCard] =
       await Promise.all([
         prisma.project.findUnique({ where: { id: projectId } }),
         prisma.storyNode.findUnique({ where: { id: nodeId } }),
@@ -53,6 +53,15 @@ export async function POST(request: Request) {
           where: { projectId },
           orderBy: { createdAt: "desc" },
           take: 3,
+        }),
+        prisma.storyBeat.findMany({
+          where: { projectId },
+          orderBy: { chapterNumber: "desc" },
+          take: 20,
+        }),
+        prisma.styleCard.findFirst({
+          where: { projectId },
+          orderBy: { updatedAt: "desc" },
         }),
       ]);
 
@@ -79,6 +88,8 @@ export async function POST(request: Request) {
       characters: characters as any,
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
+      storyBeats: storyBeats as any,
+      styleCard: styleCard as any,
       authorNote,
     });
 
@@ -111,22 +122,52 @@ export async function POST(request: Request) {
 
         try {
           const orchestrator = new AgentOrchestrator();
-          let fullContent = "";
+          let newContent = ""; // 本次生成的新内容
+
+          // 检查是否有未完成的草稿
+          const partialDraft = currentNode.status === "drafting" && currentNode.content
+            ? currentNode.content.replace(/\[PARTIAL_DRAFT\]/g, "").trim()
+            : "";
 
           // Phase 1: 流式生成正文
+          let saveCounter = 0;
           for await (const chunk of orchestrator.writeSection(
             promptContext,
-            writingInstruction,
+            partialDraft
+              ? `${writingInstruction}\n\n【续写——从以下草稿断点继续，不要重复已有内容】\n已有内容末段：${partialDraft.slice(-200)}\n\n请从断点处自然接续。`
+              : writingInstruction,
             targetWordCount
           )) {
             if (chunk.type === "token") {
-              fullContent += chunk.content;
+              newContent += chunk.content;
               send({ type: "token", content: chunk.content });
+
+              // 每 ~300 字 fire-and-forget 保存草稿（合并旧内容）
+              saveCounter += chunk.content.length;
+              if (saveCounter >= 300) {
+                saveCounter = 0;
+                const combined = partialDraft + newContent;
+                prisma.storyNode.update({
+                  where: { id: nodeId },
+                  data: {
+                    content: combined + "\n\n[PARTIAL_DRAFT]",
+                    status: "drafting",
+                  },
+                }).catch(() => {}); // 静默失败，不阻塞流
+              }
             } else if (chunk.type === "error") {
               send({ type: "error", content: chunk.content });
               controller.close();
               return;
             }
+          }
+
+          // 合并旧草稿 + 新内容
+          const fullContent = partialDraft + newContent;
+
+          // 通知前端是否续写
+          if (partialDraft) {
+            send({ type: "resume", content: `从草稿续写 (已有${partialDraft.length}字)` });
           }
 
           // Phase 2: 审校
@@ -196,6 +237,52 @@ export async function POST(request: Request) {
               revisionCount: (currentNode.revisionCount || 0) + 1,
             },
           });
+
+          // Phase 3: 自动摘要——写入中期记忆
+          send({ type: "summarize_start", content: "" });
+
+          try {
+            const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses } =
+              await orchestrator.summarizeChapter(
+                fullContent,
+                currentNode.title || `第${currentNode.order + 1}节`,
+                activeCharacters as any,
+              );
+
+            // 存入 ChapterSummary（characterStates JSON 包含快照+脉搏+状态）
+            await prisma.chapterSummary.create({
+              data: {
+                projectId,
+                chapterId: nodeId,
+                chapterTitle: currentNode.title || `第${currentNode.order + 1}节`,
+                summary,
+                keyEvents,
+                characterStates: {
+                  raw: characterStates,
+                  closingSnapshot,
+                  impulses: characterImpulses,
+                },
+              },
+            });
+
+            // 存入 StoryBeat（长期记忆索引）
+            if (keyEvents.length > 0) {
+              await prisma.storyBeat.create({
+                data: {
+                  projectId,
+                  nodeId,
+                  description: keyEvents.join("；"),
+                  chapterNumber: currentNode.order + 1,
+                  impact: "minor",
+                },
+              });
+            }
+
+            send({ type: "summarize_done", summary, keyEvents });
+          } catch (summaryErr) {
+            // 摘要失败不阻塞主流程
+            send({ type: "summarize_error", content: String(summaryErr).slice(0, 100) });
+          }
 
           // Token 用量
           const tokenCount = countTokens(fullContent);

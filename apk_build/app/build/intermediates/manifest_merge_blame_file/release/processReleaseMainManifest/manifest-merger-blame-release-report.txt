@@ -1,0 +1,370 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<!--
+3    Copyright 2019 Google Inc. All Rights Reserved.
+4
+5     Licensed under the Apache License, Version 2.0 (the "License");
+6     you may not use this file except in compliance with the License.
+7     You may obtain a copy of the License at
+8
+9         http://www.apache.org/licenses/LICENSE-2.0
+10
+11     Unless required by applicable law or agreed to in writing, software
+12     distributed under the License is distributed on an "AS IS" BASIS,
+13     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+14     See the License for the specific language governing permissions and
+15     limitations under the License.
+16-->
+17<!--
+18 The "package" attribute is rewritten by the Gradle build with the value of applicationId.
+19     It is still required here, as it is used to derive paths, for instance when referring
+20     to an Activity by ".MyActivity" instead of the full name. If more Activities are added to the
+21     application, the package attribute will need to reflect the correct path in order to use
+22     the abbreviated format.
+23-->
+24<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+25    package="com.novelforge.app"
+26    android:versionCode="1"
+27    android:versionName="1.0.0" >
+28
+29    <uses-sdk
+30        android:minSdkVersion="21"
+31        android:targetSdkVersion="35" />
+32
+33    <queries>
+33-->[com.google.androidbrowserhelper:androidbrowserhelper:2.6.2] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5053e02be90783e54992393be394bb70\transformed\androidbrowserhelper-2.6.2\AndroidManifest.xml:22:5-30:15
+34        <intent>
+34-->[com.google.androidbrowserhelper:androidbrowserhelper:2.6.2] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5053e02be90783e54992393be394bb70\transformed\androidbrowserhelper-2.6.2\AndroidManifest.xml:23:9-29:18
+35            <action android:name="android.intent.action.VIEW" />
+35-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:146:17-68
+35-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:146:25-66
+36
+37            <category android:name="android.intent.category.BROWSABLE" />
+37-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:148:17-77
+37-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:148:27-75
+38
+39            <data android:scheme="https" />
+39-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:149:17-152:19
+39-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:149:23-45
+40        </intent>
+41    </queries>
+42
+43    <permission
+43-->[androidx.core:core:1.13.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
+44        android:name="com.novelforge.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+44-->[androidx.core:core:1.13.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
+45        android:protectionLevel="signature" />
+45-->[androidx.core:core:1.13.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
+46
+47    <uses-permission android:name="com.novelforge.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+47-->[androidx.core:core:1.13.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
+47-->[androidx.core:core:1.13.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
+48
+49    <application
+49-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:33:5-191:19
+50        android:name="com.novelforge.app.Application"
+50-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:34:9-35
+51        android:allowBackup="true"
+51-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:35:9-35
+52        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+52-->[androidx.core:core:1.13.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:28:18-86
+53        android:extractNativeLibs="true"
+54        android:icon="@mipmap/ic_launcher"
+54-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:36:9-43
+55        android:label="@string/appName"
+55-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:37:9-40
+56        android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+56-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:39:9-105
+57        android:supportsRtl="true"
+57-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:41:9-35
+58        android:theme="@android:style/Theme.Translucent.NoTitleBar" >
+58-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:42:9-68
+59        <meta-data
+59-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:44:9-46:58
+60            android:name="asset_statements"
+60-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:45:13-44
+61            android:resource="@string/assetStatements" />
+61-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:46:13-55
+62        <meta-data
+62-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:49:13-51:58
+63            android:name="web_manifest_url"
+63-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:50:17-48
+64            android:value="@string/webManifestUrl" />
+64-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:51:17-55
+65        <meta-data
+65-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:54:9-56:52
+66            android:name="twa_generator"
+66-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:55:13-41
+67            android:value="@string/generatorApp" />
+67-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:56:13-49
+68
+69        <activity
+69-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:63:13-74:24
+70            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+70-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:63:23-104
+71            android:enabled="true"
+71-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:65:17-39
+72            android:excludeFromRecents="true"
+72-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:66:17-50
+73            android:exported="false" >
+73-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:64:17-41
+74            <meta-data
+74-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:67:17-69:57
+75                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
+75-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:68:21-87
+76                android:value="@string/launchUrl" />
+76-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:69:21-54
+77
+78            <intent-filter>
+78-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:70:17-73:33
+79                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+79-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:71:21-92
+79-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:71:29-89
+80
+81                <category android:name="android.intent.category.DEFAULT" />
+81-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:72:21-80
+81-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:72:31-77
+82            </intent-filter>
+83        </activity>
+84        <activity
+84-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:77:9-158:20
+85            android:name="com.novelforge.app.LauncherActivity"
+85-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:77:19-50
+86            android:alwaysRetainTaskState="true"
+86-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:78:13-49
+87            android:exported="true"
+87-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:80:13-36
+88            android:label="@string/launcherName" >
+88-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:79:13-49
+89            <meta-data
+89-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:81:13-82:53
+90                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+90-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:81:24-85
+91                android:value="@string/launchUrl" />
+91-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:82:17-50
+92            <meta-data
+92-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:84:13-86:58
+93                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+93-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:85:17-83
+94                android:resource="@color/colorPrimary" />
+94-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:86:17-55
+95            <meta-data
+95-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:90:13-92:62
+96                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR_DARK"
+96-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:91:17-88
+97                android:resource="@color/colorPrimaryDark" />
+97-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:92:17-59
+98            <meta-data
+98-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:94:13-96:61
+99                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+99-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:95:17-87
+100                android:resource="@color/navigationColor" />
+100-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:96:17-58
+101            <meta-data
+101-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:98:13-100:65
+102                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR_DARK"
+102-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:99:17-92
+103                android:resource="@color/navigationColorDark" />
+103-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:100:17-62
+104            <meta-data
+104-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:102:13-104:68
+105                android:name="androix.browser.trusted.NAVIGATION_BAR_DIVIDER_COLOR"
+105-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:103:17-84
+106                android:resource="@color/navigationDividerColor" />
+106-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:104:17-65
+107            <meta-data
+107-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:106:13-108:72
+108                android:name="androix.browser.trusted.NAVIGATION_BAR_DIVIDER_COLOR_DARK"
+108-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:107:17-89
+109                android:resource="@color/navigationDividerColorDark" />
+109-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:108:17-69
+110            <meta-data
+110-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:110:13-111:54
+111                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+111-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:110:24-95
+112                android:resource="@drawable/splash" />
+112-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:111:17-52
+113            <meta-data
+113-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:113:13-114:60
+114                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+114-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:113:24-104
+115                android:resource="@color/backgroundColor" />
+115-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:114:17-58
+116            <meta-data
+116-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:116:13-117:71
+117                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_FADE_OUT_DURATION"
+117-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:116:24-105
+118                android:value="@integer/splashScreenFadeOutDuration" />
+118-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:117:17-69
+119            <meta-data
+119-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:119:13-120:60
+120                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+120-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:119:24-97
+121                android:value="@string/providerAuthority" />
+121-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:120:17-58
+122            <meta-data
+122-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:122:13-97
+123                android:name="android.app.shortcuts"
+123-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:122:24-60
+124                android:resource="@xml/shortcuts" />
+124-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:122:61-94
+125            <meta-data
+125-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:124:13-125:56
+126                android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
+126-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:124:24-91
+127                android:value="@string/fallbackType" />
+127-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:125:17-53
+128            <meta-data
+128-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:131:13-132:54
+129                android:name="android.support.customtabs.trusted.SCREEN_ORIENTATION"
+129-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:131:24-92
+130                android:value="@string/orientation" />
+130-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:132:17-52
+131
+132            <intent-filter>
+132-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:140:13-143:29
+133                <action android:name="android.intent.action.MAIN" />
+133-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:141:17-69
+133-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:141:25-66
+134
+135                <category android:name="android.intent.category.LAUNCHER" />
+135-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:142:17-77
+135-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:142:27-74
+136            </intent-filter>
+137            <intent-filter android:autoVerify="true" >
+137-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:145:13-153:29
+137-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:145:28-53
+138                <action android:name="android.intent.action.VIEW" />
+138-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:146:17-68
+138-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:146:25-66
+139
+140                <category android:name="android.intent.category.DEFAULT" />
+140-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:72:21-80
+140-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:72:31-77
+141                <category android:name="android.intent.category.BROWSABLE" />
+141-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:148:17-77
+141-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:148:27-75
+142
+143                <data
+143-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:149:17-152:19
+144                    android:host="@string/hostName"
+144-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:150:21-52
+145                    android:scheme="https" />
+145-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:149:23-45
+146            </intent-filter>
+147        </activity>
+148        <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" />
+148-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:160:9-90
+148-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:160:19-87
+149        <activity
+149-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:162:9-163:62
+150            android:name="com.google.androidbrowserhelper.trusted.WebViewFallbackActivity"
+150-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:162:19-97
+151            android:configChanges="orientation|screenSize" />
+151-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:163:13-59
+152
+153        <provider
+153-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:165:9-173:20
+154            android:name="androidx.core.content.FileProvider"
+154-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:166:13-62
+155            android:authorities="@string/providerAuthority"
+155-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:167:13-60
+156            android:exported="false"
+156-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:169:13-37
+157            android:grantUriPermissions="true" >
+157-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:168:13-47
+158            <meta-data
+158-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:170:13-172:53
+159                android:name="android.support.FILE_PROVIDER_PATHS"
+159-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:171:17-67
+160                android:resource="@xml/filepaths" />
+160-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:172:17-50
+161        </provider>
+162
+163        <service
+163-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:175:9-186:19
+164            android:name="com.novelforge.app.DelegationService"
+164-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:176:13-46
+165            android:enabled="@bool/enableNotification"
+165-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:177:13-55
+166            android:exported="@bool/enableNotification" >
+166-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:178:13-56
+167            <intent-filter>
+167-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:182:13-185:29
+168                <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
+168-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:183:17-105
+168-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:183:25-103
+169
+170                <category android:name="android.intent.category.DEFAULT" />
+170-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:72:21-80
+170-->C:\Users\Administrator\Projects\novel-forge\apk_build\app\src\main\AndroidManifest.xml:72:31-77
+171            </intent-filter>
+172        </service>
+173
+174        <provider
+174-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+175            android:name="androidx.startup.InitializationProvider"
+175-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+176            android:authorities="com.novelforge.app.androidx-startup"
+176-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+177            android:exported="false" >
+177-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+178            <meta-data
+178-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+179                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+179-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+180                android:value="androidx.startup" />
+180-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+181            <meta-data
+181-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\4bc52031417e9743197e36b704fe409f\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+182                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+182-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\4bc52031417e9743197e36b704fe409f\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+183                android:value="androidx.startup" />
+183-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\4bc52031417e9743197e36b704fe409f\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+184            <meta-data
+184-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+185                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+185-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+186                android:value="androidx.startup" />
+186-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+187        </provider>
+188
+189        <receiver
+189-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+190            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+190-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+191            android:directBootAware="false"
+191-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+192            android:enabled="true"
+192-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+193            android:exported="true"
+193-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+194            android:permission="android.permission.DUMP" >
+194-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+195            <intent-filter>
+195-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+196                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+196-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+196-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+197            </intent-filter>
+198            <intent-filter>
+198-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+199                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+199-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+199-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+200            </intent-filter>
+201            <intent-filter>
+201-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+202                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+202-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+202-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+203            </intent-filter>
+204            <intent-filter>
+204-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+205                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+205-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+205-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Administrator\.gradle\caches\8.11.1\transforms\bb4a0d32d1b17a1dcea0cf71d2bde5e0\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+206            </intent-filter>
+207        </receiver>
+208    </application>
+209
+210</manifest>

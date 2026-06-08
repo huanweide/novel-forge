@@ -71,7 +71,7 @@ export function ImportWizard({
   const [step, setStep] = useState<Step>("input");
   const [rawText, setRawText] = useState("");
   const [volumeMode, setVolumeMode] = useState(true);
-  const [importMode, setImportMode] = useState<"auto" | "chapters" | "settings">("auto");
+  const [importMode, setImportMode] = useState<"auto" | "chapters" | "settings" | "quick">("auto");
   const [result, setResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -87,6 +87,12 @@ export function ImportWizard({
   // SSE进度跟踪
   const [progressSteps, setProgressSteps] = useState<Array<{ stage: string; message: string; time: string }>>([]);
   const [currentStage, setCurrentStage] = useState("");
+  const [charsFound, setCharsFound] = useState(0);
+  const [loreFound, setLoreFound] = useState(0);
+  const [parsePct, setParsePct] = useState(0);
+  const [chunkDone, setChunkDone] = useState(0);
+  const [chunkTotal, setChunkTotal] = useState(0);
+  const [isSettings, setIsSettings] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +122,84 @@ export function ImportWizard({
     reader.readAsText(file);
   };
 
+  // ─── 快速导入（SSE 流式进度）────────────────────────
+
+  const [quickLoading, setQuickLoading] = useState(false);
+  const [quickResult, setQuickResult] = useState("");
+  const [quickStage, setQuickStage] = useState("");       // 当前阶段描述
+  const [quickPct, setQuickPct] = useState(0);             // 进度条 0-100
+  const [quickCharList, setQuickCharList] = useState<Array<{ name: string; preview: string }>>([]);
+
+  const handleQuickImport = async () => {
+    if (rawText.trim().length < 20) { setError("文本太短（最少20字）"); return; }
+    setQuickLoading(true);
+    setError("");
+    setQuickResult("");
+    setQuickStage("connecting");
+    setQuickPct(0);
+    setQuickCharList([]);
+
+    try {
+      const res = await fetch("/api/import/quick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, rawText }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        setError(err.error || "快速导入失败");
+        setQuickLoading(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("无法获取响应流");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() || "";
+
+        for (const chunk of chunks) {
+          if (!chunk.trim()) continue;
+          const dataLine = chunk.split("\n").find(l => l.trim().startsWith("data: "));
+          if (!dataLine) continue;
+          try {
+            const event = JSON.parse(dataLine.trim().slice(6));
+
+            if (event.type === "progress") {
+              setQuickStage(event.message || event.stage || "");
+              if (event.pct !== undefined) setQuickPct(event.pct as number);
+              if (event.characters) {
+                setQuickCharList(event.characters as Array<{ name: string; preview: string }>);
+              }
+            } else if (event.type === "done") {
+              setQuickPct(100);
+              setQuickStage(event.message || "✅ 完成");
+              setQuickResult(event.message || "");
+              setToast(event.message || "导入完成");
+              // 延迟关闭，让用户看到结果
+              setTimeout(() => { onImported(); onClose(); }, 1500);
+            } else if (event.type === "error") {
+              setError(event.message || "导入失败");
+              setQuickLoading(false);
+            }
+          } catch { /* skip malformed SSE */ }
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "网络中断");
+    } finally {
+      setQuickLoading(false);
+    }
+  };
+
   // ─── SSE 流式解析 ──────────────────────────────────────
 
   const handleParse = async () => {
@@ -128,6 +212,12 @@ export function ImportWizard({
     setError("");
     setProgressSteps([]);
     setCurrentStage("connecting");
+    setCharsFound(0);
+    setLoreFound(0);
+    setParsePct(0);
+    setChunkDone(0);
+    setChunkTotal(0);
+    setIsSettings(false);
 
     try {
       const res = await fetch("/api/import/parse", {
@@ -154,15 +244,19 @@ export function ImportWizard({
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+        // 按 SSE 事件边界 \n\n 分割，不是按行
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() || "";
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data: ")) continue;
+        for (const chunk of chunks) {
+          if (!chunk.trim()) continue;
+          // 找 data: 行（可能跨多行，取第一行 data: 的内容）
+          const lines = chunk.split("\n");
+          const dataLine = lines.find(l => l.trim().startsWith("data: "));
+          if (!dataLine) continue;
 
           try {
-            const event = JSON.parse(trimmed.slice(6));
+            const event = JSON.parse(dataLine.trim().slice(6));
 
             if (event.type === "progress") {
               setProgressSteps((prev) => [...prev, {
@@ -171,6 +265,20 @@ export function ImportWizard({
                 time: new Date().toLocaleTimeString("zh-CN"),
               }]);
               setCurrentStage(event.stage || "");
+              // 百分比
+              if (event.pct !== undefined) setParsePct(event.pct as number);
+              // 设定集标记
+              if (event.isSettings) setIsSettings(true);
+              // 分块进度
+              if (event.stage === "ready" && event.chunks !== undefined) setChunkTotal(event.chunks as number);
+              if (event.stage === "chunk-done" && event.doneChunks !== undefined) setChunkDone(event.doneChunks as number);
+              // 逐角色/词条计数
+              if (event.stage === "char-found" && event.total !== undefined) {
+                setCharsFound(event.total as number);
+              }
+              if (event.stage === "lore-found" && event.total !== undefined) {
+                setLoreFound(event.total as number);
+              }
             } else if (event.type === "done") {
               setResult(event);
               setEditedChapters(event.detectedChapters || []);
@@ -203,10 +311,17 @@ export function ImportWizard({
     }
   };
 
-  // ─── 提交导入 ──────────────────────────────────────────
+  // ─── 分批提交（SSE 流式进度）──────────────────────────
+
+  const [commitProgress, setCommitProgress] = useState<Array<{ stage: string; message: string }>>([]);
+  const [commitStats, setCommitStats] = useState<{ charTotal?: number; charDone?: number; loreTotal?: number; loreDone?: number }>({});
+  const [toast, setToast] = useState("");
 
   const handleCommit = async () => {
     setStep("committing");
+    setCommitProgress([]);
+    setCommitStats({});
+    setToast("");
 
     const selectedChaptersList = editedChapters.filter((_, i) => selectedChapters.has(i));
     const selectedCharsList = editedCharacters.filter((_, i) => selectedChars.has(i));
@@ -226,19 +341,85 @@ export function ImportWizard({
         }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "提交失败");
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        setError(errData.error || "提交失败");
         setStep("preview");
         return;
       }
 
-      setMessage(data.message || "导入完成");
-      setStep("done");
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("无法获取响应流");
+
+      const decoder2 = new TextDecoder();
+      let buf2 = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf2 += decoder2.decode(value, { stream: true });
+        const chunks = buf2.split("\n\n");
+        buf2 = chunks.pop() || "";
+
+        for (const chunk of chunks) {
+          if (!chunk.trim()) continue;
+          const dataLine = chunk.split("\n").find(l => l.trim().startsWith("data: "));
+          if (!dataLine) continue;
+          try {
+            const event = JSON.parse(dataLine.trim().slice(6));
+            if (event.type === "progress") {
+              setCommitProgress((prev) => [...prev, { stage: event.stage as string, message: event.message as string }]);
+              if (event.stage === "chars-merge") {
+                setCommitStats((p) => ({ ...p, charTotal: event.totalBatches as number, charDone: event.done as number }));
+              } else if (event.stage === "lore-merge") {
+                setCommitStats((p) => ({ ...p, loreTotal: event.totalBatches as number, loreDone: event.done as number }));
+              }
+            } else if (event.type === "done") {
+              // 从列表中移除已确认的（保留未确认的）
+              setEditedCharacters((prev) => prev.filter((_, i) => !selectedChars.has(i)));
+              setEditedLore((prev) => prev.filter((_, i) => !selectedLore.has(i)));
+              setEditedChapters((prev) => prev.filter((_, i) => !selectedChapters.has(i)));
+              setSelectedChars(new Set());
+              setSelectedLore(new Set());
+              setSelectedChapters(new Set());
+
+              const totalRemaining = (editedCharacters.length - selectedCharsList.length) + (editedLore.length - selectedLoreList.length);
+              setToast(`✅ ${event.message}`);
+              setTimeout(() => setToast(""), 4000);
+
+              if (totalRemaining === 0) {
+                // 全部确认完毕
+                setMessage(event.message as string);
+                setStep("done");
+              } else {
+                setStep("preview");
+              }
+            } else if (event.type === "error") {
+              setError(event.message as string || "写入失败");
+              setStep("preview");
+            }
+          } catch { /* skip */ }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交失败");
       setStep("preview");
     }
+  };
+
+  // ─── 一键删除未确认 ────────────────────────────────────
+
+  const handleRemoveAllUnconfirmed = () => {
+    if (editedCharacters.length === 0 && editedLore.length === 0 && editedChapters.length === 0) return;
+    setEditedCharacters([]);
+    setEditedLore([]);
+    setEditedChapters([]);
+    setSelectedChars(new Set());
+    setSelectedLore(new Set());
+    setSelectedChapters(new Set());
+    setToast("🗑️ 已清空所有未确认项");
+    setTimeout(() => setToast(""), 3000);
   };
 
   // ─── 渲染 ──────────────────────────────────────────────
@@ -277,6 +458,7 @@ export function ImportWizard({
                     { key: "auto", label: "🤖 自动检测", desc: "智能识别" },
                     { key: "chapters", label: "📖 章节正文", desc: "叙事文本" },
                     { key: "settings", label: "📋 设定文本", desc: "角色/世界观/风格" },
+                    { key: "quick", label: "⚡ 快速导入", desc: "识别名字→直写DB" },
                   ].map((opt) => (
                     <button
                       key={opt.key}
@@ -295,6 +477,11 @@ export function ImportWizard({
                 {importMode === "settings" && (
                   <p className="text-xs text-amber-400 mt-2">
                     ⚡ 设定模式：不限角色/词条数量上限，穷尽提取文本中的全部设定。不创建章节节点，仅导入三卡。
+                  </p>
+                )}
+                {importMode === "quick" && (
+                  <p className="text-xs text-green-400 mt-2">
+                    ⚡ 快速导入：正则匹配"1.人名"格式→原文全抄进 quickImportContent→直接写DB。不用AI、毫秒级解析、一次搞定。
                   </p>
                 )}
                 {importMode === "chapters" && (
@@ -361,79 +548,170 @@ export function ImportWizard({
                 </span>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={onClose} className="border-zinc-700">取消</Button>
-                  <Button
-                    onClick={handleParse}
-                    disabled={rawText.trim().length < 50}
-                    className="bg-indigo-600 hover:bg-indigo-500"
-                  >
-                    🤖 AI 分析文本
-                  </Button>
+                  {importMode === "quick" ? (
+                    <Button
+                      onClick={handleQuickImport}
+                      disabled={quickLoading || rawText.trim().length < 30}
+                      className="bg-green-600 hover:bg-green-500"
+                    >
+                      {quickLoading ? "⚡ 导入中..." : "⚡ 快速导入"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleParse}
+                      disabled={rawText.trim().length < 50}
+                      className="bg-indigo-600 hover:bg-indigo-500"
+                    >
+                      🤖 AI 分析文本
+                    </Button>
+                  )}
                 </div>
               </div>
+
+              {/* ── 快速导入进度 ── */}
+              {quickLoading && (
+                <div className="mt-4 p-4 rounded-xl bg-zinc-800/50 border border-zinc-700 space-y-3">
+                  {/* 进度条 */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-green-400 font-medium">{quickStage || "连接中..."}</span>
+                      <span className="text-zinc-500">{quickPct}%</span>
+                    </div>
+                    <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-600 to-emerald-500 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.max(quickPct, 3)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 识别的角色列表 */}
+                  {quickCharList.length > 0 && (
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      <p className="text-xs text-zinc-500 mb-1">识别到的角色：</p>
+                      {quickCharList.map((c, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs py-1 px-2 rounded bg-zinc-800/40">
+                          <span className="text-green-400 font-medium shrink-0">{c.name}</span>
+                          <span className="text-zinc-500 truncate">{c.preview}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 完成提示 */}
+                  {quickResult && (
+                    <div className="text-sm text-emerald-400 font-medium text-center py-2">
+                      {quickResult}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Step 2: 解析中 */}
           {step === "parsing" && (
-            <div className="flex flex-col items-center py-8 space-y-4">
+            <div className="flex flex-col items-center py-6 space-y-4">
               {/* 大状态 */}
               <div className="flex items-center gap-3">
-                {currentStage === "complete" ? (
+                {currentStage === "complete" || currentStage === "done" ? (
                   <span className="text-3xl">✅</span>
                 ) : (
                   <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                 )}
                 <div>
                   <p className="text-sm text-zinc-200 font-medium">
-                    {currentStage === "connecting" && "正在连接 V4 Pro..."}
-                    {currentStage === "segment" && "文本拆分完成"}
-                    {currentStage === "sending" && "正在发送分析请求..."}
-                    {currentStage === "analyzing" && "V4 Pro 深度分析中"}
-                    {currentStage === "received" && "收到回复，解析中..."}
-                    {currentStage === "parsing" && "结构化提取中..."}
-                    {currentStage === "complete" && "分析完成！"}
+                    {currentStage === "init" && "连接数据库..."}
+                    {currentStage === "ready" && `文本 ${rawText.length.toLocaleString()} 字 · 双Provider并行`}
+                    {currentStage === "launch" && "A路 DeepSeek→人物 | B路 Flash→世界"}
+                    {(currentStage === "path-a" || currentStage === "path-b") && `AB路并行中 · ${parsePct}%`}
+                    {currentStage === "path-a-done" && `A路完成`}
+                    {currentStage === "path-b-done" && `B路完成`}
+                    {currentStage === "done-pre" && "完成！"}
+                    {currentStage === "done" && "分析完成！"}
                     {!currentStage && "准备中..."}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    {rawText.length > 0 && `文本 ${rawText.length.toLocaleString()} 字符 · V4 Pro 推理模型`}
+                    {rawText.length > 0 && `文本 ${rawText.length.toLocaleString()} 字符 · 硅基+DeepSeek 双Provider`}
                   </p>
                 </div>
               </div>
 
+              {/* 全局进度条 */}
+              {parsePct > 0 && (
+                <div className="w-full max-w-md mt-1">
+                  <div className="flex justify-between text-xs text-zinc-500 mb-0.5">
+                    <span>总进度</span>
+                    <span>{parsePct}%</span>
+                  </div>
+                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${parsePct}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {/* AB路进度 */}
+              {(currentStage === "path-a" || currentStage === "path-b" || currentStage === "path-a-done" || currentStage === "path-b-done") && (
+                <div className="w-full max-w-md space-y-1.5 mt-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-pink-400 w-24 shrink-0">👤 A路 DeepSeek</span>
+                    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-pink-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-a-done" ? "100" : "40"}%` }} />
+                    </div>
+                    <span className="text-zinc-500 w-16 text-right text-[10px]">{currentStage === "path-a-done" ? "✅完成" : "进行中"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-emerald-400 w-24 shrink-0">🌍 B路 Flash</span>
+                    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-b-done" ? "100" : "40"}%` }} />
+                    </div>
+                    <span className="text-zinc-500 w-16 text-right text-[10px]">{currentStage === "path-b-done" ? "✅完成" : "进行中"}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 实时统计：角色+词条计数 */}
+              {(charsFound > 0 || loreFound > 0) && (
+                <div className="flex gap-4 text-xs">
+                  <span className="text-pink-400">👤 角色 {charsFound}</span>
+                  <span className="text-emerald-400">📖 词条 {loreFound}</span>
+                </div>
+              )}
+
               {/* 进度步骤列表 */}
               {progressSteps.length > 0 && (
-                <div className="w-full max-w-md space-y-1.5">
+                <div className="w-full max-w-md space-y-1 max-h-60 overflow-y-auto">
                   {progressSteps.map((step, i) => (
                     <div
                       key={i}
-                      className={`flex items-start gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
+                      className={`flex items-start gap-2 px-3 py-1 rounded text-xs transition-colors ${
                         i === progressSteps.length - 1
-                          ? "bg-indigo-950/40 border border-indigo-800/30"
+                          ? "bg-indigo-950/30 border border-indigo-800/20"
                           : "text-zinc-500"
                       }`}
                     >
                       <span className="text-zinc-600 font-mono shrink-0 w-14">{step.time}</span>
                       <span className="flex-1">{step.message}</span>
-                      {i < progressSteps.length - 1 && (
-                        <span className="text-green-500 shrink-0">✓</span>
-                      )}
+                      {step.stage === "chunk-done" && <span className="text-green-500 shrink-0">✓</span>}
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* 等待提示 */}
-              {currentStage === "analyzing" && (
+              {/* 提示 */}
+              {parsePct > 0 && parsePct < 90 && (
                 <p className="text-xs text-zinc-600 animate-pulse">
-                  V4 Pro 正在推理分析，大文本可能需要 30-90 秒，请耐心等待...
+                  分块并行分析中，总时间≈最慢那块...
                 </p>
               )}
             </div>
           )}
 
-          {/* Step 3: 预览确认 */}
+          {/* Step 3: 预览确认（分批选择确认） */}
           {step === "preview" && result && (
             <div className="space-y-5">
+              <p className="text-xs text-zinc-500 -mb-3">勾选要导入的项 → 点「确认选中」写入数据库。已写入的会自动移出列表。未确认的可以保留或手动移除。</p>
+
               {/* 概要 */}
               <div className="grid grid-cols-4 gap-3">
                 <StatBox label="识别章节" value={String(editedChapters.length)} color="text-indigo-400" />
@@ -463,33 +741,40 @@ export function ImportWizard({
                   </div>
                   <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
                     {editedChapters.map((ch, i) => (
-                      <label
-                        key={i}
-                        className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer text-xs border transition-colors ${
-                          selectedChapters.has(i)
-                            ? "border-indigo-700 bg-indigo-950/30"
-                            : "border-zinc-800 bg-zinc-900/50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedChapters.has(i)}
-                          onChange={() => {
+                      <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
+                        selectedChapters.has(i) ? "border-indigo-700 bg-indigo-950/30" : "border-zinc-800 bg-zinc-900/50"
+                      }`}>
+                        <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedChapters.has(i)}
+                            onChange={() => {
+                              const next = new Set(selectedChapters);
+                              next.has(i) ? next.delete(i) : next.add(i);
+                              setSelectedChapters(next);
+                            }}
+                            className="mt-0.5 rounded accent-indigo-600"
+                          />
+                          <div className="min-w-0">
+                            {ch.volumeTitle && (
+                              <span className="text-amber-400/70 font-medium block">{ch.volumeTitle}</span>
+                            )}
+                            <span className="text-zinc-300">{ch.chapterTitle}</span>
+                            <span className="text-zinc-600 ml-1">{ch.wordCount}字</span>
+                            <p className="text-zinc-600 mt-0.5 truncate">{ch.contentSnippet}</p>
+                          </div>
+                        </label>
+                        <button
+                          onClick={() => {
+                            setEditedChapters((prev) => prev.filter((_, j) => j !== i));
                             const next = new Set(selectedChapters);
-                            next.has(i) ? next.delete(i) : next.add(i);
+                            next.delete(i);
                             setSelectedChapters(next);
                           }}
-                          className="mt-0.5 rounded accent-indigo-600"
-                        />
-                        <div className="min-w-0">
-                          {ch.volumeTitle && (
-                            <span className="text-amber-400/70 font-medium block">{ch.volumeTitle}</span>
-                          )}
-                          <span className="text-zinc-300">{ch.chapterTitle}</span>
-                          <span className="text-zinc-600 ml-1">{ch.wordCount}字</span>
-                          <p className="text-zinc-600 mt-0.5 truncate">{ch.contentSnippet}</p>
-                        </div>
-                      </label>
+                          className="text-zinc-600 hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
+                          title="移除"
+                        >✕</button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -513,41 +798,48 @@ export function ImportWizard({
                   </div>
                   <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
                     {editedCharacters.map((char, i) => (
-                      <label
-                        key={i}
-                        className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer text-xs border transition-colors ${
-                          selectedChars.has(i)
-                            ? "border-pink-700 bg-pink-950/30"
-                            : "border-zinc-800 bg-zinc-900/50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedChars.has(i)}
-                          onChange={() => {
+                      <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
+                        selectedChars.has(i) ? "border-pink-700 bg-pink-950/30" : "border-zinc-800 bg-zinc-900/50"
+                      }`}>
+                        <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedChars.has(i)}
+                            onChange={() => {
+                              const next = new Set(selectedChars);
+                              next.has(i) ? next.delete(i) : next.add(i);
+                              setSelectedChars(next);
+                            }}
+                            className="mt-0.5 rounded accent-pink-600"
+                          />
+                          <div className="min-w-0">
+                            <span className="text-zinc-200 font-medium">{char.name}</span>
+                            <span className="text-zinc-500 ml-1">
+                              {char.role === "protagonist" ? "主角" : char.role === "antagonist" ? "反派" : char.role === "supporting" ? "配角" : char.role || "配角"}
+                            </span>
+                            {Array.isArray(char.personality) && char.personality.length > 0 && (
+                              <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                {char.personality.slice(0, 4).map((p: string, j: number) => (
+                                  <span key={j} className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">{p}</span>
+                                ))}
+                              </div>
+                            )}
+                            {char.background && (
+                              <p className="text-zinc-600 mt-0.5 line-clamp-2">{char.background}</p>
+                            )}
+                          </div>
+                        </label>
+                        <button
+                          onClick={() => {
+                            setEditedCharacters((prev) => prev.filter((_, j) => j !== i));
                             const next = new Set(selectedChars);
-                            next.has(i) ? next.delete(i) : next.add(i);
+                            next.delete(i);
                             setSelectedChars(next);
                           }}
-                          className="mt-0.5 rounded accent-pink-600"
-                        />
-                        <div className="min-w-0">
-                          <span className="text-zinc-200 font-medium">{char.name}</span>
-                          <span className="text-zinc-500 ml-1">
-                            {char.role === "protagonist" ? "主角" : char.role === "antagonist" ? "反派" : char.role === "supporting" ? "配角" : char.role || "配角"}
-                          </span>
-                          {char.personality && char.personality.length > 0 && (
-                            <div className="flex flex-wrap gap-0.5 mt-0.5">
-                              {char.personality.slice(0, 4).map((p, j) => (
-                                <span key={j} className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">{p}</span>
-                              ))}
-                            </div>
-                          )}
-                          {char.background && (
-                            <p className="text-zinc-600 mt-0.5 line-clamp-2">{char.background}</p>
-                          )}
-                        </div>
-                      </label>
+                          className="text-zinc-600 hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
+                          title="移除"
+                        >✕</button>
+                      </div>
                     ))}
                     {editedCharacters.length === 0 && (
                       <p className="text-xs text-zinc-600 p-4 text-center">未识别到角色</p>
@@ -576,36 +868,43 @@ export function ImportWizard({
                     </div>
                     <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
                       {editedLore.map((entry, i) => (
-                        <label
-                          key={i}
-                          className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer text-xs border transition-colors ${
-                            selectedLore.has(i)
-                              ? "border-emerald-700 bg-emerald-950/30"
-                              : "border-zinc-800 bg-zinc-900/50"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedLore.has(i)}
-                            onChange={() => {
+                        <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
+                          selectedLore.has(i) ? "border-emerald-700 bg-emerald-950/30" : "border-zinc-800 bg-zinc-900/50"
+                        }`}>
+                          <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={selectedLore.has(i)}
+                              onChange={() => {
+                                const next = new Set(selectedLore);
+                                next.has(i) ? next.delete(i) : next.add(i);
+                                setSelectedLore(next);
+                              }}
+                              className="mt-0.5 rounded accent-emerald-600"
+                            />
+                            <div className="min-w-0">
+                              <span className="text-zinc-200">{entry.title}</span>
+                              <span className="text-zinc-600 ml-1 text-[10px]">{entry.category}</span>
+                              {entry.keys && entry.keys.length > 0 && (
+                                <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                  {entry.keys.slice(0, 4).map((k, j) => (
+                                    <span key={j} className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-500 text-[10px]">🔑{k}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                          <button
+                            onClick={() => {
+                              setEditedLore((prev) => prev.filter((_, j) => j !== i));
                               const next = new Set(selectedLore);
-                              next.has(i) ? next.delete(i) : next.add(i);
+                              next.delete(i);
                               setSelectedLore(next);
                             }}
-                            className="mt-0.5 rounded accent-emerald-600"
-                          />
-                          <div className="min-w-0">
-                            <span className="text-zinc-200">{entry.title}</span>
-                            <span className="text-zinc-600 ml-1 text-[10px]">{entry.category}</span>
-                            {entry.keys && entry.keys.length > 0 && (
-                              <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                {entry.keys.slice(0, 4).map((k, j) => (
-                                  <span key={j} className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-500 text-[10px]">🔑{k}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </label>
+                            className="text-zinc-600 hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
+                            title="移除"
+                          >✕</button>
+                        </div>
                       ))}
                       {editedLore.length === 0 && (
                         <p className="text-xs text-zinc-600 p-4 text-center">未识别到世界设定</p>
@@ -621,29 +920,92 @@ export function ImportWizard({
               </div>
 
               {/* 操作按钮 */}
-              <div className="flex justify-between pt-3 border-t border-zinc-800">
-                <Button variant="outline" onClick={() => setStep("input")} className="border-zinc-700">
-                  ← 返回修改
-                </Button>
-                <Button
-                  onClick={handleCommit}
-                  disabled={selectedChapters.size === 0 && selectedChars.size === 0 && selectedLore.size === 0}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
-                >
-                  ✅ 确认导入（{selectedChapters.size}章 {selectedChars.size}角色 {selectedLore.size}词条）
-                </Button>
+              <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep("input")} className="border-zinc-700 text-xs">
+                    ← 返回修改
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleRemoveAllUnconfirmed}
+                    className="border-red-800 text-red-400 hover:bg-red-950/30 text-xs"
+                    disabled={editedCharacters.length === 0 && editedLore.length === 0 && editedChapters.length === 0}
+                  >
+                    🗑 一键删除未确认
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500">
+                    剩余 {editedCharacters.length}角色 {editedLore.length}词条 {editedChapters.length}章
+                  </span>
+                  <Button
+                    onClick={handleCommit}
+                    disabled={selectedChapters.size === 0 && selectedChars.size === 0 && selectedLore.size === 0}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs"
+                  >
+                    ✅ 确认选中（{selectedChapters.size}章 {selectedChars.size}角色 {selectedLore.size}词条）
+                  </Button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 4: 提交中 */}
+          {/* Toast 提示 */}
+          {toast && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-emerald-900/90 border border-emerald-700 text-sm text-emerald-200 shadow-lg animate-pulse">
+              {toast}
+            </div>
+          )}
+
+          {/* Step 4: 提交中（SSE 实时进度） */}
           {step === "committing" && (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-zinc-400">正在写入数据库...</p>
-              <p className="text-xs text-zinc-600">
-                创建章节节点 · 角色卡片 · 世界书词条 · 文风卡
-              </p>
+            <div className="flex flex-col py-8 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                <div>
+                  <p className="text-sm text-zinc-200 font-medium">正在写入数据库...</p>
+                  <p className="text-xs text-zinc-500">
+                    章节 · 角色卡 · 世界书 · 文风卡 | V4 Pro 分批合并
+                  </p>
+                </div>
+              </div>
+
+              {/* 进度列表 */}
+              <div className="space-y-2">
+                {commitProgress.map((p, i) => {
+                  const isChars = p.stage === "chars-merge";
+                  const isLore = p.stage === "lore-merge";
+                  const isDone = p.stage.includes("done") || p.message.startsWith("✅");
+
+                  return (
+                    <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      i === commitProgress.length - 1 ? "bg-purple-950/30 border border-purple-800/30" : "text-zinc-500"
+                    }`}>
+                      {isDone ? (
+                        <span className="text-green-500 shrink-0">✅</span>
+                      ) : (
+                        <span className="shrink-0">{isChars ? "👤" : isLore ? "📖" : "📝"}</span>
+                      )}
+                      <span className="flex-1 text-xs">{p.message}</span>
+                      {/* 进度条 */}
+                      {isChars && commitStats.charDone !== undefined && commitStats.charTotal && (
+                        <div className="w-24 h-1.5 bg-zinc-700 rounded-full overflow-hidden shrink-0">
+                          <div className="h-full bg-indigo-500 rounded-full transition-all" style={{
+                            width: `${Math.min(100, Math.round((commitStats.charDone / Math.max(1, Number(commitStats.charTotal) * 4)) * 100))}%`
+                          }} />
+                        </div>
+                      )}
+                      {isLore && commitStats.loreDone !== undefined && commitStats.loreTotal && (
+                        <div className="w-24 h-1.5 bg-zinc-700 rounded-full overflow-hidden shrink-0">
+                          <div className="h-full bg-emerald-500 rounded-full transition-all" style={{
+                            width: `${Math.min(100, Math.round(((commitStats.loreDone || 0) / Math.max(1, Number(commitStats.loreTotal) * 4)) * 100))}%`
+                          }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
