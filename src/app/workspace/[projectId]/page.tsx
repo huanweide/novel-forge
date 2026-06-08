@@ -802,8 +802,12 @@ export default function WorkspacePage() {
             setSelectedNode({ ...selectedNode, outline });
           }}
           onGenerateChapterOutline={async () => {
-            if (!selectedNode || !project) return;
-            const promptText = refineInstruction.trim() || "";
+            if (!selectedNode || !project) {
+              alert("请先选中一个章节节点");
+              return;
+            }
+            const promptText = prompt("输入章纲提示词（留空则自动生成）：", refineInstruction || "");
+            if (promptText === null) return; // 用户取消
             try {
               setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
               const res = await fetch("/api/generate/chapter-outline", {
@@ -816,17 +820,22 @@ export default function WorkspacePage() {
                 }),
               });
               const data = await res.json();
+              if (!res.ok || data.error) {
+                alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`);
+                setReviewResult(null);
+                return;
+              }
               if (data.outline) {
-                // 更新本地状态和数据库的 outline
                 setSelectedNode({ ...selectedNode, outline: data.outline });
-                // notify the user
-                setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）` }] });
+                setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
                 await loadProject();
               } else {
-                setReviewResult({ passed: false, issues: [{ type: "error", severity: "critical", description: `❌ 生成失败：${data.error || "未知错误"}` }] });
+                alert("API 返回空内容，请重试");
+                setReviewResult(null);
               }
             } catch (err) {
-              setReviewResult({ passed: false, issues: [{ type: "error", severity: "critical", description: `❌ 网络错误：${err instanceof Error ? err.message : "请重试"}` }] });
+              alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
+              setReviewResult(null);
             }
           }}
           projectId={project.id}
