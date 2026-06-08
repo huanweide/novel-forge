@@ -112,6 +112,7 @@ export async function POST(request: Request) {
     writingInstruction += currentNode.outline
       ? `【本节大纲】${currentNode.outline}`
       : "根据上下文自然推进剧情，撰写本节正文。";
+    writingInstruction += "\n\n【格式铁律】绝不在正文首行或任意位置写「第X章」「第X节」或章节标题。章节标题由系统管理，正文直接切入动作/对话。";
 
     // 创建 SSE 流
     const encoder = new TextEncoder();

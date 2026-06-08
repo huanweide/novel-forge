@@ -366,6 +366,9 @@ export default function WorkspacePage() {
   const [outlineRaw, setOutlineRaw] = useState("");
   const [outlineError, setOutlineError] = useState("");
   const [outlineUseFlash, setOutlineUseFlash] = useState(false);
+  // 大纲追加模式：已有章节时默认追加而非替换
+  const existingChapterCount = project?.storyNodes.filter(n => n.type === "chapter" && !n.parentId).length || 0;
+  const [outlineAppendMode, setOutlineAppendMode] = useState(existingChapterCount > 0);
 
   /** 获取实际章节数（含自定义） */
   const getEffectiveChapterCount = () => {
@@ -427,7 +430,7 @@ export default function WorkspacePage() {
       const putRes = await fetch("/api/generate/outline", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, chapters: outlinePreviewChapters, replaceAll: true }),
+        body: JSON.stringify({ projectId: project.id, chapters: outlinePreviewChapters, replaceAll: !outlineAppendMode }),
       });
       if (!putRes.ok) {
         const err = await putRes.json().catch(() => ({ error: "创建失败" }));
@@ -561,6 +564,33 @@ export default function WorkspacePage() {
       }
     } catch (err) {
       console.error("创建节点失败:", err);
+    }
+  };
+
+  // ─── 删除节点（章节自动重新编号） ──────────────────────────
+
+  const handleDeleteNode = async (nodeId: string) => {
+    if (!project) return;
+    const node = project.storyNodes.find(n => n.id === nodeId);
+    const label = node?.title || "此节点";
+    if (!confirm(`确定删除「${label}」？\n删除后后续章节将自动重新编号。`)) return;
+
+    try {
+      const res = await fetch(`/api/story/nodes/${nodeId}`, { method: "DELETE" });
+      if (res.ok) {
+        // 如果删的是当前选中节点，清空选中
+        if (selectedNode?.id === nodeId) {
+          setSelectedNode(null);
+          setStreamContent("");
+          setReviewResult(null);
+        }
+        await loadProject();
+      } else {
+        const err = await res.json().catch(() => ({ error: "未知错误" }));
+        alert("删除失败: " + (err.error || "请重试"));
+      }
+    } catch (err) {
+      console.error("删除节点失败:", err);
     }
   };
 
@@ -746,6 +776,7 @@ export default function WorkspacePage() {
           onClearSelection={clearSelection}
           batchGenerating={batchGenerating}
           onBatchGenerate={handleBatchGenerate}
+          onDeleteNode={handleDeleteNode}
         />
 
         {/* 中栏：写作区 */}
@@ -769,6 +800,34 @@ export default function WorkspacePage() {
               body: JSON.stringify({ outline }),
             });
             setSelectedNode({ ...selectedNode, outline });
+          }}
+          onGenerateChapterOutline={async () => {
+            if (!selectedNode || !project) return;
+            const promptText = refineInstruction.trim() || "";
+            try {
+              setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
+              const res = await fetch("/api/generate/chapter-outline", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  projectId: project.id,
+                  nodeId: selectedNode.id,
+                  prompt: promptText || undefined,
+                }),
+              });
+              const data = await res.json();
+              if (data.outline) {
+                // 更新本地状态和数据库的 outline
+                setSelectedNode({ ...selectedNode, outline: data.outline });
+                // notify the user
+                setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）` }] });
+                await loadProject();
+              } else {
+                setReviewResult({ passed: false, issues: [{ type: "error", severity: "critical", description: `❌ 生成失败：${data.error || "未知错误"}` }] });
+              }
+            } catch (err) {
+              setReviewResult({ passed: false, issues: [{ type: "error", severity: "critical", description: `❌ 网络错误：${err instanceof Error ? err.message : "请重试"}` }] });
+            }
           }}
           projectId={project.id}
           lastGeneratedText={lastGeneratedText}
@@ -961,6 +1020,9 @@ export default function WorkspacePage() {
           onGenerate={handleGenerateOutlinePreview}
           onConfirm={handleConfirmOutline}
           onUpdateChapter={updatePreviewChapter}
+          appendMode={outlineAppendMode}
+          onAppendModeChange={setOutlineAppendMode}
+          hasExistingChapters={existingChapterCount > 0}
           onClose={() => {
             setShowOutlineDialog(false);
             setOutlinePreviewChapters([]);
@@ -1155,6 +1217,7 @@ function LeftPanel({
   onClearSelection,
   batchGenerating,
   onBatchGenerate,
+  onDeleteNode,
 }: {
   project: ProjectData;
   activeTab: string;
@@ -1177,6 +1240,7 @@ function LeftPanel({
   onClearSelection: () => void;
   batchGenerating: boolean;
   onBatchGenerate: () => void;
+  onDeleteNode?: (id: string) => void;
 }) {
   const tabs = [
     { key: "outline", label: "大纲" },
@@ -1265,6 +1329,7 @@ function LeftPanel({
               batchMode={batchMode}
               selectedChapterIds={selectedChapterIds}
               onToggleChapterSelect={onToggleChapterSelect}
+              onDeleteNode={onDeleteNode}
             />
           </>
         )}
@@ -1312,6 +1377,7 @@ function OutlineTree({
   batchMode,
   selectedChapterIds,
   onToggleChapterSelect,
+  onDeleteNode,
 }: {
   nodes: StoryNodeData[];
   selectedNode: StoryNodeData | null;
@@ -1321,6 +1387,7 @@ function OutlineTree({
   batchMode?: boolean;
   selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void;
+  onDeleteNode?: (id: string) => void;
 }) {
   const volumeNodes = nodes.filter((n) => n.type === "volume");
   const nonVolumeRoots = nodes.filter((n) => !n.parentId && n.type !== "volume");
@@ -1343,6 +1410,7 @@ function OutlineTree({
               batchMode={batchMode}
               selectedChapterIds={selectedChapterIds}
               onToggleChapterSelect={onToggleChapterSelect}
+              onDeleteNode={onDeleteNode}
             />
           );
         })}
@@ -1360,6 +1428,7 @@ function OutlineTree({
             batchMode={batchMode}
             selectedChapterIds={selectedChapterIds}
             onToggleChapterSelect={onToggleChapterSelect}
+            onDeleteNode={onDeleteNode}
           />
         ))}
 
@@ -1409,6 +1478,7 @@ function OutlineTree({
           batchMode={batchMode}
           selectedChapterIds={selectedChapterIds}
           onToggleChapterSelect={onToggleChapterSelect}
+          onDeleteNode={onDeleteNode}
         />
       ))}
 
@@ -1434,6 +1504,7 @@ function VolumeGroup({
   batchMode,
   selectedChapterIds,
   onToggleChapterSelect,
+  onDeleteNode,
 }: {
   volume: StoryNodeData;
   children: StoryNodeData[];
@@ -1444,6 +1515,7 @@ function VolumeGroup({
   batchMode?: boolean;
   selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void;
+  onDeleteNode?: (id: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const totalWords = children.reduce((sum, c) => sum + (c.wordCount || 0), 0);
@@ -1475,6 +1547,7 @@ function VolumeGroup({
               batchMode={batchMode}
               selectedChapterIds={selectedChapterIds}
               onToggleChapterSelect={onToggleChapterSelect}
+              onDeleteNode={onDeleteNode}
             />
           ))}
           <button
@@ -1500,6 +1573,7 @@ function NodeTreeItem({
   batchMode,
   selectedChapterIds,
   onToggleChapterSelect,
+  onDeleteNode,
 }: {
   node: StoryNodeData;
   allNodes: StoryNodeData[];
@@ -1510,6 +1584,7 @@ function NodeTreeItem({
   batchMode?: boolean;
   selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void;
+  onDeleteNode?: (id: string) => void;
 }) {
   const children = allNodes.filter((n) => n.parentId === node.id);
   const isSelected = selectedNode?.id === node.id;
@@ -1564,6 +1639,15 @@ function NodeTreeItem({
         {isImported && (
           <span className="text-purple-400/70 text-[10px]" title="从导入文本创建">📥</span>
         )}
+        {onDeleteNode && (node.type === "chapter" || node.type === "section") && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
+            className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity"
+            title="删除此章节"
+          >
+            ✕
+          </button>
+        )}
         <span className="text-zinc-600 text-[10px]">
           {node.wordCount > 0 ? `${node.wordCount}字` : ""}
         </span>
@@ -1581,6 +1665,7 @@ function NodeTreeItem({
           batchMode={batchMode}
           selectedChapterIds={selectedChapterIds}
           onToggleChapterSelect={onToggleChapterSelect}
+          onDeleteNode={onDeleteNode}
         />
       ))}
     </div>
@@ -1592,7 +1677,7 @@ function NodeTreeItem({
 function CenterPanel({
   selectedNode, streamContent, isGenerating, reviewResult,
   authorNote, onAuthorNoteChange, targetWordCount, onTargetWordCountChange,
-  onWrite, onStop, onContinue, onEditOutline,
+  onWrite, onStop, onContinue, onEditOutline, onGenerateChapterOutline,
   projectId, lastGeneratedText, onEntitiesCreated, onOpenCardUpdater,
   refineMode, onToggleRefineMode, refineInstruction, onRefineInstructionChange, onRefine,
   onReviewDismiss, onReviewExplain, onReviewFix,
@@ -1609,6 +1694,7 @@ function CenterPanel({
   onStop: () => void;
   onContinue: () => void;
   onEditOutline: (outline: string) => void;
+  onGenerateChapterOutline: () => void;
   projectId: string;
   lastGeneratedText: string;
   onEntitiesCreated: () => void;
@@ -1684,14 +1770,25 @@ function CenterPanel({
                   </div>
                 </div>
               ) : (
-                <div
-                  onClick={() => {
-                    setOutlineDraft(selectedNode.outline || "");
-                    setEditingOutline(true);
-                  }}
-                  className="text-xs text-zinc-500 hover:text-zinc-400 cursor-pointer italic"
-                >
-                  {selectedNode.outline || "点击设置本节点大纲..."}
+                <div className="flex items-center gap-2">
+                  <div
+                    onClick={() => {
+                      setOutlineDraft(selectedNode.outline || "");
+                      setEditingOutline(true);
+                    }}
+                    className="flex-1 text-xs text-zinc-500 hover:text-zinc-400 cursor-pointer italic"
+                  >
+                    {selectedNode.outline || "点击设置本节点大纲..."}
+                  </div>
+                  {!isGenerating && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onGenerateChapterOutline(); }}
+                      className="text-[10px] px-2 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors shrink-0"
+                      title="用 V4 Flash 为本章生成章纲"
+                    >
+                      ⚡ Flash 生成章纲
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -2532,6 +2629,9 @@ function OutlineDialog({
   onConfirm,
   onUpdateChapter,
   onClose,
+  appendMode,
+  onAppendModeChange,
+  hasExistingChapters,
 }: {
   projectName: string;
   chapterCount: number;
@@ -2551,6 +2651,9 @@ function OutlineDialog({
   onConfirm: () => void;
   onUpdateChapter: (index: number, field: string, value: string) => void;
   onClose: () => void;
+  appendMode: boolean;
+  onAppendModeChange: (v: boolean) => void;
+  hasExistingChapters: boolean;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const hasPreview = previewChapters.length > 0;
@@ -2639,6 +2742,24 @@ function OutlineDialog({
               有提示词 → {useFlash ? "V4 Flash" : "V4 Pro"} 快速响应 · 无提示词 → V4 Pro 深度创作
             </p>
           </div>
+
+          {/* 追加/替换模式 */}
+          {hasExistingChapters && (
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={appendMode}
+                  onChange={(e) => onAppendModeChange(e.target.checked)}
+                  className="rounded accent-indigo-500"
+                />
+                <span>{appendMode ? "📎 追加到已有章节末尾" : "🔄 替换全部已有大纲"}</span>
+              </label>
+              <span className="text-[10px] text-zinc-600">
+                {appendMode ? "新章节从最后一章后面继续编号" : "删除已有章节，重新从第一章开始"}
+              </span>
+            </div>
+          )}
 
           {/* 错误提示 */}
           {error && (

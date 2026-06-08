@@ -511,6 +511,9 @@ export function buildPromptContext(params: {
 【灵魂】
 对感受具体。有观点——透过角色的眼睛看世界。允许些许混乱——完美的结构是AI。
 
+【格式铁律——禁止在正文中写章节标题】
+绝不在正文第一行或任意位置写「第X章」「第X节」或任何章节编号/标题。章节标题由系统自动管理，正文直接切入场景——第一句必须是动作或冲突对话。
+
 正在撰写《${project.name}》——一部${project.genre.join("、")}作品。`;
 
   if (styleCard) {

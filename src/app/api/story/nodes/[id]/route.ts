@@ -61,17 +61,48 @@ export async function PUT(
   }
 }
 
-// DELETE /api/story/nodes/[id]
+// DELETE /api/story/nodes/[id] —— 删除节点并自动重新编号章节
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    const node = await prisma.storyNode.findUnique({ where: { id } });
+    if (!node) {
+      return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+    }
+
     // 级联删除子节点
     await prisma.storyNode.deleteMany({ where: { parentId: id } });
     await prisma.storyNode.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+
+    // 如果删除的是顶层章节（parentId=null, type=chapter），重新编号所有剩余章节
+    if (node.parentId === null && (node.type === "chapter" || node.type === "section")) {
+      const remaining = await prisma.storyNode.findMany({
+        where: { projectId: node.projectId, parentId: null, type: { not: "volume" } },
+        orderBy: { order: "asc" },
+      });
+
+      const cnDigits = ["零","一","二","三","四","五","六","七","八","九","十","十一","十二","十三","十四","十五","十六","十七","十八","十九","二十","二十一","二十二","二十三","二十四","二十五","二十六","二十七","二十八","二十九","三十"];
+      const toCn = (n: number) => cnDigits[n] || String(n);
+
+      for (let i = 0; i < remaining.length; i++) {
+        const ch = remaining[i];
+        // 提取原标题中冒号后的部分（如果有的话）
+        const rawTitle = (ch.title || "").replace(/^第[一二三四五六七八九十百千\d]+章[：:]\s*/, "");
+        const newTitle = rawTitle
+          ? `第${toCn(i + 1)}章：${rawTitle}`
+          : `第${toCn(i + 1)}章`;
+        await prisma.storyNode.update({
+          where: { id: ch.id },
+          data: { title: newTitle, order: i },
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, renumbered: true });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "删除节点失败" },
