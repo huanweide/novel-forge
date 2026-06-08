@@ -67,6 +67,67 @@ export default function WorkspacePage() {
   // 续写状态
   const [continueLoading, setContinueLoading] = useState(false);
 
+  // 微调模式
+  const [refineMode, setRefineMode] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+
+  const handleRefine = async () => {
+    if (!selectedNode || !project) return;
+    setIsGenerating(true);
+    setStreamContent("");
+    setReviewResult(null);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const res = await fetch("/api/generate/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          nodeId: selectedNode.id,
+          instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情",
+          targetWords: targetWordCount,
+        }),
+        signal: controller.signal,
+      });
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("无法获取响应流");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+          try {
+            const event: SSEEvent = JSON.parse(trimmed.slice(6));
+            if (event.type === "token") setStreamContent((prev) => prev + event.content);
+            if (event.type === "done") {
+              setLastChapterContent(streamContent);
+              setLastChapterTitle(selectedNode?.title || "");
+              loadProject();
+              autoAnalyzeChapter(streamContent, selectedNode?.title || "");
+            }
+          } catch { /* */ }
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") console.error("微调失败:", err);
+    } finally {
+      setIsGenerating(false);
+      abortRef.current = null;
+    }
+  };
+
   // 实体检测用——记录最近生成的文本
   const [lastGeneratedText, setLastGeneratedText] = useState("");
 
@@ -704,6 +765,11 @@ export default function WorkspacePage() {
           lastGeneratedText={lastGeneratedText}
           onEntitiesCreated={loadProject}
           onOpenCardUpdater={() => setShowCardUpdater(true)}
+          refineMode={refineMode}
+          onToggleRefineMode={() => setRefineMode(!refineMode)}
+          refineInstruction={refineInstruction}
+          onRefineInstructionChange={setRefineInstruction}
+          onRefine={handleRefine}
         />
 
         {/* 右栏：上下文监控面板 */}
@@ -1514,6 +1580,11 @@ function CenterPanel({
   lastGeneratedText,
   onEntitiesCreated,
   onOpenCardUpdater,
+  refineMode,
+  onToggleRefineMode,
+  refineInstruction,
+  onRefineInstructionChange,
+  onRefine,
 }: {
   selectedNode: StoryNodeData | null;
   streamContent: string;
@@ -1531,6 +1602,11 @@ function CenterPanel({
   lastGeneratedText: string;
   onEntitiesCreated: () => void;
   onOpenCardUpdater: () => void;
+  refineMode: boolean;
+  onToggleRefineMode: () => void;
+  refineInstruction: string;
+  onRefineInstructionChange: (v: string) => void;
+  onRefine: () => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -1607,32 +1683,64 @@ function CenterPanel({
             </div>
 
             {/* 生成控制 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {isGenerating ? (
-                <Button size="sm" onClick={onStop} className="bg-red-600 hover:bg-red-500 h-7 text-xs">
-                  ⏹ 停止生成
-                </Button>
-              ) : (
-                <Button size="sm" onClick={onWrite} className="bg-indigo-600 hover:bg-indigo-500 h-7 text-xs">
-                  ▶ 生成/重写
-                </Button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {isGenerating ? (
+                  <Button size="sm" onClick={onStop} className="bg-red-600 hover:bg-red-500 h-7 text-xs">
+                    ⏹ 停止生成
+                  </Button>
+                ) : (
+                  <>
+                    {/* 生成/重写 按钮 */}
+                    {!refineMode && (
+                      <Button size="sm" onClick={onWrite} className="bg-indigo-600 hover:bg-indigo-500 h-7 text-xs">
+                        ▶ 生成/重写
+                      </Button>
+                    )}
+                    {/* 微调 按钮 */}
+                    {refineMode && (
+                      <Button size="sm" onClick={onRefine} className="bg-amber-600 hover:bg-amber-500 h-7 text-xs">
+                        🔧 微调
+                      </Button>
+                    )}
+                    {/* 模式切换 */}
+                    <button
+                      onClick={onToggleRefineMode}
+                      className={`text-xs px-2 py-1 h-7 rounded border transition-colors ${
+                        refineMode
+                          ? "border-amber-700 text-amber-400 bg-amber-950/20 hover:bg-amber-950/40"
+                          : "border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
+                      }`}
+                      title={refineMode ? "切换到生成模式" : "切换到微调模式"}
+                    >
+                      {refineMode ? "🔧 微调中" : "🔧 微调"}
+                    </button>
+                  </>
+                )}
+
+                <input
+                  type="number"
+                  value={targetWordCount}
+                  onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 800)}
+                  className="w-16 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-center"
+                  title="目标字数"
+                />
+                <span className="text-xs text-zinc-600">字</span>
+
+                <input
+                  placeholder={refineMode ? "微调指令（改对话/加描写/续写500字）..." : "作者指令（高优先级）..."}
+                  value={refineMode ? refineInstruction : authorNote}
+                  onChange={(e) => refineMode ? onRefineInstructionChange(e.target.value) : onAuthorNoteChange(e.target.value)}
+                  className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs placeholder:text-zinc-600"
+                />
+              </div>
+
+              {/* 微调模式提示 */}
+              {refineMode && !isGenerating && (
+                <p className="text-[10px] text-amber-600/70">
+                  微调模式：不重写正文，按指令修改现有内容或续写补长。字数不够会自动补，中途打断可续写。
+                </p>
               )}
-
-              <input
-                type="number"
-                value={targetWordCount}
-                onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 800)}
-                className="w-16 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-center"
-                title="目标字数"
-              />
-              <span className="text-xs text-zinc-600">字</span>
-
-              <input
-                placeholder="作者指令（高优先级）..."
-                value={authorNote}
-                onChange={(e) => onAuthorNoteChange(e.target.value)}
-                className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs placeholder:text-zinc-600"
-              />
             </div>
           </div>
 
