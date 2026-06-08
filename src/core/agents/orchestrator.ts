@@ -430,7 +430,7 @@ export function buildPromptContext(params: {
   const characterBrief = protagonist
     ? {
         name: protagonist.name,
-        personality: (protagonist.personality || []).slice(0, 5),
+        personality: safeJoin(protagonist.personality).split("、").slice(0, 5),
         goal: Array.isArray(protagonist.hiddenMotives) && protagonist.hiddenMotives.length > 0
           ? protagonist.hiddenMotives[0]
           : "推动剧情发展",
