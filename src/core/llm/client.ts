@@ -184,14 +184,17 @@ export type LLMClient = ReturnType<typeof createLLMClient>;
 // ─── 便捷函数：从环境变量创建默认客户端 ──────────────────────
 
 export function getDefaultLLMConfig(): LLMConfig {
+  // 硅基流动模型命名：deepseek-ai/DeepSeek-V4-Pro / deepseek-ai/DeepSeek-V4-Flash
+  const PRO = "deepseek-ai/DeepSeek-V4-Pro";
+  const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
   return {
-    architectModel: process.env.ARCHITECT_MODEL || "deepseek-chat",
-    writerModel: process.env.WRITER_MODEL || "deepseek-chat",
-    reviewerModel: process.env.REVIEWER_MODEL || "deepseek-chat",
-    summarizeModel: process.env.SUMMARIZE_MODEL || "deepseek-chat",
-    // 分析提取用非推理模型（快、便宜、JSON稳）
-    extractorModel: process.env.EXTRACTOR_MODEL || process.env.WRITER_MODEL || "deepseek-chat",
-    baseURL: process.env.LLM_BASE_URL || "https://api.deepseek.com/v1",
+    architectModel: process.env.ARCHITECT_MODEL || PRO,
+    writerModel: process.env.WRITER_MODEL || PRO,
+    reviewerModel: process.env.REVIEWER_MODEL || FLASH,
+    summarizeModel: process.env.SUMMARIZE_MODEL || FLASH,
+    // 分析提取用 Flash（快、便宜、JSON 稳）
+    extractorModel: process.env.EXTRACTOR_MODEL || FLASH,
+    baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
     apiKey: process.env.LLM_API_KEY || "",
     defaultTemperature: parseFloat(process.env.DEFAULT_TEMPERATURE || "0.8"),
     defaultTopP: parseFloat(process.env.DEFAULT_TOP_P || "0.95"),

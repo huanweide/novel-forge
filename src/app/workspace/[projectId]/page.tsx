@@ -92,6 +92,124 @@ export default function WorkspacePage() {
   // 生成中断控制
   const abortRef = useRef<AbortController | null>(null);
 
+  // 批量生成
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<Map<string, { status: "pending" | "generating" | "done" | "failed"; error?: string }>>(new Map());
+  const [batchAbort, setBatchAbort] = useState(false);
+
+  const toggleChapterSelect = (id: string) => {
+    setSelectedChapterIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllChapters = () => {
+    if (!project) return;
+    const chapters = project.storyNodes.filter((n) => n.type === "chapter" && n.status !== "completed");
+    setSelectedChapterIds(new Set(chapters.map((c) => c.id)));
+  };
+
+  const clearSelection = () => setSelectedChapterIds(new Set());
+
+  const handleBatchGenerate = async () => {
+    if (!project || selectedChapterIds.size === 0) return;
+    setBatchGenerating(true);
+    setBatchAbort(false);
+
+    // 按 order 排序，串行生成
+    const ids = [...selectedChapterIds].sort((a, b) => {
+      const na = project.storyNodes.find((n) => n.id === a);
+      const nb = project.storyNodes.find((n) => n.id === b);
+      return (na?.order || 0) - (nb?.order || 0);
+    });
+
+    const progress = new Map<string, { status: "pending" | "generating" | "done" | "failed"; error?: string }>();
+    ids.forEach((id) => progress.set(id, { status: "pending" }));
+    setBatchProgress(new Map(progress));
+
+    for (const nodeId of ids) {
+      if (batchAbort) break;
+
+      const node = project.storyNodes.find((n) => n.id === nodeId);
+      if (!node || node.status === "completed") continue;
+
+      progress.set(nodeId, { status: "generating" });
+      setBatchProgress(new Map(progress));
+
+      try {
+        const controller = new AbortController();
+        const res = await fetch("/api/generate/write", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: project.id,
+            nodeId,
+            authorNote: authorNote || undefined,
+            targetWordCount,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "未知错误" }));
+          progress.set(nodeId, { status: "failed", error: err.error || `HTTP ${res.status}` });
+          setBatchProgress(new Map(progress));
+          continue;
+        }
+
+        // 消费 SSE 流直到完成
+        const reader = res.body?.getReader();
+        if (!reader) {
+          progress.set(nodeId, { status: "failed", error: "无法获取响应流" });
+          setBatchProgress(new Map(progress));
+          continue;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let failed = false;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data: ")) continue;
+            try {
+              const event = JSON.parse(trimmed.slice(6));
+              if (event.type === "error") {
+                failed = true;
+                progress.set(nodeId, { status: "failed", error: event.content });
+              }
+              if (event.type === "done" && !failed) {
+                progress.set(nodeId, { status: "done" });
+              }
+            } catch { /* */ }
+          }
+        }
+
+        if (!failed && progress.get(nodeId)?.status !== "failed") {
+          progress.set(nodeId, { status: "done" });
+        }
+      } catch (err) {
+        progress.set(nodeId, { status: "failed", error: err instanceof Error ? err.message : "网络错误" });
+      }
+      setBatchProgress(new Map(progress));
+    }
+
+    setBatchGenerating(false);
+    setBatchMode(false);
+    setSelectedChapterIds(new Set());
+    await loadProject();
+  };
+
   // ─── 加载项目 ─────────────────────────────────────────────
 
   const loadProject = useCallback(async () => {
@@ -549,6 +667,15 @@ export default function WorkspacePage() {
           loadProject={loadProject}
           volumeView={volumeView}
           onToggleVolumeView={() => setVolumeView(!volumeView)}
+          // 批量生成
+          batchMode={batchMode}
+          onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
+          selectedChapterIds={selectedChapterIds}
+          onToggleChapterSelect={toggleChapterSelect}
+          onSelectAll={selectAllChapters}
+          onClearSelection={clearSelection}
+          batchGenerating={batchGenerating}
+          onBatchGenerate={handleBatchGenerate}
         />
 
         {/* 中栏：写作区 */}
@@ -654,6 +781,15 @@ export default function WorkspacePage() {
           projectId={project.id}
           onClose={() => setShowImportWizard(false)}
           onImported={loadProject}
+        />
+      )}
+
+      {/* 批量生成进度 */}
+      {batchGenerating && (
+        <BatchProgressPanel
+          progress={batchProgress}
+          nodes={project.storyNodes}
+          onAbort={() => setBatchAbort(true)}
         />
       )}
 
@@ -919,6 +1055,14 @@ function LeftPanel({
   loadProject,
   volumeView,
   onToggleVolumeView,
+  batchMode,
+  onToggleBatchMode,
+  selectedChapterIds,
+  onToggleChapterSelect,
+  onSelectAll,
+  onClearSelection,
+  batchGenerating,
+  onBatchGenerate,
 }: {
   project: ProjectData;
   activeTab: string;
@@ -933,6 +1077,14 @@ function LeftPanel({
   loadProject: () => void;
   volumeView: boolean;
   onToggleVolumeView: () => void;
+  batchMode: boolean;
+  onToggleBatchMode: () => void;
+  selectedChapterIds: Set<string>;
+  onToggleChapterSelect: (id: string) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  batchGenerating: boolean;
+  onBatchGenerate: () => void;
 }) {
   const tabs = [
     { key: "outline", label: "大纲" },
@@ -963,27 +1115,64 @@ function LeftPanel({
       <div className="flex-1 overflow-y-auto p-2">
         {activeTab === "outline" && (
           <>
-            <div className="flex items-center justify-between px-1 mb-1">
+            <div className="flex items-center justify-between px-1 mb-1 flex-wrap gap-1">
               <span className="text-[10px] text-zinc-600">
                 {volumeView ? "分卷视图" : "平铺视图"}
               </span>
-              <button
-                onClick={onToggleVolumeView}
-                className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  volumeView
-                    ? "bg-indigo-900/40 text-indigo-400"
-                    : "bg-zinc-800 text-zinc-500"
-                }`}
-              >
-                {volumeView ? "📂 分卷" : "📄 平铺"}
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={onToggleVolumeView}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                    volumeView
+                      ? "bg-indigo-900/40 text-indigo-400"
+                      : "bg-zinc-800 text-zinc-500"
+                  }`}
+                >
+                  {volumeView ? "📂 分卷" : "📄 平铺"}
+                </button>
+                <button
+                  onClick={onToggleBatchMode}
+                  disabled={batchGenerating}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                    batchMode
+                      ? "bg-amber-900/40 text-amber-400"
+                      : "bg-zinc-800 text-zinc-500"
+                  }`}
+                >
+                  ☑ 批量
+                </button>
+              </div>
             </div>
+            {batchMode && (
+              <div className="flex items-center gap-1 mb-1 px-1 flex-wrap">
+                <button onClick={onSelectAll} className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-zinc-800 px-1.5 py-0.5 rounded">
+                  全选
+                </button>
+                <button onClick={onClearSelection} className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-zinc-800 px-1.5 py-0.5 rounded">
+                  清除
+                </button>
+                <span className="text-[10px] text-zinc-600 ml-1">
+                  {selectedChapterIds.size} 章
+                </span>
+                {selectedChapterIds.size > 0 && !batchGenerating && (
+                  <button
+                    onClick={onBatchGenerate}
+                    className="text-[10px] bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded font-medium ml-auto"
+                  >
+                    ▶ 批量生成
+                  </button>
+                )}
+              </div>
+            )}
             <OutlineTree
               nodes={project.storyNodes}
               selectedNode={selectedNode}
               onSelectNode={onSelectNode}
               onAddSection={onAddSection}
               volumeView={volumeView}
+              batchMode={batchMode}
+              selectedChapterIds={selectedChapterIds}
+              onToggleChapterSelect={onToggleChapterSelect}
             />
           </>
         )}
@@ -1028,12 +1217,18 @@ function OutlineTree({
   onSelectNode,
   onAddSection,
   volumeView,
+  batchMode,
+  selectedChapterIds,
+  onToggleChapterSelect,
 }: {
   nodes: StoryNodeData[];
   selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void;
   volumeView: boolean;
+  batchMode?: boolean;
+  selectedChapterIds?: Set<string>;
+  onToggleChapterSelect?: (id: string) => void;
 }) {
   const volumeNodes = nodes.filter((n) => n.type === "volume");
   const nonVolumeRoots = nodes.filter((n) => !n.parentId && n.type !== "volume");
@@ -1053,6 +1248,9 @@ function OutlineTree({
               selectedNode={selectedNode}
               onSelectNode={onSelectNode}
               onAddSection={onAddSection}
+              batchMode={batchMode}
+              selectedChapterIds={selectedChapterIds}
+              onToggleChapterSelect={onToggleChapterSelect}
             />
           );
         })}
@@ -1067,6 +1265,9 @@ function OutlineTree({
             onSelectNode={onSelectNode}
             onAddSection={onAddSection}
             depth={0}
+            batchMode={batchMode}
+            selectedChapterIds={selectedChapterIds}
+            onToggleChapterSelect={onToggleChapterSelect}
           />
         ))}
 
@@ -1113,6 +1314,9 @@ function OutlineTree({
           onSelectNode={onSelectNode}
           onAddSection={onAddSection}
           depth={0}
+          batchMode={batchMode}
+          selectedChapterIds={selectedChapterIds}
+          onToggleChapterSelect={onToggleChapterSelect}
         />
       ))}
 
@@ -1135,6 +1339,9 @@ function VolumeGroup({
   selectedNode,
   onSelectNode,
   onAddSection,
+  batchMode,
+  selectedChapterIds,
+  onToggleChapterSelect,
 }: {
   volume: StoryNodeData;
   children: StoryNodeData[];
@@ -1142,6 +1349,9 @@ function VolumeGroup({
   selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void;
+  batchMode?: boolean;
+  selectedChapterIds?: Set<string>;
+  onToggleChapterSelect?: (id: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const totalWords = children.reduce((sum, c) => sum + (c.wordCount || 0), 0);
@@ -1170,6 +1380,9 @@ function VolumeGroup({
               onSelectNode={onSelectNode}
               onAddSection={onAddSection}
               depth={1}
+              batchMode={batchMode}
+              selectedChapterIds={selectedChapterIds}
+              onToggleChapterSelect={onToggleChapterSelect}
             />
           ))}
           <button
@@ -1192,6 +1405,9 @@ function NodeTreeItem({
   onSelectNode,
   onAddSection,
   depth,
+  batchMode,
+  selectedChapterIds,
+  onToggleChapterSelect,
 }: {
   node: StoryNodeData;
   allNodes: StoryNodeData[];
@@ -1199,10 +1415,15 @@ function NodeTreeItem({
   onSelectNode: (n: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void;
   depth: number;
+  batchMode?: boolean;
+  selectedChapterIds?: Set<string>;
+  onToggleChapterSelect?: (id: string) => void;
 }) {
   const children = allNodes.filter((n) => n.parentId === node.id);
   const isSelected = selectedNode?.id === node.id;
   const isImported = node.content?.includes("📥") || false;
+  const isChapter = node.type === "chapter" || node.type === "section";
+  const isChecked = selectedChapterIds?.has(node.id) || false;
 
   const typeIcon =
     node.type === "volume" ? "📂" :
@@ -1236,6 +1457,15 @@ function NodeTreeItem({
         }`}
         style={{ paddingLeft: `${depth * 12 + 6}px` }}
       >
+        {batchMode && isChapter && (
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={(e) => { e.stopPropagation(); onToggleChapterSelect?.(node.id); }}
+            className="w-3 h-3 rounded shrink-0 accent-amber-500"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
         <span className="text-[10px]">{typeIcon}</span>
         <span className={`${statusColor} text-[10px]`}>{statusIcon}</span>
         <span className="flex-1 truncate">{node.title}</span>
@@ -1256,6 +1486,9 @@ function NodeTreeItem({
           onSelectNode={onSelectNode}
           onAddSection={onAddSection}
           depth={depth + 1}
+          batchMode={batchMode}
+          selectedChapterIds={selectedChapterIds}
+          onToggleChapterSelect={onToggleChapterSelect}
         />
       ))}
     </div>
@@ -2101,6 +2334,77 @@ function LorebookCreateDialog({
         <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500" disabled={!form.title.trim()}>创建</Button>
       </div>
     </DialogOverlay>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 批量生成进度面板
+// ═══════════════════════════════════════════════════════════════
+
+function BatchProgressPanel({
+  progress,
+  nodes,
+  onAbort,
+}: {
+  progress: Map<string, { status: string; error?: string }>;
+  nodes: StoryNodeData[];
+  onAbort: () => void;
+}) {
+  const entries = [...progress.entries()];
+  const done = entries.filter(([, v]) => v.status === "done").length;
+  const failed = entries.filter(([, v]) => v.status === "failed").length;
+  const generating = entries.find(([, v]) => v.status === "generating");
+  const total = entries.length;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 w-72 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden">
+      {/* 头部 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900">
+        <div>
+          <span className="text-sm font-medium">📝 批量生成</span>
+          <span className="text-xs text-zinc-500 ml-2">{done + failed}/{total}</span>
+        </div>
+        <button
+          onClick={onAbort}
+          className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded border border-red-800 hover:border-red-700"
+        >
+          停止
+        </button>
+      </div>
+
+      {/* 进度列表 */}
+      <div className="max-h-64 overflow-y-auto px-3 py-2 space-y-1">
+        {entries.map(([id, state]) => {
+          const node = nodes.find((n) => n.id === id);
+          const icon = state.status === "done" ? "✅" : state.status === "failed" ? "❌" : state.status === "generating" ? "⏳" : "○";
+          return (
+            <div key={id} className={`flex items-center gap-2 text-xs py-0.5 ${
+              state.status === "generating" ? "text-amber-300" : state.status === "failed" ? "text-red-400" : "text-zinc-400"
+            }`}>
+              <span className="shrink-0">{icon}</span>
+              <span className="truncate flex-1">{node?.title || id.slice(0, 8)}</span>
+              {state.error && (
+                <span className="text-red-500 text-[10px] truncate max-w-[100px]" title={state.error}>
+                  {state.error.slice(0, 30)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 底部统计 */}
+      <div className="border-t border-zinc-800 px-4 py-2 flex items-center gap-3 text-xs text-zinc-500">
+        <span>✅ {done}</span>
+        <span>❌ {failed}</span>
+        <span>○ {total - done - failed}</span>
+        {generating && (
+          <span className="text-amber-400 ml-auto animate-pulse">
+            {nodes.find((n) => n.id === generating[0])?.title?.slice(0, 15)}...
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
