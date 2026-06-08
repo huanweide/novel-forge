@@ -221,7 +221,7 @@ export async function POST(request: Request) {
             data: {
               content: fullContent,
               wordCount: fullContent.length,
-              status: reviewLog.passed ? "completed" : "reviewing",
+              status: "completed", // 内容写完即为完成，审校仅作参考建议
               reviewLogs: [
                 ...((currentNode.reviewLogs as any) || []),
                 {
