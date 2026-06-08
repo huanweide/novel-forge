@@ -105,10 +105,13 @@ export async function POST(request: Request) {
       promptContext.systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
     }
 
-    // 撰写指令
-    const writingInstruction = currentNode.outline
-      ? `请根据以下大纲撰写本节正文：\n${currentNode.outline}`
-      : "请根据上下文自然推进剧情，撰写下一节正文。";
+    // 撰写指令——作者注释放最前面，最高优先级
+    let writingInstruction = authorNote
+      ? `【⚠️ 作者指令——最高优先级，优先于大纲】\n${authorNote}\n\n`
+      : "";
+    writingInstruction += currentNode.outline
+      ? `【本节大纲】${currentNode.outline}`
+      : "根据上下文自然推进剧情，撰写本节正文。";
 
     // 创建 SSE 流
     const encoder = new TextEncoder();
