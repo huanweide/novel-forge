@@ -23,6 +23,18 @@ export default function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
 
+  // ── 生成步骤状态（进度可视化）──────────────────────────
+  const [genStep, setGenStep] = useState<"" | "loading-cards" | "confirming" | "generating" | "reviewing" | "summarizing" | "done" | "error">("");
+  const genStepLabels: Record<string, { icon: string; label: string }> = {
+    "loading-cards": { icon: "🔍", label: "AI 正在分析角色调度..." },
+    "confirming": { icon: "📋", label: "等待确认角色选择" },
+    "generating": { icon: "✍️", label: "AI 正在写作..." },
+    "reviewing": { icon: "🔍", label: "AI 正在审校..." },
+    "summarizing": { icon: "📦", label: "生成章节摘要..." },
+    "done": { icon: "✅", label: "生成完成" },
+    "error": { icon: "❌", label: "生成出错" },
+  };
+
   // 项目数据
   const [project, setProject] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +119,7 @@ export default function WorkspacePage() {
 
   const handleRefine = async () => {
     if (!selectedNode || !project) return;
-    // 弹窗确认角色调度
+    setGenStep("confirming");
     setPreGenMode("refine");
     setPreGenOpen(true);
   };
@@ -115,6 +127,7 @@ export default function WorkspacePage() {
   const handleRefineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false);
+    setGenStep("generating");
     setIsGenerating(true);
     setStreamContent("");
     setReviewResult(null);
@@ -157,16 +170,22 @@ export default function WorkspacePage() {
             const event: SSEEvent = JSON.parse(trimmed.slice(6));
             if (event.type === "token") setStreamContent((prev) => prev + event.content);
             if (event.type === "done") {
+              setGenStep("done");
+              setTimeout(() => setGenStep(""), 5000);
               setLastChapterContent(streamContent);
               setLastChapterTitle(selectedNode?.title || "");
               loadProject();
               autoAnalyzeChapter(streamContent, selectedNode?.title || "");
             }
+            if (event.type === "error") setGenStep("error");
           } catch { /* */ }
         }
       }
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== "AbortError") console.error("微调失败:", err);
+      if (err instanceof Error && err.name !== "AbortError") {
+        setGenStep("error");
+        console.error("微调失败:", err);
+      }
     } finally {
       setIsGenerating(false);
       abortRef.current = null;
@@ -335,13 +354,22 @@ export default function WorkspacePage() {
           if (!styleData.error) data.styleCard = styleData;
         }
         setProject(data);
-        // 默认选第一个没有内容的节点
-        if (data.storyNodes?.length > 0) {
-          const firstDraft = data.storyNodes.find(
-            (n: StoryNodeData) => n.status !== "completed"
-          );
-          setSelectedNode(firstDraft || data.storyNodes[0]);
-        }
+        // 保持当前选中章节——不跳走
+        setSelectedNode((prev) => {
+          if (prev && data.storyNodes?.some((n: StoryNodeData) => n.id === prev.id)) {
+            // 更新同一节点的数据（含新生成的 content）
+            const updated = data.storyNodes.find((n: StoryNodeData) => n.id === prev.id);
+            return updated || prev;
+          }
+          // 没有选中或节点已删除 → 选第一个未完成的
+          if (data.storyNodes?.length > 0) {
+            const firstDraft = data.storyNodes.find(
+              (n: StoryNodeData) => n.status !== "completed"
+            );
+            return firstDraft || data.storyNodes[0];
+          }
+          return null;
+        });
       } else {
         router.push("/");
       }
@@ -399,6 +427,7 @@ export default function WorkspacePage() {
   const handleGenerateOutlinePreview = async () => {
     if (!project) return;
     // 保存配置，弹窗确认角色
+    setGenStep("confirming");
     setOutlineGenConfig({
       chapterCount: getEffectiveChapterCount(),
       customPrompt: outlineCustomPrompt,
@@ -411,6 +440,7 @@ export default function WorkspacePage() {
   const handleOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
     if (!project || !outlineGenConfig) return;
     setPreGenOpen(false);
+    setGenStep("generating");
     setOutlineGenerating(true);
     setOutlineError("");
     setOutlinePreviewChapters([]);
@@ -447,7 +477,10 @@ export default function WorkspacePage() {
       setOutlinePreviewChapters(chapters);
       setOutlineRaw(data.rawOutline || "");
       setOutlineModelUsed(data.modelUsed || "未知");
+      setGenStep("done");
+      setTimeout(() => setGenStep(""), 5000);
     } catch (err) {
+      setGenStep("error");
       setOutlineError(err instanceof Error ? err.message : "网络错误");
     } finally {
       setOutlineGenerating(false);
@@ -458,6 +491,7 @@ export default function WorkspacePage() {
   const handleChapterOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false);
+    setGenStep("generating");
 
     try {
       setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
@@ -480,14 +514,18 @@ export default function WorkspacePage() {
         return;
       }
       if (data.outline) {
+        setGenStep("done");
+        setTimeout(() => setGenStep(""), 5000);
         setSelectedNode({ ...selectedNode, outline: data.outline });
         setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
         await loadProject();
       } else {
+        setGenStep("error");
         alert("API 返回空内容，请重试");
         setReviewResult(null);
       }
     } catch (err) {
+      setGenStep("error");
       alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
       setReviewResult(null);
     }
@@ -538,6 +576,7 @@ export default function WorkspacePage() {
 
   const handleWrite = async () => {
     if (!selectedNode || !project) return;
+    setGenStep("confirming");
     setPreGenMode("write");
     setPreGenOpen(true);
   };
@@ -546,6 +585,7 @@ export default function WorkspacePage() {
     if (!selectedNode || !project) return;
     setPreGenOpen(false);
 
+    setGenStep("generating");
     setIsGenerating(true);
     setStreamContent("");
     setReviewResult(null);
@@ -592,21 +632,28 @@ export default function WorkspacePage() {
 
             if (event.type === "token") {
               setStreamContent((prev) => prev + event.content);
+            } else if (event.type === "review_start") {
+              setGenStep("reviewing");
+            } else if (event.type === "summarize_start") {
+              setGenStep("summarizing");
             } else if (event.type === "review_result") {
               setReviewResult({
                 passed: event.passed ?? false,
                 issues: event.issues || [],
               });
             } else if (event.type === "done") {
+              setGenStep("done");
+              setTimeout(() => setGenStep(""), 5000);
               // 保存最后生成的内容用于卡面更新
               const finalContent = streamContent + (event.content || "");
               setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
-              // 刷新数据
+              // 刷新数据但不跳转
               loadProject();
               // 自动检测章节变化
               autoAnalyzeChapter(finalContent, selectedNode?.title || "");
             } else if (event.type === "error") {
+              setGenStep("error");
               console.error("生成错误:", event.content);
             }
           } catch {
@@ -616,6 +663,7 @@ export default function WorkspacePage() {
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== "AbortError") {
+        setGenStep("error");
         console.error("生成失败:", err);
       }
     } finally {
@@ -722,7 +770,7 @@ export default function WorkspacePage() {
 
   const handleContinue = async () => {
     if (!selectedNode || !project) return;
-    // 弹窗确认角色调度
+    setGenStep("confirming");
     setPreGenMode("continue");
     setPreGenOpen(true);
   };
@@ -730,6 +778,7 @@ export default function WorkspacePage() {
   const handleContinueConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false);
+    setGenStep("generating");
     setContinueLoading(true);
     setStreamContent("");
     setReviewResult(null);
@@ -777,6 +826,8 @@ export default function WorkspacePage() {
             if (event.type === "token") {
               setStreamContent((prev) => prev + event.content);
             } else if (event.type === "done") {
+              setGenStep("done");
+              setTimeout(() => setGenStep(""), 5000);
               // 保存最后生成的内容用于卡面更新
               setLastChapterContent(streamContent);
               setLastChapterTitle(selectedNode?.title || "");
@@ -784,6 +835,7 @@ export default function WorkspacePage() {
               loadProject();
               setContextRefreshKey((k) => k + 1);
             } else if (event.type === "error") {
+              setGenStep("error");
               console.error("续写错误:", event.content);
             }
           } catch {
@@ -793,6 +845,7 @@ export default function WorkspacePage() {
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== "AbortError") {
+        setGenStep("error");
         console.error("续写失败:", err);
       }
     } finally {
@@ -906,6 +959,7 @@ export default function WorkspacePage() {
               return;
             }
             // 弹窗确认角色调度
+            setGenStep("confirming");
             setChapterOutlineFlashPrompt(flashPrompt);
             setPreGenMode("chapter-outline");
             setPreGenOpen(true);
@@ -921,6 +975,8 @@ export default function WorkspacePage() {
           onRefine={handleRefine}
           chapterOutlinePrompt={chapterOutlinePrompt}
           onChapterOutlinePromptChange={handleChapterOutlinePromptChange}
+          genStep={genStep}
+          genStepLabels={genStepLabels}
           onReviewDismiss={() => setReviewResult(null)}
           onReviewExplain={(issue: ReviewIssue, note: string) => {
             setReviewResult((prev: typeof reviewResult) => prev ? {
@@ -1827,6 +1883,7 @@ function CenterPanel({
   refineMode, onToggleRefineMode, refineInstruction, onRefineInstructionChange, onRefine,
   onReviewDismiss, onReviewExplain, onReviewFix,
   chapterOutlinePrompt, onChapterOutlinePromptChange,
+  genStep, genStepLabels,
 }: {
   selectedNode: StoryNodeData | null;
   streamContent: string;
@@ -1855,6 +1912,8 @@ function CenterPanel({
   onReviewDismiss: () => void;
   onReviewExplain: (issue: ReviewIssue, note: string) => void;
   onReviewFix: (issue: ReviewIssue, note: string) => void;
+  genStep: string;
+  genStepLabels: Record<string, { icon: string; label: string }>;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -2067,8 +2126,39 @@ function CenterPanel({
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
-                {isGenerating ? (
-                  <span className="animate-pulse">生成中...</span>
+                {(isGenerating || genStep) ? (
+                  <div className="text-center space-y-3">
+                    {/* 步骤指示器 */}
+                    {genStep && (
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${
+                        genStep === "error" ? "bg-red-950/40 text-red-400 border border-red-900/50"
+                        : genStep === "done" ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/50"
+                        : "bg-indigo-950/40 text-indigo-400 border border-indigo-900/50"
+                      }`}>
+                        <span className="text-lg">{genStepLabels[genStep]?.icon}</span>
+                        <span className={genStep === "generating" ? "animate-pulse" : ""}>
+                          {genStepLabels[genStep]?.label || "处理中..."}
+                        </span>
+                      </div>
+                    )}
+                    {/* 4步进度条 */}
+                    {genStep && genStep !== "done" && genStep !== "error" && (
+                      <div className="flex items-center gap-1 justify-center">
+                        {["loading-cards", "confirming", "generating", "reviewing", "summarizing"].map((s, i) => {
+                          const stepIdx = ["loading-cards", "confirming", "generating", "reviewing", "summarizing"].indexOf(genStep);
+                          return (
+                            <div key={s} className="flex items-center gap-1">
+                              <div className={`w-2 h-2 rounded-full transition-colors ${
+                                i <= stepIdx ? "bg-indigo-500" : "bg-zinc-700"
+                              }`} />
+                              {i < 4 && <div className={`w-3 h-0.5 ${i < stepIdx ? "bg-indigo-500" : "bg-zinc-700"}`} />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {isGenerating && !genStep && <span className="animate-pulse">生成中...</span>}
+                  </div>
                 ) : (
                   <div className="text-center">
                     <p className="mb-2">选择左侧大纲节点，设置大纲后点击「生成」</p>
