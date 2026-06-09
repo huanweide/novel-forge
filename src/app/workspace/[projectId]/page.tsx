@@ -47,8 +47,16 @@ export default function WorkspacePage() {
     issues: ReviewIssue[];
   } | null>(null);
 
-  // 作者注释
-  const [authorNote, setAuthorNote] = useState("");
+  // 作者注释——持久化到 localStorage，不消失
+  const [authorNote, setAuthorNote] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(`novel-forge-author-note-${projectId}`) || "";
+  });
+  // 保存作者注释时同步写 localStorage
+  const handleAuthorNoteChange = (v: string) => {
+    setAuthorNote(v);
+    if (typeof window !== "undefined") localStorage.setItem(`novel-forge-author-note-${projectId}`, v);
+  };
   const [targetWordCount, setTargetWordCount] = useState(800);
 
   // 面板状态
@@ -78,7 +86,14 @@ export default function WorkspacePage() {
 
   // 微调模式
   const [refineMode, setRefineMode] = useState(false);
-  const [refineInstruction, setRefineInstruction] = useState("");
+  const [refineInstruction, setRefineInstruction] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(`novel-forge-refine-${projectId}`) || "";
+  });
+  const handleRefineInstructionChange = (v: string) => {
+    setRefineInstruction(v);
+    if (typeof window !== "undefined") localStorage.setItem(`novel-forge-refine-${projectId}`, v);
+  };
 
   const handleRefine = async () => {
     if (!selectedNode || !project) return;
@@ -157,6 +172,9 @@ export default function WorkspacePage() {
   const [autoUpdateNotification, setAutoUpdateNotification] = useState<{
     summary: string; charCount: number; newCharCount: number; loreCount: number;
   } | null>(null);
+  // 三卡更新待处理标记——关闭弹窗后显示浮动按钮
+  const [cardUpdatePending, setCardUpdatePending] = useState(false);
+  const [pendingCardUpdateNodeId, setPendingCardUpdateNodeId] = useState("");
   const [autoAnalyzing, setAutoAnalyzing] = useState(false);
 
   // 生成中断控制
@@ -320,9 +338,11 @@ export default function WorkspacePage() {
     // 保存最新内容供 CardUpdater 使用，自动弹窗让用户确认
     setLastChapterContent(content);
     setLastChapterTitle(title || "");
+    setCardUpdatePending(true);
+    if (selectedNode?.id) setPendingCardUpdateNodeId(selectedNode.id);
     // 延迟一帧确保 state 更新后再弹窗
     setTimeout(() => setShowCardUpdater(true), 100);
-  }, [projectId]);
+  }, [projectId, selectedNode?.id]);
 
   useEffect(() => {
     loadProject();
@@ -761,7 +781,7 @@ export default function WorkspacePage() {
           isGenerating={isGenerating || continueLoading}
           reviewResult={reviewResult}
           authorNote={authorNote}
-          onAuthorNoteChange={setAuthorNote}
+          onAuthorNoteChange={handleAuthorNoteChange}
           targetWordCount={targetWordCount}
           onTargetWordCountChange={setTargetWordCount}
           onWrite={handleWrite}
@@ -820,7 +840,7 @@ export default function WorkspacePage() {
           refineMode={refineMode}
           onToggleRefineMode={() => setRefineMode(!refineMode)}
           refineInstruction={refineInstruction}
-          onRefineInstructionChange={setRefineInstruction}
+          onRefineInstructionChange={handleRefineInstructionChange}
           onRefine={handleRefine}
           onReviewDismiss={() => setReviewResult(null)}
           onReviewExplain={(issue: ReviewIssue, note: string) => {
@@ -973,27 +993,6 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* 章节卡面更新 */}
-      {showCardUpdater && (() => {
-        // 从章节标题中提取章节号：第一章 → 一，第3章 → 3
-        const extractChapterNum = (title?: string) => {
-          if (!title) return undefined;
-          const m = title.match(/第([一二三四五六七八九十百千\d]+)章/);
-          return m?.[1] || undefined;
-        };
-        const chapNum = extractChapterNum(selectedNode?.title);
-        return (
-          <CardUpdater
-            projectId={project.id}
-            chapterContent={selectedNode?.content || lastChapterContent}
-            chapterTitle={selectedNode?.title || lastChapterTitle}
-            chapterNumber={chapNum}
-            onApplied={() => { loadProject(); setAutoUpdateNotification(null); }}
-            onClose={() => setShowCardUpdater(false)}
-          />
-        );
-      })()}
-
       {/* 大纲生成对话框 */}
       {showOutlineDialog && (
         <OutlineDialog
@@ -1022,6 +1021,52 @@ export default function WorkspacePage() {
             setOutlinePreviewChapters([]);
             setOutlineError("");
             setOutlineRaw("");
+          }}
+        />
+      )}
+
+      {/* 三卡更新待处理浮动按钮——关闭弹窗后不消失 */}
+      {cardUpdatePending && !showCardUpdater && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button
+            onClick={() => {
+              // 如果切到了其他节点，更新内容
+              if (selectedNode?.id !== pendingCardUpdateNodeId) {
+                setLastChapterContent(selectedNode?.content || "");
+                setLastChapterTitle(selectedNode?.title || "");
+                setPendingCardUpdateNodeId(selectedNode?.id || "");
+              }
+              setShowCardUpdater(true);
+            }}
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-2xl shadow-indigo-900/40 transition-all hover:scale-105 active:scale-95"
+          >
+            <span className="text-lg">🔍</span>
+            <div className="text-left">
+              <div className="text-sm font-medium">三卡待更新</div>
+              <div className="text-[10px] text-white/60">点击分析本章变化</div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* 三卡更新确认后清除浮动按钮 */}
+      {showCardUpdater && (
+        <CardUpdater
+          projectId={project.id}
+          chapterContent={selectedNode?.content || lastChapterContent}
+          chapterTitle={selectedNode?.title || lastChapterTitle}
+          chapterNumber={(() => {
+            const m = (selectedNode?.title || "").match(/第([一二三四五六七八九十百千\d]+)章/);
+            return m?.[1] || undefined;
+          })()}
+          onApplied={() => {
+            loadProject();
+            setAutoUpdateNotification(null);
+            setCardUpdatePending(false);
+          }}
+          onClose={() => {
+            setShowCardUpdater(false);
+            // 不清除 cardUpdatePending——按钮持续显示
           }}
         />
       )}
