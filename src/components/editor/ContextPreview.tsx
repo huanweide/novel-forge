@@ -21,6 +21,8 @@ interface ContextData {
     authorNote: { tokens: number; content: string };
   };
   activeCharacters: Array<{ id: string; name: string; role: string }>;
+  activeCharacterCount: number;
+  totalCharacterCount: number;
   activeLoreCount: number;
   totalPromptTokens: number;
   contextWindowSize: number;
@@ -156,29 +158,45 @@ export function ContextPreview({
         </div>
       ))}
 
-      {/* 激活角色 */}
-      <div className="border-t border-zinc-800 pt-2">
-        <div className="text-xs text-zinc-500 mb-1">🎭 当前场景激活角色：</div>
-        <div className="flex flex-wrap gap-1">
-          {activeCharacters.length > 0 ? (
-            activeCharacters.map((c) => (
-              <span
-                key={c.id}
-                className={`text-[10px] px-1.5 py-0.5 rounded ${
-                  c.role === "protagonist"
-                    ? "bg-amber-900/50 text-amber-400"
-                    : c.role === "antagonist"
-                    ? "bg-red-900/50 text-red-400"
-                    : "bg-zinc-800 text-zinc-400"
-                }`}
-              >
-                {c.name}
-              </span>
-            ))
-          ) : (
-            <span className="text-xs text-zinc-600">无</span>
-          )}
+      {/* 角色读取统计 */}
+      <div className="border-t border-zinc-800 pt-3 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-zinc-500">📊 角色卡读取</span>
+          <span className="font-mono">
+            <b className="text-indigo-400">{data.activeCharacterCount ?? activeCharacters.length}</b>
+            <span className="text-zinc-600">/{data.totalCharacterCount ?? "?"}</span>
+            <span className="text-zinc-500"> 张</span>
+          </span>
         </div>
+        {/* 小进度条 */}
+        <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-indigo-600 rounded-full transition-all"
+            style={{ width: `${(data.totalCharacterCount ?? 1) > 0 ? ((data.activeCharacterCount ?? activeCharacters.length) / (data.totalCharacterCount ?? 1) * 100) : 0}%` }}
+          />
+        </div>
+        {/* 角色名标签——可折叠 */}
+        {activeCharacters.length > 0 && (
+          <details className="text-xs">
+            <summary className="text-zinc-500 cursor-pointer hover:text-zinc-400">出场角色</summary>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {activeCharacters.map((c) => (
+                <span
+                  key={c.id}
+                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    c.role === "protagonist"
+                      ? "bg-amber-900/50 text-amber-400"
+                      : c.role === "antagonist"
+                      ? "bg-red-900/50 text-red-400"
+                      : "bg-zinc-800 text-zinc-400"
+                  }`}
+                >
+                  {c.name}
+                </span>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );

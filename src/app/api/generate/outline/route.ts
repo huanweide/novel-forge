@@ -18,6 +18,9 @@ export async function POST(request: Request) {
       chapterCount = 8,
       customPrompt,
       useFlash = false,
+      confirmedCardIds,
+      cardNotes,
+      newCharacterRequests,
     } = await request.json();
 
     const project = await prisma.project.findUnique({
@@ -29,9 +32,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "项目不存在" }, { status: 404 });
     }
 
+    // ── 自建用户要求的角色 ──
+    const allChars = [...(project.characters || [])] as any[];
+    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
+      for (const req of newCharacterRequests as string[]) {
+        const name = req.trim();
+        if (!name) continue;
+        const exists = allChars.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
+        if (!exists) {
+          const created = await prisma.characterCard.create({
+            data: {
+              projectId,
+              name,
+              role: "supporting",
+              personality: { dominant: "大纲生成时自建，待丰富" } as any,
+              background: `[大纲生成] 用户要求自建角色`,
+              abilities: [],
+              tags: ["🆕 大纲自建"],
+              currentStatus: "alive",
+            } as any,
+          });
+          allChars.push(created as any);
+        }
+      }
+    }
+
+    // ── 过滤角色——如果用户确认了卡列表 ──
+    let activeChars = allChars;
+    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
+      const confirmedSet = new Set(confirmedCardIds as string[]);
+      activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
+    }
+
     // ── 全量角色（每人一行，不砍）──
-    const allChars = (project.characters || []) as any[];
-    const characterBriefs = allChars
+    const characterBriefs = activeChars
       .map((c: any) => {
         const p = typeof c.personality === "object" && !Array.isArray(c.personality)
           ? (c.personality as Record<string, unknown>).dominant || ""
@@ -83,11 +117,27 @@ export async function POST(request: Request) {
       return digits[Math.floor(n / 10)] + "十" + digits[n % 10];
     };
 
+    // ── 用户备注注入 ──
+    let cardNotesText = "";
+    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
+      const noteLines: string[] = [];
+      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
+        if (!note.trim()) continue;
+        const char = allChars.find((c: any) => c.id === id);
+        if (char) noteLines.push(`[${char.name}] ${note}`);
+      }
+      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
+    }
+
+    const charCountNote = Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0
+      ? `\n【角色出场策略】用户已确认以下${activeChars.length}个角色为全故事主要角色。每章大纲的characters字段应从这些角色中选择，不要引入名单外的角色。如需引入新角色，在rawOutline中说明理由。`
+      : "";
+
     // ── Prompt ──
     const systemPrompt = hasCustomPrompt
-      ? `你是小说大纲拆解专家。严格按照用户提示词将大纲拆为${chapterCount}章。输出纯JSON：
+      ? `你是小说大纲拆解专家。严格按照用户提示词将大纲拆为${chapterCount}章。每章标注出场角色。输出纯JSON：
 {"chapters":[{"title":"第X章：标题（8-15字）","summary":"梗概（2-3句，≤100字）","coreConflict":"核心冲突","characters":["出场角色"]}],"rawOutline":"总览≤200字"}`
-      : `你是小说大纲拆解专家。基于作品设定将总纲拆为${chapterCount}章详细大纲。输出纯JSON：
+      : `你是小说大纲拆解专家。基于作品设定将总纲拆为${chapterCount}章详细大纲。每章标注出场角色。输出纯JSON：
 {"chapters":[{"title":"第X章：标题（8-15字）","summary":"梗概（2-3句，≤100字）","coreConflict":"核心冲突","characters":["出场角色"]}],"rawOutline":"总览≤200字"}`;
 
     const userPrompt = hasCustomPrompt
@@ -100,11 +150,12 @@ ${project.name} · ${project.genre.join("、")}
 基调：${project.toneKeywords.join("、")}
 ${styleText}
 
-【全量角色（${allChars.length}人）】
+【全量角色（${activeChars.length}人）】
 ${characterBriefs}
 
 【世界观（${loreEntries.length}条）】
 ${loreBriefs}
+${cardNotesText}${charCountNote}
 
 按用户提示词生成${chapterCount}章大纲。只输出JSON。`
       : `【作品设定】
@@ -113,11 +164,12 @@ ${project.name} · ${project.genre.join("、")} · 目标${project.targetWordCou
 基调：${project.toneKeywords.join("、")}
 ${styleText}
 
-【全量角色（${allChars.length}人）】
+【全量角色（${activeChars.length}人）】
 ${characterBriefs}
 
 【世界观（${loreEntries.length}条）】
 ${loreBriefs}
+${cardNotesText}${charCountNote}
 
 生成${chapterCount}章大纲，从"第一章"开始顺序编号。只输出JSON。`;
 

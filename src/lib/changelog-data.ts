@@ -20,17 +20,60 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.11.0";
+export const LATEST_VERSION = "v0.11.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎭 生成前角色确认——AI调度角色→你审核确认→精准写作，根治乱拉人",
-  "🆕 自建角色——大纲提到但无卡的角色，输入名字AI自动建卡",
-  "📝 角色备注注入——确认框写备注自动送入prompt最高优先级",
+  "🔄 全场景角色确认——正文/微调/续写/大纲/章纲 全部走角色确认弹窗",
+  "📊 上下文监控优化——角色卡读取X/Y张清晰可见，替换原来不知所云的显示",
+  "📋 大纲生成联动角色——确认角色后生成大纲，AI按确认的名单规划出场",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.11.1",
+    date: "2026-06-09",
+    title: "全场景角色确认 + 上下文监控优化 + 大纲角色联动",
+    sections: [
+      {
+        label: "🔄 全场景角色确认",
+        items: [
+          "微调（✏️）→ 弹角色确认框 → 确认后精准微调",
+          "续写（➡️）→ 弹角色确认框 → 确认后精准续写",
+          "大纲生成（🤖）→ 弹角色确认框 → 确认后按名单生成大纲",
+          "Flash章纲（⚡）→ 弹角色确认框 → 确认后精准生成章纲",
+          "全部走同一套调度逻辑——你确认谁出场，AI就用谁",
+        ],
+      },
+      {
+        label: "📊 上下文监控优化",
+        items: [
+          "Token用量面板顶部新增「📊 角色卡读取 X/Y 张」进度条",
+          "角色名标签改为可折叠——默认收起，点开才看名单",
+          "替换原来不知所云的角色激活列表",
+          "preview-context API 返回 activeCharacterCount + totalCharacterCount",
+        ],
+      },
+      {
+        label: "📋 大纲角色联动",
+        items: [
+          "大纲生成时 pre-write-cards 支持无节点模式——用作品总纲做调度",
+          "确认的角色名单注入大纲prompt——AI按名单规划每章出场",
+          "角色备注同样生效——「这场他右腿旧伤」→ AI在大纲中体现",
+          "大纲和章纲的prompt都追加角色出场策略指令",
+        ],
+      },
+      {
+        label: "🔧 后端统一",
+        items: [
+          "outline/chapter-outline/refine/continue 四个API全部支持 confirmedCardIds + cardNotes + newCharacterRequests",
+          "四个API全部支持运行时自建角色——输入名字自动建卡",
+          "pre-write-cards API nodeId改为可选——大纲生成时用作品总纲替代",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.11.0",
     date: "2026-06-09",

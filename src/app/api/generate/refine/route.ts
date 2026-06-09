@@ -21,7 +21,7 @@ import { countTokens } from "@/core/assembly/tokenizer";
 
 export async function POST(request: Request) {
   try {
-    const { projectId, nodeId, instruction, targetWords = 500 } = await request.json();
+    const { projectId, nodeId, instruction, targetWords = 500, confirmedCardIds, cardNotes, newCharacterRequests } = await request.json();
 
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
@@ -61,17 +61,61 @@ export async function POST(request: Request) {
     const currentNodeIndex = allNodes.findIndex((n) => n.id === nodeId);
     const previousNodes = allNodes.slice(Math.max(0, currentNodeIndex - 4), currentNodeIndex);
 
+    // ── 自建角色 ──
+    const allChars = [...characters];
+    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
+      for (const req of newCharacterRequests as string[]) {
+        const name = req.trim();
+        if (!name) continue;
+        const exists = allChars.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
+        if (!exists) {
+          const created = await prisma.characterCard.create({
+            data: {
+              projectId,
+              name,
+              role: "supporting",
+              personality: { dominant: "微调时自建，待丰富" } as any,
+              background: `[微调] 用户要求自建角色`,
+              abilities: [],
+              tags: ["🆕 微调自建"],
+              currentStatus: "alive",
+            } as any,
+          });
+          allChars.push(created as any);
+        }
+      }
+    }
+
+    // ── 过滤角色 ──
+    let activeChars = allChars;
+    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
+      const confirmedSet = new Set(confirmedCardIds as string[]);
+      activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
+    }
+
     // 构建 Prompt 上下文（和 write 一样）
     const promptContext = buildPromptContext({
       project: project as any,
       currentNode: currentNode as any,
       previousNodes: previousNodes as any,
-      characters: characters as any,
+      characters: activeChars as any,
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
     });
+
+    // ── 用户备注注入 ──
+    let cardNotesText = "";
+    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
+      const noteLines: string[] = [];
+      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
+        if (!note.trim()) continue;
+        const char = allChars.find((c: any) => c.id === id);
+        if (char) noteLines.push(`[${char.name}] ${note}`);
+      }
+      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
+    }
 
     // 微调指令
     const refineInstruction = instruction && instruction.trim().length > 0
@@ -79,7 +123,7 @@ export async function POST(request: Request) {
       : "请在现有正文基础上自然续写，保持文风一致，推进剧情。";
 
     const writingInstruction = hasContent
-      ? `【微调任务——在以下已有正文上进行修改/续写，不要从头重写】
+      ? `${cardNotesText}【微调任务——在以下已有正文上进行修改/续写，不要从头重写】
 
 已有正文（共${existingContent.length}字）：
 ---
@@ -95,7 +139,7 @@ ${existingContent.slice(-3000)}${existingContent.length > 3000 ? "\n\n…(前文
 - 绝对不要改变已有正文中没要求修改的部分。
 - 保持文风、人称、节奏一致。
 - 续写字数约${targetWords}字。`
-      : `此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
+      : `${cardNotesText}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
 
     // SSE 流
     const encoder = new TextEncoder();

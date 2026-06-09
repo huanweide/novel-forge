@@ -18,7 +18,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { projectId, nodeId, prompt: customPrompt } = await request.json();
+    const { projectId, nodeId, prompt: customPrompt, confirmedCardIds, cardNotes, newCharacterRequests } = await request.json();
 
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
@@ -58,13 +58,45 @@ export async function POST(request: Request) {
       `[${n.title}]${n.outline ? ` 大纲：${n.outline.slice(0, 200)}` : ""}`
     ).join("\n");
 
+    // ── 自建角色 ──
+    const allChars = [...characters];
+    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
+      for (const req of newCharacterRequests as string[]) {
+        const name = req.trim();
+        if (!name) continue;
+        const exists = allChars.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
+        if (!exists) {
+          const created = await prisma.characterCard.create({
+            data: {
+              projectId,
+              name,
+              role: "supporting",
+              personality: { dominant: "章纲生成时自建，待丰富" } as any,
+              background: `[章纲生成] 用户要求自建角色`,
+              abilities: [],
+              tags: ["🆕 章纲自建"],
+              currentStatus: "alive",
+            } as any,
+          });
+          allChars.push(created as any);
+        }
+      }
+    }
+
+    // ── 过滤角色 ──
+    let activeChars = allChars;
+    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
+      const confirmedSet = new Set(confirmedCardIds as string[]);
+      activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
+    }
+
     // 最近的摘要
     const recentSummary = summaries.length > 0
       ? summaries.map(s => s.summary).join("\n")
       : "暂无前文摘要";
 
     // 角色简表
-    const charBriefs = characters.slice(0, 50).map((c: any) => {
+    const charBriefs = activeChars.slice(0, 50).map((c: any) => {
       const p = typeof c.personality === "object" && !Array.isArray(c.personality)
         ? (c.personality as Record<string, unknown>).dominant || ""
         : Array.isArray(c.personality) ? (c.personality as string[]).slice(0, 2).join("、") : "";
@@ -91,6 +123,18 @@ export async function POST(request: Request) {
 5. 与前后章的衔接点
 
 输出纯文本，不要 JSON，不要编号。直接回答章纲内容。`;
+
+    // ── 用户备注注入 ──
+    let cardNotesText = "";
+    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
+      const noteLines: string[] = [];
+      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
+        if (!note.trim()) continue;
+        const char = allChars.find((c: any) => c.id === id);
+        if (char) noteLines.push(`[${char.name}] ${note}`);
+      }
+      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
+    }
 
     const userPrompt = hasCustomPrompt
       ? `【用户提示词——最高优先级】
@@ -119,6 +163,7 @@ ${charBriefs}
 
 【世界观】
 ${loreBriefs}
+${cardNotesText}
 
 请为「${node.title}」生成一份详细的章纲。`
       : `【作品信息】
@@ -144,6 +189,7 @@ ${charBriefs}
 
 【世界观】
 ${loreBriefs}
+${cardNotesText}
 
 请为「${node.title}」生成一份详细的章纲。`;
 

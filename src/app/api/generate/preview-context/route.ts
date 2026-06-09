@@ -159,6 +159,8 @@ export async function POST(request: Request) {
       budget,
       breakdown,
       activeCharacters,
+      activeCharacterCount: activeCharacters.length,
+      totalCharacterCount: characters.length,
       activeLoreCount: promptContext.triggeredLore.length,
       totalPromptTokens: budget.used || countTokens(JSON.stringify(breakdown)),
       contextWindowSize,

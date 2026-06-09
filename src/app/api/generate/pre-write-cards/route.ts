@@ -13,31 +13,49 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
-    const nodeId = searchParams.get("nodeId");
+    const nodeId = searchParams.get("nodeId"); // 可选——大纲生成时无节点
 
-    if (!projectId || !nodeId) {
-      return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
+    if (!projectId) {
+      return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
     }
 
-    const [project, currentNode, allNodes, characters] = await Promise.all([
-      prisma.project.findUnique({ where: { id: projectId } }),
-      prisma.storyNode.findUnique({ where: { id: nodeId } }),
-      prisma.storyNode.findMany({
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
+
+    let currentNode: any = null;
+    let allNodes: any[] = [];
+    let chapterOrder = 0;
+    let chapterTitle = "";
+    let outlineText = "";
+    let totalChapters = 1;
+
+    if (nodeId) {
+      currentNode = await prisma.storyNode.findUnique({ where: { id: nodeId } });
+      if (!currentNode) return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+      allNodes = await prisma.storyNode.findMany({
         where: { projectId, content: { not: null } },
         orderBy: { order: "asc" },
-      }),
-      prisma.characterCard.findMany({ where: { projectId } }),
-    ]);
-
-    if (!project || !currentNode) {
-      return NextResponse.json({ error: "项目或节点不存在" }, { status: 404 });
+      });
+      chapterOrder = currentNode.order;
+      chapterTitle = currentNode.title || "";
+      outlineText = (currentNode.outline || "") + " " + chapterTitle;
+      totalChapters = allNodes.length + 1;
+    } else {
+      // 无节点模式——用于大纲生成，用作品总纲代替章节大纲
+      allNodes = await prisma.storyNode.findMany({
+        where: { projectId, content: { not: null } },
+        orderBy: { order: "asc" },
+      });
+      totalChapters = allNodes.length + 1;
+      chapterOrder = totalChapters; // 视为"故事全局"
+      chapterTitle = project.name;
+      outlineText = (project.synopsis || "") + " " + (project.genre || []).join(" ") + " " + (project.toneKeywords || []).join(" ");
+      // 大纲生成没有单个节点——用项目概要覆盖
     }
 
+    const characters = await prisma.characterCard.findMany({ where: { projectId } });
+
     // ── 复用智能调度器逻辑 ──
-    const chapterOrder = currentNode.order;
-    const chapterTitle = currentNode.title || "";
-    const outlineText = (currentNode.outline || "") + " " + chapterTitle;
-    const totalChapters = allNodes.length + 1;
 
     // 故事阶段
     let storyPhase = "";
@@ -204,7 +222,7 @@ export async function GET(request: Request) {
       scheduledCount: scheduled.length,
       missingRoleSuggestions: missingRoles,
       chapterTitle,
-      chapterOutline: currentNode.outline || "",
+      chapterOutline: nodeId ? (currentNode?.outline || "") : (project.synopsis || "").slice(0, 200),
     });
   } catch (err) {
     return NextResponse.json(

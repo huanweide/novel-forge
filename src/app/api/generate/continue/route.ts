@@ -27,6 +27,9 @@ export async function POST(request: Request) {
       styleTemplateId,
       authorNote,
       autoOutline = true,
+      confirmedCardIds,
+      cardNotes,
+      newCharacterRequests,
     } = await request.json();
 
     if (!projectId || !currentNodeId) {
@@ -185,12 +188,56 @@ export async function POST(request: Request) {
       systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
     }
 
+    // ── 自建角色 ──
+    const allChars = [...characters];
+    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
+      for (const req of newCharacterRequests as string[]) {
+        const name = req.trim();
+        if (!name) continue;
+        const exists = allChars.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
+        if (!exists) {
+          const created = await prisma.characterCard.create({
+            data: {
+              projectId,
+              name,
+              role: "supporting",
+              personality: { dominant: "续写时自建，待丰富" } as any,
+              background: `[续写] 用户要求自建角色`,
+              abilities: [],
+              tags: ["🆕 续写自建"],
+              currentStatus: "alive",
+            } as any,
+          });
+          allChars.push(created as any);
+        }
+      }
+    }
+
+    // ── 过滤角色 ──
+    let activeChars = allChars;
+    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
+      const confirmedSet = new Set(confirmedCardIds as string[]);
+      activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
+    }
+
+    // ── 用户备注注入 ──
+    let cardNotesText = "";
+    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
+      const noteLines: string[] = [];
+      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
+        if (!note.trim()) continue;
+        const char = allChars.find((c: any) => c.id === id);
+        if (char) noteLines.push(`[${char.name}] ${note}`);
+      }
+      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
+    }
+
     // 构建上下文
     const promptContext = buildPromptContext({
       project: project as any,
       currentNode: nextNode as any,
       previousNodes: previousNodes as any,
-      characters: characters as any,
+      characters: activeChars as any,
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
@@ -207,7 +254,7 @@ export async function POST(request: Request) {
     const temperature = template?.temperature ?? 0.85;
     const topP = template?.topP ?? 0.95;
 
-    const writingInstruction = `请接着上文继续撰写下一节。\n\n【上文末段——从这里衔接】\n${lastParagraphs}\n\n【本节标题】${nextTitle}\n【本节大纲】${nextOutline || "基于前文剧情自然推进"}\n\n注意：与上文无缝衔接，保持叙事视角一致。`;
+    const writingInstruction = `${cardNotesText}请接着上文继续撰写下一节。\n\n【上文末段——从这里衔接】\n${lastParagraphs}\n\n【本节标题】${nextTitle}\n【本节大纲】${nextOutline || "基于前文剧情自然推进"}\n\n注意：与上文无缝衔接，保持叙事视角一致。`;
 
     // SSE 流式生成
     const encoder = new TextEncoder();

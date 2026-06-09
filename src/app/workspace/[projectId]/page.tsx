@@ -107,6 +107,14 @@ export default function WorkspacePage() {
 
   const handleRefine = async () => {
     if (!selectedNode || !project) return;
+    // 弹窗确认角色调度
+    setPreGenMode("refine");
+    setPreGenOpen(true);
+  };
+
+  const handleRefineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
+    if (!selectedNode || !project) return;
+    setPreGenOpen(false);
     setIsGenerating(true);
     setStreamContent("");
     setReviewResult(null);
@@ -123,6 +131,9 @@ export default function WorkspacePage() {
           nodeId: selectedNode.id,
           instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情",
           targetWords: targetWordCount,
+          confirmedCardIds: cards,
+          cardNotes: notes,
+          newCharacterRequests: newChars,
         }),
         signal: controller.signal,
       });
@@ -387,13 +398,26 @@ export default function WorkspacePage() {
   /** 生成大纲预览（不写入DB） */
   const handleGenerateOutlinePreview = async () => {
     if (!project) return;
+    // 保存配置，弹窗确认角色
+    setOutlineGenConfig({
+      chapterCount: getEffectiveChapterCount(),
+      customPrompt: outlineCustomPrompt,
+      useFlash: outlineUseFlash || outlineCustomPrompt.trim().length > 0,
+    });
+    setPreGenMode("outline");
+    setPreGenOpen(true);
+  };
+
+  const handleOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
+    if (!project || !outlineGenConfig) return;
+    setPreGenOpen(false);
     setOutlineGenerating(true);
     setOutlineError("");
     setOutlinePreviewChapters([]);
     setOutlineRaw("");
     setOutlineModelUsed("");
 
-    const hasCustomPrompt = outlineCustomPrompt.trim().length > 0;
+    const { chapterCount, customPrompt, useFlash } = outlineGenConfig;
 
     try {
       const res = await fetch("/api/generate/outline", {
@@ -401,9 +425,12 @@ export default function WorkspacePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: project.id,
-          chapterCount: getEffectiveChapterCount(),
-          customPrompt: hasCustomPrompt ? outlineCustomPrompt : undefined,
-          useFlash: outlineUseFlash || hasCustomPrompt,
+          chapterCount,
+          customPrompt: customPrompt || undefined,
+          useFlash,
+          confirmedCardIds: cards,
+          cardNotes: notes,
+          newCharacterRequests: newChars,
         }),
       });
       if (!res.ok) {
@@ -424,6 +451,45 @@ export default function WorkspacePage() {
       setOutlineError(err instanceof Error ? err.message : "网络错误");
     } finally {
       setOutlineGenerating(false);
+    }
+  };
+
+  // ─── 章纲角色确认后 ─────────────────────────────────────────
+  const handleChapterOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
+    if (!selectedNode || !project) return;
+    setPreGenOpen(false);
+
+    try {
+      setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
+      const res = await fetch("/api/generate/chapter-outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          nodeId: selectedNode.id,
+          prompt: chapterOutlineFlashPrompt || undefined,
+          confirmedCardIds: cards,
+          cardNotes: notes,
+          newCharacterRequests: newChars,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`);
+        setReviewResult(null);
+        return;
+      }
+      if (data.outline) {
+        setSelectedNode({ ...selectedNode, outline: data.outline });
+        setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
+        await loadProject();
+      } else {
+        alert("API 返回空内容，请重试");
+        setReviewResult(null);
+      }
+    } catch (err) {
+      alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
+      setReviewResult(null);
     }
   };
 
@@ -460,17 +526,19 @@ export default function WorkspacePage() {
     );
   };
 
-  // ─── 生成前确认 ─────────────────────────────────────────
+  // ─── 生成前确认（统一入口） ─────────────────────────────
   const [preGenOpen, setPreGenOpen] = useState(false);
-  const [pendingWriteConfirmed, setPendingWriteConfirmed] = useState<{
-    cards: string[]; notes: Record<string, string>; newChars: string[]; finalAuthorNote: string;
-  } | null>(null);
+  const [preGenMode, setPreGenMode] = useState<"write" | "refine" | "continue" | "outline" | "chapter-outline">("write");
+  // 大纲生成配置——在 PreGenConfirm 期间暂存
+  const [outlineGenConfig, setOutlineGenConfig] = useState<{ chapterCount: number; customPrompt: string; useFlash: boolean } | null>(null);
+  // Flash 章纲提示词暂存
+  const [chapterOutlineFlashPrompt, setChapterOutlineFlashPrompt] = useState("");
 
   // ─── 正文生成 (SSE 流式) ──────────────────────────────────
 
   const handleWrite = async () => {
     if (!selectedNode || !project) return;
-    // 弹窗确认角色调度，不直接写
+    setPreGenMode("write");
     setPreGenOpen(true);
   };
 
@@ -654,7 +722,14 @@ export default function WorkspacePage() {
 
   const handleContinue = async () => {
     if (!selectedNode || !project) return;
+    // 弹窗确认角色调度
+    setPreGenMode("continue");
+    setPreGenOpen(true);
+  };
 
+  const handleContinueConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
+    if (!selectedNode || !project) return;
+    setPreGenOpen(false);
     setContinueLoading(true);
     setStreamContent("");
     setReviewResult(null);
@@ -670,8 +745,11 @@ export default function WorkspacePage() {
           projectId: project.id,
           currentNodeId: selectedNode.id,
           styleTemplateId,
-          authorNote: authorNote || undefined,
+          authorNote: finalAuthorNote || authorNote || undefined,
           autoOutline: true,
+          confirmedCardIds: cards,
+          cardNotes: notes,
+          newCharacterRequests: newChars,
         }),
         signal: controller.signal,
       });
@@ -822,40 +900,15 @@ export default function WorkspacePage() {
             });
             setSelectedNode({ ...selectedNode, outline });
           }}
-          onGenerateChapterOutline={async (flashPrompt: string) => {
+          onGenerateChapterOutline={(flashPrompt: string) => {
             if (!selectedNode || !project) {
               alert("请先选中一个章节节点");
               return;
             }
-            try {
-              setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
-              const res = await fetch("/api/generate/chapter-outline", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  projectId: project.id,
-                  nodeId: selectedNode.id,
-                  prompt: flashPrompt || undefined,
-                }),
-              });
-              const data = await res.json();
-              if (!res.ok || data.error) {
-                alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`);
-                setReviewResult(null);
-                return;
-              }
-              if (data.outline) {
-                setSelectedNode({ ...selectedNode, outline: data.outline });
-                setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
-                await loadProject();
-              } else {
-                alert("API 返回空内容，请重试");
-                setReviewResult(null);
-              }
-            } catch (err) {
-              alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
-              setReviewResult(null);
-            }
+            // 弹窗确认角色调度
+            setChapterOutlineFlashPrompt(flashPrompt);
+            setPreGenMode("chapter-outline");
+            setPreGenOpen(true);
           }}
           projectId={project.id}
           lastGeneratedText={lastGeneratedText}
@@ -1052,16 +1105,29 @@ export default function WorkspacePage() {
       )}
 
       {/* 生成前角色确认弹窗 */}
-      {preGenOpen && selectedNode && (
+      {preGenOpen && (
         <PreGenConfirm
           projectId={project.id}
-          nodeId={selectedNode.id}
+          nodeId={preGenMode === "outline" ? undefined : selectedNode?.id}
           authorNote={authorNote}
+          title={
+            preGenMode === "write" ? "生成前确认——角色调度"
+            : preGenMode === "refine" ? "微调前确认——角色调度"
+            : preGenMode === "continue" ? "续写前确认——角色调度"
+            : preGenMode === "outline" ? "大纲生成前确认——角色调度"
+            : "章纲生成前确认——角色调度"
+          }
           onAuthorNoteChange={handleAuthorNoteChange}
           onConfirm={(cards, notes, newChars, finalAuthorNote) => {
-            handleWriteConfirmed(cards, notes, newChars, finalAuthorNote);
+            switch (preGenMode) {
+              case "write": handleWriteConfirmed(cards, notes, newChars, finalAuthorNote); break;
+              case "refine": handleRefineConfirmed(cards, notes, newChars, finalAuthorNote); break;
+              case "continue": handleContinueConfirmed(cards, notes, newChars, finalAuthorNote); break;
+              case "outline": handleOutlineConfirmed(cards, notes, newChars, finalAuthorNote); break;
+              case "chapter-outline": handleChapterOutlineConfirmed(cards, notes, newChars, finalAuthorNote); break;
+            }
           }}
-          onCancel={() => setPreGenOpen(false)}
+          onCancel={() => { setPreGenOpen(false); setOutlineGenConfig(null); }}
         />
       )}
 
@@ -3168,13 +3234,15 @@ function PreGenConfirm({
   projectId,
   nodeId,
   authorNote,
+  title,
   onAuthorNoteChange,
   onConfirm,
   onCancel,
 }: {
   projectId: string;
-  nodeId: string;
+  nodeId?: string;
   authorNote: string;
+  title?: string;
   onAuthorNoteChange: (v: string) => void;
   onConfirm: (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => void;
   onCancel: () => void;
@@ -3197,7 +3265,10 @@ function PreGenConfirm({
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/generate/pre-write-cards?projectId=${projectId}&nodeId=${nodeId}`);
+      const url = nodeId
+        ? `/api/generate/pre-write-cards?projectId=${projectId}&nodeId=${nodeId}`
+        : `/api/generate/pre-write-cards?projectId=${projectId}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -3243,7 +3314,7 @@ function PreGenConfirm({
         {/* 标题 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
           <div>
-            <h2 className="text-lg font-semibold">📋 生成前确认——角色调度</h2>
+            <h2 className="text-lg font-semibold">📋 {title || "生成前确认——角色调度"}</h2>
             {storyInfo && (
               <p className="text-xs text-zinc-500 mt-0.5">
                 {storyInfo.storyPhase} · {storyInfo.sceneContext || "未确定场景"} · 「{storyInfo.chapterTitle}」
