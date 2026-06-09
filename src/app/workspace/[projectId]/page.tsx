@@ -95,6 +95,16 @@ export default function WorkspacePage() {
     if (typeof window !== "undefined") localStorage.setItem(`novel-forge-refine-${projectId}`, v);
   };
 
+  // Flash 章纲提示词——持久化
+  const [chapterOutlinePrompt, setChapterOutlinePrompt] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(`novel-forge-flash-prompt-${projectId}`) || "";
+  });
+  const handleChapterOutlinePromptChange = (v: string) => {
+    setChapterOutlinePrompt(v);
+    if (typeof window !== "undefined") localStorage.setItem(`novel-forge-flash-prompt-${projectId}`, v);
+  };
+
   const handleRefine = async () => {
     if (!selectedNode || !project) return;
     setIsGenerating(true);
@@ -796,13 +806,11 @@ export default function WorkspacePage() {
             });
             setSelectedNode({ ...selectedNode, outline });
           }}
-          onGenerateChapterOutline={async () => {
+          onGenerateChapterOutline={async (flashPrompt: string) => {
             if (!selectedNode || !project) {
               alert("请先选中一个章节节点");
               return;
             }
-            const promptText = prompt("输入章纲提示词（留空则自动生成）：", refineInstruction || "");
-            if (promptText === null) return; // 用户取消
             try {
               setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
               const res = await fetch("/api/generate/chapter-outline", {
@@ -811,7 +819,7 @@ export default function WorkspacePage() {
                 body: JSON.stringify({
                   projectId: project.id,
                   nodeId: selectedNode.id,
-                  prompt: promptText || undefined,
+                  prompt: flashPrompt || undefined,
                 }),
               });
               const data = await res.json();
@@ -842,6 +850,8 @@ export default function WorkspacePage() {
           refineInstruction={refineInstruction}
           onRefineInstructionChange={handleRefineInstructionChange}
           onRefine={handleRefine}
+          chapterOutlinePrompt={chapterOutlinePrompt}
+          onChapterOutlinePromptChange={handleChapterOutlinePromptChange}
           onReviewDismiss={() => setReviewResult(null)}
           onReviewExplain={(issue: ReviewIssue, note: string) => {
             setReviewResult((prev: typeof reviewResult) => prev ? {
@@ -1720,6 +1730,7 @@ function CenterPanel({
   projectId, lastGeneratedText, onEntitiesCreated, onOpenCardUpdater,
   refineMode, onToggleRefineMode, refineInstruction, onRefineInstructionChange, onRefine,
   onReviewDismiss, onReviewExplain, onReviewFix,
+  chapterOutlinePrompt, onChapterOutlinePromptChange,
 }: {
   selectedNode: StoryNodeData | null;
   streamContent: string;
@@ -1733,7 +1744,9 @@ function CenterPanel({
   onStop: () => void;
   onContinue: () => void;
   onEditOutline: (outline: string) => void;
-  onGenerateChapterOutline: () => void;
+  onGenerateChapterOutline: (flashPrompt: string) => void;
+  chapterOutlinePrompt: string;
+  onChapterOutlinePromptChange: (v: string) => void;
   projectId: string;
   lastGeneratedText: string;
   onEntitiesCreated: () => void;
@@ -1820,13 +1833,21 @@ function CenterPanel({
                     {selectedNode.outline || "点击设置本节点大纲..."}
                   </div>
                   {!isGenerating && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onGenerateChapterOutline(); }}
-                      className="text-[10px] px-2 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors shrink-0"
-                      title="用 V4 Flash 为本章生成章纲"
-                    >
-                      ⚡ Flash 生成章纲
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        value={chapterOutlinePrompt}
+                        onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
+                        placeholder="Flash提示词（留空自动生成）"
+                        className="w-32 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-cyan-700"
+                      />
+                      <button
+                        onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
+                        className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors"
+                        title="用 V4 Flash 为本章生成章纲"
+                      >
+                        ⚡生成
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
