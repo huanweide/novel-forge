@@ -79,7 +79,7 @@ const SYSTEM_PROMPTS = {
 【超能力自然下沉】
 允许超出常人的反应/预判/精准技术——但它们是自然发生的，不命名不强调。不用"他发动了……"，给高光留物理合理的解释。
 
-【角色出场逻辑】参照花名册中每个角色的权重和出场条件。S级(世界级/传说级)只在重大比赛/剧情高潮出现，不可日常陪同。A级有明确目的才出场。B级可日常出现。未出场角色需铺垫引入。每个出场角色必须能回答"他为什么在这里"。禁止让S级角色随意出现在训练/闲聊场景。
+【角色出场原则】足球世界是流动的——任何人可以因为任何合理的动机出现。世界级球员可以接受邀请打友谊赛(钱/人情/曝光)，对手可以来侦察，陌生人可以突然出现(被雇佣/私人恩怨)。出场不需资格，需要动机。如果让非常规角色出场，给一句暗示解释原因。新角色需铺垫引入不能凭空冒出。参照花名册中每个角色的背景标签和可能动机。
 
 【灵魂】感受具体，有观点，允许些许混乱。`,
 
@@ -537,15 +537,12 @@ export function buildPromptContext(params: {
 【超能力自然下沉】
 允许超出常人的反应速度、极限预判、极度精准技术——但它们是自然发生的，不命名、不强调。不用「他发动了……」「他使出了……」、不喊招式名。给高光时刻留物理上合理的解释——十年的身体记忆、对对手习惯的观察、无数次训练的肌肉反应。超能力不破坏写实基底，不被角色和观众当作"超自然现象"讨论——它就是这个人厉害而已。
 
-【角色出场逻辑——极度重要的叙事法则】
-角色花名册中每个角色都标注了叙事权重和出场条件。你必须严格遵守：
-- S级角色（世界级/传说级/国家队/反派首领）：只在重大比赛、剧情高潮、关键冲突中出现。绝不在日常训练、普通吃饭、随意陪同的场合出现。他们每一次出现都是一次"事件"。
-- A级角色（导师/反派/催化剂/队长）：有明确叙事目的才可出场——推进主线、传授关键信息、制造重大冲突。不是随叫随到的配角。
-- B级角色（队友/同辈/主角团）：可在训练/比赛/日常场景自然出现。这些是"常规可用"的角色。
-- C级角色（背景角色）：可以随意出现，但不应主导剧情。
-- 🆕标注"未出场"的角色：不能突然凭空出现。引入新角色需要铺垫——先让其他角色提到他、先描写观众/旁观者中有这个人、先在电话/消息中出现。新角色第一次出场必须有引入场景。
-- ❌ 禁止行为：让S级角色陪主角日常训练；让对手的核心球员无故出现在主角的休息区；让从未出场过的角色突然加入对话；让明显属于另一个地区/队伍的角色随意出现在当前场景。
-- 每个出场的角色都应该能回答一个问题："他为什么在这里？"——如果答案是"因为他是主角的朋友"而没有任何更深层的叙事目的，那就不要让他出现。
+【角色出场原则——动机驱动，非实力禁入】
+足球世界是流动的——任何人可以因为任何合理的动机出现在任何地方。世界级球员可以接受邀请来打友谊赛（钱、人情、曝光）；对手可以出现在场边观察；陌生人可以因为被雇佣/被推荐/私人恩怨而突然出现。出场不需"资格"，需要的是"动机"。
+- 如果你让一个不在当前场景常规名单中的角色出场，在叙述/对话中给一句暗示他为什么在这里——"绘心雇来的""他欠凛一个人情""经纪人安排的""碰巧在隔壁场训练"
+- 新角色首次出场需要铺垫：他人提到→远处出现→简短接触→正式登场。不要凭空冒出一个无人知晓的名字开始长篇对话。
+- 已死亡的不可出场。暂时失踪的可以出场但需要解释。
+- 参考花名册中每个角色的【背景】和【可能动机】——那是你的人设锚点。
 
 【灵魂】
 对感受具体。有观点——透过角色的眼睛看世界。允许些许混乱——完美的结构是AI。
@@ -604,30 +601,73 @@ export function buildPromptContext(params: {
     systemPrompt += `\n\n【角色当下冲动——本章开头的行为驱动力】\n${impulseLines}`;
   }
 
-  // ── 构建角色花名册——含叙事权重+出场条件，防止AI乱拉人 ──
-  // 叙事权重：决定角色应该在什么样的场景出现
-  const getNarrativeWeight = (c: any): { weight: string; context: string } => {
-    const bg = (c.background || "").toLowerCase();
-    const abilities = (c.abilities || []).join(" ").toLowerCase();
-    const role = c.role || "supporting";
+  // ── 推断当前故事阶段（基于章节位置 + 标题）──
+  const chapterOrder = currentNode.order;
+  const chapterTitle = currentNode.title || "";
+  const totalChapters = previousNodes.length + 1; // 粗略的总章节数
+  let storyPhase = "";
+  if (chapterOrder <= 3) storyPhase = "故事初期——角色引入阶段，主要人物陆续登场，世界观铺设中";
+  else if (chapterOrder <= totalChapters * 0.3) storyPhase = "故事前期——核心冲突开始浮现，主角团磨合中";
+  else if (chapterOrder <= totalChapters * 0.6) storyPhase = "故事中期——冲突升级，外部势力介入，角色关系复杂化";
+  else if (chapterOrder <= totalChapters * 0.85) storyPhase = "故事后期——高潮临近，重要角色汇聚，决定性对抗即将到来";
+  else storyPhase = "故事末期——终局阶段，所有伏笔回收，最终对决";
 
-    // S级：世界级/传说级——只在重大剧情高潮出现，不可日常陪同
-    if (bg.includes("世界级") || bg.includes("国家队") || bg.includes("传说") ||
-        abilities.includes("世界") || abilities.includes("绝对") || abilities.includes("领域") ||
-        role === "antagonist" && (bg.includes("首领") || bg.includes("教练") || bg.includes("导师"))) {
-      return { weight: "S级·仅重大冲突/比赛/剧情高潮出场", context: "不可在日常训练/闲聊/陪同场景出现" };
+  // 从章节标题提取场景类型提示
+  const sceneHints: string[] = [];
+  if (chapterTitle.includes("比赛") || chapterTitle.includes("战") || chapterTitle.includes("对决")) sceneHints.push("⚽比赛场景");
+  if (chapterTitle.includes("训练") || chapterTitle.includes("练习")) sceneHints.push("🏃训练场景");
+  if (chapterTitle.includes("日常") || chapterTitle.includes("休息")) sceneHints.push("☕日常场景");
+  if (chapterTitle.includes("选拔") || chapterTitle.includes("测试")) sceneHints.push("📋选拔/测试场景");
+  const sceneContext = sceneHints.length > 0 ? sceneHints.join("、") : "场景类型未知——根据大纲判断";
+
+  // 把故事阶段注入 systemPrompt
+  systemPrompt += `\n\n【当前故事阶段】\n第${chapterOrder + 1}章/${totalChapters}章。${storyPhase}。${sceneContext}。`;
+  systemPrompt += `\n本章标题：${chapterTitle}。大纲：${currentNode.outline || "无"}。`;
+
+  // ── 构建角色花名册——含背景标签+动机提示，不按实力分级 ──
+
+  // 从角色背景中提取立场/所属标签
+  const extractAffiliation = (c: any): string => {
+    const bg = (c.background || "").toLowerCase();
+    const name = c.name || "";
+    const tags: string[] = [];
+
+    // 从背景文字中提取线索
+    if (bg.includes("蓝色监狱") || bg.includes("蓝锁")) tags.push("蓝锁成员");
+    if (bg.includes("u-20") || bg.includes("u20") || bg.includes("日本代表")) tags.push("日本U-20");
+    if (bg.includes("世界") || bg.includes("国际") || bg.includes("海外") || bg.includes("欧洲")) tags.push("国际球员");
+    if (bg.includes("教练") || bg.includes("指导") || bg.includes("绘心")) tags.push("教练/工作人员");
+    if (bg.includes("记者") || bg.includes("媒体") || bg.includes("解说")) tags.push("媒体/观察者");
+    if (bg.includes("家族") || bg.includes("兄弟") || bg.includes("父母") || bg.includes("亲人")) tags.push("家人/亲属");
+    if (bg.includes("赞助") || bg.includes("商业") || bg.includes("经纪人")) tags.push("商业/经纪");
+    if (bg.includes("宿敌") || bg.includes("对手") || bg.includes("敌对")) tags.push("敌对关系");
+    if (bg.includes("队友") || bg.includes("同队") || bg.includes("搭档")) tags.push("同队队友");
+
+    // 角色类型补充
+    if (c.role === "antagonist") tags.push("主要对手");
+    if (c.role === "mentor") tags.push("导师");
+    if (c.role === "protagonist") tags.push("主角");
+
+    return tags.length > 0 ? tags.join("/") : "未明确";
+  };
+
+  // 推断角色可能的出场动机
+  const extractMotivation = (c: any): string => {
+    const bg = (c.background || "").toLowerCase();
+    const motives: string[] = [];
+
+    if (bg.includes("竞争") || bg.includes("打败") || bg.includes("证明")) motives.push("竞争/证明自己");
+    if (bg.includes("观察") || bg.includes("侦察") || bg.includes("考察")) motives.push("观察/侦察");
+    if (bg.includes("邀请") || bg.includes("雇佣") || bg.includes("报酬")) motives.push("被邀请/被雇佣");
+    if (bg.includes("复仇") || bg.includes("恩怨") || bg.includes("恨")) motives.push("私人恩怨");
+    if (bg.includes("保护") || bg.includes("守护") || bg.includes("照顾")) motives.push("保护/守护某人");
+    if (bg.includes("好奇") || bg.includes("兴趣") || bg.includes("关注")) motives.push("好奇/感兴趣");
+    if (bg.includes("命令") || bg.includes("任务") || bg.includes("指派")) motives.push("被指派/执行任务");
+    if (Array.isArray((c as any).relationships) && (c as any).relationships.length > 0) {
+      motives.push("人际关系驱动");
     }
-    // A级：重要角色——有明确叙事目的才出现
-    if (role === "mentor" || role === "antagonist" || role === "catalyst" ||
-        bg.includes("教练") || bg.includes("队长") || bg.includes("首领")) {
-      return { weight: "A级·有明确目的才出场", context: "仅在推进主线/传授关键信息/制造重大冲突时出现" };
-    }
-    // B级：常规角色——队友、同辈，可日常出现
-    if (role === "protagonist" || role === "love_interest" || role === "supporting") {
-      return { weight: "B级·常规出场", context: "可在训练/比赛/日常场景自然出现" };
-    }
-    // C级：背景角色
-    return { weight: "C级·背景角色", context: "可随意出现但不应主导剧情" };
+
+    return motives.length > 0 ? motives.join("、") : "故事推进自然出场";
   };
 
   // 根据前文章节内容判断角色是否已出场
@@ -643,21 +683,25 @@ export function buildPromptContext(params: {
 
   const rosterLines: string[] = [];
   for (const c of characters) {
-    // 已死亡/失踪的角色标注不可出场
-    if ((c as any).currentStatus === "dead") continue; // 死了不出现在花名册
-    if ((c as any).currentStatus === "missing") continue;
+    // 跳过死亡角色
+    if ((c as any).currentStatus === "dead") continue;
 
-    const { weight, context } = getNarrativeWeight(c as any);
+    const affiliation = extractAffiliation(c as any);
+    const motivation = extractMotivation(c as any);
     const appeared = appearedNames.has(c.name);
-    const introTag = appeared ? "✅已出场" : "🆕未出场——需铺垫引入";
+    const introTag = appeared ? "✅已知" : "🆕未登场";
 
     const parts: string[] = [];
-    // 叙事权重——最重要的新增字段
-    parts.push(`权重：${weight}`);
-    parts.push(`出场：${context}`);
+    // 核心信息：立场+动机+出场状态
+    parts.push(`立场：${affiliation}`);
+    parts.push(`动机：${motivation}`);
     parts.push(introTag);
 
-    // 关系（精简——只取最重要的2条）
+    // 背景摘要——最重要的出场逻辑来源
+    const bg = ((c as any).background || "").slice(0, 80);
+    if (bg.trim()) parts.push(`背景：${bg}`);
+
+    // 关系（精简——最多2条）
     if (Array.isArray((c as any).relationships) && (c as any).relationships.length > 0) {
       const rels = (c as any).relationships.slice(0, 2).map((r: any) =>
         `${r.targetName || "?"}(${r.relation || ""})`
@@ -666,40 +710,23 @@ export function buildPromptContext(params: {
     }
     // 弧光
     if ((c as any).arcProgress) parts.push(`弧光：${(c as any).arcProgress.slice(0, 60)}`);
-    // 对话风格
-    if ((c as any).dialogueStyle && typeof (c as any).dialogueStyle === "string" && (c as any).dialogueStyle.trim()) {
-      parts.push(`说话：${(c as any).dialogueStyle.slice(0, 50)}`);
-    } else if ((c as any).dialogueStyle && typeof (c as any).dialogueStyle === "object") {
-      const ds = (c as any).dialogueStyle as Record<string, unknown>;
-      if (ds.description) parts.push(`说话：${String(ds.description).slice(0, 50)}`);
-    }
-    // 外貌
-    if ((c as any).appearance && typeof (c as any).appearance === "string" && (c as any).appearance.trim()) {
-      parts.push(`外貌：${(c as any).appearance.slice(0, 50)}`);
-    }
-    // 能力（不超过5个）
-    if (Array.isArray((c as any).abilities) && (c as any).abilities.length > 0) {
-      const abs = (c as any).abilities.slice(0, 5).join("、");
-      if (abs) parts.push(`能力：${abs}`);
-    }
-    // 状态
-    if ((c as any).currentStatus && !["alive", "dead", "missing"].includes((c as any).currentStatus)) {
-      parts.push(`状态：${(c as any).currentStatus}`);
+    // 状态（仅非正常状态）
+    if ((c as any).currentStatus && !["alive"].includes((c as any).currentStatus)) {
+      parts.push(`当前：${(c as any).currentStatus}`);
     }
 
-    if (parts.length > 0) {
-      rosterLines.push(`[${c.name}] ${parts.join(" | ")}`);
-    }
+    rosterLines.push(`[${c.name}] ${parts.join(" | ")}`);
   }
-  // 排序：S级(A级)→B级→C级，未出场优先排在后面（减少AI随意拉人）
-  const weightOrder = (w: string) => w.startsWith("S级") ? 0 : w.startsWith("A级") ? 1 : w.startsWith("B级") ? 2 : 3;
+
+  // 排序：已知角色优先（减少AI随机拉新人）
   rosterLines.sort((a, b) => {
-    const aW = a.match(/权重：(.+?)\|/)?.[1]?.trim() || "";
-    const bW = b.match(/权重：(.+?)\|/)?.[1]?.trim() || "";
-    return weightOrder(aW) - weightOrder(bW);
+    const aKnown = a.includes("✅已知") ? 0 : 1;
+    const bKnown = b.includes("✅已知") ? 0 : 1;
+    return aKnown - bKnown;
   });
+
   const characterRoster = rosterLines.length > 0
-    ? rosterLines.slice(0, 50).join("\n") // 最多50个角色
+    ? rosterLines.slice(0, 50).join("\n")
     : "";
 
   return {
