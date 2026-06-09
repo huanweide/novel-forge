@@ -79,6 +79,8 @@ const SYSTEM_PROMPTS = {
 【超能力自然下沉】
 允许超出常人的反应/预判/精准技术——但它们是自然发生的，不命名不强调。不用"他发动了……"，给高光留物理合理的解释。
 
+【角色出场逻辑】参照花名册中每个角色的权重和出场条件。S级(世界级/传说级)只在重大比赛/剧情高潮出现，不可日常陪同。A级有明确目的才出场。B级可日常出现。未出场角色需铺垫引入。每个出场角色必须能回答"他为什么在这里"。禁止让S级角色随意出现在训练/闲聊场景。
+
 【灵魂】感受具体，有观点，允许些许混乱。`,
 
   /** Agent D：审校/逻辑守护者 */
@@ -535,6 +537,16 @@ export function buildPromptContext(params: {
 【超能力自然下沉】
 允许超出常人的反应速度、极限预判、极度精准技术——但它们是自然发生的，不命名、不强调。不用「他发动了……」「他使出了……」、不喊招式名。给高光时刻留物理上合理的解释——十年的身体记忆、对对手习惯的观察、无数次训练的肌肉反应。超能力不破坏写实基底，不被角色和观众当作"超自然现象"讨论——它就是这个人厉害而已。
 
+【角色出场逻辑——极度重要的叙事法则】
+角色花名册中每个角色都标注了叙事权重和出场条件。你必须严格遵守：
+- S级角色（世界级/传说级/国家队/反派首领）：只在重大比赛、剧情高潮、关键冲突中出现。绝不在日常训练、普通吃饭、随意陪同的场合出现。他们每一次出现都是一次"事件"。
+- A级角色（导师/反派/催化剂/队长）：有明确叙事目的才可出场——推进主线、传授关键信息、制造重大冲突。不是随叫随到的配角。
+- B级角色（队友/同辈/主角团）：可在训练/比赛/日常场景自然出现。这些是"常规可用"的角色。
+- C级角色（背景角色）：可以随意出现，但不应主导剧情。
+- 🆕标注"未出场"的角色：不能突然凭空出现。引入新角色需要铺垫——先让其他角色提到他、先描写观众/旁观者中有这个人、先在电话/消息中出现。新角色第一次出场必须有引入场景。
+- ❌ 禁止行为：让S级角色陪主角日常训练；让对手的核心球员无故出现在主角的休息区；让从未出场过的角色突然加入对话；让明显属于另一个地区/队伍的角色随意出现在当前场景。
+- 每个出场的角色都应该能回答一个问题："他为什么在这里？"——如果答案是"因为他是主角的朋友"而没有任何更深层的叙事目的，那就不要让他出现。
+
 【灵魂】
 对感受具体。有观点——透过角色的眼睛看世界。允许些许混乱——完美的结构是AI。
 
@@ -592,29 +604,78 @@ export function buildPromptContext(params: {
     systemPrompt += `\n\n【角色当下冲动——本章开头的行为驱动力】\n${impulseLines}`;
   }
 
-  // ── 构建角色花名册——把更新过的关键字段送入 prompt 供后续章节读取 ──
+  // ── 构建角色花名册——含叙事权重+出场条件，防止AI乱拉人 ──
+  // 叙事权重：决定角色应该在什么样的场景出现
+  const getNarrativeWeight = (c: any): { weight: string; context: string } => {
+    const bg = (c.background || "").toLowerCase();
+    const abilities = (c.abilities || []).join(" ").toLowerCase();
+    const role = c.role || "supporting";
+
+    // S级：世界级/传说级——只在重大剧情高潮出现，不可日常陪同
+    if (bg.includes("世界级") || bg.includes("国家队") || bg.includes("传说") ||
+        abilities.includes("世界") || abilities.includes("绝对") || abilities.includes("领域") ||
+        role === "antagonist" && (bg.includes("首领") || bg.includes("教练") || bg.includes("导师"))) {
+      return { weight: "S级·仅重大冲突/比赛/剧情高潮出场", context: "不可在日常训练/闲聊/陪同场景出现" };
+    }
+    // A级：重要角色——有明确叙事目的才出现
+    if (role === "mentor" || role === "antagonist" || role === "catalyst" ||
+        bg.includes("教练") || bg.includes("队长") || bg.includes("首领")) {
+      return { weight: "A级·有明确目的才出场", context: "仅在推进主线/传授关键信息/制造重大冲突时出现" };
+    }
+    // B级：常规角色——队友、同辈，可日常出现
+    if (role === "protagonist" || role === "love_interest" || role === "supporting") {
+      return { weight: "B级·常规出场", context: "可在训练/比赛/日常场景自然出现" };
+    }
+    // C级：背景角色
+    return { weight: "C级·背景角色", context: "可随意出现但不应主导剧情" };
+  };
+
+  // 根据前文章节内容判断角色是否已出场
+  const appearedNames = new Set<string>();
+  for (const n of previousNodes) {
+    const content = (n.content || "").toLowerCase();
+    for (const c of characters) {
+      if (content.includes(c.name.toLowerCase())) {
+        appearedNames.add(c.name);
+      }
+    }
+  }
+
   const rosterLines: string[] = [];
   for (const c of characters) {
+    // 已死亡/失踪的角色标注不可出场
+    if ((c as any).currentStatus === "dead") continue; // 死了不出现在花名册
+    if ((c as any).currentStatus === "missing") continue;
+
+    const { weight, context } = getNarrativeWeight(c as any);
+    const appeared = appearedNames.has(c.name);
+    const introTag = appeared ? "✅已出场" : "🆕未出场——需铺垫引入";
+
     const parts: string[] = [];
-    // 关系
+    // 叙事权重——最重要的新增字段
+    parts.push(`权重：${weight}`);
+    parts.push(`出场：${context}`);
+    parts.push(introTag);
+
+    // 关系（精简——只取最重要的2条）
     if (Array.isArray((c as any).relationships) && (c as any).relationships.length > 0) {
-      const rels = (c as any).relationships.map((r: any) =>
+      const rels = (c as any).relationships.slice(0, 2).map((r: any) =>
         `${r.targetName || "?"}(${r.relation || ""})`
       ).join("、");
       if (rels) parts.push(`关系：${rels}`);
     }
     // 弧光
-    if ((c as any).arcProgress) parts.push(`弧光：${(c as any).arcProgress.slice(0, 80)}`);
+    if ((c as any).arcProgress) parts.push(`弧光：${(c as any).arcProgress.slice(0, 60)}`);
     // 对话风格
     if ((c as any).dialogueStyle && typeof (c as any).dialogueStyle === "string" && (c as any).dialogueStyle.trim()) {
-      parts.push(`说话：${(c as any).dialogueStyle.slice(0, 60)}`);
+      parts.push(`说话：${(c as any).dialogueStyle.slice(0, 50)}`);
     } else if ((c as any).dialogueStyle && typeof (c as any).dialogueStyle === "object") {
       const ds = (c as any).dialogueStyle as Record<string, unknown>;
-      if (ds.description) parts.push(`说话：${String(ds.description).slice(0, 60)}`);
+      if (ds.description) parts.push(`说话：${String(ds.description).slice(0, 50)}`);
     }
     // 外貌
     if ((c as any).appearance && typeof (c as any).appearance === "string" && (c as any).appearance.trim()) {
-      parts.push(`外貌：${(c as any).appearance.slice(0, 60)}`);
+      parts.push(`外貌：${(c as any).appearance.slice(0, 50)}`);
     }
     // 能力（不超过5个）
     if (Array.isArray((c as any).abilities) && (c as any).abilities.length > 0) {
@@ -622,7 +683,7 @@ export function buildPromptContext(params: {
       if (abs) parts.push(`能力：${abs}`);
     }
     // 状态
-    if ((c as any).currentStatus && (c as any).currentStatus !== "alive") {
+    if ((c as any).currentStatus && !["alive", "dead", "missing"].includes((c as any).currentStatus)) {
       parts.push(`状态：${(c as any).currentStatus}`);
     }
 
@@ -630,19 +691,15 @@ export function buildPromptContext(params: {
       rosterLines.push(`[${c.name}] ${parts.join(" | ")}`);
     }
   }
-  // 限制花名册长度，主角+重要角色优先（protagonist/antagonist/mentor 排在前面）
-  const priorityRoles = ["protagonist", "antagonist", "mentor", "love_interest", "catalyst"];
+  // 排序：S级(A级)→B级→C级，未出场优先排在后面（减少AI随意拉人）
+  const weightOrder = (w: string) => w.startsWith("S级") ? 0 : w.startsWith("A级") ? 1 : w.startsWith("B级") ? 2 : 3;
   rosterLines.sort((a, b) => {
-    const aName = a.match(/^\[(.+?)\]/)?.[1] || "";
-    const bName = b.match(/^\[(.+?)\]/)?.[1] || "";
-    const aChar = characters.find(c => c.name === aName);
-    const bChar = characters.find(c => c.name === bName);
-    const aPri = aChar ? priorityRoles.indexOf(aChar.role) : 99;
-    const bPri = bChar ? priorityRoles.indexOf(bChar.role) : 99;
-    return aPri - bPri;
+    const aW = a.match(/权重：(.+?)\|/)?.[1]?.trim() || "";
+    const bW = b.match(/权重：(.+?)\|/)?.[1]?.trim() || "";
+    return weightOrder(aW) - weightOrder(bW);
   });
   const characterRoster = rosterLines.length > 0
-    ? rosterLines.slice(0, 60).join("\n") // 最多60个有更新记录的角色
+    ? rosterLines.slice(0, 50).join("\n") // 最多50个角色
     : "";
 
   return {
