@@ -34,6 +34,8 @@ export default function WorkspacePage() {
     "done": { icon: "✅", label: "生成完成" },
     "error": { icon: "❌", label: "生成出错" },
   };
+  // 章纲生成独立状态（genStep 是共享的，写正文 done ≠ 章纲 done）
+  const [chapterOutlineStatus, setChapterOutlineStatus] = useState<"" | "generating" | "done" | "error">("");
 
   // 项目数据
   const [project, setProject] = useState<ProjectData | null>(null);
@@ -912,9 +914,8 @@ export default function WorkspacePage() {
               alert("请先选中一个章节节点");
               return;
             }
-            setGenStep("generating");
+            setChapterOutlineStatus("generating");
             try {
-              setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
               const res = await fetch("/api/generate/chapter-outline", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -926,26 +927,26 @@ export default function WorkspacePage() {
               });
               const data = await res.json();
               if (!res.ok || data.error) {
-                setGenStep("error");
+                setChapterOutlineStatus("error");
+                setTimeout(() => setChapterOutlineStatus(""), 4000);
                 alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`);
-                setReviewResult(null);
                 return;
               }
               if (data.outline) {
-                setGenStep("done");
-                setTimeout(() => setGenStep(""), 5000);
+                setChapterOutlineStatus("done");
+                setTimeout(() => setChapterOutlineStatus(""), 4000);
                 setSelectedNode({ ...selectedNode, outline: data.outline });
                 setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
                 await loadProject();
               } else {
-                setGenStep("error");
+                setChapterOutlineStatus("error");
+                setTimeout(() => setChapterOutlineStatus(""), 4000);
                 alert("API 返回空内容，请重试");
-                setReviewResult(null);
               }
             } catch (err) {
-              setGenStep("error");
+              setChapterOutlineStatus("error");
+              setTimeout(() => setChapterOutlineStatus(""), 4000);
               alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
-              setReviewResult(null);
             }
           }}
           projectId={project.id}
@@ -961,6 +962,7 @@ export default function WorkspacePage() {
           onChapterOutlinePromptChange={handleChapterOutlinePromptChange}
           genStep={genStep}
           genStepLabels={genStepLabels}
+          chapterOutlineStatus={chapterOutlineStatus}
           onReviewDismiss={() => setReviewResult(null)}
           onReviewExplain={(issue: ReviewIssue, note: string) => {
             setReviewResult((prev: typeof reviewResult) => prev ? {
@@ -1866,6 +1868,7 @@ function CenterPanel({
   onReviewDismiss, onReviewExplain, onReviewFix,
   chapterOutlinePrompt, onChapterOutlinePromptChange,
   genStep, genStepLabels,
+  chapterOutlineStatus,
 }: {
   selectedNode: StoryNodeData | null;
   streamContent: string;
@@ -1896,6 +1899,7 @@ function CenterPanel({
   onReviewFix: (issue: ReviewIssue, note: string) => void;
   genStep: string;
   genStepLabels: Record<string, { icon: string; label: string }>;
+  chapterOutlineStatus: string;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -1971,19 +1975,29 @@ function CenterPanel({
                   </div>
                   {!isGenerating && (
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        value={chapterOutlinePrompt}
-                        onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
-                        placeholder="Flash提示词（留空自动生成）"
-                        className="w-32 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-cyan-700"
-                      />
-                      <button
-                        onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
-                        className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors"
-                        title="用 V4 Flash 为本章生成章纲"
-                      >
-                        ⚡生成
-                      </button>
+                      {chapterOutlineStatus === "generating" ? (
+                        <span className="text-[10px] text-indigo-400 animate-pulse px-1">⏳ 章纲生成中...</span>
+                      ) : chapterOutlineStatus === "done" ? (
+                        <span className="text-[10px] text-emerald-400 font-medium px-1">✅ 章纲完成</span>
+                      ) : chapterOutlineStatus === "error" ? (
+                        <span className="text-[10px] text-red-400 px-1">❌ 章纲失败</span>
+                      ) : (
+                        <>
+                          <input
+                            value={chapterOutlinePrompt}
+                            onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
+                            placeholder="Flash提示词（留空自动生成）"
+                            className="w-32 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-cyan-700"
+                          />
+                          <button
+                            onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors"
+                            title="用 V4 Flash 为本章生成章纲"
+                          >
+                            ⚡生成
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
