@@ -99,9 +99,17 @@ export function CardUpdater({
         }),
       });
 
-      const data = await res.json();
+      // 先读文本，再尝试 JSON 解析——防止 API 返回非 JSON 炸掉
+      const resText = await res.text();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any;
+      try {
+        data = JSON.parse(resText);
+      } catch {
+        throw new Error(`API返回格式异常 (${res.status})：${resText.slice(0, 200)}`);
+      }
+
       if (!res.ok) {
-        // 显示API返回的具体错误
         const errMsg = data.error || `服务器错误 (${res.status})`;
         if (data.details) throw new Error(`${errMsg}: ${data.details}`);
         throw new Error(errMsg);

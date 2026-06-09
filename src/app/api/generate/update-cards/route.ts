@@ -161,25 +161,49 @@ ${contentSnippet}
     const config = getDefaultLLMConfig();
     const client = getDefaultClient();
 
-    const response = await client.chat({
-      model: config.extractorModel || config.writerModel,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.3,
-      maxTokens: 8192,
-    });
+    let rawContent = "";
+    try {
+      const response = await client.chat({
+        model: config.extractorModel || config.writerModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 8192,
+      });
+      rawContent = response.content || "";
+    } catch (llmErr) {
+      console.error("LLM调用失败:", llmErr);
+      return NextResponse.json({
+        characterUpdates: [],
+        newCharacters: [],
+        newLoreEntries: [],
+        styleShift: { detected: false },
+        newForeshadowings: [],
+        summary: `LLM调用失败：${llmErr instanceof Error ? llmErr.message.slice(0, 100) : "模型不可用，请稍后重试"}`,
+        meta: { existingCharCount: characters.length, existingLoreCount: loreEntries.length, modelUsed: config.extractorModel || "unknown" },
+      });
+    }
 
-    // 解析
+    // 解析 —— 多层容错
     let result: Record<string, unknown> = {};
     try {
-      let jsonStr = response.content.trim();
+      let jsonStr = rawContent.trim();
+      // 1. 尝试提取 markdown 代码块
       const md = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (md) jsonStr = md[1].trim();
+      // 2. 尝试从第一个 { 到最后一个 } 截取
+      if (!jsonStr.startsWith("{")) {
+        const a = jsonStr.indexOf("{"), b = jsonStr.lastIndexOf("}");
+        if (a >= 0 && b > a) jsonStr = jsonStr.slice(a, b + 1);
+      }
+      // 3. 尝试解析
       result = JSON.parse(jsonStr) as Record<string, unknown>;
     } catch {
-      result = { parseError: true, raw: response.content.slice(0, 500) };
+      // 4. JSON 解析失败 → 返回空结果+原始文本给前端排查
+      console.error("JSON解析失败，原始内容前500字:", rawContent.slice(0, 500));
+      result = { parseError: true, raw: rawContent.slice(0, 800) };
     }
 
     // 匹配现有角色 ID
