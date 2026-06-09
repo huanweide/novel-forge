@@ -86,10 +86,20 @@ export async function POST(request: Request) {
 ✅ 人物弧光推进（成长/堕落/醒悟的关键时刻）
 ✅ 获得重要物品或身份
 
+🌍 世界观细节——即使不是"重大揭露"，以下也值得记录为新世界书词条：
+✅ 比赛/竞技规则（赛制、计分方式、晋级条件、特殊规则）
+✅ 战术体系/训练方法（具体的战术名称、训练模式、技术流派）
+✅ 设施/地点（训练场、竞技场、特定建筑——只要有名字和特征）
+✅ 组织/势力（队伍、俱乐部、赞助商、管理机构——只要有结构和目的）
+✅ 物品/装备（特殊的训练器材、比赛用球、队服——只要有独特之处）
+✅ 文化/惯例（球队传统、球迷习俗、更衣室规矩、赛前仪式）
+✅ 媒体/舆论（解说员风格、报道角度、公众评价体系）
+→ 即使看起来不"重大"，只要它让世界观更具体，就应该记录。category 选择最匹配的。
+
 忽略——小事（没有持久影响，一个月后无意义）：
 ❌ 日常衣食住行、临时情绪波动
 ❌ 与路人NPC的短暂互动
-❌ 普通战斗擦伤，天气/环境变化
+❌ 普通比赛过程中的一次普通对抗
 
 判断标准：如果把这个变化写在角色卡/世界书上，一个月后再看还有意义吗？
 
@@ -150,12 +160,12 @@ ${contentSnippet}
   ],
   "newLoreEntries": [
     {
-      "title": "新设定名",
-      "category": "geography/faction/magic_system/history/culture/creature/item/law/custom",
-      "keys": ["触发关键词"],
-      "content": "设定内容",
-      "significance": "high/medium/low",
-      "evidence": "文本依据"
+      "title": "新设定名（简洁，见名知义）",
+      "category": "geography(地点/设施)/faction(组织/势力/队伍)/magic_system(规则/战术体系)/history(历史)/culture(文化/惯例/传统)/creature(生物)/item(物品/装备)/law(规则/法则)/custom(自定义)",
+      "keys": ["触发关键词——角色名、地点名、术语，用于后续章节自动匹配"],
+      "content": "设定内容——写清楚是什么、怎么运作、为什么重要（2-5句）",
+      "significance": "high/medium/low——high是主线核心设定，medium是值得记录的细节",
+      "evidence": "文本依据——从本章哪段话推断出来的"
     }
   ],
   "styleShift": {
