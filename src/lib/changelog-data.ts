@@ -20,16 +20,57 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.10.2";
+export const LATEST_VERSION = "v0.11.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📝 Flash章纲提示词+作者指令+微调指令——全部持久化不消失",
-  "🔍 写完自动弹三卡更新+关闭后浮动按钮+世界书自动扩充",
+  "🎭 生成前角色确认——AI调度角色→你审核确认→精准写作，根治乱拉人",
+  "🆕 自建角色——大纲提到但无卡的角色，输入名字AI自动建卡",
+  "📝 角色备注注入——确认框写备注自动送入prompt最高优先级",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.11.0",
+    date: "2026-06-09",
+    title: "生成前角色确认系统——你决定谁出场，AI不再乱拉人",
+    sections: [
+      {
+        label: "🎭 生成前角色确认",
+        items: [
+          "点「生成」→ 弹确认框：列出AI调度的角色+出场理由+打分",
+          "每张卡可勾选/取消——你控制谁出场",
+          "每张卡可写备注（如「这场他右腿旧伤隐隐作痛」）→ 自动注入prompt最高优先级",
+          "无匹配角色卡时AI提示缺失类型（如「大纲提到门将但无对应卡」）",
+        ],
+      },
+      {
+        label: "🆕 自建角色",
+        items: [
+          "输入角色名 → AI自动创建角色卡并送入prompt",
+          "新卡标🆕，基础字段自动填充，后续可在角色列表补充细节",
+        ],
+      },
+      {
+        label: "🔗 完整链路",
+        items: [
+          "新API /api/generate/pre-write-cards —— 返回调度卡+理由+缺角色建议",
+          "write API新增confirmedCardIds/cardNotes/newCharacterRequests参数",
+          "确认后仅送确认的角色卡——不再全量178人塞进prompt",
+          "write API向后兼容——不传confirmedCardIds走原调度逻辑",
+        ],
+      },
+      {
+        label: "📝 其他优化",
+        items: [
+          "角色备注注入后覆盖全局作者指令",
+          "确认框可修改作者指令——本章权重与大纲等同",
+          "调度理由透明化——每张卡标注为什么被选中",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.10.2",
     date: "2026-06-09",
