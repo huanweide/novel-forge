@@ -129,6 +129,11 @@ function buildGlobalMemorySection(memory: GlobalMemory, maxTokens: number): stri
     parts.push(`【小说基调】${memory.toneKeywords.join("、")}`);
   }
 
+  // 角色花名册——由 buildPromptContext 构建，含关系/对话风格/外貌/弧光/能力/状态
+  if (memory.characterRoster) {
+    parts.push(`【角色当前状态——本章开始时各角色已知信息】\n${memory.characterRoster}`);
+  }
+
   const fullContent = `【全局设定——始终牢记】\n${parts.join("\n\n")}`;
   return truncateByTokens(fullContent, maxTokens);
 }

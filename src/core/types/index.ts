@@ -208,6 +208,7 @@ export interface GlobalMemory {
   projectSynopsis: string;        // 主线总纲（≤500 Token）
   currentProtagonist: CharacterBrief; // 当前视角主角极简卡
   toneKeywords: string[];         // 小说基调关键词
+  characterRoster: string;        // 全角色花名册——含关系/对话风格/外貌/弧光（后续章节读取用）
 }
 
 /** 角色极简卡（塞进Prompt顶部用） */

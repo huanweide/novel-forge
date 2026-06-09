@@ -592,12 +592,66 @@ export function buildPromptContext(params: {
     systemPrompt += `\n\n【角色当下冲动——本章开头的行为驱动力】\n${impulseLines}`;
   }
 
+  // ── 构建角色花名册——把更新过的关键字段送入 prompt 供后续章节读取 ──
+  const rosterLines: string[] = [];
+  for (const c of characters) {
+    const parts: string[] = [];
+    // 关系
+    if (Array.isArray((c as any).relationships) && (c as any).relationships.length > 0) {
+      const rels = (c as any).relationships.map((r: any) =>
+        `${r.targetName || "?"}(${r.relation || ""})`
+      ).join("、");
+      if (rels) parts.push(`关系：${rels}`);
+    }
+    // 弧光
+    if ((c as any).arcProgress) parts.push(`弧光：${(c as any).arcProgress.slice(0, 80)}`);
+    // 对话风格
+    if ((c as any).dialogueStyle && typeof (c as any).dialogueStyle === "string" && (c as any).dialogueStyle.trim()) {
+      parts.push(`说话：${(c as any).dialogueStyle.slice(0, 60)}`);
+    } else if ((c as any).dialogueStyle && typeof (c as any).dialogueStyle === "object") {
+      const ds = (c as any).dialogueStyle as Record<string, unknown>;
+      if (ds.description) parts.push(`说话：${String(ds.description).slice(0, 60)}`);
+    }
+    // 外貌
+    if ((c as any).appearance && typeof (c as any).appearance === "string" && (c as any).appearance.trim()) {
+      parts.push(`外貌：${(c as any).appearance.slice(0, 60)}`);
+    }
+    // 能力（不超过5个）
+    if (Array.isArray((c as any).abilities) && (c as any).abilities.length > 0) {
+      const abs = (c as any).abilities.slice(0, 5).join("、");
+      if (abs) parts.push(`能力：${abs}`);
+    }
+    // 状态
+    if ((c as any).currentStatus && (c as any).currentStatus !== "alive") {
+      parts.push(`状态：${(c as any).currentStatus}`);
+    }
+
+    if (parts.length > 0) {
+      rosterLines.push(`[${c.name}] ${parts.join(" | ")}`);
+    }
+  }
+  // 限制花名册长度，主角+重要角色优先（protagonist/antagonist/mentor 排在前面）
+  const priorityRoles = ["protagonist", "antagonist", "mentor", "love_interest", "catalyst"];
+  rosterLines.sort((a, b) => {
+    const aName = a.match(/^\[(.+?)\]/)?.[1] || "";
+    const bName = b.match(/^\[(.+?)\]/)?.[1] || "";
+    const aChar = characters.find(c => c.name === aName);
+    const bChar = characters.find(c => c.name === bName);
+    const aPri = aChar ? priorityRoles.indexOf(aChar.role) : 99;
+    const bPri = bChar ? priorityRoles.indexOf(bChar.role) : 99;
+    return aPri - bPri;
+  });
+  const characterRoster = rosterLines.length > 0
+    ? rosterLines.slice(0, 60).join("\n") // 最多60个有更新记录的角色
+    : "";
+
   return {
     systemPrompt,
     globalMemory: {
       projectSynopsis: project.synopsis,
       currentProtagonist: characterBrief,
       toneKeywords: project.toneKeywords || [],
+      characterRoster,
     },
     triggeredLore,
     slidingWindow: {
