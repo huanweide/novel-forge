@@ -487,50 +487,6 @@ export default function WorkspacePage() {
     }
   };
 
-  // ─── 章纲角色确认后 ─────────────────────────────────────────
-  const handleChapterOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
-    if (!selectedNode || !project) return;
-    setPreGenOpen(false);
-    setGenStep("generating");
-
-    try {
-      setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
-      const res = await fetch("/api/generate/chapter-outline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: project.id,
-          nodeId: selectedNode.id,
-          prompt: chapterOutlineFlashPrompt || undefined,
-          confirmedCardIds: cards,
-          cardNotes: notes,
-          newCharacterRequests: newChars,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`);
-        setReviewResult(null);
-        return;
-      }
-      if (data.outline) {
-        setGenStep("done");
-        setTimeout(() => setGenStep(""), 5000);
-        setSelectedNode({ ...selectedNode, outline: data.outline });
-        setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
-        await loadProject();
-      } else {
-        setGenStep("error");
-        alert("API 返回空内容，请重试");
-        setReviewResult(null);
-      }
-    } catch (err) {
-      setGenStep("error");
-      alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
-      setReviewResult(null);
-    }
-  };
-
   /** 确认写入大纲到DB */
   const handleConfirmOutline = async () => {
     if (!project || outlinePreviewChapters.length === 0) return;
@@ -566,11 +522,9 @@ export default function WorkspacePage() {
 
   // ─── 生成前确认（统一入口） ─────────────────────────────
   const [preGenOpen, setPreGenOpen] = useState(false);
-  const [preGenMode, setPreGenMode] = useState<"write" | "refine" | "continue" | "outline" | "chapter-outline">("write");
+  const [preGenMode, setPreGenMode] = useState<"write" | "refine" | "continue" | "outline">("write");
   // 大纲生成配置——在 PreGenConfirm 期间暂存
   const [outlineGenConfig, setOutlineGenConfig] = useState<{ chapterCount: number; customPrompt: string; useFlash: boolean } | null>(null);
-  // Flash 章纲提示词暂存
-  const [chapterOutlineFlashPrompt, setChapterOutlineFlashPrompt] = useState("");
 
   // ─── 正文生成 (SSE 流式) ──────────────────────────────────
 
@@ -953,16 +907,46 @@ export default function WorkspacePage() {
             });
             setSelectedNode({ ...selectedNode, outline });
           }}
-          onGenerateChapterOutline={(flashPrompt: string) => {
+          onGenerateChapterOutline={async (flashPrompt: string) => {
             if (!selectedNode || !project) {
               alert("请先选中一个章节节点");
               return;
             }
-            // 弹窗确认角色调度
-            setGenStep("confirming");
-            setChapterOutlineFlashPrompt(flashPrompt);
-            setPreGenMode("chapter-outline");
-            setPreGenOpen(true);
+            setGenStep("generating");
+            try {
+              setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: "⚡ V4 Flash 正在生成章纲..." }] });
+              const res = await fetch("/api/generate/chapter-outline", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  projectId: project.id,
+                  nodeId: selectedNode.id,
+                  prompt: flashPrompt || undefined,
+                }),
+              });
+              const data = await res.json();
+              if (!res.ok || data.error) {
+                setGenStep("error");
+                alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`);
+                setReviewResult(null);
+                return;
+              }
+              if (data.outline) {
+                setGenStep("done");
+                setTimeout(() => setGenStep(""), 5000);
+                setSelectedNode({ ...selectedNode, outline: data.outline });
+                setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）。点击大纲文字可编辑。` }] });
+                await loadProject();
+              } else {
+                setGenStep("error");
+                alert("API 返回空内容，请重试");
+                setReviewResult(null);
+              }
+            } catch (err) {
+              setGenStep("error");
+              alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
+              setReviewResult(null);
+            }
           }}
           projectId={project.id}
           lastGeneratedText={lastGeneratedText}
@@ -1170,8 +1154,7 @@ export default function WorkspacePage() {
             preGenMode === "write" ? "生成前确认——角色调度"
             : preGenMode === "refine" ? "微调前确认——角色调度"
             : preGenMode === "continue" ? "续写前确认——角色调度"
-            : preGenMode === "outline" ? "大纲生成前确认——角色调度"
-            : "章纲生成前确认——角色调度"
+            : "大纲生成前确认——角色调度"
           }
           onAuthorNoteChange={handleAuthorNoteChange}
           onConfirm={(cards, notes, newChars, finalAuthorNote) => {
@@ -1180,7 +1163,6 @@ export default function WorkspacePage() {
               case "refine": handleRefineConfirmed(cards, notes, newChars, finalAuthorNote); break;
               case "continue": handleContinueConfirmed(cards, notes, newChars, finalAuthorNote); break;
               case "outline": handleOutlineConfirmed(cards, notes, newChars, finalAuthorNote); break;
-              case "chapter-outline": handleChapterOutlineConfirmed(cards, notes, newChars, finalAuthorNote); break;
             }
           }}
           onCancel={() => { setPreGenOpen(false); setOutlineGenConfig(null); }}
