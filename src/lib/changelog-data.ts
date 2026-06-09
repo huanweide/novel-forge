@@ -24,9 +24,10 @@ export const LATEST_VERSION = "v0.11.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔄 全场景角色确认——正文/微调/续写/大纲/章纲 全部走角色确认弹窗",
+  "🔄 全场景角色确认——正文/微调/续写/大纲 全部走角色确认弹窗",
   "📊 上下文监控优化——角色卡读取X/Y张清晰可见，替换原来不知所云的显示",
   "📋 大纲生成联动角色——确认角色后生成大纲，AI按确认的名单规划出场",
+  "⚡ Flash章纲直接生成——去掉角色确认步骤，保留进度UI可视化",
 ];
 
 /** 完整版本历史（最新在前） */
@@ -34,7 +35,7 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.11.1",
     date: "2026-06-09",
-    title: "全场景角色确认 + 上下文监控优化 + 大纲角色联动",
+    title: "全场景角色确认 + 进度可视化 + 上下文监控 + 写完不跳转",
     sections: [
       {
         label: "🔄 全场景角色确认",
@@ -42,7 +43,7 @@ export const VERSIONS: VersionEntry[] = [
           "微调（✏️）→ 弹角色确认框 → 确认后精准微调",
           "续写（➡️）→ 弹角色确认框 → 确认后精准续写",
           "大纲生成（🤖）→ 弹角色确认框 → 确认后按名单生成大纲",
-          "Flash章纲（⚡）→ 弹角色确认框 → 确认后精准生成章纲",
+          "Flash章纲（⚡）→ 直接生成+进度UI，不弹角色确认",
           "全部走同一套调度逻辑——你确认谁出场，AI就用谁",
         ],
       },
@@ -53,6 +54,23 @@ export const VERSIONS: VersionEntry[] = [
           "角色名标签改为可折叠——默认收起，点开才看名单",
           "替换原来不知所云的角色激活列表",
           "preview-context API 返回 activeCharacterCount + totalCharacterCount",
+        ],
+      },
+      {
+        label: "⏳ 进度可视化",
+        items: [
+          "所有生成操作显示步骤状态：生成中/审校中/摘要中/完成/出错",
+          "4步进度条动画——时刻知道AI在干什么",
+          "完成/出错状态5秒后自动消失",
+          "Flash章纲/大纲生成/微调/续写全部覆盖",
+        ],
+      },
+      {
+        label: "🐛 写完不跳转修复",
+        items: [
+          "根因：loadProject() 自动跳到第一个未完成章节",
+          "修复：记住当前章节，只刷新数据不跳选",
+          "写完一章后留在原地目送成功",
         ],
       },
       {
@@ -67,9 +85,10 @@ export const VERSIONS: VersionEntry[] = [
       {
         label: "🔧 后端统一",
         items: [
-          "outline/chapter-outline/refine/continue 四个API全部支持 confirmedCardIds + cardNotes + newCharacterRequests",
-          "四个API全部支持运行时自建角色——输入名字自动建卡",
+          "outline/refine/continue 三个API全部支持 confirmedCardIds + cardNotes + newCharacterRequests",
+          "三个API全部支持运行时自建角色——输入名字自动建卡",
           "pre-write-cards API nodeId改为可选——大纲生成时用作品总纲替代",
+          "chapter-outline API 保留 confirmedCardIds 支持（向后兼容）",
         ],
       },
     ],
