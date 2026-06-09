@@ -678,7 +678,19 @@ export default function WorkspacePage() {
   const handleAddSection = async (parentId: string | null = null) => {
     if (!project) return;
 
-    const title = prompt("请输入小节标题：");
+    const isChapter = !parentId;
+    let defaultTitle = "";
+    let hint = "请输入标题：";
+    if (isChapter) {
+      // 自动编号：统计已有章节数
+      const chapters = project.storyNodes.filter((n) => n.type === "chapter");
+      const chapterNum = chapters.length + 1;
+      defaultTitle = `第${chapterNum}章：`;
+      hint = `新建章节（已有${chapters.length}章，自动编号为第${chapterNum}章）：`;
+    } else {
+      hint = "请输入小节标题：";
+    }
+    const title = prompt(hint, defaultTitle || undefined);
     if (!title) return;
 
     try {
