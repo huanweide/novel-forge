@@ -44,13 +44,16 @@ export default function WorkspacePage() {
   // 选中节点
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
 
-  /** 切换章节——清空流内容、审校、Flash章纲提示词。作者指令保持（跨章节通用）。 */
+  /** 切换章节——清空流内容、审校、Flash章纲提示词、作者指令。每章独立。 */
   const handleSelectNode = (node: StoryNodeData) => {
     if (selectedNode?.id !== node.id) {
       setStreamContent("");
       setReviewResult(null);
       setChapterOutlinePrompt(""); // Flash章纲提示词——每章独立
       if (typeof window !== "undefined" && projectId) localStorage.removeItem(`novel-forge-flash-prompt-${projectId}`);
+      // 作者指令——每章独立
+      setAuthorNote("");
+      if (typeof window !== "undefined" && projectId) localStorage.removeItem(`novel-forge-author-note-${projectId}`);
     }
     setSelectedNode(node);
   };
