@@ -1002,8 +1002,9 @@ export default function WorkspacePage() {
       {showCardUpdater && (
         <CardUpdater
           projectId={project.id}
-          chapterContent={lastChapterContent}
-          chapterTitle={lastChapterTitle}
+          chapterContent={(selectedNode?.content || lastChapterContent)}
+          chapterTitle={selectedNode?.title || lastChapterTitle}
+          chapterNumber={selectedNode?.title?.match(/第(\d+)章/) ? selectedNode.title : undefined}
           onApplied={() => { loadProject(); setAutoUpdateNotification(null); }}
           onClose={() => setShowCardUpdater(false)}
         />

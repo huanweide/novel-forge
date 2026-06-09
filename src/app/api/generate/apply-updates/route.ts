@@ -9,13 +9,14 @@ import { NextResponse } from "next/server";
 
 interface CharChange { characterId: string; name: string; changes: Record<string, unknown>; isNew?: boolean }
 interface NewChar { name: string; role?: string; personality?: unknown; abilities?: string[]; evidence?: string }
-interface NewLore { title: string; category?: string; keys?: string[]; content?: string }
+interface NewLore { title: string; category?: string; keys?: string[]; content?: string; evidence?: string }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
       projectId,
+      chapterNumber = "",
       characterUpdates = [],
       newCharacters = [],
       newLoreEntries = [],
@@ -39,15 +40,19 @@ export async function POST(request: Request) {
       const changes = update.changes || {};
       const updateData: Record<string, unknown> = {};
 
-      // 位置更新 → 拼接进 background
+      // 位置 + 情绪 → 追加到 background（标记章节来源）
       if (changes["位置"] || changes["情绪"]) {
-        const locInfo = [changes["位置"], changes["情绪"]].filter(Boolean).join(" | ");
+        const locInfo = [
+          chapterNumber ? `第${chapterNumber}章` : "本章",
+          changes["位置"],
+          changes["情绪"]
+        ].filter(Boolean).join(" | ");
         updateData.background = existing.background
-          ? existing.background + `\n[本章] ${locInfo}`
-          : locInfo;
+          ? existing.background + `\n[${locInfo}]`
+          : `[${locInfo}]`;
       }
 
-      // 新能力
+      // 新能力 → 去重合并（标记新增来源）
       if (Array.isArray(changes["新能力"]) && (changes["新能力"] as string[]).length > 0) {
         const newAbilities = [...new Set([...(existing.abilities || []), ...(changes["新能力"] as string[])])];
         updateData.abilities = newAbilities;
@@ -58,24 +63,72 @@ export async function POST(request: Request) {
         updateData.currentStatus = String(changes["状态变化"]);
       }
 
-      // 人物弧光推进
+      // 人物弧光推进 → 追加到 arcProgress
       if (changes["人物弧光推进"]) {
+        const chapterLabel = chapterNumber ? `第${chapterNumber}章` : "本章";
         updateData.arcProgress = existing.arcProgress
-          ? existing.arcProgress + `\n→ ${changes["人物弧光推进"]}`
-          : String(changes["人物弧光推进"]);
+          ? existing.arcProgress + `\n→ [${chapterLabel}] ${changes["人物弧光推进"]}`
+          : `[${chapterLabel}] ${changes["人物弧光推进"]}`;
       }
 
-      // 新关系
+      // 背景更新 → 如果有独立章节引用就追加
+      if (changes["背景更新"]) {
+        const bgLabel = chapterNumber ? `\n[第${chapterNumber}章揭示] ` : "\n[本章揭示] ";
+        updateData.background = (updateData.background || existing.background || "") + bgLabel + String(changes["背景更新"]);
+      }
+
+      // 新关系 → 带 targetCharacterId 匹配
       if (Array.isArray(changes["新关系"]) && (changes["新关系"] as unknown[]).length > 0) {
         const existingRels = (existing.relationships || []) as unknown[];
-        const newRels = (changes["新关系"] as Record<string, unknown>[]).map((r) => ({
-          targetCharacterId: "", // 后续解析
-          targetName: r.targetName || "",
-          relation: r.relation || "",
-          dynamic: "",
-          notes: `文本依据: ${r.evidence || "本章内容"}`,
-        }));
+        const newRels = await Promise.all(
+          (changes["新关系"] as Record<string, unknown>[]).map(async (r) => {
+            // 尝试匹配已有角色 ID
+            let targetId = "";
+            const targetName = String(r.targetName || "");
+            if (targetName) {
+              const matched = await prisma.characterCard.findFirst({
+                where: { projectId, name: targetName },
+              });
+              if (matched) targetId = matched.id;
+            }
+            return {
+              targetCharacterId: targetId,
+              targetName: targetName,
+              relation: String(r.relation || ""),
+              dynamic: "",
+              notes: chapterNumber
+                ? `第${chapterNumber}章建立。依据: ${r.evidence || "正文"}`
+                : `依据: ${r.evidence || "正文"}`,
+            };
+          })
+        );
         updateData.relationships = [...existingRels, ...newRels];
+      }
+
+      // 性格/信念转变 → 追加到 personality（如果是结构化格式）
+      if (changes["性格信念转变"]) {
+        const existingPersonality = typeof existing.personality === "object" && existing.personality !== null
+          ? existing.personality as Record<string, unknown>
+          : {};
+        if (Array.isArray(existingPersonality)) {
+          // 旧格式：字符串数组，保持兼容
+          updateData.personality = [...(existingPersonality as string[]), `[${chapterNumber || "本章"}] ${changes["性格信念转变"]}`];
+        } else {
+          // 新格式：结构化
+          updateData.personality = {
+            ...existingPersonality,
+            arcNote: (existingPersonality.arcNote || "") + `\n[${chapterNumber || "本章"}] ${changes["性格信念转变"]}`,
+          };
+        }
+      }
+
+      // 获得重要物品/身份 → 追加到标签
+      if (changes["获得重要物品或身份"]) {
+        const newTag = String(changes["获得重要物品或身份"]);
+        const existingTags = existing.tags || [];
+        if (!existingTags.includes(newTag)) {
+          updateData.tags = [...existingTags, newTag];
+        }
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -108,17 +161,39 @@ export async function POST(request: Request) {
     // ─── 创建新世界书词条 ────────────────────────────────
     for (const nl of newLoreEntries as NewLore[]) {
       if (!nl.title) continue;
-      await prisma.lorebookEntry.create({
-        data: {
-          projectId,
-          title: String(nl.title),
-          category: String(nl.category || "custom"),
-          keys: Array.isArray(nl.keys) ? nl.keys.filter(Boolean) : [String(nl.title)],
-          content: String(nl.content || ""),
-          insertionOrder: 50,
-          enabled: true,
-        } as any,
+      // 检查是否已存同名/同内容词条，避免重复创建
+      const existingLore = await prisma.lorebookEntry.findFirst({
+        where: { projectId, title: nl.title },
       });
+      if (existingLore) {
+        // 更新已有词条，追加新内容
+        await prisma.lorebookEntry.update({
+          where: { id: existingLore.id },
+          data: {
+            content: existingLore.content
+              ? existingLore.content + `\n\n[${chapterNumber || "后续章节"} 补充] ${nl.content || ""}`
+              : nl.content || "",
+            keys: [...new Set([...(existingLore.keys || []), ...(nl.keys || []), nl.title])],
+            enabled: true,
+          } as any,
+        });
+      } else {
+        await prisma.lorebookEntry.create({
+          data: {
+            projectId,
+            title: String(nl.title),
+            category: String(nl.category || "custom"),
+            keys: Array.isArray(nl.keys) && nl.keys.length > 0
+              ? nl.keys.filter(Boolean)
+              : [String(nl.title)],
+            content: (nl.evidence
+              ? `[依据: ${chapterNumber || "正文"}]\n${nl.content || ""}`
+              : nl.content || ""),
+            insertionOrder: 50,
+            enabled: true,
+          } as any,
+        });
+      }
       applied.lore++;
     }
 

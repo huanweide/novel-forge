@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 
 // ─── 类型 ────────────────────────────────────────────────────
@@ -8,16 +8,19 @@ import { Button } from "@/components/ui/button";
 interface CharChange {
   characterId?: string;
   name: string;
-  isNew?: boolean;
+  significance?: string;
   changes: Record<string, unknown>;
+  _edited?: boolean;
 }
 
 interface NewChar {
   name: string;
   role?: string;
+  significance?: string;
   personality?: Record<string, unknown>;
   abilities?: string[];
   evidence?: string;
+  _edited?: boolean;
 }
 
 interface NewLore {
@@ -25,7 +28,9 @@ interface NewLore {
   category?: string;
   keys?: string[];
   content?: string;
+  significance?: string;
   evidence?: string;
+  _edited?: boolean;
 }
 
 interface UpdateResult {
@@ -35,7 +40,7 @@ interface UpdateResult {
   styleShift?: { detected: boolean; description?: string };
   newForeshadowings?: { description: string; relatedCharacters?: string[]; suggestedPayoff?: string }[];
   summary?: string;
-  meta?: { existingCharCount: number; existingLoreCount: number };
+  meta?: { existingCharCount: number; existingLoreCount: number; modelUsed?: string };
 }
 
 // ─── 组件 ────────────────────────────────────────────────────
@@ -44,32 +49,41 @@ export function CardUpdater({
   projectId,
   chapterContent,
   chapterTitle,
+  chapterNumber,
   onApplied,
   onClose,
 }: {
   projectId: string;
   chapterContent: string;
   chapterTitle?: string;
+  chapterNumber?: string;
   onApplied: () => void;
   onClose: () => void;
 }) {
-  const [step, setStep] = useState<"analyzing" | "preview" | "applying" | "done">("analyzing");
+  const [step, setStep] = useState<"analyzing" | "preview" | "editing" | "applying" | "done">("analyzing");
   const [result, setResult] = useState<UpdateResult | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [editTarget, setEditTarget] = useState<{ type: "char" | "newchar" | "lore"; index: number } | null>(null);
+  const [editField, setEditField] = useState("");
+  const [editValue, setEditValue] = useState("");
 
   // 勾选状态
   const [selectedChars, setSelectedChars] = useState<Set<string>>(new Set());
   const [selectedNewChars, setSelectedNewChars] = useState<Set<string>>(new Set());
   const [selectedLore, setSelectedLore] = useState<Set<string>>(new Set());
 
-  // ─── 自动分析 ──────────────────────────────────────────
+  // ─── 分析 ──────────────────────────────────────────────
 
   useEffect(() => {
     analyzeChapter();
   }, []);
 
   const analyzeChapter = async () => {
+    if (!chapterContent || chapterContent.trim().length < 50) {
+      setError("当前章节内容不足（少于50字），无法分析。请先生成本章正文。");
+      return;
+    }
     setStep("analyzing");
     setError("");
 
@@ -77,18 +91,47 @@ export function CardUpdater({
       const res = await fetch("/api/generate/update-cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, chapterContent, chapterTitle }),
+        body: JSON.stringify({
+          projectId,
+          chapterContent: chapterContent.slice(0, 10000),
+          chapterTitle: chapterTitle || "",
+          chapterNumber: chapterNumber || "",
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "分析失败");
+      if (!res.ok) {
+        // 显示API返回的具体错误
+        const errMsg = data.error || `服务器错误 (${res.status})`;
+        if (data.details) throw new Error(`${errMsg}: ${data.details}`);
+        throw new Error(errMsg);
+      }
+
+      // 检查是否解析失败
+      if (data.parseError) {
+        setResult({
+          characterUpdates: [],
+          newCharacters: [],
+          newLoreEntries: [],
+          summary: "AI 返回内容无法解析，请重试。",
+          meta: data.meta,
+        });
+        setStep("preview");
+        return;
+      }
 
       setResult(data);
 
-      // 默认全选
-      const charKeys = (data.characterUpdates || []).map((c: CharChange) => `char-${c.name}`);
-      const newCharKeys = (data.newCharacters || []).map((c: NewChar, i: number) => `newchar-${i}`);
-      const loreKeys = (data.newLoreEntries || []).map((l: NewLore, i: number) => `lore-${i}`);
+      // 默认只选中 significance 为 high/medium 的项（low 默认不勾）
+      const charKeys = (data.characterUpdates || []).map((c: CharChange, i: number) =>
+        c.significance !== "low" ? `char-${i}` : null
+      ).filter(Boolean) as string[];
+      const newCharKeys = (data.newCharacters || []).map((c: NewChar, i: number) =>
+        c.significance !== "low" ? `newchar-${i}` : null
+      ).filter(Boolean) as string[];
+      const loreKeys = (data.newLoreEntries || []).map((l: NewLore, i: number) =>
+        l.significance !== "low" ? `lore-${i}` : null
+      ).filter(Boolean) as string[];
 
       setSelectedChars(new Set(charKeys));
       setSelectedNewChars(new Set(newCharKeys));
@@ -97,17 +140,95 @@ export function CardUpdater({
       setStep("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
+      setStep("preview"); // 错误状态下也能关闭
     }
+  };
+
+  // ─── 内联编辑 ──────────────────────────────────────────
+
+  const startEdit = (type: "char" | "newchar" | "lore", index: number, field: string, currentValue: unknown) => {
+    setEditTarget({ type, index });
+    setEditField(field);
+    // 格式化当前值
+    if (typeof currentValue === "string") {
+      setEditValue(currentValue);
+    } else if (Array.isArray(currentValue)) {
+      setEditValue(currentValue.join("\n"));
+    } else if (typeof currentValue === "object" && currentValue !== null) {
+      setEditValue(JSON.stringify(currentValue, null, 2));
+    } else {
+      setEditValue(String(currentValue || ""));
+    }
+    setStep("editing");
+  };
+
+  const saveEdit = () => {
+    if (!result || !editTarget) return;
+
+    const updated = { ...result };
+    const { type, index } = editTarget;
+
+    if (type === "char" && updated.characterUpdates[index]) {
+      const chars = [...updated.characterUpdates];
+      // 尝试解析 JSON
+      let parsedValue: unknown = editValue;
+      try { parsedValue = JSON.parse(editValue); } catch { /* 保持字符串 */ }
+      chars[index] = { ...chars[index], changes: { ...chars[index].changes, [editField]: parsedValue }, _edited: true };
+      updated.characterUpdates = chars;
+    } else if (type === "newchar" && updated.newCharacters[index]) {
+      const newChars = [...updated.newCharacters];
+      let parsedValue: unknown = editValue;
+      try { parsedValue = JSON.parse(editValue); } catch { /* 保持字符串 */ }
+      (newChars[index] as unknown as Record<string, unknown>)[editField] = parsedValue;
+      newChars[index] = { ...newChars[index], _edited: true };
+      updated.newCharacters = newChars;
+    } else if (type === "lore" && updated.newLoreEntries[index]) {
+      const lores = [...updated.newLoreEntries];
+      (lores[index] as unknown as Record<string, unknown>)[editField] = editValue;
+      lores[index] = { ...lores[index], _edited: true };
+      updated.newLoreEntries = lores;
+    }
+
+    setResult(updated);
+    setEditTarget(null);
+    setStep("preview");
   };
 
   // ─── 应用更新 ──────────────────────────────────────────
 
   const handleApply = async () => {
     setStep("applying");
+    setError("");
 
-    const approvedChars = (result?.characterUpdates || []).filter((c) => selectedChars.has(`char-${c.name}`));
-    const approvedNewChars = (result?.newCharacters || []).filter((_, i) => selectedNewChars.has(`newchar-${i}`));
-    const approvedLore = (result?.newLoreEntries || []).filter((_, i) => selectedLore.has(`lore-${i}`));
+    // 收集用户批准且编辑过的数据
+    const approvedChars = (result?.characterUpdates || [])
+      .filter((c, i) => selectedChars.has(`char-${i}`))
+      .map((c) => ({
+        characterId: c.characterId,
+        name: c.name,
+        changes: c.changes,
+        isNew: false,
+      }));
+
+    const approvedNewChars = (result?.newCharacters || [])
+      .filter((_, i) => selectedNewChars.has(`newchar-${i}`))
+      .map((c) => ({
+        name: c.name,
+        role: c.role,
+        personality: c.personality,
+        abilities: c.abilities,
+        evidence: c.evidence,
+      }));
+
+    const approvedLore = (result?.newLoreEntries || [])
+      .filter((_, i) => selectedLore.has(`lore-${i}`))
+      .map((l) => ({
+        title: l.title,
+        category: l.category,
+        keys: l.keys,
+        content: l.content,
+        evidence: l.evidence,
+      }));
 
     try {
       const res = await fetch("/api/generate/apply-updates", {
@@ -115,6 +236,7 @@ export function CardUpdater({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId,
+          chapterNumber: chapterNumber || "",
           characterUpdates: approvedChars,
           newCharacters: approvedNewChars,
           newLoreEntries: approvedLore,
@@ -140,6 +262,7 @@ export function CardUpdater({
   const newChars = result?.newCharacters || [];
   const newLores = result?.newLoreEntries || [];
   const totalCount = charUpdates.length + newChars.length + newLores.length;
+  const selectedTotal = selectedChars.size + selectedNewChars.size + selectedLore.size;
 
   return (
     <div
@@ -147,7 +270,7 @@ export function CardUpdater({
       onClick={step === "done" ? onClose : undefined}
     >
       <div
-        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl"
+        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
@@ -155,7 +278,8 @@ export function CardUpdater({
           <h2 className="text-lg font-semibold">
             {step === "analyzing" && "🔍 AI 正在分析本章变化..."}
             {step === "preview" && `📋 本章变化检测（${totalCount}条）`}
-            {step === "applying" && "⏳ 正在更新卡面..."}
+            {step === "editing" && "✏️ 编辑内容"}
+            {step === "applying" && "⏳ 正在更新三卡..."}
             {step === "done" && "✅ 更新完成"}
           </h2>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">✕</button>
@@ -163,15 +287,81 @@ export function CardUpdater({
 
         {/* 内容区 */}
         <div className="flex-1 overflow-y-auto p-5">
-          {step === "analyzing" && (
-            <div className="flex flex-col items-center justify-center py-16 space-y-3">
-              <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-zinc-400 text-sm">AI 正在比对现有卡面与新章节...</p>
-              <p className="text-zinc-600 text-xs">角色状态变化 · 新能力 · 新关系 · 新设定</p>
+          {/* 错误状态 */}
+          {error && (
+            <div className="p-4 rounded-xl bg-red-950/30 border border-red-900/50 mb-4">
+              <p className="text-sm text-red-400 font-medium mb-2">❌ {error}</p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={analyzeChapter}
+                  className="border-red-800 text-red-400 hover:text-red-300 text-xs"
+                >
+                  🔄 重试分析
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-zinc-700 text-zinc-400 text-xs"
+                >
+                  关闭
+                </Button>
+              </div>
             </div>
           )}
 
-          {step === "preview" && result && (
+          {/* 分析中 */}
+          {step === "analyzing" && !error && (
+            <div className="flex flex-col items-center justify-center py-16 space-y-3">
+              <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-zinc-400 text-sm">AI 正在比对现有卡面与新章节...</p>
+              <p className="text-zinc-600 text-xs">
+                角色状态变化 · 新能力 · 新关系 · 新设定 · 人物弧光推进
+              </p>
+              <p className="text-zinc-700 text-[10px]">
+                使用模型：{result?.meta?.modelUsed || "v4-flash"}
+              </p>
+            </div>
+          )}
+
+          {/* 编辑模式 */}
+          {step === "editing" && editTarget && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <span>✏️ 编辑</span>
+                <span className="text-zinc-200 font-medium">
+                  {editTarget.type === "char" && charUpdates[editTarget.index]?.name}
+                  {editTarget.type === "newchar" && newChars[editTarget.index]?.name}
+                  {editTarget.type === "lore" && newLores[editTarget.index]?.title}
+                </span>
+                <span className="text-zinc-600">· {editField}</span>
+              </div>
+              <textarea
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-sm text-zinc-200 font-mono min-h-[200px] resize-y focus:border-indigo-500 focus:outline-none"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                placeholder="编辑内容..."
+              />
+              <p className="text-[10px] text-zinc-600">
+                对象和数组字段请用 JSON 格式；纯文本字段直接输入。编辑后的内容将替代 AI 建议写入三卡。
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={saveEdit} className="bg-indigo-600 hover:bg-indigo-500 text-sm">
+                  💾 保存编辑
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setEditTarget(null); setStep("preview"); }}
+                  className="border-zinc-700 text-sm"
+                >
+                  取消
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* 预览 */}
+          {step === "preview" && result && !editTarget && (
             <div className="space-y-5">
               {/* 概要 */}
               {result.summary && (
@@ -185,33 +375,50 @@ export function CardUpdater({
                 <div className="text-center py-10 text-zinc-500">
                   <div className="text-4xl mb-3">👍</div>
                   <p className="text-sm">AI 未检测到明显变化</p>
-                  <p className="text-xs mt-1">所有角色和设定保持一致，无需更新</p>
+                  <p className="text-xs mt-1 text-zinc-600">所有角色和设定保持一致，无需更新</p>
+                  <div className="flex justify-center gap-2 mt-4">
+                    <Button variant="outline" onClick={analyzeChapter} className="border-zinc-700 text-xs">🔄 重新分析</Button>
+                    <Button variant="outline" onClick={onClose} className="border-zinc-700 text-xs">关闭</Button>
+                  </div>
                 </div>
               )}
 
               {/* 角色状态更新 */}
               {charUpdates.length > 0 && (
-                <Section title={`🔄 角色状态更新（${charUpdates.length}）`} count={selectedChars.size} total={charUpdates.length}>
-                  {charUpdates.map((c) => {
-                    const key = `char-${c.name}`;
+                <Section
+                  title={`🔄 角色状态更新（${charUpdates.length}）`}
+                  count={selectedChars.size}
+                  total={charUpdates.length}
+                >
+                  {charUpdates.map((c, i) => {
+                    const key = `char-${i}`;
+                    const checked = selectedChars.has(key);
                     return (
                       <UpdateItem
                         key={key}
-                        checked={selectedChars.has(key)}
+                        checked={checked}
                         onToggle={() => {
                           const next = new Set(selectedChars);
                           next.has(key) ? next.delete(key) : next.add(key);
                           setSelectedChars(next);
                         }}
                         color="indigo"
+                        onEditField={(field, value) => startEdit("char", i, field, value)}
+                        edited={c._edited}
                       >
-                        <span className="text-zinc-200 font-medium">{c.name}</span>
-                        {c.characterId ? (
-                          <span className="text-zinc-500 ml-1 text-[10px]">（更新已有）</span>
-                        ) : (
-                          <span className="text-amber-400 ml-1 text-[10px]">（新角色建议）</span>
-                        )}
-                        <ChangeDetail changes={c.changes} />
+                        <div className="flex items-center gap-2">
+                          <span className="text-zinc-200 font-medium">{c.name}</span>
+                          {c.characterId && (
+                            <span className="text-zinc-500 text-[10px]">更新已有</span>
+                          )}
+                          {c.significance === "high" && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-red-900/40 text-red-400">重要</span>
+                          )}
+                        </div>
+                        <ChangeDetail
+                          changes={c.changes}
+                          onEditField={(field, value) => startEdit("char", i, field, value)}
+                        />
                       </UpdateItem>
                     );
                   })}
@@ -220,33 +427,57 @@ export function CardUpdater({
 
               {/* 新角色 */}
               {newChars.length > 0 && (
-                <Section title={`🆕 新出场角色（${newChars.length}）`} count={selectedNewChars.size} total={newChars.length}>
+                <Section
+                  title={`🆕 新出场角色（${newChars.length}）`}
+                  count={selectedNewChars.size}
+                  total={newChars.length}
+                >
                   {newChars.map((c, i) => {
                     const key = `newchar-${i}`;
+                    const checked = selectedNewChars.has(key);
                     return (
                       <UpdateItem
                         key={key}
-                        checked={selectedNewChars.has(key)}
+                        checked={checked}
                         onToggle={() => {
                           const next = new Set(selectedNewChars);
                           next.has(key) ? next.delete(key) : next.add(key);
                           setSelectedNewChars(next);
                         }}
                         color="pink"
+                        onEditField={(field, value) => startEdit("newchar", i, field, value)}
+                        edited={c._edited}
                       >
-                        <span className="text-zinc-200 font-medium">{c.name}</span>
-                        <span className="text-zinc-500 ml-1 text-[10px]">
-                          {c.role === "protagonist" ? "主角" : c.role === "antagonist" ? "反派" : c.role || "配角"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-zinc-200 font-medium">{c.name}</span>
+                          <span className="text-zinc-500 text-[10px]">
+                            {c.role === "protagonist" ? "主角" : c.role === "antagonist" ? "反派" : c.role || "配角"}
+                          </span>
+                          {c.significance === "high" && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-red-900/40 text-red-400">重要</span>
+                          )}
+                        </div>
                         {c.abilities && c.abilities.length > 0 && (
                           <div className="flex gap-1 mt-1 flex-wrap">
                             {c.abilities.map((a, j) => (
-                              <span key={j} className="text-[10px] px-1 py-0.5 rounded bg-zinc-800 text-zinc-400">⚡{a}</span>
+                              <span key={j} className="text-[10px] px-1 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                                ⚡{a}
+                              </span>
                             ))}
                           </div>
                         )}
                         {c.evidence && (
-                          <p className="text-zinc-600 text-[10px] mt-0.5 truncate">「{c.evidence.slice(0, 80)}...」</p>
+                          <p className="text-zinc-600 text-[10px] mt-0.5 truncate">
+                            📎 依据：「{c.evidence.slice(0, 80)}...」
+                          </p>
+                        )}
+                        {c.personality && typeof c.personality === "object" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startEdit("newchar", i, "personality", c.personality); }}
+                            className="text-[10px] text-indigo-400 hover:text-indigo-300 mt-1"
+                          >
+                            ✏️ 编辑性格设定
+                          </button>
                         )}
                       </UpdateItem>
                     );
@@ -256,24 +487,44 @@ export function CardUpdater({
 
               {/* 新世界观词条 */}
               {newLores.length > 0 && (
-                <Section title={`🌍 新世界观设定（${newLores.length}）`} count={selectedLore.size} total={newLores.length}>
+                <Section
+                  title={`🌍 新世界观设定（${newLores.length}）`}
+                  count={selectedLore.size}
+                  total={newLores.length}
+                >
                   {newLores.map((l, i) => {
                     const key = `lore-${i}`;
+                    const checked = selectedLore.has(key);
                     return (
                       <UpdateItem
                         key={key}
-                        checked={selectedLore.has(key)}
+                        checked={checked}
                         onToggle={() => {
                           const next = new Set(selectedLore);
                           next.has(key) ? next.delete(key) : next.add(key);
                           setSelectedLore(next);
                         }}
                         color="emerald"
+                        onEditField={(field, value) => startEdit("lore", i, field, value)}
+                        edited={l._edited}
                       >
-                        <span className="text-zinc-200 font-medium">{l.title}</span>
-                        <span className="text-zinc-500 ml-1 text-[10px]">{l.category}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-zinc-200 font-medium">{l.title}</span>
+                          <span className="text-zinc-500 text-[10px]">{l.category || "未分类"}</span>
+                          {l.significance === "high" && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-red-900/40 text-red-400">核心设定</span>
+                          )}
+                        </div>
                         {l.content && (
-                          <p className="text-zinc-500 text-[10px] mt-0.5 line-clamp-2">{l.content}</p>
+                          <div className="mt-1">
+                            <p className="text-zinc-500 text-[10px] line-clamp-2">{l.content}</p>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); startEdit("lore", i, "content", l.content); }}
+                              className="text-[10px] text-indigo-400 hover:text-indigo-300 mt-0.5"
+                            >
+                              ✏️ 编辑内容
+                            </button>
+                          </div>
                         )}
                         {l.evidence && (
                           <p className="text-zinc-700 text-[10px] mt-0.5">📎 {l.evidence.slice(0, 60)}</p>
@@ -292,28 +543,54 @@ export function CardUpdater({
                 </div>
               )}
 
+              {/* 新伏笔 */}
+              {(result.newForeshadowings || []).length > 0 && (
+                <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-900/30">
+                  <span className="text-xs text-cyan-400 font-medium">🔮 新发现伏笔（{result.newForeshadowings!.length}）</span>
+                  <div className="mt-1 space-y-1">
+                    {result.newForeshadowings!.map((f, i) => (
+                      <div key={i} className="text-xs text-zinc-400">
+                        <span className="text-zinc-300">• {f.description}</span>
+                        {f.suggestedPayoff && (
+                          <span className="text-zinc-600 ml-1">→ 建议回收：{f.suggestedPayoff}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* 操作按钮 */}
               <div className="flex justify-between pt-3 border-t border-zinc-800">
-                <Button variant="outline" onClick={() => { analyzeChapter(); }} className="border-zinc-700">
-                  🔄 重新分析
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={analyzeChapter} className="border-zinc-700 text-xs">
+                    🔄 重新分析
+                  </Button>
+                  <Button variant="outline" onClick={() => {
+                    // 全选
+                    setSelectedChars(new Set(charUpdates.map((_, i) => `char-${i}`)));
+                    setSelectedNewChars(new Set(newChars.map((_, i) => `newchar-${i}`)));
+                    setSelectedLore(new Set(newLores.map((_, i) => `lore-${i}`)));
+                  }} className="border-zinc-700 text-xs">
+                    ☑ 全选
+                  </Button>
+                </div>
                 <Button
                   onClick={handleApply}
-                  disabled={totalCount === 0 || (
-                    selectedChars.size === 0 && selectedNewChars.size === 0 && selectedLore.size === 0
-                  )}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
+                  disabled={selectedTotal === 0}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm"
                 >
-                  ✅ 应用选中更新（{selectedChars.size + selectedNewChars.size + selectedLore.size}条）
+                  ✅ 应用选中更新（{selectedTotal}条）
                 </Button>
               </div>
             </div>
           )}
 
-          {step === "applying" && (
+          {step === "applying" && !error && (
             <div className="flex flex-col items-center justify-center py-16 space-y-3">
               <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-zinc-400 text-sm">正在写入更新...</p>
+              <p className="text-zinc-400 text-sm">正在写入三卡...</p>
+              <p className="text-zinc-600 text-xs">角色卡 · 世界书 · 风格卡</p>
             </div>
           )}
 
@@ -321,18 +598,15 @@ export function CardUpdater({
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <div className="text-5xl">✅</div>
               <p className="text-lg text-zinc-200 font-medium">{message}</p>
+              <p className="text-xs text-zinc-600">
+                已添加的内容将在后续章节生成时被读取。系统会自动在章纲/提示词中引用相关角色状态和设定。
+              </p>
               <div className="flex gap-3 mt-3">
                 <Button variant="outline" onClick={onClose} className="border-zinc-700">关闭</Button>
                 <Button onClick={() => { onApplied(); onClose(); }} className="bg-indigo-600 hover:bg-indigo-500">
                   刷新工作区
                 </Button>
               </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-3 p-3 rounded-lg bg-red-950/30 border border-red-900/50 text-sm text-red-400">
-              {error}
             </div>
           )}
         </div>
@@ -352,14 +626,21 @@ function Section({
         <h3 className="text-sm font-medium text-zinc-300">{title}</h3>
         <span className="text-xs text-zinc-500">{count}/{total}</span>
       </div>
-      <div className="space-y-1 max-h-64 overflow-y-auto">{children}</div>
+      <div className="space-y-1 max-h-72 overflow-y-auto">{children}</div>
     </div>
   );
 }
 
 function UpdateItem({
-  checked, onToggle, color, children,
-}: { checked: boolean; onToggle: () => void; color: string; children: React.ReactNode }) {
+  checked, onToggle, color, children, onEditField, edited,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  color: string;
+  children: React.ReactNode;
+  onEditField?: (field: string, value: unknown) => void;
+  edited?: boolean;
+}) {
   const colors: Record<string, string> = {
     indigo: "border-indigo-700 bg-indigo-950/20",
     pink: "border-pink-700 bg-pink-950/20",
@@ -368,7 +649,7 @@ function UpdateItem({
 
   return (
     <label
-      className={`flex items-start gap-2 p-2.5 rounded-lg cursor-pointer text-xs border transition-colors ${
+      className={`flex items-start gap-2 p-2.5 rounded-lg cursor-pointer text-xs border transition-colors relative ${
         checked ? colors[color] || colors.indigo : "border-zinc-800 bg-zinc-900/50 opacity-70"
       }`}
     >
@@ -379,35 +660,74 @@ function UpdateItem({
         className="mt-0.5 rounded shrink-0"
       />
       <div className="min-w-0 flex-1">{children}</div>
+      {edited && (
+        <span className="absolute top-1 right-1 text-[9px] px-1 py-0.5 rounded bg-amber-900/50 text-amber-400">已编辑</span>
+      )}
     </label>
   );
 }
 
-function ChangeDetail({ changes }: { changes: Record<string, unknown> }) {
-  const entries = Object.entries(changes).filter(([, v]) => {
-    if (v == null) return false;
-    if (Array.isArray(v) && v.length === 0) return false;
-    if (typeof v === "string" && v.trim() === "") return false;
-    return true;
-  });
+function ChangeDetail({
+  changes,
+  onEditField,
+}: {
+  changes: Record<string, unknown>;
+  onEditField?: (field: string, value: unknown) => void;
+}) {
+  // 字段顺序：关系→能力→弧光→位置→状态→其他
+  const priority = ["新关系", "新能力", "人物弧光推进", "背景更新", "位置", "情绪", "状态变化"];
+  const entries = Object.entries(changes)
+    .filter(([, v]) => {
+      if (v == null) return false;
+      if (Array.isArray(v) && v.length === 0) return false;
+      if (typeof v === "string" && v.trim() === "") return false;
+      return true;
+    })
+    .sort(([a], [b]) => {
+      const ai = priority.indexOf(a);
+      const bi = priority.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
 
   if (entries.length === 0) return null;
 
   return (
     <div className="mt-1.5 space-y-0.5">
       {entries.map(([key, value]) => (
-        <div key={key} className="text-zinc-500 text-[10px] leading-relaxed">
+        <div key={key} className="text-zinc-500 text-[10px] leading-relaxed group">
           <span className="text-zinc-400 font-medium">{key}：</span>
           {Array.isArray(value)
-            ? value.map((v, i) => {
-                if (typeof v === "object" && v !== null) {
-                  const o = v as Record<string, string>;
-                  return <span key={i} className="bg-zinc-800 px-1 py-0.5 rounded mr-1">{o.targetName}: {o.relation}</span>;
-                }
-                return <span key={i} className="bg-zinc-800 px-1 py-0.5 rounded mr-1">{String(v)}</span>;
-              })
+            ? (key === "新关系" ? (
+                value.map((v, i) => {
+                  if (typeof v === "object" && v !== null) {
+                    const o = v as Record<string, string>;
+                    return (
+                      <span key={i} className="bg-zinc-800 px-1 py-0.5 rounded mr-1 inline-flex items-center gap-1">
+                        <span className="text-zinc-300">{o.targetName}</span>
+                        <span className="text-zinc-500">→</span>
+                        <span className="text-emerald-400">{o.relation}</span>
+                      </span>
+                    );
+                  }
+                  return <span key={i} className="bg-zinc-800 px-1 py-0.5 rounded mr-1">{String(v)}</span>;
+                })
+              ) : (
+                value.map((v, i) => <span key={i} className="bg-zinc-800 px-1 py-0.5 rounded mr-1">{String(v)}</span>)
+              ))
             : <span>{String(value)}</span>
           }
+          {onEditField && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEditField(key, value);
+              }}
+              className="ml-1 text-[9px] text-zinc-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              ✏️
+            </button>
+          )}
         </div>
       ))}
     </div>

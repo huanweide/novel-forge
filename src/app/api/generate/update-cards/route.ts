@@ -12,10 +12,20 @@ import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectId, chapterContent, chapterTitle = "" } = body;
+    const { projectId, chapterContent, chapterTitle = "", chapterNumber = "" } = body;
 
     if (!projectId || !chapterContent) {
-      return NextResponse.json({ error: "缺少 projectId 或 chapterContent" }, { status: 400 });
+      return NextResponse.json(
+        { error: "缺少 projectId 或 chapterContent", details: "请确保当前节点已有正文内容" },
+        { status: 400 }
+      );
+    }
+
+    if (chapterContent.trim().length < 50) {
+      return NextResponse.json(
+        { error: "章节内容过短", details: "正文至少需要50字才能进行有效分析" },
+        { status: 400 }
+      );
     }
 
     // 加载现有数据
@@ -47,33 +57,33 @@ export async function POST(request: Request) {
       ? `POV=${styleCard.povType} | 对话占比=${(styleCard.dialogueRatio * 100).toFixed(0)}% | 描写密度=${(styleCard.descriptionRatio * 100).toFixed(0)}% | 文风=${styleCard.styleDescription?.slice(0, 60)}`
       : "（未设定）";
 
-    // 截取章节内容（最多 8000 字送分析）
-    const contentSnippet = chapterContent.slice(0, 8000);
+    // 截取章节内容（最多 10000 字送分析）
+    const contentSnippet = chapterContent.slice(0, 10000);
 
     // 构建 Prompt
     const systemPrompt = `你是小说编辑，每章结束后追踪故事变化。核心职责：区分"大事"与"小事"。
 
-【必须记录——大事（对角色/世界观有持久影响）】
+必须记录——大事（对角色/世界观有持久影响，会写入三卡供后续章节使用）：
 ✅ 获得/失去能力、技能升级
 ✅ 性格信念明显转变（从懦弱变勇敢、从天真变世故）
-✅ 建立重要关系（师徒、恋人、宿敌、盟友）
+✅ 建立重要关系（师徒、恋人、宿敌、盟友）——标记relation关系类型
 ✅ 角色死亡/重伤/失踪
-✅ 世界观重大揭露（力量体系的秘密、历史真相）
+✅ 世界观重大揭露（力量体系的秘密、历史真相）——要标记category
 ✅ 人物弧光推进（成长/堕落/醒悟的关键时刻）
 ✅ 获得重要物品或身份
 
-【忽略——小事（没有持久影响）】
-❌ 换了件衣服、吃了顿饭、日常寒暄
-❌ 临时情绪波动（生气了一下马上好了）
-❌ 路过场景的细节描写
+忽略——小事（没有持久影响，一个月后无意义）：
+❌ 日常衣食住行、临时情绪波动
 ❌ 与路人NPC的短暂互动
-❌ 普通战斗的擦伤（不改变状态）
-❌ 天气变化、房间摆设等环境细节
+❌ 普通战斗擦伤，天气/环境变化
 
-判断标准：如果把这个变化写在角色卡上，一个月后再看还有意义吗？没有则不报。
+判断标准：如果把这个变化写在角色卡/世界书上，一个月后再看还有意义吗？
 
-输出纯 JSON。`;
+重要：significance只标记high或medium。low的项目会被自动过滤不显示给用户。
 
+输出纯 JSON，不要markdown代码块包裹。`;
+
+    const chapterLabel = chapterNumber ? `第${chapterNumber}章` : "";
     const userPrompt = `【现有卡面——写本章之前的状态】
 === 角色卡 ===
 ${charSummary || "（无现有角色）"}
@@ -84,7 +94,7 @@ ${loreSummary || "（无现有词条）"}
 === 风格卡 ===
 ${styleSummary}
 
-【新章节内容】
+【新章节内容${chapterLabel ? `——${chapterLabel}` : ""}】
 ${chapterTitle ? `标题：${chapterTitle}\n` : ""}
 ${contentSnippet}
 
