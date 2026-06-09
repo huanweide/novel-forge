@@ -3,7 +3,7 @@
  * 章节更新系统 —— AI 比对新内容与现有卡面，生成差异更新建议。
  */
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -38,8 +38,25 @@ export async function POST(request: Request) {
 
     if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
 
-    // 构建现有卡面摘要（省 Token）
-    const charSummary = characters.map((c) => {
+    // 截取章节内容（最多 8000 字送分析）
+    const contentSnippet = chapterContent.slice(0, 8000);
+
+    // ── 角色智能过滤：只送章节中出现的角色 + 主角反派导师，不是全量 178 个 ──
+    const contentLower = contentSnippet.toLowerCase();
+    const mentionedChars = characters.filter((c) => {
+      // 主角/反派/导师一定送
+      if (["protagonist", "antagonist", "mentor"].includes(c.role)) return true;
+      // 名字在章节内容中出现过的角色
+      const nameLower = c.name.toLowerCase();
+      if (contentLower.includes(nameLower)) return true;
+      // 别名匹配
+      return (c.aliases || []).some((a: string) => contentLower.includes(a.toLowerCase()));
+    });
+    // 限制最多 40 个角色，减少 LLM 处理时间
+    const activeChars = mentionedChars.slice(0, 40);
+
+    // 构建现有卡面摘要（只送活跃角色）
+    const charSummary = activeChars.map((c) => {
       const personality = (typeof c.personality === "object" && c.personality !== null)
         ? c.personality : {};
       const pObj = personality as Record<string, unknown>;
@@ -56,9 +73,6 @@ export async function POST(request: Request) {
     const styleSummary = styleCard
       ? `POV=${styleCard.povType} | 对话占比=${(styleCard.dialogueRatio * 100).toFixed(0)}% | 描写密度=${(styleCard.descriptionRatio * 100).toFixed(0)}% | 文风=${styleCard.styleDescription?.slice(0, 60)}`
       : "（未设定）";
-
-    // 截取章节内容（最多 10000 字送分析）
-    const contentSnippet = chapterContent.slice(0, 10000);
 
     // 构建 Prompt
     const systemPrompt = `你是小说编辑，每章结束后追踪故事变化。核心职责：区分"大事"与"小事"。
@@ -84,7 +98,7 @@ export async function POST(request: Request) {
 输出纯 JSON，不要markdown代码块包裹。`;
 
     const chapterLabel = chapterNumber ? `第${chapterNumber}章` : "";
-    const userPrompt = `【现有卡面——写本章之前的状态】
+    const userPrompt = `【现有卡面——写本章之前的状态（${activeChars.length}/${characters.length}个活跃角色）】
 === 角色卡 ===
 ${charSummary || "（无现有角色）"}
 

@@ -20,16 +20,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.9.2";
+export const LATEST_VERSION = "v0.9.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧠 角色花名册注入prompt：apply-updates写入的关系/对话风格/外貌/弧光现可被后续章节读取",
-  "🔍 AI分析本章变化：新增对话风格&外貌检测+chapterNumber修复+内联编辑",
+  "⚡ AI分析本章变化：修复504超时——maxDuration拉到300s+角色智能过滤(178→40)",
+  "🛡 JSON解析容错：API四层提取+前端res.json加固，不再白屏",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.9.3",
+    date: "2026-06-09",
+    title: "修复504超时 + JSON解析容错——AI分析本章变化终于能跑完了",
+    sections: [
+      {
+        label: "⚡ 性能修复",
+        items: [
+          "maxDuration从60秒拉到300秒——Vercel不再提前掐断LLM分析",
+          "角色智能过滤：只送章节中出现的角色+主角反派导师（178→≤40个），LLM处理时间大幅下降",
+          "章节内容截取从10000字降到8000字——再减20%prompt体积",
+        ],
+      },
+      {
+        label: "🛡 容错加固",
+        items: [
+          "LLM调用加try/catch——模型不可用时返回空结果+友好错误信息，不再抛500",
+          "JSON解析四层容错：markdown提取→花括号截取→JSON.parse→失败返回raw文本",
+          "前端res.json()改成先res.text()再JSON.parse——API返回非JSON不再白屏炸掉",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.9.2",
     date: "2026-06-09",
