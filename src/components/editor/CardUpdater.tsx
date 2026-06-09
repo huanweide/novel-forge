@@ -52,6 +52,8 @@ export function CardUpdater({
   chapterNumber,
   onApplied,
   onClose,
+  preAnalysisResult,
+  existingCharacters = [],
 }: {
   projectId: string;
   chapterContent: string;
@@ -59,6 +61,8 @@ export function CardUpdater({
   chapterNumber?: string;
   onApplied: () => void;
   onClose: () => void;
+  preAnalysisResult?: UpdateResult | null;
+  existingCharacters?: Array<{ id: string; name: string; role: string }>;
 }) {
   const [step, setStep] = useState<"analyzing" | "preview" | "editing" | "applying" | "done">("analyzing");
   const [result, setResult] = useState<UpdateResult | null>(null);
@@ -66,6 +70,61 @@ export function CardUpdater({
   const [message, setMessage] = useState("");
   const [editTarget, setEditTarget] = useState<{ type: "char" | "newchar" | "lore"; index: number } | null>(null);
   const [editField, setEditField] = useState("");
+
+  // ─── 搜索 / 自建角色 ──────────────────────────────────────
+  const [charSearch, setCharSearch] = useState("");
+  const [showCharSearch, setShowCharSearch] = useState(false);
+  const [newCharName, setNewCharName] = useState("");
+  const [showNewCharInput, setShowNewCharInput] = useState(false);
+  // 搜索已有角色
+  const [existingCharOptions, setExistingCharOptions] = useState<Array<{ id: string; name: string; role: string }>>([]);
+  const [searchingChars, setSearchingChars] = useState(false);
+
+  const searchCharacters = (q: string) => {
+    if (!q || q.length < 1) { setExistingCharOptions([]); return; }
+    const qLower = q.toLowerCase();
+    const filtered = (existingCharacters || []).filter(c =>
+      c.name.toLowerCase().includes(qLower)
+    ).slice(0, 20);
+    setExistingCharOptions(filtered);
+  };
+
+  const addExistingCharAsNew = (char: { id: string; name: string; role: string }) => {
+    if (!result) return;
+    const already = result.newCharacters.some(c => c.name.toLowerCase() === char.name.toLowerCase());
+    if (already) { setCharSearch(""); setShowCharSearch(false); return; }
+    const updated = { ...result, newCharacters: [...result.newCharacters, {
+      name: char.name, role: char.role || "supporting",
+      significance: "medium",
+      personality: { dominant: "从已有角色库添加" },
+      abilities: [],
+      evidence: "用户手动添加",
+      _edited: true,
+    }]};
+    setResult(updated);
+    const idx = updated.newCharacters.length - 1;
+    setSelectedNewChars(prev => { const next = new Set(prev); next.add(`newchar-${idx}`); return next; });
+    setCharSearch(""); setShowCharSearch(false);
+  };
+
+  const addNewCharacter = () => {
+    if (!result || !newCharName.trim()) return;
+    const name = newCharName.trim();
+    const already = result.newCharacters.some(c => c.name.toLowerCase() === name.toLowerCase());
+    if (already) { setNewCharName(""); setShowNewCharInput(false); return; }
+    const updated = { ...result, newCharacters: [...result.newCharacters, {
+      name, role: "supporting",
+      significance: "medium",
+      personality: { dominant: "用户自建" },
+      abilities: [],
+      evidence: "用户自建角色",
+      _edited: true,
+    }]};
+    setResult(updated);
+    const idx = updated.newCharacters.length - 1;
+    setSelectedNewChars(prev => { const next = new Set(prev); next.add(`newchar-${idx}`); return next; });
+    setNewCharName(""); setShowNewCharInput(false);
+  };
   const [editValue, setEditValue] = useState("");
 
   // 勾选状态
@@ -76,7 +135,25 @@ export function CardUpdater({
   // ─── 分析 ──────────────────────────────────────────────
 
   useEffect(() => {
-    analyzeChapter();
+    if (preAnalysisResult) {
+      // 使用外部传入的预分析结果，跳过 API 调用
+      setResult(preAnalysisResult);
+      const charKeys = (preAnalysisResult.characterUpdates || []).map((c: CharChange, i: number) =>
+        c.significance !== "low" ? `char-${i}` : null
+      ).filter(Boolean) as string[];
+      const newCharKeys = (preAnalysisResult.newCharacters || []).map((c: NewChar, i: number) =>
+        c.significance !== "low" ? `newchar-${i}` : null
+      ).filter(Boolean) as string[];
+      const loreKeys = (preAnalysisResult.newLoreEntries || []).map((l: NewLore, i: number) =>
+        l.significance !== "low" ? `lore-${i}` : null
+      ).filter(Boolean) as string[];
+      setSelectedChars(new Set(charKeys));
+      setSelectedNewChars(new Set(newCharKeys));
+      setSelectedLore(new Set(loreKeys));
+      setStep("preview");
+    } else {
+      analyzeChapter();
+    }
   }, []);
 
   const analyzeChapter = async () => {
@@ -567,6 +644,75 @@ export function CardUpdater({
                   </div>
                 </div>
               )}
+
+              {/* ── 手动添加角色卡 ── */}
+              <div className="border-t border-zinc-800 pt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400">🃏 添加角色卡</span>
+                  <button
+                    onClick={() => { setShowCharSearch(!showCharSearch); setShowNewCharInput(false); }}
+                    className="text-[10px] px-2 py-0.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors"
+                  >
+                    {showCharSearch ? "收起" : "🔍 搜索已有角色"}
+                  </button>
+                  <button
+                    onClick={() => { setShowNewCharInput(!showNewCharInput); setShowCharSearch(false); }}
+                    className="text-[10px] px-2 py-0.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors"
+                  >
+                    {showNewCharInput ? "收起" : "✨ 自建新角色"}
+                  </button>
+                </div>
+
+                {/* 搜索已有角色 */}
+                {showCharSearch && (
+                  <div className="space-y-1">
+                    <input
+                      value={charSearch}
+                      onChange={(e) => { setCharSearch(e.target.value); searchCharacters(e.target.value); }}
+                      placeholder="输入角色名搜索..."
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
+                    />
+                    {searchingChars && <p className="text-[10px] text-zinc-500">搜索中...</p>}
+                    {existingCharOptions.length > 0 && (
+                      <div className="max-h-32 overflow-y-auto border border-zinc-800 rounded">
+                        {existingCharOptions.map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => addExistingCharAsNew(c)}
+                            className="w-full text-left px-2 py-1 text-xs hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                          >
+                            <span className="text-zinc-300">{c.name}</span>
+                            <span className="text-zinc-600 text-[10px]">{c.role}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {charSearch && !searchingChars && existingCharOptions.length === 0 && (
+                      <p className="text-[10px] text-zinc-600">未找到匹配角色，试试"自建新角色"</p>
+                    )}
+                  </div>
+                )}
+
+                {/* 自建新角色 */}
+                {showNewCharInput && (
+                  <div className="flex gap-2">
+                    <input
+                      value={newCharName}
+                      onChange={(e) => setNewCharName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addNewCharacter()}
+                      placeholder="输入新角色名，回车添加"
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs placeholder:text-zinc-600 focus:outline-none focus:border-pink-600"
+                    />
+                    <button
+                      onClick={addNewCharacter}
+                      disabled={!newCharName.trim()}
+                      className="text-[10px] px-2 py-1 rounded bg-pink-900/40 border border-pink-800 text-pink-400 hover:bg-pink-900/60 disabled:opacity-30 transition-colors"
+                    >
+                      添加
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* 操作按钮 */}
               <div className="flex justify-between pt-3 border-t border-zinc-800">

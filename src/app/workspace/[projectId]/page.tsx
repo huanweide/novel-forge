@@ -218,6 +218,8 @@ export default function WorkspacePage() {
   const [cardUpdatePending, setCardUpdatePending] = useState(false);
   const [pendingCardUpdateNodeId, setPendingCardUpdateNodeId] = useState("");
   const [autoAnalyzing, setAutoAnalyzing] = useState(false);
+  // 预分析结果——后台分析完成后直接传给 CardUpdater，跳过其内部 API 调用
+  const [preCardUpdateResult, setPreCardUpdateResult] = useState<any>(null);
 
   // 生成中断控制
   const abortRef = useRef<AbortController | null>(null);
@@ -385,14 +387,53 @@ export default function WorkspacePage() {
   // ── 自动分析章节变化（生成完成后后台运行）──────
 
   const autoAnalyzeChapter = useCallback(async (content: string, title: string) => {
-    if (!content || content.length < 200) return; // 太短不分析
-    // 保存最新内容供 CardUpdater 使用，自动弹窗让用户确认
+    if (!content || content.length < 200 || !projectId) return;
+    // 保存最新内容
     setLastChapterContent(content);
     setLastChapterTitle(title || "");
     setCardUpdatePending(true);
     if (selectedNode?.id) setPendingCardUpdateNodeId(selectedNode.id);
-    // 延迟一帧确保 state 更新后再弹窗
-    setTimeout(() => setShowCardUpdater(true), 100);
+    // 后台调 API，不弹窗
+    setAutoAnalyzing(true);
+    try {
+      const res = await fetch("/api/generate/update-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          chapterContent: content.slice(0, 10000),
+          chapterTitle: title || "",
+          chapterNumber: (() => { const m = (title || "").match(/第([一二三四五六七八九十百千\d]+)章/); return m?.[1] || ""; })(),
+        }),
+      });
+      const resText = await res.text();
+      let data: any;
+      try { data = JSON.parse(resText); } catch { throw new Error(`API返回格式异常：${resText.slice(0, 200)}`); }
+      if (!res.ok) throw new Error(data.error || `服务器错误 ${res.status}`);
+
+      // 分析完成，存结果
+      setPreCardUpdateResult(data);
+      // 设置通知
+      const charUpdates = data.characterUpdates || [];
+      const newChars = data.newCharacters || [];
+      const newLores = data.newLoreEntries || [];
+      setAutoUpdateNotification({
+        summary: data.summary || "AI 分析完成",
+        charCount: charUpdates.length,
+        newCharCount: newChars.length,
+        loreCount: newLores.length,
+      });
+      // 弹三卡确认窗
+      setShowCardUpdater(true);
+    } catch (err) {
+      console.error("自动分析失败:", err);
+      setAutoUpdateNotification({
+        summary: `分析失败：${err instanceof Error ? err.message : "请手动分析"}`,
+        charCount: 0, newCharCount: 0, loreCount: 0,
+      });
+    } finally {
+      setAutoAnalyzing(false);
+    }
   }, [projectId, selectedNode?.id]);
 
   useEffect(() => {
@@ -790,6 +831,7 @@ export default function WorkspacePage() {
               setLastGeneratedText((prev) => prev + streamContent);
               loadProject();
               setContextRefreshKey((k) => k + 1);
+              autoAnalyzeChapter(streamContent, selectedNode?.title || "");
             } else if (event.type === "error") {
               setGenStep("error");
               console.error("续写错误:", event.content);
@@ -1069,8 +1111,8 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* 自动检测通知横幅 */}
-      {autoUpdateNotification && (
+      {/* 自动检测通知横幅——CardUpdater弹窗时不重复显示 */}
+      {autoUpdateNotification && !showCardUpdater && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-950/95 to-purple-950/95 border border-indigo-700/60 shadow-2xl backdrop-blur">
             <div className="flex items-center gap-2">
@@ -1205,13 +1247,17 @@ export default function WorkspacePage() {
             const m = (selectedNode?.title || "").match(/第([一二三四五六七八九十百千\d]+)章/);
             return m?.[1] || undefined;
           })()}
+          preAnalysisResult={preCardUpdateResult}
+          existingCharacters={project.characters?.map((c: any) => ({ id: c.id, name: c.name, role: c.role })) || []}
           onApplied={() => {
             loadProject();
             setAutoUpdateNotification(null);
             setCardUpdatePending(false);
+            setPreCardUpdateResult(null);
           }}
           onClose={() => {
             setShowCardUpdater(false);
+            setPreCardUpdateResult(null);
             // 不清除 cardUpdatePending——按钮持续显示
           }}
         />

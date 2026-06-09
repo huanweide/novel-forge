@@ -803,6 +803,25 @@ export function buildPromptContext(params: {
   systemPrompt += `\n本章「${chapterTitle}」· 大纲：${currentNode.outline || "无"}`;
   systemPrompt += `\n📋 本次调度 ${scheduledNames.size} 张角色卡（★标记），另有 ${characters.length - scheduledNames.size} 个角色可参考背景信息。`;
 
+  // ── 注入作者指令（大纲级优先级）──
+  if (authorNote && authorNote.trim()) {
+    systemPrompt += `\n\n【⚠️ 作者指令——具有大纲同等效力，优先于所有自动生成内容。大纲里没有的内容按作者指令执行，冲突处以作者指令为准】\n${authorNote}`;
+  }
+
+  // ── 注入比赛/比分世界书记忆 ──
+  const matchScoreEntries = loreEntries.filter((l) => {
+    const cat = (l.category || "").toLowerCase();
+    const title = (l.title || "").toLowerCase();
+    const content = (l.content || "").toLowerCase();
+    return cat === "history" || title.includes("比分") || title.includes("比赛") || title.includes("战")
+      || content.includes("比分") || content.includes("获胜") || content.includes("击败")
+      || cat === "custom" && (title.includes("match") || title.includes("score"));
+  });
+  if (matchScoreEntries.length > 0) {
+    const matchLines = matchScoreEntries.map((l) => `[${l.title}] ${l.content?.slice(0, 200)}`);
+    systemPrompt += `\n\n【📊 比赛/比分记录——必须保证前后一致】\n${matchLines.join("\n")}`;
+  }
+
   return {
     systemPrompt,
     globalMemory: {
