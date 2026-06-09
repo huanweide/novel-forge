@@ -317,40 +317,11 @@ export default function WorkspacePage() {
 
   const autoAnalyzeChapter = useCallback(async (content: string, title: string) => {
     if (!content || content.length < 200) return; // 太短不分析
-    setAutoAnalyzing(true);
-
-    // 从标题提取章节号
-    const chapMatch = title?.match(/第([一二三四五六七八九十百千\d]+)章/);
-    const chapterNum = chapMatch?.[1] || "";
-
-    try {
-      const res = await fetch("/api/generate/update-cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, chapterContent: content, chapterTitle: title, chapterNumber: chapterNum }),
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-
-      const charCount = (data.characterUpdates || []).length;
-      const newCharCount = (data.newCharacters || []).length;
-      const loreCount = (data.newLoreEntries || []).length;
-      const total = charCount + newCharCount + loreCount;
-
-      // 只有检测到变化才弹通知
-      if (total > 0) {
-        setAutoUpdateNotification({
-          summary: data.summary || `检测到 ${total} 条变化`,
-          charCount,
-          newCharCount,
-          loreCount,
-        });
-      }
-    } catch {
-      // 静默失败，不影响写作流
-    } finally {
-      setAutoAnalyzing(false);
-    }
+    // 保存最新内容供 CardUpdater 使用，自动弹窗让用户确认
+    setLastChapterContent(content);
+    setLastChapterTitle(title || "");
+    // 延迟一帧确保 state 更新后再弹窗
+    setTimeout(() => setShowCardUpdater(true), 100);
   }, [projectId]);
 
   useEffect(() => {
