@@ -601,133 +601,207 @@ export function buildPromptContext(params: {
     systemPrompt += `\n\n【角色当下冲动——本章开头的行为驱动力】\n${impulseLines}`;
   }
 
-  // ── 推断当前故事阶段（基于章节位置 + 标题）──
+  // ═══════════════════════════════════════════════════════════════
+  // 智能调度器：双层角色系统
+  // Tier 1: 全量基础信息（178人，每人一行极简）
+  // Tier 2: 调度卡全量展开（~15人，完整卡面数据）
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── 故事阶段推断 ──
   const chapterOrder = currentNode.order;
   const chapterTitle = currentNode.title || "";
-  const totalChapters = previousNodes.length + 1; // 粗略的总章节数
+  const totalChapters = previousNodes.length + 1;
   let storyPhase = "";
-  if (chapterOrder <= 3) storyPhase = "故事初期——角色引入阶段，主要人物陆续登场，世界观铺设中";
-  else if (chapterOrder <= totalChapters * 0.3) storyPhase = "故事前期——核心冲突开始浮现，主角团磨合中";
-  else if (chapterOrder <= totalChapters * 0.6) storyPhase = "故事中期——冲突升级，外部势力介入，角色关系复杂化";
-  else if (chapterOrder <= totalChapters * 0.85) storyPhase = "故事后期——高潮临近，重要角色汇聚，决定性对抗即将到来";
-  else storyPhase = "故事末期——终局阶段，所有伏笔回收，最终对决";
+  if (chapterOrder <= 3) storyPhase = "初期·角色引入";
+  else if (chapterOrder <= totalChapters * 0.3) storyPhase = "前期·冲突浮现";
+  else if (chapterOrder <= totalChapters * 0.6) storyPhase = "中期·外部势力介入";
+  else if (chapterOrder <= totalChapters * 0.85) storyPhase = "后期·高潮临近";
+  else storyPhase = "末期·终局对决";
 
-  // 从章节标题提取场景类型提示
   const sceneHints: string[] = [];
-  if (chapterTitle.includes("比赛") || chapterTitle.includes("战") || chapterTitle.includes("对决")) sceneHints.push("⚽比赛场景");
-  if (chapterTitle.includes("训练") || chapterTitle.includes("练习")) sceneHints.push("🏃训练场景");
-  if (chapterTitle.includes("日常") || chapterTitle.includes("休息")) sceneHints.push("☕日常场景");
-  if (chapterTitle.includes("选拔") || chapterTitle.includes("测试")) sceneHints.push("📋选拔/测试场景");
-  const sceneContext = sceneHints.length > 0 ? sceneHints.join("、") : "场景类型未知——根据大纲判断";
+  if (chapterTitle.includes("比赛") || chapterTitle.includes("战") || chapterTitle.includes("对决")) sceneHints.push("⚽比赛");
+  if (chapterTitle.includes("训练") || chapterTitle.includes("练习")) sceneHints.push("🏃训练");
+  if (chapterTitle.includes("日常") || chapterTitle.includes("休息")) sceneHints.push("☕日常");
+  if (chapterTitle.includes("选拔") || chapterTitle.includes("测试")) sceneHints.push("📋选拔");
+  const sceneContext = sceneHints.length > 0 ? sceneHints.join("") : "";
 
-  // 把故事阶段注入 systemPrompt
-  systemPrompt += `\n\n【当前故事阶段】\n第${chapterOrder + 1}章/${totalChapters}章。${storyPhase}。${sceneContext}。`;
-  systemPrompt += `\n本章标题：${chapterTitle}。大纲：${currentNode.outline || "无"}。`;
-
-  // ── 构建角色花名册——含背景标签+动机提示，不按实力分级 ──
-
-  // 从角色背景中提取立场/所属标签
-  const extractAffiliation = (c: any): string => {
-    const bg = (c.background || "").toLowerCase();
-    const name = c.name || "";
-    const tags: string[] = [];
-
-    // 从背景文字中提取线索
-    if (bg.includes("蓝色监狱") || bg.includes("蓝锁")) tags.push("蓝锁成员");
-    if (bg.includes("u-20") || bg.includes("u20") || bg.includes("日本代表")) tags.push("日本U-20");
-    if (bg.includes("世界") || bg.includes("国际") || bg.includes("海外") || bg.includes("欧洲")) tags.push("国际球员");
-    if (bg.includes("教练") || bg.includes("指导") || bg.includes("绘心")) tags.push("教练/工作人员");
-    if (bg.includes("记者") || bg.includes("媒体") || bg.includes("解说")) tags.push("媒体/观察者");
-    if (bg.includes("家族") || bg.includes("兄弟") || bg.includes("父母") || bg.includes("亲人")) tags.push("家人/亲属");
-    if (bg.includes("赞助") || bg.includes("商业") || bg.includes("经纪人")) tags.push("商业/经纪");
-    if (bg.includes("宿敌") || bg.includes("对手") || bg.includes("敌对")) tags.push("敌对关系");
-    if (bg.includes("队友") || bg.includes("同队") || bg.includes("搭档")) tags.push("同队队友");
-
-    // 角色类型补充
-    if (c.role === "antagonist") tags.push("主要对手");
-    if (c.role === "mentor") tags.push("导师");
-    if (c.role === "protagonist") tags.push("主角");
-
-    return tags.length > 0 ? tags.join("/") : "未明确";
-  };
-
-  // 推断角色可能的出场动机
-  const extractMotivation = (c: any): string => {
-    const bg = (c.background || "").toLowerCase();
-    const motives: string[] = [];
-
-    if (bg.includes("竞争") || bg.includes("打败") || bg.includes("证明")) motives.push("竞争/证明自己");
-    if (bg.includes("观察") || bg.includes("侦察") || bg.includes("考察")) motives.push("观察/侦察");
-    if (bg.includes("邀请") || bg.includes("雇佣") || bg.includes("报酬")) motives.push("被邀请/被雇佣");
-    if (bg.includes("复仇") || bg.includes("恩怨") || bg.includes("恨")) motives.push("私人恩怨");
-    if (bg.includes("保护") || bg.includes("守护") || bg.includes("照顾")) motives.push("保护/守护某人");
-    if (bg.includes("好奇") || bg.includes("兴趣") || bg.includes("关注")) motives.push("好奇/感兴趣");
-    if (bg.includes("命令") || bg.includes("任务") || bg.includes("指派")) motives.push("被指派/执行任务");
-    if (Array.isArray((c as any).relationships) && (c as any).relationships.length > 0) {
-      motives.push("人际关系驱动");
-    }
-
-    return motives.length > 0 ? motives.join("、") : "故事推进自然出场";
-  };
-
-  // 根据前文章节内容判断角色是否已出场
+  // ── 扫描前文，标记已出场角色 ──
   const appearedNames = new Set<string>();
   for (const n of previousNodes) {
     const content = (n.content || "").toLowerCase();
     for (const c of characters) {
-      if (content.includes(c.name.toLowerCase())) {
-        appearedNames.add(c.name);
-      }
+      if (content.includes(c.name.toLowerCase())) appearedNames.add(c.name);
     }
   }
 
-  const rosterLines: string[] = [];
+  // ── 提取大纲中的角色名（本章必须调度的核心角色）──
+  const outlineText = (currentNode.outline || "") + " " + chapterTitle;
+  const outlineChars = new Set<string>();
   for (const c of characters) {
-    // 跳过死亡角色
-    if ((c as any).currentStatus === "dead") continue;
-
-    const affiliation = extractAffiliation(c as any);
-    const motivation = extractMotivation(c as any);
-    const appeared = appearedNames.has(c.name);
-    const introTag = appeared ? "✅已知" : "🆕未登场";
-
-    const parts: string[] = [];
-    // 核心信息：立场+动机+出场状态
-    parts.push(`立场：${affiliation}`);
-    parts.push(`动机：${motivation}`);
-    parts.push(introTag);
-
-    // 背景摘要——最重要的出场逻辑来源
-    const bg = ((c as any).background || "").slice(0, 80);
-    if (bg.trim()) parts.push(`背景：${bg}`);
-
-    // 关系（精简——最多2条）
-    if (Array.isArray((c as any).relationships) && (c as any).relationships.length > 0) {
-      const rels = (c as any).relationships.slice(0, 2).map((r: any) =>
-        `${r.targetName || "?"}(${r.relation || ""})`
-      ).join("、");
-      if (rels) parts.push(`关系：${rels}`);
-    }
-    // 弧光
-    if ((c as any).arcProgress) parts.push(`弧光：${(c as any).arcProgress.slice(0, 60)}`);
-    // 状态（仅非正常状态）
-    if ((c as any).currentStatus && !["alive"].includes((c as any).currentStatus)) {
-      parts.push(`当前：${(c as any).currentStatus}`);
-    }
-
-    rosterLines.push(`[${c.name}] ${parts.join(" | ")}`);
+    if (outlineText.includes(c.name)) outlineChars.add(c.name);
   }
 
-  // 排序：已知角色优先（减少AI随机拉新人）
-  rosterLines.sort((a, b) => {
-    const aKnown = a.includes("✅已知") ? 0 : 1;
-    const bKnown = b.includes("✅已知") ? 0 : 1;
-    return aKnown - bKnown;
-  });
+  // ── 智能调度算法：打分选人 ──
+  const charScores = new Map<string, { score: number; reasons: string[] }>();
+  for (const c of characters) {
+    if ((c as any).currentStatus === "dead") continue;
+    let score = 0;
+    const reasons: string[] = [];
 
-  const characterRoster = rosterLines.length > 0
-    ? rosterLines.slice(0, 50).join("\n")
-    : "";
+    // 1. 大纲点名 → +100（必选）
+    if (outlineChars.has(c.name)) { score += 100; reasons.push("大纲点名"); }
+
+    // 2. 主角/反派 → +50
+    if (c.role === "protagonist") { score += 50; reasons.push("主角"); }
+    if (c.role === "antagonist") { score += 50; reasons.push("反派"); }
+
+    // 3. 已出场 + 近期活跃 → +30
+    if (appearedNames.has(c.name)) {
+      score += 15;
+      // timeline有最近2章记录 → 额外加分
+      const tl = (Array.isArray((c as any).timeline) ? (c as any).timeline : []) as any[];
+      const recentEvents = tl.filter((e: any) => {
+        const echap = String(e.chapter || "");
+        return echap.includes(String(chapterOrder)) || echap.includes(String(chapterOrder + 1));
+      });
+      if (recentEvents.length > 0) { score += 15; reasons.push("近期活跃"); }
+    }
+
+    // 4. 关系网：与大纲角色有关系 → +25
+    if (outlineChars.size > 0) {
+      const rels = (Array.isArray((c as any).relationships) ? (c as any).relationships : []) as any[];
+      const connectedToOutline = rels.some((r: any) => outlineChars.has(r.targetName || ""));
+      if (connectedToOutline) { score += 25; reasons.push("关系网关联"); }
+    }
+
+    // 5. 导师/催化剂角色 + 故事前期/中期 → +20
+    if ((c.role === "mentor" || c.role === "catalyst") && chapterOrder <= totalChapters * 0.6) {
+      score += 20; reasons.push("剧情推进者");
+    }
+
+    // 6. 立场匹配场景类型 → +10
+    const bg = ((c as any).background || "").toLowerCase();
+    if (sceneHints.some(h => h.includes("比赛")) && (bg.includes("球员") || bg.includes("队"))) { score += 10; reasons.push("比赛场景在场"); }
+    if (sceneHints.some(h => h.includes("训练")) && (bg.includes("蓝锁") || bg.includes("教练"))) { score += 10; reasons.push("训练场景在场"); }
+
+    // 7. 有未完成的弧光 → +5
+    if ((c as any).arcProgress && !(c as any).arcProgress.includes("完成")) { score += 5; }
+
+    if (score > 0) charScores.set(c.name, { score, reasons });
+  }
+
+  // 选出调度卡：按分数降序，最多 15 人，至少包括主角
+  const sortedChars = [...charScores.entries()]
+    .sort(([, a], [, b]) => b.score - a.score)
+    .map(([name]) => name);
+  const scheduledNames = new Set<string>();
+  // 主角一定在
+  const protagonistName = characters.find(c => c.role === "protagonist")?.name || "";
+  if (protagonistName) scheduledNames.add(protagonistName);
+  for (const name of sortedChars) {
+    if (scheduledNames.size >= 15) break;
+    scheduledNames.add(name);
+  }
+
+  // ── Tier 1: 全量基础信息（每人一行，178人全上）──
+  const allRosterLines: string[] = [];
+  for (const c of characters) {
+    if ((c as any).currentStatus === "dead") continue;
+    const roleLabel = c.role === "protagonist" ? "主角" : c.role === "antagonist" ? "反派"
+      : c.role === "mentor" ? "导师" : c.role === "love_interest" ? "恋人" : "";
+    const statusIcon = (c as any).currentStatus === "alive" ? "" : `[${(c as any).currentStatus}]`;
+    const appeared = appearedNames.has(c.name) ? "" : "🆕";
+    const scheduled = scheduledNames.has(c.name) ? "★" : "";
+    // 从 background 提取最核心的一句话（前40字）
+    const bgBrief = ((c as any).background || "").slice(0, 40).replace(/\n/g, " ");
+    allRosterLines.push(`${scheduled}${appeared}${statusIcon}[${c.name}]${roleLabel ? ` ${roleLabel}` : ""}${bgBrief ? ` — ${bgBrief}` : ""}`);
+  }
+  const allRoster = allRosterLines.join("\n");
+
+  // ── Tier 2: 调度卡全量展开（~15人，每人完整卡面）──
+  const scheduledCardLines: string[] = [];
+  for (const c of characters) {
+    if (!scheduledNames.has(c.name)) continue;
+
+    const card: string[] = [];
+    card.push(`════ ${c.name} ════`);
+
+    // 角色定位
+    const roleMap: Record<string, string> = { protagonist: "主角", antagonist: "主要对手", mentor: "导师", love_interest: "恋爱对象", catalyst: "剧情催化剂", supporting: "配角", background: "背景角色" };
+    card.push(`定位：${roleMap[c.role] || c.role}`);
+
+    // 性格（结构化）
+    const persRaw = c.personality as any;
+    const pObj = (persRaw && typeof persRaw === "object" && !Array.isArray(persRaw)) ? persRaw as Record<string, unknown> : null;
+    if (pObj) {
+      const pParts: string[] = [];
+      if (pObj.dominant) pParts.push(`表层：${pObj.dominant}`);
+      if (pObj.drive) pParts.push(`驱动力：${pObj.drive}`);
+      if (pObj.contradiction) pParts.push(`矛盾：${pObj.contradiction}`);
+      if (pObj.socialMask) pParts.push(`社交面具：${pObj.socialMask}`);
+      if (pParts.length > 0) card.push(`性格：${pParts.join(" | ")}`);
+    } else if (Array.isArray(persRaw)) {
+      card.push(`性格：${(persRaw as string[]).slice(0, 5).join("、")}`);
+    }
+
+    // 对话风格
+    const dsRaw = c.dialogueStyle as any;
+    if (dsRaw && typeof dsRaw === "object") {
+      const dsParts: string[] = [];
+      if (dsRaw.description) dsParts.push(String(dsRaw.description).slice(0, 60));
+      if (Array.isArray(dsRaw.speechPatterns) && dsRaw.speechPatterns.length > 0) dsParts.push(`句式：${dsRaw.speechPatterns.join("、")}`);
+      if (dsParts.length > 0) card.push(`说话：${dsParts.join(" | ")}`);
+    }
+
+    // 外貌
+    const app = c.appearance as any;
+    if (app && typeof app === "object") {
+      const appParts: string[] = [];
+      if (app.hair) appParts.push(`发：${app.hair}`);
+      if (app.eyes) appParts.push(`眼：${app.eyes}`);
+      if (app.build) appParts.push(`体型：${app.build}`);
+      if (app.features) appParts.push(`特征：${app.features}`);
+      if (appParts.length > 0) card.push(`外貌：${appParts.join(" | ")}`);
+    }
+
+    // 能力
+    const abilities = (c as any).abilities as string[] | undefined;
+    if (Array.isArray(abilities) && abilities.length > 0) {
+      card.push(`能力：${abilities.slice(0, 8).join("、")}`);
+    }
+
+    // 关系网（完整）
+    const rels = (Array.isArray((c as any).relationships) ? (c as any).relationships : []) as any[];
+    if (rels.length > 0) {
+      const relLines = rels.map((r: any) => `  ${r.targetName || "?"} → ${r.relation || ""}${r.notes ? ` (${r.notes.slice(0, 40)})` : ""}`);
+      card.push(`关系：\n${relLines.join("\n")}`);
+    }
+
+    // 经历时间线（完整——从 timeline 字段读取）
+    const tl = (Array.isArray((c as any).timeline) ? (c as any).timeline : []) as any[];
+    if (tl.length > 0) {
+      const tlLines = tl.map((e: any) => `  [${e.chapter || "?"}] ${e.type ? `(${e.type}) ` : ""}${e.event || ""}`);
+      card.push(`经历（${tl.length}条）：\n${tlLines.join("\n")}`);
+    } else if ((c as any).background) {
+      // 没有 timeline 但有 background → 用 background 作为初始经历
+      card.push(`背景：${(c as any).background.slice(0, 150)}`);
+    }
+
+    // 弧光
+    if ((c as any).arcProgress) card.push(`弧光进度：${(c as any).arcProgress.slice(0, 100)}`);
+
+    // 调度理由
+    const scoreInfo = charScores.get(c.name);
+    if (scoreInfo) card.push(`📋 调度理由：${scoreInfo.reasons.join("、")} (分:${scoreInfo.score})`);
+
+    scheduledCardLines.push(card.join("\n"));
+  }
+  const scheduledCards = scheduledCardLines.join("\n\n");
+
+  // ── 注入 systemPrompt ──
+  systemPrompt += `\n\n【当前故事阶段】\n第${chapterOrder + 1}章 | ${storyPhase} | ${sceneContext}`;
+  systemPrompt += `\n本章「${chapterTitle}」· 大纲：${currentNode.outline || "无"}`;
+  systemPrompt += `\n📋 本次调度 ${scheduledNames.size} 张角色卡（★标记），另有 ${characters.length - scheduledNames.size} 个角色可参考背景信息。`;
 
   return {
     systemPrompt,
@@ -735,7 +809,8 @@ export function buildPromptContext(params: {
       projectSynopsis: project.synopsis,
       currentProtagonist: characterBrief,
       toneKeywords: project.toneKeywords || [],
-      characterRoster,
+      characterRoster: allRoster,
+      scheduledCards,
     },
     triggeredLore,
     slidingWindow: {

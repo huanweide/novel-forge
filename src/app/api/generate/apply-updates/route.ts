@@ -147,6 +147,45 @@ export async function POST(request: Request) {
         }
       }
 
+      // ── 汇总本章经历写入 timeline ──
+      const timelineEvents: Record<string, unknown>[] = [];
+      const existingTimeline = (Array.isArray(existing.timeline) ? existing.timeline : []) as Record<string, unknown>[];
+      const chapLabel = chapterNumber || "本章";
+
+      if (changes["人物弧光推进"]) {
+        timelineEvents.push({ chapter: chapLabel, type: "弧光", event: changes["人物弧光推进"] });
+      }
+      if (changes["新能力"]) {
+        const abs = Array.isArray(changes["新能力"]) ? (changes["新能力"] as string[]).join("、") : String(changes["新能力"]);
+        timelineEvents.push({ chapter: chapLabel, type: "能力", event: `获得/展现新能力：${abs}` });
+      }
+      if (Array.isArray(changes["新关系"]) && (changes["新关系"] as any[]).length > 0) {
+        for (const r of changes["新关系"] as any[]) {
+          timelineEvents.push({ chapter: chapLabel, type: "关系", event: `与${r.targetName || "?"}建立${r.relation || "关系"}` });
+        }
+      }
+      if (changes["状态变化"] && changes["状态变化"] !== existing.currentStatus) {
+        timelineEvents.push({ chapter: chapLabel, type: "状态", event: `状态变化：${existing.currentStatus} → ${changes["状态变化"]}` });
+      }
+      if (changes["获得重要物品或身份"]) {
+        timelineEvents.push({ chapter: chapLabel, type: "获得", event: `获得：${changes["获得重要物品或身份"]}` });
+      }
+      if (changes["位置"] || changes["情绪"]) {
+        const loc = [changes["位置"], changes["情绪"]].filter(Boolean).join("，");
+        timelineEvents.push({ chapter: chapLabel, type: "位置", event: loc });
+      }
+      if (changes["性格信念转变"]) {
+        timelineEvents.push({ chapter: chapLabel, type: "信念", event: changes["性格信念转变"] });
+      }
+      // 背景更新也算经历
+      if (changes["背景更新"] && !timelineEvents.some(e => e.event === changes["背景更新"])) {
+        timelineEvents.push({ chapter: chapLabel, type: "背景", event: String(changes["背景更新"]).slice(0, 100) });
+      }
+
+      if (timelineEvents.length > 0) {
+        updateData.timeline = [...existingTimeline, ...timelineEvents];
+      }
+
       if (Object.keys(updateData).length > 0) {
         await prisma.characterCard.update({
           where: { id: update.characterId },

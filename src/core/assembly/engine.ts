@@ -129,9 +129,13 @@ function buildGlobalMemorySection(memory: GlobalMemory, maxTokens: number): stri
     parts.push(`【小说基调】${memory.toneKeywords.join("、")}`);
   }
 
-  // 角色花名册——由 buildPromptContext 构建，含关系/对话风格/外貌/弧光/能力/状态
+  // Tier 2: 调度卡全量展开——AI 应该深度使用的角色（~15人完整卡面）
+  if (memory.scheduledCards) {
+    parts.push(`【📋 本章调度卡——以下角色的完整信息，请优先且深度使用】\n${memory.scheduledCards}`);
+  }
+  // Tier 1: 全量基础信息——所有角色一览（178人每人一行极简）
   if (memory.characterRoster) {
-    parts.push(`【角色当前状态——本章开始时各角色已知信息】\n${memory.characterRoster}`);
+    parts.push(`【📇 全角色一览——所有人物的基础信息（★为本次调度卡，🆕为未登场）】\n${memory.characterRoster}`);
   }
 
   const fullContent = `【全局设定——始终牢记】\n${parts.join("\n\n")}`;
@@ -267,6 +271,8 @@ export function calculateContextUsage(
         ? JSON.stringify(context.globalMemory.currentProtagonist)
         : "",
       context.globalMemory.toneKeywords.join(),
+      context.globalMemory.characterRoster,
+      context.globalMemory.scheduledCards,
       ...context.triggeredLore.map((t) => t.entry.content),
       ...context.slidingWindow.shortTerm.map(
         (n) => n.content || n.outline || ""
