@@ -20,26 +20,81 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.9.1";
+export const LATEST_VERSION = "v0.9.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🐛 大纲生成修复: LLM_BASE_URL自动检测Provider命名约定，178角色项目prompt精简到30核心角色",
+  "🧠 角色花名册注入prompt：apply-updates写入的关系/对话风格/外貌/弧光现可被后续章节读取",
+  "🔍 AI分析本章变化：新增对话风格&外貌检测+chapterNumber修复+内联编辑",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
   {
-    version: "v0.9.1",
-    date: "2026-06-08",
-    title: "🐛 大纲生成修复",
+    version: "v0.9.2",
+    date: "2026-06-09",
+    title: "角色花名册注入prompt——修复三卡更新后后续章节读不到的致命漏洞",
     sections: [
       {
-        label: "🐛 大纲生成修复",
+        label: "🧠 架构修复",
         items: [
-          "LLM_BASE_URL自动检测Provider命名约定",
-          "178角色项目prompt精简到30核心角色",
-          "maxDuration加到120秒防超时",
+          "根因：buildPromptContext只把主角极简卡送进globalMemory——apply-updates写入的关系/对话风格/外貌/弧光/能力全停在数据库永不进prompt",
+          "修复：GlobalMemory新增characterRoster字段，遍历所有角色提取有意义字段",
+          "花名册按角色优先级排序(protagonist/antagonist优先→最多60个有更新记录的角色)",
+          "assemblePrompt把花名册注入「全局设定——始终牢记」区——AI写后续章节时能看到所有角色当前状态",
+        ],
+      },
+      {
+        label: "🔍 AI分析本章变化增强",
+        items: [
+          "新增「对话风格」「外貌描述」「性格信念转变」「获得物品/身份」检测字段",
+          "apply-updates新增dialogueStyle/appearance字段的章节标记写入",
+          "chapterNumber提取修复：正则匹配中文数字(一二三)和阿拉伯数字，不再传完整标题",
+          "autoAnalyzeChapter也传chapterNumber——自动检测的更新也能被后续章节读取",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.9.1",
+    date: "2026-06-08",
+    title: "四大功能齐发 + 足球风格卡 + AI分析本章变化修复",
+    sections: [
+      {
+        label: "🗑 章节管理",
+        items: [
+          "章节删除+自动重编号：DELETE API自动将剩余章节重新编号为第一章/第二章…",
+          "大纲追加模式：已有章节时默认追加而非替换，对话框toggle切换",
+          "正文禁写「第X章」：orchestrator/write/continue三处prompt格式铁律",
+          "单章Flash章纲：新API /api/generate/chapter-outline + 中栏⚡按钮",
+        ],
+      },
+      {
+        label: "⚽ 蓝锁足球美学风格卡",
+        items: [
+          "心理直嵌：内心想法口语化碎片化，不加引导词直接写进叙述流",
+          "对话肉搏感：每句承载性格/战术/情绪，禁止单字对话，每个动作必须有回应",
+          "变速齿轮：一对一慢速展开·球转移快速掠过·射门前心理定格",
+          "足球肉搏精度：触球动词具体化·身体接触量化·空间距离精确·失败失误拉满",
+          "超能力自然下沉：允许但自然发生，不命名不强调，给高光留物理解释",
+        ],
+      },
+      {
+        label: "🔍 AI分析本章变化",
+        items: [
+          "修复按钮400报错：改用selectedNode?.content不再传空值",
+          "内联编辑：每条检测变化可点击✏️编辑，编辑后标记「已编辑」",
+          "significance过滤：high/medium默认勾选，low不选",
+          "三卡写入格式对齐角色卡(personality/关系/背景/对话风格/外貌)",
+          "世界观词条自动去重",
+          "Prompt优化：分析上限10000字，明确big/little区分标准",
+        ],
+      },
+      {
+        label: "🔧 修复",
+        items: [
+          "Flash章纲按钮：加prompt输入框+错误alert+res.ok检查",
+          "GitHub Actions自动部署到Vercel——每次push master自动上线",
         ],
       },
     ],
