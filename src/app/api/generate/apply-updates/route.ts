@@ -122,6 +122,22 @@ export async function POST(request: Request) {
         }
       }
 
+      // 对话风格更新 → 标记章节来源，后续章节可读取
+      if (changes["对话风格"]) {
+        const chapterLabel = chapterNumber ? `\n[第${chapterNumber}章] ` : "\n[本章] ";
+        updateData.dialogueStyle = existing.dialogueStyle
+          ? existing.dialogueStyle + chapterLabel + String(changes["对话风格"])
+          : chapterLabel.trim() + String(changes["对话风格"]);
+      }
+
+      // 外貌描述更新 → 标记章节来源
+      if (changes["外貌描述"]) {
+        const chapterLabel = chapterNumber ? `\n[第${chapterNumber}章] ` : "\n[本章] ";
+        updateData.appearance = existing.appearance
+          ? existing.appearance + chapterLabel + String(changes["外貌描述"])
+          : chapterLabel.trim() + String(changes["外貌描述"]);
+      }
+
       // 获得重要物品/身份 → 追加到标签
       if (changes["获得重要物品或身份"]) {
         const newTag = String(changes["获得重要物品或身份"]);

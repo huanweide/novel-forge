@@ -319,11 +319,15 @@ export default function WorkspacePage() {
     if (!content || content.length < 200) return; // 太短不分析
     setAutoAnalyzing(true);
 
+    // 从标题提取章节号
+    const chapMatch = title?.match(/第([一二三四五六七八九十百千\d]+)章/);
+    const chapterNum = chapMatch?.[1] || "";
+
     try {
       const res = await fetch("/api/generate/update-cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, chapterContent: content, chapterTitle: title }),
+        body: JSON.stringify({ projectId, chapterContent: content, chapterTitle: title, chapterNumber: chapterNum }),
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -999,16 +1003,25 @@ export default function WorkspacePage() {
       )}
 
       {/* 章节卡面更新 */}
-      {showCardUpdater && (
-        <CardUpdater
-          projectId={project.id}
-          chapterContent={(selectedNode?.content || lastChapterContent)}
-          chapterTitle={selectedNode?.title || lastChapterTitle}
-          chapterNumber={selectedNode?.title?.match(/第(\d+)章/) ? selectedNode.title : undefined}
-          onApplied={() => { loadProject(); setAutoUpdateNotification(null); }}
-          onClose={() => setShowCardUpdater(false)}
-        />
-      )}
+      {showCardUpdater && (() => {
+        // 从章节标题中提取章节号：第一章 → 一，第3章 → 3
+        const extractChapterNum = (title?: string) => {
+          if (!title) return undefined;
+          const m = title.match(/第([一二三四五六七八九十百千\d]+)章/);
+          return m?.[1] || undefined;
+        };
+        const chapNum = extractChapterNum(selectedNode?.title);
+        return (
+          <CardUpdater
+            projectId={project.id}
+            chapterContent={selectedNode?.content || lastChapterContent}
+            chapterTitle={selectedNode?.title || lastChapterTitle}
+            chapterNumber={chapNum}
+            onApplied={() => { loadProject(); setAutoUpdateNotification(null); }}
+            onClose={() => setShowCardUpdater(false)}
+          />
+        );
+      })()}
 
       {/* 大纲生成对话框 */}
       {showOutlineDialog && (
