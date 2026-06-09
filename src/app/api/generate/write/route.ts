@@ -27,7 +27,7 @@ import { countTokens } from "@/core/assembly/tokenizer";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectId, nodeId, authorNote, targetWordCount = 800 } = body;
+    const { projectId, nodeId, authorNote, targetWordCount = 800, confirmedCardIds, cardNotes, newCharacterRequests } = body;
 
     if (!projectId || !nodeId) {
       return NextResponse.json(
@@ -79,18 +79,64 @@ export async function POST(request: Request) {
       currentNodeIndex
     );
 
-    // 构建 Prompt 上下文
+    // ── 自建用户要求的角色 ──
+    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
+      for (const req of newCharacterRequests as string[]) {
+        const name = req.trim();
+        if (!name) continue;
+        // 检查是否已存在同名角色
+        const exists = characters.some(c => c.name.toLowerCase() === name.toLowerCase());
+        if (!exists) {
+          const created = await prisma.characterCard.create({
+            data: {
+              projectId,
+              name,
+              role: "supporting",
+              personality: { dominant: "本章新建，待丰富" } as any,
+              background: `[${currentNode.title || "本章"}] 用户要求自建角色`,
+              abilities: [],
+              tags: ["🆕 用户自建"],
+              currentStatus: "alive",
+            } as any,
+          });
+          characters.push(created as any);
+        }
+      }
+    }
+
+    // ── 过滤角色花名册——如果用户确认了卡列表，只送确认的 ──
+    let activeCharacters = characters;
+    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
+      const confirmedSet = new Set(confirmedCardIds as string[]);
+      activeCharacters = characters.filter(c => confirmedSet.has(c.id));
+    }
+
+    // 把用户备注注入 authorNote
+    let enrichedAuthorNote = authorNote || "";
+    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
+      const noteLines: string[] = [];
+      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
+        if (!note.trim()) continue;
+        const char = characters.find(c => c.id === id);
+        if (char) noteLines.push(`[${char.name}] ${note}`);
+      }
+      if (noteLines.length > 0) {
+        enrichedAuthorNote = (enrichedAuthorNote ? enrichedAuthorNote + "\n\n" : "") + "【用户角色备注——最高优先级】\n" + noteLines.join("\n");
+      }
+    }
+
+    // 构建 Prompt 上下文——使用过滤后的角色列表
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const promptContext = buildPromptContext({
       project: project as any,
       currentNode: currentNode as any,
       previousNodes: previousNodes as any,
-      characters: characters as any,
+      characters: activeCharacters as any,
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
-      authorNote,
+      authorNote: enrichedAuthorNote,
     });
 
     // 注入项目的自定义文风设置
@@ -106,8 +152,9 @@ export async function POST(request: Request) {
     }
 
     // 撰写指令——作者注释放最前面，最高优先级
-    let writingInstruction = authorNote
-      ? `【⚠️ 作者指令——最高优先级，优先于大纲】\n${authorNote}\n\n`
+    const effectiveAuthorNote = enrichedAuthorNote || authorNote;
+    let writingInstruction = effectiveAuthorNote
+      ? `【⚠️ 作者指令——最高优先级，优先于大纲】\n${effectiveAuthorNote}\n\n`
       : "";
     writingInstruction += currentNode.outline
       ? `【本节大纲】${currentNode.outline}`

@@ -20,16 +20,26 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.9.4";
+export const LATEST_VERSION = "v0.10.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎭 角色出场逻辑系统：S/A/B/C四级叙事权重+已出场追踪+出场条件规则",
-  "🛡 根治前期乱入——世界级角色不再日常陪同/未出场角色不会凭空出现",
+  "📝 Flash章纲提示词+作者指令+微调指令——全部持久化不消失",
+  "🔍 写完自动弹三卡更新+关闭后浮动按钮+世界书自动扩充",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.10.2",
+    date: "2026-06-09",
+    title: "持久化+自动流程+世界书扩充——写完自动弹三卡",
+    sections: [
+      { label: "📝 持久化", items: ["Flash章纲提示词从prompt()→持久输入框", "作者指令+微调指令→localStorage", "三卡浮动按钮→关闭弹窗后不消失"] },
+      { label: "⚡ 自动流程", items: ["写完自动弹CardUpdater→不需手动点通知", "经历时间线自动汇总→timeline字段", "调度卡全量展开~15人完整卡面"] },
+      { label: "🌍 世界书扩充", items: ["三卡分析新增7类世界观检测", "自动创建世界书词条→从11条涨到30+"] },
+    ],
+  },
   {
     version: "v0.9.4",
     date: "2026-06-09",
