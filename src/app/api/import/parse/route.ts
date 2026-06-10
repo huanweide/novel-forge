@@ -14,7 +14,7 @@ import { NextResponse } from "next/server";
 import { getDefaultLLMConfig } from "@/core/llm/client";
 import { countTokens } from "@/core/assembly/tokenizer";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const MODEL_A = "deepseek-chat";                   // DeepSeek官方 (fast)
 const MODEL_B = "deepseek-ai/DeepSeek-V4-Flash";   // 硅基流动 Flash
@@ -73,18 +73,24 @@ async function callOne(
   onTick: (elapsedSec: number) => void,
 ): Promise<{ raw: string; error?: string; sec: number }> {
   const t0 = Date.now();
+  const TIMEOUT_MS = 55000; // 55s 超时，留 5s 给 Vercel 清理
 
   // 进度心跳
   const ticker = setInterval(() => onTick((Date.now() - t0) / 1000), 2000);
 
   try {
     const url = cfg.baseURL.endsWith("/v1") ? `${cfg.baseURL}/chat/completions` : `${cfg.baseURL}/v1/chat/completions`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
       body: JSON.stringify({ model: cfg.model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], temperature: 0.1, max_tokens: maxTokens, stream: false }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     clearInterval(ticker);
     const sec = ((Date.now() - t0) / 1000).toFixed(1);
 
@@ -97,7 +103,11 @@ async function callOne(
   } catch (e) {
     clearInterval(ticker);
     const sec = ((Date.now() - t0) / 1000).toFixed(1);
-    const msg = `${cfg.label} ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
+    const name = (e as Error).name || "";
+    const isAbort = name === "AbortError";
+    const msg = isAbort
+      ? `${cfg.label} 超时 (${TIMEOUT_MS / 1000}s) —— 文本过长，请尝试分次导入`
+      : `${cfg.label} ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
     return { raw: "", error: msg, sec: parseFloat(sec) };
   }
 }
@@ -145,23 +155,33 @@ export async function POST(request: Request) {
 
         send({ type: "progress", stage: "ready", message: `${text.length.toLocaleString()} 字 · ${mode}`, importMode, isSettings: true, pct: 3, hasDeepSeek: hasDS });
 
+        // 大文本警告
+        if (text.length > 30000) {
+          send({ type: "progress", stage: "warn-large", message: `⚠️ 文本较长 (${text.length.toLocaleString()}字)，分析需要更多时间，请耐心等待...`, pct: 4 });
+        }
+
         const t0 = Date.now();
+
+        // ── 文本分块（超 20k 字截断，防止 LLM 超时）──
+        const MAX_TEXT = 20000;
+        const textSlice = text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) + `\n\n…(后文共${text.length.toLocaleString()}字，已截断)…` : text;
+        const truncNote = text.length > MAX_TEXT ? `（全文${text.length.toLocaleString()}字，已截取前${MAX_TEXT.toLocaleString()}字分析）` : "";
 
         // ── Prompt ──
 
-        const promptChars = `设定集→角色卡JSON。原文照搬，没信息写"无"。只输出JSON。
+        const promptChars = `设定集→角色卡JSON。原文照搬，没信息写"无"。只输出JSON。${truncNote}
 
 【${pName}】${pGenre.join("、")}
 
-${text}
+${textSlice}
 
 {"characters":[{"name":"","aliases":[],"role":"protagonist|antagonist|supporting|mentor|love_interest|background","age":"","gender":"","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[{"targetName":"","relation":"","dynamic":""}],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[{"age":0,"event":"","era":""}],"arcProgress":"","currentStatus":"alive"}]}`;
 
-        const promptLore = `设定集→世界设定+文风JSON。原文照搬，没信息写"无"。只输出JSON。
+        const promptLore = `设定集→世界设定+文风JSON。原文照搬，没信息写"无"。只输出JSON。${truncNote}
 
 【${pName}】${pGenre.join("、")}
 
-${text}
+${textSlice}
 
 {"lore":[{"title":"","category":"geography|faction|magic_system|history|culture|creature|item|custom","keys":[],"content":""}],"style":{"styleDescription":"","povType":"third_person_limited","narrativeDistance":"medium","dialogueRatio":0.35,"descriptionRatio":0.25,"actionRatio":0.25,"innerThoughtRatio":0.15,"tonalMarkers":{},"lexicalFeatures":{},"sampleText":""}}`;
 
@@ -170,18 +190,24 @@ ${text}
         send({ type: "progress", stage: "launch", message: `A路 DeepSeek→人物 | B路 硅基Flash→世界`, pct: 5 });
 
         let progressA = 0, progressB = 0;
+        const basePct = 5;
+        const rangePct = 70; // 5%~75% 分配给 AB路并行阶段
 
         const [resA, resB] = await Promise.all([
-          // 路A：DeepSeek官方 → 人物（48 tok/s 比硅基快37%）
+          // 路A：DeepSeek官方 → 人物
           callOne(dsConfig, "格式翻译器。设定集→角色卡JSON。原文照搬。只输出JSON。", promptChars, 24000, (elapsed) => {
             progressA = Math.round(elapsed);
-            send({ type: "progress", stage: "path-a", message: `👤 A路 DeepSeek·人物 进行中 ${progressA}s`, path: "A", elapsed: progressA, pct: Math.min(50, Math.round(5 + (elapsed / 200) * 45)) });
+            // 路A 进度：5%~40% 区间，随时间递增但不超过 40%
+            const aPct = Math.min(basePct + Math.round(elapsed / 150 * 35), 40);
+            send({ type: "progress", stage: "path-a", message: `👤 A路 DeepSeek·人物 进行中 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
           }),
 
           // 路B：硅基流动 → 世界设定+文风
           callOne(sfCfg, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 12000, (elapsed) => {
             progressB = Math.round(elapsed);
-            send({ type: "progress", stage: "path-b", message: `🌍 B路 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.min(50, Math.round(5 + (elapsed / 200) * 45)) });
+            // 路B 进度：40%~75% 区间
+            const bPct = Math.min(40 + Math.round(elapsed / 150 * 35), 75);
+            send({ type: "progress", stage: "path-b", message: `🌍 B路 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
           }),
         ]);
 
