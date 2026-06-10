@@ -2449,8 +2449,8 @@ function CharacterEditDialog({
         },
         personality: fromText(form.personality),
         background: form.background,
-        abilities: form.abilities.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
-        hiddenMotives: form.hiddenMotives.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+        abilities: form.abilities.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
+        hiddenMotives: form.hiddenMotives.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
         relationships,
         dialogueStyle: {
           description: form.dialogueDesc,
@@ -2547,8 +2547,8 @@ function CharacterEditDialog({
         {/* 能力 */}
         <div className="border-b border-zinc-800 pb-3">
           <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">能力/功法</h4>
-          {field("能力（逗号分隔）", form.abilities, v => setForm({ ...form, abilities: v }), { placeholder: "剑气决·入门, 医术·精湛, 潜行·大师" })}
-          {field("隐藏动机（逗号分隔）", form.hiddenMotives, v => setForm({ ...form, hiddenMotives: v }), { placeholder: "暗中寻找灭门仇人, 表面臣服实则谋反" })}
+          {field("能力（每行一个，或用逗号分隔）", form.abilities, v => setForm({ ...form, abilities: v }), { textarea: true, rows: 6, placeholder: "步频幻觉\n伪九号回撤\n节奏变奏\n逆足终结" })}
+          {field("隐藏动机（每行一个，或用逗号分隔）", form.hiddenMotives, v => setForm({ ...form, hiddenMotives: v }), { textarea: true, rows: 3, placeholder: "暗中寻找灭门仇人\n表面臣服实则谋反" })}
         </div>
 
         {/* 经历时间线 */}
