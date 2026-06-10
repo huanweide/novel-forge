@@ -231,28 +231,39 @@ ${textSlice}
 
         // ── AB路同时启动 ──
 
-        send({ type: "progress", stage: "launch", message: `A路 DeepSeek→人物 | B路 硅基Flash→世界`, pct: 5 });
-
         let progressA = 0, progressB = 0;
         const basePct = 5;
 
-        const [resA, resB] = await Promise.all([
-          // 路A：DeepSeek官方 → 人物
-          callOne(dsConfig, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 24000, (elapsed) => {
-            progressA = Math.round(elapsed);
-            // 路A 进度：5%~40% 区间，随时间递增但不超过 40%
-            const aPct = Math.min(basePct + Math.round(elapsed / 150 * 35), 40);
-            send({ type: "progress", stage: "path-a", message: `👤 A路 DeepSeek·人物 进行中 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
-          }),
+        let resA: { raw: string; error?: string; sec: number };
+        let resB: { raw: string; error?: string; sec: number };
 
-          // 路B：硅基流动 → 世界设定+文风
-          callOne(sfCfg, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 12000, (elapsed) => {
+        if (hasDS) {
+          // 双Provider并行：DeepSeek→人物 + 硅基Flash→世界
+          send({ type: "progress", stage: "launch", message: `A路 DeepSeek→人物 | B路 硅基Flash→世界`, pct: 5 });
+          [resA, resB] = await Promise.all([
+            callOne(dsConfig, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 24000, (elapsed) => {
+              progressA = Math.round(elapsed);
+              const aPct = Math.min(basePct + Math.round(elapsed / 150 * 35), 40);
+              send({ type: "progress", stage: "path-a", message: `👤 A路 DeepSeek·人物 进行中 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
+            }),
+            callOne(sfCfg, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 12000, (elapsed) => {
+              progressB = Math.round(elapsed);
+              const bPct = Math.min(40 + Math.round(elapsed / 150 * 35), 75);
+              send({ type: "progress", stage: "path-b", message: `🌍 B路 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
+            }),
+          ]);
+        } else {
+          // 仅硅基Flash：先人物后世界（串行，避免Flash限流）
+          send({ type: "progress", stage: "launch", message: `硅基Flash → 人物+世界（DeepSeek未配置）`, pct: 5 });
+          resA = await callOne(sfCfg, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 24000, (elapsed) => {
+            progressA = Math.round(elapsed);
+            send({ type: "progress", stage: "path-a", message: `👤 硅基Flash·人物 进行中 ${progressA}s`, path: "A", elapsed: progressA, pct: Math.min(basePct + Math.round(elapsed / 150 * 35), 40) });
+          });
+          resB = await callOne(sfCfg, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 12000, (elapsed) => {
             progressB = Math.round(elapsed);
-            // 路B 进度：40%~75% 区间
-            const bPct = Math.min(40 + Math.round(elapsed / 150 * 35), 75);
-            send({ type: "progress", stage: "path-b", message: `🌍 B路 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
-          }),
-        ]);
+            send({ type: "progress", stage: "path-b", message: `🌍 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.min(45 + Math.round(elapsed / 150 * 35), 80) });
+          });
+        }
 
         // ── 解析路A：人物 ──
 

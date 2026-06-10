@@ -19,7 +19,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // ─── 类型 ──────────────────────────────────────────
 
@@ -175,61 +175,66 @@ async function dbMerge(
   projectId: string,
   chars: ParsedChar[],
 ): Promise<{ created: string[]; updated: string[]; mergeLog: string[] }> {
-  // 加载项目所有已有角色
+  // 加载项目所有已有角色（含 tags）
   const existing = await prisma.characterCard.findMany({
     where: { projectId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, tags: true, quickImportContent: true, background: true },
   });
 
   const created: string[] = [];
   const updated: string[] = [];
   const mergeLog: string[] = [];
+  const newCharData: Array<{
+    projectId: string; name: string; background: string;
+    quickImportContent: string; role: string; age: string; gender: string; tags: string[];
+  }> = [];
 
   for (const c of chars) {
     // 在已有角色中找相似项
     const match = existing.find(e => isSameCharacter(e.name, c.name));
 
     if (match) {
-      // 读当前值，拼接后写回
-      const current = await prisma.characterCard.findUnique({
-        where: { id: match.id },
-        select: { quickImportContent: true, background: true, name: true },
-      });
-
-      // 防御：旧版 bug 可能把 quickImportContent 写成对象，统一转字符串
-      const prevQC = typeof current?.quickImportContent === 'string' ? current.quickImportContent : '';
+      // 拼接 quickImportContent（防御旧版空对象脏数据）
+      const prevQC = typeof match.quickImportContent === 'string' ? match.quickImportContent : '';
       const newQC = [prevQC, String(c.content || '')]
         .filter(s => s.trim().length > 0)
         .join("\n\n---\n\n")
         .slice(0, 15000) || c.content.slice(0, 15000);
 
+      // 安全合并 tags（避免原子操作兼容问题）
+      const existingTags: string[] = Array.isArray(match.tags) ? match.tags : [];
+      const mergedTags = [...new Set([...existingTags, "📥快速导入"])];
+
       await prisma.characterCard.update({
         where: { id: match.id },
         data: {
           quickImportContent: newQC,
-          background: current?.background || c.content.slice(0, 5000),
-          tags: { push: "📥快速导入" },  // 追加标签
+          background: match.background || c.content.slice(0, 5000),
+          tags: mergedTags,
         },
       });
 
       updated.push(match.name);
       mergeLog.push(`${match.name} ← 追加内容`);
     } else {
-      // 新建角色
-      await prisma.characterCard.create({
-        data: {
-          projectId,
-          name: c.name,
-          background: c.content.slice(0, 5000),
-          quickImportContent: c.content.slice(0, 15000),
-          role: "supporting",
-          age: "未知",
-          gender: "未知",
-          tags: ["📥快速导入"],
-        },
+      // 收集新建角色，最后批量写入
+      newCharData.push({
+        projectId,
+        name: c.name,
+        background: c.content.slice(0, 5000),
+        quickImportContent: c.content.slice(0, 15000),
+        role: "supporting",
+        age: "未知",
+        gender: "未知",
+        tags: ["📥快速导入"],
       });
       created.push(c.name);
     }
+  }
+
+  // 批量写入新角色（单次DB往返）
+  if (newCharData.length > 0) {
+    await prisma.characterCard.createMany({ data: newCharData });
   }
 
   return { created, updated, mergeLog };

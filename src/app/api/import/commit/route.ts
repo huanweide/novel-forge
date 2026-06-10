@@ -9,7 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 // ═══════════════════════════════════════════════════════════════
 // AI 合并引擎 —— V4 Flash 分批并行（每批4个，N批并发）
