@@ -99,14 +99,14 @@ export async function POST(request: Request) {
       styleText += "\n" + String(llmConfig.customStyleNotes).slice(0, 300);
     }
 
-    // ── 硅基流动固定配置 ──
-    const baseURL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1");
-    const apiKey = process.env.LLM_API_KEY || "";
+    // ── DeepSeek官方配置 ──
+    const baseURL = "https://api.deepseek.com/v1";
+    const apiKey = process.env.DEEPSEEK_API_KEY || "";
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
     const shouldUseFlash = useFlash || hasCustomPrompt;
     const model = shouldUseFlash
-      ? (process.env.FLASH_MODEL || process.env.EXTRACTOR_MODEL || "deepseek-ai/DeepSeek-V4-Flash")
-      : (process.env.ARCHITECT_MODEL || "deepseek-ai/DeepSeek-V4-Pro");
+      ? "deepseek-v4-flash"
+      : "deepseek-v4-pro";
 
     // ── 中文数字 ──
     const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getTemplate, applyTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { getSiliconFlowClient } from "@/core/llm/client";
 
 /**
  * POST /api/generate/continue
@@ -237,7 +238,9 @@ export async function POST(request: Request) {
           const generator = orchestrator.writeSection(
             promptContext,
             writingInstruction,
-            targetWords
+            targetWords,
+            getSiliconFlowClient(),
+            "deepseek-ai/DeepSeek-V4-Pro",
           );
 
           for await (const chunk of generator) {

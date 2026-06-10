@@ -181,31 +181,52 @@ export function createLLMClient(config: LLMConfig) {
 
 export type LLMClient = ReturnType<typeof createLLMClient>;
 
-// ─── 便捷函数：从环境变量创建默认客户端 ──────────────────────
+// ─── 便捷函数：从环境变量创建客户端 ──────────────────────
 
+/** DeepSeek 官方配置 —— 默认客户端，所有非正文生成场景用这个 */
 export function getDefaultLLMConfig(): LLMConfig {
-  // 硅基流动模型命名：deepseek-ai/DeepSeek-V4-Pro / deepseek-ai/DeepSeek-V4-Flash
-  const PRO = "deepseek-ai/DeepSeek-V4-Pro";
-  const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
+  const DS_FLASH = "deepseek-v4-flash";
+  const DS_PRO = "deepseek-v4-pro";
   return {
-    architectModel: process.env.ARCHITECT_MODEL || PRO,
-    writerModel: process.env.WRITER_MODEL || PRO,
-    reviewerModel: process.env.REVIEWER_MODEL || FLASH,
-    summarizeModel: process.env.SUMMARIZE_MODEL || FLASH,
-    // 分析提取用 Flash（快、便宜、JSON 稳）
-    extractorModel: process.env.EXTRACTOR_MODEL || FLASH,
-    baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
-    apiKey: process.env.LLM_API_KEY || "",
-    defaultTemperature: parseFloat(process.env.DEFAULT_TEMPERATURE || "0.8"),
-    defaultTopP: parseFloat(process.env.DEFAULT_TOP_P || "0.95"),
+    architectModel: process.env.ARCHITECT_MODEL || DS_PRO,
+    writerModel: process.env.WRITER_MODEL || DS_PRO,
+    reviewerModel: process.env.REVIEWER_MODEL || DS_FLASH,
+    summarizeModel: process.env.SUMMARIZE_MODEL || DS_FLASH,
+    extractorModel: process.env.EXTRACTOR_MODEL || DS_FLASH,
+    baseURL: "https://api.deepseek.com/v1",
+    apiKey: process.env.DEEPSEEK_API_KEY || "",
+    defaultTemperature: 0.8,
+    defaultTopP: 0.95,
     maxTokensPerRequest: parseInt(process.env.MAX_TOKENS_PER_REQUEST || "4096"),
     contextWindowSize: parseInt(process.env.CONTEXT_WINDOW_SIZE || "65536"),
   };
 }
 
-/**
- * 获取默认 LLM 客户端实例
- */
+/** 硅基流动配置 —— 仅正文生成(write/continue/refine)用，大量 token 消耗走这里 */
+export function getSiliconFlowConfig(): LLMConfig {
+  const SF_PRO = "deepseek-ai/DeepSeek-V4-Pro";
+  const SF_FLASH = "deepseek-ai/DeepSeek-V4-Flash";
+  return {
+    architectModel: SF_PRO,
+    writerModel: SF_PRO,
+    reviewerModel: SF_FLASH,
+    summarizeModel: SF_FLASH,
+    extractorModel: SF_FLASH,
+    baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
+    apiKey: process.env.LLM_API_KEY || "",
+    defaultTemperature: 0.8,
+    defaultTopP: 0.95,
+    maxTokensPerRequest: parseInt(process.env.MAX_TOKENS_PER_REQUEST || "4096"),
+    contextWindowSize: parseInt(process.env.CONTEXT_WINDOW_SIZE || "65536"),
+  };
+}
+
+/** 默认客户端 → DeepSeek 官方（分类/审校/摘要/分析 等大部分场景） */
 export function getDefaultClient(): LLMClient {
   return createLLMClient(getDefaultLLMConfig());
+}
+
+/** 硅基客户端 → 仅正文生成（write/continue/refine），大量 token */
+export function getSiliconFlowClient(): LLMClient {
+  return createLLMClient(getSiliconFlowConfig());
 }

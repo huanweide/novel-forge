@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     // 所有匹配角色全送，无数量上限
     const activeChars = mentionedChars;
 
-    // 构建现有卡面摘要（只送活跃角色）
+    // 构建现有卡面（活跃角色全量信息，不截断）
     const charSummary = activeChars.map((c) => {
       const personality = (typeof c.personality === "object" && c.personality !== null)
         ? c.personality : {};
@@ -63,7 +63,10 @@ export async function POST(request: Request) {
       const dominant = typeof pObj.dominant === "string" ? pObj.dominant
         : Array.isArray(c.personality) ? (c.personality as string[]).slice(0, 2).join("、")
         : "未知";
-      return `[${c.name}] 角色=${c.role} | 性格=${dominant} | 能力=${(c.abilities || []).slice(0, 3).join("、")} | 状态=${c.currentStatus} | 背景=${c.background?.slice(0, 60)}`;
+      const abilities = (c.abilities || []).join("、");
+      const motives = (c.hiddenMotives || []).join("、");
+      const bg = (c.background || "").slice(0, 300);
+      return `[${c.name}] 角色=${c.role} | 性格=${dominant} | 能力=${abilities || "无"} | 隐藏动机=${motives || "无"} | 状态=${c.currentStatus} | 弧光=${c.arcProgress || "无"} | 背景=${bg}`;
     }).join("\n");
 
     const loreSummary = loreEntries.map((l) =>
@@ -76,6 +79,11 @@ export async function POST(request: Request) {
 
     // 构建 Prompt
     const systemPrompt = `你是小说编辑，每章结束后追踪故事变化。核心职责：区分"大事"与"小事"。
+
+【核心原则——少总结，多复述】
+- 角色卡更新时原文照搬新章节中的具体描写，不要缩写概括
+- 世界书更新时保留原文细节：人名地名数字时间必须原样
+- 如果新章节没有明确写某个字段的变化，就不要编造
 
 必须记录——大事（对角色/世界观有持久影响，会写入三卡供后续章节使用）：
 ✅ 获得/失去能力、技能升级

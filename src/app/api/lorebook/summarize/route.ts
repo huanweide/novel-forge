@@ -13,9 +13,9 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 60;
 
-const MODEL = "deepseek-ai/DeepSeek-V4-Flash";
-const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
-const API_KEY = process.env.LLM_API_KEY || "";
+const MODEL = "deepseek-v4-flash";
+const BASE_URL = "https://api.deepseek.com/v1";
+const API_KEY = process.env.DEEPSEEK_API_KEY || "";
 
 // ─── Flash 调用 ──────────────────────────────────
 

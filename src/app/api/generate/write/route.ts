@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
+import { getSiliconFlowClient } from "@/core/llm/client";
 
 /**
  * POST /api/generate/write
@@ -187,7 +188,9 @@ export async function POST(request: Request) {
             partialDraft
               ? `${writingInstruction}\n\n【续写——从以下草稿断点继续，不要重复已有内容】\n已有内容末段：${partialDraft.slice(-200)}\n\n请从断点处自然接续。`
               : writingInstruction,
-            targetWordCount
+            targetWordCount,
+            getSiliconFlowClient(),
+            "deepseek-ai/DeepSeek-V4-Pro",
           )) {
             if (chunk.type === "token") {
               newContent += chunk.content;

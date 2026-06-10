@@ -147,7 +147,10 @@ ${loreBriefs}
   async *writeSection(
     context: PromptContext,
     writingInstruction: string,
-    targetWordCount: number
+    targetWordCount: number,
+    /** 正文生成专用客户端（硅基），不传则用默认 DeepSeek */
+    clientOverride?: LLMClient,
+    writerModelOverride?: string,
   ): AsyncGenerator<{ type: "token" | "done" | "error"; content: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
     const { prompt } = assemblePrompt(
       context,
@@ -155,11 +158,13 @@ ${loreBriefs}
       `${writingInstruction}\n\n目标字数：约${targetWordCount}字。`
     );
 
-    const systemPrompt = context.systemPrompt; // buildPromptContext 始终生成 systemPrompt
+    const systemPrompt = context.systemPrompt;
+    const client = clientOverride || this.client;
+    const model = writerModelOverride || this.config.writerModel;
 
     try {
-      for await (const chunk of this.client.chatStream({
-        model: this.config.writerModel,
+      for await (const chunk of client.chatStream({
+        model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },

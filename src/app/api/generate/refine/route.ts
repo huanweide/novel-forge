@@ -18,6 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
+import { getSiliconFlowClient } from "@/core/llm/client";
 
 export async function POST(request: Request) {
   try {
@@ -157,7 +158,9 @@ ${existingContent.slice(-3000)}${existingContent.length > 3000 ? "\n\n…(前文
           for await (const chunk of orchestrator.writeSection(
             promptContext,
             writingInstruction,
-            targetWords
+            targetWords,
+            getSiliconFlowClient(),
+            "deepseek-ai/DeepSeek-V4-Pro",
           )) {
             if (chunk.type === "token") {
               newContent += chunk.content;

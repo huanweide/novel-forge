@@ -34,9 +34,9 @@ async function mergeOneBatch(
   globalContext: string,
   type: "char" | "lore",
 ): Promise<Record<string, unknown>[] | null> {
-  const baseURL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
-  const apiKey = process.env.LLM_API_KEY || "";
-  const model = process.env.MERGER_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+  const baseURL = "https://api.deepseek.com/v1";
+  const apiKey = process.env.DEEPSEEK_API_KEY || "";
+  const model = "deepseek-v4-flash";
 
   const pairsText = pairs.map((p, i) =>
     `【${i + 1}】【${p.name}】

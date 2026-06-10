@@ -109,9 +109,9 @@ export async function POST(request: Request) {
     ).join("\n");
 
     // ── V4 Flash 调用 ──
-    const baseURL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1");
-    const apiKey = process.env.LLM_API_KEY || "";
-    const model = process.env.FLASH_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+    const baseURL = "https://api.deepseek.com/v1";
+    const apiKey = process.env.DEEPSEEK_API_KEY || "";
+    const model = "deepseek-v4-flash";
 
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
 

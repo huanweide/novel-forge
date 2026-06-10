@@ -10,9 +10,9 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 120;
 
-const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
-const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
-const API_KEY = process.env.LLM_API_KEY || "";
+const FLASH = "deepseek-v4-flash";
+const BASE_URL = "https://api.deepseek.com/v1";
+const API_KEY = process.env.DEEPSEEK_API_KEY || "";
 
 interface ClassifyGroup {
   category: string;      // 分类维度：ability | affiliation | archetype
