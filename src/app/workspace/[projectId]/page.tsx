@@ -408,7 +408,7 @@ export default function WorkspacePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId,
-          chapterContent: content.slice(0, 10000),
+          chapterContent: content, // 全量，不截断
           chapterTitle: title || "",
           chapterNumber: (() => { const m = (title || "").match(/第([一二三四五六七八九十百千\d]+)章/); return m?.[1] || ""; })(),
         }),

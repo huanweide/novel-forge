@@ -170,7 +170,7 @@ export function CardUpdater({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId,
-          chapterContent: chapterContent.slice(0, 10000),
+          chapterContent: chapterContent, // 全量，不截断
           chapterTitle: chapterTitle || "",
           chapterNumber: chapterNumber || "",
         }),

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
 
     // 截取章节内容（最多 8000 字送分析）
-    const contentSnippet = chapterContent.slice(0, 8000);
+    const contentSnippet = chapterContent; // 全量送入，不截断
 
     // ── 角色智能过滤：只送章节中出现的角色 + 主角反派导师，不是全量 178 个 ──
     const contentLower = contentSnippet.toLowerCase();
@@ -207,7 +207,7 @@ ${contentSnippet}
           { role: "user", content: userPrompt },
         ],
         temperature: 0.3,
-        maxTokens: 16000, // 100+角色需要足够输出空间
+        maxTokens: 32000, // 全量内容+无上限角色需要更大输出空间
       });
       rawContent = response.content || "";
     } catch (llmErr) {

@@ -171,11 +171,11 @@ export async function GET(request: Request) {
     // 排序
     results.sort((a, b) => b.score - a.score);
 
-    // 主角必在
+    // 主角必在，无上限——用户自己勾选
     const scheduled = results.filter(r => {
       if (r.role === "protagonist") return true;
       return r.score >= 30; // 门槛分
-    }).slice(0, 15);
+    });
 
     // 大纲中可能提到但花名册里没有的角色类型
     const outlineLower = outlineText.toLowerCase();

@@ -573,7 +573,7 @@ export function buildPromptContext(params: {
   // ═══════════════════════════════════════════════════════════════
   // 智能调度器：双层角色系统
   // Tier 1: 全量基础信息（178人，每人一行极简）
-  // Tier 2: 调度卡全量展开（~15人，完整卡面数据）
+  // Tier 2: 调度卡全量展开（~50人，完整卡面数据）
   // ═══════════════════════════════════════════════════════════════
 
   // ── 故事阶段推断 ──
@@ -659,7 +659,7 @@ export function buildPromptContext(params: {
     if (score > 0) charScores.set(c.name, { score, reasons });
   }
 
-  // 选出调度卡：按分数降序，最多 15 人，至少包括主角
+  // 选出调度卡：按分数降序，最多 50 人，至少包括主角
   const sortedChars = [...charScores.entries()]
     .sort(([, a], [, b]) => b.score - a.score)
     .map(([name]) => name);
@@ -668,7 +668,7 @@ export function buildPromptContext(params: {
   const protagonistName = characters.find(c => c.role === "protagonist")?.name || "";
   if (protagonistName) scheduledNames.add(protagonistName);
   for (const name of sortedChars) {
-    if (scheduledNames.size >= 15) break;
+    if (scheduledNames.size >= 50) break;
     scheduledNames.add(name);
   }
 
@@ -687,7 +687,7 @@ export function buildPromptContext(params: {
   }
   const allRoster = allRosterLines.join("\n");
 
-  // ── Tier 2: 调度卡全量展开（~15人，每人完整卡面）──
+  // ── Tier 2: 调度卡全量展开（~50人，每人完整卡面）──
   const scheduledCardLines: string[] = [];
   for (const c of characters) {
     if (!scheduledNames.has(c.name)) continue;
