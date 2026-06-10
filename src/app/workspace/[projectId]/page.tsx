@@ -163,6 +163,7 @@ export default function WorkspacePage() {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let accumulated = ""; // 局部累积
 
       while (true) {
         const { done, value } = await reader.read();
@@ -175,14 +176,15 @@ export default function WorkspacePage() {
           if (!trimmed.startsWith("data: ")) continue;
           try {
             const event: SSEEvent = JSON.parse(trimmed.slice(6));
-            if (event.type === "token") setStreamContent((prev) => prev + event.content);
+            if (event.type === "token") { accumulated += event.content; setStreamContent((prev) => prev + event.content); }
             if (event.type === "done") {
               setGenStep("done");
               setTimeout(() => setGenStep(""), 5000);
-              setLastChapterContent(streamContent);
+              const finalContent = accumulated + (event.content || "");
+              setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
               loadProject();
-              autoAnalyzeChapter(streamContent, selectedNode?.title || "");
+              autoAnalyzeChapter(finalContent, selectedNode?.title || "");
             }
             if (event.type === "error") setGenStep("error");
           } catch { /* */ }
@@ -616,6 +618,7 @@ export default function WorkspacePage() {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let accumulated = ""; // 局部累积，避免 React 闭包读到旧值
 
       while (true) {
         const { done, value } = await reader.read();
@@ -633,6 +636,7 @@ export default function WorkspacePage() {
             const event: SSEEvent = JSON.parse(trimmed.slice(6));
 
             if (event.type === "token") {
+              accumulated += event.content;
               setStreamContent((prev) => prev + event.content);
             } else if (event.type === "review_start") {
               setGenStep("reviewing");
@@ -646,13 +650,10 @@ export default function WorkspacePage() {
             } else if (event.type === "done") {
               setGenStep("done");
               setTimeout(() => setGenStep(""), 5000);
-              // 保存最后生成的内容用于卡面更新
-              const finalContent = streamContent + (event.content || "");
+              const finalContent = accumulated + (event.content || "");
               setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
-              // 刷新数据但不跳转
               loadProject();
-              // 自动检测章节变化
               autoAnalyzeChapter(finalContent, selectedNode?.title || "");
             } else if (event.type === "error") {
               setGenStep("error");
@@ -822,6 +823,7 @@ export default function WorkspacePage() {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let accumulated = ""; // 局部累积
 
       while (true) {
         const { done, value } = await reader.read();
@@ -838,17 +840,18 @@ export default function WorkspacePage() {
           try {
             const event: SSEEvent = JSON.parse(trimmed.slice(6));
             if (event.type === "token") {
+              accumulated += event.content;
               setStreamContent((prev) => prev + event.content);
             } else if (event.type === "done") {
               setGenStep("done");
               setTimeout(() => setGenStep(""), 5000);
-              // 保存最后生成的内容用于卡面更新
-              setLastChapterContent(streamContent);
+              const finalContent = accumulated + (event.content || "");
+              setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
-              setLastGeneratedText((prev) => prev + streamContent);
+              setLastGeneratedText((prev) => prev + finalContent);
               loadProject();
               setContextRefreshKey((k) => k + 1);
-              autoAnalyzeChapter(streamContent, selectedNode?.title || "");
+              autoAnalyzeChapter(finalContent, selectedNode?.title || "");
             } else if (event.type === "error") {
               setGenStep("error");
               console.error("续写错误:", event.content);
@@ -2174,12 +2177,6 @@ function CenterPanel({
                       </Button>
                     </div>
 
-                    {/* 实体检测 */}
-                    <EntityDetector
-                      projectId={projectId}
-                      text={displayContent}
-                      onCreated={onEntitiesCreated}
-                    />
                   </div>
                 )}
               </div>
