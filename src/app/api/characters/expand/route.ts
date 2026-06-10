@@ -287,7 +287,7 @@ export async function POST(request: Request) {
                   appearance: safeMerge(r.appearance, fallback?.appearance) as any,
                   personality: safeMerge(r.personality, fallback?.personality) as any,
                   dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
-                  background: safeMerge(String(r.background || "").trim() || null, String(fallback?.background || "")) as string,
+                  background: String(r.background || "").trim(), // AI总结覆盖原始导入描述
                   abilities: safeMerge(
                     Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
                     fallback?.abilities as string[] | undefined,

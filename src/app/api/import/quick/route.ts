@@ -209,7 +209,7 @@ async function dbMerge(
         where: { id: match.id },
         data: {
           quickImportContent: newQC,
-          background: match.background || c.content.slice(0, 5000),
+          background: match.background || c.content.slice(0, 15000),
           tags: mergedTags,
         },
       });
@@ -221,7 +221,7 @@ async function dbMerge(
       newCharData.push({
         projectId,
         name: c.name,
-        background: c.content.slice(0, 5000),
+        background: c.content.slice(0, 15000),
         quickImportContent: c.content.slice(0, 15000),
         role: "supporting",
         age: "未知",
