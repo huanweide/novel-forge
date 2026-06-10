@@ -3497,7 +3497,7 @@ function PreGenConfirm({
               </div>
 
               {/* 角色清单 */}
-              <div className="space-y-1 max-h-64 overflow-y-auto">
+              <div className="space-y-1 max-h-[500px] overflow-y-auto">
                 {cards.map(c => {
                   const checked = selected.has(c.id);
                   return (
@@ -3516,7 +3516,7 @@ function PreGenConfirm({
                         <p className="text-[10px] text-zinc-500 mt-0.5">
                           理由：{c.reasons.join("、")}{c.motivation !== "剧情推进" ? ` · 动机：${c.motivation}` : ""}
                         </p>
-                        {c.background && <p className="text-[10px] text-zinc-600 mt-0.5 truncate">背景：{c.background}</p>}
+                        {c.background && <p className="text-[10px] text-zinc-600 mt-0.5 line-clamp-4 whitespace-pre-line">背景：{c.background}</p>}
                         <input
                           value={cardNotes[c.id] || ""}
                           onChange={e => setCardNotes(prev => ({ ...prev, [c.id]: e.target.value }))}

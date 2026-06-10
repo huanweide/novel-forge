@@ -825,7 +825,7 @@ export function ImportWizard({
                               </div>
                             )}
                             {char.background && (
-                              <p className="text-zinc-600 mt-0.5 line-clamp-2">{char.background}</p>
+                              <p className="text-zinc-600 mt-0.5 line-clamp-4 whitespace-pre-line text-[11px]">{char.background}</p>
                             )}
                           </div>
                         </label>
