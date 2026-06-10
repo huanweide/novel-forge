@@ -212,7 +212,7 @@ async function dbMerge(
         where: { id: match.id },
         data: {
           quickImportContent: newQC,
-          background: match.background || c.content.slice(0, 15000),
+          background: c.content.slice(0, 15000), // 每次导入覆盖最新内容
           tags: mergedTags,
         },
       });
