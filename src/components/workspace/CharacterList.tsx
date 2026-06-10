@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
 
 export function CharacterList({
@@ -79,19 +79,23 @@ export function CharacterList({
     grouped[r].push(c);
   }
 
-  // 兜底：expanding结束但没有弹窗 → 从progress自动构建结果
+  // 兜底：expanding结束但没有弹窗 → 从progress自动构建结果（仅触发一次）
+  const fallbackTriggered = useRef(false);
   useEffect(() => {
-    if (!expanding && expandDone > 0 && expandProgress.length > 0 && !expandResult) {
+    if (!expanding && expandDone > 0 && expandProgress.length > 0 && !fallbackTriggered.current) {
       const okList = expandProgress
         .filter(p => p.status === "ok" || p.status === "char-done")
         .map(p => p.name);
       const failList = expandProgress
         .filter(p => p.status === "failed" || p.status === "char-failed")
         .map(p => ({ name: p.name, reason: p.error || "未知错误" }));
-      if (okList.length + failList.length > 0) {
+      if (okList.length + failList.length > 0 && !expandResult) {
+        fallbackTriggered.current = true;
         setExpandResult({ okList, failList, total: expandTotal });
       }
     }
+    // expanding重新开始时重置标记
+    if (expanding) fallbackTriggered.current = false;
   }, [expanding, expandDone, expandProgress, expandTotal, expandResult]);
 
   const handleExpand = async () => {
