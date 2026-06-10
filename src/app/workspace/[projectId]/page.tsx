@@ -2539,7 +2539,7 @@ function CharacterEditDialog({
         <div className="border-b border-zinc-800 pb-3">
           <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">背景状态</h4>
           {field("背景", form.background, v => setForm({ ...form, background: v }), {
-            textarea: true, rows: 4,
+            textarea: true, rows: 16,
             placeholder: "1)所在位置与境遇：xxx\n2)当前短期目标：xxx\n3)长期欲望：xxx\n4)所持资源与限制：xxx\n5)卷入核心事件的方式与态度：xxx",
           })}
         </div>
