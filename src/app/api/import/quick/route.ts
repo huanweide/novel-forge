@@ -197,14 +197,30 @@ async function dbMerge(
     const match = existing.find(e => isSameCharacter(e.name, c.name));
 
     if (match) {
-      // 拼接 quickImportContent（防御旧版空对象脏数据）
+      // 防御旧版空对象脏数据
       const prevQC = typeof match.quickImportContent === 'string' ? match.quickImportContent : '';
-      const newQC = [prevQC, String(c.content || '')]
+      const prevBg = typeof match.background === 'string' ? match.background : '';
+      const newContent = String(c.content || '');
+
+      // quickImportContent：追加+去重
+      const newQC = [prevQC, newContent]
         .filter(s => s.trim().length > 0)
         .join("\n\n---\n\n")
-        .slice(0, 15000) || c.content.slice(0, 15000);
+        .slice(0, 15000) || newContent.slice(0, 15000);
 
-      // 安全合并 tags（避免原子操作兼容问题）
+      // background：追加+去重（AI扩展后会清空，这里做安全追加）
+      let mergedBg: string;
+      if (!prevBg.trim()) {
+        mergedBg = newContent.slice(0, 15000);
+      } else if (prevBg.includes(newContent.trim()) || newContent.trim().includes(prevBg.trim())) {
+        // 已包含，不重复追加
+        mergedBg = prevBg.length >= newContent.length ? prevBg.slice(0, 15000) : newContent.slice(0, 15000);
+      } else {
+        // 不重复 → 追加，以分隔线隔开
+        mergedBg = (prevBg + "\n\n---\n\n" + newContent).slice(0, 15000);
+      }
+
+      // 安全合并 tags
       const existingTags: string[] = Array.isArray(match.tags) ? match.tags : [];
       const mergedTags = [...new Set([...existingTags, "📥快速导入"])];
 
@@ -212,7 +228,7 @@ async function dbMerge(
         where: { id: match.id },
         data: {
           quickImportContent: newQC,
-          background: c.content.slice(0, 15000), // 每次导入覆盖最新内容
+          background: mergedBg,
           tags: mergedTags,
         },
       });
