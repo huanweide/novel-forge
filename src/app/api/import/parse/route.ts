@@ -248,17 +248,22 @@ ${textSlice}
 
         const isCharOnly = charactersOnly === true;
         if (isCharOnly) {
-          // 仅人物卡模式——单路Flash，跳过世界设定
+          // 仅人物卡模式——单路Flash
           send({ type: "progress", stage: "launch", message: `👤 仅人物卡 · Flash单路`, pct: 5 });
+          await new Promise(r => setTimeout(r, 100)); // 强制flush，前端看到5%
+          send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
           resA = await callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
             progressA = Math.round(elapsed);
-            const aPct = Math.min(basePct + Math.round(elapsed / 30 * 85), 90);
+            const aPct = Math.min(15 + Math.round(elapsed / 45 * 70), 85);
             send({ type: "progress", stage: "path-a", message: `👤 人物提取 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
           });
+          send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
           resB = { raw: "", sec: 0 }; // B路跳过
         } else {
           // 双路并行：Flash→人物 + Flash→世界
           send({ type: "progress", stage: "launch", message: `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
+          await new Promise(r => setTimeout(r, 100)); // flush
+          send({ type: "progress", stage: "calling", message: `📡 双路并行调用中...`, pct: 10 });
           [resA, resB] = await Promise.all([
             callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
               progressA = Math.round(elapsed);
@@ -271,6 +276,7 @@ ${textSlice}
               send({ type: "progress", stage: "path-b", message: `🌍 B路 世界 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
             }),
           ]);
+          send({ type: "progress", stage: "api-done", message: `📥 双路返回 · 解析中...`, pct: 85 });
         }
 
         // ── 解析路A：人物 ──

@@ -285,6 +285,7 @@ export function ImportWizard({
               if (event.stage === "char-found" && event.total !== undefined) setCharsFound(event.total as number);
               if (event.stage === "lore-found" && event.total !== undefined) setLoreFound(event.total as number);
             } else if (event.type === "done") {
+              setParsePct(100); // 保证进度条到100%
               setResult(event);
               setEditedChapters(event.detectedChapters || []);
               setEditedCharacters(event.extractedCharacters || []);
