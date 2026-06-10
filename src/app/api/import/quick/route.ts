@@ -19,7 +19,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 120;
+export const maxDuration = 300; // 无角色数量上限，200+人批量导入充裕
 
 // ─── 类型 ──────────────────────────────────────────
 
@@ -235,9 +235,11 @@ async function dbMerge(
     }
   }
 
-  // 批量写入新角色（单次DB往返）
+  // 批量写入新角色（每批100个，防单次写入上限）
   if (newCharData.length > 0) {
-    await prisma.characterCard.createMany({ data: newCharData });
+    for (let i = 0; i < newCharData.length; i += 100) {
+      await prisma.characterCard.createMany({ data: newCharData.slice(i, i + 100) });
+    }
   }
 
   return { created, updated, mergeLog };
