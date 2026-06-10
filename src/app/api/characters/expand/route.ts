@@ -11,13 +11,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 300; // 117角色+每角色3s=~70s，留足余量
+export const maxDuration = 600; // 100+角色×每角色6s=~100s，留足余量
 
 const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
 const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "";
-const CONCURRENCY = 8;  // 提高到8并发，加快117角色处理
-const CALL_TIMEOUT_MS = 30000; // 单次API调用30s超时
+const CONCURRENCY = 10; // 高并发，角色多时加速
 
 // ─── 安全合并：空值不覆盖已有数据 ──────────────────────
 
@@ -51,9 +50,7 @@ ${styleText ? "文风: " + styleText : ""}`;
 
 // ─── Flash 调用（非流式）───────────────────────────
 
-async function callFlash(system: string, prompt: string, maxTokens = 4000): Promise<{ raw: string } | { error: string }> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
+async function callFlash(system: string, prompt: string, maxTokens = 8000): Promise<{ raw: string } | { error: string }> {
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -68,9 +65,7 @@ async function callFlash(system: string, prompt: string, maxTokens = 4000): Prom
         max_tokens: maxTokens,
         stream: false,
       }),
-      signal: controller.signal,
     });
-    clearTimeout(timeoutId);
 
     if (!r.ok) {
       const body = await r.text().catch(() => "");
@@ -82,9 +77,7 @@ async function callFlash(system: string, prompt: string, maxTokens = 4000): Prom
     if (!raw) return { error: "Flash 返回空内容" };
     return { raw };
   } catch (e) {
-    clearTimeout(timeoutId);
-    const isAbort = (e as Error).name === "AbortError";
-    return { error: isAbort ? `超时(${CALL_TIMEOUT_MS / 1000}s)` : (e instanceof Error ? e.message : String(e)).slice(0, 200) };
+    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) };
   }
 }
 
@@ -98,23 +91,23 @@ async function expandOne(
   const bg = (char.card.background as string) || "";
   const sourceText = qic || bg;
 
-  const prompt = `基于原始设定补全【${char.name}】的角色卡——所有字段填满。原始设定里的信息拆解进各字段。
+  const prompt = `基于原始设定扩展【${char.name}】的角色卡——信息不能丢，能复述就别总结。
 
-【上下文——世界观和文风】
+【世界观+文风——所有扩展基于此】
 ${context}
 
-【原始设定——基于此扩展】
+【该角色原始设定——逐字逐句保留，不要缩写】
 ${sourceText || "（无原始设定，基于角色地位推敲）"}
 
-【当前卡面】
+【当前卡面（已有结构化数据）】
 ${JSON.stringify(char.card)}
 
-【输出——单角色完整JSON】
+【输出格式——单角色完整JSON】
 {
   "appearance": {"hair":"发色发型","eyes":"眼型瞳色","height":"身高","build":"体型","features":"特殊印记","attire":"标志性着装"},
   "personality": {"dominant":"主导性格","drive":"核心驱动力","contradiction":"内在矛盾","habits":["习惯动作"],"socialMask":"社交面具"},
-  "background": "基于原始设定，五要素：1)位置与境遇 2)短期目标 3)长期欲望 4)资源与限制 5)卷入核心事件的方式",
-  "abilities": ["能力·等级"],
+  "background": "五要素：1)位置与境遇 2)短期目标 3)长期欲望 4)资源与限制 5)卷入核心事件的方式",
+  "abilities": ["能力名·等级·一句话描述"],
   "timeline": [{"age":12,"event":"事件","era":"时期"}],
   "dialogueStyle": {"description":"说话风格","examples":["典型台词"],"vocabulary":["用词特点"],"speechPatterns":["句式模式"]},
   "hiddenMotives": ["隐藏动机"],
@@ -122,12 +115,16 @@ ${JSON.stringify(char.card)}
   "arcProgress": "人物弧光方向"
 }
 
-【铁律】
-1. 任何字段禁止"无""未知""暂无"或空——缺信息基于原始设定推敲
-2. 原始设定中的细节分散填入对应字段，别全堆background
-3. 只输出纯JSON`;
+【核心原则——少总结，多复述，多扩展】
+1. ❌ 禁止总结/缩写/概括原始设定——原文照搬，原汁原味
+2. ✅ 原始设定中已分好类的能力（如「能力1：步频幻觉」）→ abilities字段逐条原样复述，包括原理、应用场景、限制
+3. ✅ 背景缺失的信息→基于世界观、文风、同类角色的信息推敲补充
+4. ✅ personality→从原始设定的描述中提炼性格特征
+5. ✅ appearance→如果原始设定没有外貌描写，基于角色定位和世界观合理推敲
+6. ❌ 任何字段禁止"无""未知""暂无"或留空——基于上下文推断填满
+7. ✅ 只输出纯JSON，无markdown代码块`;
 
-  const result = await callFlash("补全单张角色卡。每个字段必须有具体内容。只输出JSON。", prompt, 4000);
+  const result = await callFlash("扩展角色卡。少总结多复述，原文照搬不缩写，空字段基于世界观推敲补全。只输出JSON。", prompt, 8000);
 
   if ("error" in result) {
     return { id: char.id, name: char.name, result: null, error: result.error };
