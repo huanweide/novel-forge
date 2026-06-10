@@ -62,8 +62,10 @@ function isSameCharacter(a: string, b: string): boolean {
  * 第一个角色名之前的文本忽略。
  */
 function parseCharacters(text: string): ParsedChar[] {
+  // 换行符归一化：\r\n → \n，去除残余 \r
+  const cleanText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   // 编号格式全面兼容：
-  //   Markdown标题: ### 1. 拉明·亚马尔  /  ## 2、洁世一
+  //   Markdown标题: ### 1. 拉明·亚马尔  /  ## 2、洁世一  / 行首空格+### 1.
   //   纯文本: 1. 2、3) (4)（5）① ②
   //   中文数字: 一、二、三 四）
   //   中文序数: 第一位 第二，
@@ -75,10 +77,11 @@ function parseCharacters(text: string): ParsedChar[] {
     "[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]",            // 圈号
     "[（(]\\d+[）)]",                                // 括号编号: (1)（2）
   ].join("|");
+  // \s* → 容忍行首空格
   // (?:#{1,3}\s*)?  → 可选 Markdown 标题前缀（### / ## / #）
-  const HEADER_RE = new RegExp(`^(?:#{1,3}\\s*)?\\s*(${NUM})[.、．，)\）\\s:：·\\-—]+\\s*(.+)$`);
+  const HEADER_RE = new RegExp(`^\\s*(?:#{1,3}\\s*)?\\s*(${NUM})[.、．，)\）\\s:：·\\-—]+\\s*(.+)$`);
 
-  const lines = text.split("\n");
+  const lines = cleanText.split("\n");
   const chars: ParsedChar[] = [];
   let currentName = "";
   let currentLines: string[] = [];

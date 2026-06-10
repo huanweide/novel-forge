@@ -132,7 +132,7 @@ export async function POST(request: Request) {
 
       try {
         if (!projectId || !rawText) { send({ type: "error", message: "缺少 projectId 或 rawText" }); controller.close(); return; }
-        const text = rawText as string;
+        const text = (rawText as string).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
         if (text.length < 30) { send({ type: "error", message: "文本太短" }); controller.close(); return; }
 
         send({ type: "progress", stage: "init", message: "连接数据库...", pct: 1 });
@@ -259,9 +259,11 @@ ${textSlice}
             progressA = Math.round(elapsed);
             send({ type: "progress", stage: "path-a", message: `👤 硅基Flash·人物 进行中 ${progressA}s`, path: "A", elapsed: progressA, pct: Math.min(basePct + Math.round(elapsed / 150 * 35), 40) });
           });
+          // A路完成，通知用户并启动B路
+          send({ type: "progress", stage: "path-a-done", message: `${resA.error ? "⚠️" : "✅"} 人物完成 (${resA.sec}s)，继续世界设定...`, pct: 45 });
           resB = await callOne(sfCfg, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 12000, (elapsed) => {
             progressB = Math.round(elapsed);
-            send({ type: "progress", stage: "path-b", message: `🌍 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.min(45 + Math.round(elapsed / 150 * 35), 80) });
+            send({ type: "progress", stage: "path-b", message: `🌍 硅基·世界 进行中 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.min(50 + Math.round(elapsed / 150 * 35), 85) });
           });
         }
 
