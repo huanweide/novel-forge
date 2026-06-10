@@ -279,7 +279,9 @@ export async function POST(request: Request) {
         const parsed = parseCharacters(text);
 
         if (parsed.length === 0) {
-          send({ type: "error", message: "未识别到任何角色。支持格式：1.人名+描述 / 一、人名+描述 / ①人名+描述" });
+          // 诊断：显示文本前200字帮助定位格式问题
+          const preview = text.slice(0, 200).replace(/\n/g, "↵");
+          send({ type: "error", message: `未识别到任何角色（${text.length.toLocaleString()}字）。支持格式：### 1.人名 / 1.人名 / 一、人名。文本预览：${preview}...` });
           controller.close();
           return;
         }
