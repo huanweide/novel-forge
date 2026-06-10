@@ -169,46 +169,45 @@ export async function POST(request: Request) {
 
         // ── Prompt ──
 
-        const promptChars = `你是角色提取器。从文本中找"编号列表+人名+描述"的行，每一行对应一个角色。其他所有内容（旁白、情节、对话、章节标题等）视为不存在、不提取。没信息写"无"。只输出JSON。${truncNote}
+        const promptChars = `你是角色提取器。只做三件事：找编号 → 抓人名 → 整段描述塞进 background。只输出JSON。${truncNote}
 
-【识别规则——宽泛匹配，不要死板】
-以下编号格式全部识别，本质就是"行首有编号、后面跟人名"：
+【第一步：识别角色行——宽泛匹配所有编号格式】
+行首有编号标记 + 人名 + 描述 = 角色行。其他旁白/情节/对话/标题全部忽略。
 
-阿拉伯数字（有无点号都认）：
-  "1.洁世一 - 前锋，自我中心"
-  "2、凪诚士郎：懒散的天才"
-  "3 糸师凛 · 冷静的杀手"
-  "1）千切豹马 速度型边锋"
-  "(2) 御影玲王 - 全能中场"
-  "① 蚁生十兵卫 古怪的守门员"
+全部认的编号格式（举例）：
+  阿拉伯："1.洁世一" "2、凪诚士郎" "3 糸师凛" "1）千切豹马" "(2)御影玲王" "①蚁生十兵卫"
+  中文数字："一、洁世一" "二、凪诚士郎" "三 糸师凛"
+  中文序数："第一位 洁世一" "第二，凪诚士郎"
 
-中文数字：
-  "一、洁世一 - 前锋"
-  "二、凪诚士郎：天才"
-  "三 糸师凛 · 执着的杀手"
+【第二步：提取三个字段——不要拆解描述】
 
-中文序数：
-  "第一，洁世一 - 蓝锁计划的中心"
-  "第二位 凪诚士郎"
+  name = 编号后面的人名（去掉分隔符 - — ：: · 空格等）
 
-核心判断标准——同时满足三点就是角色行：
-  a) 行首有编号标记（数字/中文数字/序数/圈号/括号号）
-  b) 紧跟着人名（日文名/中文名/英文名，通常2-5个字）
-  c) 后面有描述文字（用 - — ：: · 空格等分隔）
+  role = 从描述中找一个最贴切的角色定位词，从以下选：
+         protagonist(主角) / antagonist(反派) / supporting(配角) /
+         mentor(导师) / love_interest(恋爱对象) / background(背景角色)
+         默认填 "supporting"
 
-【填入规则】
-- 描述内容对应字段：外貌描写→appearance，性格特征→personality，能力特长→abilities，身世经历→background
-- 描述里没提到的字段写"无"，绝对不编造
-- 如果描述只有一句话（如"前锋，自我中心"），能填几个字段填几个，其余写"无"
+  background = **整段描述原文直接搬进去，不做任何拆解/分析/分类**
+        例："前锋，自我中心，目标是成为世界第一" → 完整写入 background
+        例："懒散的天才，身体能力极强但缺乏动力" → 完整写入 background
+        ❌禁止拆成 personality/appearance/abilities 等字段
+
+【第三步：其余所有字段统一填默认值】
+  age:"未知" gender:"未知"
+  appearance:{"hair":"","eyes":"","height":"","build":"","features":"","attire":""}
+  personality:{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""}
+  abilities:[] hiddenMotives:[] relationships:[] dialogueStyle:{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]}
+  timeline:[] arcProgress:"" currentStatus:"alive" aliases:[] tags:["📥导入"]
 
 【作品信息】
 名称：${pName}
 类型：${pGenre.join("、")}
 
-【文本——只在其中寻找编号列表+人名+描述的行，其余全忽略】
+【文本】
 ${textSlice}
 
-{"characters":[{"name":"","aliases":[],"role":"protagonist|antagonist|supporting|mentor|love_interest|background","age":"","gender":"","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[{"targetName":"","relation":"","dynamic":""}],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[{"age":0,"event":"","era":""}],"arcProgress":"","currentStatus":"alive"}]}`;
+{"characters":[{"name":"","aliases":[],"role":"supporting","age":"未知","gender":"未知","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[],"arcProgress":"","currentStatus":"alive"}]}`;
 
         const promptLore = `设定集→世界设定+文风JSON。原文照搬，没信息写"无"。只输出JSON。${truncNote}
 
@@ -227,7 +226,7 @@ ${textSlice}
 
         const [resA, resB] = await Promise.all([
           // 路A：DeepSeek官方 → 人物
-          callOne(dsConfig, "角色提取器。从编号列表（阿拉伯/中文数字/序数/圈号等）+人名+描述的行中提取角色，忽略其他内容。输出JSON。", promptChars, 24000, (elapsed) => {
+          callOne(dsConfig, "角色提取器。编号→人名→整段描述塞进background，不拆解不分析。其余字段填默认值。输出JSON。", promptChars, 24000, (elapsed) => {
             progressA = Math.round(elapsed);
             // 路A 进度：5%~40% 区间，随时间递增但不超过 40%
             const aPct = Math.min(basePct + Math.round(elapsed / 150 * 35), 40);
