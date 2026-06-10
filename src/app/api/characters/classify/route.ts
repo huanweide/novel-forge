@@ -9,7 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const FLASH = "deepseek-v4-flash";
 const BASE_URL = "https://api.deepseek.com/v1";
@@ -29,7 +29,7 @@ async function callFlash(system: string, prompt: string): Promise<string> {
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
-    body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 4000, stream: false }),
+    body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 16000, stream: false }),
   });
   if (!r.ok) throw new Error(`Flash ${r.status}`);
   const data = await r.json().catch(() => null);
