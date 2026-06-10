@@ -129,6 +129,7 @@ export function ImportWizard({
   const [quickStage, setQuickStage] = useState("");       // 当前阶段描述
   const [quickPct, setQuickPct] = useState(0);             // 进度条 0-100
   const [quickCharList, setQuickCharList] = useState<Array<{ name: string; preview: string }>>([]);
+  const [quickDiag, setQuickDiag] = useState("");          // 诊断信息
 
   const handleQuickImport = async () => {
     if (rawText.trim().length < 20) { setError("文本太短（最少20字）"); return; }
@@ -138,6 +139,7 @@ export function ImportWizard({
     setQuickStage("connecting");
     setQuickPct(0);
     setQuickCharList([]);
+    setQuickDiag("");
 
     try {
       const res = await fetch("/api/import/quick", {
@@ -179,7 +181,15 @@ export function ImportWizard({
               if (event.characters) {
                 setQuickCharList(event.characters as Array<{ name: string; preview: string }>);
               }
+              // 捕获诊断信息
+              if (event.parsedCount !== undefined) {
+                setQuickDiag(`正则匹配: ${event.parsedCount}个 | 文本: ${event.textLength?.toLocaleString()}字 ${event.totalLines}行${event.sampleNames ? ` | 前10: ${(event.sampleNames as string[]).join(", ")}` : ""}`);
+              }
             } else if (event.type === "done") {
+              // 补诊断
+              if (event.parsedCount !== undefined) {
+                setQuickDiag(`解析: ${event.parsedCount}→合并: ${event.mergedCount}→写入: +${event.created || 0}新 📎${event.updated || 0}追加`);
+              }
               setQuickPct(100);
               setQuickResult(event.message || "");
               setQuickStage("✅ 完成");
@@ -589,6 +599,13 @@ export function ImportWizard({
                           style={{ width: `${Math.max(quickPct, 3)}%` }}
                         />
                       </div>
+                    </div>
+                  )}
+
+                  {/* 诊断信息 */}
+                  {quickDiag && (
+                    <div className="text-[10px] text-zinc-500 bg-zinc-800/70 rounded px-2 py-1 font-mono">
+                      {quickDiag}
                     </div>
                   )}
 

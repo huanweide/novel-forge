@@ -281,18 +281,23 @@ export async function POST(request: Request) {
 
         const parsed = parseCharacters(text);
 
+        // ── 诊断：发送解析结果详情 ──
+        send({ type: "progress", stage: "parsed", message: `📋 正则解析：${parsed.length}个候选 · ${text.length.toLocaleString()}字 · ${text.split("\n").length}行`, pct: 20,
+          parsedCount: parsed.length, totalLines: text.split("\n").length, textLength: text.length,
+          sampleNames: parsed.slice(0, 10).map(c => c.name),
+        });
+
         if (parsed.length === 0) {
-          // 诊断：显示文本前200字帮助定位格式问题
-          const preview = text.slice(0, 200).replace(/\n/g, "↵");
-          send({ type: "error", message: `未识别到任何角色（${text.length.toLocaleString()}字）。支持格式：### 1.人名 / 1.人名 / 一、人名。文本预览：${preview}...` });
+          const preview = text.slice(0, 300).replace(/\n/g, "↵");
+          send({ type: "error", message: `未识别到任何角色（${text.length.toLocaleString()}字，${text.split("\n").length}行）。支持格式：### 1.人名 / 1.人名 / 一、人名。前300字：${preview}...` });
           controller.close();
           return;
         }
 
         // ── 阶段2：内部去重合并 ──
-        send({ type: "progress", stage: "merge", message: `🔗 内部去重... ${parsed.length} 个候选`, pct: 30 });
-
         const { merged, mergeLog: internalMerges } = mergeSimilar(parsed);
+
+        send({ type: "progress", stage: "merge", message: `🔗 内部去重：${parsed.length}→${merged.length}个${internalMerges.length > 0 ? ` (${internalMerges.length}组合并: ${internalMerges.join("、")})` : ""}`, pct: 30 });
 
         if (internalMerges.length > 0) {
           send({
@@ -332,6 +337,8 @@ export async function POST(request: Request) {
           created: created.length,
           updated: updated.length,
           totalChars: created.length + updated.length,
+          parsedCount: parsed.length,
+          mergedCount: merged.length,
           timeSec: parseFloat(sec),
           message,
           characterNames: [...created, ...updated.map(n => `${n}(追加)`)],
