@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { CharacterData } from "./types";
 
 export function CharacterList({
@@ -79,8 +79,24 @@ export function CharacterList({
     grouped[r].push(c);
   }
 
+  // 兜底：expanding结束但没有弹窗 → 从progress自动构建结果
+  useEffect(() => {
+    if (!expanding && expandDone > 0 && expandProgress.length > 0 && !expandResult) {
+      const okList = expandProgress
+        .filter(p => p.status === "ok" || p.status === "char-done")
+        .map(p => p.name);
+      const failList = expandProgress
+        .filter(p => p.status === "failed" || p.status === "char-failed")
+        .map(p => ({ name: p.name, reason: p.error || "未知错误" }));
+      if (okList.length + failList.length > 0) {
+        setExpandResult({ okList, failList, total: expandTotal });
+      }
+    }
+  }, [expanding, expandDone, expandProgress, expandTotal, expandResult]);
+
   const handleExpand = async () => {
     if (selectedIds.size === 0) return;
+    setExpandResult(null); // 清旧结果
     setExpanding(true);
     setExpandProgress([]);
     setExpandDone(0);

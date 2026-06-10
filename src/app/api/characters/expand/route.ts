@@ -2,8 +2,7 @@
  * POST /api/characters/expand
  *
  * SSE 流式：逐角色独立并行扩展。
- * 双Provider：硅基 V4 Flash (4并发) + DeepSeek官方 deepseek-chat (4并发) = 8并发
- * 共享角色队列，谁快谁多做。不做超时，不主动断联。
+ * DeepSeek 官方 deepseek-chat，8 并发，不超时不断联。
  * 每完成一个角色即时推 SSE 进度。
  */
 
@@ -12,39 +11,12 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 300;
 
-// ─── 双Provider配置 ──────────────────────────────────
+const DS_URL = "https://api.deepseek.com/v1/chat/completions";
+const DS_MODEL = "deepseek-chat";
+const CONCURRENCY = 8;
 
-interface ProviderConfig {
-  name: string;       // 日志标签
-  baseURL: string;
-  apiKey: string;
-  model: string;
-}
-
-function getProviders(): { providers: ProviderConfig[]; limits: number[] } {
-  const sfKey = process.env.LLM_API_KEY || "";
-  const dsKey = process.env.DEEPSEEK_API_KEY || "";
-
-  const siliconFlow: ProviderConfig = {
-    name: "硅基",
-    baseURL: (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, ""),
-    apiKey: sfKey,
-    model: "deepseek-ai/DeepSeek-V4-Flash",
-  };
-
-  const deepseek: ProviderConfig = {
-    name: "DeepSeek",
-    baseURL: "https://api.deepseek.com",
-    apiKey: dsKey,
-    model: "deepseek-chat",
-  };
-
-  if (dsKey.length > 10) {
-    // 双Provider：硅基4 + DeepSeek4
-    return { providers: [siliconFlow, deepseek], limits: [4, 4] };
-  }
-  // DeepSeek未配置→全部走硅基8并发
-  return { providers: [siliconFlow], limits: [8] };
+function getDSKey(): string {
+  return process.env.DEEPSEEK_API_KEY || "";
 }
 
 // ─── 安全合并 ──────────────────────────────────────
@@ -77,24 +49,18 @@ function slimContext(
 ${styleText ? "文风: " + styleText : ""}`;
 }
 
-// ─── Provider调用 ──────────────────────────────────
+// ─── DeepSeek API 调用 ─────────────────────────────
 
-async function callProvider(
-  provider: ProviderConfig,
-  system: string,
-  prompt: string,
-  maxTokens = 8000,
-): Promise<{ raw: string } | { error: string }> {
-  const url = provider.baseURL.endsWith("/v1")
-    ? `${provider.baseURL}/chat/completions`
-    : `${provider.baseURL}/v1/chat/completions`;
+async function callDS(system: string, prompt: string, maxTokens = 8000): Promise<{ raw: string } | { error: string }> {
+  const key = getDSKey();
+  if (key.length < 10) return { error: "DeepSeek API Key 未配置" };
 
   try {
-    const r = await fetch(url, {
+    const r = await fetch(DS_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: provider.model,
+        model: DS_MODEL,
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -107,22 +73,21 @@ async function callProvider(
 
     if (!r.ok) {
       const body = await r.text().catch(() => "");
-      return { error: `${provider.name} ${r.status}: ${body.slice(0, 180)}` };
+      return { error: `DS ${r.status}: ${body.slice(0, 180)}` };
     }
 
     const data = await r.json().catch(() => null);
     const raw = data?.choices?.[0]?.message?.content;
-    if (!raw) return { error: `${provider.name} 返回空内容` };
+    if (!raw) return { error: "DeepSeek 返回空内容" };
     return { raw };
   } catch (e) {
-    return { error: `${provider.name} ${(e instanceof Error ? e.message : String(e)).slice(0, 180)}` };
+    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 180) };
   }
 }
 
-// ─── 单角色扩展（指定provider）────────────────────
+// ─── 单角色扩展 ──────────────────────────────────
 
 async function expandOne(
-  provider: ProviderConfig,
   char: { id: string; name: string; card: Record<string, unknown> },
   context: string,
 ): Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> {
@@ -157,14 +122,14 @@ ${JSON.stringify(char.card)}
 
 【核心原则——少总结，多复述，多扩展】
 1. ❌ 禁止总结/缩写/概括原始设定——原文照搬，原汁原味
-2. ✅ 原始设定中已分好类的能力→ abilities字段逐条原样复述，包括原理、应用场景、限制
+2. ✅ 已分好类的能力→ abilities字段逐条原样复述，包括原理、应用场景、限制
 3. ✅ 背景缺失的信息→基于世界观、文风、同类角色的信息推敲补充
 4. ✅ personality→从原始设定的描述中提炼性格特征
 5. ✅ appearance→如果原始设定没有外貌描写，基于角色定位和世界观合理推敲
 6. ❌ 任何字段禁止"无""未知""暂无"或留空——基于上下文推断填满
 7. ✅ 只输出纯JSON，无markdown代码块`;
 
-  const result = await callProvider(provider,
+  const result = await callDS(
     "扩展角色卡。少总结多复述，原文照搬不缩写，空字段基于世界观推敲补全。只输出JSON。",
     prompt, 8000);
 
@@ -187,30 +152,24 @@ ${JSON.stringify(char.card)}
   }
 }
 
-// ─── 双Provider并发池（共享队列，各跑各的）─────────
+// ─── 并发池 ─────────────────────────────────────
 
-async function withDualProviders<T>(
+async function withConcurrency<T, R>(
   items: T[],
-  fns: Array<(item: T, index: number) => Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }>>,
-  limits: number[],
-) {
-  const results: Array<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> = new Array(items.length);
+  fn: (item: T, index: number) => Promise<R>,
+  limit: number,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
   let cursor = 0;
 
-  async function worker(fn: (item: T, index: number) => Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }>): Promise<void> {
+  async function worker(): Promise<void> {
     while (cursor < items.length) {
       const idx = cursor++;
       results[idx] = await fn(items[idx], idx);
     }
   }
 
-  const allWorkers: Promise<void>[] = [];
-  for (let i = 0; i < fns.length; i++) {
-    for (let j = 0; j < limits[i]; j++) {
-      allWorkers.push(worker(fns[i]));
-    }
-  }
-  await Promise.all(allWorkers);
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
   return results;
 }
 
@@ -229,6 +188,11 @@ export async function POST(request: Request) {
 
   if (!projectId || !characterIds.length) {
     return NextResponse.json({ error: "缺少 projectId 或 characterIds" }, { status: 400 });
+  }
+
+  const dsKey = getDSKey();
+  if (dsKey.length < 10) {
+    return NextResponse.json({ error: "DeepSeek API Key 未配置。请在环境变量中设置 DEEPSEEK_API_KEY。" }, { status: 500 });
   }
 
   const encoder = new TextEncoder();
@@ -333,90 +297,77 @@ export async function POST(request: Request) {
           },
         }));
 
-        // ── 双Provider配置 ──
-        const { providers, limits } = getProviders();
-        const totalConcurrency = limits.reduce((a, b) => a + b, 0);
-        const providerLabels = providers.map((p, i) => `${p.name}×${limits[i]}`).join(" + ");
-
         send({
           type: "progress", stage: "start",
-          message: `${total} 个角色 · ${providerLabels} · ${totalConcurrency}并发`,
-          pct: 5, done: 0, total, providers: providers.map(p => p.name),
+          message: `${total} 个角色 · DeepSeek chat · ${CONCURRENCY}并发`,
+          pct: 5, done: 0, total,
         });
 
-        // ── 逐角色并行扩展（双Provider共享队列）──
+        // ── 逐角色并行扩展 ──
         let doneCount = 0;
-        const charResults: Array<{ name: string; status: "ok" | "failed"; error?: string; provider?: string }> = [];
+        const charResults: Array<{ name: string; status: "ok" | "failed"; error?: string }> = [];
         const fallbackMap = new Map(charItems.map(c => [c.id, c.card]));
 
-        // 为每个provider创建对应的fn
-        const fns = providers.map((provider) =>
-          async (item: typeof charItems[number], idx: number) => {
-            const { result: r, error } = await expandOne(provider, item, context);
-            let finalError = error;
+        await withConcurrency(charItems, async (item, idx) => {
+          const { result: r, error } = await expandOne(item, context);
+          let finalError = error;
 
-            if (r) {
-              const fallback = fallbackMap.get(item.id);
-              try {
-                await prisma.characterCard.update({
-                  where: { id: item.id },
-                  data: {
-                    appearance: safeMerge(r.appearance, fallback?.appearance) as any,
-                    personality: safeMerge(r.personality, fallback?.personality) as any,
-                    dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
-                    background: String(r.background || "").trim(),
-                    abilities: safeMerge(
-                      Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
-                      fallback?.abilities as string[] | undefined,
-                    ) as string[],
-                    hiddenMotives: safeMerge(
-                      Array.isArray(r.hiddenMotives) ? r.hiddenMotives.filter((a: unknown) => typeof a === "string") : null,
-                      fallback?.hiddenMotives as string[] | undefined,
-                    ) as string[],
-                    relationships: safeMerge(
-                      Array.isArray(r.relationships) ? r.relationships : null,
-                      fallback?.relationships as any,
-                    ) as any,
-                    timeline: safeMerge(
-                      Array.isArray(r.timeline) ? r.timeline : null,
-                      fallback?.timeline as any,
-                    ) as any,
-                    arcProgress: safeMerge(
-                      String(r.arcProgress || "").trim() || null,
-                      String(fallback?.arcProgress || ""),
-                    ) as string,
-                    quickImportContent: "",
-                  },
-                });
-              } catch (dbErr) {
-                finalError = `DB写入失败: ${String(dbErr).slice(0, 100)}`;
-              }
+          if (r) {
+            const fallback = fallbackMap.get(item.id);
+            try {
+              await prisma.characterCard.update({
+                where: { id: item.id },
+                data: {
+                  appearance: safeMerge(r.appearance, fallback?.appearance) as any,
+                  personality: safeMerge(r.personality, fallback?.personality) as any,
+                  dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
+                  background: String(r.background || "").trim(),
+                  abilities: safeMerge(
+                    Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
+                    fallback?.abilities as string[] | undefined,
+                  ) as string[],
+                  hiddenMotives: safeMerge(
+                    Array.isArray(r.hiddenMotives) ? r.hiddenMotives.filter((a: unknown) => typeof a === "string") : null,
+                    fallback?.hiddenMotives as string[] | undefined,
+                  ) as string[],
+                  relationships: safeMerge(
+                    Array.isArray(r.relationships) ? r.relationships : null,
+                    fallback?.relationships as any,
+                  ) as any,
+                  timeline: safeMerge(
+                    Array.isArray(r.timeline) ? r.timeline : null,
+                    fallback?.timeline as any,
+                  ) as any,
+                  arcProgress: safeMerge(
+                    String(r.arcProgress || "").trim() || null,
+                    String(fallback?.arcProgress || ""),
+                  ) as string,
+                  quickImportContent: "",
+                },
+              });
+            } catch (dbErr) {
+              finalError = `DB写入失败: ${String(dbErr).slice(0, 100)}`;
             }
-
-            if (finalError) {
-              charResults.push({ name: item.name, status: "failed", error: finalError, provider: provider.name });
-            } else {
-              charResults.push({ name: item.name, status: "ok", provider: provider.name });
-            }
-
-            doneCount++;
-            send({
-              type: "progress",
-              stage: finalError ? "char-failed" : "char-done",
-              message: `${finalError ? "⚠️" : "✅"} ${item.name} [${provider.name}]${finalError ? " " + finalError.slice(0, 40) : ""}`,
-              done: doneCount, total,
-              name: item.name,
-              status: finalError ? "failed" : "ok",
-              error: finalError?.slice(0, 100),
-              provider: provider.name,
-              pct: Math.round(5 + (doneCount / total) * 90),
-            });
-
-            return { id: item.id, name: item.name, result: r, error: finalError };
           }
-        );
 
-        await withDualProviders(charItems, fns, limits);
+          if (finalError) {
+            charResults.push({ name: item.name, status: "failed", error: finalError });
+          } else {
+            charResults.push({ name: item.name, status: "ok" });
+          }
+
+          doneCount++;
+          send({
+            type: "progress",
+            stage: finalError ? "char-failed" : "char-done",
+            message: `${finalError ? "⚠️" : "✅"} ${item.name}${finalError ? " " + finalError.slice(0, 40) : ""}`,
+            done: doneCount, total,
+            name: item.name,
+            status: finalError ? "failed" : "ok",
+            error: finalError?.slice(0, 100),
+            pct: Math.round(5 + (doneCount / total) * 90),
+          });
+        }, CONCURRENCY);
 
         // ── 完成：推送详细结果 ──
         const okList = charResults.filter(r => r.status === "ok").map(r => r.name);
@@ -431,6 +382,9 @@ export async function POST(request: Request) {
           okList,
           failList: failList.map(f => ({ name: f.name, reason: f.error })),
         });
+
+        // ⚠️ 延迟关闭——确保 SSE done 事件 flush 到网络再断联
+        await new Promise(r => setTimeout(r, 300));
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : "扩展失败" });
       } finally {
