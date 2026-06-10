@@ -20,9 +20,13 @@ export function CharacterList({
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expanding, setExpanding] = useState(false);
-  const [expandProgress, setExpandProgress] = useState<Array<{ name: string; status: string }>>([]);
+  const [expandProgress, setExpandProgress] = useState<Array<{ name: string; status: string; error?: string }>>([]);
   const [expandDone, setExpandDone] = useState(0);
   const [expandTotal, setExpandTotal] = useState(0);
+  // 扩展结果弹窗
+  const [expandResult, setExpandResult] = useState<{
+    okList: string[]; failList: Array<{ name: string; reason: string }>; total: number;
+  } | null>(null);
   const [classifying, setClassifying] = useState(false);
   const [classifyMsg, setClassifyMsg] = useState("");
   const [classifyDone, setClassifyDone] = useState(0);
@@ -117,29 +121,35 @@ export function CharacterList({
               if (ev.done !== undefined) setExpandDone(ev.done as number);
               if (ev.total) setExpandTotal(ev.total as number);
               if (ev.stage === "char-done" || ev.stage === "char-failed") {
-                setExpandProgress((p) => [...p, { name: ev.name as string, status: ev.stage as string }]);
+                setExpandProgress((p) => [...p, { name: ev.name as string, status: ev.status as string || ev.stage as string, error: ev.error as string | undefined }]);
               }
               if (ev.stage === "start" || ev.stage === "dedup") {
                 setExpandProgress((p) => [...p, { name: ev.message as string, status: ev.stage as string }]);
               }
             } else if (ev.type === "done") {
-              const succeeded = ev.done as number;
-              const total = ev.total as number;
               setSelectedIds(new Set());
               onExpanded();
-              setTimeout(() => {
-                alert(succeeded === total
-                  ? `✅ 全部扩展成功：${succeeded}/${total}`
-                  : `⚠️ 扩展完成：${succeeded}/${total} — ${Number(total) - Number(succeeded)} 个失败`);
-              }, 300);
+              setExpandResult({
+                okList: (ev.okList || []) as string[],
+                failList: (ev.failList || []) as Array<{ name: string; reason: string }>,
+                total: ev.total as number,
+              });
             } else if (ev.type === "error") {
-              alert(ev.message);
+              setExpandResult({
+                okList: [],
+                failList: [{ name: "全局错误", reason: ev.message as string }],
+                total: 0,
+              });
             }
           } catch { /* skip */ }
         }
       }
     } catch (e) {
-      alert("扩展失败: " + (e instanceof Error ? e.message : "网络错误"));
+      setExpandResult({
+        okList: [],
+        failList: [{ name: "连接中断", reason: (e instanceof Error ? e.message : "网络错误").slice(0, 200) }],
+        total: 0,
+      });
     } finally {
       setExpanding(false);
     }
@@ -581,13 +591,19 @@ export function CharacterList({
             </div>
           )}
           {expandProgress.map((p, i) => {
-            const isBatch = p.status === "batch-start" || p.status === "batch-done" || p.status === "batch-error";
-            const isDone = p.status === "done-one";
-            const isFailed = p.status === "failed";
+            const isInfo = p.status === "start" || p.status === "dedup";
+            const isOk = p.status === "ok" || p.status === "char-done";
+            const isFailed = p.status === "failed" || p.status === "char-failed";
+            if (isInfo) return (
+              <div key={i} className="text-xs text-zinc-500 py-0.5">{p.name}</div>
+            );
             return (
-              <div key={i} className={`text-xs flex items-center gap-1 ${isDone ? "text-emerald-400" : isFailed ? "text-red-400" : isBatch ? "text-zinc-500" : "text-zinc-500"}`}>
-                <span>{isDone ? "✅" : isFailed ? "⚠️" : isBatch ? "📦" : "⏳"}</span>
-                <span>{p.name}</span>
+              <div key={i} className={`text-xs ${isOk ? "text-emerald-400" : isFailed ? "text-red-400" : "text-zinc-500"}`}>
+                <span className="inline-flex items-center gap-1">
+                  <span>{isOk ? "✅" : isFailed ? "⚠️" : "⏳"}</span>
+                  <span>{p.name}</span>
+                  {p.error && <span className="text-red-400/60 text-[10px] ml-1">— {p.error}</span>}
+                </span>
               </div>
             );
           })}
@@ -598,6 +614,82 @@ export function CharacterList({
               }} />
             </div>
             <span className="text-xs text-zinc-500 shrink-0">{expandDone}/{expandTotal} · {expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* 扩展结果弹窗 */}
+      {expandResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* 头部 */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+              <h3 className="text-base font-bold text-zinc-200">
+                {expandResult.failList.length === 0 ? "🎉 全部扩展成功" : "📋 扩展结果"}
+              </h3>
+              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none">✕</button>
+            </div>
+
+            {/* 统计 */}
+            <div className="px-5 py-3 flex gap-4 text-sm border-b border-zinc-800/50">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold text-lg">{expandResult.okList.length}</span>
+                <span className="text-zinc-500">成功</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={expandResult.failList.length > 0 ? "text-red-400 font-bold text-lg" : "text-zinc-500 font-bold text-lg"}>{expandResult.failList.length}</span>
+                <span className="text-zinc-500">失败</span>
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-zinc-500 text-xs">共 {expandResult.total} 个角色</span>
+              </div>
+            </div>
+
+            {/* 内容区 */}
+            <div className="overflow-y-auto px-5 py-3 flex-1 max-h-[50vh]">
+              {/* 成功列表 */}
+              {expandResult.okList.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-emerald-500 font-medium mb-1.5">✅ 成功 ({expandResult.okList.length})</div>
+                  <div className="flex flex-wrap gap-1">
+                    {expandResult.okList.map((name, i) => (
+                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-emerald-950/30 text-emerald-300 border border-emerald-900/30">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 失败列表 + 原因 */}
+              {expandResult.failList.length > 0 && (
+                <div>
+                  <div className="text-xs text-red-400 font-medium mb-1.5">⚠️ 失败 ({expandResult.failList.length})</div>
+                  <div className="space-y-1.5">
+                    {expandResult.failList.map((f, i) => (
+                      <div key={i} className="p-2 rounded bg-red-950/20 border border-red-900/20">
+                        <div className="text-xs text-red-300 font-medium">{f.name}</div>
+                        <div className="text-[11px] text-red-400/70 mt-0.5">{f.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {expandResult.okList.length === 0 && expandResult.failList.length === 0 && (
+                <div className="text-sm text-zinc-500 text-center py-8">无结果数据</div>
+              )}
+            </div>
+
+            {/* 底部按钮 */}
+            <div className="px-5 py-3 border-t border-zinc-800 flex gap-2 justify-end">
+              <button
+                onClick={() => setExpandResult(null)}
+                className="px-4 py-1.5 text-sm rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium"
+              >
+                知道了
+              </button>
+            </div>
           </div>
         </div>
       )}

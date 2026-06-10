@@ -11,12 +11,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 300; // Hobby上限；单角色120s超时+并发6→100+角色稳定
+export const maxDuration = 300; // Hobby上限
 
 const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
 const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "";
-const CONCURRENCY = 6; // 并发过高会触发Flash限流→卡死，6个稳
+const CONCURRENCY = 10; // 10路并发，绝不主动断联
 
 // ─── 安全合并：空值不覆盖已有数据 ──────────────────────
 
@@ -51,9 +51,6 @@ ${styleText ? "文风: " + styleText : ""}`;
 // ─── Flash 调用（非流式）───────────────────────────
 
 async function callFlash(system: string, prompt: string, maxTokens = 8000): Promise<{ raw: string } | { error: string }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 120_000); // 单角色120s超时——比无超时等死强
-
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -68,10 +65,7 @@ async function callFlash(system: string, prompt: string, maxTokens = 8000): Prom
         max_tokens: maxTokens,
         stream: false,
       }),
-      signal: controller.signal,
     });
-
-    clearTimeout(timer);
 
     if (!r.ok) {
       const body = await r.text().catch(() => "");
@@ -83,12 +77,7 @@ async function callFlash(system: string, prompt: string, maxTokens = 8000): Prom
     if (!raw) return { error: "Flash 返回空内容" };
     return { raw };
   } catch (e) {
-    clearTimeout(timer);
-    const msg = (e instanceof Error ? e.message : String(e)).slice(0, 200);
-    if ((e as Error).name === "AbortError") {
-      return { error: `超时(120s)——该角色跳过，不影响其他` };
-    }
-    return { error: msg };
+    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) };
   }
 }
 
@@ -314,16 +303,14 @@ export async function POST(request: Request) {
 
         // ── 逐角色并行扩展 ──
         let doneCount = 0;
-        const errors: string[] = [];
+        // 详细结果：每个角色一条，前端弹窗展示
+        const charResults: Array<{ name: string; status: "ok" | "failed"; error?: string }> = [];
         const fallbackMap = new Map(charItems.map(c => [c.id, c.card]));
 
         await withConcurrency(charItems, async (item, idx) => {
           // 单个角色开始处理（不发事件，避免刷屏）
           const { result: r, error } = await expandOne(item, context);
-
-          if (error) {
-            errors.push(`${item.name}: ${error}`);
-          }
+          let finalError = error;
 
           // 写 DB
           if (r) {
@@ -335,7 +322,7 @@ export async function POST(request: Request) {
                   appearance: safeMerge(r.appearance, fallback?.appearance) as any,
                   personality: safeMerge(r.personality, fallback?.personality) as any,
                   dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
-                  background: String(r.background || "").trim(), // AI总结覆盖原始导入描述
+                  background: String(r.background || "").trim(),
                   abilities: safeMerge(
                     Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
                     fallback?.abilities as string[] | undefined,
@@ -356,35 +343,47 @@ export async function POST(request: Request) {
                     String(r.arcProgress || "").trim() || null,
                     String(fallback?.arcProgress || ""),
                   ) as string,
-                  quickImportContent: "", // 消化完毕，清空
+                  quickImportContent: "",
                 },
               });
             } catch (dbErr) {
-              errors.push(`${item.name}写入失败: ${String(dbErr).slice(0, 100)}`);
+              finalError = `DB写入失败: ${String(dbErr).slice(0, 100)}`;
             }
           }
 
-          // ⭐ 即时推送单个角色完成进度
+          // 记录结果
+          if (finalError) {
+            charResults.push({ name: item.name, status: "failed", error: finalError });
+          } else {
+            charResults.push({ name: item.name, status: "ok" });
+          }
+
+          // ⭐ 即时推送单个角色完成进度（含结果标记让前端实时更新列表）
           doneCount++;
           send({
             type: "progress",
-            stage: r ? "char-done" : "char-failed",
-            message: `${r ? "✅" : "⚠️"} ${item.name}`,
+            stage: finalError ? "char-failed" : "char-done",
+            message: `${finalError ? "⚠️" : "✅"} ${item.name}${finalError ? " " + finalError.slice(0, 50) : ""}`,
             done: doneCount, total,
             name: item.name,
+            status: finalError ? "failed" : "ok",
+            error: finalError?.slice(0, 100),
             pct: Math.round(5 + (doneCount / total) * 90),
           });
         }, CONCURRENCY);
 
-        // ── 完成 ──
-        const succeeded = total - errors.length;
+        // ── 完成：推送详细结果 ──
+        const okList = charResults.filter(r => r.status === "ok").map(r => r.name);
+        const failList = charResults.filter(r => r.status === "failed");
+
         send({
           type: "done",
-          message: errors.length > 0
-            ? `扩展完成：${succeeded}/${total} · ${errors.length} 个错误`
-            : `✅ 全部成功：${succeeded}/${total}`,
-          done: succeeded, total,
-          errors: errors.length > 0 ? errors.slice(0, 5) : undefined,
+          message: failList.length > 0
+            ? `扩展完成：${okList.length}/${total} · ${failList.length} 个失败`
+            : `✅ 全部成功：${okList.length}/${total}`,
+          done: okList.length, total,
+          okList,
+          failList: failList.map(f => ({ name: f.name, reason: f.error })),
         });
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : "扩展失败" });
