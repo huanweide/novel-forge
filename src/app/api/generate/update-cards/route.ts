@@ -52,8 +52,8 @@ export async function POST(request: Request) {
       // 别名匹配
       return (c.aliases || []).some((a: string) => contentLower.includes(a.toLowerCase()));
     });
-    // 限制最多 40 个角色，减少 LLM 处理时间
-    const activeChars = mentionedChars.slice(0, 40);
+    // 所有匹配角色全送，无数量上限
+    const activeChars = mentionedChars;
 
     // 构建现有卡面摘要（只送活跃角色）
     const charSummary = activeChars.map((c) => {
@@ -199,7 +199,7 @@ ${contentSnippet}
           { role: "user", content: userPrompt },
         ],
         temperature: 0.3,
-        maxTokens: 8192,
+        maxTokens: 16000, // 100+角色需要足够输出空间
       });
       rawContent = response.content || "";
     } catch (llmErr) {
