@@ -465,10 +465,11 @@ export function CharacterList({
           {/* 分类列表——按 category 分组 */}
           <div className="max-h-80 overflow-y-auto p-1.5 space-y-2">
             {(() => {
-              const catOrder = ["势力", "身份", "阵营", "称号", "剧情功能"];
+              const catOrder = ["ability", "affiliation", "archetype"];
               const catLabel: Record<string, string> = {
-                势力: "🏛 势力/组织", 身份: "⚔ 身份/职业", 阵营: "⚖ 阵营/立场",
-                称号: "👑 特殊称号", "剧情功能": "🎭 剧情功能",
+                ability: "⭐ 能力等级（对标号）",
+                affiliation: "🏛 势力归属（对地点）",
+                archetype: "🎭 角色原型（对性质）",
               };
               const grouped = new Map<string, typeof classifyGroups>();
               for (const g of classifyGroups) {
