@@ -105,31 +105,6 @@ ${pairsText}
   }
 }
 
-async function aiMergeCharacters(pairs: MergePair[], globalContext: string): Promise<Record<string, unknown>[] | null> {
-  if (pairs.length === 0) return [];
-  const batches = chunkPairs(pairs, BATCH_SIZE);
-  const results = await Promise.all(batches.map(b => mergeOneBatch(b, globalContext, "char")));
-  // 扁平化各批结果，保持顺序
-  const all: Record<string, unknown>[] = [];
-  for (const r of results) {
-    if (!r) return null; // 任何一批失败就全部失败→回退规则合并
-    all.push(...r);
-  }
-  return all.length === pairs.length ? all : null;
-}
-
-async function aiMergeLore(pairs: MergePair[], globalContext: string): Promise<Record<string, unknown>[] | null> {
-  if (pairs.length === 0) return [];
-  const batches = chunkPairs(pairs, BATCH_SIZE);
-  const results = await Promise.all(batches.map(b => mergeOneBatch(b, globalContext, "lore")));
-  const all: Record<string, unknown>[] = [];
-  for (const r of results) {
-    if (!r) return null;
-    all.push(...r);
-  }
-  return all.length === pairs.length ? all : null;
-}
-
 // ═══════════════════════════════════════════════════════════════
 // 规则合并 —— AI 失败时的兜底（互补合并，不丢信息）
 // ═══════════════════════════════════════════════════════════════

@@ -204,7 +204,6 @@ ${textSlice}
 
         let progressA = 0, progressB = 0;
         const basePct = 5;
-        const rangePct = 70; // 5%~75% 分配给 AB路并行阶段
 
         const [resA, resB] = await Promise.all([
           // 路A：DeepSeek官方 → 人物
