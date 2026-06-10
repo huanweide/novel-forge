@@ -106,8 +106,9 @@ export function CharacterList({
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
+        if (value) {
+          buf += decoder.decode(value, { stream: true });
+        }
         const chunks = buf.split("\n\n");
         buf = chunks.pop() || "";
         for (const chunk of chunks) {
@@ -139,6 +140,26 @@ export function CharacterList({
                 okList: [],
                 failList: [{ name: "全局错误", reason: ev.message as string }],
                 total: 0,
+              });
+            }
+          } catch { /* skip */ }
+        }
+        if (done) break;
+      }
+
+      // 流结束后处理buf残留——done事件可能卡在最后一段不完整的chunk里
+      if (buf.trim()) {
+        const dataLine = buf.split("\n").find(l => l.trim().startsWith("data: "));
+        if (dataLine) {
+          try {
+            const ev = JSON.parse(dataLine.trim().slice(6));
+            if (ev.type === "done") {
+              setSelectedIds(new Set());
+              onExpanded();
+              setExpandResult({
+                okList: (ev.okList || []) as string[],
+                failList: (ev.failList || []) as Array<{ name: string; reason: string }>,
+                total: ev.total as number,
               });
             }
           } catch { /* skip */ }

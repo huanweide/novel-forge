@@ -124,68 +124,39 @@ export async function POST(request: Request) {
       .filter((n) => n.order <= currentNode.order && n.content)
       .slice(-5);
 
-    // System Prompt 合并文风模板 + 自定义设置 + 风格卡 + Humanizer-zh + 丰满性原则 + 蓝锁足球美学
-    let systemPrompt = `你不是AI。你是出版过十本长篇的职业作家。文风冷峻、克制、白描。
-
-禁用词：宿命、齿轮、羁绊、宛如、画卷、不禁、意味深长、不可思议、交织、洗礼、深邃、凝重、倒吸一口凉气、心头一暖、心里一沉、瞳孔一缩、身体一僵。禁止"作为/标志着/象征着"句式。禁止否定式排比、三段式堆砌、虚假范围。
-
-【人称代词】不准连续三个"他/她"开头。每500字"他"不超过15次。用角色名、身体部位、环境物、动作分词开头代替。
-
-【丰满性原则】禁止空洞短句。每句话言之有物，细节拉满。叙事不精简，描述不干瘪。短句只用于铺陈后的爆发。
-
-【Show Don't Tell + 心理直嵌】情绪用生理反应代替。心理活动直嵌叙述流——拒绝"他想""他觉得""他意识到"。内心想法口语化碎片化，不加引导词直接写进叙述句。
-
-【对话毛边 + 肉搏感】打断用破折号。沉默有力。答非所问。动作切对话。对话不短促到失真——每句承载性格/战术/情绪，有完整意思和潜台词。每个动作必须有对手的回应。
-
-【结构 + 变速齿轮】开头动作切入。结尾不准总结升华展望。段落长度不一致。变速齿轮：一对一对抗——细节展开。球转移/无球跑动——短句掠过。射门前/摔倒后——插入心理定格。
-
-【足球肉搏精度】触球方式必须具体：捅、拉、踩、磕、推、弹、拨、卸、领。身体接触量化：胸口撞击、手的位置、鞋钉踩脚背。空间距离精确。失败与失误也拉满。
-
-【超能力自然下沉】允许超出常人的反应/预判/精准技术——自然发生，不命名不强调。不用"他发动了……"。给高光留物理合理的解释。
-
-【格式铁律】绝不在正文首行写「第X章」「第X节」或章节标题。正文直接切入动作/对话。
-
-正在撰写《${project.name}》。`;
-
-    // 读取项目的自定义文风设置
+    // ── 读取文风模板 + 自定义设置 ──
+    const template = styleTemplateId ? getTemplate(styleTemplateId) : undefined;
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
     const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
 
-    // 注入风格卡数据
-    if (styleCard) {
-      const styleParts: string[] = [];
-      const desc = typeof styleCard.styleDescription === "string" ? styleCard.styleDescription.trim() : "";
-      if (desc) styleParts.push(`文风：${desc}`);
-      const pov = typeof styleCard.povType === "string" ? styleCard.povType : "";
-      if (pov) {
-        const povMap: Record<string, string> = { first_person: "第一人称", third_person_limited: "第三人称有限", third_person_omniscient: "第三人称全知" };
-        styleParts.push(`视角：${povMap[pov] || pov}`);
+    // ── 用户备注注入 ──
+    let cardNotesText = "";
+    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
+      const noteLines: string[] = [];
+      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
+        if (!note.trim()) continue;
+        const char = characters.find((c: any) => c.id === id);
+        if (char) noteLines.push(`[${char.name}] ${note}`);
       }
-      const dr = Number(styleCard.dialogueRatio) || 0;
-      const descR = Number(styleCard.descriptionRatio) || 0;
-      const ar = Number(styleCard.actionRatio) || 0;
-      if (dr + descR + ar > 0) {
-        styleParts.push(`内容配比：对话${Math.round(dr * 100)}% 描写${Math.round(descR * 100)}% 动作${Math.round(ar * 100)}%`);
-      }
-      if (styleParts.length > 0) {
-        systemPrompt += `\n\n【文风约束】\n${styleParts.join("\n")}`;
-      }
+      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
     }
 
+    // ── 合并 authorNote：用户指令 + 模板禁用 + 自定义禁用 + 角色备注 ──
+    let mergedAuthorNote = authorNote || "";
     if (template) {
-      systemPrompt = applyTemplate(template, systemPrompt);
-      systemPrompt += forbiddenPatternsToPrompt(template);
+      const tp = forbiddenPatternsToPrompt(template);
+      if (tp) mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n\n" : "") + tp;
     }
-
-    // 追加自定义禁用词
     if (customForbidden.length > 0) {
-      systemPrompt += `\n\n【自定义禁用——绝对不可使用】\n${customForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
+      mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n\n" : "")
+        + "【自定义禁用】\n" + customForbidden.map((p) => `- 禁止：${p}`).join("\n");
     }
-
-    // 追加自定义风格笔记
     if (customStyleNotes) {
-      systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
+      mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n\n" : "") + "【作者风格笔记】\n" + customStyleNotes;
+    }
+    if (cardNotesText) {
+      mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n" : "") + cardNotesText;
     }
 
     // ── 自建角色 ──
@@ -220,19 +191,7 @@ export async function POST(request: Request) {
       activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
     }
 
-    // ── 用户备注注入 ──
-    let cardNotesText = "";
-    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
-      const noteLines: string[] = [];
-      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
-        if (!note.trim()) continue;
-        const char = allChars.find((c: any) => c.id === id);
-        if (char) noteLines.push(`[${char.name}] ${note}`);
-      }
-      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
-    }
-
-    // 构建上下文
+    // ── 构建统一上下文（与 write/refine 同一套 systemPrompt）──
     const promptContext = buildPromptContext({
       project: project as any,
       currentNode: nextNode as any,
@@ -242,9 +201,13 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
-      authorNote,
+      authorNote: mergedAuthorNote || undefined,
     });
-    promptContext.systemPrompt = systemPrompt;
+
+    // 模板文风覆盖（buildPromptContext 已含风格卡，模板在此基础上叠加）
+    if (template) {
+      promptContext.systemPrompt = applyTemplate(template, promptContext.systemPrompt);
+    }
 
     // 撰写指令——基于前文末段自然衔接
     const lastContent = currentNode.content || "";

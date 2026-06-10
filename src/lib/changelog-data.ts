@@ -20,21 +20,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.12.1";
+export const LATEST_VERSION = "v0.13.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🪟 AI扩展结果弹窗——成功/失败角色列表+失败原因一目了然，不再盲alert",
-  "⚡ AI扩展并发10+不断联——绝不主动Abort，死等也要等回来",
-  "🏷 自动分类AI三分类——Flash分析能力/势力/原型三个维度，全堆一起问题修复",
-  "📝 作者指令=大纲级优先级——冲突以作者指令为准，没写的按指令执行",
-  "🔍 自动三卡更新——正文写完后台分析，完成后弹窗确认，中途不干扰",
-  "⚽ 比赛比分智能追踪——比分/胜负写入世界书，后续章节自动引用保证前后一致",
-  "🃏 CardUpdater搜索+自建角色——可直接搜索已有角色或自建新角色加入更新",
+  "🔀 AI扩展双Provider——硅基V4 Flash×4 + DeepSeek官方×4 = 8并发，快一倍",
+  "🪟 扩展弹窗修复——SSE buf残留bug修复，完成/失败列表终于能显示了",
+  "🔧 continue提示词统一——续写走write同一套完整systemPrompt，文风一致",
+  "🧹 清理SYSTEM_PROMPTS.writer死代码——统一收敛到buildPromptContext",
+  "🏷 自动分类AI三分类——Flash分析能力/势力/原型三个维度",
+  "📝 作者指令=大纲级优先级——冲突以作者指令为准",
+  "🔍 自动三卡更新——正文写完后台分析，完成后弹窗确认",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.13.0",
+    date: "2026-06-10",
+    title: "AI扩展双Provider + SSE弹窗修复 + continue提示词统一 + 死代码清理",
+    sections: [
+      {
+        label: "🔀 AI扩展双Provider架构",
+        items: [
+          "硅基流动 V4 Flash ×4 并发 + DeepSeek官方 deepseek-chat ×4 并发 = 8路并行",
+          "共享角色队列——哪个Provider快就多做，自动负载均衡",
+          "DeepSeek未配置时自动回退全部8并发走硅基",
+          "进度条标注每个角色由哪个Provider处理 [硅基]/[DeepSeek]",
+        ],
+      },
+      {
+        label: "🪟 扩展弹窗修复（SSE buf残留bug）",
+        items: [
+          "根因：SSE流结束时buf里残留的done事件被直接丢弃→expandResult永远不设置",
+          "修复：流结束后检查buf残留，有data行就解析——done事件不再丢失",
+          "扩展完成后弹窗正确显示成功/失败角色列表+原因",
+        ],
+      },
+      {
+        label: "🔧 continue提示词统一",
+        items: [
+          "续写不再自建systemPrompt——统一走buildPromptContext与write/refine同一套",
+          "删除重复的风格卡注入代码（buildPromptContext已含）",
+          "模板禁用词+自定义禁用词合并进authorNote统一传递",
+          "续写文风与正文生成完全一致——含角色出场原则、丰满性示例、心理直嵌范例",
+        ],
+      },
+      {
+        label: "🧹 技术债清理",
+        items: [
+          "删除 SYSTEM_PROMPTS.writer 死代码——从未被使用（buildPromptContext始终生成systemPrompt）",
+          "writeSection 移除无意义的回退逻辑 `context.systemPrompt || SYSTEM_PROMPTS.writer`",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.12.1",
     date: "2026-06-10",

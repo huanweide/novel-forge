@@ -2,23 +2,52 @@
  * POST /api/characters/expand
  *
  * SSE 流式：逐角色独立并行扩展。
- * - 每个角色一次 Flash 调用，不分组
- * - CONCURRENCY 控制同时请求数，做完自动补位
- * - 每完成一个角色即时推 SSE 进度——不再有空白等待
- * - 非流式 API：可靠收完整响应再解析
+ * 双Provider：硅基 V4 Flash (4并发) + DeepSeek官方 deepseek-chat (4并发) = 8并发
+ * 共享角色队列，谁快谁多做。不做超时，不主动断联。
+ * 每完成一个角色即时推 SSE 进度。
  */
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 300; // Hobby上限
+export const maxDuration = 300;
 
-const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
-const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
-const API_KEY = process.env.LLM_API_KEY || "";
-const CONCURRENCY = 10; // 10路并发，绝不主动断联
+// ─── 双Provider配置 ──────────────────────────────────
 
-// ─── 安全合并：空值不覆盖已有数据 ──────────────────────
+interface ProviderConfig {
+  name: string;       // 日志标签
+  baseURL: string;
+  apiKey: string;
+  model: string;
+}
+
+function getProviders(): { providers: ProviderConfig[]; limits: number[] } {
+  const sfKey = process.env.LLM_API_KEY || "";
+  const dsKey = process.env.DEEPSEEK_API_KEY || "";
+
+  const siliconFlow: ProviderConfig = {
+    name: "硅基",
+    baseURL: (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, ""),
+    apiKey: sfKey,
+    model: "deepseek-ai/DeepSeek-V4-Flash",
+  };
+
+  const deepseek: ProviderConfig = {
+    name: "DeepSeek",
+    baseURL: "https://api.deepseek.com",
+    apiKey: dsKey,
+    model: "deepseek-chat",
+  };
+
+  if (dsKey.length > 10) {
+    // 双Provider：硅基4 + DeepSeek4
+    return { providers: [siliconFlow, deepseek], limits: [4, 4] };
+  }
+  // DeepSeek未配置→全部走硅基8并发
+  return { providers: [siliconFlow], limits: [8] };
+}
+
+// ─── 安全合并 ──────────────────────────────────────
 
 function safeMerge<T>(result: T | undefined | null, fallback: T): T {
   if (result === undefined || result === null) return fallback;
@@ -48,15 +77,24 @@ function slimContext(
 ${styleText ? "文风: " + styleText : ""}`;
 }
 
-// ─── Flash 调用（非流式）───────────────────────────
+// ─── Provider调用 ──────────────────────────────────
 
-async function callFlash(system: string, prompt: string, maxTokens = 8000): Promise<{ raw: string } | { error: string }> {
+async function callProvider(
+  provider: ProviderConfig,
+  system: string,
+  prompt: string,
+  maxTokens = 8000,
+): Promise<{ raw: string } | { error: string }> {
+  const url = provider.baseURL.endsWith("/v1")
+    ? `${provider.baseURL}/chat/completions`
+    : `${provider.baseURL}/v1/chat/completions`;
+
   try {
-    const r = await fetch(`${BASE_URL}/chat/completions`, {
+    const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
       body: JSON.stringify({
-        model: FLASH,
+        model: provider.model,
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -69,27 +107,27 @@ async function callFlash(system: string, prompt: string, maxTokens = 8000): Prom
 
     if (!r.ok) {
       const body = await r.text().catch(() => "");
-      return { error: `API ${r.status}: ${body.slice(0, 200)}` };
+      return { error: `${provider.name} ${r.status}: ${body.slice(0, 180)}` };
     }
 
     const data = await r.json().catch(() => null);
     const raw = data?.choices?.[0]?.message?.content;
-    if (!raw) return { error: "Flash 返回空内容" };
+    if (!raw) return { error: `${provider.name} 返回空内容` };
     return { raw };
   } catch (e) {
-    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) };
+    return { error: `${provider.name} ${(e instanceof Error ? e.message : String(e)).slice(0, 180)}` };
   }
 }
 
-// ─── 单角色扩展 ──────────────────────────────────
+// ─── 单角色扩展（指定provider）────────────────────
 
 async function expandOne(
+  provider: ProviderConfig,
   char: { id: string; name: string; card: Record<string, unknown> },
   context: string,
 ): Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> {
   const qic = (char.card.quickImportContent as string) || "";
   const bg = (char.card.background as string) || "";
-  // 截断过长原文——超8000字Flash处理极慢还容易超时
   const rawSource = (qic || bg).slice(0, 8000);
   const sourceText = rawSource.length >= 8000 ? rawSource + "\n…(原文过长已截断前8000字)" : rawSource;
 
@@ -119,14 +157,16 @@ ${JSON.stringify(char.card)}
 
 【核心原则——少总结，多复述，多扩展】
 1. ❌ 禁止总结/缩写/概括原始设定——原文照搬，原汁原味
-2. ✅ 原始设定中已分好类的能力（如「能力1：步频幻觉」）→ abilities字段逐条原样复述，包括原理、应用场景、限制
+2. ✅ 原始设定中已分好类的能力→ abilities字段逐条原样复述，包括原理、应用场景、限制
 3. ✅ 背景缺失的信息→基于世界观、文风、同类角色的信息推敲补充
 4. ✅ personality→从原始设定的描述中提炼性格特征
 5. ✅ appearance→如果原始设定没有外貌描写，基于角色定位和世界观合理推敲
 6. ❌ 任何字段禁止"无""未知""暂无"或留空——基于上下文推断填满
 7. ✅ 只输出纯JSON，无markdown代码块`;
 
-  const result = await callFlash("扩展角色卡。少总结多复述，原文照搬不缩写，空字段基于世界观推敲补全。只输出JSON。", prompt, 8000);
+  const result = await callProvider(provider,
+    "扩展角色卡。少总结多复述，原文照搬不缩写，空字段基于世界观推敲补全。只输出JSON。",
+    prompt, 8000);
 
   if ("error" in result) {
     return { id: char.id, name: char.name, result: null, error: result.error };
@@ -147,24 +187,30 @@ ${JSON.stringify(char.card)}
   }
 }
 
-// ─── 并发池（限制同时请求数，做完自动补位）─────
+// ─── 双Provider并发池（共享队列，各跑各的）─────────
 
-async function withConcurrency<T, R>(
+async function withDualProviders<T>(
   items: T[],
-  fn: (item: T, index: number) => Promise<R>,
-  limit: number,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
+  fns: Array<(item: T, index: number) => Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }>>,
+  limits: number[],
+) {
+  const results: Array<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> = new Array(items.length);
   let cursor = 0;
 
-  async function worker(): Promise<void> {
+  async function worker(fn: (item: T, index: number) => Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }>): Promise<void> {
     while (cursor < items.length) {
       const idx = cursor++;
       results[idx] = await fn(items[idx], idx);
     }
   }
 
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  const allWorkers: Promise<void>[] = [];
+  for (let i = 0; i < fns.length; i++) {
+    for (let j = 0; j < limits[i]; j++) {
+      allWorkers.push(worker(fns[i]));
+    }
+  }
+  await Promise.all(allWorkers);
   return results;
 }
 
@@ -209,10 +255,9 @@ export async function POST(request: Request) {
           await prisma.project.update({ where: { id: projectId }, data: { globalPrompt: context } }).catch(() => {});
         }
 
-        // ── 加载 + 去重（同名+别名+小名，只合并不删除）──
+        // ── 加载 + 去重 ──
         const chars = await prisma.characterCard.findMany({ where: { id: { in: characterIds } } });
 
-        // 标准化名字（最短2字以上才参与包含匹配，防止"一"误匹配"洁世一"）
         const normalizeName = (name: string): string => {
           return name.toLowerCase().replace(/[（(][^)）]*[)）]/g, "").replace(/\s+/g, "").trim();
         };
@@ -220,21 +265,18 @@ export async function POST(request: Request) {
           const na = normalizeName(a), nb = normalizeName(b);
           if (!na || !nb) return false;
           if (na === nb) return true;
-          // 包含关系：较短名≥2字才参与（防单字误匹配），且短名是长名的子串
           const shorter = na.length <= nb.length ? na : nb;
           const longer = na.length > nb.length ? na : nb;
-          if (shorter.length < 2) return false; // 单字不参与包含匹配
+          if (shorter.length < 2) return false;
           if (longer.includes(shorter)) return true;
           return false;
         };
 
         const dedupedChars: typeof chars = [];
         const mergedNames: string[] = [];
-        // 用 Map 跟踪已见过的角色名→主卡索引
         const seenNames = new Map<string, number>();
 
         for (const c of chars) {
-          // 在已见过的角色中找相似项
           let foundIdx = -1;
           for (const [key, idx] of seenNames) {
             if (isSameCharacter(key, c.name)) { foundIdx = idx; break; }
@@ -242,25 +284,21 @@ export async function POST(request: Request) {
 
           if (foundIdx >= 0) {
             const primary = dedupedChars[foundIdx];
-            // 合并内容到主卡（不删卡，副本保留在DB）
             const mergedQC = [primary.quickImportContent, c.quickImportContent]
               .filter(s => typeof s === 'string' && s.trim().length > 0)
               .join("\n\n---\n---\n\n");
-            // 更新内存中的主卡数据
             const primaryQC = typeof primary.quickImportContent === 'string' ? primary.quickImportContent : '';
             primary.quickImportContent = mergedQC || primaryQC;
             if (!primary.background && c.background) primary.background = c.background;
             primary.abilities = [...new Set([...primary.abilities, ...c.abilities])];
             primary.hiddenMotives = [...new Set([...primary.hiddenMotives, ...c.hiddenMotives])];
 
-            // 同步更新DB中主卡的 quickImportContent
             await prisma.characterCard.update({
               where: { id: primary.id },
               data: { quickImportContent: primary.quickImportContent },
             }).catch(() => {});
 
             mergedNames.push(`${primary.name}←${c.name}`);
-            // 副本不加入扩展列表（跳过），但保留在DB
           } else {
             seenNames.set(c.name.toLowerCase().trim(), dedupedChars.length);
             dedupedChars.push(c);
@@ -278,7 +316,7 @@ export async function POST(request: Request) {
           return;
         }
 
-        // ── 构建角色列表（每角色独立一项）──
+        // ── 构建角色列表 ──
         const charItems = dedupedChars.map(c => ({
           id: c.id,
           name: c.name,
@@ -295,82 +333,90 @@ export async function POST(request: Request) {
           },
         }));
 
+        // ── 双Provider配置 ──
+        const { providers, limits } = getProviders();
+        const totalConcurrency = limits.reduce((a, b) => a + b, 0);
+        const providerLabels = providers.map((p, i) => `${p.name}×${limits[i]}`).join(" + ");
+
         send({
           type: "progress", stage: "start",
-          message: `${total} 个角色 · 逐角色并行扩展 · 并发${CONCURRENCY}`,
-          pct: 5, done: 0, total,
+          message: `${total} 个角色 · ${providerLabels} · ${totalConcurrency}并发`,
+          pct: 5, done: 0, total, providers: providers.map(p => p.name),
         });
 
-        // ── 逐角色并行扩展 ──
+        // ── 逐角色并行扩展（双Provider共享队列）──
         let doneCount = 0;
-        // 详细结果：每个角色一条，前端弹窗展示
-        const charResults: Array<{ name: string; status: "ok" | "failed"; error?: string }> = [];
+        const charResults: Array<{ name: string; status: "ok" | "failed"; error?: string; provider?: string }> = [];
         const fallbackMap = new Map(charItems.map(c => [c.id, c.card]));
 
-        await withConcurrency(charItems, async (item, idx) => {
-          // 单个角色开始处理（不发事件，避免刷屏）
-          const { result: r, error } = await expandOne(item, context);
-          let finalError = error;
+        // 为每个provider创建对应的fn
+        const fns = providers.map((provider) =>
+          async (item: typeof charItems[number], idx: number) => {
+            const { result: r, error } = await expandOne(provider, item, context);
+            let finalError = error;
 
-          // 写 DB
-          if (r) {
-            const fallback = fallbackMap.get(item.id);
-            try {
-              await prisma.characterCard.update({
-                where: { id: item.id },
-                data: {
-                  appearance: safeMerge(r.appearance, fallback?.appearance) as any,
-                  personality: safeMerge(r.personality, fallback?.personality) as any,
-                  dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
-                  background: String(r.background || "").trim(),
-                  abilities: safeMerge(
-                    Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
-                    fallback?.abilities as string[] | undefined,
-                  ) as string[],
-                  hiddenMotives: safeMerge(
-                    Array.isArray(r.hiddenMotives) ? r.hiddenMotives.filter((a: unknown) => typeof a === "string") : null,
-                    fallback?.hiddenMotives as string[] | undefined,
-                  ) as string[],
-                  relationships: safeMerge(
-                    Array.isArray(r.relationships) ? r.relationships : null,
-                    fallback?.relationships as any,
-                  ) as any,
-                  timeline: safeMerge(
-                    Array.isArray(r.timeline) ? r.timeline : null,
-                    fallback?.timeline as any,
-                  ) as any,
-                  arcProgress: safeMerge(
-                    String(r.arcProgress || "").trim() || null,
-                    String(fallback?.arcProgress || ""),
-                  ) as string,
-                  quickImportContent: "",
-                },
-              });
-            } catch (dbErr) {
-              finalError = `DB写入失败: ${String(dbErr).slice(0, 100)}`;
+            if (r) {
+              const fallback = fallbackMap.get(item.id);
+              try {
+                await prisma.characterCard.update({
+                  where: { id: item.id },
+                  data: {
+                    appearance: safeMerge(r.appearance, fallback?.appearance) as any,
+                    personality: safeMerge(r.personality, fallback?.personality) as any,
+                    dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
+                    background: String(r.background || "").trim(),
+                    abilities: safeMerge(
+                      Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
+                      fallback?.abilities as string[] | undefined,
+                    ) as string[],
+                    hiddenMotives: safeMerge(
+                      Array.isArray(r.hiddenMotives) ? r.hiddenMotives.filter((a: unknown) => typeof a === "string") : null,
+                      fallback?.hiddenMotives as string[] | undefined,
+                    ) as string[],
+                    relationships: safeMerge(
+                      Array.isArray(r.relationships) ? r.relationships : null,
+                      fallback?.relationships as any,
+                    ) as any,
+                    timeline: safeMerge(
+                      Array.isArray(r.timeline) ? r.timeline : null,
+                      fallback?.timeline as any,
+                    ) as any,
+                    arcProgress: safeMerge(
+                      String(r.arcProgress || "").trim() || null,
+                      String(fallback?.arcProgress || ""),
+                    ) as string,
+                    quickImportContent: "",
+                  },
+                });
+              } catch (dbErr) {
+                finalError = `DB写入失败: ${String(dbErr).slice(0, 100)}`;
+              }
             }
-          }
 
-          // 记录结果
-          if (finalError) {
-            charResults.push({ name: item.name, status: "failed", error: finalError });
-          } else {
-            charResults.push({ name: item.name, status: "ok" });
-          }
+            if (finalError) {
+              charResults.push({ name: item.name, status: "failed", error: finalError, provider: provider.name });
+            } else {
+              charResults.push({ name: item.name, status: "ok", provider: provider.name });
+            }
 
-          // ⭐ 即时推送单个角色完成进度（含结果标记让前端实时更新列表）
-          doneCount++;
-          send({
-            type: "progress",
-            stage: finalError ? "char-failed" : "char-done",
-            message: `${finalError ? "⚠️" : "✅"} ${item.name}${finalError ? " " + finalError.slice(0, 50) : ""}`,
-            done: doneCount, total,
-            name: item.name,
-            status: finalError ? "failed" : "ok",
-            error: finalError?.slice(0, 100),
-            pct: Math.round(5 + (doneCount / total) * 90),
-          });
-        }, CONCURRENCY);
+            doneCount++;
+            send({
+              type: "progress",
+              stage: finalError ? "char-failed" : "char-done",
+              message: `${finalError ? "⚠️" : "✅"} ${item.name} [${provider.name}]${finalError ? " " + finalError.slice(0, 40) : ""}`,
+              done: doneCount, total,
+              name: item.name,
+              status: finalError ? "failed" : "ok",
+              error: finalError?.slice(0, 100),
+              provider: provider.name,
+              pct: Math.round(5 + (doneCount / total) * 90),
+            });
+
+            return { id: item.id, name: item.name, result: r, error: finalError };
+          }
+        );
+
+        await withDualProviders(charItems, fns, limits);
 
         // ── 完成：推送详细结果 ──
         const okList = charResults.filter(r => r.status === "ok").map(r => r.name);
