@@ -26,14 +26,21 @@ interface ClassifyGroup {
 // ─── API ───────────────────────────────────────
 
 async function callFlash(system: string, prompt: string): Promise<string> {
-  const r = await fetch(`${BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
-    body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 16000, stream: false }),
-  });
-  if (!r.ok) throw new Error(`Flash ${r.status}`);
-  const data = await r.json().catch(() => null);
-  return data?.choices?.[0]?.message?.content || "";
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000); // 单路60秒超时
+  try {
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+      body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 16000, stream: false }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) throw new Error(`Flash ${r.status}`);
+    const data = await r.json().catch(() => null);
+    return data?.choices?.[0]?.message?.content || "";
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function parseJSON(raw: string): Record<string, unknown> {
@@ -231,35 +238,51 @@ export async function POST(request: Request) {
           return groups;
         };
 
-        // ── 四路串行分类（避免限流，每步推送进度+错误）──
-        send({ type: "progress", stage: "start", message: `🔬 ${characters.length}角色 · 四维分类中...`, pct: 5 });
+        // ── 四路并行分类（每路独立60秒超时，总耗时=最慢那路）──
+        send({ type: "progress", stage: "start", message: `🔬 ${characters.length}角色 · 四维并行分类中...`, pct: 5 });
 
         const errors: string[] = [];
         const allResults: ClassifyGroup[] = [];
 
         const dims = [
-          { fn: classifyTitles, label: "🏷 称号", pct: 25 },
-          { fn: classifySchools, label: "🏫 学校", pct: 45 },
-          { fn: classifyExperiences, label: "📋 经历", pct: 65 },
-          { fn: classifyClubs, label: "⚽ 俱乐部", pct: 85 },
+          { fn: classifyTitles, label: "🏷 称号" },
+          { fn: classifySchools, label: "🏫 学校" },
+          { fn: classifyExperiences, label: "📋 经历" },
+          { fn: classifyClubs, label: "⚽ 俱乐部" },
         ];
 
-        for (const dim of dims) {
-          send({ type: "progress", stage: dim.label, message: `${dim.label} 分析中...`, pct: dim.pct - 5 });
-          try {
-            const groups = await dim.fn(charList, worldContext);
-            if (groups.length === 0) {
-              errors.push(`${dim.label}: AI未返回分组`);
-            } else {
-              allResults.push(...fillIds(groups));
-              send({ type: "progress", stage: dim.label, message: `${dim.label} ✅ ${groups.length}组`, pct: dim.pct });
+        // 四路并行
+        const dimResults = await Promise.all(
+          dims.map(async (dim) => {
+            send({ type: "progress", stage: dim.label, message: `${dim.label} 分析中...`, pct: 20 });
+            try {
+              const groups = await dim.fn(charList, worldContext);
+              if (groups.length === 0) {
+                errors.push(`${dim.label}: AI未返回分组`);
+                return { dim, groups: [] as ClassifyGroup[], error: `${dim.label}: AI未返回分组` };
+              }
+              send({ type: "progress", stage: dim.label, message: `${dim.label} ✅ ${groups.length}组`, pct: 60 });
+              return { dim, groups, error: null };
+            } catch (e) {
+              const msg = (e instanceof Error ? e.message : String(e)).slice(0, 100);
+              errors.push(`${dim.label}: ${msg}`);
+              send({ type: "progress", stage: `${dim.label}-err`, message: `${dim.label} ⚠️ ${msg}`, pct: 40 });
+              return { dim, groups: [] as ClassifyGroup[], error: `${dim.label}: ${msg}` };
             }
-          } catch (e) {
-            const msg = (e instanceof Error ? e.message : String(e)).slice(0, 100);
-            errors.push(`${dim.label}: ${msg}`);
-            send({ type: "progress", stage: `${dim.label}-err`, message: `${dim.label} ⚠️ ${msg}`, pct: dim.pct });
+          })
+        );
+
+        // 合并结果
+        for (const { dim, groups, error } of dimResults) {
+          if (error) {
+            send({ type: "progress", stage: `${dim.label}-err`, message: `${dim.label} ⚠️ ${error}`, pct: 40 });
+          }
+          if (groups.length > 0) {
+            allResults.push(...fillIds(groups));
           }
         }
+
+        send({ type: "progress", stage: "merge", message: `合并结果...`, pct: 75 });
 
         // 覆盖率检查
         const allNamed = new Set(allResults.flatMap(g => g.members));
