@@ -9,7 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // ═══════════════════════════════════════════════════════════════
 // AI 合并引擎 —— V4 Flash 分批并行（每批4个，N批并发）
@@ -61,6 +61,10 @@ ${pairsText}
 【输出——纯JSON，无markdown】
 {"merged":[{"name":"${isChar ? "角色名" : "词条标题"}","result":{${isChar ? "完整卡面" : "完整词条"}}},...]}`;
 
+  const TIMEOUT_MS = 45000; // 45s 超时保护，防止单批卡死
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
   try {
     const r = await fetch(`${baseURL}/chat/completions`, {
       method: "POST",
@@ -77,7 +81,10 @@ ${pairsText}
         stream: false,
         // 不传 thinking——硅基流动 Flash 不支持
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!r.ok) return null;
     const data = await r.json().catch(() => null);
@@ -90,7 +97,10 @@ ${pairsText}
     const parsed = JSON.parse(s) as Record<string, unknown>;
     const merged = Array.isArray(parsed.merged) ? parsed.merged as Record<string, unknown>[] : [];
     return merged.map(m => (m.result || {}) as Record<string, unknown>);
-  } catch {
+  } catch (e) {
+    clearTimeout(timeoutId);
+    const isAbort = (e as Error).name === "AbortError";
+    if (isAbort) console.warn(`[mergeOneBatch] ${type} 批次超时 (${TIMEOUT_MS / 1000}s)，回退规则合并`);
     return null;
   }
 }
@@ -437,7 +447,6 @@ export async function POST(request: Request) {
           send({ type: "progress", stage: "chars-merge", message: `Flash 分批合并角色... 0/${charTotalBatches} 批 (共${charMergePairs.length}个)`, batch: 0, totalBatches: charTotalBatches, done: 0 });
 
           const charBatches = chunkPairs(charMergePairs, BATCH_SIZE);
-          let charMergedDone = 0;
 
           const charBatchResults = await Promise.all(charBatches.map(async (batch, idx) => {
             const aiResult = await mergeOneBatch(batch, globalContext, "char");
@@ -456,6 +465,7 @@ export async function POST(request: Request) {
                   });
                 }
               }
+              send({ type: "progress", stage: "chars-merge", message: `第${idx+1}/${charTotalBatches}批 ✨AI合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
               return { batch: idx + 1, aiMerged: true, count: batch.length };
             } else {
               // 回退规则合并
@@ -471,13 +481,14 @@ export async function POST(request: Request) {
                   });
                 }
               }
+              send({ type: "progress", stage: "chars-merge", message: `第${idx+1}/${charTotalBatches}批 ⚙️规则合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
               return { batch: idx + 1, aiMerged: false, count: batch.length };
             }
           }));
 
+          let charMergedDone = 0;
           for (const r of charBatchResults) {
             charMergedDone += r.count;
-            send({ type: "progress", stage: "chars-merge", message: `角色合并 ${charMergedDone}/${charMergePairs.length} ${r.aiMerged ? "✨AI" : "⚙️规则"}`, batch: r.batch, totalBatches: charTotalBatches, done: charMergedDone });
           }
           created.charMerged = charMergedDone;
         }
@@ -536,9 +547,8 @@ export async function POST(request: Request) {
           send({ type: "progress", stage: "lore-merge", message: `Flash 分批合并词条... 0/${loreTotalBatches} 批 (共${loreMergePairs.length}个)`, batch: 0, totalBatches: loreTotalBatches, done: 0 });
 
           const loreBatches = chunkPairs(loreMergePairs, BATCH_SIZE);
-          let loreMergedDone = 0;
 
-          const loreBatchResults = await Promise.all(loreBatches.map(async (batch) => {
+          const loreBatchResults = await Promise.all(loreBatches.map(async (batch, idx) => {
             const aiResult = await mergeOneBatch(batch, globalContext, "lore");
             if (aiResult && aiResult.length === batch.length) {
               for (let j = 0; j < batch.length; j++) {
@@ -554,6 +564,7 @@ export async function POST(request: Request) {
                   });
                 }
               }
+              send({ type: "progress", stage: "lore-merge", message: `第${idx+1}/${loreTotalBatches}批 ✨AI合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
               return { aiMerged: true, count: batch.length };
             } else {
               for (const pair of batch) {
@@ -568,13 +579,14 @@ export async function POST(request: Request) {
                   });
                 }
               }
+              send({ type: "progress", stage: "lore-merge", message: `第${idx+1}/${loreTotalBatches}批 ⚙️规则合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
               return { aiMerged: false, count: batch.length };
             }
           }));
 
+          let loreMergedDone = 0;
           for (const r of loreBatchResults) {
             loreMergedDone += r.count;
-            send({ type: "progress", stage: "lore-merge", message: `词条合并 ${loreMergedDone}/${loreMergePairs.length} ${r.aiMerged ? "✨AI" : "⚙️规则"}`, batch: 0, totalBatches: loreTotalBatches, done: loreMergedDone });
           }
           created.loreMerged = loreMergedDone;
         }

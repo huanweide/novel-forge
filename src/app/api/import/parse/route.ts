@@ -169,10 +169,23 @@ export async function POST(request: Request) {
 
         // ── Prompt ──
 
-        const promptChars = `设定集→角色卡JSON。原文照搬，没信息写"无"。只输出JSON。${truncNote}
+        const promptChars = `你是角色提取器。只从"数字.人名 + 描述"格式中提取角色，其他所有内容视为不存在、不提取。没信息写"无"。只输出JSON。${truncNote}
 
-【${pName}】${pGenre.join("、")}
+【提取规则——严格遵守】
+1. 只识别以下格式的行：数字开头 + 人名 + 分隔符（- — ：: 空格等）+ 描述文字
+   例："1.洁世一 - 前锋，自我中心，目标是成为世界第一"
+   例："2、凪诚士郎：懒散的天才，身体能力极强"
+   例："3 糸师凛 · 冷静的杀手，执着于击败哥哥"
+2. 每一行编号对应一个角色
+3. 描述内容填入对应字段：提到外貌→appearance，提到性格→personality，提到能力→abilities，提到背景→background
+4. 描述里没有的字段写"无"，不要编造
+5. 不在编号列表中的文字（包括旁白、情节描述、对话等）一律忽略——不要从中提取角色
 
+【作品信息】
+名称：${pName}
+类型：${pGenre.join("、")}
+
+【文本——只在其中寻找"数字.人名 + 描述"的行】
 ${textSlice}
 
 {"characters":[{"name":"","aliases":[],"role":"protagonist|antagonist|supporting|mentor|love_interest|background","age":"","gender":"","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[{"targetName":"","relation":"","dynamic":""}],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[{"age":0,"event":"","era":""}],"arcProgress":"","currentStatus":"alive"}]}`;
@@ -195,7 +208,7 @@ ${textSlice}
 
         const [resA, resB] = await Promise.all([
           // 路A：DeepSeek官方 → 人物
-          callOne(dsConfig, "格式翻译器。设定集→角色卡JSON。原文照搬。只输出JSON。", promptChars, 24000, (elapsed) => {
+          callOne(dsConfig, "角色提取器。只从'数字.人名+描述'格式行提取，忽略其他所有内容。输出JSON。", promptChars, 24000, (elapsed) => {
             progressA = Math.round(elapsed);
             // 路A 进度：5%~40% 区间，随时间递增但不超过 40%
             const aPct = Math.min(basePct + Math.round(elapsed / 150 * 35), 40);
