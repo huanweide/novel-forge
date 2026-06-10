@@ -62,7 +62,19 @@ function isSameCharacter(a: string, b: string): boolean {
  * 第一个角色名之前的文本忽略。
  */
 function parseCharacters(text: string): ParsedChar[] {
-  const HEADER_RE = /^\s*(\d+)\s*[\.、．，)\）]\s*(.+)$/;
+  // 编号格式全面兼容：
+  //   阿拉伯: 1. 2、3) (4)（5）① ②
+  //   中文数字: 一、二、三 四）
+  //   中文序数: 第一位 第二，
+  // 数字捕获到 match[1]，人名捕获到 match[2]
+  const NUM = [
+    "\\d+",                                          // 阿拉伯数字: 1 2 3
+    "[一二三四五六七八九十百]+",                      // 中文数字: 一 二 三 十 二十 百
+    "第[一二三四五六七八九十百]+[位名个]?",           // 中文序数: 第一位 第二
+    "[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]",            // 圈号
+    "[（(]\\d+[）)]",                                // 括号编号: (1)（2）
+  ].join("|");
+  const HEADER_RE = new RegExp(`^\\s*(${NUM})[.、．，)）\\s:：·\\-—]+\\s*(.+)$`);
 
   const lines = text.split("\n");
   const chars: ParsedChar[] = [];
@@ -76,7 +88,7 @@ function parseCharacters(text: string): ParsedChar[] {
     if (match) {
       const name = match[2].trim();
       // 过滤非人名：太长、太短、标题关键词
-      if (name.length >= 1 && name.length <= 30 && !/^(第|章|节|卷|部|篇)/.test(name)) {
+      if (name.length >= 2 && name.length <= 15 && !/^(第|章|节|卷|部|篇)/.test(name)) {
         // 保存上一个角色
         if (started && currentName && currentLines.length > 0) {
           const content = currentLines.join("\n").trim();
@@ -260,7 +272,7 @@ export async function POST(request: Request) {
         const parsed = parseCharacters(text);
 
         if (parsed.length === 0) {
-          send({ type: "error", message: "未识别到任何角色。格式：1.人名 + 描述" });
+          send({ type: "error", message: "未识别到任何角色。支持格式：1.人名+描述 / 一、人名+描述 / ①人名+描述" });
           controller.close();
           return;
         }
