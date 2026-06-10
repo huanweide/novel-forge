@@ -88,10 +88,8 @@ ${charList}
 
 {"groups":[{"category":"title","label":"称号标签","description":"该称号的含义与来源","members":["角色名"]}]}`;
 
-  try {
-    const raw = await callFlash("角色称号分类。从背景描述中提取称号/头衔/标签。不遗漏。JSON。", prompt);
-    return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-  } catch { return []; }
+  const raw = await callFlash("角色称号分类。从背景描述中提取称号/头衔/标签。不遗漏。JSON。", prompt);
+  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
 }
 
 /** 学校 —— 从背景中识别学校/学园 */
@@ -118,10 +116,8 @@ ${charList}
 
 {"groups":[{"category":"school","label":"学校名","description":"学校简介","members":["角色名"]}]}`;
 
-  try {
-    const raw = await callFlash("角色学校分类。从背景中识别学校/学园归属。不遗漏。JSON。", prompt);
-    return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-  } catch { return []; }
+  const raw = await callFlash("角色学校分类。从背景中识别学校/学园归属。不遗漏。JSON。", prompt);
+  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
 }
 
 /** 经历/背景 —— 从背景中提取关键经历 */
@@ -150,10 +146,8 @@ ${charList}
 
 {"groups":[{"category":"experience","label":"经历标签","description":"该经历的说明","members":["角色名"]}]}`;
 
-  try {
-    const raw = await callFlash("角色经历分类。从背景中提取关键经历/履历。不遗漏。JSON。", prompt);
-    return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-  } catch { return []; }
+  const raw = await callFlash("角色经历分类。从背景中提取关键经历/履历。不遗漏。JSON。", prompt);
+  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
 }
 
 /** 俱乐部/队伍 —— 从背景中识别所属队伍 */
@@ -182,10 +176,8 @@ ${charList}
 
 {"groups":[{"category":"club","label":"队伍/俱乐部名","description":"该队伍说明","members":["角色名"]}]}`;
 
-  try {
-    const raw = await callFlash("角色俱乐部分类。从背景中识别队伍/俱乐部归属。不遗漏。JSON。", prompt);
-    return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-  } catch { return []; }
+  const raw = await callFlash("角色俱乐部分类。从背景中识别队伍/俱乐部归属。不遗漏。JSON。", prompt);
+  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
 }
 
 // ─── 世界上下文 ──────────────────────────────

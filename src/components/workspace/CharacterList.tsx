@@ -79,10 +79,21 @@ export function CharacterList({
     grouped[r].push(c);
   }
 
-  // 兜底：expanding结束但没有弹窗 → 从progress自动构建结果（仅触发一次）
-  const fallbackTriggered = useRef(false);
+  // 兜底：classifying结束但没显示面板 → 确保结果消息可见（仅触发一次）
+  const classifyFallbackTriggered = useRef(false);
   useEffect(() => {
-    if (!expanding && expandDone > 0 && expandProgress.length > 0 && !fallbackTriggered.current) {
+    if (!classifying && classifyResult && !classifyGroups && !classifyFallbackTriggered.current) {
+      classifyFallbackTriggered.current = true;
+      // 强制刷新——让错误面板显示（如果 classifyResult.message 非空但面板没渲染）
+      setClassifyResult(prev => prev ? { ...prev } : null);
+    }
+    if (classifying) classifyFallbackTriggered.current = false;
+  }, [classifying, classifyResult, classifyGroups]);
+
+  // 兜底：expanding结束但没有弹窗 → 从progress自动构建结果（仅触发一次）
+  const expandFallbackTriggered = useRef(false);
+  useEffect(() => {
+    if (!expanding && expandDone > 0 && expandProgress.length > 0 && !expandFallbackTriggered.current) {
       const okList = expandProgress
         .filter(p => p.status === "ok" || p.status === "char-done")
         .map(p => p.name);
@@ -90,12 +101,12 @@ export function CharacterList({
         .filter(p => p.status === "failed" || p.status === "char-failed")
         .map(p => ({ name: p.name, reason: p.error || "未知错误" }));
       if (okList.length + failList.length > 0 && !expandResult) {
-        fallbackTriggered.current = true;
+        expandFallbackTriggered.current = true;
         setExpandResult({ okList, failList, total: expandTotal });
       }
     }
     // expanding重新开始时重置标记
-    if (expanding) fallbackTriggered.current = false;
+    if (expanding) expandFallbackTriggered.current = false;
   }, [expanding, expandDone, expandProgress, expandTotal, expandResult]);
 
   const handleExpand = async () => {
@@ -221,7 +232,38 @@ export function CharacterList({
       let buf = "";
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          // 流结束——处理 buf 中残余的 data: 行（done 事件可能卡在这里）
+          if (buf.trim()) {
+            const lines = buf.split("\n").filter(l => l.trim().startsWith("data: "));
+            for (const dataLine of lines) {
+              try {
+                const ev = JSON.parse(dataLine.trim().slice(6));
+                console.log("[classify SSE residual]", ev.type, ev);
+                if (ev.type === "progress") {
+                  setClassifyMsg(ev.message as string);
+                  if (ev.pct !== undefined) { setClassifyDone(Math.round(ev.pct as number)); setClassifyTotal(100); }
+                } else if (ev.type === "done") {
+                  const groups = (ev.groups || []) as Array<{
+                    category: string; label: string; description: string;
+                    members: string[]; memberIds: string[];
+                  }>;
+                  if (groups.length > 0) {
+                    setClassifyGroups(groups);
+                    const sel = new Map<string, Set<string>>();
+                    for (const g of groups) sel.set(g.label, new Set(g.memberIds));
+                    setGroupSelections(sel);
+                  }
+                  setClassifyResult({ ok: ev.ok !== false, message: ev.message as string });
+                  setClassifyDone(100); setClassifyTotal(100);
+                } else if (ev.type === "error") {
+                  setClassifyResult({ ok: false, message: `❌ ${ev.message}` });
+                }
+              } catch { /* skip */ }
+            }
+          }
+          break;
+        }
         buf += decoder.decode(value, { stream: true });
         const chunks = buf.split("\n\n");
         buf = chunks.pop() || "";
@@ -239,7 +281,6 @@ export function CharacterList({
                 setClassifyTotal(100);
               }
             } else if (ev.type === "done") {
-              // 从 done 事件拿 groups 数据
               const groups = (ev.groups || []) as Array<{
                 category: string; label: string; description: string;
                 members: string[]; memberIds: string[];
@@ -254,6 +295,7 @@ export function CharacterList({
                 setGroupSelections(sel);
               }
               setClassifyResult({ ok: ev.ok !== false, message: ev.message as string });
+              setClassifyDone(100); setClassifyTotal(100);
             } else if (ev.type === "error") {
               setClassifyResult({ ok: false, message: `❌ ${ev.message}` });
             }
