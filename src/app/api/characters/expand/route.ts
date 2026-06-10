@@ -11,12 +11,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 300; // 117角色+每角色3s=~70s，留足余量
 
 const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
 const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "";
-const CONCURRENCY = 5;  // 最多同时 5 个 Flash 请求，做完自动补位
+const CONCURRENCY = 8;  // 提高到8并发，加快117角色处理
+const CALL_TIMEOUT_MS = 30000; // 单次API调用30s超时
 
 // ─── 安全合并：空值不覆盖已有数据 ──────────────────────
 
@@ -51,6 +52,8 @@ ${styleText ? "文风: " + styleText : ""}`;
 // ─── Flash 调用（非流式）───────────────────────────
 
 async function callFlash(system: string, prompt: string, maxTokens = 4000): Promise<{ raw: string } | { error: string }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -64,9 +67,10 @@ async function callFlash(system: string, prompt: string, maxTokens = 4000): Prom
         temperature: 0.1,
         max_tokens: maxTokens,
         stream: false,
-        // 不传 thinking——硅基流动 Flash 不支持
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!r.ok) {
       const body = await r.text().catch(() => "");
@@ -78,7 +82,9 @@ async function callFlash(system: string, prompt: string, maxTokens = 4000): Prom
     if (!raw) return { error: "Flash 返回空内容" };
     return { raw };
   } catch (e) {
-    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) };
+    clearTimeout(timeoutId);
+    const isAbort = (e as Error).name === "AbortError";
+    return { error: isAbort ? `超时(${CALL_TIMEOUT_MS / 1000}s)` : (e instanceof Error ? e.message : String(e)).slice(0, 200) };
   }
 }
 
@@ -204,10 +210,10 @@ export async function POST(request: Request) {
           await prisma.project.update({ where: { id: projectId }, data: { globalPrompt: context } }).catch(() => {});
         }
 
-        // ── 加载 + 去重（同名+别名+小名全认）──
+        // ── 加载 + 去重（同名+别名+小名，只合并不删除）──
         const chars = await prisma.characterCard.findMany({ where: { id: { in: characterIds } } });
 
-        // 标准化名字：去括号、去空格、小写
+        // 标准化名字（最短2字以上才参与包含匹配，防止"一"误匹配"洁世一"）
         const normalizeName = (name: string): string => {
           return name.toLowerCase().replace(/[（(][^)）]*[)）]/g, "").replace(/\s+/g, "").trim();
         };
@@ -215,48 +221,56 @@ export async function POST(request: Request) {
           const na = normalizeName(a), nb = normalizeName(b);
           if (!na || !nb) return false;
           if (na === nb) return true;
-          // 包含关系：小名vs全名（"挽月" ⊂ "苏挽月"，"洛基" ⊂ "朱利安·洛基"）
-          if (na.includes(nb) || nb.includes(na)) return true;
+          // 包含关系：较短名≥2字才参与（防单字误匹配），且短名是长名的子串
+          const shorter = na.length <= nb.length ? na : nb;
+          const longer = na.length > nb.length ? na : nb;
+          if (shorter.length < 2) return false; // 单字不参与包含匹配
+          if (longer.includes(shorter)) return true;
           return false;
         };
 
-        const seenChars: typeof chars = [];
+        const dedupedChars: typeof chars = [];
         const mergedNames: string[] = [];
+        // 用 Map 跟踪已见过的角色名→主卡索引
+        const seenNames = new Map<string, number>();
 
         for (const c of chars) {
-          const existing = seenChars.find(e => isSameCharacter(e.name, c.name));
-          if (existing) {
-            // 用更长的名字（全名优先）
-            const useLonger = c.name.length > existing.name.length;
-            const primary = useLonger ? c : existing;
-            const duplicate = useLonger ? existing : c;
+          // 在已见过的角色中找相似项
+          let foundIdx = -1;
+          for (const [key, idx] of seenNames) {
+            if (isSameCharacter(key, c.name)) { foundIdx = idx; break; }
+          }
 
-            const mergedQC = [primary.quickImportContent, duplicate.quickImportContent]
+          if (foundIdx >= 0) {
+            const primary = dedupedChars[foundIdx];
+            // 合并内容到主卡（不删卡，副本保留在DB）
+            const mergedQC = [primary.quickImportContent, c.quickImportContent]
               .filter(s => typeof s === 'string' && s.trim().length > 0)
               .join("\n\n---\n---\n\n");
-            primary.quickImportContent = mergedQC;
-            if (!primary.background && duplicate.background) primary.background = duplicate.background;
-            primary.abilities = [...new Set([...primary.abilities, ...duplicate.abilities])];
-            primary.hiddenMotives = [...new Set([...primary.hiddenMotives, ...duplicate.hiddenMotives])];
-            if (useLonger) {
-              // 用新的做主卡，删旧卡
-              seenChars[seenChars.indexOf(existing)] = c;
-              mergedNames.push(existing.name);
-              await prisma.characterCard.delete({ where: { id: existing.id } }).catch(() => {});
-            } else {
-              mergedNames.push(c.name);
-              await prisma.characterCard.delete({ where: { id: c.id } }).catch(() => {});
-            }
+            // 更新内存中的主卡数据
+            const primaryQC = typeof primary.quickImportContent === 'string' ? primary.quickImportContent : '';
+            primary.quickImportContent = mergedQC || primaryQC;
+            if (!primary.background && c.background) primary.background = c.background;
+            primary.abilities = [...new Set([...primary.abilities, ...c.abilities])];
+            primary.hiddenMotives = [...new Set([...primary.hiddenMotives, ...c.hiddenMotives])];
+
+            // 同步更新DB中主卡的 quickImportContent
+            await prisma.characterCard.update({
+              where: { id: primary.id },
+              data: { quickImportContent: primary.quickImportContent },
+            }).catch(() => {});
+
+            mergedNames.push(`${primary.name}←${c.name}`);
+            // 副本不加入扩展列表（跳过），但保留在DB
           } else {
-            seenChars.push(c);
+            seenNames.set(c.name.toLowerCase().trim(), dedupedChars.length);
+            dedupedChars.push(c);
           }
         }
 
         if (mergedNames.length > 0) {
-          send({ type: "progress", stage: "dedup", message: `🔗 合并 ${mergedNames.length} 个重复角色（含别名/小名）: ${mergedNames.join("、")}`, pct: 2 });
+          send({ type: "progress", stage: "dedup", message: `🔗 合并 ${mergedNames.length} 组重复角色: ${mergedNames.join("、")}`, pct: 2 });
         }
-
-        const dedupedChars = seenChars;
 
         const total = dedupedChars.length;
         if (total === 0) {
