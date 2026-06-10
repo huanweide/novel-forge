@@ -63,10 +63,11 @@ function isSameCharacter(a: string, b: string): boolean {
  */
 function parseCharacters(text: string): ParsedChar[] {
   // 编号格式全面兼容：
-  //   阿拉伯: 1. 2、3) (4)（5）① ②
+  //   Markdown标题: ### 1. 拉明·亚马尔  /  ## 2、洁世一
+  //   纯文本: 1. 2、3) (4)（5）① ②
   //   中文数字: 一、二、三 四）
   //   中文序数: 第一位 第二，
-  // 数字捕获到 match[1]，人名捕获到 match[2]
+  // 数字捕获到 match[1]，名字+描述捕获到 match[2]
   const NUM = [
     "\\d+",                                          // 阿拉伯数字: 1 2 3
     "[一二三四五六七八九十百]+",                      // 中文数字: 一 二 三 十 二十 百
@@ -74,7 +75,8 @@ function parseCharacters(text: string): ParsedChar[] {
     "[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]",            // 圈号
     "[（(]\\d+[）)]",                                // 括号编号: (1)（2）
   ].join("|");
-  const HEADER_RE = new RegExp(`^\\s*(${NUM})[.、．，)）\\s:：·\\-—]+\\s*(.+)$`);
+  // (?:#{1,3}\s*)?  → 可选 Markdown 标题前缀（### / ## / #）
+  const HEADER_RE = new RegExp(`^(?:#{1,3}\\s*)?\\s*(${NUM})[.、．，)\）\\s:：·\\-—]+\\s*(.+)$`);
 
   const lines = text.split("\n");
   const chars: ParsedChar[] = [];
@@ -86,9 +88,19 @@ function parseCharacters(text: string): ParsedChar[] {
     const match = HEADER_RE.exec(line);
 
     if (match) {
-      const name = match[2].trim();
-      // 过滤非人名：太长、太短、标题关键词
-      if (name.length >= 2 && name.length <= 15 && !/^(第|章|节|卷|部|篇)/.test(name)) {
+      let rawName = match[2].trim();
+      // 分离名字和描述：—— 或 — 之后的部分作为内容
+      let extraDesc = "";
+      const dashIdx = rawName.indexOf("——");
+      const emDashIdx = rawName.indexOf("—"); // U+2014 EM DASH
+      const sepIdx = dashIdx >= 0 ? dashIdx : (emDashIdx >= 0 ? emDashIdx : -1);
+      if (sepIdx >= 0) {
+        extraDesc = rawName.slice(sepIdx + (dashIdx >= 0 ? 2 : 1)).trim();
+        rawName = rawName.slice(0, sepIdx).trim();
+      }
+      const name = rawName;
+      // 过滤非人名：太长、太短、标题关键词（名字可含英文/括号，上限放宽到40）
+      if (name.length >= 2 && name.length <= 40 && !/^(第|章|节|卷|部|篇)/.test(name)) {
         // 保存上一个角色
         if (started && currentName && currentLines.length > 0) {
           const content = currentLines.join("\n").trim();
@@ -102,7 +114,7 @@ function parseCharacters(text: string): ParsedChar[] {
         }
         started = true;
         currentName = name;
-        currentLines = [];
+        currentLines = extraDesc ? [extraDesc] : [];
         continue;
       }
     }
