@@ -324,7 +324,7 @@ export async function POST(request: Request) {
         if (created.length > 0) parts.push(`+${created.length} 新建`);
         if (updated.length > 0) parts.push(`📎${updated.length} 追加`);
 
-        const message = `✅ ${parts.join(" · ")} · ${sec}s`;
+        const message = `✅ ${parts.join(" · ")} · ${sec}s——点击左侧角色→编辑→背景状态查看导入内容`;
 
         send({
           type: "done",

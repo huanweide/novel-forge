@@ -181,11 +181,16 @@ export function ImportWizard({
               }
             } else if (event.type === "done") {
               setQuickPct(100);
-              setQuickStage(event.message || "✅ 完成");
               setQuickResult(event.message || "");
+              setQuickStage("✅ 完成");
               setToast(event.message || "导入完成");
-              // 延迟关闭，让用户看到结果
-              setTimeout(() => { onImported(); onClose(); }, 1500);
+              setQuickLoading(false);
+              // 保存导入的角色名列表供展示
+              if (event.characterNames && Array.isArray(event.characterNames)) {
+                setQuickCharList(event.characterNames.map((n: string) => ({ name: n, preview: "" })));
+              }
+              // 后台刷新数据，不关窗——让用户看到结果
+              onImported();
             } else if (event.type === "error") {
               setError(event.message || "导入失败");
               setQuickLoading(false);
@@ -568,40 +573,44 @@ export function ImportWizard({
                 </div>
               </div>
 
-              {/* ── 快速导入进度 ── */}
-              {quickLoading && (
+              {/* ── 快速导入进度 / 结果 ── */}
+              {(quickLoading || quickResult) && (
                 <div className="mt-4 p-4 rounded-xl bg-zinc-800/50 border border-zinc-700 space-y-3">
-                  {/* 进度条 */}
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-green-400 font-medium">{quickStage || "连接中..."}</span>
-                      <span className="text-zinc-500">{quickPct}%</span>
+                  {/* 进度条（仅加载中） */}
+                  {quickLoading && (
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-green-400 font-medium">{quickStage || "连接中..."}</span>
+                        <span className="text-zinc-500">{quickPct}%</span>
+                      </div>
+                      <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-600 to-emerald-500 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.max(quickPct, 3)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-green-600 to-emerald-500 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.max(quickPct, 3)}%` }}
-                      />
+                  )}
+
+                  {/* 完成提示 */}
+                  {quickResult && (
+                    <div className="text-sm text-emerald-400 font-medium text-center py-2 border-b border-zinc-700">
+                      {quickResult}
                     </div>
-                  </div>
+                  )}
 
                   {/* 识别的角色列表 */}
                   {quickCharList.length > 0 && (
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                      <p className="text-xs text-zinc-500 mb-1">识别到的角色：</p>
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      <p className="text-xs text-zinc-500 mb-1 sticky top-0 bg-zinc-800/50 py-1">
+                        {quickLoading ? "识别到的角色：" : "✅ 已导入角色（点左侧列表查看→编辑→背景状态）："}
+                      </p>
                       {quickCharList.map((c, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs py-1 px-2 rounded bg-zinc-800/40">
                           <span className="text-green-400 font-medium shrink-0">{c.name}</span>
                           <span className="text-zinc-500 truncate">{c.preview}</span>
                         </div>
                       ))}
-                    </div>
-                  )}
-
-                  {/* 完成提示 */}
-                  {quickResult && (
-                    <div className="text-sm text-emerald-400 font-medium text-center py-2">
-                      {quickResult}
                     </div>
                   )}
                 </div>
