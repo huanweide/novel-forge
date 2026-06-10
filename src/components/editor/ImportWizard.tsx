@@ -217,7 +217,7 @@ export function ImportWizard({
 
   // ─── SSE 流式解析 ──────────────────────────────────────
 
-  const handleParse = async () => {
+  const handleParse = async (charactersOnly = false) => {
     if (rawText.trim().length < 50) {
       setError("文本太短（最少50字）");
       return;
@@ -238,7 +238,7 @@ export function ImportWizard({
       const res = await fetch("/api/import/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, rawText, volumeMode, importMode }),
+        body: JSON.stringify({ projectId, rawText, volumeMode, importMode, charactersOnly }),
       });
 
       if (!res.ok) {
@@ -259,13 +259,11 @@ export function ImportWizard({
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        // 按 SSE 事件边界 \n\n 分割，不是按行
         const chunks = buffer.split("\n\n");
         buffer = chunks.pop() || "";
 
         for (const chunk of chunks) {
           if (!chunk.trim()) continue;
-          // 找 data: 行（可能跨多行，取第一行 data: 的内容）
           const lines = chunk.split("\n");
           const dataLine = lines.find(l => l.trim().startsWith("data: "));
           if (!dataLine) continue;
@@ -280,20 +278,12 @@ export function ImportWizard({
                 time: new Date().toLocaleTimeString("zh-CN"),
               }]);
               setCurrentStage(event.stage || "");
-              // 百分比
               if (event.pct !== undefined) setParsePct(event.pct as number);
-              // 设定集标记
               if (event.isSettings) setIsSettings(true);
-              // 分块进度
               if (event.stage === "ready" && event.chunks !== undefined) setChunkTotal(event.chunks as number);
               if (event.stage === "chunk-done" && event.doneChunks !== undefined) setChunkDone(event.doneChunks as number);
-              // 逐角色/词条计数
-              if (event.stage === "char-found" && event.total !== undefined) {
-                setCharsFound(event.total as number);
-              }
-              if (event.stage === "lore-found" && event.total !== undefined) {
-                setLoreFound(event.total as number);
-              }
+              if (event.stage === "char-found" && event.total !== undefined) setCharsFound(event.total as number);
+              if (event.stage === "lore-found" && event.total !== undefined) setLoreFound(event.total as number);
             } else if (event.type === "done") {
               setResult(event);
               setEditedChapters(event.detectedChapters || []);
@@ -310,9 +300,7 @@ export function ImportWizard({
               setTimeout(() => setStep("preview"), 500);
             } else if (event.type === "error") {
               setError(event.message || "分析失败");
-              if (event.rawOutput) {
-                setError((prev) => prev + `\n\n原始输出预览：\n${event.rawOutput}`);
-              }
+              if (event.rawOutput) setError((prev) => prev + `\n\n原始输出预览：\n${event.rawOutput}`);
               setStep("input");
             }
           } catch {
@@ -572,13 +560,22 @@ export function ImportWizard({
                       {quickLoading ? "⚡ 导入中..." : "⚡ 快速导入"}
                     </Button>
                   ) : (
-                    <Button
-                      onClick={handleParse}
-                      disabled={rawText.trim().length < 50}
-                      className="bg-indigo-600 hover:bg-indigo-500"
-                    >
-                      🤖 AI 分析文本
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleParse(false)}
+                        disabled={rawText.trim().length < 50}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-500"
+                      >
+                        🤖 AI 分析
+                      </Button>
+                      <Button
+                        onClick={() => handleParse(true)}
+                        disabled={rawText.trim().length < 50}
+                        className="flex-1 bg-purple-600 hover:bg-purple-500"
+                      >
+                        👤 仅人物卡
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

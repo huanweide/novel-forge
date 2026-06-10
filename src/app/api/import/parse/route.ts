@@ -121,7 +121,7 @@ export async function POST(request: Request) {
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
   }
-  const { projectId, rawText, volumeMode, importMode: userMode } = body;
+  const { projectId, rawText, volumeMode, importMode: userMode, charactersOnly } = body;
 
   const encoder = new TextEncoder();
   const sse = new ReadableStream({
@@ -237,20 +237,32 @@ ${textSlice}
         let resA: { raw: string; error?: string; sec: number };
         let resB: { raw: string; error?: string; sec: number };
 
-        // 双路并行：Flash→人物 + Flash→世界（Flash够快够准，不需要Pro）
-        send({ type: "progress", stage: "launch", message: `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
-        [resA, resB] = await Promise.all([
-          callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
+        const isCharOnly = charactersOnly === true;
+        if (isCharOnly) {
+          // 仅人物卡模式——单路Flash，跳过世界设定
+          send({ type: "progress", stage: "launch", message: `👤 仅人物卡 · Flash单路`, pct: 5 });
+          resA = await callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
             progressA = Math.round(elapsed);
-            const aPct = Math.min(basePct + Math.round(elapsed / 60 * 40), 45);
-            send({ type: "progress", stage: "path-a", message: `👤 A路 人物 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
-          }),
-          callOne(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 8000, (elapsed) => {
-            progressB = Math.round(elapsed);
-            const bPct = Math.min(45 + Math.round(elapsed / 60 * 40), 85);
-            send({ type: "progress", stage: "path-b", message: `🌍 B路 世界 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
-          }),
-        ]);
+            const aPct = Math.min(basePct + Math.round(elapsed / 30 * 85), 90);
+            send({ type: "progress", stage: "path-a", message: `👤 人物提取 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
+          });
+          resB = { raw: "", sec: 0 }; // B路跳过
+        } else {
+          // 双路并行：Flash→人物 + Flash→世界
+          send({ type: "progress", stage: "launch", message: `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
+          [resA, resB] = await Promise.all([
+            callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
+              progressA = Math.round(elapsed);
+              const aPct = Math.min(basePct + Math.round(elapsed / 60 * 40), 45);
+              send({ type: "progress", stage: "path-a", message: `👤 A路 人物 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
+            }),
+            callOne(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 8000, (elapsed) => {
+              progressB = Math.round(elapsed);
+              const bPct = Math.min(45 + Math.round(elapsed / 60 * 40), 85);
+              send({ type: "progress", stage: "path-b", message: `🌍 B路 世界 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
+            }),
+          ]);
+        }
 
         // ── 解析路A：人物 ──
 
