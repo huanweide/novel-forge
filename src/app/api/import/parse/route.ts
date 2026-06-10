@@ -72,11 +72,20 @@ async function callOne(
   systemPrompt: string, userPrompt: string, maxTokens: number,
   onTick: (elapsedSec: number) => void,
 ): Promise<{ raw: string; error?: string; sec: number }> {
-  const t0 = Date.now();
-  const TIMEOUT_MS = 120000; // 120s 超时，大文本需要更多时间
+  // Key 检查前置——不发无效请求
+  if (!cfg.apiKey || cfg.apiKey.length < 10) {
+    return { raw: "", error: `${cfg.label}: API Key 未配置`, sec: 0 };
+  }
 
-  // 进度心跳
-  const ticker = setInterval(() => onTick((Date.now() - t0) / 1000), 2000);
+  const t0 = Date.now();
+  const TIMEOUT_MS = 45000; // 45s 超时——Flash 正常 0.2s，大文本最多 10s，45s 足够容错
+
+  // 安全心跳——onTick 异常不影响主流程
+  const safeTick = (elapsed: number) => {
+    try { onTick(elapsed); } catch { /* 静默 */ }
+  };
+  safeTick(0); // 立即发 0s 心跳让前端知道开始了
+  const ticker = setInterval(() => safeTick((Date.now() - t0) / 1000), 2000);
 
   try {
     const url = cfg.baseURL.endsWith("/v1") ? `${cfg.baseURL}/chat/completions` : `${cfg.baseURL}/v1/chat/completions`;
@@ -106,7 +115,7 @@ async function callOne(
     const name = (e as Error).name || "";
     const isAbort = name === "AbortError";
     const msg = isAbort
-      ? `${cfg.label} 超时 (${TIMEOUT_MS / 1000}s) —— 文本过长，请尝试分次导入`
+      ? `${cfg.label} 超时 (${TIMEOUT_MS / 1000}s) —— API 无响应`
       : `${cfg.label} ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
     return { raw: "", error: msg, sec: parseFloat(sec) };
   }
