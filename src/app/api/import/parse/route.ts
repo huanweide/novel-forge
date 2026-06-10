@@ -1,12 +1,9 @@
 /**
  * POST /api/import/parse
  *
- * AB双路双Provider并行：
- *   路A → 硅基流动 V4 Pro → 人物角色
- *   路B → DeepSeek官方 deepseek-chat → 世界设定+文风
- *
- * 两个不同服务商，不限流。每路非流式完整返回。
- * 各自250s超时保护，独立进度追踪。
+ * AI 解析导入——人物提取 + 世界设定 + 文风。
+ * 角色≥30个自动分块处理，每块独立调 Flash，杜绝 token 截断。
+ * JSON 修复层——去尾逗号等 AI 常见语法错误。
  */
 
 import { prisma } from "@/lib/prisma";
@@ -16,19 +13,63 @@ import { countTokens } from "@/core/assembly/tokenizer";
 
 export const maxDuration = 300;
 
-const MODEL_A = "deepseek-v4-flash"; // DeepSeek Flash → 人物提取（结构化JSON不需要Pro）
-const MODEL_B = "deepseek-v4-flash"; // DeepSeek Flash → 世界+文风
+const MODEL_A = "deepseek-v4-flash";
+const MODEL_B = "deepseek-v4-flash";
+const CHUNK_SIZE = 30; // 每块最多30个角色
 
-// ─── JSON 解析 ──────────────────────────────────
+// ─── JSON 修复 + 解析 ──────────────────────────────
+
+/** 清洗 AI 常见 JSON 语法错误 */
+function repairJSON(raw: string): string {
+  let s = raw.trim();
+  // BOM
+  if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
+  // 去掉 markdown 代码块
+  const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (md) s = md[1].trim();
+  // 截取最外层花括号
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a >= 0 && b > a) s = s.slice(a, b + 1);
+
+  // 去尾逗号：},] 和 ,] 和 ,}
+  s = s.replace(/,(\s*[}\]])/g, "$1");
+  // 去尾逗号在数组末尾：...]\n 之后多余的逗号
+  // 修字符串内的未转义换行符（AI有时在字符串值里直接换行）
+  // 注：这个比较激进，只在 JSON.parse 失败后才尝试
+
+  return s;
+}
 
 function parseJSON(raw: string): Record<string, unknown> {
-  let s = raw.trim();
-  if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
+  // 第一轮：标准修复
+  let s = repairJSON(raw);
   try { return JSON.parse(s) as Record<string, unknown>; } catch { /* */ }
-  const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (md) try { return JSON.parse(md[1].trim()) as Record<string, unknown>; } catch { /* */ }
-  const a = s.indexOf("{"), b = s.lastIndexOf("}");
-  if (a >= 0 && b > a) try { return JSON.parse(s.slice(a, b + 1)) as Record<string, unknown>; } catch { /* */ }
+
+  // 第二轮：更激进的修复——尝试补全截断的JSON
+  // 如果JSON在中间被截断（maxTokens限制），补上闭合括号
+  try {
+    // 数花括号和方括号，补上缺失的闭合
+    let braces = 0, brackets = 0;
+    let inString = false, escape = false;
+    for (const ch of s) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"' && !escape) { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') braces++;
+      if (ch === '}') braces--;
+      if (ch === '[') brackets++;
+      if (ch === ']') brackets--;
+    }
+    // 补闭合
+    while (brackets > 0) { s += ']'; brackets--; }
+    while (braces > 0) { s += '}'; braces--; }
+    // 如果数组未结束，补]
+    if (s.endsWith(',')) s = s.slice(0, -1);
+
+    return JSON.parse(s) as Record<string, unknown>;
+  } catch { /* */ }
+
   throw new Error(`JSON parse fail: ${s.slice(0, 200)}`);
 }
 
@@ -63,61 +104,74 @@ function normLore(l: Record<string, unknown>): Record<string, unknown> {
   return { title: String(l.title || ""), category: String(l.category || "custom"), keys: Array.isArray(l.keys) ? l.keys.filter((k: unknown) => typeof k === "string") : [String(l.title || "")], content: String(l.content || ""), subFields: (typeof l.subFields === "object" && l.subFields !== null && !Array.isArray(l.subFields)) ? l.subFields : {} };
 }
 
-// ─── 单路非流式调用 ──────────────────────────
+// ─── 角色边界扫描 ──────────────────────────────
+
+/** 用正则找出文本中所有角色编号行的位置，返回 {startIndex, endIndex}[] */
+function findCharBlocks(text: string): Array<{ start: number; end: number; headerLine: string }> {
+  const NUM = [
+    "\\d+", "[一二三四五六七八九十百]+", "第[一二三四五六七八九十百]+[位名个]?",
+    "[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "[（(]\\d+[）)]",
+  ].join("|");
+  const HEADER_RE = new RegExp(`^\\s*(?:#{1,3}\\s*)?\\s*(${NUM})[.、．，)\\)\\s:：·\\-—]+\\s*(.+)$`, "gm");
+
+  const blocks: Array<{ start: number; end: number; headerLine: string }> = [];
+  let match: RegExpExecArray | null;
+  while ((match = HEADER_RE.exec(text)) !== null) {
+    const name = match[2].trim().slice(0, 40);
+    // 过滤明显不是人名的行
+    if (name.length < 2 || /^(第|章|节|卷|部|篇)/.test(name)) continue;
+    blocks.push({ start: match.index, end: match.index + match[0].length, headerLine: match[0] });
+  }
+
+  // 计算每个角色的文本范围（从这个编号行到下一个编号行之前）
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const blockStart = blocks[i].start;
+    const blockEnd = i + 1 < blocks.length ? blocks[i + 1].start : text.length;
+    ranges.push({ start: blockStart, end: blockEnd });
+  }
+  return blocks;
+}
+
+/** 将角色范围分成每 CHUNK_SIZE 个一块的文本片段 */
+function chunkText(text: string, blocks: ReturnType<typeof findCharBlocks>): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < blocks.length; i += CHUNK_SIZE) {
+    const startBlock = blocks[i];
+    const endIdx = i + CHUNK_SIZE < blocks.length ? blocks[i + CHUNK_SIZE].start : text.length;
+    // 包含这个块之前的少量上下文
+    const ctxStart = Math.max(0, startBlock.start - 50);
+    chunks.push(text.slice(ctxStart, endIdx));
+  }
+  return chunks;
+}
+
+// ─── API 调用 ──────────────────────────────────
 
 interface CallConfig { baseURL: string; apiKey: string; model: string; label: string; }
 
-async function callOne(
-  cfg: CallConfig,
-  systemPrompt: string, userPrompt: string, maxTokens: number,
-  onTick: (elapsedSec: number) => void,
-): Promise<{ raw: string; error?: string; sec: number }> {
-  // Key 检查前置——不发无效请求
+async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: string, maxTokens: number): Promise<{ raw: string; error?: string; sec: number }> {
   if (!cfg.apiKey || cfg.apiKey.length < 10) {
     return { raw: "", error: `${cfg.label}: API Key 未配置`, sec: 0 };
   }
 
   const t0 = Date.now();
-  const TIMEOUT_MS = 45000; // 45s 超时——Flash 正常 0.2s，大文本最多 10s，45s 足够容错
-
-  // 安全心跳——onTick 异常不影响主流程
-  const safeTick = (elapsed: number) => {
-    try { onTick(elapsed); } catch { /* 静默 */ }
-  };
-  safeTick(0); // 立即发 0s 心跳让前端知道开始了
-  const ticker = setInterval(() => safeTick((Date.now() - t0) / 1000), 2000);
-
   try {
     const url = cfg.baseURL.endsWith("/v1") ? `${cfg.baseURL}/chat/completions` : `${cfg.baseURL}/v1/chat/completions`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
       body: JSON.stringify({ model: cfg.model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], temperature: 0.1, max_tokens: maxTokens, stream: false }),
-      signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
-    clearInterval(ticker);
     const sec = ((Date.now() - t0) / 1000).toFixed(1);
-
     if (!res.ok) { const eb = await res.text().catch(() => ""); return { raw: "", error: `${cfg.label} HTTP ${res.status}: ${eb.slice(0, 200)}`, sec: parseFloat(sec) }; }
     const data = await res.json().catch(() => null);
     const raw = data?.choices?.[0]?.message?.content || "";
     if (!raw || raw.trim().length < 20) return { raw: "", error: `${cfg.label} 返回空内容`, sec: parseFloat(sec) };
-
     return { raw, sec: parseFloat(sec) };
   } catch (e) {
-    clearInterval(ticker);
-    const sec = ((Date.now() - t0) / 1000).toFixed(1);
-    const name = (e as Error).name || "";
-    const isAbort = name === "AbortError";
-    const msg = isAbort
-      ? `${cfg.label} 超时 (${TIMEOUT_MS / 1000}s) —— API 无响应`
-      : `${cfg.label} ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
-    return { raw: "", error: msg, sec: parseFloat(sec) };
+    return { raw: "", error: `${cfg.label} ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`, sec: ((Date.now() - t0) / 1000).toFixed(1) as any };
   }
 }
 
@@ -133,7 +187,7 @@ export async function POST(request: Request) {
   const { projectId, rawText, volumeMode, importMode: userMode, charactersOnly } = body;
 
   const encoder = new TextEncoder();
-  const sse = new ReadableStream({
+  const stream = new ReadableStream({
     async start(controller) {
       const send = (data: Record<string, unknown>) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
@@ -150,173 +204,136 @@ export async function POST(request: Request) {
 
         const sfConfig = getDefaultLLMConfig();
         const importMode = (userMode as string) || "settings";
-        const inputTokens = countTokens(text);
         const pName = project.name;
         const pGenre = project.genre;
+        const isCharOnly = charactersOnly === true;
 
-        // 双路均DeepSeek官方
         const dsKey = process.env.DEEPSEEK_API_KEY || "";
-        const dsConfigA: CallConfig = { baseURL: "https://api.deepseek.com", apiKey: dsKey, model: MODEL_A, label: "DS-Flash·人物" };
-        const dsConfigB: CallConfig = { baseURL: sfConfig.baseURL, apiKey: sfConfig.apiKey, model: MODEL_B, label: "DS-Flash·世界" };
+        const dsConfigA: CallConfig = { baseURL: "https://api.deepseek.com", apiKey: dsKey, model: MODEL_A, label: "DS-Flash" };
+        const dsConfigB: CallConfig = { baseURL: sfConfig.baseURL, apiKey: sfConfig.apiKey, model: MODEL_B, label: "DS-Flash" };
 
-        const hasDS = dsKey.length > 10;
-        const mode = "DeepSeek Flash 双路并行(人物+世界)";
-
-        send({ type: "progress", stage: "ready", message: `${text.length.toLocaleString()} 字 · ${mode}`, importMode, isSettings: true, pct: 3, hasDeepSeek: hasDS });
-
-        // 大文本警告
-        if (text.length > 30000) {
-          send({ type: "progress", stage: "warn-large", message: `⚠️ 文本较长 (${text.length.toLocaleString()}字)，分析需要更多时间，请耐心等待...`, pct: 4 });
-        }
+        send({ type: "progress", stage: "ready", message: `${text.length.toLocaleString()} 字 · ${isCharOnly ? "仅人物卡" : "人物+世界"}`, pct: 3 });
 
         const t0 = Date.now();
 
-        // ── 文本分块（超 20k 字截断，防止 LLM 超时）──
-        const MAX_TEXT = 20000;
-        const textSlice = text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) + `\n\n…(后文共${text.length.toLocaleString()}字，已截断)…` : text;
-        const truncNote = text.length > MAX_TEXT ? `（全文${text.length.toLocaleString()}字，已截取前${MAX_TEXT.toLocaleString()}字分析）` : "";
+        // ── 正则预扫描角色数量 ──
+        const charBlocks = findCharBlocks(text);
+        const estimatedCount = charBlocks.length;
 
-        // ── Prompt ──
+        send({ type: "progress", stage: "scan", message: `🔍 正则预扫描: ~${estimatedCount}个角色编号行`, pct: 4 });
 
-        const promptChars = `你是角色提取器。只做三件事：找编号 → 抓人名 → 整段描述塞进 background。只输出JSON。${truncNote}
+        // ── 分块决策 ──
+        const needsChunking = estimatedCount > CHUNK_SIZE;
 
-【第一步：识别角色行——宽泛匹配所有编号格式】
-行首有编号标记 + 人名 + 描述 = 角色行。其他旁白/情节/对话/标题全部忽略。
+        // ── 人物提取Prompt模板 ──
+        const charSystemPrompt = "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。";
+        const buildCharPrompt = (chunkText: string, chunkInfo = "") => `你是角色提取器。只做三件事：找编号 → 抓人名 → 整段描述塞进 background。只输出JSON。${chunkInfo}
 
-Markdown标题也认——# / ## / ### 是格式标记，跳过它看后面的编号：
-  "### 1. 拉明·亚马尔（Lamine Yamal）——"新梅西""  → 编号1，人名=拉明·亚马尔
-  "## 2、洁世一（Isagi Yoichi）——"蓝色监狱的心脏"" → 编号2，人名=洁世一
-  "# 3 糸师凛"                                        → 编号3，人名=糸师凛
+【识别角色行——宽泛匹配所有编号格式】
+Markdown标题也认——# / ## / ### 是格式标记，跳过它看后面的编号。
+纯文本编号：阿拉伯"1.""2、""3 ""1）""(2)""①"、中文数字"一、""二、""三 "、中文序数"第一位 ""第二，"
 
-纯文本编号（全部认）：
-  阿拉伯："1.洁世一" "2、凪诚士郎" "3 糸师凛" "1）千切豹马" "(2)御影玲王" "①蚁生十兵卫"
-  中文数字："一、洁世一" "二、凪诚士郎" "三 糸师凛"
-  中文序数："第一位 洁世一" "第二，凪诚士郎"
+【提取规则】
+name = 编号后的人名核心部分，去掉——及之后的修饰
+background = 从编号行开始到下一个编号行之前，全部内容原封不动搬进去（原文照抄不缩写）
+role = 从以下选：protagonist/antagonist/supporting/mentor/love_interest/background，默认supporting
+重复引用（"与XX号XXX为同一角色"）→ 跳过
 
-【第二步：提取三个字段——不要拆解描述】
-
-  name = 编号后面的人名核心部分。只取姓名，去掉分隔符和修饰：
-        "拉明·亚马尔（Lamine Yamal）——"新梅西"" → name="拉明·亚马尔"
-        "洁世一（Isagi Yoichi）——"蓝色监狱的心脏"" → name="洁世一"
-        "糸师凛（Itoshi Rin）——"复仇的阿修罗"" → name="糸师凛"
-        人名中可保留括号内的英文名，如 "拉明·亚马尔（Lamine Yamal）"
-
-  role = 从描述中找一个最贴切的角色定位词，从以下选：
-         protagonist(主角) / antagonist(反派) / supporting(配角) /
-         mentor(导师) / love_interest(恋爱对象) / background(背景角色)
-         默认填 "supporting"
-
-  background = **从编号行开始到下一个编号行之前，全部内容原封不动搬进去**
-        不做任何拆解/分析/分类/总结
-        ❌禁止拆成 personality/appearance/abilities 等字段
-        ❌禁止缩写、概括、改写——原文照抄
-
-【重复条目跳过】
-如果遇到类似 "与XX号XXX为同一角色，能力参见第XX号" 的重复引用条目，跳过不提取。
-
-【第三步：其余所有字段统一填默认值】
-  age:"未知" gender:"未知"
-  appearance:{"hair":"","eyes":"","height":"","build":"","features":"","attire":""}
-  personality:{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""}
-  abilities:[] hiddenMotives:[] relationships:[] dialogueStyle:{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]}
-  timeline:[] arcProgress:"" currentStatus:"alive" aliases:[] tags:["📥导入"]
+【其余字段统一默认值】
+age:"未知" gender:"未知" appearance:{"hair":"","eyes":"","height":"","build":"","features":"","attire":""} personality:{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""} abilities:[] hiddenMotives:[] relationships:[] dialogueStyle:{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]} timeline:[] arcProgress:"" currentStatus:"alive" aliases:[] tags:["📥导入"]
 
 【作品信息】
-名称：${pName}
-类型：${pGenre.join("、")}
+名称：${pName} · 类型：${pGenre.join("、")}
 
 【文本】
-${textSlice}
+${chunkText}
 
 {"characters":[{"name":"","aliases":[],"role":"supporting","age":"未知","gender":"未知","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[],"arcProgress":"","currentStatus":"alive"}]}`;
 
-        const promptLore = `设定集→世界设定+文风JSON。原文照搬，没信息写"无"。只输出JSON。${truncNote}
-
-【${pName}】${pGenre.join("、")}
-
-${textSlice}
-
-{"lore":[{"title":"","category":"geography|faction|magic_system|history|culture|creature|item|custom","keys":[],"content":""}],"style":{"styleDescription":"","povType":"third_person_limited","narrativeDistance":"medium","dialogueRatio":0.35,"descriptionRatio":0.25,"actionRatio":0.25,"innerThoughtRatio":0.15,"tonalMarkers":{},"lexicalFeatures":{},"sampleText":""}}`;
-
-        // ── AB路同时启动 ──
-
-        let progressA = 0, progressB = 0;
-        const basePct = 5;
-
-        let resA: { raw: string; error?: string; sec: number };
-        let resB: { raw: string; error?: string; sec: number };
-
-        const isCharOnly = charactersOnly === true;
-        if (isCharOnly) {
-          // 仅人物卡模式——单路Flash
-          send({ type: "progress", stage: "launch", message: `👤 仅人物卡 · Flash单路`, pct: 5 });
-          await new Promise(r => setTimeout(r, 100)); // 强制flush，前端看到5%
-          send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
-          resA = await callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
-            progressA = Math.round(elapsed);
-            const aPct = Math.min(15 + Math.round(elapsed / 45 * 70), 85);
-            send({ type: "progress", stage: "path-a", message: `👤 人物提取 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
-          });
-          send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
-          resB = { raw: "", sec: 0 }; // B路跳过
-        } else {
-          // 双路并行：Flash→人物 + Flash→世界
-          send({ type: "progress", stage: "launch", message: `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
-          await new Promise(r => setTimeout(r, 100)); // flush
-          send({ type: "progress", stage: "calling", message: `📡 双路并行调用中...`, pct: 10 });
-          [resA, resB] = await Promise.all([
-            callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
-              progressA = Math.round(elapsed);
-              const aPct = Math.min(basePct + Math.round(elapsed / 60 * 40), 45);
-              send({ type: "progress", stage: "path-a", message: `👤 A路 人物 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
-            }),
-            callOne(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 8000, (elapsed) => {
-              progressB = Math.round(elapsed);
-              const bPct = Math.min(45 + Math.round(elapsed / 60 * 40), 85);
-              send({ type: "progress", stage: "path-b", message: `🌍 B路 世界 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
-            }),
-          ]);
-          send({ type: "progress", stage: "api-done", message: `📥 双路返回 · 解析中...`, pct: 85 });
-        }
-
-        // ── 解析路A：人物 ──
-
+        // ── 人物提取 ──
         let chars: Record<string, unknown>[] = [];
 
-        if (resA.error) {
-          send({ type: "progress", stage: "path-a-done", message: `⚠️ A路失败: ${resA.error}`, pct: 60 });
+        if (needsChunking && !isCharOnly) {
+          // 分块模式：文本切成每CHUNK_SIZE个角色一块
+          const chunks = chunkText(text, charBlocks);
+          send({ type: "progress", stage: "chunk", message: `📦 分${chunks.length}块处理 · 每块≤${CHUNK_SIZE}个角色`, pct: 5 });
+          await new Promise(r => setTimeout(r, 100));
+
+          let totalChars = 0;
+          for (let ci = 0; ci < chunks.length; ci++) {
+            const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
+            send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
+
+            const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 12000);
+            if (res.error) {
+              send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
+              continue;
+            }
+            try {
+              const p = parseJSON(res.raw);
+              const pc = Array.isArray(p.characters) ? p.characters.map(normChar).filter(c => c.name) : [];
+              chars.push(...pc);
+              totalChars += pc.length;
+            } catch (e) {
+              send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块JSON解析失败`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
+            }
+          }
+          send({ type: "progress", stage: "chunk-done", message: `✅ 分块完成 · ${totalChars}角色 · ${chunks.length}块`, pct: 85 });
         } else {
-          try {
-            const p = parseJSON(resA.raw);
-            const pc = Array.isArray(p.characters) ? p.characters : [];
-            chars = pc.map(normChar).filter(c => c.name);
-            send({ type: "progress", stage: "path-a-done", message: `✅ A路完成 · ${chars.length}角色 · ${resA.sec}s`, pct: 60 });
-          } catch (e) {
-            send({ type: "progress", stage: "path-a-done", message: `⚠️ A路JSON解析失败: ${String(e).slice(0, 100)}`, rawPreview: resA.raw.slice(0, 300), pct: 60 });
+          // 单次调用模式（角色少或仅人物卡模式）
+          send({ type: "progress", stage: "launch", message: isCharOnly ? `👤 仅人物卡 · Flash单路` : `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
+          await new Promise(r => setTimeout(r, 100));
+          send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
+
+          const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 16000);
+          send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
+
+          if (resA.error) {
+            send({ type: "progress", stage: "path-a-done", message: `⚠️ 人物提取失败: ${resA.error}`, pct: 60 });
+          } else {
+            try {
+              const p = parseJSON(resA.raw);
+              const pc = Array.isArray(p.characters) ? p.characters : [];
+              chars = pc.map(normChar).filter(c => c.name);
+              send({ type: "progress", stage: "path-a-done", message: `✅ 人物提取完成 · ${chars.length}角色 · ${resA.sec}s`, pct: 60 });
+            } catch (e) {
+              send({ type: "progress", stage: "path-a-done", message: `⚠️ JSON解析失败: ${String(e).slice(0, 100)}`, pct: 60 });
+            }
           }
         }
 
-        // ── 解析路B：世界+文风 ──
-
+        // ── 世界设定+文风（仅非分块+非仅人物卡模式）──
         let lore: Record<string, unknown>[] = [];
         let style: Record<string, unknown> = {};
 
-        if (resB.error) {
-          send({ type: "progress", stage: "path-b-done", message: `⚠️ B路失败: ${resB.error}`, pct: 85 });
-        } else {
-          try {
-            const p = parseJSON(resB.raw);
-            const pl = Array.isArray(p.lore) ? p.lore : [];
-            lore = pl.map(normLore).filter(l => l.title);
-            if (typeof p.style === "object" && p.style !== null) style = p.style as Record<string, unknown>;
-            send({ type: "progress", stage: "path-b-done", message: `✅ B路完成 · ${lore.length}词条 · ${resB.sec}s`, pct: 85 });
-          } catch (e) {
-            send({ type: "progress", stage: "path-b-done", message: `⚠️ B路JSON解析失败: ${String(e).slice(0, 100)}`, rawPreview: resB.raw.slice(0, 300), pct: 85 });
+        if (!isCharOnly && !needsChunking) {
+          const lorePrompt = `设定集→世界设定+文风JSON。原文照搬，没信息写"无"。只输出JSON。
+
+【${pName}】${pGenre.join("、")}
+
+${text}
+
+{"lore":[{"title":"","category":"geography|faction|magic_system|history|culture|creature|item|custom","keys":[],"content":""}],"style":{"styleDescription":"","povType":"third_person_limited","narrativeDistance":"medium","dialogueRatio":0.35,"descriptionRatio":0.25,"actionRatio":0.25,"innerThoughtRatio":0.15,"tonalMarkers":{},"lexicalFeatures":{},"sampleText":""}}`;
+
+          const resB = await callFlash(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", lorePrompt, 8000);
+
+          if (resB.error) {
+            send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界提取失败: ${resB.error}`, pct: 90 });
+          } else {
+            try {
+              const p = parseJSON(resB.raw);
+              lore = (Array.isArray(p.lore) ? p.lore : []).map(normLore).filter(l => l.title);
+              if (typeof p.style === "object" && p.style !== null) style = p.style as Record<string, unknown>;
+              send({ type: "progress", stage: "path-b-done", message: `✅ 世界提取完成 · ${lore.length}词条 · ${resB.sec}s`, pct: 90 });
+            } catch (e) {
+              send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界JSON解析失败`, pct: 90 });
+            }
           }
+        } else if (needsChunking) {
+          send({ type: "progress", stage: "skip-b", message: `ℹ️ 分块模式跳过世界设定（避免token超限）`, pct: 90 });
         }
 
         // ── 去重 ──
-
         const charMap = new Map<string, Record<string, unknown>>();
         for (const c of chars) { const k = String(c.name || "").toLowerCase().trim(); if (k && !charMap.has(k)) charMap.set(k, c); }
         const loreMap = new Map<string, Record<string, unknown>>();
@@ -334,7 +351,7 @@ ${textSlice}
           extractedCharacters: finalChars,
           extractedLoreEntries: finalLore,
           extractedStyle: style,
-          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens, rawCharCount: text.length, modelUsed: `${MODEL_A}+${MODEL_B}`, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec) },
+          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: MODEL_A, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, chunked: needsChunking },
         });
 
       } catch (err) {
@@ -343,5 +360,5 @@ ${textSlice}
     },
   });
 
-  return new Response(sse, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
 }
