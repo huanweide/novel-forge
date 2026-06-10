@@ -602,17 +602,24 @@ export function ImportWizard({
                     </div>
                   )}
 
-                  {/* 诊断信息 */}
+                  {/* 诊断信息 —— 醒目的绿色 */}
                   {quickDiag && (
-                    <div className="text-[10px] text-zinc-500 bg-zinc-800/70 rounded px-2 py-1 font-mono">
-                      {quickDiag}
+                    <div className="text-xs text-emerald-300 bg-emerald-950/50 rounded px-3 py-2 font-mono border border-emerald-800/50">
+                      🔬 {quickDiag}
                     </div>
                   )}
 
                   {/* 完成提示 */}
                   {quickResult && (
-                    <div className="text-sm text-emerald-400 font-medium text-center py-2 border-b border-zinc-700">
+                    <div className="text-sm text-emerald-400 font-medium text-center py-2">
                       {quickResult}
+                    </div>
+                  )}
+
+                  {/* 验证指引 */}
+                  {!quickLoading && quickResult && (
+                    <div className="text-xs text-amber-300 bg-amber-950/30 rounded px-3 py-2 text-center border border-amber-800/50">
+                      👆 <b>验证方法</b>：关掉本窗口 → 左侧点任意角色卡 → 点 ✏️ 编辑 → 往下滚到「背景状态」→ 查看导入的内容
                     </div>
                   )}
 
@@ -620,7 +627,7 @@ export function ImportWizard({
                   {quickCharList.length > 0 && (
                     <div className="space-y-1 max-h-64 overflow-y-auto">
                       <p className="text-xs text-zinc-500 mb-1 sticky top-0 bg-zinc-800/50 py-1">
-                        {quickLoading ? "识别到的角色：" : "✅ 已导入角色（点左侧列表查看→编辑→背景状态）："}
+                        {quickLoading ? "识别到的角色：" : `✅ 已导入 ${quickCharList.length} 个角色：`}
                       </p>
                       {quickCharList.map((c, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs py-1 px-2 rounded bg-zinc-800/40">
