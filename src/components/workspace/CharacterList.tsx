@@ -516,15 +516,16 @@ export function CharacterList({
           {/* 分类列表——按 category 分组 */}
           <div className="max-h-80 overflow-y-auto p-1.5 space-y-2">
             {(() => {
-              const catOrder = ["ability", "affiliation", "archetype"];
+              const catOrder = ["title", "school", "experience", "club"];
               const catLabel: Record<string, string> = {
-                ability: "⭐ 能力等级（对标号）",
-                affiliation: "🏛 势力归属（对地点）",
-                archetype: "🎭 角色原型（对性质）",
+                title: "🏷 称号/头衔",
+                school: "🏫 学校/学园",
+                experience: "📋 经历/履历",
+                club: "⚽ 俱乐部/队伍",
               };
               const grouped = new Map<string, typeof classifyGroups>();
               for (const g of classifyGroups) {
-                const cat = g.category || "势力";
+                const cat = g.category || "club";
                 if (!grouped.has(cat)) grouped.set(cat, []);
                 grouped.get(cat)!.push(g);
               }
