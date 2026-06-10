@@ -11,7 +11,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 600; // 100+角色×每角色6s=~100s，留足余量
+export const maxDuration = 300; // Hobby计划上限，100+角色并发10足够
 
 const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
 const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
