@@ -20,21 +20,59 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.13.0";
+export const LATEST_VERSION = "v0.14.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔀 AI扩展双Provider——硅基V4 Flash×4 + DeepSeek官方×4 = 8并发，快一倍",
-  "🪟 扩展弹窗修复——SSE buf残留bug修复，完成/失败列表终于能显示了",
-  "🔧 continue提示词统一——续写走write同一套完整systemPrompt，文风一致",
-  "🧹 清理SYSTEM_PROMPTS.writer死代码——统一收敛到buildPromptContext",
-  "🏷 自动分类AI三分类——Flash分析能力/势力/原型三个维度",
-  "📝 作者指令=大纲级优先级——冲突以作者指令为准",
-  "🔍 自动三卡更新——正文写完后台分析，完成后弹窗确认",
+  "🏷 自动分类四维重写——称号/学校/经历/俱乐部，足球同人专属分类",
+  "🐛 分类错误不再闷杀——API失败/JSON解析错误正确报告到UI",
+  "📡 SSE收尾丢包修复——分类done事件不再丢失，面板正常弹出",
+  "🔧 进度条不再卡在5%——后端串行四步，每步独立推送进度",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.14.0",
+    date: "2026-06-10",
+    title: "自动分类四维重写 + 错误报告修复 + SSE 收尾丢包",
+    sections: [
+      {
+        label: "🏷 自动分类四维重写（称号/学校/经历/俱乐部）",
+        items: [
+          "从三个抽象维度（能力/势力/原型）→ 四个足球同人专属维度",
+          "称号头衔：从角色描述提取修饰性称号、媒体标签、实力评价",
+          "学校学园：识别日本高中、足球名校、海外学校、蓝色监狱内部层级",
+          "经历履历：国家队经历、海外经历、重大事件、特殊履历、蓝色监狱经历",
+          "俱乐部队伍：职业俱乐部、日本俱乐部队、国家队、蓝色监狱内部队伍",
+          "未归类角色自动归入 ❓ 组，后端覆盖率检查",
+        ],
+      },
+      {
+        label: "🐛 分类错误不再被闷杀",
+        items: [
+          "根因：四个分类函数 catch { return [] } 吞掉所有错误，外层永远看到空数组",
+          "修复：去掉内层 catch，错误冒泡到 POST handler 被 SSE 推送到前端",
+          "API Key 缺失、限流 429、JSON 解析失败——全部显示具体原因",
+        ],
+      },
+      {
+        label: "📡 SSE 收尾丢包修复",
+        items: [
+          "根因：while 循环 done=true 时直接 break，buf 中残留的 done 事件被丢弃",
+          "修复：break 前检查 buf.trim()，有 data: 行就解析——done 事件不再丢失",
+          "done 事件丢失时 useEffect 兜底从 classifyResult 重建面板",
+        ],
+      },
+      {
+        label: "🔧 分类进度条不再卡 5%",
+        items: [
+          "四维串行执行（避免限流），每维独立推送 25%/45%/65%/85% 进度",
+          "每维完成即推送 ✅ N组 确认消息",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.13.0",
     date: "2026-06-10",
