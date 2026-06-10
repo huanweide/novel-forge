@@ -13,7 +13,7 @@ export const maxDuration = 120;
 
 const FLASH = "deepseek-v4-flash";
 const BASE_URL = "https://api.deepseek.com/v1";
-const API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const API_KEY = (process.env.DEEPSEEK_API_KEY || "").trim();
 
 interface ClassifyGroup {
   category: string;      // title | school | experience | club
@@ -227,6 +227,7 @@ export async function POST(request: Request) {
 
         if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
         if (characters.length === 0) { send({ type: "error", message: "没有角色可分类" }); controller.close(); return; }
+        if (API_KEY.length < 10) { send({ type: "error", message: "DeepSeek API Key 未配置" }); controller.close(); return; }
 
         const worldContext = buildWorldContext(project, loreEntries);
         const charList = buildCharList(characters as any[]);
@@ -238,29 +239,41 @@ export async function POST(request: Request) {
           return groups;
         };
 
-        // ── 四路并行分类 ──
-        send({ type: "progress", stage: "start", message: `🔬 ${characters.length}角色 · 四路并行AI分类`, pct: 10 });
-        await new Promise(r => setTimeout(r, 50));
+        // ── 四路串行分类（避免限流，每步推送进度+错误）──
+        send({ type: "progress", stage: "start", message: `🔬 ${characters.length}角色 · 四维分类中...`, pct: 5 });
 
-        const [titleGroups, schoolGroups, experienceGroups, clubGroups] = await Promise.all([
-          classifyTitles(charList, worldContext),
-          classifySchools(charList, worldContext),
-          classifyExperiences(charList, worldContext),
-          classifyClubs(charList, worldContext),
-        ]);
+        const errors: string[] = [];
+        const allResults: ClassifyGroup[] = [];
 
-        const allGroups = [
-          ...fillIds(titleGroups),
-          ...fillIds(schoolGroups),
-          ...fillIds(experienceGroups),
-          ...fillIds(clubGroups),
+        const dims = [
+          { fn: classifyTitles, label: "🏷 称号", pct: 25 },
+          { fn: classifySchools, label: "🏫 学校", pct: 45 },
+          { fn: classifyExperiences, label: "📋 经历", pct: 65 },
+          { fn: classifyClubs, label: "⚽ 俱乐部", pct: 85 },
         ];
 
+        for (const dim of dims) {
+          send({ type: "progress", stage: dim.label, message: `${dim.label} 分析中...`, pct: dim.pct - 5 });
+          try {
+            const groups = await dim.fn(charList, worldContext);
+            if (groups.length === 0) {
+              errors.push(`${dim.label}: AI未返回分组`);
+            } else {
+              allResults.push(...fillIds(groups));
+              send({ type: "progress", stage: dim.label, message: `${dim.label} ✅ ${groups.length}组`, pct: dim.pct });
+            }
+          } catch (e) {
+            const msg = (e instanceof Error ? e.message : String(e)).slice(0, 100);
+            errors.push(`${dim.label}: ${msg}`);
+            send({ type: "progress", stage: `${dim.label}-err`, message: `${dim.label} ⚠️ ${msg}`, pct: dim.pct });
+          }
+        }
+
         // 覆盖率检查
-        const allNamed = new Set(allGroups.flatMap(g => g.members));
+        const allNamed = new Set(allResults.flatMap(g => g.members));
         const uncovered = characters.filter(c => !allNamed.has(c.name));
         if (uncovered.length > 0) {
-          allGroups.push({
+          allResults.push({
             category: "club",
             label: "❓ 未归类",
             description: "未被任何维度覆盖的角色",
@@ -269,15 +282,15 @@ export async function POST(request: Request) {
           });
         }
 
-        const totalMembers = new Set(allGroups.flatMap(g => g.members)).size;
+        const totalMembers = new Set(allResults.flatMap(g => g.members)).size;
 
         send({
           type: "done",
           ok: true,
-          groups: allGroups,
-          totalGroups: allGroups.length,
+          groups: allResults,
+          totalGroups: allResults.length,
           totalMembers,
-          message: `✅ ${allGroups.length} 组 · 覆盖 ${totalMembers}/${characters.length} 人 · 四维(称号/学校/经历/俱乐部)`,
+          message: `✅ ${allResults.length} 组 · 覆盖 ${totalMembers}/${characters.length} 人 · 四维(称号/学校/经历/俱乐部)`,
         });
 
         controller.close();
