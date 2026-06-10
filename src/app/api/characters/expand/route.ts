@@ -204,35 +204,59 @@ export async function POST(request: Request) {
           await prisma.project.update({ where: { id: projectId }, data: { globalPrompt: context } }).catch(() => {});
         }
 
-        // ── 加载 + 去重 ──
+        // ── 加载 + 去重（同名+别名+小名全认）──
         const chars = await prisma.characterCard.findMany({ where: { id: { in: characterIds } } });
 
-        // 同名合并 quickImportContent
-        const seenNames = new Map<string, (typeof chars)[0]>();
-        const dedupedChars: typeof chars = [];
+        // 标准化名字：去括号、去空格、小写
+        const normalizeName = (name: string): string => {
+          return name.toLowerCase().replace(/[（(][^)）]*[)）]/g, "").replace(/\s+/g, "").trim();
+        };
+        const isSameCharacter = (a: string, b: string): boolean => {
+          const na = normalizeName(a), nb = normalizeName(b);
+          if (!na || !nb) return false;
+          if (na === nb) return true;
+          // 包含关系：小名vs全名（"挽月" ⊂ "苏挽月"，"洛基" ⊂ "朱利安·洛基"）
+          if (na.includes(nb) || nb.includes(na)) return true;
+          return false;
+        };
+
+        const seenChars: typeof chars = [];
         const mergedNames: string[] = [];
 
         for (const c of chars) {
-          const key = c.name.toLowerCase().trim();
-          const existing = seenNames.get(key);
+          const existing = seenChars.find(e => isSameCharacter(e.name, c.name));
           if (existing) {
-            const mergedQC = [existing.quickImportContent, c.quickImportContent]
-              .filter(s => s && s.trim().length > 0)
+            // 用更长的名字（全名优先）
+            const useLonger = c.name.length > existing.name.length;
+            const primary = useLonger ? c : existing;
+            const duplicate = useLonger ? existing : c;
+
+            const mergedQC = [primary.quickImportContent, duplicate.quickImportContent]
+              .filter(s => typeof s === 'string' && s.trim().length > 0)
               .join("\n\n---\n---\n\n");
-            existing.quickImportContent = mergedQC;
-            if (!existing.background && c.background) existing.background = c.background;
-            existing.abilities = [...new Set([...existing.abilities, ...c.abilities])];
-            mergedNames.push(c.name);
-            await prisma.characterCard.delete({ where: { id: c.id } }).catch(() => {});
+            primary.quickImportContent = mergedQC;
+            if (!primary.background && duplicate.background) primary.background = duplicate.background;
+            primary.abilities = [...new Set([...primary.abilities, ...duplicate.abilities])];
+            primary.hiddenMotives = [...new Set([...primary.hiddenMotives, ...duplicate.hiddenMotives])];
+            if (useLonger) {
+              // 用新的做主卡，删旧卡
+              seenChars[seenChars.indexOf(existing)] = c;
+              mergedNames.push(existing.name);
+              await prisma.characterCard.delete({ where: { id: existing.id } }).catch(() => {});
+            } else {
+              mergedNames.push(c.name);
+              await prisma.characterCard.delete({ where: { id: c.id } }).catch(() => {});
+            }
           } else {
-            seenNames.set(key, c);
-            dedupedChars.push(c);
+            seenChars.push(c);
           }
         }
 
         if (mergedNames.length > 0) {
-          send({ type: "progress", stage: "dedup", message: `🔗 合并 ${mergedNames.length} 个重复角色: ${mergedNames.join("、")}`, pct: 2 });
+          send({ type: "progress", stage: "dedup", message: `🔗 合并 ${mergedNames.length} 个重复角色（含别名/小名）: ${mergedNames.join("、")}`, pct: 2 });
         }
+
+        const dedupedChars = seenChars;
 
         const total = dedupedChars.length;
         if (total === 0) {
