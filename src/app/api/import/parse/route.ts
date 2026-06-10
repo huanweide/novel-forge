@@ -16,8 +16,8 @@ import { countTokens } from "@/core/assembly/tokenizer";
 
 export const maxDuration = 300;
 
-const MODEL_A = "deepseek-v4-pro";   // DeepSeek官方 Pro → 人物提取
-const MODEL_B = "deepseek-v4-flash"; // DeepSeek官方 Flash → 世界+文风
+const MODEL_A = "deepseek-v4-flash"; // DeepSeek Flash → 人物提取（结构化JSON不需要Pro）
+const MODEL_B = "deepseek-v4-flash"; // DeepSeek Flash → 世界+文风
 
 // ─── JSON 解析 ──────────────────────────────────
 
@@ -73,7 +73,7 @@ async function callOne(
   onTick: (elapsedSec: number) => void,
 ): Promise<{ raw: string; error?: string; sec: number }> {
   const t0 = Date.now();
-  const TIMEOUT_MS = 55000; // 55s 超时，留 5s 给 Vercel 清理
+  const TIMEOUT_MS = 120000; // 120s 超时，大文本需要更多时间
 
   // 进度心跳
   const ticker = setInterval(() => onTick((Date.now() - t0) / 1000), 2000);
@@ -147,11 +147,11 @@ export async function POST(request: Request) {
 
         // 双路均DeepSeek官方
         const dsKey = process.env.DEEPSEEK_API_KEY || "";
-        const dsConfigA: CallConfig = { baseURL: "https://api.deepseek.com", apiKey: dsKey, model: MODEL_A, label: "DS-Pro" };
-        const dsConfigB: CallConfig = { baseURL: sfConfig.baseURL, apiKey: sfConfig.apiKey, model: MODEL_B, label: "DS-Flash" };
+        const dsConfigA: CallConfig = { baseURL: "https://api.deepseek.com", apiKey: dsKey, model: MODEL_A, label: "DS-Flash·人物" };
+        const dsConfigB: CallConfig = { baseURL: sfConfig.baseURL, apiKey: sfConfig.apiKey, model: MODEL_B, label: "DS-Flash·世界" };
 
         const hasDS = dsKey.length > 10;
-        const mode = "DeepSeek Pro(人物) + DeepSeek Flash(世界)";
+        const mode = "DeepSeek Flash 双路并行(人物+世界)";
 
         send({ type: "progress", stage: "ready", message: `${text.length.toLocaleString()} 字 · ${mode}`, importMode, isSettings: true, pct: 3, hasDeepSeek: hasDS });
 
@@ -237,18 +237,18 @@ ${textSlice}
         let resA: { raw: string; error?: string; sec: number };
         let resB: { raw: string; error?: string; sec: number };
 
-        // 双路并行：DeepSeek Pro→人物 + DeepSeek Flash→世界
-        send({ type: "progress", stage: "launch", message: `A路 DS Pro→人物 | B路 DS Flash→世界`, pct: 5 });
+        // 双路并行：Flash→人物 + Flash→世界（Flash够快够准，不需要Pro）
+        send({ type: "progress", stage: "launch", message: `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
         [resA, resB] = await Promise.all([
-          callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 24000, (elapsed) => {
+          callOne(dsConfigA, "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。", promptChars, 16000, (elapsed) => {
             progressA = Math.round(elapsed);
-            const aPct = Math.min(basePct + Math.round(elapsed / 150 * 35), 40);
-            send({ type: "progress", stage: "path-a", message: `👤 A路 DS Pro·人物 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
+            const aPct = Math.min(basePct + Math.round(elapsed / 60 * 40), 45);
+            send({ type: "progress", stage: "path-a", message: `👤 A路 人物 ${progressA}s`, path: "A", elapsed: progressA, pct: aPct });
           }),
-          callOne(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 12000, (elapsed) => {
+          callOne(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", promptLore, 8000, (elapsed) => {
             progressB = Math.round(elapsed);
-            const bPct = Math.min(40 + Math.round(elapsed / 150 * 35), 75);
-            send({ type: "progress", stage: "path-b", message: `🌍 B路 DS Flash·世界 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
+            const bPct = Math.min(45 + Math.round(elapsed / 60 * 40), 85);
+            send({ type: "progress", stage: "path-b", message: `🌍 B路 世界 ${progressB}s`, path: "B", elapsed: progressB, pct: Math.max(bPct, 6) });
           }),
         ]);
 
