@@ -11,12 +11,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 300; // Hobby计划上限，100+角色并发10足够
+export const maxDuration = 300; // Hobby上限；单角色120s超时+并发6→100+角色稳定
 
 const FLASH = "deepseek-ai/DeepSeek-V4-Flash";
 const BASE_URL = (process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1").replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "";
-const CONCURRENCY = 10; // 高并发，角色多时加速
+const CONCURRENCY = 6; // 并发过高会触发Flash限流→卡死，6个稳
 
 // ─── 安全合并：空值不覆盖已有数据 ──────────────────────
 
@@ -51,6 +51,9 @@ ${styleText ? "文风: " + styleText : ""}`;
 // ─── Flash 调用（非流式）───────────────────────────
 
 async function callFlash(system: string, prompt: string, maxTokens = 8000): Promise<{ raw: string } | { error: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120_000); // 单角色120s超时——比无超时等死强
+
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -65,7 +68,10 @@ async function callFlash(system: string, prompt: string, maxTokens = 8000): Prom
         max_tokens: maxTokens,
         stream: false,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timer);
 
     if (!r.ok) {
       const body = await r.text().catch(() => "");
@@ -77,7 +83,12 @@ async function callFlash(system: string, prompt: string, maxTokens = 8000): Prom
     if (!raw) return { error: "Flash 返回空内容" };
     return { raw };
   } catch (e) {
-    return { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) };
+    clearTimeout(timer);
+    const msg = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+    if ((e as Error).name === "AbortError") {
+      return { error: `超时(120s)——该角色跳过，不影响其他` };
+    }
+    return { error: msg };
   }
 }
 
@@ -89,7 +100,9 @@ async function expandOne(
 ): Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> {
   const qic = (char.card.quickImportContent as string) || "";
   const bg = (char.card.background as string) || "";
-  const sourceText = qic || bg;
+  // 截断过长原文——超8000字Flash处理极慢还容易超时
+  const rawSource = (qic || bg).slice(0, 8000);
+  const sourceText = rawSource.length >= 8000 ? rawSource + "\n…(原文过长已截断前8000字)" : rawSource;
 
   const prompt = `基于原始设定扩展【${char.name}】的角色卡——信息不能丢，能复述就别总结。
 
