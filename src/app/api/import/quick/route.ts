@@ -190,28 +190,18 @@ async function dbMerge(
     const match = existing.find(e => isSameCharacter(e.name, c.name));
 
     if (match) {
-      // 追加内容到已有角色
-      await prisma.characterCard.update({
-        where: { id: match.id },
-        data: {
-          quickImportContent: {
-            // Prisma 不支持字符串拼接，先读再写
-            // 这里用原始 SQL 思路——但 Prisma 可以用 raw query
-          },
-        },
-      });
-
-      // Prisma update 不能直接做字符串拼接...
-      // 需要先读当前值，再写回去
+      // 读当前值，拼接后写回
       const current = await prisma.characterCard.findUnique({
         where: { id: match.id },
         select: { quickImportContent: true, background: true, name: true },
       });
 
-      const newQC = [current?.quickImportContent, c.content]
-        .filter(s => s && s.trim().length > 0)
+      // 防御：旧版 bug 可能把 quickImportContent 写成对象，统一转字符串
+      const prevQC = typeof current?.quickImportContent === 'string' ? current.quickImportContent : '';
+      const newQC = [prevQC, String(c.content || '')]
+        .filter(s => s.trim().length > 0)
         .join("\n\n---\n\n")
-        .slice(0, 15000);
+        .slice(0, 15000) || c.content.slice(0, 15000);
 
       await prisma.characterCard.update({
         where: { id: match.id },
