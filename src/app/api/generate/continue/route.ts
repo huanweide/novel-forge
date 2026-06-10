@@ -124,8 +124,7 @@ export async function POST(request: Request) {
       .filter((n) => n.order <= currentNode.order && n.content)
       .slice(-5);
 
-    // ── 读取文风模板 + 自定义设置 ──
-    const template = styleTemplateId ? getTemplate(styleTemplateId) : undefined;
+    // ── 读取自定义文风设置（模板已在上面声明）──
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
     const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
