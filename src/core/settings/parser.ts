@@ -160,7 +160,7 @@ export async function parseSettings(
   const config = getDefaultLLMConfig();
 
   const response = await llm.chat({
-    model: config.architectModel,
+    model: config.extractorModel,
     messages: [
       { role: "system", content: PARSE_SYSTEM_PROMPT },
       {
@@ -415,7 +415,7 @@ export async function parseLorebookOnly(
   const config = getDefaultLLMConfig();
 
   const response = await llm.chat({
-    model: config.architectModel,
+    model: config.extractorModel,
     messages: [
       { role: "system", content: LOREBOOK_ONLY_PROMPT },
       {
@@ -519,7 +519,7 @@ export async function parseStyleOnly(
   const config = getDefaultLLMConfig();
 
   const response = await llm.chat({
-    model: config.architectModel,
+    model: config.extractorModel,
     messages: [
       { role: "system", content: STYLE_ONLY_PROMPT },
       {
