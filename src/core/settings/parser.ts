@@ -367,6 +367,214 @@ export function toLorebookCreateParams(entry: ParsedLoreEntry, projectId: string
   };
 }
 
+// ─── 专用提取：仅世界卡 ──────────────────────────────────
+
+const LOREBOOK_ONLY_PROMPT = `你是世界观设定蒸馏专家。你的任务是从文本中提取所有世界观概念，复述而非总结。
+
+【核心理念：复述蒸馏——不是总结】
+- 复述：原文的设定细节全部保留——数值、名称、关系、规则，一字不漏地搬过来
+- 蒸馏：去重（同一概念的多处描述合并为一条）、去矛盾（以最详细版本为准）、分类组织
+- 禁止总结：不要概括、不要缩写、不要"大致是..."——保持原文信息密度
+- 禁止压缩：200字的原文设定变成50字总结 = 失败。200字→200字+ 结构化 = 成功
+
+${THREE_CARD_BOUNDARIES}
+
+【提取重点——世界卡专属】
+只提取世界卡（LorebookEntry），不要角色卡，不要风格卡。
+但注意：如果原文中某些"写作规则"实际上是世界观的一部分（如"这个世界魔法反噬会烧毁灵脉""仙界之门开启时凡人会失忆三天"），提取为世界词条。
+
+【分类覆盖——每种类型都不能漏】
+- geography: 地理位置、城市、山脉、秘境、建筑、空间结构
+- faction: 势力组织、宗门、帮派、国家、阵营、队伍、家族
+- magic_system: 力量体系、功法等级、魔法规则、修炼境界、能量来源、限制条件
+- history: 历史事件、战争、变革、重大发现、时间线节点
+- culture: 文化风俗、节日、礼仪、禁忌、社会规则、阶级制度
+- creature: 生物种族、妖兽、异族、神兽、怪物、非人种族
+- item: 器物法宝、武器、丹药、卷轴、神器、重要物品
+- custom: 其他关键概念、世界观铁律、特殊规则、宇宙法则
+
+【每个词条必须包含】
+- title: 概念名称（简洁准确）
+- category: 上述分类之一
+- keys: 触发关键词数组——文中出现这些词时该词条自动激活（3-8个，包含别名/简称/相关词）
+- content: 完整设定内容——复述原文全部细节，不缩写。结构化组织（用换行分段），但信息密度不低于原文
+- insertionOrder: 重要性 0-100（核心世界观=90+，重要设定=70-89，一般条目=40-69，细节补充=<40）
+
+【无上限提取——有多少出多少】
+文本中每一个世界观概念都要提取。不设数量上限。宁可多提取10条细节词条，不要漏掉1条关键设定。`;
+
+/**
+ * 仅提取世界书词条——复述蒸馏，不总结
+ * 用于用户只想提取世界观设定的场景。
+ */
+export async function parseLorebookOnly(
+  rawText: string,
+  client?: LLMClient
+): Promise<ParsedLoreEntry[]> {
+  const llm = client || getDefaultClient();
+  const config = getDefaultLLMConfig();
+
+  const response = await llm.chat({
+    model: config.architectModel,
+    messages: [
+      { role: "system", content: LOREBOOK_ONLY_PROMPT },
+      {
+        role: "user",
+        content: `从以下文本中提取所有世界观设定词条。复述原文细节，不总结不压缩。输出JSON数组：
+
+${rawText}
+
+输出格式：
+[{"title":"词条名","category":"geography|faction|magic_system|history|culture|creature|item|custom","keys":["触发词1","触发词2"],"content":"完整设定内容——复述原文全部细节","insertionOrder":80}]
+
+只输出JSON数组。每条content必须保持原文信息密度。`,
+      },
+    ],
+    temperature: 0.2,
+    maxTokens: 16384,
+  });
+
+  return parseLorebookResponse(response.content);
+}
+
+function parseLorebookResponse(raw: string): ParsedLoreEntry[] {
+  let s = raw.trim();
+  const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (md) s = md[1].trim();
+  const a = s.indexOf("["), b = s.lastIndexOf("]");
+  if (a >= 0 && b > a) s = s.slice(a, b + 1);
+
+  try {
+    const arr = JSON.parse(s) as Array<Record<string, unknown>>;
+    return arr.map(normalizeLoreEntry);
+  } catch (err) {
+    throw new Error(`解析世界卡JSON失败: ${(err as Error).message}\n原始: ${raw.slice(0, 300)}`);
+  }
+}
+
+// ─── 专用提取：仅风格卡 ──────────────────────────────────
+
+const STYLE_ONLY_PROMPT = `你是写作风格分析专家。你的任务是从文本中提取全部风格特征和写作规则，复述而非总结。
+
+【核心理念：复述蒸馏——不是总结】
+- 复述：原文体现的风格特征全部捕捉——句式习惯、用词倾向、节奏模式，用具体例子说明
+- 蒸馏：从大量文本中提炼出可量化的风格参数，标注典型样本
+- 禁止概括："文风古雅"不够——要写"半文半白，叙述句现代中文短句，对话按角色身份切换语域，情色描写直白不加修饰"
+- 禁止压缩：如果原文有明确的写作规则（如"不准写心理活动""对话不超过3行"），原文照搬
+
+【分析维度——全部覆盖】
+
+1. 叙事视角（povType）
+   - first_person: "我"叙事
+   - third_person_limited: 第三人称限制（贴着一个角色的视角）
+   - third_person_omniscient: 第三人称全知（上帝视角，知道所有人想法）
+   - second_person: "你"叙事（罕见）
+
+2. 叙事距离（narrativeDistance）
+   - close: 贴着人物心理——大量内心独白、感知描写
+   - medium: 有距离但不远——偶尔进人物内心，以外部描写为主
+   - remote: 上帝视角俯瞰——历史记录式的冷静叙述
+
+3. 句式量化（基于文本抽样估算）
+   - avgSentenceLength: 平均句长（中文字数）
+   - shortSentenceRatio: 短句占比（<15字）
+   - longSentenceRatio: 长句占比（>40字）
+
+4. 叙事比例（估算，总和≈1.0）
+   - dialogueRatio: 对话占比
+   - descriptionRatio: 环境/外貌描写占比
+   - actionRatio: 动作描写占比
+   - innerThoughtRatio: 内心独白/心理描写占比
+
+5. 语气标记（tonalMarkers）
+   用JSON对象标注各种语气的强度(0-1)，如：
+   {"冷峻":0.8,"压抑":0.6,"讽刺":0.3,"温情":0.1}
+   覆盖：冷峻/幽默/沉重/甜宠/热血/讽刺/温情/惊悚/悲壮/轻松等
+
+6. 词汇特征（lexicalFeatures）
+   用JSON对象标注词汇倾向(0-1)，如：
+   {"古风雅语":0.7,"现代口语":0.2,"市井粗俗":0.1,"术语密度":0.5}
+   覆盖：古风雅语/现代口语/方言/市井粗俗/术语密度/成语密度/外语混用等
+
+7. 文风描述（styleDescription）
+   一段完整中文描述（100-200字），概括整体写作风格。
+   必须具体——指出句长偏好、用词习惯、节奏模式、感官优先级。
+
+8. 写作规则提取（writingRules）
+   如果原文明确写了写作规则/约束（如"禁止心理描写""对话不超过3行""每段不超过5行""不准用'突然'开头"），逐条提取。
+   如果没有明确的规则，从文风中反推隐含的规则（如"全文没用过'突然'→可能隐含禁突然规则"）。
+
+9. 样本段落（sampleText）
+   从原文中摘取最能体现风格的段落（200-500字）。优先选包含多种风格特征的段落。`;
+
+/**
+ * 仅提取风格卡——复述蒸馏，分析全部风格维度 + 写作规则
+ * 用于用户只想从文本中提取写作风格的场景。
+ */
+export async function parseStyleOnly(
+  rawText: string,
+  client?: LLMClient
+): Promise<StyleProfile & { writingRules: string[] }> {
+  const llm = client || getDefaultClient();
+  const config = getDefaultLLMConfig();
+
+  const response = await llm.chat({
+    model: config.architectModel,
+    messages: [
+      { role: "system", content: STYLE_ONLY_PROMPT },
+      {
+        role: "user",
+        content: `分析以下文本的写作风格。覆盖全部维度，复述特征不概括。输出JSON：
+
+${rawText}
+
+输出格式：
+{
+  "povType": "third_person_limited",
+  "narrativeDistance": "close",
+  "avgSentenceLength": 22,
+  "shortSentenceRatio": 0.35,
+  "longSentenceRatio": 0.1,
+  "dialogueRatio": 0.4,
+  "descriptionRatio": 0.2,
+  "actionRatio": 0.25,
+  "innerThoughtRatio": 0.15,
+  "tonalMarkers": {"冷峻":0.7,"压抑":0.3},
+  "lexicalFeatures": {"古风雅语":0.6,"现代口语":0.3,"术语密度":0.4},
+  "styleDescription": "具体文风描述——100-200字，指出句长偏好、用词习惯、节奏模式、感官优先级",
+  "writingRules": ["规则1：原文照搬", "规则2：从文风反推"],
+  "sampleText": "从原文中摘取的代表性段落"
+}
+
+只输出JSON。`,
+      },
+    ],
+    temperature: 0.2,
+    maxTokens: 16384,
+  });
+
+  return parseStyleOnlyResponse(response.content);
+}
+
+function parseStyleOnlyResponse(raw: string): StyleProfile & { writingRules: string[] } {
+  let s = raw.trim();
+  const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (md) s = md[1].trim();
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a >= 0 && b > a) s = s.slice(a, b + 1);
+
+  try {
+    const parsed = JSON.parse(s) as Record<string, unknown>;
+    const profile = normalizeStyleProfile(parsed);
+    const writingRules = Array.isArray(parsed.writingRules)
+      ? parsed.writingRules.filter((r: unknown) => typeof r === "string")
+      : [];
+    return { ...profile, writingRules };
+  } catch (err) {
+    throw new Error(`解析风格卡JSON失败: ${(err as Error).message}\n原始: ${raw.slice(0, 300)}`);
+  }
+}
+
 /**
  * 将 StyleProfile 转为 StyleCard 创建参数
  */

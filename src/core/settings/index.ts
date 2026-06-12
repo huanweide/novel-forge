@@ -1,5 +1,7 @@
 export {
   parseSettings,
+  parseLorebookOnly,
+  parseStyleOnly,
   toCharacterCreateParams,
   toLorebookCreateParams,
   toStyleCardCreateParams,
