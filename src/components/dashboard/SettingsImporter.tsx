@@ -23,6 +23,7 @@ export function SettingsImporter({
   const [result, setResult] = useState<{
     characters: number;
     loreEntries: number;
+    styleCard: boolean;
     synopsis: string;
   } | null>(null);
   const [error, setError] = useState("");
@@ -54,6 +55,7 @@ export function SettingsImporter({
       setResult({
         characters: data.created.characters,
         loreEntries: data.created.loreEntries,
+        styleCard: data.created.styleCard || false,
         synopsis: data.parsed.synopsis || "",
       });
     } catch (err) {
@@ -150,6 +152,11 @@ export function SettingsImporter({
               <p>
                 创建了 <span className="text-green-400 font-bold">{result.loreEntries}</span> 个世界书词条
               </p>
+              {result.styleCard && (
+                <p>
+                  创建了 <span className="text-pink-400 font-bold">1</span> 张风格卡
+                </p>
+              )}
               {result.synopsis && (
                 <p className="text-zinc-500 mt-2 max-w-md">
                   📌 自动提取总纲：{result.synopsis.slice(0, 100)}...

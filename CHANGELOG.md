@@ -4,6 +4,35 @@
 
 ---
 
+## v0.15.0 — 2026-06-12
+
+### 🃏 导入设定一键出三卡——分界精确、无上限提取
+
+**核心：三卡分界标准建立**
+- `src/core/settings/parser.ts` 新增 `THREE_CARD_BOUNDARIES` —— 整个项目三卡提取的唯一权威规则源
+- 角色卡：有名字的个体人物（外貌/性格/背景/能力/关系/对话风格/隐藏动机/时间线）
+- 世界卡：非人物概念（地理/势力/力量体系/历史/文化/生物/器物/自定义），含触发关键词
+- 风格卡：写作风格特征（视角/叙事距离/句式/比例/语气标记/词汇特征/文风描述/样本段落）
+- 每张卡明确排除不属于它的内容——杜绝AI把地名写进角色卡、把文风写进世界卡
+
+**SettingsImporter 补全三卡**
+- `POST /api/parse-settings` 新增 StyleCard 创建（删除旧卡→建新卡，一个项目保留最新一张）
+- 三卡并行写入：角色卡 + 世界书 + 风格卡一个 `Promise.all` 搞定
+- 前端显示风格卡创建结果（粉色高亮）
+
+**ImportWizard 统一三卡标准**
+- `POST /api/import/parse` B 路 prompt 引用 `THREE_CARD_BOUNDARIES`，与 parser.ts 一致
+- 分块模式下不再跳过世界+风格提取——改用文本前16000字独立调用
+- maxTokens 全面提升：A路 12000/16000→16384，B路 8000→16384
+
+**类型系统**
+- 新增 `StyleProfile` 接口（对应 StyleCard 全部字段）
+- `ParsedSettings` 新增 `styleProfile?: StyleProfile`
+- 新增 `toStyleCardCreateParams()` 辅助函数
+- `src/core/settings/index.ts` 导出全量更新
+
+---
+
 ## v0.14.0 — 2026-06-12
 
 ### 🎨 文风系统重做——模板真正生效

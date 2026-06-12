@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getDefaultLLMConfig } from "@/core/llm/client";
 import { countTokens } from "@/core/assembly/tokenizer";
+import { THREE_CARD_BOUNDARIES } from "@/core/settings";
 
 export const maxDuration = 300;
 
@@ -264,7 +265,7 @@ ${chunkText}
             const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
             send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
 
-            const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 12000);
+            const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 16384);
             if (res.error) {
               send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
               continue;
@@ -285,7 +286,7 @@ ${chunkText}
           await new Promise(r => setTimeout(r, 100));
           send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
 
-          const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 16000);
+          const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 16384);
           send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
 
           if (resA.error) {
@@ -306,16 +307,31 @@ ${chunkText}
         let lore: Record<string, unknown>[] = [];
         let style: Record<string, unknown> = {};
 
-        if (!isCharOnly && !needsChunking) {
-          const lorePrompt = `设定集→世界设定+文风JSON。原文照搬，没信息写"无"。只输出JSON。
+        // B路：世界设定+文风——分块模式也执行（独立调用，不跳过）
+        if (!isCharOnly) {
+          // 分块模式：用全文前16000字做世界+风格提取；非分块模式用完整文本
+          const loreText = needsChunking ? text.slice(0, 16000) : text;
+          const chunkNote = needsChunking ? "(基于文本前16000字)" : "";
 
-【${pName}】${pGenre.join("、")}
+          const lorePrompt = `从设定文本中提取世界设定词条和写作风格。${chunkNote}
 
-${text}
+${THREE_CARD_BOUNDARIES}
 
-{"lore":[{"title":"","category":"geography|faction|magic_system|history|culture|creature|item|custom","keys":[],"content":""}],"style":{"styleDescription":"","povType":"third_person_limited","narrativeDistance":"medium","dialogueRatio":0.35,"descriptionRatio":0.25,"actionRatio":0.25,"innerThoughtRatio":0.15,"tonalMarkers":{},"lexicalFeatures":{},"sampleText":""}}`;
+【作品信息】
+名称：${pName} · 类型：${pGenre.join("、")}
 
-          const resB = await callFlash(dsConfigB, "格式翻译器。设定集→世界设定+文风JSON。原文照搬。只输出JSON。", lorePrompt, 8000);
+【设定文本】
+${loreText}
+
+【输出格式——纯JSON，无markdown】
+{"lore":[{"title":"","category":"geography|faction|magic_system|history|culture|creature|item|custom","keys":[],"content":""}],"style":{"povType":"third_person_limited","narrativeDistance":"medium","avgSentenceLength":25,"shortSentenceRatio":0.3,"longSentenceRatio":0.15,"dialogueRatio":0.35,"descriptionRatio":0.25,"actionRatio":0.25,"innerThoughtRatio":0.15,"tonalMarkers":{},"lexicalFeatures":{},"styleDescription":"","sampleText":""}}`;
+
+          const resB = await callFlash(
+            dsConfigB,
+            "世界设定+文风提取器。严格遵循三卡分界标准。只输出JSON。",
+            lorePrompt,
+            16384, // 无上限提取
+          );
 
           if (resB.error) {
             send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界提取失败: ${resB.error}`, pct: 90 });
@@ -324,13 +340,11 @@ ${text}
               const p = parseJSON(resB.raw);
               lore = (Array.isArray(p.lore) ? p.lore : []).map(normLore).filter(l => l.title);
               if (typeof p.style === "object" && p.style !== null) style = p.style as Record<string, unknown>;
-              send({ type: "progress", stage: "path-b-done", message: `✅ 世界提取完成 · ${lore.length}词条 · ${resB.sec}s`, pct: 90 });
+              send({ type: "progress", stage: "path-b-done", message: `✅ 世界提取完成 · ${lore.length}词条${chunkNote} · ${resB.sec}s`, pct: 90 });
             } catch (e) {
               send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界JSON解析失败`, pct: 90 });
             }
           }
-        } else if (needsChunking) {
-          send({ type: "progress", stage: "skip-b", message: `ℹ️ 分块模式跳过世界设定（避免token超限）`, pct: 90 });
         }
 
         // ── 去重 ──
