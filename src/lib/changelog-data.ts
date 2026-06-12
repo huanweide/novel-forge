@@ -1,13 +1,18 @@
 /**
- * Novel Forge 更新公告 —— 唯一数据源
+ * Novel Forge 更新公告 —— 前端公告系统数据源
  *
- * 规则（每次部署必做）：
- *   1. 如果本次有改动 → 在 VERSIONS 数组最前面新增一个版本条目
- *   2. 更新 LATEST_VERSION 指向新版本号
- *   3. 更新首页公告摘要 CHANGELOG_BRIEF
- *   4. deploy → 自动同步到 changelog 页面 + 首页弹窗 + SW 刷新
+ * ⚠️ 强制同步规则（每次代码变更 + commit 前必做）：
+ *   本文件必须与项目根目录 CHANGELOG.md 保持同步。
+ *   两个文件一起更新、一起 commit——缺一不可。
  *
- * 修改此文件后直接部署即可，无需手动改其他文件。
+ * 步骤：
+ *   1. 在本文件 VERSIONS 数组最前面新增版本条目
+ *   2. LATEST_VERSION → 新版本号
+ *   3. CHANGELOG_BRIEF → 新版本4条摘要
+ *   4. 同步更新 CHANGELOG.md（项目根目录）
+ *   5. 两个文件一起 git commit
+ *
+ * 验证：localhost:3001/changelog 能看到最新版本
  */
 
 export interface VersionEntry {
