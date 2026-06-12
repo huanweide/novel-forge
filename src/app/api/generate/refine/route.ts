@@ -19,6 +19,8 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getSiliconFlowClient } from "@/core/llm/client";
+import { getTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 
 export async function POST(request: Request) {
   try {
@@ -110,6 +112,36 @@ export async function POST(request: Request) {
       authorNote: effectiveAuthorNote,
     });
 
+    // ── 注入文风模板（与 write 路由保持一致）──
+    const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
+    const templateId = (llmConfig.styleTemplateId as string) || "";
+    const template = getTemplate(templateId);
+    const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
+    const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
+
+    if (template?.stylePrompt) {
+      promptContext.systemPrompt += `\n\n【文风模板——${template.name}——最高优先级】\n${template.stylePrompt}`;
+    }
+
+    const allForbidden = [...(template?.forbiddenPatterns || []), ...customForbidden];
+    if (allForbidden.length > 0) {
+      promptContext.systemPrompt += `\n\n【🚫 绝对禁用词/句式——以下表达不得出现在正文中】\n${allForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
+    }
+
+    if (customStyleNotes) {
+      promptContext.systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
+    }
+
+    if (template?.pacingGuide) {
+      promptContext.systemPrompt += `\n\n【节奏指引】${template.pacingGuide}`;
+    }
+    if (template?.dialogueGuide) {
+      promptContext.systemPrompt += `\n\n【对话指引】${template.dialogueGuide}`;
+    }
+
+    const effectiveTemperature = (llmConfig.temperature as number) ?? template?.temperature ?? 0.85;
+    const effectiveTopP = (llmConfig.topP as number) ?? template?.topP ?? 0.95;
+
     // ── 用户备注注入 ──
     let cardNotesText = "";
     if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
@@ -165,6 +197,8 @@ ${existingContent.slice(-3000)}${existingContent.length > 3000 ? "\n\n…(前文
             targetWords,
             getSiliconFlowClient(),
             "deepseek-ai/DeepSeek-V4-Pro",
+            effectiveTemperature,
+            effectiveTopP,
           )) {
             if (chunk.type === "token") {
               newContent += chunk.content;
@@ -173,6 +207,25 @@ ${existingContent.slice(-3000)}${existingContent.length > 3000 ? "\n\n…(前文
               send({ type: "error", content: chunk.content });
               controller.close();
               return;
+            }
+          }
+
+          // Phase 1.5: 禁用词扫描
+          const forbiddenPatterns = collectForbiddenPatterns(
+            template?.forbiddenPatterns || [],
+            customForbidden,
+          );
+          if (forbiddenPatterns.length > 0) {
+            const scanResult = scanForbiddenWords(newContent, forbiddenPatterns);
+            if (!scanResult.passed) {
+              send({
+                type: "forbidden_scan",
+                content: scanResult.summary,
+                matches: scanResult.matches.slice(0, 10),
+                totalMatches: scanResult.matches.length,
+              });
+            } else {
+              send({ type: "forbidden_scan", content: "✅ 禁用词检查通过", passed: true });
             }
           }
 

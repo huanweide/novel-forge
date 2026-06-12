@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { buildPromptContext } from "@/core/agents";
 import { assemblePrompt, countTokens } from "@/core/assembly";
+import { getTemplate } from "@/core/templates";
 
 /**
  * POST /api/generate/preview-context
@@ -65,6 +66,47 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       authorNote,
     });
+
+    // ── 注入文风模板（与 write 路由保持一致）──
+    const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
+    const templateId = (llmConfig.styleTemplateId as string) || "";
+    const template = getTemplate(templateId);
+    const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
+    const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
+
+    const injectedSections: string[] = [];
+
+    if (template?.stylePrompt) {
+      const section = `【文风模板——${template.name}——最高优先级】\n${template.stylePrompt}`;
+      promptContext.systemPrompt += `\n\n${section}`;
+      injectedSections.push("✅ 文风模板 stylePrompt 已注入");
+    } else {
+      injectedSections.push("⚠️ 未找到模板或模板无 stylePrompt");
+    }
+
+    const allForbidden = [...(template?.forbiddenPatterns || []), ...customForbidden];
+    if (allForbidden.length > 0) {
+      promptContext.systemPrompt += `\n\n【🚫 绝对禁用词/句式——以下表达不得出现在正文中】\n${allForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
+      injectedSections.push(`✅ 禁用词已注入 (模板${template?.forbiddenPatterns?.length || 0}条 + 自定义${customForbidden.length}条 = ${allForbidden.length}条)`);
+    }
+
+    if (customStyleNotes) {
+      promptContext.systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
+      injectedSections.push(`✅ 自定义风格笔记已注入 (${customStyleNotes.length}字)`);
+    }
+
+    if (template?.pacingGuide) {
+      promptContext.systemPrompt += `\n\n【节奏指引】${template.pacingGuide}`;
+      injectedSections.push("✅ 节奏指引已注入");
+    }
+    if (template?.dialogueGuide) {
+      promptContext.systemPrompt += `\n\n【对话指引】${template.dialogueGuide}`;
+      injectedSections.push("✅ 对话指引已注入");
+    }
+
+    const effectiveTemp = (llmConfig.temperature as number) ?? template?.temperature ?? 0.85;
+    const effectiveTopP = (llmConfig.topP as number) ?? template?.topP ?? 0.95;
+    injectedSections.push(`✅ Temperature: ${effectiveTemp} | Top-P: ${effectiveTopP} | 每节字数: ${template?.targetWordsPerSection || "默认"}`);
 
     // 组装 Prompt（不实际发送）
     const contextWindowSize = parseInt(
@@ -165,6 +207,27 @@ export async function POST(request: Request) {
       totalPromptTokens: budget.used || countTokens(JSON.stringify(breakdown)),
       contextWindowSize,
       usagePercent: ((budget.used || 0) / contextWindowSize * 100).toFixed(1),
+      // ── 模板注入验证 ──
+      templateInjection: {
+        templateId: templateId || "未选择",
+        templateName: template?.name || "无",
+        injectedSections,
+        systemPromptTokens: countTokens(promptContext.systemPrompt),
+        systemPromptPreview: promptContext.systemPrompt.slice(0, 300),
+        // 为了方便验证，展示 systemPrompt 尾部（模板注入在这里）
+        // 验证标记：模板内容在 systemPrompt 中的位置
+        templateVerification: {
+          templateLabelPos: promptContext.systemPrompt.indexOf("【文风模板"),
+          templateNamePos: promptContext.systemPrompt.indexOf(template?.name || "NONEXISTENT"),
+          forbiddenLabelPos: promptContext.systemPrompt.indexOf("【🚫 绝对禁用词"),
+          pacingLabelPos: promptContext.systemPrompt.indexOf("【节奏指引】"),
+          dialogueLabelPos: promptContext.systemPrompt.indexOf("【对话指引】"),
+          systemPromptLength: promptContext.systemPrompt.length,
+          // 如果 templateLabelPos === -1，说明模板没注入
+          templateInjected: promptContext.systemPrompt.indexOf("【文风模板") !== -1,
+          forbiddenInjected: promptContext.systemPrompt.indexOf("【🚫 绝对禁用词") !== -1,
+        },
+      },
     });
   } catch (err) {
     return NextResponse.json(

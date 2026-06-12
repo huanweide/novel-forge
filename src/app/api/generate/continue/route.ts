@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getTemplate, applyTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getSiliconFlowClient } from "@/core/llm/client";
 
 /**
@@ -95,8 +96,10 @@ export async function POST(request: Request) {
       nextTitle = `第${allNodes.length + 1}节`;
     }
 
-    // 加载文风模板
-    const template = styleTemplateId ? getTemplate(styleTemplateId) : undefined;
+    // 加载文风模板（请求体优先 → 项目 llmConfig 兜底）
+    const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
+    const effectiveStyleId = styleTemplateId || (llmConfig.styleTemplateId as string) || "";
+    const template = effectiveStyleId ? getTemplate(effectiveStyleId) : undefined;
 
     // 构建下一节大纲
     let nextOutline = "";
@@ -125,8 +128,7 @@ export async function POST(request: Request) {
       .filter((n) => n.order <= currentNode.order && n.content)
       .slice(-5);
 
-    // ── 读取自定义文风设置（模板已在上面声明）──
-    const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
+    // ── 读取自定义文风设置（模板在上面声明，llmConfig 也在上面声明）──
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
     const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
 
@@ -241,6 +243,8 @@ export async function POST(request: Request) {
             targetWords,
             getSiliconFlowClient(),
             "deepseek-ai/DeepSeek-V4-Pro",
+            temperature,
+            topP,
           );
 
           for await (const chunk of generator) {
@@ -265,6 +269,25 @@ export async function POST(request: Request) {
               send({ type: "error", content: chunk.content });
               controller.close();
               return;
+            }
+          }
+
+          // Phase 1.5: 禁用词扫描
+          const forbiddenPatterns = collectForbiddenPatterns(
+            template?.forbiddenPatterns || [],
+            customForbidden,
+          );
+          if (forbiddenPatterns.length > 0) {
+            const scanResult = scanForbiddenWords(fullContent, forbiddenPatterns);
+            if (!scanResult.passed) {
+              send({
+                type: "forbidden_scan",
+                content: scanResult.summary,
+                matches: scanResult.matches.slice(0, 10),
+                totalMatches: scanResult.matches.length,
+              });
+            } else {
+              send({ type: "forbidden_scan", content: "✅ 禁用词检查通过", passed: true });
             }
           }
 

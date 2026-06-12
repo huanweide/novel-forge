@@ -27,6 +27,20 @@ interface ContextData {
   totalPromptTokens: number;
   contextWindowSize: number;
   usagePercent: string;
+  // 模板注入信息
+  templateInjection?: {
+    templateId: string;
+    templateName: string;
+    injectedSections: string[];
+    systemPromptTokens: number;
+    templateVerification?: {
+      templateInjected: boolean;
+      forbiddenInjected: boolean;
+      systemPromptLength: number;
+      templateLabelPos: number;
+      forbiddenLabelPos: number;
+    };
+  };
 }
 
 export function ContextPreview({
@@ -109,6 +123,43 @@ export function ContextPreview({
           />
         </div>
       </div>
+
+      {/* 文风模板注入状态 */}
+      {data.templateInjection && (
+        <div className="bg-indigo-950/30 border border-indigo-900/50 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-indigo-300">
+              🎨 文风模板：<b>{data.templateInjection.templateName || "未选择"}</b>
+            </span>
+            <span className="text-zinc-500 font-mono text-[10px]">
+              {data.templateInjection.systemPromptTokens.toLocaleString()} tokens
+            </span>
+          </div>
+          {data.templateInjection.templateVerification && (
+            <div className="flex gap-3 text-[10px]">
+              <span className={data.templateInjection.templateVerification.templateInjected ? "text-green-400" : "text-red-400"}>
+                {data.templateInjection.templateVerification.templateInjected ? "✅" : "❌"} 风格描述
+              </span>
+              <span className={data.templateInjection.templateVerification.forbiddenInjected ? "text-green-400" : "text-red-400"}>
+                {data.templateInjection.templateVerification.forbiddenInjected ? "✅" : "❌"} 禁用词
+              </span>
+              <span className="text-zinc-500">
+                📐 {data.templateInjection.templateVerification.systemPromptLength.toLocaleString()} 字符
+              </span>
+            </div>
+          )}
+          {data.templateInjection.injectedSections.length > 0 && (
+            <details className="text-[10px]">
+              <summary className="text-zinc-500 cursor-pointer hover:text-zinc-400">注入详情</summary>
+              <div className="mt-1 space-y-0.5 ml-2">
+                {data.templateInjection.injectedSections.map((s, i) => (
+                  <div key={i} className="text-zinc-400">{s}</div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
 
       {/* 各区域明细 */}
       {sections.map(({ key, label, icon, data: d }) => (

@@ -151,6 +151,10 @@ ${loreBriefs}
     /** 正文生成专用客户端（硅基），不传则用默认 DeepSeek */
     clientOverride?: LLMClient,
     writerModelOverride?: string,
+    /** 覆盖默认 temperature（来自项目文风设置） */
+    temperatureOverride?: number,
+    /** 覆盖默认 topP（来自项目文风设置） */
+    topPOverride?: number,
   ): AsyncGenerator<{ type: "token" | "done" | "error"; content: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
     const { prompt } = assemblePrompt(
       context,
@@ -169,8 +173,8 @@ ${loreBriefs}
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
-        temperature: this.config.defaultTemperature,
-        topP: this.config.defaultTopP,
+        temperature: temperatureOverride ?? this.config.defaultTemperature,
+        topP: topPOverride ?? this.config.defaultTopP,
         maxTokens: this.config.maxTokensPerRequest,
       })) {
         yield chunk;

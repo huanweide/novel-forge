@@ -21,18 +21,31 @@ interface DetectedEntity {
   suggestedContent?: string;
 }
 
+interface OutlineDrift {
+  type: string;
+  severity: string;
+  character?: string;
+  description: string;
+  evidence: string;
+  suggestion: string;
+}
+
 export function EntityDetector({
   projectId,
   text,
+  nodeId,
   onCreated,
 }: {
   projectId: string;
   text: string;
+  nodeId?: string;
   onCreated: () => void;
 }) {
   const [detecting, setDetecting] = useState(false);
   const [characters, setCharacters] = useState<DetectedEntity[]>([]);
   const [lore, setLore] = useState<DetectedEntity[]>([]);
+  const [drifts, setDrifts] = useState<OutlineDrift[]>([]);
+  const [stats, setStats] = useState<{ textLength: number; chunksScanned: number } | null>(null);
   const [detected, setDetected] = useState(false);
   const [creating, setCreating] = useState<Set<string>>(new Set());
 
@@ -42,12 +55,14 @@ export function EntityDetector({
       const res = await fetch("/api/generate/detect-entities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, text }),
+        body: JSON.stringify({ projectId, text, nodeId }),
       });
       if (res.ok) {
         const data = await res.json();
         setCharacters(data.newCharacters || []);
         setLore(data.newLore || []);
+        setDrifts(data.outlineDrifts || []);
+        setStats(data.stats || null);
         setDetected(true);
       }
     } catch (err) {
@@ -118,7 +133,7 @@ export function EntityDetector({
     }
   };
 
-  const total = characters.length + lore.length;
+  const total = characters.length + lore.length + drifts.length;
 
   if (!detected && !detecting) {
     return (
@@ -126,7 +141,7 @@ export function EntityDetector({
         onClick={handleDetect}
         className="text-xs text-indigo-400 hover:text-indigo-300 underline"
       >
-        🔍 检测新角色/新地点
+        🔍 检测新角色/新地点/大纲偏离
       </button>
     );
   }
@@ -134,15 +149,22 @@ export function EntityDetector({
   if (detecting) {
     return (
       <div className="text-xs text-zinc-500 animate-pulse">
-        🔍 AI 正在扫描文本中的新实体...
+        🔍 AI 正在分块扫描文本（{stats ? `${stats.chunksScanned}块·${stats.textLength}字` : "..."}）...
       </div>
     );
   }
 
-  if (total === 0) {
+  if (total === 0 && drifts.length === 0) {
     return (
-      <div className="text-xs text-zinc-600">
-        ✅ 未检测到新实体——所有角色和设定都已建卡
+      <div className="space-y-1">
+        <div className="text-xs text-zinc-600">
+          ✅ 未检测到新实体——所有角色和设定都已建卡
+        </div>
+        {stats && (
+          <div className="text-[10px] text-zinc-700">
+            扫描 {stats.textLength.toLocaleString()} 字 · {stats.chunksScanned} 块
+          </div>
+        )}
       </div>
     );
   }
@@ -151,7 +173,14 @@ export function EntityDetector({
     <div className="border border-indigo-800/50 bg-indigo-950/20 rounded-lg p-3 space-y-3">
       <div className="text-xs font-medium text-indigo-400">
         🆕 检测到 {characters.length} 个新角色、{lore.length} 个新地点/设定
+        {drifts.length > 0 && <span className="text-amber-400"> · ⚠️ {drifts.length} 处大纲偏离</span>}
       </div>
+
+      {stats && (
+        <div className="text-[10px] text-zinc-600">
+          📊 扫描 {stats.textLength.toLocaleString()} 字 · {stats.chunksScanned} 块
+        </div>
+      )}
 
       {characters.map((c, i) => (
         <div key={i} className="flex items-start justify-between gap-2 text-xs">
@@ -193,6 +222,31 @@ export function EntityDetector({
           </Button>
         </div>
       ))}
+
+      {/* 大纲偏离 */}
+      {drifts.length > 0 && (
+        <div className="border-t border-amber-900/50 pt-2 space-y-2">
+          <div className="text-xs font-medium text-amber-400">⚠️ 大纲一致性警告</div>
+          {drifts.map((d, i) => (
+            <div key={i} className="text-xs space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className={`px-1 py-0.5 rounded text-[10px] ${
+                  d.severity === "critical" ? "bg-red-900/50 text-red-400" :
+                  d.severity === "major" ? "bg-amber-900/50 text-amber-400" :
+                  "bg-zinc-800 text-zinc-400"
+                }`}>
+                  {d.severity === "critical" ? "严重" : d.severity === "major" ? "重要" : "轻微"}
+                </span>
+                <span className="text-zinc-500">{d.type === "ooc" ? "OOC" : d.type === "plot_drift" ? "情节偏离" : d.type === "pacing" ? "节奏" : "视角"}</span>
+                {d.character && <span className="text-zinc-400">· {d.character}</span>}
+              </div>
+              <div className="text-zinc-400">{d.description}</div>
+              <div className="text-zinc-700 italic">「{d.evidence?.slice(0, 80)}」</div>
+              {d.suggestion && <div className="text-green-700">💡 {d.suggestion.slice(0, 100)}</div>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

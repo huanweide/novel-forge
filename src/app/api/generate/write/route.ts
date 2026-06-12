@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getSiliconFlowClient } from "@/core/llm/client";
+import { getTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 
 /**
  * POST /api/generate/write
@@ -140,17 +142,45 @@ export async function POST(request: Request) {
       authorNote: enrichedAuthorNote,
     });
 
-    // 注入项目的自定义文风设置
+    // ═══════════════════════════════════════════════════════════════
+    // 注入项目文风——模板 stylePrompt + 模板 forbiddenPatterns + 自定义
+    // ═══════════════════════════════════════════════════════════════
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
+    const templateId = (llmConfig.styleTemplateId as string) || "";
+    const template = getTemplate(templateId);
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
     const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
 
-    if (customForbidden.length > 0) {
-      promptContext.systemPrompt += `\n\n【自定义禁用——绝对不可使用】\n${customForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
+    // 1. 注入模板的 stylePrompt（核心风格描述）
+    if (template?.stylePrompt) {
+      promptContext.systemPrompt += `\n\n【文风模板——${template.name}——最高优先级】\n${template.stylePrompt}`;
     }
+
+    // 2. 合并模板禁用词 + 自定义禁用词
+    const allForbidden = [
+      ...(template?.forbiddenPatterns || []),
+      ...customForbidden,
+    ];
+    if (allForbidden.length > 0) {
+      promptContext.systemPrompt += `\n\n【🚫 绝对禁用词/句式——以下表达不得出现在正文中】\n${allForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
+    }
+
+    // 3. 自定义风格笔记（用户在 UI 手动写的）
     if (customStyleNotes) {
       promptContext.systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
     }
+
+    // 4. 模板的 pacingGuide 和 dialogueGuide（节奏+对话指引）
+    if (template?.pacingGuide) {
+      promptContext.systemPrompt += `\n\n【节奏指引】${template.pacingGuide}`;
+    }
+    if (template?.dialogueGuide) {
+      promptContext.systemPrompt += `\n\n【对话指引】${template.dialogueGuide}`;
+    }
+
+    // 5. 模板推荐的 temperature/topP（覆盖默认值）
+    const effectiveTemperature = (llmConfig.temperature as number) ?? template?.temperature ?? 0.85;
+    const effectiveTopP = (llmConfig.topP as number) ?? template?.topP ?? 0.95;
 
     // 撰写指令——作者注释放最前面，最高优先级
     const effectiveAuthorNote = enrichedAuthorNote || authorNote;
@@ -191,6 +221,8 @@ export async function POST(request: Request) {
             targetWordCount,
             getSiliconFlowClient(),
             "deepseek-ai/DeepSeek-V4-Pro",
+            effectiveTemperature,
+            effectiveTopP,
           )) {
             if (chunk.type === "token") {
               newContent += chunk.content;
@@ -222,6 +254,25 @@ export async function POST(request: Request) {
           // 通知前端是否续写
           if (partialDraft) {
             send({ type: "resume", content: `从草稿续写 (已有${partialDraft.length}字)` });
+          }
+
+          // Phase 1.5: 禁用词扫描
+          const forbiddenPatterns = collectForbiddenPatterns(
+            template?.forbiddenPatterns || [],
+            customForbidden,
+          );
+          if (forbiddenPatterns.length > 0) {
+            const scanResult = scanForbiddenWords(fullContent, forbiddenPatterns);
+            if (!scanResult.passed) {
+              send({
+                type: "forbidden_scan",
+                content: scanResult.summary,
+                matches: scanResult.matches.slice(0, 10), // 最多报10条
+                totalMatches: scanResult.matches.length,
+              });
+            } else {
+              send({ type: "forbidden_scan", content: "✅ 禁用词检查通过", passed: true });
+            }
           }
 
           // Phase 2: 审校

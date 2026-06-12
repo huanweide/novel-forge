@@ -1,19 +1,20 @@
 /**
  * POST /api/characters/expand
  *
+ * v2: 16并发 · deepseek-v4-flash · 不截断源文本 · 16384 tokens 输出
+ *
  * SSE 流式：逐角色独立并行扩展。
- * DeepSeek 官方 deepseek-chat，8 并发，不超时不断联。
  * 每完成一个角色即时推 SSE 进度。
  */
-
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export const maxDuration = 300;
 
 const DS_URL = "https://api.deepseek.com/v1/chat/completions";
-const DS_MODEL = "deepseek-chat";
-const CONCURRENCY = 8;
+const DS_MODEL = "deepseek-v4-flash";
+const CONCURRENCY = 16;
+const MAX_TOKENS = 16384;
 
 function getDSKey(): string {
   return process.env.DEEPSEEK_API_KEY || "";
@@ -36,7 +37,7 @@ function slimContext(
   lore: { title: string; category: string; content: string }[],
   style: Record<string, unknown> | null,
 ): string {
-  const loreText = lore.slice(0, 30).map(l =>
+  const loreText = lore.slice(0, 200).map(l =>
     `[${l.title}](${l.category}) ${l.content.slice(0, 80)}`
   ).join(" | ");
 
@@ -44,14 +45,14 @@ function slimContext(
     ? `${(style.styleDescription as string)?.slice(0, 80) || ""} | POV:${style.povType || "第三人称"}`
     : "";
 
-  return `${project.name}（${project.genre.join("、")}）${project.synopsis ? " | 总纲:" + project.synopsis.slice(0, 120) : ""}
+  return `${project.name}（${project.genre.join("、")}）${project.synopsis ? " | 总纲:" + project.synopsis.slice(0, 200) : ""}
 世界观(${lore.length}条): ${loreText || "无"}
 ${styleText ? "文风: " + styleText : ""}`;
 }
 
 // ─── DeepSeek API 调用 ─────────────────────────────
 
-async function callDS(system: string, prompt: string, maxTokens = 8000): Promise<{ raw: string } | { error: string }> {
+async function callDS(system: string, prompt: string): Promise<{ raw: string } | { error: string }> {
   const key = getDSKey();
   if (key.length < 10) return { error: "DeepSeek API Key 未配置" };
 
@@ -66,7 +67,7 @@ async function callDS(system: string, prompt: string, maxTokens = 8000): Promise
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: maxTokens,
+        max_tokens: MAX_TOKENS,
         stream: false,
       }),
     });
@@ -93,8 +94,12 @@ async function expandOne(
 ): Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> {
   const qic = (char.card.quickImportContent as string) || "";
   const bg = (char.card.background as string) || "";
-  const rawSource = (qic || bg).slice(0, 8000);
-  const sourceText = rawSource.length >= 8000 ? rawSource + "\n…(原文过长已截断前8000字)" : rawSource;
+  // 不再硬截断——全文传入
+  const sourceText = (qic || bg);
+  // 如果极长（>20000字），用摘要提示而非截断
+  const truncatedHint = sourceText.length > 20000
+    ? `（原始设定共${sourceText.length}字，请逐字逐句保留前20000字中的信息，后文可基于语境合理推敲）`
+    : "";
 
   const prompt = `基于原始设定扩展【${char.name}】的角色卡——信息不能丢，能复述就别总结。
 
@@ -102,7 +107,7 @@ async function expandOne(
 ${context}
 
 【该角色原始设定——逐字逐句保留，不要缩写】
-${sourceText || "（无原始设定，基于角色地位推敲）"}
+${sourceText.slice(0, 20000)}${truncatedHint}
 
 【当前卡面（已有结构化数据）】
 ${JSON.stringify(char.card)}
@@ -131,7 +136,8 @@ ${JSON.stringify(char.card)}
 
   const result = await callDS(
     "扩展角色卡。少总结多复述，原文照搬不缩写，空字段基于世界观推敲补全。只输出JSON。",
-    prompt, 8000);
+    prompt,
+  );
 
   if ("error" in result) {
     return { id: char.id, name: char.name, result: null, error: result.error };
@@ -319,7 +325,7 @@ export async function POST(request: Request) {
 
         send({
           type: "progress", stage: "start",
-          message: `${total} 个角色 · DeepSeek chat · ${CONCURRENCY}并发`,
+          message: `${total} 个角色 · deepseek-v4-flash · ${CONCURRENCY}并发`,
           pct: 5, done: 0, total,
         });
 
@@ -328,7 +334,7 @@ export async function POST(request: Request) {
         const charResults: Array<{ name: string; status: "ok" | "failed"; error?: string }> = [];
         const fallbackMap = new Map(charItems.map(c => [c.id, c.card]));
 
-        await withConcurrency(charItems, async (item, idx) => {
+        await withConcurrency(charItems, async (item) => {
           const { result: r, error } = await expandOne(item, context);
           let finalError = error;
 
@@ -403,7 +409,7 @@ export async function POST(request: Request) {
           failList: failList.map(f => ({ name: f.name, reason: f.error })),
         });
 
-        // ⚠️ 延迟关闭——确保 SSE done 事件 flush 到网络再断联
+        // 延迟关闭——确保 SSE done 事件 flush 到网络再断联
         await new Promise(r => setTimeout(r, 300));
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : "扩展失败" });

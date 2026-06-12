@@ -27,7 +27,7 @@ interface ClassifyGroup {
 
 async function callFlash(system: string, prompt: string): Promise<string> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 60000); // 单路60秒超时
+  const timer = setTimeout(() => ctrl.abort(), 120000); // 单路120秒超时
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -193,7 +193,7 @@ function buildWorldContext(
   project: { name: string; genre: string[]; synopsis?: string },
   lore: Array<{ title: string; category: string; content: string }>,
 ): string {
-  const loreText = lore.slice(0, 50).map(l =>
+  const loreText = lore.slice(0, 200).map(l =>
     `[${l.title}](${l.category}) ${l.content.slice(0, 120)}`
   ).join("\n");
   return `作品：${project.name}（${project.genre.join("、")}）\n总纲：${project.synopsis?.slice(0, 200) || "无"}\n世界书：\n${loreText || "无"}`;

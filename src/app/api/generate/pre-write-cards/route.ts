@@ -203,6 +203,26 @@ export async function GET(request: Request) {
       }
     }
 
+    // ── 世界卡完整性检查 ──
+    const lorebookEntries = await prisma.lorebookEntry.findMany({
+      where: { projectId, enabled: true },
+    });
+    const hasGeography = lorebookEntries.some(l => l.category === "geography");
+    const hasFaction = lorebookEntries.some(l => l.category === "faction");
+    const hasMagicSystem = lorebookEntries.some(l => l.category === "magic_system");
+    const hasHistory = lorebookEntries.some(l => l.category === "history");
+    const hasCulture = lorebookEntries.some(l => l.category === "culture");
+    const missingLoreCategories: string[] = [];
+    if (!hasGeography) missingLoreCategories.push("geography");
+    if (!hasFaction) missingLoreCategories.push("faction");
+    if (!hasMagicSystem) missingLoreCategories.push("magic_system");
+    if (!hasHistory) missingLoreCategories.push("history");
+    if (!hasCulture) missingLoreCategories.push("culture");
+    const loreWarning = lorebookEntries.length === 0
+      ? "⚠️ 世界卡完全为空——强烈建议至少创建1条世界设定，防止AI凭空编造" : missingLoreCategories.length > 0
+      ? `💡 建议补充世界卡类型：${missingLoreCategories.map(c => ({geography:"地理",faction:"势力",magic_system:"能力体系",history:"历史",culture:"文化"}[c] || c)).join("、")}`
+      : "";
+
     return NextResponse.json({
       scheduledCards: scheduled.map(c => ({
         id: c.id,
@@ -223,6 +243,19 @@ export async function GET(request: Request) {
       missingRoleSuggestions: missingRoles,
       chapterTitle,
       chapterOutline: nodeId ? (currentNode?.outline || "") : (project.synopsis || "").slice(0, 200),
+      // ── 世界卡完整性 ──
+      lorebookStats: {
+        totalEntries: lorebookEntries.length,
+        categories: {
+          geography: hasGeography,
+          faction: hasFaction,
+          magic_system: hasMagicSystem,
+          history: hasHistory,
+          culture: hasCulture,
+        },
+        missingCategories: missingLoreCategories,
+        warning: loreWarning,
+      },
     });
   } catch (err) {
     return NextResponse.json(
