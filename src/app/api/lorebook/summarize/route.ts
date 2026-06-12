@@ -161,25 +161,26 @@ ${entriesText}
 
             const results = parseResult(raw);
 
-            for (const r of results) {
-              const newEntry = await prisma.lorebookEntry.create({
-                data: {
-                  projectId,
-                  title: r.title,
-                  category,
-                  keys: r.keys.length > 0 ? r.keys : [r.title],
-                  content: r.content,
-                  enabled: true,
-                  insertionOrder: 50,
-                },
+            // 原子操作：先删旧再建新（避免崩溃丢数据）
+            await prisma.$transaction(async (tx) => {
+              await tx.lorebookEntry.deleteMany({
+                where: { id: { in: group.map(e => e.id) } },
               });
-              created.push(r.title);
-            }
-
-            // 删旧词条
-            await prisma.lorebookEntry.deleteMany({
-              where: { id: { in: group.map(e => e.id) } },
+              for (const r of results) {
+                await tx.lorebookEntry.create({
+                  data: {
+                    projectId,
+                    title: r.title,
+                    category,
+                    keys: r.keys.length > 0 ? r.keys : [r.title],
+                    content: r.content,
+                    enabled: true,
+                    insertionOrder: 50,
+                  },
+                });
+              }
             });
+            created.push(...results.map(r => r.title));
 
             doneCount++;
             send({

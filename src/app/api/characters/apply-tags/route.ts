@@ -21,32 +21,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "缺少 projectId 或 assignments" }, { status: 400 });
   }
 
-  let updated = 0;
-
-  for (const a of assignments) {
-    if (!a.characterId || !Array.isArray(a.labels)) continue;
-
-    // 读取角色当前 tags
-    const character = await prisma.characterCard.findUnique({
-      where: { id: a.characterId },
-      select: { tags: true },
-    });
-    if (!character) continue;
-
-    // 保留系统标签（📥📝），替换其他标签为勾选的 labels
-    const oldTags = Array.isArray(character.tags) ? character.tags : [];
-    const systemTags = oldTags.filter((t: unknown) =>
-      typeof t === "string" && (t.startsWith("📥") || t.startsWith("📝"))
+  try {
+    // 批量验证 — 确保所有 characterId 属于该项目
+    const validIds = new Set(
+      (await prisma.characterCard.findMany({
+        where: { projectId, id: { in: assignments.map(a => a.characterId).filter(Boolean) } },
+        select: { id: true },
+      })).map(c => c.id)
     );
-    const allLabels = a.labels.filter(l => typeof l === "string" && l.length > 0);
-    const merged = [...new Set([...allLabels, ...systemTags])];
 
-    await prisma.characterCard.update({
-      where: { id: a.characterId },
-      data: { tags: merged },
-    });
-    updated++;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const a of assignments) {
+      if (!a.characterId || !Array.isArray(a.labels)) { skipped++; continue; }
+      if (!validIds.has(a.characterId)) { skipped++; continue; }
+
+      const character = await prisma.characterCard.findUnique({
+        where: { id: a.characterId },
+        select: { tags: true },
+      });
+      if (!character) { skipped++; continue; }
+
+      const oldTags = Array.isArray(character.tags) ? character.tags : [];
+      const systemTags = oldTags.filter((t: unknown) =>
+        typeof t === "string" && (t.startsWith("📥") || t.startsWith("📝"))
+      );
+      const allLabels = a.labels.filter(l => typeof l === "string" && l.length > 0);
+      const merged = [...new Set([...allLabels, ...systemTags])];
+
+      await prisma.characterCard.update({
+        where: { id: a.characterId },
+        data: { tags: merged },
+      });
+      updated++;
+    }
+
+    return NextResponse.json({ ok: true, updated, skipped, total: assignments.length });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "标签更新失败" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ ok: true, updated, total: assignments.length });
 }

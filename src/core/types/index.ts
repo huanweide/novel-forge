@@ -32,6 +32,9 @@ export interface CharacterCard {
   currentStatus: CharacterStatus; // 当前状态（存活/死亡/失踪等）
   arcProgress: string;            // 角色弧光进展描述
   tags: string[];                 // 自定义标签
+  timeline: TimelineEvent[];      // 经历时间线
+  abilities: string[];            // 能力/技能
+  quickImportContent?: string;    // 快速导入原文
   createdAt: Date;
   updatedAt: Date;
 }
@@ -237,7 +240,14 @@ export interface ChapterSummary {
   chapterTitle: string;
   summary: string;                // AI压缩的摘要（≤200 Token）
   keyEvents: string[];            // 关键事件列表
-  characterStates: CharacterStateSnapshot[]; // 章节结束时角色状态快照
+  characterStates: string | CharacterStatesPayload; // 角色状态快照（字符串或结构化）
+}
+
+/** 章节摘要中的角色状态负载 */
+export interface CharacterStatesPayload {
+  raw: string;
+  closingSnapshot?: string;
+  impulses?: Array<{ name: string; impulse: string }>;
 }
 
 export interface CharacterStateSnapshot {
@@ -247,6 +257,14 @@ export interface CharacterStateSnapshot {
   physicalState: string;          // 物理状态
   location: string;               // 所在位置
   keyDecisions: string[];         // 本章做出的关键决定
+}
+
+export interface TimelineEvent {
+  age?: number | string;
+  event: string;
+  era?: string;
+  chapter?: number | string;
+  type?: string;
 }
 
 export interface StoryBeat {

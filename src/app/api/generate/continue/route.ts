@@ -237,6 +237,7 @@ export async function POST(request: Request) {
 
           // 流式生成
           let saveCounter = 0;
+          let saving = false; // 防重叠锁
           const generator = orchestrator.writeSection(
             promptContext,
             writingInstruction,
@@ -252,10 +253,11 @@ export async function POST(request: Request) {
               fullContent += chunk.content;
               send({ type: "token", content: chunk.content });
 
-              // 每 ~300 字 fire-and-forget 保存草稿
+              // 每 ~300 字保存草稿（防重叠写）
               saveCounter += chunk.content.length;
-              if (saveCounter >= 300) {
+              if (saveCounter >= 300 && !saving) {
                 saveCounter = 0;
+                saving = true;
                 const draft = fullContent;
                 prisma.storyNode.update({
                   where: { id: nextNode.id },
@@ -263,7 +265,8 @@ export async function POST(request: Request) {
                     content: draft + "\n\n[PARTIAL_DRAFT]",
                     status: "drafting",
                   },
-                }).catch(() => {}); // 静默失败，不阻塞流
+                }).then(() => { saving = false; })
+                  .catch((e) => { saving = false; console.error("草稿保存失败:", e?.message); });
               }
             } else if (chunk.type === "error") {
               send({ type: "error", content: chunk.content });

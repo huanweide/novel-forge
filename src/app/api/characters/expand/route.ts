@@ -8,6 +8,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { parseAIJson } from "@/lib/json-parser";
 
 export const maxDuration = 300;
 
@@ -143,35 +144,9 @@ ${JSON.stringify(char.card)}
     return { id: char.id, name: char.name, result: null, error: result.error };
   }
 
-  // JSON 解析降级（含AI常见错误修复）
+  // JSON 解析（使用共享工具）
   try {
-    let s = result.raw.trim();
-    if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1); // BOM
-    const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (md) s = md[1].trim();
-    const a = s.indexOf("{"), b = s.lastIndexOf("}");
-    if (a >= 0 && b > a) s = s.slice(a, b + 1);
-    // 去尾逗号——AI 常犯
-    s = s.replace(/,(\s*[}\]])/g, "$1");
-
-    // 第一轮：标准解析
-    try { const parsed = JSON.parse(s) as Record<string, unknown>; return { id: char.id, name: char.name, result: parsed }; } catch { /* */ }
-
-    // 第二轮：补闭合括号（JSON被截断时）
-    let braces = 0, brackets = 0, inString = false, escape = false;
-    for (const ch of s) {
-      if (escape) { escape = false; continue; }
-      if (ch === '\\') { escape = true; continue; }
-      if (ch === '"' && !escape) { inString = !inString; continue; }
-      if (inString) continue;
-      if (ch === '{') braces++; else if (ch === '}') braces--;
-      else if (ch === '[') brackets++; else if (ch === ']') brackets--;
-    }
-    while (brackets > 0) { s += ']'; brackets--; }
-    while (braces > 0) { s += '}'; braces--; }
-    if (s.endsWith(',')) s = s.slice(0, -1);
-
-    const parsed = JSON.parse(s) as Record<string, unknown>;
+    const parsed = parseAIJson(result.raw);
     return { id: char.id, name: char.name, result: parsed };
   } catch (e) {
     return { id: char.id, name: char.name, result: null, error: `JSON解析失败: ${String(e).slice(0, 100)}` };

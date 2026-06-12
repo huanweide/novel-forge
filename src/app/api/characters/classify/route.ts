@@ -13,7 +13,10 @@ export const maxDuration = 300;
 
 const FLASH = "deepseek-v4-flash";
 const BASE_URL = "https://api.deepseek.com/v1";
-const API_KEY = (process.env.DEEPSEEK_API_KEY || "").trim();
+
+function getKey(): string {
+  return (process.env.DEEPSEEK_API_KEY || "").trim();
+}
 
 interface ClassifyGroup {
   category: string;      // title | school | experience | club
@@ -31,7 +34,7 @@ async function callFlash(system: string, prompt: string): Promise<string> {
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getKey()}` },
       body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 16000, stream: false }),
       signal: ctrl.signal,
     });
@@ -226,7 +229,7 @@ export async function POST(request: Request) {
 
         if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
         if (characters.length === 0) { send({ type: "error", message: "没有角色可分类" }); controller.close(); return; }
-        if (API_KEY.length < 10) { send({ type: "error", message: "DeepSeek API Key 未配置" }); controller.close(); return; }
+        if (getKey().length < 10) { send({ type: "error", message: "DeepSeek API Key 未配置" }); controller.close(); return; }
 
         const worldContext = buildWorldContext(project, loreEntries);
         const charList = buildCharList(characters as any[]);

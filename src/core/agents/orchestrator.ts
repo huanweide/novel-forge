@@ -450,12 +450,19 @@ export function buildPromptContext(params: {
 
   // 读取最近一章摘要的快照和脉搏
   const lastSummary = chapterSummaries[0];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const csData = (lastSummary?.characterStates || {}) as any;
-  const closingSnapshot = typeof csData.closingSnapshot === "string" ? csData.closingSnapshot : "";
-  const impulses: Array<{ name: string; impulse: string }> = Array.isArray(csData.impulses)
-    ? csData.impulses.filter((i: unknown) => i && typeof i === "object" && "name" in (i as object) && "impulse" in (i as object))
-    : [];
+  const csData = lastSummary?.characterStates;
+  let closingSnapshot = "";
+  let impulses: Array<{ name: string; impulse: string }> = [];
+  if (csData && typeof csData === "object") {
+    const payload = csData as { closingSnapshot?: string; impulses?: Array<{ name: string; impulse: string }> };
+    if (typeof payload.closingSnapshot === "string") closingSnapshot = payload.closingSnapshot;
+    if (Array.isArray(payload.impulses)) {
+      impulses = payload.impulses.filter(
+        (i: unknown): i is { name: string; impulse: string } =>
+          i !== null && typeof i === "object" && "name" in (i as object) && "impulse" in (i as object)
+      );
+    }
+  }
 
   // 构建系统提示——文风卡 + Humanizer-zh + 丰满性原则
   let systemPrompt = `你不是AI。你是出版过十本长篇的职业作家。文风冷峻、克制、白描、极简。相信读者的智商。

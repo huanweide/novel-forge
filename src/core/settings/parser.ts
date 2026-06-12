@@ -205,7 +205,7 @@ function normalizeLoreEntry(l: Partial<ParsedLoreEntry>): ParsedLoreEntry {
     category: l.category || "custom",
     keys: l.keys || [],
     content: l.content || "",
-    insertionOrder: l.insertionOrder || 50,
+    insertionOrder: l.insertionOrder ?? 50,
   };
 }
 
