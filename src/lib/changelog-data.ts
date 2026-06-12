@@ -20,18 +20,59 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.14.0";
+export const LATEST_VERSION = "v0.15.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🏷 自动分类四维重写——称号/学校/经历/俱乐部，足球同人专属分类",
-  "🐛 分类错误不再闷杀——API失败/JSON解析错误正确报告到UI",
-  "📡 SSE收尾丢包修复——分类done事件不再丢失，面板正常弹出",
-  "🔧 进度条不再卡在5%——后端串行四步，每步独立推送进度",
+  "🃏 导入设定一键出三卡——角色卡+世界书+风格卡，一张不漏",
+  "📐 三卡分界标准建立——精确定义每张卡提取什么、排除什么",
+  "🔗 全局统一调度——SettingsImporter和ImportWizard用同一套三卡规则",
+  "⬆️ 无上限提取——maxTokens全链路16384，不截断输出",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.15.0",
+    date: "2026-06-12",
+    title: "导入设定一键出三卡——三卡分界标准建立 + 全局统一调度",
+    sections: [
+      {
+        label: "🃏 导入设定一键出三卡",
+        items: [
+          "SettingsImporter 从两卡变三卡——角色卡 + 世界书 + 风格卡并行写入",
+          "粘贴设定文本 → AI 自动拆出全部三卡，不需要进 ImportWizard 走多步流程",
+          "一个 Promise.all 搞定三卡写入，速度快不阻塞",
+        ],
+      },
+      {
+        label: "📐 三卡分界标准建立（THREE_CARD_BOUNDARIES）",
+        items: [
+          "角色卡：有名字的个体人物——外貌/性格/背景/能力/关系/对话/动机/时间线。排除地名/组织/功法",
+          "世界卡：非人物概念——地理/势力/力量体系/历史/文化/生物/器物，含触发关键词。排除人物/文风",
+          "风格卡：写作特征——视角/叙事距离/句式/比例/语气/词汇/文风描述。排除人物/世界观",
+          "parser.ts 是唯一定义源——所有提取路径引用同一套规则，杜绝各说各话",
+        ],
+      },
+      {
+        label: "🔗 ImportWizard 统一三卡标准",
+        items: [
+          "B路（世界+风格提取）引用 THREE_CARD_BOUNDARIES，与 SettingsImporter 完全一致",
+          "分块模式下不再跳过世界提取——改用文本前16000字独立调用",
+          "maxTokens 全链路 16384：A路角色提取、B路世界提取、parser.ts 解析，全部无上限",
+        ],
+      },
+      {
+        label: "🏗 类型系统",
+        items: [
+          "新增 StyleProfile 接口——对应 StyleCard 全部字段（视角/距离/句式/比例/语气/词汇/描述/样本）",
+          "ParsedSettings 新增 styleProfile 字段",
+          "新增 toStyleCardCreateParams()——StyleProfile → Prisma 创建参数",
+          "SettingsImporter 前端显示风格卡创建结果（粉色高亮）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.14.0",
     date: "2026-06-10",
