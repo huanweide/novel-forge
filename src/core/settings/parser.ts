@@ -23,7 +23,7 @@
 
 import type { CharacterCard, LorebookEntry } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
-import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
+import { getDefaultClient } from "@/core/llm/client";
 
 // ─── 三卡分界标准（Prompt 片段）───────────────────────────────
 
@@ -157,10 +157,10 @@ export async function parseSettings(
   client?: LLMClient
 ): Promise<ParsedSettings> {
   const llm = client || getDefaultClient();
-  const config = getDefaultLLMConfig();
+
 
   const response = await llm.chat({
-    model: config.extractorModel,
+    model: "deepseek-v4-flash",
     messages: [
       { role: "system", content: PARSE_SYSTEM_PROMPT },
       {
@@ -412,10 +412,10 @@ export async function parseLorebookOnly(
   client?: LLMClient
 ): Promise<ParsedLoreEntry[]> {
   const llm = client || getDefaultClient();
-  const config = getDefaultLLMConfig();
+
 
   const response = await llm.chat({
-    model: config.extractorModel,
+    model: "deepseek-v4-flash",
     messages: [
       { role: "system", content: LOREBOOK_ONLY_PROMPT },
       {
@@ -516,10 +516,10 @@ export async function parseStyleOnly(
   client?: LLMClient
 ): Promise<StyleProfile & { writingRules: string[] }> {
   const llm = client || getDefaultClient();
-  const config = getDefaultLLMConfig();
+
 
   const response = await llm.chat({
-    model: config.extractorModel,
+    model: "deepseek-v4-flash",
     messages: [
       { role: "system", content: STYLE_ONLY_PROMPT },
       {
