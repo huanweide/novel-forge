@@ -4,7 +4,7 @@
 
 ---
 
-## v1.0.0 — 2026-06-12
+## v0.14.0 — 2026-06-12
 
 ### 🎨 文风系统重做——模板真正生效
 
@@ -58,6 +58,16 @@
 ### 🛡️ 作者指令清理
 - 作者指令不再默认填充，留空给用户自己写
 - 世界规则迁移到世界卡（Lorebook），通过关键词触发自动注入
+
+### 🔧 架构审计修复
+- 修复 `closingSnapshot`/`impulses` 数据流因类型错位完全丢失的 bug
+- 修复草稿保存竞态 — 加防重叠锁，吞错改记日志
+- 修复 `apply-tags` 完全缺失 try/catch + 加项目归属校验
+- 修复 `lorebook/summarize` 删除/创建非原子 — 包 `$transaction`
+- 修复 `insertionOrder: 0` 被 `||` 误当 falsy
+- 修复 `classify` 模块级 API_KEY 常量
+- `CharacterCard` 类型补全 `timeline`/`abilities`/`TimelineEvent`
+- 新建共享 `json-parser.ts` — 消灭 10+ 处重复 JSON 修复
 
 ---
 
