@@ -39,4 +39,51 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - [ ] changelog-data.ts CHANGELOG_BRIEF 是当前版本的摘要吗？
 - [ ] changelog-data.ts VERSIONS 数组第一条是当前版本吗？
 - [ ] localhost:3001/changelog 能看到最新版本吗？
+
+---
+
+## 🚀 本地部署上线流程（强制 — 每次 commit 后必做）
+
+每次 git commit + push 完成后，必须执行以下步骤确保本地真正上线：
+
+```
+第1步：TypeScript 编译检查
+  cd C:/Users/Administrator/Projects/novel-forge
+  npx tsc --noEmit --pretty
+  → 有错误必须修，零错误才能继续
+
+第2步：公告同步检查
+  - CHANGELOG.md 最新版本号 == changelog-data.ts LATEST_VERSION ?
+  - 不一致 → 立即修复再继续
+
+第3步：清除缓存 + 重启 dev server（Turbopak 热更新不可靠时）
+  netstat -ano | grep ":3001" | grep LISTENING | awk '{print $5}' | xargs -I{} taskkill //PID {} //F
+  rm -rf C:/Users/Administrator/Projects/novel-forge/.next
+  cd C:/Users/Administrator/Projects/novel-forge && npx next dev --turbo -p 3001 &
+
+第4步：验证服务
+  curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3001
+  → 必须返回 HTTP 200
+
+第5步：验证 changelog 页面
+  curl -s http://localhost:3001/changelog | grep -o "v[0-9.]*" | sort -u
+  → 必须包含最新版本号
+
+第6步：验证 API 可用（用项目真实 ID）
+  curl -s http://localhost:3001/api/parse-settings -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"projectId\":\"<用户当前项目ID>\",\"rawText\":\"测试\",\"mode\":\"lorebook\",\"autoCreate\":false}"
+  → 必须返回 JSON（不能是模型名错误）
+
+第7步：打开浏览器
+  start msedge http://localhost:3001/workspace/<用户当前项目ID>
+  start msedge http://localhost:3001/changelog
+```
+
+### 上线检查清单（重启后自问）：
+- [ ] tsc 零错误？
+- [ ] HTTP 200？
+- [ ] changelog 页面有最新版本？
+- [ ] API 不报模型名错误？
+- [ ] Edge 已打开 workspace + changelog 两个页面？
 <!-- END:novel-forge-rules -->
