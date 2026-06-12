@@ -20,18 +20,67 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.15.0";
+export const LATEST_VERSION = "v0.15.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🃏 导入设定一键出三卡——角色卡+世界书+风格卡，一张不漏",
-  "📐 三卡分界标准建立——精确定义每张卡提取什么、排除什么",
-  "🔗 全局统一调度——SettingsImporter和ImportWizard用同一套三卡规则",
-  "⬆️ 无上限提取——maxTokens全链路16384，不截断输出",
+  "📖 仅世界卡模式——复述蒸馏，提取全部世界观设定，不总结不压缩",
+  "🎨 仅风格卡模式——分析全部风格维度 + 提取写作规则",
+  "⬆️ maxTokens 全链路 32768——真正无上限提取，不截断",
+  "🔀 SettingsImporter 三模式切换——全部三卡 / 仅世界 / 仅风格",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.15.2",
+    date: "2026-06-12",
+    title: "maxTokens 全链路 32768——真正无上限提取",
+    sections: [
+      {
+        label: "⬆️ 输出拉满",
+        items: [
+          "parseSettings / parseLorebookOnly / parseStyleOnly: 16384 → 32768",
+          "import/parse A路(角色提取) + B路(世界+风格): 16384 → 32768",
+          "classify 四路并行: 16000 → 32768",
+          "lorebook/summarize: 8000 → 32768",
+          "上下文窗口百万token(DeepSeek原生)——输入不截断，输出不设限",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.1",
+    date: "2026-06-12",
+    title: "仅世界卡 + 仅风格卡——复述蒸馏专用模式",
+    sections: [
+      {
+        label: "📖 仅世界卡（parseLorebookOnly）",
+        items: [
+          "核心理念「复述蒸馏」——保留原文全部细节，去重去矛盾分类，不总结不压缩",
+          "8大分类全覆盖：地理/势力/力量体系/历史/文化/生物/器物/自定义",
+          "每条 content 保持原文信息密度——200字设定→200字+结构化输出",
+          "专有名词零丢失、具体数值零丢失",
+        ],
+      },
+      {
+        label: "🎨 仅风格卡（parseStyleOnly）",
+        items: [
+          "覆盖9大维度：视角/叙事距离/句式量化/叙事比例/语气标记/词汇特征/文风描述/写作规则/样本段落",
+          "写作规则提取：原文明确规则逐条照搬 + 从文风反推隐含规则",
+          "styleDescription 100-200字具体描述——不写'文风古雅'，写'半文半白，叙述句现代中文短句...'",
+        ],
+      },
+      {
+        label: "🔀 API + 前端",
+        items: [
+          "/api/parse-settings 支持 mode 参数：all / lorebook / style",
+          "SettingsImporter 三模式切换器——每个模式有独立说明和placeholder",
+          "仅风格卡响应额外返回 writingRules 数组",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.15.0",
     date: "2026-06-12",
