@@ -1417,6 +1417,16 @@ function Toolbar({
         <Button
           size="sm"
           variant="outline"
+          onClick={onImportSettings}
+          disabled={isGenerating}
+          className="text-xs border-indigo-700 text-indigo-400 hover:text-indigo-300 h-7"
+        >
+          📋 设定
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
           onClick={onImportChapters}
           disabled={isGenerating}
           className="text-xs border-purple-700 text-purple-400 hover:text-purple-300 h-7"
