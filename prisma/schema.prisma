@@ -20,6 +20,7 @@ model Project {
   povCharacterId String?                 // 当前视角主角
 
   globalPrompt String @default("")  // 世界书+风格卡缓存摘要——扩展角色时直接用
+  authorNote   String @default("")  // 作者指令——持久化，所有生成端点统一读取
   // LLM配置 (JSON存储)
   llmConfig Json @default("{}")
 

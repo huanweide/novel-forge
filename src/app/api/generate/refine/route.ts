@@ -22,7 +22,7 @@ import { getSiliconFlowClient } from "@/core/llm/client";
 
 export async function POST(request: Request) {
   try {
-    const { projectId, nodeId, instruction, targetWords = 500, confirmedCardIds, cardNotes, newCharacterRequests } = await request.json();
+    const { projectId, nodeId, instruction, targetWords = 500, confirmedCardIds, cardNotes, newCharacterRequests, authorNote } = await request.json();
 
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
@@ -94,6 +94,9 @@ export async function POST(request: Request) {
       activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
     }
 
+    // 作者指令：请求体优先 → 数据库持久化兜底
+    const effectiveAuthorNote = authorNote || (project as any).authorNote || "";
+
     // 构建 Prompt 上下文（和 write 一样）
     const promptContext = buildPromptContext({
       project: project as any,
@@ -104,6 +107,7 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
+      authorNote: effectiveAuthorNote,
     });
 
     // ── 用户备注注入 ──

@@ -51,9 +51,7 @@ export default function WorkspacePage() {
       setReviewResult(null);
       setChapterOutlinePrompt(""); // Flash章纲提示词——每章独立
       if (typeof window !== "undefined" && projectId) localStorage.removeItem(`novel-forge-flash-prompt-${projectId}`);
-      // 作者指令——每章独立
-      setAuthorNote("");
-      if (typeof window !== "undefined" && projectId) localStorage.removeItem(`novel-forge-author-note-${projectId}`);
+      // 作者指令——项目级别，不因切节点清空
     }
     setSelectedNode(node);
   };
@@ -66,15 +64,26 @@ export default function WorkspacePage() {
     issues: ReviewIssue[];
   } | null>(null);
 
-  // 作者注释——持久化到 localStorage，不消失
-  const [authorNote, setAuthorNote] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return localStorage.getItem(`novel-forge-author-note-${projectId}`) || "";
-  });
-  // 保存作者注释时同步写 localStorage
+  // 作者指令——编辑器启动时为空，loadProject 后从数据库覆写
+  const [authorNote, setAuthorNote] = useState("");
+  const authorNoteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 保存作者指令时：① 更新 state ② 防抖 1.5s 写数据库（项目级别持久化）
   const handleAuthorNoteChange = (v: string) => {
     setAuthorNote(v);
+    // 同时写 localStorage 作为离线兜底
     if (typeof window !== "undefined") localStorage.setItem(`novel-forge-author-note-${projectId}`, v);
+    // 防抖写数据库
+    if (authorNoteSaveTimer.current) clearTimeout(authorNoteSaveTimer.current);
+    authorNoteSaveTimer.current = setTimeout(async () => {
+      try {
+        await fetch(`/api/projects/${projectId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authorNote: v }),
+        });
+      } catch { /* 静默保存 */ }
+    }, 1500);
   };
   const [targetWordCount, setTargetWordCount] = useState(800);
 
@@ -154,6 +163,7 @@ export default function WorkspacePage() {
           confirmedCardIds: cards,
           cardNotes: notes,
           newCharacterRequests: newChars,
+          authorNote: finalAuthorNote || authorNote || undefined,
         }),
         signal: controller.signal,
       });
@@ -365,6 +375,11 @@ export default function WorkspacePage() {
           if (!styleData.error) data.styleCard = styleData;
         }
         setProject(data);
+        // 从数据库恢复作者指令（localStorage 只作为离线兜底，数据库是权威源）
+        if (data.authorNote && data.authorNote.trim()) {
+          setAuthorNote(data.authorNote);
+          if (typeof window !== "undefined") localStorage.setItem(`novel-forge-author-note-${projectId}`, data.authorNote);
+        }
         // 保持当前选中章节——不跳走
         setSelectedNode((prev) => {
           if (prev && data.storyNodes?.some((n: StoryNodeData) => n.id === prev.id)) {
