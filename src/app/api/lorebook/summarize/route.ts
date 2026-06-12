@@ -29,7 +29,7 @@ async function callFlash(system: string, prompt: string): Promise<string> {
         { role: "system", content: system },
         { role: "user", content: prompt },
       ],
-      temperature: 0.1, max_tokens: 8000, stream: false,
+      temperature: 0.1, max_tokens: 32768, stream: false,
       // 不传 thinking——硅基流动 Flash 不支持
     }),
   });

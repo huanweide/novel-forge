@@ -35,7 +35,7 @@ async function callFlash(system: string, prompt: string): Promise<string> {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getKey()}` },
-      body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 16000, stream: false }),
+      body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 32768, stream: false }),
       signal: ctrl.signal,
     });
     if (!r.ok) throw new Error(`Flash ${r.status}`);

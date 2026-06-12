@@ -226,7 +226,7 @@ ${rawText}
       },
     ],
     temperature: 0.3,
-    maxTokens: 16384, // 无上限提取——给足输出空间
+    maxTokens: 32768, // 无上限提取——给足输出空间
   });
 
   return parseResponse(response.content);
@@ -431,7 +431,7 @@ ${rawText}
       },
     ],
     temperature: 0.2,
-    maxTokens: 16384,
+    maxTokens: 32768,
   });
 
   return parseLorebookResponse(response.content);
@@ -550,7 +550,7 @@ ${rawText}
       },
     ],
     temperature: 0.2,
-    maxTokens: 16384,
+    maxTokens: 32768,
   });
 
   return parseStyleOnlyResponse(response.content);

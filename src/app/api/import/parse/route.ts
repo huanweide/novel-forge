@@ -265,7 +265,7 @@ ${chunkText}
             const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
             send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
 
-            const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 16384);
+            const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 32768);
             if (res.error) {
               send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
               continue;
@@ -286,7 +286,7 @@ ${chunkText}
           await new Promise(r => setTimeout(r, 100));
           send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
 
-          const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 16384);
+          const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 32768);
           send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
 
           if (resA.error) {
@@ -330,7 +330,7 @@ ${loreText}
             dsConfigB,
             "世界设定+文风提取器。严格遵循三卡分界标准。只输出JSON。",
             lorePrompt,
-            16384, // 无上限提取
+            32768, // 无上限提取——输出拉满
           );
 
           if (resB.error) {
