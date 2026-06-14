@@ -25,18 +25,322 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.15.2";
+export const LATEST_VERSION = "v0.18.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📖 仅世界卡模式——复述蒸馏，提取全部世界观设定，不总结不压缩",
-  "🎨 仅风格卡模式——分析全部风格维度 + 提取写作规则",
-  "⬆️ maxTokens 全链路 32768——真正无上限提取，不截断",
-  "🔀 SettingsImporter 三模式切换——全部三卡 / 仅世界 / 仅风格",
+  "🌐 多提供商 LLM 支持——OpenAI / DeepSeek / 硅基流动 / Groq / 自定义，UI 切换即刻生效",
+  "⚙️ 全局设置页面——选提供商→填 Key→测试连接→保存，无需碰环境变量",
+  "🏗 LLM 调用层统一——9 个路由的 callFlash/callLLM 提取为 src/lib/llm.ts 单一入口",
+  "🧹 代码清理——删除 3 个死函数、修复 AbortController 竞态、README 完善",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.18.0",
+    date: "2026-06-14",
+    title: "项目化——多模型支持 + 全局设置 + 代码清理",
+    sections: [
+      {
+        label: "🌐 多提供商 LLM 层",
+        items: [
+          "src/lib/llm.ts 重写为多提供商引擎：支持 OpenAI / 硅基流动 / DeepSeek 官方 / Groq / 自定义 OpenAI 兼容",
+          "配置优先级：数据库 AppSettings 表 > 环境变量 LLM_API_KEY——填过数据库就用数据库，向后兼容",
+          "60 秒内存缓存避免每次 LLM 调用查库",
+          "新增 testLLMConnection() ——设置页一键验证 API Key 和模型是否可用",
+          "clearLLMCache() 供设置页保存后即时刷新",
+          "callSiliconFlow 别名保留——所有旧 API 路由无需改动，编译零错误",
+        ],
+      },
+      {
+        label: "⚙️ 全局设置系统",
+        items: [
+          "Prisma 新增 AppSettings 单例模型（id='default'）：llmProvider / llmApiKey / llmModel / llmBaseUrl",
+          "GET /api/settings ——返回设置（Key 仅展示后 4 位，其余掩码）",
+          "PUT /api/settings ——保存设置，自动失效 LLM 缓存，返回 ok",
+          "POST /api/settings/test ——前端即时验证连接，不修改数据库",
+          "设置页面 /settings ——暗色 UI：提供商单选→填 Key（👁切换可见）→模型名→测试连接→保存",
+          "首页顶栏新增「⚙️ 设置」入口，一键跳转",
+          "切换提供商会自动填入推荐默认模型（如 DeepSeek→deepseek-chat）",
+          "自定义提供商支持手动填 API Base URL",
+        ],
+      },
+      {
+        label: "🏗 代码清理",
+        items: [
+          "LLM 调用统一：删除 7 个 API 路由中的本地 callFlash/callLLM 定义，统一走 src/lib/llm.ts",
+          "净削减 ~70 行重复代码，删除 21 个冗余 MODEL/BASE_URL/API_KEY 常量声明",
+          "orchestrator.ts 删除 3 个死函数：povLabel / ndLabel / pct（定义后全文无调用）",
+          "orchestrator.ts 删除重复注释（同一行贴了两遍）",
+          "4 个组件加 AbortController clean up：page.tsx / RulesPanel / StorylineList / PreGenConfirm",
+          "CharacterList 和 CardUpdater 确认无误报——useEffect 不含 fetch",
+          "README.md 完整替换为项目文档：快速开始 / 首次配置 / 提供商表 / 技术栈",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.17.0",
+    date: "2026-06-14",
+    title: "规则中心 + 记忆压缩 + Bug修复",
+    sections: [
+      {
+        label: "📏 规则中心——统一创作规则管理",
+        items: [
+          "Prisma 新增 Rule 模型：name / content / category（writing/world/character/style/custom）/ enabled / priority / scope",
+          "CRUD API 完整：GET/POST /api/rules + GET/PUT/DELETE /api/rules/[id]",
+          "核心工具函数 getActiveRules() + injectRules() —— 一处定义，全局生效",
+          "规则注入 6 大 AI 路由：write / continue / refine / chapter-outline / outline / draw",
+          "规则按分类编组后注入 authorNote，以「⚠️ 创作规则——铁律」最高优先级块呈现",
+          "scope 分级：all（全局）/ write_only（正文生成）/ outline_only（大纲章纲）/ review_only（审校）",
+          "前端 RulesPanel 组件——LeftPanel 新增「规则」Tab（第 5 个 Tab）",
+          "规则创建/编辑/删除/启用禁用的完整交互，暗色 Tailwind 风格统一",
+        ],
+      },
+      {
+        label: "🧠 记忆压缩 MVP——告别「只看最近3章」",
+        items: [
+          "summarizeChapter 增强输出：impactScore（1-10影响力评分）、threadProgress（故事线进度）、unresolvedQuestions（悬念/伏笔列表）",
+          "StoryBeat 不再硬编码 'minor'——impactScore ≥7 自动标为 major，影响排序优先注入",
+          "engine.ts buildMediumTermSection：从固定取3章 → 角色重叠评分检索（Top-8最相关+最后一章保底）",
+          "新增 buildArcSection：「角色弧光追踪」区块——有 arcProgress 的角色自动注入当前弧光状态",
+          "新增 buildStorylineSection：「活跃故事线当前状态」区块——按七要素链展示每条线走到哪一步",
+          "assemblePrompt 从 7 区块扩展到 9 区块——弧光 + 故事线追上最新进展",
+          "TokenAllocation 新增 arcMemory + storylineMemory 预算分配",
+          "第 50 章写玉佩相关内容时，第 5 章埋的伏笔能被角色重叠检索自动召回",
+        ],
+      },
+      {
+        label: "🐛 代码质量——审查修复 6 个 Bug",
+        items: [
+          "page.tsx handleDrawSelect：fire-and-forget fetch → await + try/catch，失败不静默丢数据",
+          "page.tsx onEditOutline：同上——乐观更新后加 await + try/catch",
+          "ContextPreview.tsx：useEffect 内 fetch 无 AbortController → 加全流程竞态防护",
+          "StyleEditor.tsx：同上——加 AbortController + cleanup",
+          "DrawCards.tsx：3 重竞态防护——过期请求检查、AbortError 精准跳过、finally 只关当前请求的 loading",
+          "DrawCards.tsx API route：personality 字段从提取但不使用 → 正确拼入角色简介",
+        ],
+      },
+      {
+        label: "🛡 工程质量",
+        items: [
+          "新建 novel-forge-diagnostic 专属诊断 skill——每次代码变更后六维自检（TS/Prisma/React反模式/API健壮性/代码质量/服务健康）",
+          "TypeScript 零错误编译通过",
+          "Prisma 数据库同步——新增 Rule 表 + db push + client regenerate",
+          "CHANGELOG.md 同步更新",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.8",
+    date: "2026-06-14",
+    title: "章纲AI自主选角 + 系统提示词预缓存",
+    sections: [
+      {
+        label: "🤖 章纲 AI 自主选角",
+        items: [
+          "两阶段生成——Step 1: AI 读取前5章+作者指令选角 → Step 2: 用选定角色生成章纲",
+          "作者指令作为最高优先级注入选角和生成两个阶段",
+          "空闲角色不再塞入——AI 根据剧情逻辑决定谁出场，不相关的不放",
+          "生成结果展示 AI 选角列表 + 选角理由",
+        ],
+      },
+      {
+        label: "📖 章纲上下文大幅增强",
+        items: [
+          "前文上下文：从3章→5章，正文从300字→800字末段",
+          "新增后文伏笔读取——知道后面发生什么才能埋好钩子",
+          "章纲结构：核心冲突→情感基调→场景序列→对话点子→衔接钩子",
+        ],
+      },
+      {
+        label: "⚡ 系统提示词预缓存",
+        items: [
+          "全卡编译到 Project.globalPrompt ——角色+世界书+风格实时同步",
+          "9 个同步钩子：角色CRUD、世界书CRUD、扩展、导入、整理apply、设定解析",
+          "buildPromptContext + chapter-outline 有缓存时跳过 3 个 DB 查询",
+          "缓存 >100 字生效，卡变动 <1 秒刷新",
+        ],
+      },
+      {
+        label: "🔧 其他优化",
+        items: [
+          "去重四层：自去重+跨聚类+与已有+全局 → apply 报告去重数量",
+          "范围选择器：支持 1-50、1,3,5-10 等表达式",
+          "SSE 预览缓存：previewId 替代完整 JSON 传输",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.7",
+    date: "2026-06-13",
+    title: "批量范围选择 + 世界书确认UI + 信息零丢失架构",
+    sections: [
+      {
+        label: "📐 批量范围选择",
+        items: [
+          "新增 RangeSelector 组件——支持 1-50、1,3,5-10、10-、-30、all/* 等范围表达式",
+          "已装到世界书列表和角色卡列表——全选按钮旁边，输入后 Enter 确认",
+          "角色卡列表中范围基于筛选后可见列表（1-based 索引）",
+          "Esc 清空选择，焦点离开自动应用",
+        ],
+      },
+      {
+        label: "🛡️ 信息零丢失架构",
+        items: [
+          "max_tokens 分级——Phase 1 聚类:4096（够用），Phase 2 整理:16384~32768（按输入量自适应）",
+          "输入 token 估算——中文 1.5 tokens/字，超 4 万 tokens 自动拆分批处理",
+          "分批整理——每批独立调用 Flash，批间标题去重，多批结果再合并去重",
+          "输出截断检测——检查 finish_reason === 'length'，被截断时打日志警告",
+        ],
+      },
+      {
+        label: "🔍 专有名词覆盖校验",
+        items: [
+          "整理后自动提取原文专有名词（书名号/引号/括号内容），比对输出中是否保留",
+          "逐 cluster 报告覆盖率和缺失列表",
+          "前端确认面板实时展示——缺失专有名词标红警告",
+          "总体覆盖率在 done 事件中展示（如\"专有名词保留 97%\"）",
+        ],
+      },
+      {
+        label: "📚 确认面板",
+        items: [
+          "整理改为两步——预览（AI整理不写库）→ 确认面板 → apply 写入",
+          "展示：来源词条 → 生成的新词条标题+内容摘要+关键词 + 拆分批次标记 + 覆盖警告",
+          "确认后调 POST /api/lorebook/summarize/apply 原子写库（事务保护）",
+        ],
+      },
+      {
+        label: "🧠 主题聚类 + 求同存异",
+        items: [
+          "Phase 1: AI 扫描全选词条，按人物/势力/历史/地点/力量体系/杂项聚类",
+          "内容预览从 300 字 → 500 字，聚类更准",
+          "Phase 2 铁律：禁止用\"等\"省略、禁止概括数字、禁止合并分歧、禁止删专有名词",
+          "maxDuration: 60 → 120s（分批调用需要更长时间）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.6",
+    date: "2026-06-13",
+    title: "章纲生成全面升级 —— 基于角色档案+风格设定",
+    sections: [
+      {
+        label: "📋 章纲生成（chapter-outline）",
+        items: [
+          "角色信息从一行摘要 → 完整档案：性格五维(dominant/drive/contradiction/habits/socialMask) + 背景300字 + 能力 + 关系 + 说话风格",
+          "新增文风注入——加载 styleCard，传入文风描述/视角/句长/对话比/语气标记",
+          "前后文增强——从取前2章到取前3章，正文从取前200字到取末段300字",
+          "systemPrompt 重写——6条铁律：行为必须匹配性格五维、关系一致、不违背核心驱动、文风匹配、角色不凭空创造、世界观铁律",
+          "章纲结构升级：核心冲突→情感基调→场景序列(地点/角色/事件/情感变化)→关键对话点子→衔接钩子",
+          "temperature 0.7 → 0.4（严谨不胡编），max_tokens 2048 → 4096（章纲更详细）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.5",
+    date: "2026-06-13",
+    title: "缺失角色自动发现 + 人物卡提示词全面升级",
+    sections: [
+      {
+        label: "🆕 缺失角色自动建卡",
+        items: [
+          "AI 审计新增第三项任务——扫描 background 中提到的所有人物名",
+          "比对全项目已有角色卡，发现新人物→自动创建独立角色卡",
+          "去重保护——同名/与已删卡同名不重复建",
+          "进度报告——发现几个缺失角色一目了然",
+        ],
+      },
+      {
+        label: "📝 人物卡提取全面升级（parser.ts + import/parse）",
+        items: [
+          "personality: 从简单字符串数组 → {dominant, drive, contradiction, habits, socialMask} 五维对象",
+          "background: 从'简述' → '复述原文全部细节，至少100字'",
+          "新增 abilities(能力列表)、timeline(时间线)、dialogueStyle(对话风格五字段)、hiddenMotives(隐藏动机)",
+          "import/parse: 全字段禁止留空/填'未知'——必须从原文提取或合理推断",
+          "角色提取 system prompt: 强调'保留全部信息，禁止精简''零精简'",
+        ],
+      },
+      {
+        label: "🔧 JSON 解析器",
+        items: [
+          "新增第 2.5 层——AI 输出多个 JSON 对象粘连时只取第一个完整对象",
+          "解决 'Unexpected non-whitespace character after JSON' 报错",
+        ],
+      },
+      {
+        label: "⬆️ 限制解除",
+        items: [
+          "expand 路由 MAX_TOKENS: 16384 → 32768",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.4",
+    date: "2026-06-13",
+    title: "角色扩展预处理 + JSON 解析器修复",
+    sections: [
+      {
+        label: "🧹 扩展前预处理管线",
+        items: [
+          "AI 批量审计——一次 Flash 调用检查全部卡：是否真人 / 是否组合卡",
+          "拆组合卡——'张三、李四'→每人独立建卡，已有同名则合并信息不重复",
+          "删非角色——地名/物品/势力/概念混入角色列表的自动检测并删除",
+          "智能合并增强——去括号匹配('洁世一(蓝色监狱)'↔'洁世一')，信息更丰富的卡优先保留，重复卡删除",
+          "全流程 SSE 进度推送——拆分/删除/合并每步都有报告",
+        ],
+      },
+      {
+        label: "🔧 JSON 解析器修复",
+        items: [
+          "sanitizeUnescapedQuotes 不再空转——字符串内未转义引号自动检测并转义",
+          "中文对话引号场景：'他说\"你好\"'→自动转义为 '他说\\\"你好\\\"'",
+          "接入解析管线第5/6/7层——每个恢复层先修引号再解析",
+          "错误消息扩展到 300 字 + 包含 JSON.parse 原始 SyntaxError",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.15.3",
+    date: "2026-06-13",
+    title: "全链路硅基流动 —— 16路由统一迁移 + 模型名修正",
+    sections: [
+      {
+        label: "☁️ API 迁移",
+        items: [
+          "getDefaultLLMConfig() → 硅基流动（连锁修复 detect-entities / update-style-card / settings/parser 等 5 场景）",
+          "chapter-outline（章纲）/ outline（大纲）/ classify（角色分类）→ 硅基流动",
+          "check-all-cards / import/commit / import/parse → 硅基流动",
+          "lorebook/import / lorebook/summarize / characters/expand → 硅基流动",
+          "全部 DEEPSEEK_API_KEY → LLM_API_KEY，统一密钥管理",
+        ],
+      },
+      {
+        label: "🔧 模型名修正",
+        items: [
+          "硅基流动实际支持的模型名：deepseek-ai/DeepSeek-V4-Pro、deepseek-ai/DeepSeek-V4-Flash",
+          "之前使用的 deepseek-v4-pro / deepseek-v4-flash 在硅基流动上不存在（400 code 20012）",
+          "16个文件批量替换，TypeScript 0 错误编译通过",
+        ],
+      },
+      {
+        label: "🐛 修复的问题",
+        items: [
+          "章纲生成 API 400 —— 模型名不存在",
+          "章纲生成 API 401 —— 用了失效的 DeepSeek 官方 key 调官方 API",
+          "大纲/分类/导入/世界书 全部存在同样的硬编码问题，一并根除",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.15.2",
     date: "2026-06-12",

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // GET /api/characters/[id]
 export async function GET(
@@ -50,6 +51,7 @@ export async function PUT(
         tags: body.tags,
       },
     });
+    syncGlobalPrompt(body.projectId || character.projectId).catch(() => {});
     return NextResponse.json(character);
   } catch (err) {
     return NextResponse.json(
@@ -66,7 +68,9 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const card = await prisma.characterCard.findUnique({ where: { id }, select: { projectId: true } });
     await prisma.characterCard.delete({ where: { id } });
+    if (card?.projectId) syncGlobalPrompt(card.projectId).catch(() => {});
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import {
   parseSettings,
   parseLorebookOnly,
@@ -49,18 +50,39 @@ export async function POST(request: Request) {
       const entries = await parseLorebookOnly(rawText);
 
       if (autoCreate && entries.length > 0) {
-        const ops = entries.map((l) =>
-          prisma.lorebookEntry.create({
-            data: toLorebookCreateParams(l, projectId),
-          })
-        );
-        await Promise.all(ops);
-        created.loreEntries = entries.length;
+        const existingLore = await prisma.lorebookEntry.findMany({
+          where: { projectId },
+          select: { id: true, title: true, content: true, keys: true },
+        });
+        const existingMap = new Map(existingLore.map(e => [e.title.toLowerCase().trim(), e]));
+
+        let newCount = 0, mergeCount = 0;
+        for (const l of entries) {
+          const key = l.title.toLowerCase().trim();
+          const existing = existingMap.get(key);
+          if (existing) {
+            // 求同存异：合并 content，去重 keys
+            const mergedContent = [existing.content, l.content]
+              .filter(c => c?.trim()).join("\n\n---\n");
+            const mergedKeys = [...new Set([...existing.keys, ...l.keys])];
+            await prisma.lorebookEntry.update({
+              where: { id: existing.id },
+              data: { content: mergedContent, keys: mergedKeys },
+            });
+            mergeCount++;
+          } else {
+            await prisma.lorebookEntry.create({
+              data: toLorebookCreateParams(l, projectId),
+            });
+            newCount++;
+          }
+        }
+        created.loreEntries = newCount + mergeCount;
       }
 
       return NextResponse.json({
         parsed: { loreEntries: entries },
-        created,
+        created: { ...created, newEntries: created.loreEntries },
         mode: "lorebook",
       });
     }
@@ -92,26 +114,74 @@ export async function POST(request: Request) {
 
     const writeOps: Promise<unknown>[] = [];
 
+    // ── 角色卡：求同存异 —— 同名则合并，不同则新建 ──
     if (autoCreate && parsed.characters.length > 0) {
+      const existingChars = await prisma.characterCard.findMany({
+        where: { projectId },
+        select: { id: true, name: true, background: true },
+      });
+      const existingCharMap = new Map(existingChars.map(c => [c.name.toLowerCase().trim(), c]));
+
+      let newCount = 0, mergeCount = 0;
       for (const c of parsed.characters) {
-        writeOps.push(
-          prisma.characterCard.create({
-            data: toCharacterCreateParams(c, projectId),
-          })
-        );
+        const key = c.name.toLowerCase().trim();
+        const existing = existingCharMap.get(key);
+        if (existing) {
+          // 求同存异——合并 background
+          const mergedBg = [existing.background, c.background]
+            .filter(bg => bg?.trim()).join("\n\n---\n---\n\n");
+          writeOps.push(
+            prisma.characterCard.update({
+              where: { id: existing.id },
+              data: {
+                background: mergedBg,
+              },
+            })
+          );
+          mergeCount++;
+        } else {
+          writeOps.push(
+            prisma.characterCard.create({
+              data: toCharacterCreateParams(c, projectId),
+            })
+          );
+          newCount++;
+        }
       }
-      created.characters = parsed.characters.length;
+      created.characters = newCount + mergeCount;
     }
 
+    // ── 世界书：求同存异 —— 同名合并 content + keys ──
     if (autoCreate && parsed.loreEntries.length > 0) {
+      const existingLore = await prisma.lorebookEntry.findMany({
+        where: { projectId },
+        select: { id: true, title: true, content: true, keys: true },
+      });
+      const existingLoreMap = new Map(existingLore.map(e => [e.title.toLowerCase().trim(), e]));
+
       for (const l of parsed.loreEntries) {
-        writeOps.push(
-          prisma.lorebookEntry.create({
-            data: toLorebookCreateParams(l, projectId),
-          })
-        );
+        const key = l.title.toLowerCase().trim();
+        const existing = existingLoreMap.get(key);
+        if (existing) {
+          const mergedContent = [existing.content, l.content]
+            .filter(c => c?.trim()).join("\n\n---\n");
+          const mergedKeys = [...new Set([...existing.keys, ...l.keys])];
+          writeOps.push(
+            prisma.lorebookEntry.update({
+              where: { id: existing.id },
+              data: { content: mergedContent, keys: mergedKeys },
+            })
+          );
+          created.loreEntries++;
+        } else {
+          writeOps.push(
+            prisma.lorebookEntry.create({
+              data: toLorebookCreateParams(l, projectId),
+            })
+          );
+          created.loreEntries++;
+        }
       }
-      created.loreEntries = parsed.loreEntries.length;
     }
 
     if (autoCreate && parsed.styleProfile) {
@@ -137,6 +207,8 @@ export async function POST(request: Request) {
         data: updateData,
       });
     }
+
+    syncGlobalPrompt(projectId).catch(() => {});
 
     return NextResponse.json({
       parsed,

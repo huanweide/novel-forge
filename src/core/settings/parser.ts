@@ -134,16 +134,17 @@ const PARSE_SYSTEM_PROMPT = `你是一个专业的小说设定解析专家。你
 
 ${THREE_CARD_BOUNDARIES}
 
-【提取要求】
-1. 角色卡：所有有名字的个体人物，从原文提取详细属性。缺信息的字段合理推断（参考同类型角色的常见设定），不填"未知"。
-2. 世界卡：所有非人物的世界观概念，按category分类。每个词条给出触发关键词和重要性评分(0-100)。
+【提取要求——保留全部信息，禁止精简】
+1. 角色卡：所有有名字的个体人物。原文每一个细节都要保留——外貌描写照搬原文措辞，背景故事复述原文不总结，能力逐条列出不合并。缺信息的字段基于同类型角色合理推断，禁止填"无""未知""暂无"。
+2. 世界卡：所有非人物的世界观概念，按category分类。content字段复述原文细节，不压缩不概括。每个词条给出触发关键词和重要性评分(0-100)。
 3. 风格卡：从文本行文中推断写作风格特征。如果设定文本本身没有体现风格（纯大纲/列表），则根据题材推断。
 4. synopsis：提取/概括主线剧情总纲。
 5. toneKeywords：提取作品基调关键词数组。
 
-【无上限提取】
-- 角色数量无上限——有多少提取多少
+【无上限提取 + 零精简】
+- 角色数量无上限——有多少提取多少，配角龙套也保留
 - 世界词条无上限——不遗漏任何设定概念
+- 每个字段都要填满——宁可用上下文合理推断，也不留空
 - 输出必须是严格的 JSON 格式，不要有任何额外说明文字`;
 
 /**
@@ -160,38 +161,50 @@ export async function parseSettings(
 
 
   const response = await llm.chat({
-    model: "deepseek-v4-flash",
+    model: "deepseek-ai/DeepSeek-V4-Flash",
     messages: [
       { role: "system", content: PARSE_SYSTEM_PROMPT },
       {
         role: "user",
-        content: `请解析以下小说设定文本，输出完整JSON（三卡+总纲+基调）：
+        content: `请解析以下小说设定文本，输出完整JSON（三卡+总纲+基调）。
 
 ${rawText}
 
-输出格式示例：
+输出格式——角色卡务必填满每个字段，不要精简：
 {
   "characters": [
     {
       "name": "角色名",
-      "aliases": ["别名"],
-      "age": "年龄",
+      "aliases": ["别名/称号"],
+      "age": "年龄或年龄段",
       "gender": "性别",
       "role": "protagonist|antagonist|supporting|mentor|love_interest|comic_relief|background",
       "appearance": {
-        "hair": "发色",
-        "eyes": "瞳色",
+        "hair": "发色发型——复述原文描写，不要缩写",
+        "eyes": "眼型瞳色——复述原文",
         "height": "身高",
-        "build": "体型",
-        "features": "特征",
-        "attire": "穿着"
+        "build": "体型体态",
+        "features": "特殊外貌特征/印记/疤痕",
+        "attire": "标志性着装风格"
       },
-      "personality": ["性格词1", "性格词2"],
-      "dialogueDescription": "对话风格描述",
-      "dialogueExamples": ["示例台词1"],
-      "background": "背景故事简述",
-      "hiddenMotives": ["隐藏动机"],
-      "relations": [{"target": "其他角色名", "relation": "关系描述"}]
+      "personality": {
+        "dominant": "主导性格——详细描述，不只一两个词",
+        "drive": "核心驱动力——他/她真正想要什么",
+        "contradiction": "内在矛盾——表里不一的地方",
+        "habits": ["习惯性动作/口头禅"],
+        "socialMask": "社交面具——对外展示的形象"
+      },
+      "dialogueStyle": {
+        "description": "说话风格描述——语气、节奏、用词习惯",
+        "examples": ["典型台词——从原文摘取或合理推断"],
+        "vocabulary": ["常用词汇特点"],
+        "speechPatterns": ["句式模式——短句/长句/反问/沉默"]
+      },
+      "background": "背景故事——复述原文全部细节，不压缩不概括。包含：出身/成长经历/关键事件/当前处境/卷入主线的原因。至少100字。",
+      "abilities": ["能力名·等级或掌握程度·一句话描述原理和应用"],
+      "hiddenMotives": ["隐藏动机——角色自己可能都没意识到的驱动力"],
+      "timeline": [{"age": "年龄或阶段", "event": "事件描述"}],
+      "relationships": [{"targetName": "其他角色名", "relation": "关系类型", "dynamic": "互动模式——怎样相处"}]
     }
   ],
   "loreEntries": [
@@ -199,7 +212,7 @@ ${rawText}
       "title": "词条名",
       "category": "geography|faction|magic_system|history|culture|creature|item|custom",
       "keys": ["触发词1", "触发词2"],
-      "content": "设定内容描述",
+      "content": "设定内容——复述原文全部细节，禁止概括。专有名词、数值、层级关系一字不漏。",
       "insertionOrder": 80
     }
   ],
@@ -415,7 +428,7 @@ export async function parseLorebookOnly(
 
 
   const response = await llm.chat({
-    model: "deepseek-v4-flash",
+    model: "deepseek-ai/DeepSeek-V4-Flash",
     messages: [
       { role: "system", content: LOREBOOK_ONLY_PROMPT },
       {
@@ -519,7 +532,7 @@ export async function parseStyleOnly(
 
 
   const response = await llm.chat({
-    model: "deepseek-v4-flash",
+    model: "deepseek-ai/DeepSeek-V4-Flash",
     messages: [
       { role: "system", content: STYLE_ONLY_PROMPT },
       {

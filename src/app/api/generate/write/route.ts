@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getSiliconFlowClient } from "@/core/llm/client";
-import { getTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
+import { getActiveRules, injectRules } from "@/core/rules";
 
 /**
  * POST /api/generate/write
@@ -128,6 +129,10 @@ export async function POST(request: Request) {
       }
     }
 
+    // ── Rules 系统注入 ──
+    const writeRules = await getActiveRules(projectId, "write_only");
+    const finalAuthorNote = injectRules(enrichedAuthorNote, writeRules);
+
     // 构建 Prompt 上下文——使用过滤后的角色列表
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const promptContext = buildPromptContext({
@@ -139,46 +144,15 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
-      authorNote: enrichedAuthorNote,
+      authorNote: finalAuthorNote,
     });
 
-    // ═══════════════════════════════════════════════════════════════
-    // 注入项目文风——模板 stylePrompt + 模板 forbiddenPatterns + 自定义
-    // ═══════════════════════════════════════════════════════════════
+    // 文风规则已统一在 systemPrompt 中，不再从模板二次注入
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
     const templateId = (llmConfig.styleTemplateId as string) || "";
     const template = getTemplate(templateId);
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
-    const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
 
-    // 1. 注入模板的 stylePrompt（核心风格描述）
-    if (template?.stylePrompt) {
-      promptContext.systemPrompt += `\n\n【文风模板——${template.name}——最高优先级】\n${template.stylePrompt}`;
-    }
-
-    // 2. 合并模板禁用词 + 自定义禁用词
-    const allForbidden = [
-      ...(template?.forbiddenPatterns || []),
-      ...customForbidden,
-    ];
-    if (allForbidden.length > 0) {
-      promptContext.systemPrompt += `\n\n【🚫 绝对禁用词/句式——以下表达不得出现在正文中】\n${allForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
-    }
-
-    // 3. 自定义风格笔记（用户在 UI 手动写的）
-    if (customStyleNotes) {
-      promptContext.systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
-    }
-
-    // 4. 模板的 pacingGuide 和 dialogueGuide（节奏+对话指引）
-    if (template?.pacingGuide) {
-      promptContext.systemPrompt += `\n\n【节奏指引】${template.pacingGuide}`;
-    }
-    if (template?.dialogueGuide) {
-      promptContext.systemPrompt += `\n\n【对话指引】${template.dialogueGuide}`;
-    }
-
-    // 5. 模板推荐的 temperature/topP（覆盖默认值）
     const effectiveTemperature = (llmConfig.temperature as number) ?? template?.temperature ?? 0.85;
     const effectiveTopP = (llmConfig.topP as number) ?? template?.topP ?? 0.95;
 
@@ -295,8 +269,15 @@ export async function POST(request: Request) {
             activeLoreIds.includes(l.id)
           );
 
-          const prevSummary =
-            summaries.length > 0 ? summaries[0].summary : "";
+          // 构建跨章上下文——取最近3章摘要+角色状态快照做一致性对比
+          const previousContext = summaries.map(s => ({
+            chapterTitle: s.chapterTitle,
+            summary: s.summary,
+            keyEvents: s.keyEvents || [],
+            characterStates: typeof s.characterStates === "string"
+              ? s.characterStates
+              : (s.characterStates as any)?.raw || JSON.stringify(s.characterStates || {}),
+          }));
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const reviewLog = await orchestrator.reviewContent(
@@ -304,7 +285,7 @@ export async function POST(request: Request) {
             currentNode.outline || "",
             activeCharacters as any,
             activeLore as any,
-            prevSummary
+            previousContext
           );
 
           // 发送审校结果
@@ -313,6 +294,8 @@ export async function POST(request: Request) {
               type: "review_issue",
               content: issue.description,
               severity: issue.severity,
+              location: issue.location,
+              suggestion: issue.suggestion,
             });
           }
 
@@ -350,7 +333,7 @@ export async function POST(request: Request) {
           send({ type: "summarize_start", content: "" });
 
           try {
-            const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses } =
+            const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses, threadProgress, unresolvedQuestions, impactScore } =
               await orchestrator.summarizeChapter(
                 fullContent,
                 currentNode.title || `第${currentNode.order + 1}节`,
@@ -375,13 +358,17 @@ export async function POST(request: Request) {
 
             // 存入 StoryBeat（长期记忆索引）
             if (keyEvents.length > 0) {
+              let description = keyEvents.join("；");
+              if (unresolvedQuestions && unresolvedQuestions.length > 0) {
+                description += `\n【悬念】${unresolvedQuestions.join("；")}`;
+              }
               await prisma.storyBeat.create({
                 data: {
                   projectId,
                   nodeId,
-                  description: keyEvents.join("；"),
+                  description,
                   chapterNumber: currentNode.order + 1,
-                  impact: "minor",
+                  impact: impactScore >= 7 ? "major" : "minor",
                 },
               });
             }

@@ -19,8 +19,9 @@ import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getSiliconFlowClient } from "@/core/llm/client";
-import { getTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
+import { getActiveRules, injectRules } from "@/core/rules";
 
 export async function POST(request: Request) {
   try {
@@ -99,6 +100,10 @@ export async function POST(request: Request) {
     // 作者指令：请求体优先 → 数据库持久化兜底
     const effectiveAuthorNote = authorNote || (project as any).authorNote || "";
 
+    // ── Rules 系统注入 ──
+    const writeRules = await getActiveRules(projectId, "write_only");
+    const finalAuthorNote = injectRules(effectiveAuthorNote, writeRules);
+
     // 构建 Prompt 上下文（和 write 一样）
     const promptContext = buildPromptContext({
       project: project as any,
@@ -109,35 +114,14 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
-      authorNote: effectiveAuthorNote,
+      authorNote: finalAuthorNote,
     });
 
-    // ── 注入文风模板（与 write 路由保持一致）──
+    // 文风规则已统一在 systemPrompt 中，不再从模板二次注入
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
     const templateId = (llmConfig.styleTemplateId as string) || "";
     const template = getTemplate(templateId);
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
-    const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
-
-    if (template?.stylePrompt) {
-      promptContext.systemPrompt += `\n\n【文风模板——${template.name}——最高优先级】\n${template.stylePrompt}`;
-    }
-
-    const allForbidden = [...(template?.forbiddenPatterns || []), ...customForbidden];
-    if (allForbidden.length > 0) {
-      promptContext.systemPrompt += `\n\n【🚫 绝对禁用词/句式——以下表达不得出现在正文中】\n${allForbidden.map((p) => `- 禁止：${p}`).join("\n")}`;
-    }
-
-    if (customStyleNotes) {
-      promptContext.systemPrompt += `\n\n【作者风格笔记】\n${customStyleNotes}`;
-    }
-
-    if (template?.pacingGuide) {
-      promptContext.systemPrompt += `\n\n【节奏指引】${template.pacingGuide}`;
-    }
-    if (template?.dialogueGuide) {
-      promptContext.systemPrompt += `\n\n【对话指引】${template.dialogueGuide}`;
-    }
 
     const effectiveTemperature = (llmConfig.temperature as number) ?? template?.temperature ?? 0.85;
     const effectiveTopP = (llmConfig.topP as number) ?? template?.topP ?? 0.95;
@@ -159,8 +143,10 @@ export async function POST(request: Request) {
       ? instruction.trim()
       : "请在现有正文基础上自然续写，保持文风一致，推进剧情。";
 
+    const isTargetedFix = hasContent && refineInstruction.includes("精准修复");
+
     const writingInstruction = hasContent
-      ? `${cardNotesText}【微调任务——在以下已有正文上进行修改/续写，不要从头重写】
+      ? `${cardNotesText}【${isTargetedFix ? "精准修复" : "微调"}任务——在以下已有正文上进行${isTargetedFix ? "定点修改" : "修改/续写"}，不要从头重写】
 
 已有正文（共${existingContent.length}字）：
 ---
@@ -169,13 +155,19 @@ ${existingContent.slice(-3000)}${existingContent.length > 3000 ? "\n\n…(前文
 
 用户指令：${refineInstruction}
 
-操作指南：
+${isTargetedFix ? `【精准修复铁律——违反即不合格】
+1. 你是外科医生，不是重写作家。只动刀，不换人。
+2. 找到问题位置的那几句话——只改那几句。其余文字、标点、换行、段落结构一个字都不许动。
+3. 如果问题位置引用的原文和你的修改之间不矛盾——优先保留原文。
+4. 输出的全文必须和原文99%相同——只有问题位置不同。
+5. 禁止顺手润色、禁止调段落、禁止改标点风格。
+6. 输出完整修改后全文——用原文+局部替换的方式，不要只输出修改片段。` : `操作指南：
 - 如果是修改指令（如"改对话""加描写"）：只修改指定部分，其他保留不变。输出完整修改后的版本。
 - 如果是续写指令（如"继续写""补500字"）：从已有正文断点处无缝衔接续写。输出已有正文+续写内容。
 - 如果是混合指令：先按修改要求调整，再从断点续写到目标字数。
 - 绝对不要改变已有正文中没要求修改的部分。
 - 保持文风、人称、节奏一致。
-- 续写字数约${targetWords}字。`
+- 续写字数约${targetWords}字。`}`
       : `${cardNotesText}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
 
     // SSE 流

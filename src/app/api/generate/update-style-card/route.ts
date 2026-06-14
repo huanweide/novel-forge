@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
 
-const MODEL = "deepseek-v4-flash";
+const MODEL = "deepseek-ai/DeepSeek-V4-Flash";
 
 export async function POST(request: Request) {
   try {

@@ -1,6 +1,239 @@
 # Novel Forge 更新公告
 
-每次部署自动记录。新版本在上。
+---
+
+## v0.18.0 — 2026-06-14
+
+### 🌐 项目化——多模型支持 + 全局设置 + 代码清理
+
+**🌐 多提供商 LLM 层**
+- `src/lib/llm.ts` 重写：支持 OpenAI / 硅基流动 / DeepSeek 官方 / Groq / 自定义 OpenAI 兼容
+- 配置优先级：数据库 AppSettings > 环境变量 LLM_API_KEY，向后兼容
+- 60 秒内存缓存、`testLLMConnection()` 连接验证、`clearLLMCache()` 即时刷新
+
+**⚙️ 全局设置系统**
+- Prisma 新增 `AppSettings` 单例模型（llmProvider / llmApiKey / llmModel / llmBaseUrl）
+- `GET/PUT /api/settings` + `POST /api/settings/test` 三个端点
+- 设置页面 `/settings`：选提供商→填 Key→测试连接→保存，暗色 UI
+
+**🏗 代码清理**
+- LLM 调用统一：7 个路由删除本地 callFlash，净减 ~70 行、21 个冗余常量
+- 删除 3 个死函数（povLabel/ndLabel/pct）+ 重复注释
+- 4 个组件加 AbortController 竞态防护（page.tsx/RulesPanel/StorylineList/PreGenConfirm）
+- README.md 完整替换为项目文档
+
+---
+
+## v0.17.0 — 2026-06-14
+
+### 📏 规则中心 + 🧠 记忆压缩 + 🐛 Bug修复
+
+**📏 规则中心——统一创作规则管理**
+- Prisma 新增 Rule 模型：name/content/category(enabled/priority/scope) —— 9 字段
+- CRUD API 完整：GET/POST /api/rules + GET/PUT/DELETE /api/rules/[id]
+- 核心工具函数 `getActiveRules()` + `injectRules()` —— 一处定义，全局注入
+- 规则注入 6 大 AI 路由：write/continue/refine/chapter-outline/outline/draw
+- 规则按 category 编组后注入 authorNote，以「⚠️ 创作规则——铁律」最高优先级块呈现
+- scope 分级：all(全局) / write_only(正文生成) / outline_only(大纲章纲) / review_only(审校)
+- 前端 RulesPanel 组件 —— LeftPanel 新增「规则」Tab（第 5 个 Tab）
+- 规则创建/编辑/删除/启用禁用的完整交互
+
+**🧠 记忆压缩 MVP——告别「只看最近 3 章」**
+- `summarizeChapter` 增强输出：impactScore(1-10)、threadProgress(故事线进度)、unresolvedQuestions(悬念列表)
+- StoryBeat 不再硬编码 'minor'——impactScore≥7 自动标 major，影响排序优先注入
+- `buildMediumTermSection`：固定取 3 章 → 角色重叠评分检索（Top-8 最相关 + 最后一章保底）
+- 新增 `buildArcSection`：角色弧光追踪区块——有 arcProgress 的角色自动注入当前状态
+- 新增 `buildStorylineSection`：活跃故事线当前状态——按七要素链展示每条线进度
+- `assemblePrompt` 从 7 区块扩展到 9 区块——弧光 + 故事线实时追上
+- TokenAllocation 新增 arcMemory + storylineMemory 预算分配
+
+**🐛 代码质量——审查修复 6 个 Bug**
+- page.tsx handleDrawSelect / onEditOutline：fire-and-forget fetch → await + try/catch
+- ContextPreview.tsx / StyleEditor.tsx：useEffect 无 AbortController → 加全流程竞态防护
+- DrawCards.tsx：3 重竞态防护（过期请求检查、AbortError 跳过、finally 只关当前 loading）
+- DrawCards API route：personality 字段从提取未使用 → 正确拼入角色简介
+
+**🛡 工程质量**
+- 新建 `novel-forge-diagnostic` 专属诊断 skill——六维自检（TS/Prisma/React/API/质量/服务）
+- TypeScript 零错误 · Prisma Rule 表 + db push · client regenerate
+
+---
+
+## v0.16.0 — 2026-06-14
+
+### 🎴 抽卡模式 + 🏗️ 架构大重构 + 📖 故事线系统
+
+**🔍 跨章逻辑评估增强**
+- 现有审校体系增强——写/续写时自动检测跨章矛盾
+- reviewContent 接收前3章摘要+角色状态快照+关键事件做真实跨章对比
+- 新增 `cross_chapter_contradiction` 审校类型
+- 审校 prompt 新增跨章铁律：角色生死/关系/事件必须与前文一致
+- 零新建——不改路由、不新建组件、纯增强现有流程
+
+**🎴 抽卡模式（模式C）**
+- API：POST /api/generate/chapter-outline/draw——并行 3-5 次 Flash 调用
+- 每条路线用不同 temperature（0.3~1.0）产出异构章纲
+- 卡片含：章纲全文 / 核心冲突 / 情绪基调 / 伏笔方向 / 出场角色 / 选角标签
+- 前端 DrawCards 组件——卡片网格布局，点击选中→采用写入节点大纲
+- 支持「重抽」换一批路线，支持 3/4/5 张选择
+- CenterPanel 新增「🎴抽卡」按钮
+
+**🏗️ 前端拆分**
+- 工作台主文件从 3652 行拆分为 14 个独立组件模块，精简 83%
+- 四面板（Toolbar / LeftPanel / CenterPanel / RightPanel）独立化
+- 6 弹窗 + OutlineTree + ReviewPanel 全部分拆到 `src/components/workspace/`
+- 主 page.tsx 变为 ~600 行的纯状态管理 + 布局编排器
+
+**📖 故事线系统（Storyline）——阶段二启动**
+- Prisma 新增 Storyline 模型：type（主线/支线）+ 完整七要素字段
+- 七要素：欲望 → 阻碍 → 行动 → 结果 → 意外 → 转折 → 结局
+- chapterBindings JSON——七要素绑定具体章节
+- CRUD API 完整：GET/POST /api/storylines + GET/PUT/DELETE /api/storylines/[id]
+- AI 自动生成：POST /api/storylines/generate——V4 Pro 读总纲+角色→拆分主线+支线+填七要素
+- 前端 StorylineList：展开查看七要素详情、编辑弹窗、AI 生成按钮
+- LeftPanel 新增「故事线」Tab——大纲/故事线/角色/世界书 四 Tab 切换
+
+---
+
+## v0.15.8 — 2026-06-14
+
+### 🤖 章纲 AI 自主选角
+
+**两阶段生成**
+- Step 1: AI 读取前 5 章大纲 + 上一章结尾 800 字 + 作者指令 → 自主决定本章出场角色
+- Step 2: 只用选定角色的完整档案 → 生成详细章纲
+- 作者指令作为最高优先级注入两个阶段
+- 空闲角色不再塞入——AI 根据剧情逻辑选角，不写"等"来糊弄
+- 结果展示选角列表 + 选角理由
+
+**上下文增强**
+- 前文：3 章 → 5 章，正文末段：300 字 → 800 字
+- 新增后文伏笔读取
+
+### ⚡ 系统提示词预缓存
+
+- 三卡编译到 `Project.globalPrompt`，卡变动 <1 秒自动刷新
+- 9 个同步钩子覆盖全部 CRUD + 导入/扩展/整理
+- `buildPromptContext` 和 `chapter-outline` 有缓存时跳过 3 个 DB 查询
+
+### 🔧 其他
+
+- 去重四层：自去重 + 跨聚类 + 与已有 + 全局
+- 范围选择器：`1-50`、`1,3,5-10`
+- SSE 预览缓存：`previewId` 替代大数据传输
+
+---
+
+## v0.15.7 — 2026-06-13
+
+### 🛡️ 信息零丢失架构 —— 输入估算 + 拆分 + 覆盖校验
+
+**max_tokens 分级**
+- Phase 1 聚类: 4096（输出仅 JSON，够用）
+- Phase 2 整理: 16384~32768（按输入量自适应——输入超 5 万 tokens 自动升级到 32768）
+
+**输入 token 估算 + 超大聚类拆分**
+- 中文按 1.5 tokens/字估算，超 4 万 tokens 自动拆分
+- 每批独立调用 Flash，批间标题去重，多批结果合并去重
+- 输出截断检测——检查 `finish_reason === "length"`
+
+**专有名词覆盖校验**
+- 整理后自动提取原文专有名词（书名号/引号/括号内容）
+- 比对输出，逐 cluster 报告缺失列表
+- 前端确认面板实时展示——缺失标红
+
+**确认面板**
+- 展示：来源词条 → 新词条标题+摘要+关键词 + 拆分标记 + 覆盖警告
+- 确认后调 apply 接口原子写入
+
+**Phase 2 铁律**
+- 禁止用"等"省略、禁止概括数字、禁止合并分歧来源、禁止删专有名词
+- maxDuration 60→120s（分批处理）
+
+---
+
+## v0.15.6 — 2026-06-13
+
+### 📋 章纲生成全面升级 —— 严格基于角色档案+风格设定
+
+**角色信息**
+- 从一行摘要 `[名字] 定位 性格词` → 完整档案：性格五维 + 背景300字 + 能力 + 关系 + 说话风格
+
+**文风注入**
+- 新增 styleCard 加载——文风描述/视角/句长/对话比/语气标记全传入
+
+**Prompt 重写**
+- 6条铁律：行为匹配性格五维、关系一致、不违背核心驱动、文风匹配、不凭空造角色、世界观铁律
+- 章纲结构：核心冲突→情感基调→场景序列→关键对话点子→衔接钩子
+
+**参数优化**
+- temperature: 0.7 → 0.4，max_tokens: 2048 → 4096
+- 前后文：2章 → 3章，正文取末段300字代替取前200字
+
+---
+
+## v0.15.5 — 2026-06-13
+
+### 🆕 缺失角色自动发现 + 人物卡提示词全面升级
+
+**缺失角色自动建卡**
+- AI 审计新增第三项任务——扫描 background 中所有人物名
+- 比对全项目已有角色卡，新人物自动建卡
+- 去重保护，进度报告
+
+**人物卡提取全面升级**
+- parser.ts: personality 从 `["词"]` → `{dominant, drive, contradiction, habits, socialMask}` 五维
+- background: "简述" → "复述原文全部细节，至少100字"
+- 新增 abilities / timeline / dialogueStyle 等丰富字段
+- import/parse: 全字段禁止"未知"，必须从原文提取或推断
+
+**JSON 解析器**
+- 第 2.5 层：多 JSON 对象粘连自动拆分
+
+**限制解除**
+- expand MAX_TOKENS: 16384 → 32768
+
+---
+
+## v0.15.4 — 2026-06-13
+
+### 🧹 角色扩展预处理管线 + JSON 解析器修复
+
+**扩展前预处理（四步管线）**
+- AI 批量审计——一次 Flash 调用检查全部卡：是否真人 / 是否组合卡
+- 拆组合卡——"张三、李四"→每人独立建卡，已有同名则合并信息不重复
+- 删非角色——地名/物品/势力/概念混入角色列表的自动检测并删除
+- 智能合并增强——去括号匹配，信息更丰富的卡优先保留，重复卡删除
+- 全流程 SSE 进度推送
+
+**JSON 解析器修复**
+- `sanitizeUnescapedQuotes` 不再空转——字符串内未转义引号自动检测并转义
+- 中文对话引号场景自动修复
+- 接入解析管线第5/6/7层
+- 错误消息扩展到 300 字 + JSON.parse 原始错误
+
+---
+
+## v0.15.3 — 2026-06-13
+
+### ☁️ 全链路硅基流动 —— 16路由统一迁移 + 模型名修正
+
+**API 迁移**
+- `getDefaultLLMConfig()` → 硅基流动（连锁修复 detect-entities / update-style-card / settings/parser 等 5 场景）
+- chapter-outline（章纲）/ outline（大纲）/ classify（角色分类）→ 硅基流动
+- check-all-cards / import/commit / import/parse → 硅基流动
+- lorebook/import / lorebook/summarize / characters/expand → 硅基流动
+- 全部 `DEEPSEEK_API_KEY` → `LLM_API_KEY`，统一密钥管理
+
+**模型名修正**
+- 硅基流动实际支持的模型名：`deepseek-ai/DeepSeek-V4-Pro`、`deepseek-ai/DeepSeek-V4-Flash`
+- 之前使用的 `deepseek-v4-pro` / `deepseek-v4-flash` 在硅基流动上不存在（400 code 20012）
+- 16个文件批量替换，TypeScript 0 错误编译通过
+
+**修复**
+- 章纲生成 API 400 —— 模型名不存在
+- 章纲生成 API 401 —— 用了失效的 DeepSeek 官方 key
+- 大纲/分类/导入/世界书 全部存在同样的硬编码问题，一并根除
 
 ---
 

@@ -3,6 +3,37 @@
 import { useState } from "react";
 import type { LorebookData } from "./types";
 import { categoryLabel } from "./types";
+import { RangeSelector } from "./RangeSelector";
+
+// 预览结果类型（与 SSE preview 事件一致）
+// 预览结果类型（SSE 只传摘要，不含完整 content）
+interface PreviewGroup {
+  clusterTheme: string;
+  clusterType: string;
+  sourceCount: number;
+  sourceTitles: string[];
+  resultCount: number;
+  resultTitles: string[];
+  resultKeys: string[];
+  coverage?: { covered: number; total: number; missing: string[] };
+}
+interface PreviewData {
+  groups: PreviewGroup[];
+  sourceCount: number;
+  resultCount: number;
+  dedupRatio: number;
+  coveragePct: number;
+  missingNouns: string[];
+}
+
+const themeIcon = (t: string) => {
+  if (t === "person") return "🧑";
+  if (t === "faction") return "🏛";
+  if (t === "history") return "📜";
+  if (t === "location") return "📍";
+  if (t === "system") return "⚙️";
+  return "📦";
+};
 
 export function LorebookList({
   projectId,
@@ -26,6 +57,13 @@ export function LorebookList({
   const [sumDone, setSumDone] = useState(0);
   const [sumTotal, setSumTotal] = useState(0);
 
+  // ── 确认面板状态 ──
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [previewId, setPreviewId] = useState<string>(""); // 服务端缓存ID
+  const [applying, setApplying] = useState(false);
+  const [applyMsg, setApplyMsg] = useState("");
+
   // 一键导入
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
@@ -34,7 +72,6 @@ export function LorebookList({
   const [importPct, setImportPct] = useState(0);
   const [importDone, setImportDone] = useState(0);
   const [importTotal, setImportTotal] = useState(0);
-  // 结果提示（独立于进度条，结束后仍显示）
   const [importResult, setImportResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const allSelected = entries.length > 0 && selectedIds.size === entries.length;
@@ -50,13 +87,26 @@ export function LorebookList({
     setSelectedIds(next);
   };
 
+  // 范围选择
+  const handleRangeSelect = (indices: Set<number>) => {
+    if (indices.size === 0) {
+      setSelectedIds(new Set());
+      return;
+    }
+    const ids = new Set<string>();
+    for (const i of indices) {
+      if (i < entries.length) ids.add(entries[i].id);
+    }
+    setSelectedIds(ids);
+  };
+
+  // ── 预览模式：AI 整理但不写库 ──
   const handleSummarize = async () => {
     if (selectedIds.size < 2) return;
     setSummarizing(true);
     setSumProgress("连接中...");
-    setSumPct(0);
-    setSumDone(0);
-    setSumTotal(0);
+    setSumPct(0); setSumDone(0); setSumTotal(0);
+    setPreview(null);
 
     try {
       const res = await fetch("/api/lorebook/summarize", {
@@ -97,11 +147,21 @@ export function LorebookList({
               if (event.pct !== undefined) setSumPct(event.pct as number);
               if (event.done !== undefined) setSumDone(event.done as number);
               if (event.total !== undefined) setSumTotal(event.total as number);
+            } else if (event.type === "preview") {
+              // 收集每个 cluster 的预览结果
+              setSumProgress(event.message as string);
+              if (event.pct !== undefined) setSumPct(event.pct as number);
+              if (event.done !== undefined) setSumDone(event.done as number);
+              if (event.total !== undefined) setSumTotal(event.total as number);
             } else if (event.type === "done") {
               setSumPct(100);
               setSumProgress(event.message as string);
-              setSelectedIds(new Set());
-              onRefresh();
+              // 保存预览摘要 + 缓存ID
+              if (event.preview) {
+                setPreview(event.preview as PreviewData);
+                setPreviewId((event.previewId as string) || "");
+                setShowConfirm(true);
+              }
             } else if (event.type === "error") {
               setSumProgress(`❌ ${event.message}`);
             }
@@ -115,12 +175,58 @@ export function LorebookList({
     }
   };
 
+  // ── 确认执行 ──
+  const handleApply = async () => {
+    if (!preview || applying) return;
+    setApplying(true);
+    setApplyMsg("正在写入...");
+
+    try {
+      const res = await fetch("/api/lorebook/summarize/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          previewId: previewId || undefined,
+          // 降级：如果 previewId 不可用，传完整数据
+          entryIds: previewId ? undefined : Array.from(selectedIds),
+          results: previewId ? undefined : preview.groups.flatMap(g =>
+            g.resultTitles.map((title, i) => ({
+              title,
+              content: "", // 旧路径需要完整 content，这里降级不支持
+              keys: g.resultKeys || [],
+            }))
+          ),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      setApplyMsg(data.message as string);
+      setSelectedIds(new Set());
+      setShowConfirm(false);
+      setPreview(null);
+      onRefresh();
+    } catch (e) {
+      setApplyMsg(`❌ ${e instanceof Error ? e.message : "写入失败"}`);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setShowConfirm(false);
+    setPreview(null);
+    setPreviewId("");
+  };
+
   const handleImport = async () => {
     if (!importText.trim() || importText.trim().length < 10) return;
     setImporting(true);
     setImportMsg("连接中…");
     setImportPct(0); setImportDone(0); setImportTotal(0);
-    setImportResult(null); // 清掉上次结果
+    setImportResult(null);
     try {
       const res = await fetch("/api/lorebook/import", {
         method: "POST",
@@ -172,7 +278,7 @@ export function LorebookList({
 
   return (
     <div className="space-y-1">
-      {/* 工具栏：全选 + 精简总结 */}
+      {/* 工具栏 */}
       {entries.length > 0 && (
         <div className="flex items-center gap-1 mb-2 px-1">
           <button
@@ -182,6 +288,10 @@ export function LorebookList({
             {allSelected ? "取消全选" : "全选"}
           </button>
           <span className="text-zinc-700 text-[10px]">{selectedIds.size}/{entries.length}</span>
+          <RangeSelector
+            total={entries.length}
+            onSelect={handleRangeSelect}
+          />
           <div className="flex-1" />
           <button
             onClick={() => setShowImport(!showImport)}
@@ -202,12 +312,12 @@ export function LorebookList({
                 : "text-zinc-600 cursor-not-allowed"
             }`}
           >
-            {summarizing ? "⏳ 精简中..." : "📐 整理"}
+            {summarizing ? "⏳ 分析中..." : "📐 整理"}
           </button>
         </div>
       )}
 
-      {/* 总结进度条 */}
+      {/* 进度条 */}
       {summarizing && (
         <div className="px-1 mb-2">
           <div className="flex justify-between text-[10px] text-zinc-500 mb-0.5">
@@ -219,6 +329,112 @@ export function LorebookList({
               className="h-full bg-amber-500 rounded-full transition-all duration-300"
               style={{ width: `${Math.max(sumPct, 5)}%` }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════ */}
+      {/* 确认面板 */}
+      {/* ══════════════════════════════════════════════ */}
+      {showConfirm && preview && (
+        <div className="mb-2 rounded border border-amber-700/30 bg-amber-950/10 overflow-hidden">
+          {/* 标题栏 */}
+          <div className="flex items-center justify-between px-2 py-1.5 bg-amber-950/20 border-b border-amber-900/10">
+            <span className="text-xs text-amber-300 font-medium">
+              📚 整理预览 —— {preview.sourceCount}条 → {preview.resultCount}条（精简{preview.dedupRatio}%）
+              {preview.coveragePct < 100 && (
+                <span className="text-red-400 ml-1">⚠️专有名词保留{preview.coveragePct}%</span>
+              )}
+            </span>
+            <button
+              onClick={handleCancel}
+              disabled={applying}
+              className="text-zinc-500 hover:text-zinc-300 text-xs"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* 分组列表 */}
+          <div className="max-h-64 overflow-y-auto">
+            {preview.groups.map((group, gi) => (
+              <div
+                key={gi}
+                className={`px-2 py-1.5 border-b border-zinc-800/50 ${
+                  gi % 2 === 0 ? "bg-transparent" : "bg-zinc-900/20"
+                }`}
+              >
+                {/* 组标题 */}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-sm">{themeIcon(group.clusterType)}</span>
+                  <span className="text-xs text-amber-400 font-medium">
+                    {group.clusterTheme}
+                  </span>
+                  <span className="text-[10px] text-zinc-600">
+                    {group.sourceCount}条→{group.resultCount}条
+                  </span>
+                </div>
+
+                {/* 来源词条 */}
+                <div className="text-[10px] text-zinc-600 ml-6 mb-1">
+                  来源：{group.sourceTitles.map(t => `"${t}"`).join("、")}
+                </div>
+
+                {/* 覆盖校验警告 */}
+                {group.coverage && group.coverage.missing.length > 0 && (
+                  <div className="text-[10px] text-red-400 ml-6 mb-1">
+                    ⚠️ 可能丢失：{group.coverage.missing.join("、")}
+                  </div>
+                )}
+
+                {/* 生成结果 */}
+                {group.resultTitles.map((title, ri) => (
+                  <div key={ri} className="ml-6 mb-1 last:mb-0">
+                    <div className="text-[11px] text-zinc-300">
+                      → <span className="font-medium">{title}</span>
+                    </div>
+                  </div>
+                ))}
+                {group.resultKeys.length > 0 && (
+                  <div className="text-[10px] text-zinc-600 ml-6 mt-0.5">
+                    🔑 {group.resultKeys.slice(0, 8).join("、")}
+                    {group.resultKeys.length > 8 ? ` 等${group.resultKeys.length}个` : ""}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 操作栏 */}
+          <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-900/30 border-t border-zinc-800/50">
+            <span className="text-[10px] text-zinc-500">
+              ⚠️ 将删除 {preview.sourceCount} 条词条，新建 {preview.resultCount} 条
+            </span>
+            <div className="flex items-center gap-2">
+              {applyMsg && (
+                <span className={`text-[10px] ${applyMsg.startsWith("❌") ? "text-red-400" : "text-green-400"}`}>
+                  {applyMsg}
+                </span>
+              )}
+              <button
+                onClick={handleCancel}
+                disabled={applying}
+                className="text-[10px] px-2 py-0.5 text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                🔙 取消
+              </button>
+              <button
+                onClick={handleApply}
+                disabled={applying}
+                className={`text-[10px] px-3 py-0.5 rounded transition-colors ${
+                  applying
+                    ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                    : "bg-amber-700/40 text-amber-300 hover:bg-amber-700/60"
+                }`}
+              >
+                {applying ? "⏳ 写入中..." : "✅ 确认整理"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -257,7 +473,6 @@ export function LorebookList({
               取消
             </button>
           </div>
-          {/* 导入进度 */}
           {importing && (
             <div>
               <div className="flex justify-between text-[10px] text-zinc-500 mb-0.5">
@@ -272,7 +487,6 @@ export function LorebookList({
               </div>
             </div>
           )}
-          {/* 结果提示（进度条消失后仍显示） */}
           {!importing && importResult && (
             <div
               className={`text-[10px] px-2 py-1 rounded ${

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // POST /api/characters
 export async function POST(request: Request) {
@@ -26,6 +27,8 @@ export async function POST(request: Request) {
         tags: body.tags || [],
       },
     });
+    // 异步刷新系统提示词
+    syncGlobalPrompt(body.projectId).catch(() => {});
     return NextResponse.json(character, { status: 201 });
   } catch (err) {
     return NextResponse.json(

@@ -43,14 +43,15 @@ export default function Dashboard() {
   const [showChangelog, setShowChangelog] = useState(false);
 
   // 加载项目列表
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/projects");
+      const res = await fetch("/api/projects", { signal });
       if (res.ok) {
         const data = await res.json();
         setProjects(data);
       }
     } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       console.error("加载项目失败:", err);
     } finally {
       setLoading(false);
@@ -58,7 +59,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    loadProjects();
+    const ctrl = new AbortController();
+    loadProjects(ctrl.signal);
+    return () => ctrl.abort();
   }, [loadProjects]);
 
   // 自动弹更新公告（首次访问或版本更新后）
@@ -131,12 +134,17 @@ export default function Dashboard() {
               </a>
             </p>
           </div>
-          <Button
-            onClick={() => setShowCreate(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white"
-          >
-            + 新建项目
-          </Button>
+          <div className="flex items-center gap-3">
+            <Link href="/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+              ⚙️ 设置
+            </Link>
+            <Button
+              onClick={() => setShowCreate(true)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white"
+            >
+              + 新建项目
+            </Button>
+          </div>
         </div>
       </header>
 

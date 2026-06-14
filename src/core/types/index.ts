@@ -192,9 +192,10 @@ export type ReviewIssueType =
   | "logic_flaw"        // 逻辑漏洞
   | "lore_conflict"     // 世界观冲突
   | "timeline_error"    // 时间线错误
-  | "character_resurrection" // 已死角色复活
-  | "item_teleport"     // 物品凭空出现/消失
-  | "continuity_error"; // 连续性问题
+  | "character_resurrection"     // 已死角色复活
+  | "item_teleport"             // 物品凭空出现/消失
+  | "continuity_error"          // 连续性问题
+  | "cross_chapter_contradiction"; // 跨章矛盾（前文角色状态/关系与本章冲突）
 
 // ─── Prompt组装系统 (Context Assembly) ─────────────────────
 
@@ -205,6 +206,8 @@ export interface PromptContext {
   triggeredLore: TriggeredLore[]; // 动态触发的世界书词条
   slidingWindow: SlidingWindow;   // 滑动窗口记忆
   authorNote: string | null;      // 作者强制介入指令
+  characters?: CharacterCard[];   // 角色列表（用于角色重叠检索和弧光追踪）
+  storylines?: Storyline[];       // 故事线列表（用于活跃故事线追踪）
 }
 
 export interface GlobalMemory {
@@ -272,6 +275,28 @@ export interface StoryBeat {
   description: string;            // 转折点描述
   chapterNumber: number;
   impact: "major" | "minor";     // 对主线的影响程度
+}
+
+/** 故事线（Storyline）—— 可追踪的主线/支线进度 */
+export interface Storyline {
+  id: string;
+  projectId: string;
+  type: string;           // "main" | "side"
+  parentId: string | null;
+  title: string;
+  order: number;
+  status: string;         // "active" | "completed" | "paused" | "abandoned"
+  description: string;
+  desire: string;         // 欲望/目标
+  obstacle: string;       // 阻碍
+  action: string;         // 行动
+  result: string;         // 结果
+  twist: string;          // 转折
+  turn: string;           // 反转
+  ending: string;         // 结局
+  chapterBindings?: unknown;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─── 项目系统 ──────────────────────────────────────────────
@@ -392,6 +417,8 @@ export interface TokenAllocation {
   systemPrompt: number;
   globalMemory: number;
   triggeredLore: number;
+  arcMemory: number;              // 角色弧光追踪
+  storylineMemory: number;        // 活跃故事线进度
   shortTermMemory: number;
   mediumTermMemory: number;
   longTermMemory: number;

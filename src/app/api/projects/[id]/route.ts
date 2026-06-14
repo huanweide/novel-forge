@@ -15,6 +15,7 @@ export async function GET(
         lorebookEntries: true,
         storyNodes: { orderBy: { order: "asc" } },
         storyBranches: true,
+        storylines: { orderBy: [{ type: "asc" }, { order: "asc" }] },
       },
     });
     if (!project) {
@@ -29,15 +30,15 @@ export async function GET(
   }
 }
 
-// PUT /api/projects/[id]
-export async function PUT(
+// PATCH /api/projects/[id] — 更新项目（作者指令等）
+export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const project = await prisma.project.update({
+    const updated = await prisma.project.update({
       where: { id },
       data: {
         name: body.name,
@@ -46,39 +47,15 @@ export async function PUT(
         targetWordCount: body.targetWordCount,
         synopsis: body.synopsis,
         toneKeywords: body.toneKeywords,
-        povCharacterId: body.povCharacterId,
         authorNote: body.authorNote,
+        globalPrompt: body.globalPrompt,
+        llmConfig: body.llmConfig,
       },
     });
-    return NextResponse.json(project);
+    return NextResponse.json(updated);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "更新项目失败" },
-      { status: 500 }
-    );
-  }
-}
-
-// PATCH /api/projects/[id] —— 轻量更新（authorNote 等单个字段）
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const data: Record<string, unknown> = {};
-    if (body.authorNote !== undefined) data.authorNote = body.authorNote;
-    if (body.globalPrompt !== undefined) data.globalPrompt = body.globalPrompt;
-    if (body.povCharacterId !== undefined) data.povCharacterId = body.povCharacterId;
-    if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: "无可更新字段" }, { status: 400 });
-    }
-    const project = await prisma.project.update({ where: { id }, data });
-    return NextResponse.json({ ok: true, authorNote: project.authorNote });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新失败" },
       { status: 500 }
     );
   }

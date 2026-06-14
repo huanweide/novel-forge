@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
  * 上下文预览面板 —— 展示当前 Prompt 中各区域的 Token 用量
@@ -57,21 +57,38 @@ export function ContextPreview({
   const [data, setData] = useState<ContextData | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!nodeId) return;
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
-    fetch("/api/generate/preview-context", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, nodeId, authorNote }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
+
+    const fetchData = async () => {
+      try {
+        const r = await fetch("/api/generate/preview-context", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, nodeId, authorNote }),
+          signal: controller.signal,
+        });
+        const d = await r.json();
         if (!d.error) setData(d);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    return () => { controller.abort(); };
   }, [projectId, nodeId, authorNote, refreshKey]);
 
   if (!nodeId) {

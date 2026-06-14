@@ -14,8 +14,8 @@ import { THREE_CARD_BOUNDARIES } from "@/core/settings";
 
 export const maxDuration = 300;
 
-const MODEL_A = "deepseek-v4-flash";
-const MODEL_B = "deepseek-v4-flash";
+const MODEL_A = "deepseek-ai/DeepSeek-V4-Flash";
+const MODEL_B = "deepseek-ai/DeepSeek-V4-Flash";
 const CHUNK_SIZE = 30; // 每块最多30个角色
 
 // ─── JSON 修复 + 解析 ──────────────────────────────
@@ -209,8 +209,8 @@ export async function POST(request: Request) {
         const pGenre = project.genre;
         const isCharOnly = charactersOnly === true;
 
-        const dsKey = process.env.DEEPSEEK_API_KEY || "";
-        const dsConfigA: CallConfig = { baseURL: "https://api.deepseek.com", apiKey: dsKey, model: MODEL_A, label: "DS-Flash" };
+        const dsKey = process.env.LLM_API_KEY || "";
+        const dsConfigA: CallConfig = { baseURL: "https://api.siliconflow.cn", apiKey: dsKey, model: MODEL_A, label: "SF-Flash" };
         const dsConfigB: CallConfig = { baseURL: sfConfig.baseURL, apiKey: sfConfig.apiKey, model: MODEL_B, label: "DS-Flash" };
 
         send({ type: "progress", stage: "ready", message: `${text.length.toLocaleString()} 字 · ${isCharOnly ? "仅人物卡" : "人物+世界"}`, pct: 3 });
@@ -227,21 +227,30 @@ export async function POST(request: Request) {
         const needsChunking = estimatedCount > CHUNK_SIZE;
 
         // ── 人物提取Prompt模板 ──
-        const charSystemPrompt = "角色提取器。编号(含Markdown标题)→人名→整段描述塞进background，重复引用跳过。输出JSON。";
-        const buildCharPrompt = (chunkText: string, chunkInfo = "") => `你是角色提取器。只做三件事：找编号 → 抓人名 → 整段描述塞进 background。只输出JSON。${chunkInfo}
+        const charSystemPrompt = "角色提取器。编号→人名→全字段提取：外貌、性格、能力、关系、对话风格，每个字段都填满。只输出JSON。";
+        const buildCharPrompt = (chunkText: string, chunkInfo = "") => `你是角色提取器。找编号 → 抓人名 → 从原文提取全字段信息。禁止留空。${chunkInfo}
 
 【识别角色行——宽泛匹配所有编号格式】
 Markdown标题也认——# / ## / ### 是格式标记，跳过它看后面的编号。
 纯文本编号：阿拉伯"1.""2、""3 ""1）""(2)""①"、中文数字"一、""二、""三 "、中文序数"第一位 ""第二，"
 
-【提取规则】
+【提取规则——每个字段都要从原文找信息填满】
 name = 编号后的人名核心部分，去掉——及之后的修饰
 background = 从编号行开始到下一个编号行之前，全部内容原封不动搬进去（原文照抄不缩写）
 role = 从以下选：protagonist/antagonist/supporting/mentor/love_interest/background，默认supporting
-重复引用（"与XX号XXX为同一角色"）→ 跳过
 
-【其余字段统一默认值】
-age:"未知" gender:"未知" appearance:{"hair":"","eyes":"","height":"","build":"","features":"","attire":""} personality:{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""} abilities:[] hiddenMotives:[] relationships:[] dialogueStyle:{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]} timeline:[] arcProgress:"" currentStatus:"alive" aliases:[] tags:["📥导入"]
+【以下字段——从background和其他原文描述中提取，禁止填"未知"或留空】
+- age: 从原文找年龄线索，没有则根据角色定位推断（主角一般16-25岁，师傅一般40+）
+- gender: 从名字/代词/描述推断
+- appearance: 从外貌描写提取 hair/eyes/height/build/features/attire，没描写则根据角色定位推断
+- personality: 从行为/对话/描述中提炼 dominant(主导性格)/drive(核心驱动)/contradiction(内在矛盾)/habits(习惯)/socialMask(社交面具)
+- abilities: 从能力/技能描述中逐条提取，格式"能力名·等级·一句话描述"
+- relationships: 从关系描述中提取 targetName/relation/dynamic
+- dialogueStyle: 从对话示例中提炼 description/examples/vocabulary/speechPatterns
+- hiddenMotives: 从背景中推断隐藏动机
+- timeline: 从背景中提取年龄+事件节点
+- aliases: 从别名/称号中提取
+- tags: 固定["📥导入"]
 
 【作品信息】
 名称：${pName} · 类型：${pGenre.join("、")}
@@ -249,7 +258,7 @@ age:"未知" gender:"未知" appearance:{"hair":"","eyes":"","height":"","build"
 【文本】
 ${chunkText}
 
-{"characters":[{"name":"","aliases":[],"role":"supporting","age":"未知","gender":"未知","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[],"arcProgress":"","currentStatus":"alive"}]}`;
+{"characters":[{"name":"","aliases":[],"role":"supporting","age":"","gender":"","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[],"arcProgress":"","currentStatus":"alive","tags":["📥导入"]}]}`;
 
         // ── 人物提取 ──
         let chars: Record<string, unknown>[] = [];

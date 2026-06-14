@@ -33,7 +33,9 @@ model Project {
   storyBranches StoryBranch[]
   chapterSummaries ChapterSummary[]
   storyBeats    StoryBeat[]
+  storylines    Storyline[]
   styleCards    StyleCard[]
+  rules         Rule[]
 }
 
 // ─── 人物卡 (Character Card) ───────────────────────────────
@@ -197,6 +199,69 @@ model StoryBeat {
   createdAt DateTime @default(now())
 
   @@index([projectId])
+}
+
+// ─── 故事线 (Storyline) —— 七要素事件线，主线+支线 ──────────
+
+model Storyline {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type     String @default("side")  // "main" | "side"
+  parentId String?                   // 支线挂主线
+  title    String                    // 事件线名称，如"主角获得宝剑"
+  order    Int @default(0)
+  status   String @default("active") // "active" | "completed" | "abandoned"
+  description String @default("")    // 简要说明
+
+  // ── 七要素 ──
+  desire    String @default("")  // 欲望：主角想要什么
+  obstacle  String @default("")  // 阻碍：谁/什么挡着
+  action    String @default("")  // 行动：主角怎么做
+  result    String @default("")  // 结果：暂时成/败
+  twist     String @default("")  // 意外：突然转折
+  turn      String @default("")  // 转折：方向改变
+  ending    String @default("")  // 结局：本事件线收束
+
+  // 章节绑定——七要素各绑定到哪章 [{element: "desire", chapterId: "xxx", note: ""}]
+  chapterBindings Json @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([parentId])
+}
+
+// ─── 规则 (Rule) —— 写作规则/约束 ──────────────────────────────
+
+model Rule {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String                           // 规则名称（如"主角不杀人"）
+  content   String                           // 规则正文（自然语言描述，会直接注入 prompt）
+  category  String   @default("writing")     // writing / world / character / style / custom
+  enabled   Boolean  @default(true)          // 是否启用
+  priority  Int      @default(0)             // 优先级（越大越靠前，影响注入顺序）
+  scope     String   @default("all")         // 生效范围：all / write_only / outline_only / review_only
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, enabled])
+}
+
+// ─── 全局设置 (App Settings) —— 单例，LLM 提供商 + API Key ──
+
+model AppSettings {
+  id          String   @id @default("default") // 单例，固定 key
+  llmProvider String   @default("siliconflow") // openai | siliconflow | deepseek | groq | custom
+  llmApiKey   String   @default("")            // API Key（明文存储，数据库本地）
+  llmModel    String   @default("deepseek-ai/DeepSeek-V4-Flash")
+  llmBaseUrl  String   @default("")            // 自定义 base URL（custom 提供商时使用）
+  updatedAt   DateTime @updatedAt
 }
 
 // ─── 文风卡 (Style Card) —— 量化导入文本的笔触特征 ──────────

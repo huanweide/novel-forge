@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { STYLE_TEMPLATES, getTemplate } from "@/core/templates";
 
@@ -39,11 +39,18 @@ export function StyleEditor({
   });
   const [newForbidden, setNewForbidden] = useState("");
 
+  const abortRef = useRef<AbortController | null>(null);
+
   // 加载当前设置
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/style`)
-      .then((r) => r.json())
-      .then((data) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const fetchData = async () => {
+      try {
+        const r = await fetch(`/api/projects/${projectId}/style`, { signal: controller.signal });
+        const data = await r.json();
         if (!data.error) {
           setConfig({
             styleTemplateId: data.styleTemplateId || "custom",
@@ -54,9 +61,17 @@ export function StyleEditor({
             customStyleNotes: data.customStyleNotes || "",
           });
         }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    return () => { controller.abort(); };
   }, [projectId]);
 
   // 选模板时合并模板的默认值

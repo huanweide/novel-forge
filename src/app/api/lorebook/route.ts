@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // POST /api/lorebook
 export async function POST(request: Request) {
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
         relatedEntryIds: body.relatedEntryIds || [],
       },
     });
+    syncGlobalPrompt(body.projectId).catch(() => {});
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {
     return NextResponse.json(

@@ -1,30 +1,39 @@
 /**
  * POST /api/generate/chapter-outline
  *
- * 单章章纲生成 —— 用 V4 Flash 快速为指定章节生成/重新生成大纲。
- * 接收章节上下文（前后文 + 角色 + 世界书 + 用户提示词），返回单章大纲文本。
+ * v2: 上下文增强 + AI 自主选角
  *
- * 请求体：
- * {
- *   projectId: string;
- *   nodeId: string;          // 目标章节（获取上下文）
- *   prompt?: string;         // 可选的用户提示词（不填则自动生成）
- * }
+ * 流程：
+ * 1. 读取前 5 章大纲 + 上一章结尾正文 → 上下文
+ * 2. 读取全部角色卡摘要 + 作者指令（最高优先级）
+ * 3. AI 根据章纲目标 + 前文 + 作者指令 → 自主决定本章出场角色
+ * 4. 用选定角色 + 完整上下文 → 生成详细章纲
+ * 5. 返回章纲 + AI 选角列表
+ *
+ * 核心理念：不让用户手动勾选角色，AI 根据剧情逻辑决定谁应该出现。
+ * 作者指令 > 章纲目标 > 前文惯性 > 角色关系。
  */
+
 export const maxDuration = 120;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getActiveRules, injectRules } from "@/core/rules";
+
+import { callSiliconFlow } from "@/lib/llm";
 
 export async function POST(request: Request) {
   try {
-    const { projectId, nodeId, prompt: customPrompt, confirmedCardIds, cardNotes, newCharacterRequests } = await request.json();
+    const { projectId, nodeId, prompt: customPrompt, authorNote: explicitAuthorNote } = await request.json();
 
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
     }
 
-    const [project, node, allNodes, characters, loreEntries, summaries] = await Promise.all([
+    // ═══════════════════════════════════════════════
+    // Step 1: 读数据——前文上下文 + 角色卡 + 作者指令
+    // ═══════════════════════════════════════════════
+    const [project, node, allNodes, characters, summaries] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
       prisma.storyNode.findMany({
@@ -32,12 +41,7 @@ export async function POST(request: Request) {
         orderBy: { order: "asc" },
       }),
       prisma.characterCard.findMany({ where: { projectId } }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
-      prisma.chapterSummary.findMany({
-        where: { projectId },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
+      prisma.chapterSummary.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 3 }),
     ]);
 
     if (!project || !node) {
@@ -46,200 +50,228 @@ export async function POST(request: Request) {
 
     const nodeIndex = allNodes.findIndex((n) => n.id === nodeId);
 
-    // 前后章节上下文
-    const prevNodes = allNodes.slice(Math.max(0, nodeIndex - 2), nodeIndex);
+    // ── 前 5 章上下文（章纲 + 上一章正文末段 800 字）──
+    const prevNodes = allNodes.slice(Math.max(0, nodeIndex - 5), nodeIndex);
+    const prevContext = prevNodes.map(n => {
+      const outline = n.outline ? `\n  大纲：${n.outline.slice(0, 500)}` : "";
+      const ending = n.content ? `\n  正文末段：${n.content.slice(-800)}` : "";
+      return `[${n.title}]${outline}${ending}`;
+    }).join("\n\n");
+
+    // 后文（如果后面有已规划的章节）
     const nextNodes = allNodes.slice(nodeIndex + 1, Math.min(allNodes.length, nodeIndex + 3));
-
-    const prevContext = prevNodes.map(n =>
-      `[${n.title}]${n.outline ? ` 大纲：${n.outline.slice(0, 200)}` : ""}${n.content ? ` 正文前200字：${(n.content || "").slice(0, 200)}` : ""}`
-    ).join("\n");
-
     const nextContext = nextNodes.map(n =>
-      `[${n.title}]${n.outline ? ` 大纲：${n.outline.slice(0, 200)}` : ""}`
-    ).join("\n");
+      `[${n.title}]${n.outline ? `\n  大纲：${n.outline.slice(0, 300)}` : ""}`
+    ).join("\n\n");
 
-    // ── 自建角色 ──
-    const allChars = [...characters];
-    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
-      for (const req of newCharacterRequests as string[]) {
-        const name = req.trim();
-        if (!name) continue;
-        const exists = allChars.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
-        if (!exists) {
-          const created = await prisma.characterCard.create({
-            data: {
-              projectId,
-              name,
-              role: "supporting",
-              personality: { dominant: "章纲生成时自建，待丰富" } as any,
-              background: `[章纲生成] 用户要求自建角色`,
-              abilities: [],
-              tags: ["🆕 章纲自建"],
-              currentStatus: "alive",
-            } as any,
-          });
-          allChars.push(created as any);
-        }
-      }
-    }
+    // ── 作者指令（最高优先级）──
+    const effectiveAuthorNote = explicitAuthorNote?.trim() || project.authorNote?.trim() || "";
 
-    // ── 过滤角色 ──
-    let activeChars = allChars;
-    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
-      const confirmedSet = new Set(confirmedCardIds as string[]);
-      activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
-    }
+    // ── Rules 系统注入 ──
+    const outlineRules = await getActiveRules(projectId, "outline_only");
+    const finalAuthorDirective = injectRules(effectiveAuthorNote, outlineRules);
 
-    // 最近的摘要
-    const recentSummary = summaries.length > 0
-      ? summaries.map(s => s.summary).join("\n")
-      : "暂无前文摘要";
+    const authorDirective = finalAuthorDirective
+      ? `\n## ⚠️ 作者指令——最高优先级，必须逐条遵守\n${finalAuthorDirective}\n`
+      : "";
 
-    // 角色简表
-    const charBriefs = activeChars.slice(0, 50).map((c: any) => {
-      const p = typeof c.personality === "object" && !Array.isArray(c.personality)
-        ? (c.personality as Record<string, unknown>).dominant || ""
-        : Array.isArray(c.personality) ? (c.personality as string[]).slice(0, 2).join("、") : "";
-      return `[${c.name}] ${c.role || "supporting"} ${p}`;
+    // ── 角色卡简要列表（供 AI 选角用）──
+    const roleLabel: Record<string, string> = {
+      protagonist: "★主角", antagonist: "◆反派", mentor: "◈导师",
+      love_interest: "♡恋爱", supporting: "●配角", background: "○背景",
+    };
+    const characterList = characters.map((c: any) => {
+      const p = typeof c.personality === "object" && !Array.isArray(c.personality) ? c.personality as Record<string, unknown> : {};
+      const brief = [
+        `${roleLabel[c.role] || c.role} | ${c.currentStatus || "存活"}`,
+        c.background ? c.background.slice(0, 80).replace(/\n/g, " ") : "",
+      ].filter(Boolean).join(" | ");
+      return `- 【${c.name}】${c.aliases?.length ? `（${c.aliases.join("、")}）` : ""} ${brief}`;
     }).join("\n");
 
-    // 世界书简表
-    const loreBriefs = (loreEntries as any[]).slice(0, 20).map((l: any) =>
-      `[${l.title}](${l.category}) ${(l.content || "").slice(0, 100)}`
-    ).join("\n");
+    // 最近摘要
+    const recentSummary = summaries.length > 0
+      ? summaries.map(s => `[${s.chapterTitle}] ${s.summary}`).join("\n")
+      : "";
 
-    // ── V4 Flash 调用 ──
-    const baseURL = "https://api.deepseek.com/v1";
-    const apiKey = process.env.DEEPSEEK_API_KEY || "";
-    const model = "deepseek-v4-flash";
+    // ═══════════════════════════════════════════════
+    // Step 2: AI 选角——根据章纲目标 + 前文 + 作者指令 → 决定谁出场
+    // ═══════════════════════════════════════════════
+    const selectionSystem = `你是小说章纲专家。你的任务是：阅读章纲目标、作者指令和前文上下文，从角色列表中选出**本章应该出现的角色**。
 
-    const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
+【选角原则——按优先级排序】
+1. 作者指令明确提到的人物 → 必须出场（最高优先级）
+2. 前文末段正在发展的人物线 → 自然延续出场
+3. 章纲目标需要的人物 → 剧情需要谁就选谁
+4. 与选中人物有紧密关系的人物 → 可能需要出场（如师徒、恋人、当前敌对）
+5. 不强行塞人——如果一个人物和本章剧情无关，即使他是主角的前女友/前对手，也不要放进来
 
-    const systemPrompt = `你是小说章纲专家。根据上下文为指定章节生成 200-500 字的详细章纲。章纲需包含：
-1. 本章核心冲突（一句话）
-2. 主要事件序列（3-5个关键场景/节拍）
-3. 出场角色及其动作
-4. 情感弧线（角色情绪起点→转折→终点）
-5. 与前后章的衔接点
+【输出格式——纯JSON】
+{
+  "selected": ["角色名1", "角色名2"],
+  "reasoning": "一句话解释选角逻辑（如：本章主线是XX，所以选了A、B、C）"
+}`;
 
-输出纯文本，不要 JSON，不要编号。直接回答章纲内容。`;
+    const authorNoteInjection = effectiveAuthorNote
+      ? `\n\n## ⚠️ 作者指令（最高优先级，必须逐条遵守）\n${effectiveAuthorNote}\n`
+      : "";
 
-    // ── 用户备注注入 ──
-    let cardNotesText = "";
-    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
-      const noteLines: string[] = [];
-      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
-        if (!note.trim()) continue;
-        const char = allChars.find((c: any) => c.id === id);
-        if (char) noteLines.push(`[${char.name}] ${note}`);
-      }
-      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
-    }
+    const hasCustomPrompt = customPrompt?.trim();
 
-    const userPrompt = hasCustomPrompt
-      ? `【用户提示词——最高优先级】
-${customPrompt}
-
+    const selectionPrompt = `【章纲目标——本章要写什么】
+${hasCustomPrompt ? `用户提示词：${customPrompt}\n` : ""}本章标题：${node.title}（第${nodeIndex + 1}章）
+${node.outline ? `现有大纲（如有）：${node.outline.slice(0, 300)}\n` : ""}（大纲为空则根据前后文 + 作者指令推断本章方向）
+${authorNoteInjection}
 【作品信息】
 名称：${project.name} · 类型：${project.genre.join("、")}
 总纲：${project.synopsis}
 
-【本文标题】${node.title}（第${nodeIndex + 1}章）
+【前文上下文——你读了才知道谁在场上】
+${prevContext || "（本章为开头，无前文）"}
+${recentSummary ? `\n最近摘要：${recentSummary}` : ""}
 
-【现有大纲（如果有）】
-${node.outline || "暂无大纲"}
+【所有角色卡——选出本章应该出场的人】
+${characterList}
 
-【前后章节】
-──前文──
-${prevContext || "无（本章为开头）"}
-──后文──
-${nextContext || "无（本章为结尾）"}
+请从以上角色列表中选出本章应该出场的角色。不要塞无关人物。`;
 
-【最近摘要】
-${recentSummary}
+    let selectedNames: string[] = [];
+    let selectionReasoning = "";
 
-【角色】
-${charBriefs}
+    try {
+      const selectionRaw = await callSiliconFlow({ system: selectionSystem, prompt: selectionPrompt, maxTokens: 2048, temperature: 0.3 });
+      const parsed = JSON.parse(
+        (() => {
+          let s = selectionRaw.trim();
+          const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (md) s = md[1].trim();
+          const a = s.indexOf("{"), b = s.lastIndexOf("}");
+          if (a >= 0 && b > a) s = s.slice(a, b + 1);
+          return s;
+        })()
+      ) as Record<string, unknown>;
+      if (Array.isArray(parsed.selected)) {
+        selectedNames = parsed.selected as string[];
+        selectionReasoning = (parsed.reasoning as string) || "";
+      }
+    } catch {
+      // AI 选角失败 → 回退：至少保主角
+      const protag = characters.find((c: any) => c.role === "protagonist");
+      if (protag) selectedNames = [protag.name];
+    }
 
-【世界观】
-${loreBriefs}
-${cardNotesText}
+    // 确保主角一定在（除非明确排除了）
+    const protagonist = characters.find((c: any) => c.role === "protagonist");
+    if (protagonist && !selectedNames.some(n => n.toLowerCase() === protagonist.name.toLowerCase())) {
+      selectedNames.unshift(protagonist.name);
+      selectionReasoning = "（自动补入主角）" + selectionReasoning;
+    }
 
-请为「${node.title}」生成一份详细的章纲。`
-      : `【作品信息】
+    // 名字匹配角色详情
+    const selectedChars = characters.filter((c: any) =>
+      selectedNames.some(n => n.toLowerCase() === c.name.toLowerCase() ||
+        (c.aliases || []).some((a: string) => a.toLowerCase() === n.toLowerCase()))
+    );
+
+    if (selectedChars.length === 0 && characters.length > 0) {
+      selectedChars.push(characters[0]); // 兜底：至少有一个角色
+    }
+
+    // ═══════════════════════════════════════════════
+    // Step 3: 生成章纲——只用选定角色 + 完整上下文
+    // ═══════════════════════════════════════════════
+
+    // 选定角色的详细档案
+    const charBriefs = selectedChars.map((c: any) => {
+      const p = typeof c.personality === "object" && !Array.isArray(c.personality) ? c.personality as Record<string, unknown> : {};
+      const parts: string[] = [];
+      parts.push(`【${c.name}】${c.aliases?.length ? `（${c.aliases.join("、")}）` : ""}`);
+      parts.push(`  定位：${c.role || "supporting"} | 状态：${c.currentStatus || "alive"}`);
+      if (p.dominant) parts.push(`  主导性格：${p.dominant}`);
+      if (p.drive) parts.push(`  核心驱动：${p.drive}`);
+      if (p.contradiction) parts.push(`  内在矛盾：${p.contradiction}`);
+      if (Array.isArray(p.habits) && p.habits.length) parts.push(`  习惯：${(p.habits as string[]).join("、")}`);
+      if (p.socialMask) parts.push(`  社交面具：${p.socialMask}`);
+      if (c.background && c.background.length > 10) parts.push(`  背景：${String(c.background).slice(0, 600)}`);
+      if (Array.isArray(c.abilities) && c.abilities.length) parts.push(`  能力：${(c.abilities as string[]).join("；")}`);
+      if (Array.isArray(c.aliases) && c.aliases.length) parts.push(`  别名：${(c.aliases as string[]).join("、")}`);
+      const rels = c.relationships as any[];
+      if (Array.isArray(rels) && rels.length) {
+        const relText = rels.map((r: any) => `${r.targetName || "?"}(${r.relation || "?"}${r.dynamic ? `·${r.dynamic}` : ""})`).join("、");
+        if (relText) parts.push(`  关系：${relText}`);
+      }
+      const ds = c.dialogueStyle as Record<string, unknown> | undefined;
+      if (ds?.description) {
+        parts.push(`  说话风格：${ds.description}`);
+        if (Array.isArray(ds.examples) && ds.examples.length) parts.push(`  台词示例：${(ds.examples as string[]).join(" / ")}`);
+      }
+      if (c.hiddenMotives && Array.isArray(c.hiddenMotives) && c.hiddenMotives.length) parts.push(`  隐藏动机：${(c.hiddenMotives as string[]).join("；")}`);
+      return parts.join("\n");
+    }).join("\n\n");
+
+    const outlineSystem = `你是小说章纲专家。你必须严格基于提供的【角色档案】【作者指令】和【前文上下文】来生成章纲。
+
+【铁律——违反任一即不合格】
+1. 出场角色只能从下方"选定角色"列表中选——除此之外的角色本章不允许出现
+2. 角色行为必须与其性格五维一致（主导性格/核心驱动/内在矛盾/习惯）
+3. 角色互动必须与其关系设定一致——关系好的人不会突然翻脸，除非背景中有冲突伏笔
+4. 绝不让角色做出违背其"核心驱动"的行为
+5. 文风必须匹配给定的风格描述、视角、句长
+6. 作者指令 > 章纲目标 > 前文惯性 > 角色关系——优先级链
+
+【章纲结构——每章 300-600 字】
+1. 本章核心冲突（一句话——谁和谁因为什么对立）
+2. 本章情感基调（从角色性格推导本章的情绪氛围）
+3. 场景序列（3-5个场景，每个场景标注：地点 / 出场角色 / 发生什么 / 角色的情感变化）
+4. 关键对话点子（至少一句体现角色性格的对话方向）
+5. 与前章的衔接钩子 + 为后章埋的伏笔
+
+输出纯文本。不用编号——但用自然段落把上面的结构讲清楚。`;
+
+    const outlinePrompt = `${authorDirective}
+【章纲目标——本章要写什么】
+${hasCustomPrompt ? `用户提示词：${customPrompt}\n` : ""}本章标题：${node.title}（第${nodeIndex + 1}章）
+${node.outline ? `现有大纲（如有）：${node.outline.slice(0, 300)}\n` : ""}
+${authorDirective}
+【作品信息】
 名称：${project.name} · 类型：${project.genre.join("、")}
 总纲：${project.synopsis}
 
-【本文标题】${node.title}（第${nodeIndex + 1}章）
+【前文上下文——你读了才知道从哪里接】
+${prevContext || "（本章为开头）"}
 
-【现有大纲（如果有）】
-${node.outline || "暂无大纲"}
-
-【前后章节】
-──前文──
-${prevContext || "无（本章为开头）"}
-──后文──
-${nextContext || "无（本章为结尾）"}
+【后文——知道后面会发生什么才能埋好伏笔】
+${nextContext || "（无后续章节规划）"}
 
 【最近摘要】
-${recentSummary}
+${recentSummary || "无"}
 
-【角色】
+【AI 选定出场角色——本章只允许这些人出现】
 ${charBriefs}
 
-【世界观】
-${loreBriefs}
-${cardNotesText}
+【铁律再强调】
+- 作者指令（如有）必须逐条遵守，不得遗漏
+- 不允许让未选定的角色出场
+- 不允许让角色做出违背其性格和关系的行为
+- 不允许凭空创造新角色
 
-请为「${node.title}」生成一份详细的章纲。`;
-
-    const url = baseURL.endsWith("/v1") ? `${baseURL}/chat/completions` : `${baseURL}/v1/chat/completions`;
+请为「${node.title}」生成章纲。`;
 
     let outlineText = "";
     try {
-      const llmRes = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 2048,
-          stream: false,
-        }),
-      });
-
-      if (!llmRes.ok) {
-        const err = await llmRes.text().catch(() => "");
-        return NextResponse.json(
-          { error: `API ${llmRes.status}: ${err.slice(0, 300)}` },
-          { status: 502 }
-        );
-      }
-
-      const data = await llmRes.json();
-      outlineText = data.choices?.[0]?.message?.content || "";
+      outlineText = await callSiliconFlow({ system: outlineSystem, prompt: outlinePrompt, maxTokens: 4096, temperature: 0.3 });
     } catch (err) {
       return NextResponse.json(
-        { error: `调用失败：${err instanceof Error ? err.message : String(err)}` },
+        { error: `章纲生成失败：${err instanceof Error ? err.message : String(err)}` },
         { status: 502 }
       );
     }
 
     if (!outlineText || outlineText.length < 10) {
-      return NextResponse.json(
-        { error: "模型返回空内容，请重试" },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "模型返回空内容，请重试" }, { status: 502 });
     }
 
-    // 写入大纲到数据库
+    // 写入数据库
     await prisma.storyNode.update({
       where: { id: nodeId },
       data: { outline: outlineText, status: node.status === "outline_only" ? "outline_only" : node.status },
@@ -250,6 +282,14 @@ ${cardNotesText}
       nodeId,
       title: node.title,
       modelUsed: "v4-flash",
+      // 新增：AI 选角信息
+      selectedCharacters: selectedChars.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        role: c.role,
+      })),
+      selectionReason: selectionReasoning,
+      totalCharacters: characters.length,
     });
   } catch (err) {
     return NextResponse.json(

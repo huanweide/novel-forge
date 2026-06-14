@@ -1,7 +1,7 @@
 /**
  * POST /api/characters/expand
  *
- * v2: 16并发 · deepseek-v4-flash · 不截断源文本 · 16384 tokens 输出
+ * v2: 16并发 · deepseek-ai/DeepSeek-V4-Flash · 不截断源文本 · 16384 tokens 输出
  *
  * SSE 流式：逐角色独立并行扩展。
  * 每完成一个角色即时推 SSE 进度。
@@ -9,16 +9,17 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { parseAIJson } from "@/lib/json-parser";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 300;
 
-const DS_URL = "https://api.deepseek.com/v1/chat/completions";
-const DS_MODEL = "deepseek-v4-flash";
+const DS_URL = "https://api.siliconflow.cn/v1/chat/completions";
+const DS_MODEL = "deepseek-ai/DeepSeek-V4-Flash";
 const CONCURRENCY = 16;
-const MAX_TOKENS = 16384;
+const MAX_TOKENS = 32768;
 
 function getDSKey(): string {
-  return process.env.DEEPSEEK_API_KEY || "";
+  return process.env.LLM_API_KEY || "";
 }
 
 // ─── 安全合并 ──────────────────────────────────────
@@ -150,7 +151,7 @@ ${JSON.stringify(char.card)}
     const parsed = parseAIJson(result.raw);
     return { id: char.id, name: char.name, result: parsed };
   } catch (e) {
-    return { id: char.id, name: char.name, result: null, error: `JSON解析失败: ${String(e).slice(0, 100)}` };
+    return { id: char.id, name: char.name, result: null, error: `JSON解析失败: ${String(e).slice(0, 300)}` };
   }
 }
 
@@ -194,7 +195,7 @@ export async function POST(request: Request) {
 
   const dsKey = getDSKey();
   if (dsKey.length < 10) {
-    return NextResponse.json({ error: "DeepSeek API Key 未配置。请在环境变量中设置 DEEPSEEK_API_KEY。" }, { status: 500 });
+    return NextResponse.json({ error: "硅基流动 API Key 未配置。请在环境变量中设置 LLM_API_KEY。" }, { status: 500 });
   }
 
   const encoder = new TextEncoder();
@@ -221,28 +222,265 @@ export async function POST(request: Request) {
           await prisma.project.update({ where: { id: projectId }, data: { globalPrompt: context } }).catch(() => {});
         }
 
-        // ── 加载 + 去重 ──
-        const chars = await prisma.characterCard.findMany({ where: { id: { in: characterIds } } });
+        // ═══════════════════════════════════════════════════════
+        // 预处理管线：审计 → 拆卡 → 删非角色 → 去重合并
+        // ═══════════════════════════════════════════════════════
 
+        const chars = await prisma.characterCard.findMany({ where: { id: { in: characterIds } } });
+        send({ type: "progress", stage: "audit", message: `🔍 预处理 ${chars.length} 张卡——审计中...`, pct: 1 });
+
+        // ── Step 1: AI 批量审计 —— 一次调用完成三件事 ──
+        //   a) 检测非角色（地名/物品/势力/概念混入角色列表的）
+        //   b) 检测组合卡（一张卡写了多个人，如"张三、李四"）
+        //   c) 检测缺失角色（background 中提到了但还没建卡的人物）
+
+        interface AuditResult {
+          id: string;
+          name: string;
+          isCharacter: boolean;
+          reason: string;
+          splitNames: string[];
+          missingCharacters: string[];
+        }
+
+        const auditResults: AuditResult[] = [];
+
+        if (chars.length > 0) {
+          // 构建完整角色名列表（用于缺失检测）
+          const allKnownNames = chars.map(c => c.name).join("、");
+
+          const charListForAudit = chars.map(c => {
+            const bg = ((c.background || "") as string).slice(0, 500);
+            const abs = (c.abilities || []).join("、").slice(0, 100);
+            const role = c.role || "supporting";
+            return `${c.id}|${c.name}|${role}|${abs || "无"}|${bg || "无背景"}`;
+          }).join("\n---\n");
+
+          const auditSystem = `你是角色卡审计员。逐张检查每张卡，完成三项任务：
+
+1. 【是否真实人物】判断这条记录是不是一个"人"。
+   - 地名（XX城/XX大陆/XX森林/XX山脉）→ 不是角色
+   - 物品/器物（XX剑/XX丹/XX符/XX秘籍）→ 不是角色
+   - 势力/组织（XX宗/XX派/XX殿/XX阁/XX教/XX会）→ 不是角色
+   - 概念/能力名（XX之道/XX之术/XX法则）→ 不是角色
+   - 如果 background 完全描述的是地点/势力/物品特征而非人的特征 → 不是角色
+   - 有名字的个体人物（包括配角、路人、龙套）→ 是角色
+
+2. 【是否组合卡】名字里是否包含多个人。
+   - 分隔符明显："张三、李四""王五/赵六" → 拆分
+   - "和/与/及"连接两个完整人名 → 拆分
+   - 单个人名 → 不拆分
+
+3. 【缺失角色检测】仔细阅读每张卡的 background 字段，找出其中提到的所有有名字的个体人物。
+   - 已知角色名单：${allKnownNames}——这些不需要再建卡
+   - 扫描 background 中是否出现了不在已知名单中的新人物名
+   - 如果发现新人物（2-4字中文名，从上下文判断是独立个体），添加到 missingCharacters 数组
+   - 注意区分：组织名/地名/招式名/物品名不是人物，不要加入
+
+输出纯JSON数组：
+[{"id":"卡id","isCharacter":true/false,"reason":"简短理由≤20字","splitNames":["拆出的人名"],"missingCharacters":["新发现的人名"]}]
+splitNames和missingCharacters都可能是空数组。`;
+
+          const auditPrompt = `审计以下${chars.length}张角色卡。逐张判断：是否真实人物？是否组合卡？background 里是否提到了还没建卡的人物？
+
+格式：id|姓名|定位|能力|背景
+---
+${charListForAudit}
+
+已知角色：${allKnownNames}
+
+输出JSON数组：
+[{"id":"...", "isCharacter":true/false, "reason":"...", "splitNames":[...], "missingCharacters":[...]}]`;
+
+          try {
+            const auditRaw = await callDS(auditSystem, auditPrompt);
+            if ("raw" in auditRaw) {
+              const parsed = parseAIJson(auditRaw.raw);
+              if (Array.isArray(parsed)) {
+                for (const item of parsed) {
+                  auditResults.push({
+                    id: String((item as any).id || ""),
+                    name: String((item as any).name || ""),
+                    isCharacter: (item as any).isCharacter !== false,
+                    reason: String((item as any).reason || ""),
+                    splitNames: Array.isArray((item as any).splitNames) ? (item as any).splitNames : [],
+                    missingCharacters: Array.isArray((item as any).missingCharacters) ? (item as any).missingCharacters : [],
+                  });
+                }
+              }
+            }
+          } catch {
+            // 审计失败不阻塞——全部视为角色，不做拆分
+          }
+        }
+
+        const auditMap = new Map(auditResults.map(a => [a.id, a]));
+
+        // ── Step 2: 拆组合卡 —— 一张卡写多人 → 每人独立建卡 ──
+        const splitLog: string[] = [];
+        const idsToDelete = new Set<string>();
+
+        for (const c of chars) {
+          const audit = auditMap.get(c.id);
+          if (!audit || audit.splitNames.length <= 1) continue;
+
+          // 标记原卡删除
+          idsToDelete.add(c.id);
+          const originalName = c.name;
+
+          for (const splitName of audit.splitNames) {
+            const trimmed = splitName.trim();
+            if (!trimmed || trimmed === originalName) continue;
+
+            // 检查是否已存在同名卡
+            const existing = chars.find(
+              ec => ec.name.toLowerCase().trim() === trimmed.toLowerCase().trim()
+            );
+            if (existing) {
+              // 已存在 → 合并 quickImportContent 到已有卡
+              if (c.quickImportContent) {
+                const merged = [existing.quickImportContent, c.quickImportContent]
+                  .filter(s => typeof s === 'string' && s.trim().length > 0)
+                  .join("\n\n---\n---\n\n");
+                await prisma.characterCard.update({
+                  where: { id: existing.id },
+                  data: { quickImportContent: merged },
+                }).catch(() => {});
+              }
+              splitLog.push(`${originalName}→${trimmed}(合并到已有)`);
+            } else {
+              // 新建独立卡
+              await prisma.characterCard.create({
+                data: {
+                  projectId,
+                  name: trimmed,
+                  role: c.role || "supporting",
+                  quickImportContent: c.quickImportContent || "",
+                  background: c.background || "",
+                  abilities: c.abilities || [],
+                  hiddenMotives: c.hiddenMotives || [],
+                  personality: c.personality || ({} as any),
+                  tags: ["🆕 自动拆分"],
+                  currentStatus: "alive",
+                } as any,
+              });
+              splitLog.push(`${originalName}→${trimmed}(新建)`);
+            }
+          }
+        }
+
+        // ── Step 3: 删除非角色卡 ──
+        const deleteLog: string[] = [];
+        for (const c of chars) {
+          if (idsToDelete.has(c.id)) continue; // 已被拆卡标记删除
+          const audit = auditMap.get(c.id);
+          if (audit && !audit.isCharacter) {
+            idsToDelete.add(c.id);
+            deleteLog.push(`${c.name}: ${audit.reason}`);
+          }
+        }
+
+        // 执行删除
+        if (idsToDelete.size > 0) {
+          await prisma.characterCard.deleteMany({
+            where: { id: { in: [...idsToDelete] } },
+          });
+        }
+
+        // ── Step 3.5: 缺失角色自动建卡 —— 从 background 中发现新人物 ──
+        const newCharLog: string[] = [];
+        const allMissingNames = new Set<string>();
+        for (const audit of auditResults) {
+          for (const name of audit.missingCharacters) {
+            const trimmed = name.trim();
+            if (trimmed.length >= 2 && trimmed.length <= 8) {
+              allMissingNames.add(trimmed);
+            }
+          }
+        }
+
+        if (allMissingNames.size > 0) {
+          // 获取全项目现有角色名
+          const allProjectChars = await prisma.characterCard.findMany({
+            where: { projectId },
+            select: { name: true },
+          });
+          const existingNames = new Set(allProjectChars.map(c => c.name.toLowerCase().trim()));
+
+          for (const newName of allMissingNames) {
+            if (existingNames.has(newName.toLowerCase().trim())) continue;
+            // 检查是否和已删除的卡同名
+            if ([...idsToDelete].some(id => {
+              const c = chars.find(ch => ch.id === id);
+              return c && c.name.toLowerCase().trim() === newName.toLowerCase().trim();
+            })) continue;
+
+            try {
+              await prisma.characterCard.create({
+                data: {
+                  projectId,
+                  name: newName,
+                  role: "supporting",
+                  personality: { dominant: "待扩展", drive: "", contradiction: "", habits: [], socialMask: "" } as any,
+                  background: `[自动发现] 从角色扩展分析中检测到的新人物`,
+                  abilities: [],
+                  hiddenMotives: [],
+                  tags: ["🆕 自动发现"],
+                  currentStatus: "alive",
+                } as any,
+              });
+              newCharLog.push(newName);
+            } catch { /* 重名跳过 */ }
+          }
+        }
+
+        // 重新加载——拆卡/新建可能变了角色列表
+        let workingChars: typeof chars;
+        if (idsToDelete.size > 0 || splitLog.length > 0) {
+          const allProjectChars = await prisma.characterCard.findMany({ where: { projectId } });
+          // 排除已删除的，包含新建的
+          workingChars = allProjectChars.filter(c => !idsToDelete.has(c.id));
+        } else {
+          workingChars = chars.filter(c => !idsToDelete.has(c.id));
+        }
+
+        // 发送预处理报告
+        const preprocessParts: string[] = [];
+        if (splitLog.length > 0) preprocessParts.push(`✂️ 拆分 ${splitLog.length} 组: ${splitLog.join("、")}`);
+        if (deleteLog.length > 0) preprocessParts.push(`🗑️ 删除 ${deleteLog.length} 张非角色: ${deleteLog.join("、")}`);
+        if (newCharLog.length > 0) preprocessParts.push(`🆕 发现 ${newCharLog.length} 个缺失角色: ${newCharLog.join("、")}`);
+        if (preprocessParts.length > 0) {
+          send({ type: "progress", stage: "preprocess", message: preprocessParts.join(" | "), pct: 2 });
+        }
+
+        // ── Step 4: 去重合并（增强版——含别名匹配+背景相似度）──
         const normalizeName = (name: string): string => {
-          return name.toLowerCase().replace(/[（(][^)）]*[)）]/g, "").replace(/\s+/g, "").trim();
+          return name.toLowerCase()
+            .replace(/[（(][^)）]*[)）]/g, "")
+            .replace(/["""''「」『』【】]/g, "")
+            .replace(/\s+/g, "").trim();
         };
         const isSameCharacter = (a: string, b: string): boolean => {
           const na = normalizeName(a), nb = normalizeName(b);
           if (!na || !nb) return false;
           if (na === nb) return true;
+          // 一个名字包含另一个（如"洁世一"和"洁"）
           const shorter = na.length <= nb.length ? na : nb;
           const longer = na.length > nb.length ? na : nb;
           if (shorter.length < 2) return false;
           if (longer.includes(shorter)) return true;
+          // 检查是否是别名关系（名字中括号内容）
+          const bareA = na.replace(/[（(（].*$/, "").trim();
+          const bareB = nb.replace(/[（(（].*$/, "").trim();
+          if (bareA === bareB && bareA.length >= 2) return true;
           return false;
         };
 
-        const dedupedChars: typeof chars = [];
+        const dedupedChars: typeof workingChars = [];
         const mergedNames: string[] = [];
         const seenNames = new Map<string, number>();
 
-        for (const c of chars) {
+        for (const c of workingChars) {
           let foundIdx = -1;
           for (const [key, idx] of seenNames) {
             if (isSameCharacter(key, c.name)) { foundIdx = idx; break; }
@@ -256,14 +494,22 @@ export async function POST(request: Request) {
             const primaryQC = typeof primary.quickImportContent === 'string' ? primary.quickImportContent : '';
             primary.quickImportContent = mergedQC || primaryQC;
             if (!primary.background && c.background) primary.background = c.background;
+            if (!primary.personality && c.personality) primary.personality = c.personality;
             primary.abilities = [...new Set([...primary.abilities, ...c.abilities])];
             primary.hiddenMotives = [...new Set([...primary.hiddenMotives, ...c.hiddenMotives])];
+
+            // 保留信息更丰富的那张卡
+            if ((c.background || "").length > (primary.background || "").length) {
+              primary.background = c.background;
+            }
 
             await prisma.characterCard.update({
               where: { id: primary.id },
               data: { quickImportContent: primary.quickImportContent },
             }).catch(() => {});
 
+            // 删掉重复卡
+            await prisma.characterCard.delete({ where: { id: c.id } }).catch(() => {});
             mergedNames.push(`${primary.name}←${c.name}`);
           } else {
             seenNames.set(c.name.toLowerCase().trim(), dedupedChars.length);
@@ -272,12 +518,12 @@ export async function POST(request: Request) {
         }
 
         if (mergedNames.length > 0) {
-          send({ type: "progress", stage: "dedup", message: `🔗 合并 ${mergedNames.length} 组重复角色: ${mergedNames.join("、")}`, pct: 2 });
+          send({ type: "progress", stage: "dedup", message: `🔗 合并 ${mergedNames.length} 组重复角色: ${mergedNames.join("、")}`, pct: 3 });
         }
 
         const total = dedupedChars.length;
         if (total === 0) {
-          send({ type: "error", message: "没有可扩展的角色" });
+          send({ type: "error", message: "预处理后没有可扩展的角色——所有卡已被拆分/删除/合并" });
           controller.close();
           return;
         }
@@ -301,7 +547,7 @@ export async function POST(request: Request) {
 
         send({
           type: "progress", stage: "start",
-          message: `${total} 个角色 · deepseek-v4-flash · ${CONCURRENCY}并发`,
+          message: `${total} 个角色 · deepseek-ai/DeepSeek-V4-Flash · ${CONCURRENCY}并发`,
           pct: 5, done: 0, total,
         });
 
@@ -385,6 +631,8 @@ export async function POST(request: Request) {
           failList: failList.map(f => ({ name: f.name, reason: f.error })),
         });
 
+        // 刷新系统提示词缓存
+        syncGlobalPrompt(projectId).catch(() => {});
         // 延迟关闭——确保 SSE done 事件 flush 到网络再断联
         await new Promise(r => setTimeout(r, 300));
       } catch (err) {

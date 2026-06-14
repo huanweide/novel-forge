@@ -8,6 +8,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 300;
 
@@ -34,9 +35,9 @@ async function mergeOneBatch(
   globalContext: string,
   type: "char" | "lore",
 ): Promise<Record<string, unknown>[] | null> {
-  const baseURL = "https://api.deepseek.com/v1";
-  const apiKey = process.env.DEEPSEEK_API_KEY || "";
-  const model = "deepseek-v4-flash";
+  const baseURL = "https://api.siliconflow.cn/v1";
+  const apiKey = process.env.LLM_API_KEY || "";
+  const model = "deepseek-ai/DeepSeek-V4-Flash";
 
   const pairsText = pairs.map((p, i) =>
     `【${i + 1}】【${p.name}】
@@ -45,7 +46,7 @@ async function mergeOneBatch(
   ).join("\n\n---\n\n");
 
   const isChar = type === "char";
-  const prompt = `合并以下${pairs.length}对${isChar ? "角色卡" : "世界书词条"}。综合新旧输出完整结果。
+  const prompt = `合并以下${pairs.length}对${isChar ? "角色卡" : "世界书词条"}。核心理念：**求同存异**。
 
 【全局上下文——所有扩展必须基于此】
 ${globalContext}
@@ -53,10 +54,11 @@ ${globalContext}
 【合并对象】
 ${pairsText}
 
-【铁律】
-1. 互补合并——各有则全保留，冲突则择优
-2. ${isChar ? "❌ 禁止留\"无\"——appearance、personality、background必须补全。参考全局上下文中其他角色，确保不抄袭、有区分度。能力为空则按地位推导" : "内容互补，keys去重合并，subFields逐字段合并"}
-3. 符合作品基调
+【铁律——求同存异】
+1. 求同——新旧描述同一概念/人物→合并为一条完整版。信息互补：你有的我保留，我有的你保留。冲突时选更详细/更晚的描述。
+2. 存异——新旧描述不同概念/人物→各自保留，不强行合并。
+3. ${isChar ? "❌ 禁止留\"无\"或空字段——appearance/personality/background/abilities 必须基于上下文补全。参考全局上下文中其他角色确保不抄袭、有区分度。" : "❌ content 禁止精简概括——旧词条有的细节新词条必须保留。keys 去重合并。专有名词、数值一个不丢。"}
+4. 符合作品基调和世界观
 
 【输出——纯JSON，无markdown】
 {"merged":[{"name":"${isChar ? "角色名" : "词条标题"}","result":{${isChar ? "完整卡面" : "完整词条"}}},...]}`;
@@ -613,6 +615,8 @@ export async function POST(request: Request) {
           created,
           message: `✅ 导入完成：${created.volumes}卷 ${created.chapters}章 ${totalChars}角色 ${created.loreEntries}词条${created.styleCard ? " +文风卡" : ""}（含${created.charMerged}个AI合并 +${created.loreMerged}个词条合并）`,
         });
+
+        syncGlobalPrompt(projectId).catch(() => {});
 
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : "导入失败" });

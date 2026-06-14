@@ -11,11 +11,10 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 300;
 
-const FLASH = "deepseek-v4-flash";
-const BASE_URL = "https://api.deepseek.com/v1";
+import { callSiliconFlow } from "@/lib/llm";
 
 function getKey(): string {
-  return (process.env.DEEPSEEK_API_KEY || "").trim();
+  return (process.env.LLM_API_KEY || "").trim();
 }
 
 interface ClassifyGroup {
@@ -29,21 +28,7 @@ interface ClassifyGroup {
 // ─── API ───────────────────────────────────────
 
 async function callFlash(system: string, prompt: string): Promise<string> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 120000); // 单路120秒超时
-  try {
-    const r = await fetch(`${BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getKey()}` },
-      body: JSON.stringify({ model: FLASH, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.05, max_tokens: 32768, stream: false }),
-      signal: ctrl.signal,
-    });
-    if (!r.ok) throw new Error(`Flash ${r.status}`);
-    const data = await r.json().catch(() => null);
-    return data?.choices?.[0]?.message?.content || "";
-  } finally {
-    clearTimeout(timer);
-  }
+  return callSiliconFlow({ system, prompt, temperature: 0.05, maxTokens: 32768 });
 }
 
 function parseJSON(raw: string): Record<string, unknown> {
@@ -229,7 +214,7 @@ export async function POST(request: Request) {
 
         if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
         if (characters.length === 0) { send({ type: "error", message: "没有角色可分类" }); controller.close(); return; }
-        if (getKey().length < 10) { send({ type: "error", message: "DeepSeek API Key 未配置" }); controller.close(); return; }
+        if (getKey().length < 10) { send({ type: "error", message: "硅基流动 API Key 未配置" }); controller.close(); return; }
 
         const worldContext = buildWorldContext(project, loreEntries);
         const charList = buildCharList(characters as any[]);

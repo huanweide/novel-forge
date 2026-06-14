@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeJoin } from "@/lib/utils";
+import { getActiveRules, injectRules } from "@/core/rules";
 
 export const maxDuration = 300;
 
@@ -99,14 +100,14 @@ export async function POST(request: Request) {
       styleText += "\n" + String(llmConfig.customStyleNotes).slice(0, 300);
     }
 
-    // ── DeepSeek官方配置 ──
-    const baseURL = "https://api.deepseek.com/v1";
-    const apiKey = process.env.DEEPSEEK_API_KEY || "";
+    // ── 硅基流动配置 ──
+    const baseURL = "https://api.siliconflow.cn/v1";
+    const apiKey = process.env.LLM_API_KEY || "";
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
     const shouldUseFlash = useFlash || hasCustomPrompt;
     const model = shouldUseFlash
-      ? "deepseek-v4-flash"
-      : "deepseek-v4-pro";
+      ? "deepseek-ai/DeepSeek-V4-Flash"
+      : "deepseek-ai/DeepSeek-V4-Pro";
 
     // ── 中文数字 ──
     const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
@@ -133,6 +134,10 @@ export async function POST(request: Request) {
       ? `\n【角色出场策略】用户已确认以下${activeChars.length}个角色为全故事主要角色。每章大纲的characters字段应从这些角色中选择，不要引入名单外的角色。如需引入新角色，在rawOutline中说明理由。`
       : "";
 
+    // ── Rules 系统注入 ──
+    const outlineRules = await getActiveRules(projectId, "outline_only");
+    const finalDirective = injectRules(cardNotesText || "", outlineRules);
+
     // ── Prompt ──
     const systemPrompt = hasCustomPrompt
       ? `你是小说大纲拆解专家。严格按照用户提示词将大纲拆为${chapterCount}章。每章标注出场角色。输出纯JSON：
@@ -155,7 +160,7 @@ ${characterBriefs}
 
 【世界观（${loreEntries.length}条）】
 ${loreBriefs}
-${cardNotesText}${charCountNote}
+${finalDirective}${charCountNote}
 
 按用户提示词生成${chapterCount}章大纲。只输出JSON。`
       : `【作品设定】
@@ -169,7 +174,7 @@ ${characterBriefs}
 
 【世界观（${loreEntries.length}条）】
 ${loreBriefs}
-${cardNotesText}${charCountNote}
+${finalDirective}${charCountNote}
 
 生成${chapterCount}章大纲，从"第一章"开始顺序编号。只输出JSON。`;
 

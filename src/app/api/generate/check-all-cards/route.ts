@@ -22,23 +22,16 @@ import { NextResponse } from "next/server";
 import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
 
 export const maxDuration = 300;
-const MODEL = "deepseek-v4-flash";
+import { callSiliconFlow } from "@/lib/llm";
+
 const CHUNK_SIZE = 12000;
 
 function getDSKey(): string {
-  return process.env.DEEPSEEK_API_KEY || "";
+  return process.env.LLM_API_KEY || "";
 }
 
 async function callFlash(system: string, prompt: string, maxTokens = 4096): Promise<string> {
-  const key = getDSKey();
-  const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: MODEL, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature: 0.3, max_tokens: maxTokens, stream: false }),
-  });
-  if (!r.ok) throw new Error(`DS ${r.status}`);
-  const data = await r.json().catch(() => null);
-  return data?.choices?.[0]?.message?.content || "";
+  return callSiliconFlow({ system, prompt, maxTokens, temperature: 0.3 });
 }
 
 function parseJSON(raw: string): Record<string, unknown> {

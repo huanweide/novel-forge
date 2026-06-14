@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
+import { RangeSelector } from "./RangeSelector";
 
 export function CharacterList({
   characters,
@@ -48,6 +49,20 @@ export function CharacterList({
     const next = new Set(selectedIds);
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedIds(next);
+  };
+
+  // 范围选择——对筛选后的可见列表生效
+  const handleRangeSelect = (indices: Set<number>) => {
+    const visible = filtered; // filtered 是筛选+搜索后的结果
+    if (indices.size === 0) {
+      setSelectedIds(new Set());
+      return;
+    }
+    const ids = new Set<string>();
+    for (const i of indices) {
+      if (i < visible.length) ids.add(visible[i].id);
+    }
+    setSelectedIds(ids);
   };
 
   // 从所有角色标签中提取唯一值（过滤掉系统标签如 📥📝）
@@ -496,6 +511,11 @@ export function CharacterList({
         >
           {allInViewSelected ? "取消全选" : `全选(${filtered.length})`}
         </button>
+        <RangeSelector
+          total={filtered.length}
+          placeholder={`1-${filtered.length}`}
+          onSelect={handleRangeSelect}
+        />
         <button
           onClick={handleExpand}
           disabled={selectedIds.size === 0 || expanding}

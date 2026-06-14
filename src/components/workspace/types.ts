@@ -12,6 +12,7 @@ export interface ProjectData {
   characters: CharacterData[];
   lorebookEntries: LorebookData[];
   storyNodes: StoryNodeData[];
+  storylines?: StorylineData[];
   styleCard?: {
     styleDescription?: string;
     povType?: string;
@@ -68,10 +69,21 @@ export interface StoryNodeData {
   activeCharacters: string[];
 }
 
+export interface StorylineData {
+  id: string; projectId: string;
+  type: "main" | "side"; parentId?: string | null;
+  title: string; order: number; status: string; description: string;
+  desire: string; obstacle: string; action: string; result: string;
+  twist: string; turn: string; ending: string;
+  chapterBindings: { element: string; chapterId: string; note: string }[];
+}
+
 export interface ReviewIssue {
   type: string;
   severity: string;
   description: string;
+  location?: string | null;
+  suggestion?: string | null;
 }
 
 export interface SSEEvent {

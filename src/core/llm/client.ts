@@ -183,18 +183,18 @@ export type LLMClient = ReturnType<typeof createLLMClient>;
 
 // ─── 便捷函数：从环境变量创建客户端 ──────────────────────
 
-/** DeepSeek 官方配置 —— 默认客户端，所有非正文生成场景用这个 */
+/** 硅基流动配置 —— 默认客户端，全部场景统一走硅基流动 */
 export function getDefaultLLMConfig(): LLMConfig {
-  const DS_FLASH = "deepseek-v4-flash";
-  const DS_PRO = "deepseek-v4-pro";
+  const DS_FLASH = "deepseek-ai/DeepSeek-V4-Flash";
+  const DS_PRO = "deepseek-ai/DeepSeek-V4-Pro";
   return {
     architectModel: process.env.ARCHITECT_MODEL || DS_PRO,
     writerModel: process.env.WRITER_MODEL || DS_PRO,
     reviewerModel: process.env.REVIEWER_MODEL || DS_FLASH,
     summarizeModel: process.env.SUMMARIZE_MODEL || DS_FLASH,
     extractorModel: process.env.EXTRACTOR_MODEL || DS_FLASH,
-    baseURL: "https://api.deepseek.com/v1",
-    apiKey: process.env.DEEPSEEK_API_KEY || "",
+    baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
+    apiKey: process.env.LLM_API_KEY || "",
     defaultTemperature: 0.8,
     defaultTopP: 0.95,
     maxTokensPerRequest: parseInt(process.env.MAX_TOKENS_PER_REQUEST || "4096"),

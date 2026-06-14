@@ -10,7 +10,7 @@ import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
  * - 文本自动分块（每块 12K 字符），逐块扫描合并
  * - maxTokens 16384，不截断 AI 输出
  * - 新增第三维：大纲偏离检测（角色 OOC 迹象、情节走向偏差）
- * - 模型：deepseek-v4-flash
+ * - 模型：deepseek-ai/DeepSeek-V4-Flash
  *
  * 请求体：{ projectId: string; text: string; nodeId?: string }
  * 响应：{ newCharacters, newLore, outlineDrifts, stats }
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     const client = getDefaultClient();
     const config = getDefaultLLMConfig();
-    const model = "deepseek-v4-flash";
+    const model = "deepseek-ai/DeepSeek-V4-Flash";
 
     // ── 分块扫描 ──────────────────────────────────────
 

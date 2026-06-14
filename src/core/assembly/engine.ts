@@ -8,10 +8,12 @@
  * 1. System Prompt      —— AI身份定义
  * 2. Global Memory      —— 主线总纲 + 主角极简卡 + 基调
  * 3. Triggered Lore     —— 关键词触发注入的世界观
- * 4. Medium Term Memory —— 章节摘要（之前发生的事）
- * 5. Long Term Memory   —— 关键转折点提示
- * 6. Short Term Memory  —— 最近的正文（行文连贯）
- * 7. Author's Note      —— 作者强制介入指令
+ * 4. Character Arcs     —— 角色弧光追踪（新）
+ * 5. Storyline Progress —— 活跃故事线进度（新）
+ * 6. Long Term Memory   —— 关键转折点提示（按 impact 排序）
+ * 7. Medium Term Memory —— 章节摘要（按角色重叠检索优先）
+ * 8. Short Term Memory  —— 最近的正文（行文连贯）
+ * 9. Author's Note      —— 作者强制介入指令
  */
 
 import type {
@@ -21,6 +23,8 @@ import type {
   SlidingWindow,
   StoryNode,
   TokenBudget,
+  CharacterCard,
+  Storyline,
 } from "@/core/types";
 import { countTokens, truncateByTokens } from "./tokenizer";
 import { safeJoin } from "@/lib/utils";
@@ -32,11 +36,13 @@ const BUDGET_RATIOS = {
   systemPrompt: 0.08,    // 8%
   globalMemory: 0.10,    // 10%
   triggeredLore: 0.15,   // 15%
+  arcMemory: 0.01,       // 1%  —— 角色弧光追踪
+  storylineMemory: 0.01, // 1%  —— 活跃故事线进度
   shortTerm: 0.25,       // 25% —— 近期正文最重要
   mediumTerm: 0.10,      // 10%
   longTerm: 0.05,        // 5%
   authorNote: 0.02,      // 2%
-  responseReserve: 0.25, // 25% —— 留给出文
+  responseReserve: 0.23, // 23% —— 留给出文（比原来少2%，给弧光和故事线）
 };
 
 // ─── 核心组装函数 ───────────────────────────────────────────
@@ -65,16 +71,23 @@ export function assemblePrompt(
   // 3. 动态触发世界书
   const loreSection = buildLoreSection(context.triggeredLore, budget.allocations.triggeredLore);
 
-  // 4. 中期记忆（章节摘要）
-  const mediumSection = buildMediumTermSection(context.slidingWindow, budget.allocations.mediumTermMemory);
+  // 4. 角色弧光追踪
+  const arcSection = buildArcSection(context.characters, budget.allocations.arcMemory);
 
-  // 5. 长期记忆（关键转折点）
+  // 5. 活跃故事线进度
+  const storylineSection = buildStorylineSection(context.storylines, budget.allocations.storylineMemory);
+
+  // 6. 长期记忆（关键转折点）
   const longSection = buildLongTermSection(context.slidingWindow, budget.allocations.longTermMemory);
 
-  // 6. 短期记忆（近期正文）
+  // 7. 中期记忆（章节摘要）—— 带角色重叠检索
+  const currentCharacterNames = context.characters?.map(c => c.name) || undefined;
+  const mediumSection = buildMediumTermSection(context.slidingWindow, budget.allocations.mediumTermMemory, currentCharacterNames);
+
+  // 8. 短期记忆（近期正文）
   const shortSection = buildShortTermSection(context.slidingWindow, budget.allocations.shortTermMemory);
 
-  // 7. 作者注释
+  // 9. 作者注释
   const authorSection = context.authorNote
     ? buildAuthorSection(context.authorNote, budget.allocations.authorNote)
     : "";
@@ -84,6 +97,8 @@ export function assemblePrompt(
     systemSection,
     globalSection,
     loreSection,
+    arcSection,
+    storylineSection,
     longSection,
     mediumSection,
     shortSection,
@@ -190,12 +205,39 @@ function buildShortTermSection(
 
 function buildMediumTermSection(
   window: SlidingWindow,
-  maxTokens: number
+  maxTokens: number,
+  currentCharacters?: string[]
 ): string {
-  const summaries = window.mediumTerm;
-  if (summaries.length === 0) return "";
+  const allSummaries = window.mediumTerm;
+  if (allSummaries.length === 0) return "";
 
-  const texts = summaries.map((s) => {
+  // 如果有角色信息，按角色重叠分数排序（取 Top-8 最相关 + 最近 1 章保底）
+  let selected: typeof allSummaries;
+  if (currentCharacters && currentCharacters.length > 0) {
+    const scored = allSummaries.map(s => {
+      const eventsText = (s.keyEvents || []).join(" ") + " " + s.summary;
+      let overlap = 0;
+      for (const char of currentCharacters) {
+        if (eventsText.includes(char)) overlap++;
+      }
+      return { summary: s, score: overlap };
+    });
+    scored.sort((a, b) => b.score - a.score);
+
+    // Top-8 最相关 + 确保最后一章在列（保证时间连续性）
+    const top = scored.slice(0, 8).map(x => x.summary);
+    const lastChapter = allSummaries[allSummaries.length - 1];
+    if (lastChapter && !top.find(t => t.chapterId === lastChapter.chapterId)) {
+      top.push(lastChapter);
+    }
+    selected = top;
+  } else {
+    // 无角色信息时，取最后 5 章（比之前的 3 章多）
+    selected = allSummaries.slice(-5);
+  }
+
+  // 从 selected 列表中按原有 token 预算逻辑截断
+  const texts = selected.map((s) => {
     const events = s.keyEvents.map((e) => `  - ${e}`).join("\n");
     return `[${s.chapterTitle}]\n${s.summary}\n关键事件：\n${events}`;
   });
@@ -214,8 +256,15 @@ function buildLongTermSection(
   window: SlidingWindow,
   maxTokens: number
 ): string {
-  const beats = window.longTerm;
+  const beats = [...(window.longTerm || [])];
   if (beats.length === 0) return "";
+
+  // 按 impact 排序：major 优先，同级别按章节倒序
+  beats.sort((a, b) => {
+    if (a.impact === "major" && b.impact !== "major") return -1;
+    if (a.impact !== "major" && b.impact === "major") return 1;
+    return b.chapterNumber - a.chapterNumber;
+  });
 
   const texts = beats.map((b) => `[第${b.chapterNumber}章] ${b.description}`);
 
@@ -229,6 +278,31 @@ function buildLongTermSection(
   return result ? `【前文关键伏笔与转折点】\n${result}` : "";
 }
 
+function buildArcSection(characters: CharacterCard[] | undefined, maxTokens: number): string {
+  if (!characters) return "";
+  const withArc = characters.filter(c => c.arcProgress && c.arcProgress.trim());
+  if (withArc.length === 0) return "";
+
+  const lines = withArc.map(c => `- ${c.name}：${c.arcProgress}`);
+  const section = `【角色弧光追踪】\n${lines.join("\n")}`;
+  return truncateByTokens(section, maxTokens);
+}
+
+function buildStorylineSection(storylines: Storyline[] | undefined, maxTokens: number): string {
+  const active = storylines?.filter(s => s.status === "active") || [];
+  if (active.length === 0) return "";
+
+  const typeLabel: Record<string, string> = { main: "📌 主线", side: "↳ 支线" };
+  const lines = active.map(s => {
+    const label = typeLabel[s.type] || s.type;
+    const progress = [s.desire, s.obstacle, s.action, s.result, s.twist, s.turn, s.ending]
+      .filter(Boolean).join(" → ");
+    return `${label}·${s.title}：${progress || s.description || "暂无进度"}`;
+  });
+  const section = `【活跃故事线当前状态】\n${lines.join("\n")}`;
+  return truncateByTokens(section, maxTokens);
+}
+
 function buildAuthorSection(authorNote: string, maxTokens: number): string {
   return `【⚠️ 作者特别指令——最高优先级】\n${truncateByTokens(authorNote, maxTokens)}`;
 }
@@ -240,6 +314,8 @@ function calculateBudget(contextWindowSize: number): TokenBudget {
     systemPrompt: Math.floor(contextWindowSize * BUDGET_RATIOS.systemPrompt),
     globalMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.globalMemory),
     triggeredLore: Math.floor(contextWindowSize * BUDGET_RATIOS.triggeredLore),
+    arcMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.arcMemory),
+    storylineMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.storylineMemory),
     shortTermMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.shortTerm),
     mediumTermMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.mediumTerm),
     longTermMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.longTerm),
@@ -263,6 +339,15 @@ export function calculateContextUsage(
 ): TokenBudget {
   const budget = calculateBudget(contextWindowSize);
 
+  // 弧光与故事线索
+  const arcText = (context.characters || [])
+    .filter(c => c.arcProgress?.trim())
+    .map(c => `${c.name}:${c.arcProgress}`)
+    .join(" ");
+  const storylineText = (context.storylines || [])
+    .filter(s => s.status === "active")
+    .map(s => s.title).join(" ");
+
   budget.used = countTokens(
     [
       context.systemPrompt,
@@ -280,6 +365,8 @@ export function calculateContextUsage(
       ...context.slidingWindow.mediumTerm.map((s) => s.summary),
       ...context.slidingWindow.longTerm.map((b) => b.description),
       context.authorNote || "",
+      arcText,
+      storylineText,
     ].join(" ")
   );
 

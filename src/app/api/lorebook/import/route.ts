@@ -8,12 +8,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 60;
 
-const MODEL = "deepseek-v4-flash";
-const BASE_URL = "https://api.deepseek.com/v1";
-const API_KEY = process.env.DEEPSEEK_API_KEY || "";
+import { callSiliconFlow } from "@/lib/llm";
 
 // ─── 类型 ──────────────────────────────────────
 
@@ -27,29 +26,7 @@ interface ExtractedEntry {
 // ─── Flash 调用 ──────────────────────────────
 
 async function callFlash(system: string, prompt: string, maxTokens = 8000): Promise<string> {
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.1, max_tokens: maxTokens, stream: false,
-      // 不传 thinking 字段——硅基流动 Flash 不支持
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${err.slice(0, 200)}`);
-  }
-
-  const data = await res.json().catch(() => null);
-  const raw = data?.choices?.[0]?.message?.content || "";
-  if (!raw || raw.trim().length < 10) throw new Error("Flash 返回空");
-  return raw.trim();
+  return callSiliconFlow({ system, prompt, maxTokens, temperature: 0.1 });
 }
 
 // ─── 解析 JSON ──────────────────────────────
@@ -225,6 +202,7 @@ ${input}
           message: `✅ 导入完成：${created} 新词条${skipped > 0 ? ` · ${skipped} 条合并到已有` : ""} · ${sec}s`,
         });
 
+        syncGlobalPrompt(projectId).catch(() => {});
         controller.close();
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : String(err) });

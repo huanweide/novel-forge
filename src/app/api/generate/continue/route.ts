@@ -2,9 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
-import { getTemplate, applyTemplate, forbiddenPatternsToPrompt } from "@/core/templates";
+import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getSiliconFlowClient } from "@/core/llm/client";
+import { getActiveRules, injectRules } from "@/core/rules";
 
 /**
  * POST /api/generate/continue
@@ -128,9 +129,7 @@ export async function POST(request: Request) {
       .filter((n) => n.order <= currentNode.order && n.content)
       .slice(-5);
 
-    // ── 读取自定义文风设置（模板在上面声明，llmConfig 也在上面声明）──
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
-    const customStyleNotes = (llmConfig.customStyleNotes as string) || "";
 
     // ── 用户备注注入 ──
     let cardNotesText = "";
@@ -144,19 +143,8 @@ export async function POST(request: Request) {
       if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
     }
 
-    // ── 合并 authorNote：用户指令 + 模板禁用 + 自定义禁用 + 角色备注 ──
+    // 文风规则已统一在 systemPrompt 中，不再通过 authorNote 二次注入
     let mergedAuthorNote = authorNote || "";
-    if (template) {
-      const tp = forbiddenPatternsToPrompt(template);
-      if (tp) mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n\n" : "") + tp;
-    }
-    if (customForbidden.length > 0) {
-      mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n\n" : "")
-        + "【自定义禁用】\n" + customForbidden.map((p) => `- 禁止：${p}`).join("\n");
-    }
-    if (customStyleNotes) {
-      mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n\n" : "") + "【作者风格笔记】\n" + customStyleNotes;
-    }
     if (cardNotesText) {
       mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n" : "") + cardNotesText;
     }
@@ -193,6 +181,10 @@ export async function POST(request: Request) {
       activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
     }
 
+    // ── Rules 系统注入 ──
+    const writeRules = await getActiveRules(projectId, "write_only");
+    const finalAuthorNote = injectRules(mergedAuthorNote, writeRules);
+
     // ── 构建统一上下文（与 write/refine 同一套 systemPrompt）──
     const promptContext = buildPromptContext({
       project: project as any,
@@ -203,13 +195,10 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
-      authorNote: mergedAuthorNote || undefined,
+      authorNote: finalAuthorNote || undefined,
     });
 
-    // 模板文风覆盖（buildPromptContext 已含风格卡，模板在此基础上叠加）
-    if (template) {
-      promptContext.systemPrompt = applyTemplate(template, promptContext.systemPrompt);
-    }
+    // 文风规则已统一在 systemPrompt 中，不再从模板二次注入
 
     // 撰写指令——基于前文末段自然衔接
     const lastContent = currentNode.content || "";
@@ -311,7 +300,14 @@ export async function POST(request: Request) {
             activeLoreIds.includes(l.id)
           );
 
-          const prevSummary = summaries.length > 0 ? summaries[0].summary : "";
+          const previousContext = summaries.map(s => ({
+            chapterTitle: s.chapterTitle,
+            summary: s.summary,
+            keyEvents: s.keyEvents || [],
+            characterStates: typeof s.characterStates === "string"
+              ? s.characterStates
+              : (s.characterStates as any)?.raw || JSON.stringify(s.characterStates || {}),
+          }));
 
           let reviewPassed = true;
           try {
@@ -320,11 +316,11 @@ export async function POST(request: Request) {
               nextOutline || "",
               activeCharacters as any,
               activeLore as any,
-              prevSummary,
+              previousContext,
             );
 
             for (const issue of reviewLog.issues) {
-              send({ type: "review_issue", content: issue.description, severity: issue.severity });
+              send({ type: "review_issue", content: issue.description, severity: issue.severity, location: issue.location, suggestion: issue.suggestion });
             }
             send({ type: "review_result", content: reviewLog.passed ? "审校通过" : "审校未通过", passed: reviewLog.passed, issues: reviewLog.issues });
             reviewPassed = reviewLog.passed;

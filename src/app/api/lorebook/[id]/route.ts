@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // PUT /api/lorebook/[id]
 export async function PUT(
@@ -22,6 +23,7 @@ export async function PUT(
         relatedEntryIds: body.relatedEntryIds,
       },
     });
+    syncGlobalPrompt(body.projectId || entry.projectId).catch(() => {});
     return NextResponse.json(entry);
   } catch (err) {
     return NextResponse.json(
@@ -38,7 +40,9 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const entry = await prisma.lorebookEntry.findUnique({ where: { id }, select: { projectId: true } });
     await prisma.lorebookEntry.delete({ where: { id } });
+    if (entry?.projectId) syncGlobalPrompt(entry.projectId).catch(() => {});
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(
