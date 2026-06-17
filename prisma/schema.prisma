@@ -289,11 +289,18 @@ model Rule {
   enabled   Boolean  @default(true)          // 是否启用
   priority  Int      @default(0)             // 优先级（越大越靠前，影响注入顺序）
   scope     String   @default("all")         // 生效范围：all / write_only / outline_only / review_only
+
+  // ── 冲突裁决系统 ──
+  scopeType       String   @default("global") // global | volume | chapter_range | event_type | character_scene | conditional
+  specificityScore Int     @default(1)        // 特异性分（global=1 → conditional=6）
+  scopeConfig     Json     @default("{}")     // 作用域配置（chapter range/条件等）
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([projectId, enabled])
+  @@index([projectId, enabled, priority])
 }
 
 // ─── 全局设置 (App Settings) —— 单例，LLM 提供商 + API Key ──
