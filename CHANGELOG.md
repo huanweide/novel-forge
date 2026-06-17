@@ -2,6 +2,70 @@
 
 ---
 
+## v0.20.1 — 2026-06-17
+
+### 🔑 API Key 动态透传——全局设置全面生效
+
+**🐛 修复 401 "Invalid token"**
+- `parser.ts`（parseSettings / parseLorebookOnly / parseStyleOnly）：fallback 从 `getDefaultClient()`（读 env vars，`.env` 无 `LLM_API_KEY` → 空 token → 401）改为 `getEffectiveConfig()` + `createLLMClient()`（从数据库 AppSettings 动态读取）
+- `update-cards/route.ts`（章节变化检测）：同样从 `getDefaultLLMConfig()` + `getDefaultClient()` 改为 `getEffectiveConfig()` + `createLLMClient()`
+- 至此全部 LLM 调用路径统一走数据库全局设置，用户在设置页改 Key/模型即时生效
+
+---
+
+## v0.20.0 — 2026-06-17
+
+### ✍️ 写作质量闭环——禁用词v2.0 + 审校9维 + 管线全覆盖
+
+**🔍 禁用词检查器 v2.0**
+- 正则表达式支持：`/pattern/flags` 格式自动识别，强制 `g` 标志防死循环
+- 三级严重度：error（必须修改）/ warning（建议修改）/ info（仅提示）
+- 替换建议：每个禁用词可附带推荐替代词
+- 无效正则自动降级为精确匹配，不静默丢弃
+
+**📋 审校维度扩展（5→9维）**
+- 新增：节奏问题（pacing）、对话质量（dialogue_quality）、描写密度（description_density）、情绪一致性（emotion_consistency）
+- 审校 Prompt 从 5 个检查维度扩展到 9 个，覆盖叙事节奏/对话机械感/描写密度/情绪跳跃
+- `ReviewIssueType` 联合类型同步扩展
+
+**🔗 refine 路由接入管线**
+- refine 路由不再内联扫描+存储，改用 `runPostGenerationPipeline({ skipReview: true, skipSummarize: true })`
+- 消除最后一处后处理代码重复
+
+**🐛 诊断修复（code-review 7代理审查）**
+- 修复：`allNodes` 过滤 `content: not null` 导致新节点 previousNodes 全错
+- 修复：审校/摘要用原始角色列表而非用户确认的角色集
+- 修复：`prepareAuthorNote` 收到原始角色列表，新角色备注丢失
+- 修复：审校步骤缺 try-catch，LLM 超时会崩掉整个请求
+- 修复：authorNote 含 rules 文本在 systemPrompt 和 writingInstruction 中双重注入
+- 修复：continue 路由 done 事件缺 status 字段
+- 修复：正则无 `g` 标志时 exec 死循环（进程挂起）
+
+---
+
+## v0.19.1 — 2026-06-17
+
+### 🏗 架构重构——生成管线抽取，消除 60% 路由重复代码
+
+**📦 新增 `src/core/pipeline/` 共享管线模块**
+- `context-loader.ts` — `loadGenerationContext()` 统一7表数据加载（原 write/refine/continue 各写一遍）
+- `pre-processor.ts` — 角色自建/过滤/备注/规则注入/LLM配置提取/上下文构建 六合一
+- `post-processor.ts` — `runPostGenerationPipeline()` 扫描→审校→存储→摘要 完整后处理链
+- `types.ts` — 管线共享类型定义
+
+**✂️ 路由精简**
+- `write/route.ts`：424行 → ~170行
+- `refine/route.ts`：277行 → ~140行
+- `continue/route.ts`：420行 → ~190行
+- 三个路由的重复代码从 ~350行 降至 ~0
+
+**🔧 附带修复**
+- write 和 continue 路由的 `summarizeChapter` 现在正确传入 `chapterOrder` 和 `existingSummariesCount`
+- 摘要存储统一包含 `eventImportances` 四级事件分层
+- StoryBeat 的 `impact` 字段根据 `impactScore >= 7` 动态判断 major/minor
+
+---
+
 ## v0.19.0 — 2026-06-17
 
 ### 🧠 蒸馏系统上线——四级事件分层 + 伏笔追踪基础

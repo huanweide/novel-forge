@@ -23,8 +23,7 @@
 
 import type { CharacterCard, LorebookEntry } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
-import { getDefaultClient } from "@/core/llm/client";
-import { getFallbackModel } from "@/core/llm/client";
+import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 
 // ─── 三卡分界标准（Prompt 片段）───────────────────────────────
 
@@ -158,11 +157,19 @@ export async function parseSettings(
   rawText: string,
   client?: LLMClient
 ): Promise<ParsedSettings> {
-  const llm = client || getDefaultClient();
-
+  let llm: LLMClient;
+  let effectiveModel: string;
+  if (client) {
+    llm = client;
+    effectiveModel = process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+  } else {
+    const config = await getEffectiveConfig();
+    llm = createLLMClient(config);
+    effectiveModel = config.extractorModel;
+  }
 
   const response = await llm.chat({
-    model: getFallbackModel(),
+    model: effectiveModel,
     messages: [
       { role: "system", content: PARSE_SYSTEM_PROMPT },
       {
@@ -425,11 +432,19 @@ export async function parseLorebookOnly(
   rawText: string,
   client?: LLMClient
 ): Promise<ParsedLoreEntry[]> {
-  const llm = client || getDefaultClient();
-
+  let llm: LLMClient;
+  let effectiveModel: string;
+  if (client) {
+    llm = client;
+    effectiveModel = process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+  } else {
+    const config = await getEffectiveConfig();
+    llm = createLLMClient(config);
+    effectiveModel = config.extractorModel;
+  }
 
   const response = await llm.chat({
-    model: getFallbackModel(),
+    model: effectiveModel,
     messages: [
       { role: "system", content: LOREBOOK_ONLY_PROMPT },
       {
@@ -529,11 +544,19 @@ export async function parseStyleOnly(
   rawText: string,
   client?: LLMClient
 ): Promise<StyleProfile & { writingRules: string[] }> {
-  const llm = client || getDefaultClient();
-
+  let llm: LLMClient;
+  let effectiveModel: string;
+  if (client) {
+    llm = client;
+    effectiveModel = process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+  } else {
+    const config = await getEffectiveConfig();
+    llm = createLLMClient(config);
+    effectiveModel = config.extractorModel;
+  }
 
   const response = await llm.chat({
-    model: getFallbackModel(),
+    model: effectiveModel,
     messages: [
       { role: "system", content: STYLE_ONLY_PROMPT },
       {

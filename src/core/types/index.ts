@@ -193,9 +193,13 @@ export type ReviewIssueType =
   | "lore_conflict"     // 世界观冲突
   | "timeline_error"    // 时间线错误
   | "character_resurrection"     // 已死角色复活
-  | "item_teleport"             // 物品凭空出现/消失
-  | "continuity_error"          // 连续性问题
-  | "cross_chapter_contradiction"; // 跨章矛盾（前文角色状态/关系与本章冲突）
+  | "continuity_error"           // 连续性错误
+  | "item_teleport"              // 物品瞬移
+  | "cross_chapter_contradiction" // 跨章矛盾
+  | "pacing"                    // 节奏问题（过急/过缓）
+  | "dialogue_quality"          // 对话质量问题（机械/NPC感/缺乏潜台词）
+  | "description_density"       // 描写密度问题（过疏/过密）
+  | "emotion_consistency";      // 情绪一致性（情绪跳跃过大无过渡）
 
 // ─── Prompt组装系统 (Context Assembly) ─────────────────────
 

@@ -1,253 +1,172 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
+import { AgentOrchestrator } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
+import { collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getTemplate } from "@/core/templates";
-import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
-// 模型配置从 AgentOrchestrator.fromSettings() 动态读取
-import { getActiveRules, injectRules } from "@/core/rules";
+import {
+  loadGenerationContext,
+  handleNewCharacters,
+  filterByConfirmedCards,
+  prepareAuthorNote,
+  buildGenerationContext,
+  runPostGenerationPipeline,
+} from "@/core/pipeline";
 
 /**
  * POST /api/generate/continue
  *
  * 一键续写 —— 自动创建下一节节点并流式生成。
- * 这是"连续写作体验"的核心：用户点一个按钮，系统自动推进。
- *
- * 请求体：
- * {
- *   projectId: string;
- *   currentNodeId: string;   // 刚写完的节点
- *   styleTemplateId?: string; // 文风模板ID
- *   authorNote?: string;
- *   autoOutline?: boolean;    // 是否自动生成下一节大纲（默认true）
- * }
+ * 管线：创建新节点 → 数据加载 → 角色预处理 → 上下文构建 → 流式生成 → 完整后处理
  */
 export async function POST(request: Request) {
   try {
     const {
-      projectId,
-      currentNodeId,
-      styleTemplateId,
-      authorNote,
-      autoOutline = true,
-      confirmedCardIds,
-      cardNotes,
-      newCharacterRequests,
+      projectId, currentNodeId, styleTemplateId, authorNote, autoOutline = true,
+      confirmedCardIds, cardNotes, newCharacterRequests,
     } = await request.json();
 
     if (!projectId || !currentNodeId) {
-      return NextResponse.json(
-        { error: "缺少 projectId 或 currentNodeId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "缺少 projectId 或 currentNodeId" }, { status: 400 });
     }
 
-    // 加载数据
+    // ── 加载当前节点数据 ──
     const [project, currentNode, allNodes, characters, loreEntries, summaries, storyBeats, styleCard] =
       await Promise.all([
         prisma.project.findUnique({ where: { id: projectId } }),
         prisma.storyNode.findUnique({ where: { id: currentNodeId } }),
-        prisma.storyNode.findMany({
-          where: { projectId },
-          orderBy: { order: "asc" },
-        }),
+        prisma.storyNode.findMany({ where: { projectId }, orderBy: { order: "asc" } }),
         prisma.characterCard.findMany({ where: { projectId } }),
-        prisma.lorebookEntry.findMany({
-          where: { projectId, enabled: true },
-        }),
-        prisma.chapterSummary.findMany({
-          where: { projectId },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-        }),
-        prisma.storyBeat.findMany({
-          where: { projectId },
-          orderBy: { chapterNumber: "desc" },
-          take: 20,
-        }),
-        prisma.styleCard.findFirst({
-          where: { projectId },
-          orderBy: { updatedAt: "desc" },
-        }),
+        prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
+        prisma.chapterSummary.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 5 }),
+        prisma.storyBeat.findMany({ where: { projectId }, orderBy: { chapterNumber: "desc" }, take: 20 }),
+        prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
       ]);
 
     if (!project || !currentNode) {
-      return NextResponse.json(
-        { error: "项目或节点不存在" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "项目或节点不存在" }, { status: 404 });
     }
 
-    // 找到兄弟节点，确定下一节的顺序
-    const siblings = allNodes.filter((n) => n.parentId === currentNode.parentId);
-    const currentIndex = siblings.findIndex((n) => n.id === currentNodeId);
+    // ── 创建下一节节点 ──
+    const siblings = (allNodes as any[]).filter((n: any) => n.parentId === (currentNode as any).parentId);
+    const currentIndex = siblings.findIndex((n: any) => n.id === currentNodeId);
     const nextOrder = currentIndex >= 0 ? currentIndex + 1 : siblings.length;
 
-    // 确定下一节的标题
     let nextTitle = "";
-    if (currentNode.title) {
-      // 尝试从当前标题推断下一节标题
-      const match = currentNode.title.match(/^(.+?)(\d+)$/);
-      if (match) {
-        nextTitle = `${match[1]}${parseInt(match[2]) + 1}`;
-      } else {
-        nextTitle = `${currentNode.title}（续）`;
-      }
+    if ((currentNode as any).title) {
+      const match = (currentNode as any).title.match(/^(.+?)(\d+)$/);
+      nextTitle = match ? `${match[1]}${parseInt(match[2]) + 1}` : `${(currentNode as any).title}（续）`;
     } else {
-      nextTitle = `第${allNodes.length + 1}节`;
+      nextTitle = `第${(allNodes as any[]).length + 1}节`;
     }
 
-    // 加载文风模板（请求体优先 → 项目 llmConfig 兜底）
-    const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;
-    const effectiveStyleId = styleTemplateId || (llmConfig.styleTemplateId as string) || "";
-    const template = effectiveStyleId ? getTemplate(effectiveStyleId) : undefined;
-
-    // 构建下一节大纲
     let nextOutline = "";
-    if (autoOutline && currentNode.content) {
-      nextOutline = `基于前文剧情自然推进，续写下一节。保持节奏和风格一致。`;
+    if (autoOutline && (currentNode as any).content) {
+      nextOutline = "基于前文剧情自然推进，续写下一节。保持节奏和风格一致。";
     }
 
-    // 创建下一节节点
     const nextNode = await prisma.storyNode.create({
       data: {
-        projectId,
-        parentId: currentNode.parentId,
-        type: currentNode.type || "section",
-        title: nextTitle,
-        order: nextOrder,
-        status: "drafting",
+        projectId, parentId: (currentNode as any).parentId,
+        type: (currentNode as any).type || "section",
+        title: nextTitle, order: nextOrder, status: "drafting",
         outline: nextOutline || null,
-        activeCharacters: currentNode.activeCharacters,
-        activeLoreIds: currentNode.activeLoreIds,
+        activeCharacters: (currentNode as any).activeCharacters,
+        activeLoreIds: (currentNode as any).activeLoreIds,
         notes: null,
       },
     });
 
-    // 找到续写节点的上文（之前所有已完成的节点+当前节点）
-    const previousNodes = allNodes
-      .filter((n) => n.order <= currentNode.order && n.content)
-      .slice(-5);
+    // ── 角色预处理 ──
+    const allChars = await handleNewCharacters(characters as any, newCharacterRequests, projectId, "续写");
+    const activeChars = filterByConfirmedCards(allChars as any, confirmedCardIds);
 
+    // ── 作者指令 ──
+    const finalAuthorNote = await prepareAuthorNote(authorNote || "", cardNotes, allChars as any, projectId);
+
+    // ── LLM 配置 ──
+    const llmConfig = ((project as any).llmConfig || {}) as Record<string, unknown>;
+    const effectiveStyleId = styleTemplateId || (llmConfig.styleTemplateId as string) || "";
+    const template = effectiveStyleId ? getTemplate(effectiveStyleId) : undefined;
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];
-
-    // ── 用户备注注入 ──
-    let cardNotesText = "";
-    if (cardNotes && typeof cardNotes === "object" && Object.keys(cardNotes).length > 0) {
-      const noteLines: string[] = [];
-      for (const [id, note] of Object.entries(cardNotes as Record<string, string>)) {
-        if (!note.trim()) continue;
-        const char = characters.find((c: any) => c.id === id);
-        if (char) noteLines.push(`[${char.name}] ${note}`);
-      }
-      if (noteLines.length > 0) cardNotesText = "\n【用户角色备注——最高优先级】\n" + noteLines.join("\n");
-    }
-
-    // 文风规则已统一在 systemPrompt 中，不再通过 authorNote 二次注入
-    let mergedAuthorNote = authorNote || "";
-    if (cardNotesText) {
-      mergedAuthorNote = (mergedAuthorNote ? mergedAuthorNote + "\n" : "") + cardNotesText;
-    }
-
-    // ── 自建角色 ──
-    const allChars = [...characters];
-    if (Array.isArray(newCharacterRequests) && newCharacterRequests.length > 0) {
-      for (const req of newCharacterRequests as string[]) {
-        const name = req.trim();
-        if (!name) continue;
-        const exists = allChars.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
-        if (!exists) {
-          const created = await prisma.characterCard.create({
-            data: {
-              projectId,
-              name,
-              role: "supporting",
-              personality: { dominant: "续写时自建，待丰富" } as any,
-              background: `[续写] 用户要求自建角色`,
-              abilities: [],
-              tags: ["🆕 续写自建"],
-              currentStatus: "alive",
-            } as any,
-          });
-          allChars.push(created as any);
-        }
-      }
-    }
-
-    // ── 过滤角色 ──
-    let activeChars = allChars;
-    if (Array.isArray(confirmedCardIds) && confirmedCardIds.length > 0) {
-      const confirmedSet = new Set(confirmedCardIds as string[]);
-      activeChars = allChars.filter((c: any) => confirmedSet.has(c.id));
-    }
-
-    // ── Rules 系统注入 ──
-    const writeRules = await getActiveRules(projectId, "write_only");
-    const finalAuthorNote = injectRules(mergedAuthorNote, writeRules);
-
-    // ── 构建统一上下文（与 write/refine 同一套 systemPrompt）──
-    const promptContext = buildPromptContext({
-      project: project as any,
-      currentNode: nextNode as any,
-      previousNodes: previousNodes as any,
-      characters: activeChars as any,
-      loreEntries: loreEntries as any,
-      chapterSummaries: summaries as any,
-      storyBeats: storyBeats as any,
-      styleCard: styleCard as any,
-      authorNote: finalAuthorNote || undefined,
-    });
-
-    // 文风规则已统一在 systemPrompt 中，不再从模板二次注入
-
-    // 撰写指令——基于前文末段自然衔接
-    const lastContent = currentNode.content || "";
-    const lastParagraphs = lastContent.split("\n").slice(-6).join("\n"); // 最后6段用于衔接
-
-    const targetWords = template?.targetWordsPerSection || 1000;
     const temperature = template?.temperature ?? 0.85;
     const topP = template?.topP ?? 0.95;
 
-    const writingInstruction = `${cardNotesText}请接着上文继续撰写下一节。\n\n【上文末段——从这里衔接】\n${lastParagraphs}\n\n【本节标题】${nextTitle}\n【本节大纲】${nextOutline || "基于前文剧情自然推进"}\n\n注意：与上文无缝衔接，保持叙事视角一致。`;
+    // ── 上下文窗口 ──
+    const previousNodes = (allNodes as any[])
+      .filter((n: any) => n.order <= (currentNode as any).order && n.content)
+      .slice(-5);
 
-    // 从全局设置创建调度器——模型名、API Key 全部动态读取
+    // ── 组装 GenerationData 供管线函数使用 ──
+    const data = {
+      project: project as any,
+      currentNode: nextNode as any,
+      allNodes: allNodes as any,
+      characters: characters as any,
+      loreEntries: loreEntries as any,
+      summaries: summaries as any,
+      storyBeats: storyBeats as any,
+      styleCard: styleCard as any,
+    };
+
+    // ── Prompt 上下文 ──
+    const promptContext = buildGenerationContext({
+      data,
+      activeCharacters: activeChars as any,
+      authorNote: finalAuthorNote || undefined as any,
+      previousNodes: previousNodes as any,
+    });
+
+    // ── 撰写指令 ──
+    const lastContent = (currentNode as any).content || "";
+    const lastParagraphs = lastContent.split("\n").slice(-6).join("\n");
+    const targetWords = template?.targetWordsPerSection || 1000;
+
+    const cardNotesText = cardNotes && typeof cardNotes === "object"
+      ? Object.entries(cardNotes as Record<string, string>)
+          .filter(([, n]) => n.trim())
+          .map(([id, n]) => { const c = allChars.find((x: any) => x.id === id); return c ? `[${c.name}] ${n}` : ""; })
+          .filter(Boolean).join("\n")
+      : "";
+
+    const writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText + "\n" : ""}请接着上文继续撰写下一节。
+
+【上文末段——从这里衔接】
+${lastParagraphs}
+
+【本节标题】${nextTitle}
+【本节大纲】${nextOutline || "基于前文剧情自然推进"}
+
+注意：与上文无缝衔接，保持叙事视角一致。`;
+
+    // ── 调度器 ──
     const orchestrator = await AgentOrchestrator.fromSettings({
       defaultTemperature: temperature,
       defaultTopP: topP,
     });
 
-    // SSE 流式生成
+    // ── SSE 流 ──
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        const send = (data: object) => {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
+        const send = (obj: object) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
         };
 
         try {
           let fullContent = "";
 
-          // 流式生成
+          // Phase 1: 流式生成
           let saveCounter = 0;
-          let saving = false; // 防重叠锁
-          const generator = orchestrator.writeSection(
-            promptContext,
-            writingInstruction,
-            targetWords,
-            undefined, // 用 orchestrator 自带的 settings 客户端
-            undefined, // 用 orchestrator 自带的 settings 模型名
-            temperature,
-            topP,
-          );
-
-          for await (const chunk of generator) {
+          let saving = false;
+          for await (const chunk of orchestrator.writeSection(
+            promptContext, writingInstruction, targetWords,
+            undefined, undefined, temperature, topP,
+          )) {
             if (chunk.type === "token") {
               fullContent += chunk.content;
               send({ type: "token", content: chunk.content });
 
-              // 每 ~300 字保存草稿（防重叠写）
               saveCounter += chunk.content.length;
               if (saveCounter >= 300 && !saving) {
                 saveCounter = 0;
@@ -255,10 +174,7 @@ export async function POST(request: Request) {
                 const draft = fullContent;
                 prisma.storyNode.update({
                   where: { id: nextNode.id },
-                  data: {
-                    content: draft + "\n\n[PARTIAL_DRAFT]",
-                    status: "drafting",
-                  },
+                  data: { content: draft + "\n\n[PARTIAL_DRAFT]", status: "drafting" },
                 }).then(() => { saving = false; })
                   .catch((e) => { saving = false; console.error("草稿保存失败:", e?.message); });
               }
@@ -269,135 +185,38 @@ export async function POST(request: Request) {
             }
           }
 
-          // Phase 1.5: 禁用词扫描
+          // Phase 2-4: 后处理管线
+          const activeCharIds = Array.isArray((nextNode as any).activeCharacters)
+            ? ((nextNode as any).activeCharacters as string[]) : [];
+          const activeLoreIds = Array.isArray((nextNode as any).activeLoreIds)
+            ? ((nextNode as any).activeLoreIds as string[]) : [];
+
           const forbiddenPatterns = collectForbiddenPatterns(
-            template?.forbiddenPatterns || [],
-            customForbidden,
-          );
-          if (forbiddenPatterns.length > 0) {
-            const scanResult = scanForbiddenWords(fullContent, forbiddenPatterns);
-            if (!scanResult.passed) {
-              send({
-                type: "forbidden_scan",
-                content: scanResult.summary,
-                matches: scanResult.matches.slice(0, 10),
-                totalMatches: scanResult.matches.length,
-              });
-            } else {
-              send({ type: "forbidden_scan", content: "✅ 禁用词检查通过", passed: true });
-            }
-          }
-
-          // Phase 2: 审校
-          send({ type: "review_start", content: "" });
-
-          const activeCharIds = Array.isArray(nextNode.activeCharacters)
-            ? (nextNode.activeCharacters as string[])
-            : [];
-          const activeLoreIds = Array.isArray(nextNode.activeLoreIds)
-            ? (nextNode.activeLoreIds as string[])
-            : [];
-
-          const activeCharacters = characters.filter((c) =>
-            activeCharIds.includes(c.id)
-          );
-          const activeLore = loreEntries.filter((l) =>
-            activeLoreIds.includes(l.id)
+            template?.forbiddenPatterns || [], customForbidden,
           );
 
-          const previousContext = summaries.map(s => ({
-            chapterTitle: s.chapterTitle,
-            summary: s.summary,
-            keyEvents: s.keyEvents || [],
-            characterStates: typeof s.characterStates === "string"
-              ? s.characterStates
-              : (s.characterStates as any)?.raw || JSON.stringify(s.characterStates || {}),
-          }));
-
-          let reviewPassed = true;
-          try {
-            const reviewLog = await orchestrator.reviewContent(
-              fullContent,
-              nextOutline || "",
-              activeCharacters as any,
-              activeLore as any,
-              previousContext,
-            );
-
-            for (const issue of reviewLog.issues) {
-              send({ type: "review_issue", content: issue.description, severity: issue.severity, location: issue.location, suggestion: issue.suggestion });
-            }
-            send({ type: "review_result", content: reviewLog.passed ? "审校通过" : "审校未通过", passed: reviewLog.passed, issues: reviewLog.issues });
-            reviewPassed = reviewLog.passed;
-          } catch (reviewErr) {
-            send({ type: "review_error", content: String(reviewErr).slice(0, 100) });
-          }
-
-          // 保存内容
-          const updatedNode = await prisma.storyNode.update({
-            where: { id: nextNode.id },
-            data: {
-              content: fullContent,
-              wordCount: fullContent.length,
-              status: reviewPassed ? "completed" : "reviewing",
-            },
+          const result = await runPostGenerationPipeline({
+            send, orchestrator, projectId,
+            nodeId: nextNode.id,
+            content: fullContent,
+            nodeOutline: nextOutline || "",
+            activeCharacters: activeChars.filter((c: any) => activeCharIds.includes(c.id)) as any,
+            activeLore: (loreEntries as any[]).filter((l: any) => activeLoreIds.includes(l.id)) as any,
+            chapterSummaries: summaries as any,
+            currentNode: nextNode as any,
+            chapterTitle: nextTitle,
+            chapterOrder: (nextNode as any).order,
+            forbiddenPatterns,
           });
 
-          // Phase 3: 自动摘要（含章末快照+角色脉搏）
-          send({ type: "summarize_start", content: "" });
-          try {
-            const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses } =
-              await orchestrator.summarizeChapter(
-                fullContent,
-                nextTitle,
-                activeCharacters as any,
-              );
-
-            await prisma.chapterSummary.create({
-              data: {
-                projectId,
-                chapterId: nextNode.id,
-                chapterTitle: nextTitle,
-                summary,
-                keyEvents,
-                characterStates: {
-                  raw: characterStates,
-                  closingSnapshot,
-                  impulses: characterImpulses,
-                },
-              },
-            });
-
-            if (keyEvents.length > 0) {
-              await prisma.storyBeat.create({
-                data: {
-                  projectId,
-                  nodeId: nextNode.id,
-                  description: keyEvents.join("；"),
-                  chapterNumber: nextNode.order + 1,
-                  impact: "minor",
-                },
-              });
-            }
-
-            send({ type: "summarize_done", summary, keyEvents });
-          } catch (summaryErr) {
-            send({ type: "summarize_error", content: String(summaryErr).slice(0, 100) });
-          }
-
           send({
-            type: "done",
-            content: "",
-            nodeId: updatedNode.id,
-            title: updatedNode.title,
-            order: updatedNode.order,
-            nextAction: `已自动创建并完成「${updatedNode.title}」，可继续续写`,
+            type: "done", content: "",
+            nodeId: result.nodeId, title: nextTitle, order: (nextNode as any).order,
+            status: result.status,
+            nextAction: `已自动创建并完成「${nextTitle}」，可继续续写`,
           });
         } catch (err) {
-          send({
-            type: "error",
-            content: err instanceof Error ? err.message : "续写失败",
-          });
+          send({ type: "error", content: err instanceof Error ? err.message : "续写失败" });
         } finally {
           controller.close();
         }
@@ -405,16 +224,9 @@ export async function POST(request: Request) {
     });
 
     return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "续写失败" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err instanceof Error ? err.message : "续写失败" }, { status: 500 });
   }
 }

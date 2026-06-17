@@ -61,6 +61,10 @@ const SYSTEM_PROMPTS = {
 3. **世界观冲突**：是否违反或凭空创造了设定？
 4. **跨章连续性**：对比前文章节摘要和角色状态快照——角色是否已死却出现？关系是否突变无交代？物品/能力是否凭空消失或出现？时间线是否前后矛盾？
 5. **时间线问题**：本章内时间推进是否合理？
+6. **节奏问题（pacing）**：是否存在情节推进过急（跳过了必要的过渡/铺垫）或过缓（大段描写无实质推进）？关键转折是否有足够的时间和空间展开？
+7. **对话质量（dialogue_quality）**：对话是否机械刻板如NPC？是否每个角色的对话有独特的语气/节奏/潜台词？是否存在"乒乓球式"的A说B回A接？是否有缺乏信息量的"废话型"对话？
+8. **描写密度（description_density）**：是否存在大段连续环境/心理描写打断叙事节奏？或者反过来——关键场景（初遇/战斗/转折）缺乏足够的画面感描写？
+9. **情绪一致性（emotion_consistency）**：角色情绪变化是否有合理的触发和过渡？是否存在"突然暴怒"或"瞬间释然"的情绪跳跃？情绪与场景氛围是否匹配？
 
 【跨章对比铁律】
 - 前文角色状态是"权威记录"——如果前文标记某角色已死/失踪/失去能力，本章该角色不应正常出场（除非有复活/恢复的明确描写）
@@ -73,7 +77,7 @@ const SYSTEM_PROMPTS = {
   "passed": true/false,
   "issues": [
     {
-      "type": "ooc|logic_flaw|lore_conflict|timeline_error|cross_chapter_contradiction",
+      "type": "ooc|logic_flaw|lore_conflict|timeline_error|cross_chapter_contradiction|pacing|dialogue_quality|description_density|emotion_consistency",
       "severity": "critical|major|minor",
       "description": "具体问题描述",
       "location": "引用正文中出问题的片段",
@@ -1407,7 +1411,12 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
 // ─── 审校校验辅助 ─────────────────────────────────────────────
 
 function validateIssueType(t: string): ReviewIssueType {
-  const valid: ReviewIssueType[] = ["ooc", "logic_flaw", "lore_conflict", "timeline_error", "continuity_error", "character_resurrection", "item_teleport", "cross_chapter_contradiction"];
+  const valid: ReviewIssueType[] = [
+    "ooc", "logic_flaw", "lore_conflict", "timeline_error",
+    "continuity_error", "character_resurrection", "item_teleport",
+    "cross_chapter_contradiction",
+    "pacing", "dialogue_quality", "description_density", "emotion_consistency",
+  ];
   return valid.includes(t as ReviewIssueType) ? (t as ReviewIssueType) : "logic_flaw";
 }
 

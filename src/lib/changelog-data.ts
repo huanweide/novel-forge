@@ -25,18 +25,100 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.19.0";
+export const LATEST_VERSION = "v0.20.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📊 S/A/B/C 四级事件评分引擎——时效性×事件类型×伏笔关联×角色重要性 四因子评分",
-  "📦 新增 PendingCommitment 模型——五状态机伏笔追踪，closure_conditions 闭环检测",
-  "🔄 上下文组装升级——四级事件分层差异化注入，[S-N]/[A-N] 标签标记",
-  "🛠 新增 src/core/distillation/ 模块——scorer 评分引擎 + formatEventsForPrompt 注入格式化",
+  "🔑 修复 401 Invalid token——parser/update-cards 绕过数据库导致空 token",
+  "🔗 全部 LLM 调用路径统一走 AppSettings 动态读取——改 Key 即时生效",
+  "parseSettings/parseLorebookOnly/parseStyleOnly：fallback 改为 getEffectiveConfig()",
+  "update-cards 变化检测：从 env vars 改为数据库动态读取",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.1",
+    date: "2026-06-17",
+    title: "API Key 动态透传——全局设置全面生效",
+    sections: [
+      {
+        label: "修复 401 Invalid token",
+        items: [
+          "parser.ts 三个函数 fallback 从 getDefaultClient()（读 env vars→空 token→401）改为 getEffectiveConfig()（读数据库 AppSettings）",
+          "update-cards/route.ts 变化检测同样从 getDefaultLLMConfig() 改为 getEffectiveConfig()",
+          "全部 LLM 调用路径统一走数据库全局设置",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.0",
+    date: "2026-06-17",
+    title: "写作质量闭环——禁用词v2.0 + 审校9维 + 管线全覆盖",
+    sections: [
+      {
+        label: "禁用词检查器 v2.0",
+        items: [
+          "正则表达式支持：/pattern/flags 格式自动识别，强制 g 标志防死循环",
+          "三级严重度：error/warning/info + 替换建议",
+          "无效正则自动降级为精确匹配",
+        ],
+      },
+      {
+        label: "审校维度扩展",
+        items: [
+          "5维→9维：新增节奏/对话质量/描写密度/情绪一致性",
+          "审校 Prompt 和 ReviewIssueType 同步更新",
+        ],
+      },
+      {
+        label: "管线覆盖",
+        items: [
+          "refine 路由接入 runPostGenerationPipeline",
+          "3个路由全部使用统一后处理管线",
+        ],
+      },
+      {
+        label: "诊断修复",
+        items: [
+          "正则无 g 标志死循环、allNodes 过滤导致 previousNodes 错误",
+          "角色集不一致、authorNote 双重注入、审校缺异常保护",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.19.1",
+    date: "2026-06-17",
+    title: "架构重构——生成管线抽取，消除 60% 路由重复代码",
+    sections: [
+      {
+        label: "新增管线模块",
+        items: [
+          "context-loader.ts — loadGenerationContext() 统一7表数据加载",
+          "pre-processor.ts — 角色自建/过滤/备注/规则注入/LLM配置提取/上下文构建",
+          "post-processor.ts — runPostGenerationPipeline() 扫描→审校→存储→摘要完整后处理链",
+        ],
+      },
+      {
+        label: "路由精简",
+        items: [
+          "write/route.ts：424行 → ~170行",
+          "refine/route.ts：277行 → ~140行",
+          "continue/route.ts：420行 → ~190行",
+        ],
+      },
+      {
+        label: "附带修复",
+        items: [
+          "summarizeChapter 正确传入 chapterOrder 和 existingSummariesCount",
+          "eventImportances 四级事件分层在所有路由中统一存储",
+          "StoryBeat impact 字段根据 impactScore 动态判断",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.19.0",
     date: "2026-06-17",

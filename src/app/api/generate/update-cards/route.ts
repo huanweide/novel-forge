@@ -7,7 +7,7 @@ export const maxDuration = 300;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
+import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 
 export async function POST(request: Request) {
   try {
@@ -194,9 +194,9 @@ ${contentSnippet}
 - 没变化不列入 characterUpdates
 - 所有推断标注文本依据`;
 
-    // 调用 LLM
-    const config = getDefaultLLMConfig();
-    const client = getDefaultClient();
+    // 调用 LLM —— 从全局设置动态读取 API Key / Base URL / Model
+    const config = await getEffectiveConfig();
+    const client = createLLMClient(config);
 
     let rawContent = "";
     try {
