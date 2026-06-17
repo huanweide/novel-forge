@@ -20,7 +20,7 @@ const PROVIDER_BASE_URLS: Record<string, string> = {
 
 // ─── 配置缓存 ────────────────────────────────────────────
 
-interface LLMSettings {
+export interface LLMSettings {
   provider: string;
   apiKey: string;
   model: string;
@@ -31,7 +31,7 @@ let cachedSettings: LLMSettings | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 60_000; // 60 秒
 
-async function getSettings(): Promise<LLMSettings> {
+export async function getSettings(): Promise<LLMSettings> {
   const now = Date.now();
   if (cachedSettings && (now - cacheTimestamp) < CACHE_TTL) {
     return cachedSettings;

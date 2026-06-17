@@ -8,14 +8,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getDefaultLLMConfig } from "@/core/llm/client";
+import { getSettings } from "@/lib/llm";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { THREE_CARD_BOUNDARIES } from "@/core/settings";
 
 export const maxDuration = 300;
 
-const MODEL_A = "deepseek-ai/DeepSeek-V4-Flash";
-const MODEL_B = "deepseek-ai/DeepSeek-V4-Flash";
 const CHUNK_SIZE = 30; // 每块最多30个角色
 
 // ─── JSON 修复 + 解析 ──────────────────────────────
@@ -203,15 +201,16 @@ export async function POST(request: Request) {
         const project = await prisma.project.findUnique({ where: { id: projectId as string } });
         if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
 
-        const sfConfig = getDefaultLLMConfig();
         const importMode = (userMode as string) || "settings";
         const pName = project.name;
         const pGenre = project.genre;
         const isCharOnly = charactersOnly === true;
 
-        const dsKey = process.env.LLM_API_KEY || "";
-        const dsConfigA: CallConfig = { baseURL: "https://api.siliconflow.cn", apiKey: dsKey, model: MODEL_A, label: "SF-Flash" };
-        const dsConfigB: CallConfig = { baseURL: sfConfig.baseURL, apiKey: sfConfig.apiKey, model: MODEL_B, label: "DS-Flash" };
+        const settings = await getSettings();
+        const dsKey = settings.apiKey || process.env.LLM_API_KEY || "";
+        const { model, baseUrl } = settings;
+        const dsConfigA: CallConfig = { baseURL: baseUrl, apiKey: dsKey, model, label: "LLM" };
+        const dsConfigB: CallConfig = { baseURL: baseUrl, apiKey: dsKey, model, label: "LLM" };
 
         send({ type: "progress", stage: "ready", message: `${text.length.toLocaleString()} 字 · ${isCharOnly ? "仅人物卡" : "人物+世界"}`, pct: 3 });
 
@@ -374,7 +373,7 @@ ${loreText}
           extractedCharacters: finalChars,
           extractedLoreEntries: finalLore,
           extractedStyle: style,
-          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: MODEL_A, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, chunked: needsChunking },
+          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, chunked: needsChunking },
         });
 
       } catch (err) {

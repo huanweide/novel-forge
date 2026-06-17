@@ -19,7 +19,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
+// 使用 src/lib/llm.ts 的 callLLM，模型名从全局设置自动读取
 
 export const maxDuration = 300;
 import { callSiliconFlow } from "@/lib/llm";

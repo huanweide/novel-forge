@@ -10,7 +10,7 @@ export const maxDuration = 120;
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-import { callSiliconFlow } from "@/lib/llm";
+import { callLLM } from "@/lib/llm";
 
 export async function POST(request: Request) {
   try {
@@ -73,7 +73,7 @@ ${existingStorylines.map(s => `- [${s.type === "main" ? "主线" : "支线"}] ${
 请为这部小说生成故事线：
 ${existingStorylines.filter(s => s.type === "main").length === 0 ? "生成 1 条主线和 3-5 条支线。" : "主线已存在，生成 3-5 条支线来丰富主线。"}`;
 
-    const raw = await callSiliconFlow({ model: "deepseek-ai/DeepSeek-V4-Pro", system, prompt, maxTokens: 8192, temperature: 0.5 });
+    const raw = await callLLM({ system, prompt, maxTokens: 8192, temperature: 0.5 });
 
     // 解析 JSON
     let parsed: Record<string, unknown>;

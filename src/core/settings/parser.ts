@@ -24,6 +24,7 @@
 import type { CharacterCard, LorebookEntry } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
 import { getDefaultClient } from "@/core/llm/client";
+import { getFallbackModel } from "@/core/llm/client";
 
 // ─── 三卡分界标准（Prompt 片段）───────────────────────────────
 
@@ -161,7 +162,7 @@ export async function parseSettings(
 
 
   const response = await llm.chat({
-    model: "deepseek-ai/DeepSeek-V4-Flash",
+    model: getFallbackModel(),
     messages: [
       { role: "system", content: PARSE_SYSTEM_PROMPT },
       {
@@ -428,7 +429,7 @@ export async function parseLorebookOnly(
 
 
   const response = await llm.chat({
-    model: "deepseek-ai/DeepSeek-V4-Flash",
+    model: getFallbackModel(),
     messages: [
       { role: "system", content: LOREBOOK_ONLY_PROMPT },
       {
@@ -532,7 +533,7 @@ export async function parseStyleOnly(
 
 
   const response = await llm.chat({
-    model: "deepseek-ai/DeepSeek-V4-Flash",
+    model: getFallbackModel(),
     messages: [
       { role: "system", content: STYLE_ONLY_PROMPT },
       {

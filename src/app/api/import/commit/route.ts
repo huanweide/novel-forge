@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import { getSettings } from "@/lib/llm";
 
 export const maxDuration = 300;
 
@@ -35,9 +36,10 @@ async function mergeOneBatch(
   globalContext: string,
   type: "char" | "lore",
 ): Promise<Record<string, unknown>[] | null> {
-  const baseURL = "https://api.siliconflow.cn/v1";
-  const apiKey = process.env.LLM_API_KEY || "";
-  const model = "deepseek-ai/DeepSeek-V4-Flash";
+  const settings = await getSettings();
+  const baseURL = settings.baseUrl;
+  const apiKey = settings.apiKey || process.env.LLM_API_KEY || "";
+  const model = settings.model;
 
   const pairsText = pairs.map((p, i) =>
     `【${i + 1}】【${p.name}】

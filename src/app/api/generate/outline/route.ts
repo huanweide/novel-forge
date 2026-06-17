@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeJoin } from "@/lib/utils";
 import { getActiveRules, injectRules } from "@/core/rules";
+import { getSettings } from "@/lib/llm";
 
 export const maxDuration = 300;
 
@@ -103,11 +104,10 @@ export async function POST(request: Request) {
     // ── 硅基流动配置 ──
     const baseURL = "https://api.siliconflow.cn/v1";
     const apiKey = process.env.LLM_API_KEY || "";
+    // 从全局设置读取模型名
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
     const shouldUseFlash = useFlash || hasCustomPrompt;
-    const model = shouldUseFlash
-      ? "deepseek-ai/DeepSeek-V4-Flash"
-      : "deepseek-ai/DeepSeek-V4-Pro";
+    const { model } = await getSettings();
 
     // ── 中文数字 ──
     const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];

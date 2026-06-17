@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
+import { createLLMClientFromSettings } from "@/core/llm/client";
+import { getSettings } from "@/lib/llm";
 
 /**
  * POST /api/generate/detect-entities
@@ -59,9 +60,9 @@ export async function POST(request: Request) {
       (l.keys as string[])?.forEach((k) => knownLore.add(k.toLowerCase()));
     }
 
-    const client = getDefaultClient();
-    const config = getDefaultLLMConfig();
-    const model = "deepseek-ai/DeepSeek-V4-Flash";
+    const client = await createLLMClientFromSettings();
+    const settings = await getSettings();
+    const model = settings.model;
 
     // ── 分块扫描 ──────────────────────────────────────
 

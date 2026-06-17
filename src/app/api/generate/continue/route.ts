@@ -4,7 +4,8 @@ import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
-import { getSiliconFlowClient } from "@/core/llm/client";
+import { createLLMClientFromSettings } from "@/core/llm/client";
+import { getSettings } from "@/lib/llm";
 import { getActiveRules, injectRules } from "@/core/rules";
 
 /**
@@ -211,6 +212,11 @@ export async function POST(request: Request) {
     const writingInstruction = `${cardNotesText}请接着上文继续撰写下一节。\n\n【上文末段——从这里衔接】\n${lastParagraphs}\n\n【本节标题】${nextTitle}\n【本节大纲】${nextOutline || "基于前文剧情自然推进"}\n\n注意：与上文无缝衔接，保持叙事视角一致。`;
 
     // SSE 流式生成
+    // 从全局设置获取模型配置
+    const llmClient = await createLLMClientFromSettings({ defaultTemperature: temperature, defaultTopP: topP });
+    const settings = await getSettings();
+    const writerModel = settings.model;
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
@@ -231,8 +237,8 @@ export async function POST(request: Request) {
             promptContext,
             writingInstruction,
             targetWords,
-            getSiliconFlowClient(),
-            "deepseek-ai/DeepSeek-V4-Pro",
+            llmClient,
+            writerModel,
             temperature,
             topP,
           );

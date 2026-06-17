@@ -18,7 +18,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
-import { getSiliconFlowClient } from "@/core/llm/client";
+import { createLLMClientFromSettings } from "@/core/llm/client";
+import { getSettings } from "@/lib/llm";
 import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getActiveRules, injectRules } from "@/core/rules";
@@ -170,6 +171,11 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 - 续写字数约${targetWords}字。`}`
       : `${cardNotesText}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
 
+    // 从全局设置获取模型配置
+    const llmClient = await createLLMClientFromSettings({ defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP });
+    const settings = await getSettings();
+    const writerModel = settings.model;
+
     // SSE 流
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -187,8 +193,8 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             promptContext,
             writingInstruction,
             targetWords,
-            getSiliconFlowClient(),
-            "deepseek-ai/DeepSeek-V4-Pro",
+            llmClient,
+            writerModel,
             effectiveTemperature,
             effectiveTopP,
           )) {

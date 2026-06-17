@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
-import { getSiliconFlowClient } from "@/core/llm/client";
+import { createLLMClientFromSettings, getEffectiveConfig } from "@/core/llm/client";
 import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getActiveRules, injectRules } from "@/core/rules";
@@ -166,6 +166,17 @@ export async function POST(request: Request) {
       : "根据上下文自然推进剧情，撰写本节正文。";
     writingInstruction += "\n\n【格式铁律】绝不在正文首行或任意位置写「第X章」「第X节」或章节标题。章节标题由系统管理，正文直接切入动作/对话。";
 
+    // 从全局设置获取模型配置（用户设置页改什么，这里就用什么）
+    const effectiveConfig = await getEffectiveConfig({
+      defaultTemperature: effectiveTemperature,
+      defaultTopP: effectiveTopP,
+    });
+    const llmClient = await createLLMClientFromSettings({
+      defaultTemperature: effectiveTemperature,
+      defaultTopP: effectiveTopP,
+    });
+    const writerModel = effectiveConfig.writerModel;
+
     // 创建 SSE 流
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -194,8 +205,8 @@ export async function POST(request: Request) {
               ? `${writingInstruction}\n\n【续写——从以下草稿断点继续，不要重复已有内容】\n已有内容末段：${partialDraft.slice(-200)}\n\n请从断点处自然接续。`
               : writingInstruction,
             targetWordCount,
-            getSiliconFlowClient(),
-            "deepseek-ai/DeepSeek-V4-Pro",
+            llmClient,
+            writerModel,
             effectiveTemperature,
             effectiveTopP,
           )) {

@@ -3,8 +3,12 @@
  *
  * 支持 DeepSeek、硅基流动、OpenAI 等任何 OpenAI 兼容 API。
  * 核心能力：同步调用 + 流式调用（SSE）。
+ *
+ * ⚠️ 模型名/API Key 统一从 AppSettings 数据库读取，不再硬编码。
+ *    用户设置页改什么模型，所有 API 调用即时生效。
  */
 
+import { getSettings } from "@/lib/llm";
 import type { LLMConfig } from "@/core/types";
 
 // ─── 类型定义 ───────────────────────────────────────────────
@@ -34,13 +38,15 @@ export interface LLMResponse {
   };
 }
 
+export type LLMClient = ReturnType<typeof createLLMClient>;
+
 // ─── 客户端工厂 ─────────────────────────────────────────────
 
 /**
  * 创建 LLM 客户端
  */
 export function createLLMClient(config: LLMConfig) {
-  const baseURL = config.baseURL.replace(/\/+$/, ""); // 去掉末尾斜杠
+  const baseURL = config.baseURL.replace(/\/+$/, "");
 
   return {
     /**
@@ -81,13 +87,7 @@ export function createLLMClient(config: LLMConfig) {
     },
 
     /**
-     * 流式调用 —— 返回 AsyncGenerator，一个字一个字往外蹦
-     *
-     * 用法：
-     *   for await (const chunk of client.chatStream(req)) {
-     *     if (chunk.type === "token") process.stdout.write(chunk.content);
-     *     if (chunk.type === "done") console.log("完成!", chunk.usage);
-     *   }
+     * 流式调用 —— 返回 AsyncGenerator
      */
     async *chatStream(request: Omit<LLMRequest, "stream">) {
       const response = await fetch(`${baseURL}/chat/completions`, {
@@ -127,7 +127,7 @@ export function createLLMClient(config: LLMConfig) {
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // 保留最后不完整的行
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
             const trimmed = line.trim();
@@ -156,7 +156,6 @@ export function createLLMClient(config: LLMConfig) {
                 };
               }
 
-              // 部分 API 在最后一个 chunk 返回 usage
               if (data.usage) {
                 promptTokens = data.usage.prompt_tokens;
                 completionTokens = data.usage.completion_tokens;
@@ -179,20 +178,63 @@ export function createLLMClient(config: LLMConfig) {
   };
 }
 
-export type LLMClient = ReturnType<typeof createLLMClient>;
+// ─── 从数据库设置构建 LLMConfig ──────────────────────────
 
-// ─── 便捷函数：从环境变量创建客户端 ──────────────────────
+/**
+ * 从全局设置（AppSettings 表）构建 LLMConfig
+ *
+ * 这是所有 LLM 调用的统一入口——模型名、API Key、Base URL
+ * 全部从数据库读取，用户在设置页面改了就全局生效。
+ *
+ * @param overrides 可选覆盖（如正文生成想用不同的 temperature）
+ */
+export async function getEffectiveConfig(overrides?: Partial<LLMConfig>): Promise<LLMConfig> {
+  const settings = await getSettings();
 
-/** 硅基流动配置 —— 默认客户端，全部场景统一走硅基流动 */
+  return {
+    architectModel: overrides?.architectModel || settings.model,
+    writerModel: overrides?.writerModel || settings.model,
+    reviewerModel: overrides?.reviewerModel || settings.model,
+    summarizeModel: overrides?.summarizeModel || settings.model,
+    extractorModel: overrides?.extractorModel || settings.model,
+    baseURL: overrides?.baseURL || settings.baseUrl,
+    apiKey: overrides?.apiKey || settings.apiKey,
+    defaultTemperature: overrides?.defaultTemperature ?? 0.8,
+    defaultTopP: overrides?.defaultTopP ?? 0.95,
+    maxTokensPerRequest: overrides?.maxTokensPerRequest ?? parseInt(process.env.MAX_TOKENS_PER_REQUEST || "4096"),
+    contextWindowSize: overrides?.contextWindowSize ?? parseInt(process.env.CONTEXT_WINDOW_SIZE || "65536"),
+  };
+}
+
+/**
+ * 从数据库设置创建 LLM 客户端（非流式调用用）
+ */
+export async function createLLMClientFromSettings(overrides?: Partial<LLMConfig>): Promise<LLMClient> {
+  const config = await getEffectiveConfig(overrides);
+  return createLLMClient(config);
+}
+
+/**
+ * 获取当前设置中的模型名（同步版本——仅用于已缓存的场景）
+ *
+ * @deprecated 优先使用 getEffectiveConfig()。此函数仅在同步代码路径中作为 fallback。
+ */
+export function getFallbackModel(): string {
+  return process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+}
+
+// ─── 向后兼容导出 ──────────────────────────────────────────
+
+/**
+ * @deprecated 使用 getEffectiveConfig() 替代
+ */
 export function getDefaultLLMConfig(): LLMConfig {
-  const DS_FLASH = "deepseek-ai/DeepSeek-V4-Flash";
-  const DS_PRO = "deepseek-ai/DeepSeek-V4-Pro";
   return {
-    architectModel: process.env.ARCHITECT_MODEL || DS_PRO,
-    writerModel: process.env.WRITER_MODEL || DS_PRO,
-    reviewerModel: process.env.REVIEWER_MODEL || DS_FLASH,
-    summarizeModel: process.env.SUMMARIZE_MODEL || DS_FLASH,
-    extractorModel: process.env.EXTRACTOR_MODEL || DS_FLASH,
+    architectModel: getFallbackModel(),
+    writerModel: getFallbackModel(),
+    reviewerModel: getFallbackModel(),
+    summarizeModel: getFallbackModel(),
+    extractorModel: getFallbackModel(),
     baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
     apiKey: process.env.LLM_API_KEY || "",
     defaultTemperature: 0.8,
@@ -202,31 +244,23 @@ export function getDefaultLLMConfig(): LLMConfig {
   };
 }
 
-/** 硅基流动配置 —— 仅正文生成(write/continue/refine)用，大量 token 消耗走这里 */
+/**
+ * @deprecated 使用 createLLMClientFromSettings() 替代
+ */
 export function getSiliconFlowConfig(): LLMConfig {
-  const SF_PRO = "deepseek-ai/DeepSeek-V4-Pro";
-  const SF_FLASH = "deepseek-ai/DeepSeek-V4-Flash";
-  return {
-    architectModel: SF_PRO,
-    writerModel: SF_PRO,
-    reviewerModel: SF_FLASH,
-    summarizeModel: SF_FLASH,
-    extractorModel: SF_FLASH,
-    baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
-    apiKey: process.env.LLM_API_KEY || "",
-    defaultTemperature: 0.8,
-    defaultTopP: 0.95,
-    maxTokensPerRequest: parseInt(process.env.MAX_TOKENS_PER_REQUEST || "4096"),
-    contextWindowSize: parseInt(process.env.CONTEXT_WINDOW_SIZE || "65536"),
-  };
+  return getDefaultLLMConfig();
 }
 
-/** 默认客户端 → DeepSeek 官方（分类/审校/摘要/分析 等大部分场景） */
+/**
+ * @deprecated 使用 createLLMClientFromSettings() 替代
+ */
 export function getDefaultClient(): LLMClient {
   return createLLMClient(getDefaultLLMConfig());
 }
 
-/** 硅基客户端 → 仅正文生成（write/continue/refine），大量 token */
+/**
+ * @deprecated 使用 createLLMClientFromSettings() 替代
+ */
 export function getSiliconFlowClient(): LLMClient {
-  return createLLMClient(getSiliconFlowConfig());
+  return createLLMClient(getDefaultLLMConfig());
 }

@@ -9,9 +9,8 @@
  */
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
-
-const MODEL = "deepseek-ai/DeepSeek-V4-Flash";
+import { createLLMClientFromSettings } from "@/core/llm/client";
+import { getSettings } from "@/lib/llm";
 
 export async function POST(request: Request) {
   try {
@@ -58,8 +57,9 @@ export async function POST(request: Request) {
     const dialogueRatio = totalChars > 0 ? dialogueChars / totalChars : 0.35;
 
     // ── AI 语义分析（语气标记 + 风格描述）──
-    const client = getDefaultClient();
-    const config = getDefaultLLMConfig();
+    const client = await createLLMClientFromSettings();
+    const settings = await getSettings();
+    const model = settings.model;
 
     let tonalMarkers: Record<string, number> = {};
     let styleDescription = "";
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     try {
       const sample = analysisText.slice(0, 6000);
       const response = await client.chat({
-        model: MODEL,
+        model,
         messages: [
           {
             role: "system",
