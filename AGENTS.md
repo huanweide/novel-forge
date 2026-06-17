@@ -86,4 +86,35 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - [ ] changelog 页面有最新版本？
 - [ ] API 不报模型名错误？
 - [ ] Edge 已打开 workspace + changelog 两个页面？
+
+---
+
+## 📁 架构目标参考 (`docs/architecture-reference/`)
+
+项目根目录下的 `docs/architecture-reference/` 包含 20 份 aixiaoshuojia.cn 逆向分析文档（01~20），是本项目的架构设计目标参考。**每次规划新功能前必须先查阅对应文档，理解目标平台的实现方式后再动手。**
+
+| 编号 | 文件 | 对应功能 |
+|------|------|---------|
+| 01 | architecture-overview | 总体架构概览 |
+| 02 | writing-modes | 写作模式（续写/润色/生成） |
+| 03 | distillation-system | S/A/B/C 四级事件蒸馏 |
+| 04 | token-strategy | Token 管理策略 |
+| 05 | book-splitting | 分书/分卷机制 |
+| 06 | ui-entity-system | 前端实体系统 |
+| 07 | writing-styles-and-modes | 文风与写作模式 |
+| 08 | pinia-stores | 状态管理（Pinia stores） |
+| 09 | pending-commitments | 伏笔/承诺追踪 |
+| 10 | sse-protocol | SSE 流式协议 |
+| 11 | rules-engine-specificity | 规则冲突裁决引擎 |
+| 12 | memory-injection-template | 记忆注入模板 |
+| 13 | writing-quality-standards | 写作质量标准 |
+| 14 | postprocessing-pipeline | 8 步后处理流水线 |
+| 15 | agent-system-prompt | Agent 系统提示词 |
+| 16 | game-mode | 交互式游戏模式 |
+| 17 | complete-ui-inventory | 完整 UI 组件清单 |
+| 18 | ui-writing-style | 文笔风格面板 UI |
+| 19 | ui-rules-management | 规则管理 UI |
+| 20 | ui-outline-editor | 大纲编辑器 UI |
+
+**使用规则：** 开发对应功能时，先读分析文档理解目标架构，再结合本项目现有代码做增量改造。不改架构，只加模块。
 <!-- END:novel-forge-rules -->
