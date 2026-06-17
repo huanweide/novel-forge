@@ -45,13 +45,15 @@ export async function POST(request: Request) {
 
     // AI 摘要压缩
     const orchestrator = new AgentOrchestrator();
-    const { summary, keyEvents, characterStates } = await orchestrator.summarizeChapter(
+    const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses, eventImportances } = await orchestrator.summarizeChapter(
       chapter.content,
       chapter.title,
-      characters as any
+      characters as any,
+      chapter.order,
+      0, // 本章最新，diff=0
     );
 
-    // 存入 ChapterSummary 表
+    // 存入 ChapterSummary 表（含四级事件分层）
     const chapterSummary = await prisma.chapterSummary.create({
       data: {
         projectId,
@@ -59,9 +61,12 @@ export async function POST(request: Request) {
         chapterTitle: chapter.title,
         summary,
         keyEvents,
-        characterStates: JSON.parse(
-          characterStates || '{"states":[]}'
-        ),
+        characterStates: {
+          states: JSON.parse(characterStates || '{"states":[]}'),
+          closingSnapshot,
+          impulses: characterImpulses,
+        } as any,
+        eventImportances: eventImportances as any,
       },
     });
 

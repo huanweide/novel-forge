@@ -2,7 +2,27 @@
 
 ---
 
-## v0.18.0 — 2026-06-14
+## v0.19.0 — 2026-06-17
+
+### 🧠 蒸馏系统上线——四级事件分层 + 伏笔追踪基础
+
+**📊 S/A/B/C 四级事件评分引擎**
+- 新增 `src/core/distillation/scorer.ts`：时效性×事件类型×伏笔关联×角色重要性 四因子评分
+- 自动推断事件类型（突破/死亡/传承/转折/揭露/战斗/日常 8 种）
+- S层(≥40分)完整注入、A层(≥20分)压缩注入、B层(≥10分)关键词索引、C层不注入仅存档
+- 新增 `formatEventsForPrompt()` 格式化 [S-N]/[A-N] 标签注入
+
+**📦 数据库扩展**
+- `ChapterSummary` 新增 `eventImportances` JSON 字段
+- 新增 `PendingCommitment` 模型（五状态机：pending→detected→partially_fulfilled→fulfilled/voided）
+- 支持 closure_conditions 闭环条件数组 + status_history 完整审计链
+
+**🔄 上下文组装升级**
+- `buildMediumTermSection` 读取四级事件分层，差异化注入短期/中期记忆
+- `summarizeChapter` 生成后自动评分分层
+- summarize API 存储 closingSnapshot/characterImpulses/eventImportances
+
+---
 
 ### 🌐 项目化——多模型支持 + 全局设置 + 代码清理
 

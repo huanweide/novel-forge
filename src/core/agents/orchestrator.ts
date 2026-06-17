@@ -25,6 +25,8 @@ import type {
   ChapterSummary,
   ReviewLog,
   ReviewIssueType,
+  EventImportances,
+  EventCategory,
 } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
 import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
@@ -32,6 +34,7 @@ import { assemblePrompt } from "@/core/assembly/engine";
 import { matchLoreEntries } from "@/core/assembly/trigger";
 import { safeJoin } from "@/lib/utils";
 import { countTokens } from "@/core/assembly/tokenizer";
+import { scoreAndClassifyEvents, classifyEventCategory } from "@/core/distillation";
 
 // ─── Prompt 模板 ─────────────────────────────────────────────
 
@@ -269,7 +272,9 @@ ${generatedContent}
   async summarizeChapter(
     chapterContent: string,
     chapterTitle: string,
-    characters: CharacterCard[]
+    characters: CharacterCard[],
+    chapterOrder?: number, // 当前章节序号，用于时效性计算
+    existingSummariesCount?: number, // 已有摘要数，用于计算 chapterDiff
   ): Promise<{
     summary: string;
     keyEvents: string[];
@@ -279,6 +284,7 @@ ${generatedContent}
     threadProgress: Array<{ storylineId: string; stage: string; progressNote: string }>;
     unresolvedQuestions: string[];
     impactScore: number;
+    eventImportances: EventImportances; // S/A/B/C四级事件分层
   }> {
     const charNames = characters.map((c) => c.name).join("、");
 
@@ -332,7 +338,25 @@ ${generatedContent}
       maxTokens: 1536, // 加大，容纳脉搏数据
     });
 
-    return this.parseSummaryResponse(response.content);
+    const parsed = this.parseSummaryResponse(response.content);
+
+    // ── 蒸馏评分：对关键事件进行 S/A/B/C 分层 ──
+    const roleMap: Record<string, string> = {};
+    for (const c of characters) {
+      roleMap[c.name] = c.role;
+    }
+
+    const events = parsed.keyEvents.map((event) => ({
+      description: event,
+      chapterDiff: existingSummariesCount || 0, // 本章的事件，diff=0（最新）
+      category: classifyEventCategory(event) as EventCategory,
+      characterIds: characters.filter((c) => event.includes(c.name)).map((c) => c.id),
+      characterRoleMap: roleMap,
+    }));
+
+    const eventImportances = scoreAndClassifyEvents(events);
+
+    return { ...parsed, eventImportances };
   }
 
   // ─── 私有方法 ─────────────────────────────────────────────

@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.18.0";
+export const LATEST_VERSION = "v0.19.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🌐 多提供商 LLM 支持——OpenAI / DeepSeek / 硅基流动 / Groq / 自定义，UI 切换即刻生效",
-  "⚙️ 全局设置页面——选提供商→填 Key→测试连接→保存，无需碰环境变量",
-  "🏗 LLM 调用层统一——9 个路由的 callFlash/callLLM 提取为 src/lib/llm.ts 单一入口",
-  "🧹 代码清理——删除 3 个死函数、修复 AbortController 竞态、README 完善",
+  "📊 S/A/B/C 四级事件评分引擎——时效性×事件类型×伏笔关联×角色重要性 四因子评分",
+  "📦 新增 PendingCommitment 模型——五状态机伏笔追踪，closure_conditions 闭环检测",
+  "🔄 上下文组装升级——四级事件分层差异化注入，[S-N]/[A-N] 标签标记",
+  "🛠 新增 src/core/distillation/ 模块——scorer 评分引擎 + formatEventsForPrompt 注入格式化",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.19.0",
+    date: "2026-06-17",
+    title: "蒸馏系统上线——四级事件分层 + 伏笔追踪基础",
+    sections: [
+      {
+        label: "蒸馏引擎",
+        items: [
+          "S/A/B/C 四级事件评分：时效性×事件类型×伏笔关联×角色重要性 四因子算法",
+          "自动推断事件类型（突破/死亡/传承/转折/揭露/战斗/日常 8 种）",
+          "formatEventsForPrompt() 格式化 [S-N]/[A-N] 标签注入",
+        ],
+      },
+      {
+        label: "数据库",
+        items: [
+          "ChapterSummary 新增 eventImportances JSON 字段",
+          "新增 PendingCommitment 模型——五状态机 + closure_conditions + status_history",
+        ],
+      },
+      {
+        label: "上下文组装",
+        items: [
+          "buildMediumTermSection 读取四级事件分层差异化注入",
+          "summarizeChapter 生成后自动评分分层",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.18.0",
     date: "2026-06-14",

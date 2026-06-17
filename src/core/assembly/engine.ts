@@ -25,9 +25,11 @@ import type {
   TokenBudget,
   CharacterCard,
   Storyline,
+  EventImportances,
 } from "@/core/types";
 import { countTokens, truncateByTokens } from "./tokenizer";
 import { safeJoin } from "@/lib/utils";
+import { formatEventsForPrompt } from "@/core/distillation";
 
 // ─── 配置常量 ───────────────────────────────────────────────
 
@@ -237,9 +239,22 @@ function buildMediumTermSection(
   }
 
   // 从 selected 列表中按原有 token 预算逻辑截断
+  // 增强：提取 S/A/B 四级事件分层进行差异化注入
   const texts = selected.map((s) => {
     const events = s.keyEvents.map((e) => `  - ${e}`).join("\n");
-    return `[${s.chapterTitle}]\n${s.summary}\n关键事件：\n${events}`;
+
+    // 尝试提取蒸馏后的事件分层
+    let tieredEvents = "";
+    const rawImportances = (s as any).eventImportances as EventImportances | undefined;
+    if (rawImportances && (rawImportances.sTier?.length > 0 || rawImportances.aTier?.length > 0)) {
+      tieredEvents = "\n" + formatEventsForPrompt({
+        sTier: rawImportances.sTier || [],
+        aTier: rawImportances.aTier || [],
+        bTier: rawImportances.bTier || [],
+      });
+    }
+
+    return `[${s.chapterTitle}]\n${s.summary}${tieredEvents}`;
   });
 
   let result = "";

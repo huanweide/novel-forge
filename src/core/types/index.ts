@@ -244,6 +244,105 @@ export interface ChapterSummary {
   summary: string;                // AI压缩的摘要（≤200 Token）
   keyEvents: string[];            // 关键事件列表
   characterStates: string | CharacterStatesPayload; // 角色状态快照（字符串或结构化）
+  eventImportances?: EventImportances; // S/A/B/C四级事件分层
+}
+
+// ─── 蒸馏/事件分层系统 ──────────────────────────────────────
+
+/** 事件重要性分层 */
+export type EventTier = 'S' | 'A' | 'B' | 'C';
+
+/** 事件类型（决定基础分） */
+export type EventCategory =
+  | 'death'           // 角色死亡 → 25分
+  | 'breakthrough'    // 修为突破 → 20分
+  | 'inheritance'     // 传承/获得 → 15分
+  | 'plot_twist'      // 剧情转折 → 12分
+  | 'revelation'      // 关键信息揭露 → 10分
+  | 'battle'          // 战斗 → 5分
+  | 'interaction'     // 角色互动 → 3分
+  | 'daily';          // 日常 → 1分
+
+/** 单个事件的重要性评分 */
+export interface EventImportance {
+  description: string;
+  score: number;                  // 总分
+  tier: EventTier;                // S/A/B/C
+  category: EventCategory;
+  isBreakthrough: boolean;        // 是否突破事件
+  isForeshadowRelated: boolean;   // 是否关联伏笔
+  relatedCharacterIds: string[];  // 涉及角色
+}
+
+/** 四级事件容器 */
+export interface EventImportances {
+  sTier: EventImportance[];       // ≥40分，3-5条，完整注入
+  aTier: EventImportance[];       // ≥20分，10-15条，压缩注入
+  bTier: EventImportance[];       // ≥10分，不限，关键词索引
+  cTier: EventImportance[];       // <10分，不注入仅存档
+}
+
+// ─── 伏笔/承诺追踪系统 ──────────────────────────────────────
+
+/** 承诺状态 */
+export type CommitmentStatus =
+  | 'pending'
+  | 'detected'
+  | 'partially_fulfilled'
+  | 'fulfilled'
+  | 'voided';
+
+/** 闭环条件 */
+export interface ClosureCondition {
+  type: 'location' | 'action' | 'state_change' | 'entity_presence' | 'dialogue';
+  value: string;
+  entity?: string;
+  from?: string;
+  to?: string;
+  required: boolean;
+}
+
+/** 状态变更记录（审计链） */
+export interface StatusHistoryEntry {
+  from: CommitmentStatus;
+  to: CommitmentStatus;
+  trigger: string;                // pre_injection | post_generation | manual | timeout | cascade
+  chapterId?: string;
+  timestamp: string;
+  details: string;
+}
+
+/** 伏笔/承诺追踪实体 */
+export interface PendingCommitment {
+  id: string;
+  projectId: string;
+  source: 'outline_summary' | 'user_intent' | 'ai_inference' | 'foreshadow';
+  sourceNodeId?: string;
+  priority: 'high' | 'medium' | 'low';
+  description: string;
+  entityIds: string[];
+  closureConditions: ClosureCondition[];
+
+  // 五状态机
+  status: CommitmentStatus;
+  fulfillmentRatio: number;       // 0.0 ~ 1.0
+  voidReason?: string;
+
+  // 兑现记录
+  fulfilledChapterId?: string;
+  fulfilledContentSnippet?: string;
+  partiallyFulfilledIds: string[];
+
+  // 时间追踪
+  detectedAt?: Date;
+  fulfilledAt?: Date;
+  voidedAt?: Date;
+
+  // 完整审计链
+  statusHistory: StatusHistoryEntry[];
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /** 章节摘要中的角色状态负载 */

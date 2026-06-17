@@ -36,6 +36,7 @@ model Project {
   storylines    Storyline[]
   styleCards    StyleCard[]
   rules         Rule[]
+  pendingCommitments PendingCommitment[]
 }
 
 // ─── 人物卡 (Character Card) ───────────────────────────────
@@ -176,12 +177,54 @@ model ChapterSummary {
   summary      String                    // AI压缩摘要 ≤200 Token
   keyEvents    String[] @default([])
   characterStates Json @default("[]")    // CharacterStateSnapshot[]
+  eventImportances Json @default("{\"sTier\":[],\"aTier\":[],\"bTier\":[],\"cTier\":[]}") // S/A/B/C四级事件分层
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([chapterId])
+}
+
+// ─── 伏笔/承诺追踪 (Pending Commitment) ──────────────────
+
+model PendingCommitment {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  source        String   @default("ai_inference") // outline_summary | user_intent | ai_inference | foreshadow
+  sourceNodeId  String?
+  priority      String   @default("medium")       // high | medium | low
+
+  description   String                            // 承诺描述
+  entityIds     Json     @default("[]")           // 涉及实体ID列表
+  closureConditions Json @default("[]")           // 闭环条件JSON数组
+
+  // 五状态机
+  status             String   @default("pending")  // pending | detected | partially_fulfilled | fulfilled | voided
+  fulfillmentRatio   Float    @default(0.0)
+  voidReason         String?
+
+  // 兑现记录
+  fulfilledChapterId       String?
+  fulfilledContentSnippet  String?
+  partiallyFulfilledIds    Json     @default("[]")
+
+  // 时间追踪
+  detectedAt  DateTime?
+  fulfilledAt DateTime?
+  voidedAt    DateTime?
+
+  // 完整审计链
+  statusHistory Json     @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, status])
+  @@index([sourceNodeId])
 }
 
 // ─── 关键转折点 (Story Beat) —— 长期记忆索引 ──────────────
