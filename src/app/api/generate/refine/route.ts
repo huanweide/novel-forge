@@ -18,8 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
-import { createLLMClientFromSettings } from "@/core/llm/client";
-import { getSettings } from "@/lib/llm";
+// 模型配置从 AgentOrchestrator.fromSettings() 动态读取
 import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getActiveRules, injectRules } from "@/core/rules";
@@ -171,10 +170,11 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 - 续写字数约${targetWords}字。`}`
       : `${cardNotesText}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
 
-    // 从全局设置获取模型配置
-    const llmClient = await createLLMClientFromSettings({ defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP });
-    const settings = await getSettings();
-    const writerModel = settings.model;
+    // 从全局设置创建调度器——模型名、API Key 全部动态读取
+    const orchestrator = await AgentOrchestrator.fromSettings({
+      defaultTemperature: effectiveTemperature,
+      defaultTopP: effectiveTopP,
+    });
 
     // SSE 流
     const encoder = new TextEncoder();
@@ -185,7 +185,6 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
         };
 
         try {
-          const orchestrator = new AgentOrchestrator();
           let newContent = "";
 
           // 流式生成
@@ -193,8 +192,8 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             promptContext,
             writingInstruction,
             targetWords,
-            llmClient,
-            writerModel,
+            undefined, // 用 orchestrator 自带的 settings 客户端
+            undefined, // 用 orchestrator 自带的 settings 模型名
             effectiveTemperature,
             effectiveTopP,
           )) {

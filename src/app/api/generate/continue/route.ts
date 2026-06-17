@@ -4,8 +4,7 @@ import { AgentOrchestrator, buildPromptContext } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { getTemplate } from "@/core/templates";
 import { scanForbiddenWords, collectForbiddenPatterns } from "@/lib/forbidden-checker";
-import { createLLMClientFromSettings } from "@/core/llm/client";
-import { getSettings } from "@/lib/llm";
+// 模型配置从 AgentOrchestrator.fromSettings() 动态读取
 import { getActiveRules, injectRules } from "@/core/rules";
 
 /**
@@ -211,12 +210,13 @@ export async function POST(request: Request) {
 
     const writingInstruction = `${cardNotesText}请接着上文继续撰写下一节。\n\n【上文末段——从这里衔接】\n${lastParagraphs}\n\n【本节标题】${nextTitle}\n【本节大纲】${nextOutline || "基于前文剧情自然推进"}\n\n注意：与上文无缝衔接，保持叙事视角一致。`;
 
-    // SSE 流式生成
-    // 从全局设置获取模型配置
-    const llmClient = await createLLMClientFromSettings({ defaultTemperature: temperature, defaultTopP: topP });
-    const settings = await getSettings();
-    const writerModel = settings.model;
+    // 从全局设置创建调度器——模型名、API Key 全部动态读取
+    const orchestrator = await AgentOrchestrator.fromSettings({
+      defaultTemperature: temperature,
+      defaultTopP: topP,
+    });
 
+    // SSE 流式生成
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
@@ -227,7 +227,6 @@ export async function POST(request: Request) {
         };
 
         try {
-          const orchestrator = new AgentOrchestrator();
           let fullContent = "";
 
           // 流式生成
@@ -237,8 +236,8 @@ export async function POST(request: Request) {
             promptContext,
             writingInstruction,
             targetWords,
-            llmClient,
-            writerModel,
+            undefined, // 用 orchestrator 自带的 settings 客户端
+            undefined, // 用 orchestrator 自带的 settings 模型名
             temperature,
             topP,
           );

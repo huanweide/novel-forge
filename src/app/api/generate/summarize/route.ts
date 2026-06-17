@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       : [];
 
     // AI 摘要压缩
-    const orchestrator = new AgentOrchestrator();
+    const orchestrator = await AgentOrchestrator.fromSettings();
     const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses, eventImportances } = await orchestrator.summarizeChapter(
       chapter.content,
       chapter.title,

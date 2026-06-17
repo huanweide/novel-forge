@@ -29,7 +29,8 @@ import type {
   EventCategory,
 } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
-import { getDefaultClient, getDefaultLLMConfig } from "@/core/llm/client";
+import type { LLMConfig } from "@/core/types";
+import { getDefaultClient, getDefaultLLMConfig, getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { assemblePrompt } from "@/core/assembly/engine";
 import { matchLoreEntries } from "@/core/assembly/trigger";
 import { safeJoin } from "@/lib/utils";
@@ -89,10 +90,28 @@ const SYSTEM_PROMPTS = {
 
 export class AgentOrchestrator {
   private client: LLMClient;
-  private config = getDefaultLLMConfig();
+  private config: LLMConfig;
 
-  constructor(client?: LLMClient) {
+  /**
+   * @param client  可选——LLM 客户端，不传则用 getDefaultClient() 兜底
+   * @param config  可选——LLM 配置（模型名等），不传则用 getDefaultLLMConfig() 兜底
+   *
+   * ⚠️ 推荐使用静态工厂 AgentOrchestrator.fromSettings() 替代直接 new，
+   *    确保模型名/API Key 从全局设置页动态读取。
+   */
+  constructor(client?: LLMClient, config?: LLMConfig) {
     this.client = client || getDefaultClient();
+    this.config = config || getDefaultLLMConfig();
+  }
+
+  /**
+   * 从全局设置创建调度器——模型名、API Key、Base URL 全部从 AppSettings 表读取。
+   * 这是推荐的初始化方式，用户在设置页改了模型会即时生效。
+   */
+  static async fromSettings(overrides?: Partial<LLMConfig>): Promise<AgentOrchestrator> {
+    const config = await getEffectiveConfig(overrides);
+    const client = createLLMClient(config);
+    return new AgentOrchestrator(client, config);
   }
 
   /**
