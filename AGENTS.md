@@ -115,6 +115,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | 18 | ui-writing-style | 文笔风格面板 UI |
 | 19 | ui-rules-management | 规则管理 UI |
 | 20 | ui-outline-editor | 大纲编辑器 UI |
+| 21 | platform-full-architecture | 平台完整功能架构+生成引擎（三层输入→五步处理→单格式输出） |
 
 **使用规则：** 开发对应功能时，先读分析文档理解目标架构，再结合本项目现有代码做增量改造。不改架构，只加模块。
 <!-- END:novel-forge-rules -->
