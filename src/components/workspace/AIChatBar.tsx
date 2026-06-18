@@ -7,6 +7,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Icon } from "@/components/ui/icons";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -370,7 +371,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
         {/* 空状态 */}
         {!hasHistory && !loading && (
           <div className="flex flex-col items-center justify-center h-full px-4 text-center">
-            <div className="text-3xl mb-3">🤖</div>
+            <div className="mb-3"><Icon name="bot" size={32} className="text-zinc-600" /></div>
             <div className="text-xs text-zinc-400 font-medium mb-1">AI 写作助手就绪</div>
             <div className="text-[10px] text-zinc-600 leading-relaxed max-w-[220px]">
               我能直接查角色卡、世界书、大纲来回答你——不猜正文，只看数据
@@ -382,7 +383,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
         {messages.map((msg, i) => (
           <div key={i} className={`px-3 py-2.5 border-b border-white/[0.06]/30 ${msg.role === "user" ? "bg-white/[0.02] backdrop-blur-sm" : "bg-zinc-900/20"}`}>
             <div className="flex items-start gap-2">
-              <span className="text-xs shrink-0 mt-0.5">{msg.role === "user" ? "👤" : "🤖"}</span>
+              <span className="shrink-0 mt-0.5">{msg.role === "user" ? <Icon name="user" size={13} /> : <Icon name="bot" size={13} />}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[10px] font-medium text-zinc-500">
@@ -414,7 +415,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 {msg.analysis && msg.analysis.differences && msg.analysis.differences.length > 0 && (
                   <details className="mb-1" open>
                     <summary className="text-[10px] text-amber-400 cursor-pointer hover:text-amber-300 font-medium">
-                      📋 角色卡更新建议（{msg.analysis.differences.length} 项）
+                      <span className="flex items-center gap-1"><Icon name="clipboard" size={13} /> 角色卡更新建议（{msg.analysis.differences.length} 项）</span>
                     </summary>
                     <div className="mt-1.5 space-y-1.5 pl-2 border-l border-amber-700/30">
                       {msg.analysis.differences.map((d, j) => (
@@ -427,11 +428,11 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                           </div>
                           {d.evidence && (
                             <div className="text-zinc-500 mb-0.5 leading-relaxed">
-                              📖 「{d.evidence.slice(0, 80)}{d.evidence.length > 80 ? "…" : ""}」
+                              <span className="flex items-center gap-1"><Icon name="bookmarked" size={12} /> 「{d.evidence.slice(0, 80)}{d.evidence.length > 80 ? "…" : ""}」</span>
                             </div>
                           )}
-                          <div className="text-zinc-400 mb-1">
-                            💡 建议：{d.suggested}
+                          <div className="text-zinc-400 mb-1 flex items-start gap-1">
+                            <Icon name="lightbulb" size={12} className="shrink-0 mt-0.5" /> 建议：{d.suggested}
                           </div>
                           <button
                             onClick={() => d.confidence > 0 ? handleAdoptSuggestion(d) : null}
