@@ -13,9 +13,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-jetbrains);
+  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -85,10 +85,36 @@
   --nv-accent:       oklch(0.75 0.14 95);        /* 金色 —— 强调/高亮 */
   --nv-accent-soft:  oklch(0.75 0.14 95 / 0.1);
 
-  /* ── 文字层级 ── */
-  --nv-text-primary:   #F0EEE8;   /* 主文字——暖白 */
-  --nv-text-secondary: #A1A09A;   /* 辅文字——暖灰 */
-  --nv-text-muted:     #5C5A55;   /* 弱文字——深灰 */
+  /* ── 文字层级（4级明度 + 功能色） ── */
+  --nv-text-primary:   #EEECE6;   /* L1 主文字——暖白，对比度 16:1 */
+  --nv-text-secondary: #9E9C94;   /* L2 辅文字——暖灰，对比度 6:1 */
+  --nv-text-tertiary:  #6B6962;   /* L3 弱文字——中灰，对比度 3.5:1 */
+  --nv-text-muted:     #484640;   /* L4 禁用文字——暗灰 */
+
+  /* ── 字体栈（Next.js Google Fonts CSS变量 → 中文系统字体 fallback） ── */
+  --font-sans:       var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
+  --font-mono:       var(--font-jetbrains), var(--font-geist-mono), "Cascadia Code", "Consolas", monospace;
+  --font-heading:    var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /* ── 排版比例 ── */
+  --text-2xs:  0.625rem;   /* 10px — 标签/徽章 */
+  --text-xs:   0.75rem;    /* 12px — 辅助文字 */
+  --text-sm:   0.875rem;   /* 14px — 正文 */
+  --text-base: 1rem;       /* 16px — 正文强调 */
+  --text-lg:   1.125rem;   /* 18px — 卡片标题 */
+  --text-xl:   1.25rem;    /* 20px — 面板标题 */
+  --text-2xl:  1.5rem;     /* 24px — 页面标题 */
+  --leading-tight:  1.25;
+  --leading-normal: 1.6;
+  --leading-relaxed:1.75;
+
+  /* ── 悬停阴影层级 ── */
+  --shadow-hover-sm:  0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-hover-md:  0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-hover-lg:  0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow-indigo:   0 0 16px oklch(0.62 0.19 270 / 0.15);
+  --shadow-glow-success:  0 0 16px oklch(0.65 0.18 160 / 0.15);
+  --shadow-glow-creative: 0 0 16px oklch(0.58 0.21 295 / 0.15);
 
   /* ── 动画曲线 ── */
   --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -227,7 +253,7 @@
 }
 .surface-elevated:hover {
   border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3),
+  box-shadow: var(--shadow-hover-md),
               0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 .surface-elevated:active {
@@ -446,7 +472,7 @@
 }
 .card-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-hover-lg);
 }
 
 /* ═══════════════════════════════════════════
@@ -473,6 +499,63 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   Tooltip 系统
+   ═══════════════════════════════════════════ */
+
+.tooltip-trigger {
+  position: relative;
+}
+.tooltip-trigger::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(15, 15, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--nv-text-secondary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-out-smooth),
+              transform 0.2s var(--ease-out-smooth);
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+.tooltip-trigger:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ── 悬停色彩过渡 ── */
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow-indigo);
+}
+
+/* ── 链接悬停下划线动画 ── */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.25s var(--ease-out-smooth);
+}
+.link-underline:hover::after {
+  width: 100%;
 }
 
 /* ═══════════════════════════════════════════
