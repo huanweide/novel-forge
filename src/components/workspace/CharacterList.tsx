@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
 import { RangeSelector } from "./RangeSelector";
+import { Icon, StatusDot } from "@/components/ui/icons";
 
 export function CharacterList({
   characters,
@@ -433,8 +434,8 @@ export function CharacterList({
         ))}
         <span className="text-zinc-700 mx-0.5">|</span>
         {[
-          { key: "alive", label: "🟢存活", count: characters.length - statDead },
-          { key: "dead", label: "💀离场", count: statDead },
+          { key: "alive", label: <span className="flex items-center gap-1"><StatusDot color="green" size={6} /> 存活</span>, count: characters.length - statDead },
+          { key: "dead", label: <span className="flex items-center gap-1"><Icon name="skull" size={10} /> 离场</span>, count: statDead },
         ].filter(o => o.count > 0).map(o => (
           <button
             key={o.key}
@@ -459,7 +460,7 @@ export function CharacterList({
       {/* 标签筛选：已分类/未分类 + 具体标签 */}
       <div className="flex gap-0.5 mb-1.5 flex-wrap items-center">
         {[
-          { key: "has-tags", label: "🏷已分类", count: statHasTags },
+          { key: "has-tags", label: <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 已分类</span>, count: statHasTags },
           { key: "no-tags", label: "未分类", count: statNoTags },
         ].filter(o => o.count > 0).map(o => (
           <button
@@ -536,7 +537,7 @@ export function CharacterList({
               : "bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 border border-purple-800/30 hover:border-purple-700/40"
           }`}
         >
-          {classifying ? `🏷 ${classifyDone}/${classifyTotal || "?"}` : "🏷 自动分类"}
+          {classifying ? <span className="flex items-center gap-1"><Icon name="tag" size={10} /> {classifyDone}/{classifyTotal || "?"}</span> : <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 自动分类</span>}
         </button>
         {selectedIds.size > 0 && !expanding && (
           <button
@@ -568,7 +569,7 @@ export function CharacterList({
           {/* 面板标题 */}
           <div className="flex items-center justify-between px-2 py-1.5 bg-purple-950/30 border-b border-purple-900/20">
             <span className="text-[10px] text-purple-400 font-medium">
-              🏷 分类建议 · {classifyGroups.length} 组 · {selectedCharIds.size} 人
+              <Icon name="tag" size={10} /> 分类建议 · {classifyGroups.length} 组 · {selectedCharIds.size} 人
             </span>
             <button
               onClick={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
@@ -579,11 +580,11 @@ export function CharacterList({
           <div className="max-h-80 overflow-y-auto p-1.5 space-y-2">
             {(() => {
               const catOrder = ["title", "school", "experience", "club"];
-              const catLabel: Record<string, string> = {
-                title: "🏷 称号/头衔",
-                school: "🏫 学校/学园",
-                experience: "📋 经历/履历",
-                club: "⚽ 俱乐部/队伍",
+              const catLabel: Record<string, React.ReactNode> = {
+                title: <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 称号/头衔</span>,
+                school: <span className="flex items-center gap-1"><Icon name="building" size={10} /> 学校/学园</span>,
+                experience: <span className="flex items-center gap-1"><Icon name="clipboard" size={10} /> 经历/履历</span>,
+                club: <span className="flex items-center gap-1"><Icon name="users" size={10} /> 俱乐部/队伍</span>,
               };
               const grouped = new Map<string, typeof classifyGroups>();
               for (const g of classifyGroups) {
@@ -729,7 +730,7 @@ export function CharacterList({
             {/* 头部 */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
               <h3 className="text-base font-bold text-zinc-200">
-                {expandResult.failList.length === 0 ? "🎉 全部扩展成功" : "📋 扩展结果"}
+                {expandResult.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-emerald-400" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
               </h3>
               <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none">✕</button>
             </div>
