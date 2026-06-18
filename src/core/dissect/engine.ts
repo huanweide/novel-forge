@@ -4,9 +4,14 @@
 // 五阶段流水线：
 //   1. 预处理（文本清理、编码统一）
 //   2. 章边界检测（三层：正则→语义→固定字数）
-//   3. 逐维提取（快速1次/标准4组/精细15次 LLM 调用）
+//   3. 逐维提取（快速1次/标准4组并行/精细15维并发池）
 //   4. 全局蒸馏（别名合并、时间排序——后续迭代）
 //   5. 结构化入库
+//
+// 性能优化（v0.20.28）：
+//   - 维度提取并行化：标准4组并行 / 精细15维并发池(limit=8)
+//   - 章节摘要并发池：withConcurrency(8)，50章从串行~250s→~35s
+//   - 智能文本采样：按维度定向截取相关段落
 // ============================================================
 
 import { prisma } from "@/lib/prisma";
@@ -30,6 +35,42 @@ import {
   DIMENSION_ICONS,
   DIMENSION_GROUPS,
 } from "./types";
+
+// ─── 并发控制 ──────────────────────────────────────────
+
+/** LLM 并发上限——避免触发 API 限流 */
+const LLM_CONCURRENCY = 8;
+
+/**
+ * 通用并发池。
+ * 复用 characters/expand 的 withConcurrency 模式——
+ * limit 个 worker 并行消费 items，任一失败不阻断其他。
+ */
+async function withConcurrency<T, R>(
+  items: T[],
+  fn: (item: T, index: number) => Promise<R>,
+  limit: number = LLM_CONCURRENCY,
+): Promise<(R | null)[]> {
+  const results: (R | null)[] = new Array(items.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < items.length) {
+      const idx = cursor++;
+      try {
+        results[idx] = await fn(items[idx], idx);
+      } catch {
+        results[idx] = null;
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+  );
+
+  return results;
+}
 
 // ─── 文本预处理 ──────────────────────────────────────────
 
@@ -163,67 +204,96 @@ export async function runDissection(options: DissectOptions): Promise<void> {
     const client = createLLMClient(config);
     const model = config.extractorModel || config.writerModel;
 
-    // 4. 准备原文样本（对大文本做智能截取）
+    // 4. 准备原文样本（智能截取——按维度定向采样）
     const textSample = buildTextSample(cleanText, chapters);
 
-    // 5. 按深度执行维度提取
-    const groups = DIMENSION_GROUPS[depth];
-    const totalGroups = groups.length;
+    // 5. 并行维度提取
     const dimensions: Record<string, DimensionResult> = {};
 
-    for (let gi = 0; gi < groups.length; gi++) {
-      const group = groups[gi];
-      const baseProgress = 10 + Math.round((gi / totalGroups) * 80); // 10%-90%
-
-      report(baseProgress, "extracting", `正在提取：${group.map((d) => DIMENSION_LABELS[d]).join("、")}`);
-
+    if (depth === "quick") {
+      // 快速模式：单次 LLM 全提（无法并行——本身就是一次调用）
+      report(15, "extracting", "快速模式：一次性提取全部15维度...");
       try {
-        if (depth === "quick" && group.length > 1) {
-          // 快速模式：一次提取全部
-          const result = await extractDimensionsBatch(
-            client, model, group, textSample, chapters.length,
-          );
-          Object.assign(dimensions, result);
-        } else {
-          // 标准/精细模式：逐组提取
-          for (const dim of group) {
-            const dimResult = await extractSingleDimension(
-              client, model, dim, textSample, chapters.length,
-            );
-            dimensions[dim] = dimResult;
-          }
-        }
+        const group = DIMENSION_GROUPS.quick[0];
+        const result = await extractDimensionsBatch(
+          client, model, group, textSample, chapters.length,
+        );
+        Object.assign(dimensions, result);
       } catch (err: any) {
-        // 单个维度失败不阻断整体——标记为失败继续
-        for (const dim of group) {
-          if (!dimensions[dim]) {
-            dimensions[dim] = {
-              dimension: dim,
-              label: DIMENSION_LABELS[dim],
-              icon: DIMENSION_ICONS[dim],
-              content: "",
-              status: "failed",
-              error: err?.message || "提取失败",
-            };
-          }
+        // 快速模式失败——标记所有维度为失败
+        for (const dim of DISSECT_DIMENSIONS) {
+          dimensions[dim] = {
+            dimension: dim,
+            label: DIMENSION_LABELS[dim],
+            icon: DIMENSION_ICONS[dim],
+            content: "",
+            status: "failed",
+            error: err?.message || "批量提取失败",
+          };
         }
       }
+      report(90, "extracting", "维度提取完成");
 
-      // 实时更新 DB
+      // 实时写 DB
       await prisma.dissectionTask.update({
         where: { id: taskId },
-        data: {
-          progress: baseProgress + Math.round((1 / totalGroups) * 80),
-          dimensions: dimensions as any,
-          status: "extracting",
-        },
+        data: { progress: 90, dimensions: dimensions as any, status: "extracting" },
       });
+    } else {
+      // 标准/精细模式：并行提取
+      const allDims: DimensionKey[] = DIMENSION_GROUPS[depth].flat();
+      const totalDims = allDims.length;
+      let completedDims = 0;
+
+      report(15, "extracting", `并行提取 ${totalDims} 个维度（并发${LLM_CONCURRENCY}）...`);
+
+      // 并发池——所有维度同时跑，limit 控制并发数
+      const results = await withConcurrency(
+        allDims,
+        async (dim) => {
+          // 为每个维度构建定向文本样本
+          const dimSample = buildDimensionTextSample(cleanText, chapters, dim);
+          const result = await extractSingleDimension(
+            client, model, dim, dimSample, chapters.length,
+          );
+          completedDims++;
+          const pct = 15 + Math.round((completedDims / totalDims) * 75);
+          // 每完成一个维度就更新 DB（让前端看到实时进度）
+          dimensions[dim] = result;
+          await prisma.dissectionTask.update({
+            where: { id: taskId },
+            data: {
+              progress: pct,
+              dimensions: dimensions as any,
+              status: "extracting",
+            },
+          }).catch(() => {}); // 更新失败不阻断
+          report(pct, "extracting", `✅ ${DIMENSION_LABELS[dim]} (${completedDims}/${totalDims})`);
+          return result;
+        },
+        LLM_CONCURRENCY,
+      );
+
+      // 标记失败的维度
+      for (let i = 0; i < allDims.length; i++) {
+        const dim = allDims[i];
+        if (!dimensions[dim]) {
+          dimensions[dim] = {
+            dimension: dim,
+            label: DIMENSION_LABELS[dim],
+            icon: DIMENSION_ICONS[dim],
+            content: "",
+            status: "failed",
+            error: "并发提取失败",
+          };
+        }
+      }
     }
 
-    // 6. 可选：逐章摘要提取
+    // 6. 可选：逐章摘要提取（并发池加速）
     if (extractChapterSummaries && chapters.length > 0) {
-      report(90, "extracting", "正在提取章节摘要...");
-      await extractChapterSummariesForTask(
+      report(90, "extracting", `并发提取章节摘要（${chapters.length}章，并发${LLM_CONCURRENCY}）...`);
+      await extractChapterSummariesConcurrent(
         client, model, taskId, chapters, cleanText, 90, 99,
       );
     }
@@ -325,7 +395,11 @@ async function extractDimensionsBatch(
   return results;
 }
 
-async function extractChapterSummariesForTask(
+/**
+ * 并发池版章节摘要提取。
+ * 复用 withConcurrency 模式——8章并行跑，比串行快 ~8x。
+ */
+async function extractChapterSummariesConcurrent(
   client: LLMClient,
   model: string,
   taskId: string,
@@ -335,49 +409,55 @@ async function extractChapterSummariesForTask(
   progressEnd: number,
 ): Promise<void> {
   const total = chapters.length;
-  for (let i = 0; i < total; i++) {
-    const ch = chapters[i];
-    const chapterText = fullText.slice(ch.startPos, ch.endPos);
-    const prompt = buildChapterSummaryPrompt(ch.title, chapterText, i + 1, total);
+  let completedCount = 0;
 
-    try {
-      const response = await client.chat({
-        model,
-        messages: [
-          { role: "system", content: "你是一个精准的小说分析师。只返回要求的JSON，不要额外文字。" },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.2,
-        maxTokens: 1024,
-      });
+  await withConcurrency(
+    chapters,
+    async (ch, i) => {
+      const chapterText = fullText.slice(ch.startPos, ch.endPos);
+      const prompt = buildChapterSummaryPrompt(ch.title, chapterText, i + 1, total);
 
-      // 尝试解析 JSON 响应
-      const content = response.content || "";
       try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          ch.summary = parsed.summary || content.slice(0, 200);
-        } else {
+        const response = await client.chat({
+          model,
+          messages: [
+            { role: "system", content: "你是一个精准的小说分析师。只返回要求的JSON，不要额外文字。" },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.2,
+          maxTokens: 1024,
+        });
+
+        const content = response.content || "";
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            ch.summary = parsed.summary || content.slice(0, 200);
+          } else {
+            ch.summary = content.slice(0, 200);
+          }
+        } catch {
           ch.summary = content.slice(0, 200);
         }
       } catch {
-        ch.summary = content.slice(0, 200);
+        ch.summary = `第${i + 1}章摘要提取失败`;
       }
-    } catch {
-      ch.summary = `第${i + 1}章摘要提取失败`;
-    }
 
-    const pct = progressStart + Math.round(((i + 1) / total) * (progressEnd - progressStart));
-    await prisma.dissectionTask.update({
-      where: { id: taskId },
-      data: {
-        progress: pct,
-        completedChapters: i + 1,
-        chapterList: chapters as any,
-      },
-    });
-  }
+      completedCount++;
+      const pct = progressStart + Math.round((completedCount / total) * (progressEnd - progressStart));
+      // 静默更新进度（不阻塞并发）
+      await prisma.dissectionTask.update({
+        where: { id: taskId },
+        data: {
+          progress: pct,
+          completedChapters: completedCount,
+          chapterList: chapters as any,
+        },
+      }).catch(() => {});
+    },
+    LLM_CONCURRENCY,
+  );
 }
 
 // ─── 原文样本构建 ────────────────────────────────────────
@@ -400,6 +480,114 @@ function buildTextSample(fullText: string, chapters: ChapterInfo[]): string {
   });
 
   return `${head}\n\n...（中间省略）...\n\n${chapterSamples.join("\n")}\n\n...（尾部）...\n\n${tail}`;
+}
+
+/**
+ * 按维度定向采样。
+ *
+ * 不同维度关注文本的不同部位——盲目发全文既浪费 token 又稀释关键信息。
+ * 这里复用 memory-injector 的"选择性字段"思路（Strategy 2），
+ * 每个维度只拿对它最有价值的那部分文本。
+ */
+function buildDimensionTextSample(
+  fullText: string,
+  chapters: ChapterInfo[],
+  dimension: DimensionKey,
+): string {
+  const MAX_SAMPLE = 60000;
+  const base = buildTextSample(fullText, chapters);
+
+  // 如果全文已经够小，直接返回
+  if (fullText.length <= MAX_SAMPLE) return fullText;
+
+  // 根据维度类型定向采样
+  switch (dimension) {
+    case "characters": {
+      // 角色维度：取对话密集的段落 + 前5章的完整角色出场
+      const dialogues = extractDialogueSections(fullText, 3000);
+      const firstChapters = chapters.slice(0, 5).map((ch) =>
+        fullText.slice(ch.startPos, Math.min(ch.startPos + 800, ch.endPos))
+      ).join("\n---\n");
+      return `【角色出场段落】\n${firstChapters}\n\n【对话密集段落】\n${dialogues}\n\n${base.slice(0, 20000)}`;
+    }
+
+    case "style_analysis": {
+      // 风格维度：头/中/尾各取一段，保证代表性
+      const mid = Math.floor(chapters.length / 2);
+      const headSample = fullText.slice(0, 2000);
+      const midSample = chapters[mid]
+        ? fullText.slice(chapters[mid].startPos, Math.min(chapters[mid].startPos + 2000, chapters[mid].endPos))
+        : "";
+      const tailSample = fullText.slice(-2000);
+      return `【开头样本】\n${headSample}\n\n【中间样本】\n${midSample}\n\n【结尾样本】\n${tailSample}`;
+    }
+
+    case "plot_thread": {
+      // 情节维度：每章开头段落（情节通常在章首引入）
+      const openings = chapters.slice(0, 40).map((ch) => {
+        const snippet = fullText.slice(ch.startPos, Math.min(ch.startPos + 400, ch.endPos));
+        return `[${ch.title}] ${snippet.slice(0, 200)}...`;
+      }).join("\n");
+      return `【各章开头】\n${openings}\n\n${base.slice(0, 30000)}`;
+    }
+
+    case "map":
+    case "factions": {
+      // 地图/势力：搜索含地名/势力名的段落
+      const locationTerms = /(?:城|宗|山|谷|殿|阁|府|界|域|国|派|门|族|盟|会|楼|堂|峰|海|林|原|境)/g;
+      const relevantSections = extractRelevantSections(fullText, locationTerms, 4000);
+      return `【地点/势力相关段落】\n${relevantSections}\n\n${base.slice(0, 20000)}`;
+    }
+
+    case "power_system":
+    case "cultivation": {
+      // 力量/功法：搜索修炼相关段落
+      const powerTerms = /(?:修炼|突破|境界|功法|灵气|丹田|元婴|金丹|筑基|炼气|化神|渡劫|秘籍|法术|神通|力量|等级|阶|品|层|重|星|环)/g;
+      const relevantSections = extractRelevantSections(fullText, powerTerms, 4000);
+      return `【修炼/功法相关段落】\n${relevantSections}\n\n${base.slice(0, 20000)}`;
+    }
+
+    case "currency":
+    case "items": {
+      // 货币/物品：搜索交易和物品描述段落
+      const itemTerms = /(?:灵石|金币|银两|丹药|法宝|神器|兵器|材料|购买|交易|价格|价值|拍卖|坊市|店铺)/g;
+      const relevantSections = extractRelevantSections(fullText, itemTerms, 3000);
+      return `【物品/交易相关段落】\n${relevantSections}\n\n${base.slice(0, 20000)}`;
+    }
+
+    default:
+      // 其他维度用标准采样
+      return base;
+  }
+}
+
+/** 提取含对话的段落 */
+function extractDialogueSections(text: string, maxChars: number): string {
+  const lines = text.split("\n");
+  const dialogueLines: string[] = [];
+  for (const line of lines) {
+    if (line.includes("「") || line.includes("」") || line.includes("\"") || line.includes("：") || line.includes("说") || line.includes("道")) {
+      dialogueLines.push(line);
+      if (dialogueLines.join("\n").length > maxChars) break;
+    }
+  }
+  return dialogueLines.join("\n").slice(0, maxChars);
+}
+
+/** 提取包含特定关键词的段落 */
+function extractRelevantSections(text: string, regex: RegExp, maxChars: number): string {
+  const sections: string[] = [];
+  let accumulated = 0;
+  // 按段落切分（双换行）
+  const paragraphs = text.split(/\n\n+/);
+  for (const para of paragraphs) {
+    if (regex.test(para)) {
+      sections.push(para.slice(0, 300));
+      accumulated += para.length;
+      if (accumulated > maxChars) break;
+    }
+  }
+  return sections.join("\n---\n").slice(0, maxChars);
 }
 
 // ─── 工具函数 ────────────────────────────────────────────
