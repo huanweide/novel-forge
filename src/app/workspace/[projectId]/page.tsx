@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 import { SettingsImporter } from "@/components/dashboard/SettingsImporter";
 import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
@@ -28,14 +29,14 @@ export default function WorkspacePage() {
 
   // ── 生成步骤状态 ──────────────────────────
   const [genStep, setGenStep] = useState<"" | "loading-cards" | "confirming" | "generating" | "reviewing" | "summarizing" | "done" | "error">("");
-  const genStepLabels: Record<string, { icon: string; label: string }> = {
-    "loading-cards": { icon: "🔍", label: "AI 正在分析角色调度..." },
-    "confirming": { icon: "📋", label: "等待确认角色选择" },
-    "generating": { icon: "✍️", label: "AI 正在写作..." },
-    "reviewing": { icon: "🔍", label: "AI 正在审校..." },
-    "summarizing": { icon: "📦", label: "生成章节摘要..." },
-    "done": { icon: "✅", label: "生成完成" },
-    "error": { icon: "❌", label: "生成出错" },
+  const genStepLabels: Record<string, { icon: React.ReactNode; label: string }> = {
+    "loading-cards": { icon: <Icon name="search" size={14} className="animate-pulse" />, label: "AI 正在分析角色调度..." },
+    "confirming": { icon: <Icon name="clipboard" size={14} />, label: "等待确认角色选择" },
+    "generating": { icon: <Icon name="pencil" size={14} className="animate-pulse" />, label: "AI 正在写作..." },
+    "reviewing": { icon: <Icon name="search" size={14} className="animate-pulse" />, label: "AI 正在审校..." },
+    "summarizing": { icon: <Icon name="package" size={14} />, label: "生成章节摘要..." },
+    "done": { icon: <Icon name="check" size={14} className="text-emerald-400" />, label: "生成完成" },
+    "error": { icon: <Icon name="alert" size={14} className="text-rose-400" />, label: "生成出错" },
   };
   const [chapterOutlineStatus, setChapterOutlineStatus] = useState<"" | "generating" | "done" | "error">("");
 

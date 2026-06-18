@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
+import { Icon } from "@/components/ui/icons";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -121,14 +122,14 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/explore" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95">
-              🎯 探讨
+            <Link href="/explore" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95 flex items-center gap-1">
+              <Icon name="target" size={13} /> 探讨
             </Link>
-            <Link href="/dissect" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95">
-              📚 拆书
+            <Link href="/dissect" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95 flex items-center gap-1">
+              <Icon name="book" size={13} /> 拆书
             </Link>
-            <Link href="/settings" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95">
-              ⚙️ 设置
+            <Link href="/settings" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95 flex items-center gap-1">
+              <Icon name="settings" size={13} /> 设置
             </Link>
             <Button
               onClick={() => setShowCreate(true)}
@@ -153,7 +154,7 @@ export default function Dashboard() {
         ) : projects.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-5">
-              <span className="text-3xl">📖</span>
+              <Icon name="bookmarked" size={28} className="text-zinc-500" />
             </div>
             <h2 className="text-xl font-semibold text-zinc-300 mb-2">还没有小说项目</h2>
             <p className="text-zinc-500 text-sm mb-6">创建你的第一个项目，开始 AI 辅助写作</p>
@@ -258,10 +259,10 @@ function ProjectCard({ project, onDelete }: { project: ProjectSummary; onDelete:
       )}
 
       <div className="flex items-center gap-4 text-[10px] text-zinc-600 mb-3">
-        <span>👤 {project._count.characters} 角色</span>
-        <span>📚 {project._count.lorebookEntries} 词条</span>
-        <span>📄 {project._count.storyNodes} 节点</span>
-        <span>🎯 {formatWordCount(project.targetWordCount)}</span>
+        <span className="flex items-center gap-1"><Icon name="user" size={11} /> {project._count.characters} 角色</span>
+        <span className="flex items-center gap-1"><Icon name="book" size={11} /> {project._count.lorebookEntries} 词条</span>
+        <span className="flex items-center gap-1"><Icon name="file" size={11} /> {project._count.storyNodes} 节点</span>
+        <span className="flex items-center gap-1"><Icon name="target" size={11} /> {formatWordCount(project.targetWordCount)}</span>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">

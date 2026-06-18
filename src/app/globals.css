@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════
+   Novel Forge · 虚空玻璃 (Void Glass) 设计体系
+   三层深度 + 功能色彩 + 弹性动画 + 微纹理
+   ═══════════════════════════════════════════ */
+
+/* ── Shadcn 主题令牌（暗色为主） ── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -48,74 +54,128 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ═══════════════════════════════════════════
+   CSS 自定义属性 — Novel Forge 虚空玻璃令牌
+   ═══════════════════════════════════════════ */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* ── 虚空色彩（功能语义） ── */
+  --nv-void:        #050508;   /* 最深底色——页背景 */
+  --nv-abyss:       #0A0A0E;   /* 次级底色——容器背景 */
+  --nv-surface-1:   rgba(255, 255, 255, 0.015);  /* 基底面——行/分组 */
+  --nv-surface-2:   rgba(255, 255, 255, 0.03);   /* 抬升面——卡片 */
+  --nv-surface-3:   rgba(255, 255, 255, 0.055);  /* 浮起面——模态/弹出 */
+  --nv-border-1:    rgba(255, 255, 255, 0.05);   /* 基底边线 */
+  --nv-border-2:    rgba(255, 255, 255, 0.08);   /* 抬升边线 */
+  --nv-border-3:    rgba(255, 255, 255, 0.12);   /* 浮起边线 */
+
+  /* ── 功能色彩（OKLCH 空间，感知均匀） ── */
+  --nv-primary:      oklch(0.62 0.19 270);       /* 靛蓝 —— 主操作/生成 */
+  --nv-primary-soft: oklch(0.62 0.19 270 / 0.12);
+  --nv-success:      oklch(0.65 0.18 160);       /* 翠绿 —— 确认/保存 */
+  --nv-success-soft: oklch(0.65 0.18 160 / 0.12);
+  --nv-warning:      oklch(0.72 0.16 85);        /* 琥珀 —— 提醒/待处理 */
+  --nv-warning-soft: oklch(0.72 0.16 85 / 0.12);
+  --nv-danger:       oklch(0.58 0.22 18);        /* 玫瑰 —— 删除/危险 */
+  --nv-danger-soft:  oklch(0.58 0.22 18 / 0.12);
+  --nv-creative:     oklch(0.58 0.21 295);       /* 紫罗兰 —— AI/魔法 */
+  --nv-creative-soft:oklch(0.58 0.21 295 / 0.12);
+  --nv-info:         oklch(0.62 0.15 230);       /* 青 —— 提示/信息 */
+  --nv-info-soft:    oklch(0.62 0.15 230 / 0.12);
+  --nv-accent:       oklch(0.75 0.14 95);        /* 金色 —— 强调/高亮 */
+  --nv-accent-soft:  oklch(0.75 0.14 95 / 0.1);
+
+  /* ── 文字层级 ── */
+  --nv-text-primary:   #F0EEE8;   /* 主文字——暖白 */
+  --nv-text-secondary: #A1A09A;   /* 辅文字——暖灰 */
+  --nv-text-muted:     #5C5A55;   /* 弱文字——深灰 */
+
+  /* ── 动画曲线 ── */
+  --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-expo:    cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-out-smooth: cubic-bezier(0.22, 0.7, 0, 1);
+
+  /* ── 动画时长 ── */
+  --dur-micro:   150ms;
+  --dur-standard: 250ms;
+  --dur-emphasis: 400ms;
+  --dur-page:    600ms;
+
+  /* ── 圆角 ── */
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* ── Shadcn 变量映射到虚空体系 ── */
+  --background: #050508;
+  --foreground: #F0EEE8;
+  --card: rgba(255, 255, 255, 0.03);
+  --card-foreground: #F0EEE8;
+  --popover: #0E0E14;
+  --popover-foreground: #F0EEE8;
+  --primary: oklch(0.62 0.19 270);
+  --primary-foreground: #F0EEE8;
+  --secondary: rgba(255, 255, 255, 0.04);
+  --secondary-foreground: #F0EEE8;
+  --muted: rgba(255, 255, 255, 0.025);
+  --muted-foreground: #A1A09A;
+  --accent: rgba(255, 255, 255, 0.04);
+  --accent-foreground: #F0EEE8;
+  --destructive: oklch(0.58 0.22 18);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: oklch(0.62 0.19 270 / 0.5);
+  --chart-1: oklch(0.62 0.19 270);
+  --chart-2: oklch(0.65 0.18 160);
+  --chart-3: oklch(0.72 0.16 85);
+  --chart-4: oklch(0.58 0.22 18);
+  --chart-5: oklch(0.58 0.21 295);
+  --sidebar: #080810;
+  --sidebar-foreground: #F0EEE8;
+  --sidebar-primary: oklch(0.62 0.19 270);
+  --sidebar-primary-foreground: #F0EEE8;
+  --sidebar-accent: rgba(255, 255, 255, 0.03);
+  --sidebar-accent-foreground: #F0EEE8;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: oklch(0.62 0.19 270 / 0.5);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #050508;
+  --foreground: #F0EEE8;
+  --card: rgba(255, 255, 255, 0.03);
+  --card-foreground: #F0EEE8;
+  --popover: #0E0E14;
+  --popover-foreground: #F0EEE8;
+  --primary: oklch(0.62 0.19 270);
+  --primary-foreground: #F0EEE8;
+  --secondary: rgba(255, 255, 255, 0.04);
+  --secondary-foreground: #F0EEE8;
+  --muted: rgba(255, 255, 255, 0.025);
+  --muted-foreground: #A1A09A;
+  --accent: rgba(255, 255, 255, 0.04);
+  --accent-foreground: #F0EEE8;
+  --destructive: oklch(0.58 0.22 18);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: oklch(0.62 0.19 270 / 0.5);
+  --chart-1: oklch(0.62 0.19 270);
+  --chart-2: oklch(0.65 0.18 160);
+  --chart-3: oklch(0.72 0.16 85);
+  --chart-4: oklch(0.58 0.22 18);
+  --chart-5: oklch(0.58 0.21 295);
+  --sidebar: #080810;
+  --sidebar-foreground: #F0EEE8;
+  --sidebar-primary: oklch(0.62 0.19 270);
+  --sidebar-primary-foreground: #F0EEE8;
+  --sidebar-accent: rgba(255, 255, 255, 0.03);
+  --sidebar-accent-foreground: #F0EEE8;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: oklch(0.62 0.19 270 / 0.5);
 }
+
+/* ═══════════════════════════════════════════
+   Layer Base — Shadcn 兼容
+   ═══════════════════════════════════════════ */
 
 @layer base {
   * {
@@ -123,71 +183,168 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: #050508;
   }
   html {
     @apply font-sans;
+    color-scheme: dark;
   }
 }
 
 /* ═══════════════════════════════════════════
-   实体高亮样式 — 正文内彩色标注（低饱和度）
+   虚空玻璃表面层级（3级深度系统）
    ═══════════════════════════════════════════ */
 
-.markdown-body .entity-highlight {
-  cursor: pointer;
-  border-radius: 2px;
-  padding: 0 1px;
-  transition: background-color 0.2s, box-shadow 0.2s;
+/* L1 基底面 —— 页面内最低层容器，带噪点纹理 */
+.surface-base {
+  background: var(--nv-surface-1);
+  border: 1px solid var(--nv-border-1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  position: relative;
+}
+.surface-base::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  background-repeat: repeat;
+  pointer-events: none;
 }
 
-.markdown-body .entity-highlight:hover {
-  box-shadow: 0 0 0 1.5px currentColor;
-  filter: brightness(1.15);
+/* L2 抬升面 —— 卡片/面板 */
+.surface-elevated {
+  background: var(--nv-surface-2);
+  border: 1px solid var(--nv-border-2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: border-color var(--dur-standard) var(--ease-out-smooth),
+              box-shadow var(--dur-standard) var(--ease-out-smooth),
+              transform var(--dur-standard) var(--ease-out-smooth);
+}
+.surface-elevated:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.surface-elevated:active {
+  transform: scale(0.985);
 }
 
-.markdown-body .entity-highlight.entity-character:hover {
-  background-color: rgba(91, 155, 213, 0.12);
+/* L3 浮起面 —— 模态/弹窗/下拉 */
+.surface-floating {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--nv-border-3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
-.markdown-body .entity-highlight.entity-lorebook:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+/* ── 旧版兼容别名（已广泛使用的类名，保留） ── */
+.glass-surface {
+  background: var(--nv-surface-2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--nv-border-2);
 }
-
-/* ── Markdown 正文排版 ── */
-.markdown-body {
-  line-height: 1.85;
-  word-break: break-word;
-  font-size: 17px;
-  letter-spacing: 0.02em;
-  color: #e2e2e2;
-}
-
-.markdown-body > *:first-child {
-  margin-top: 0;
-}
-
-.markdown-body > *:last-child {
-  margin-bottom: 0;
+.glass-surface-strong {
+  background: var(--nv-surface-3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--nv-border-3);
 }
 
 /* ═══════════════════════════════════════════
-   探讨模式 — 高级感 UI 设计令牌
+   功能色彩按钮变体
    ═══════════════════════════════════════════ */
 
-/* ── 玻璃拟态表面 ── */
-.glass-surface {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* 主操作（靛蓝渐变） */
+.btn-primary {
+  background: linear-gradient(135deg, oklch(0.62 0.19 270), oklch(0.55 0.22 278));
+  color: #F0EEE8;
+  box-shadow: 0 2px 12px oklch(0.62 0.19 270 / 0.25);
+  transition: all var(--dur-standard) var(--ease-out-smooth);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, oklch(0.67 0.18 265), oklch(0.60 0.21 273));
+  box-shadow: 0 4px 20px oklch(0.62 0.19 270 / 0.4);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 6px oklch(0.62 0.19 270 / 0.2);
 }
 
-.glass-surface-strong {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* 确认（翠绿渐变） */
+.btn-success {
+  background: linear-gradient(135deg, oklch(0.58 0.18 160), oklch(0.50 0.20 155));
+  color: #F0EEE8;
+  box-shadow: 0 2px 12px oklch(0.65 0.18 160 / 0.2);
+  transition: all var(--dur-standard) var(--ease-out-smooth);
+}
+.btn-success:hover {
+  background: linear-gradient(135deg, oklch(0.63 0.17 158), oklch(0.55 0.19 153));
+  box-shadow: 0 4px 20px oklch(0.65 0.18 160 / 0.35);
+  transform: translateY(-1px);
+}
+.btn-success:active {
+  transform: scale(0.97);
 }
 
-/* ── 按钮按压反馈 ── */
+/* 危险（玫瑰渐变） */
+.btn-danger {
+  background: linear-gradient(135deg, oklch(0.52 0.24 18), oklch(0.45 0.26 15));
+  color: #F0EEE8;
+  box-shadow: 0 2px 12px oklch(0.58 0.22 18 / 0.2);
+  transition: all var(--dur-standard) var(--ease-out-smooth);
+}
+.btn-danger:hover {
+  background: linear-gradient(135deg, oklch(0.57 0.23 16), oklch(0.50 0.25 13));
+  box-shadow: 0 4px 20px oklch(0.58 0.22 18 / 0.35);
+  transform: translateY(-1px);
+}
+.btn-danger:active {
+  transform: scale(0.97);
+}
+
+/* 创意/AI（紫罗兰渐变） */
+.btn-creative {
+  background: linear-gradient(135deg, oklch(0.53 0.22 295), oklch(0.46 0.24 300));
+  color: #F0EEE8;
+  box-shadow: 0 2px 12px oklch(0.58 0.21 295 / 0.25);
+  transition: all var(--dur-standard) var(--ease-out-smooth);
+}
+.btn-creative:hover {
+  background: linear-gradient(135deg, oklch(0.58 0.21 292), oklch(0.51 0.23 298));
+  box-shadow: 0 4px 20px oklch(0.58 0.21 295 / 0.4);
+  transform: translateY(-1px);
+}
+.btn-creative:active {
+  transform: scale(0.97);
+}
+
+/* 次要（幽灵按钮） */
+.btn-ghost {
+  background: transparent;
+  color: var(--nv-text-secondary);
+  border: 1px solid var(--nv-border-2);
+  transition: all var(--dur-standard) var(--ease-out-smooth);
+}
+.btn-ghost:hover {
+  background: var(--nv-surface-2);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--nv-text-primary);
+}
+.btn-ghost:active {
+  background: var(--nv-surface-3);
+  transform: scale(0.97);
+}
+
+/* 基础按压反馈（兼容旧 btn-press） */
 .btn-press {
   transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
               box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
@@ -196,20 +353,58 @@
   transform: scale(0.97);
 }
 
-/* ── 卡片悬浮升起 ── */
-.card-lift {
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1),
-              box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
-              border-color 0.2s ease;
+/* ═══════════════════════════════════════════
+   输入框系统
+   ═══════════════════════════════════════════ */
+
+.input-glass {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--nv-text-primary);
+  transition: border-color var(--dur-standard) var(--ease-out-smooth),
+              box-shadow var(--dur-standard) var(--ease-out-smooth),
+              background var(--dur-standard) var(--ease-out-smooth);
 }
-.card-lift:hover {
-  transform: translateY(-2px);
+.input-glass::placeholder {
+  color: var(--nv-text-muted);
+}
+.input-glass:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+}
+.input-glass:focus {
+  outline: none;
+  border-color: oklch(0.62 0.19 270 / 0.4);
+  box-shadow: 0 0 0 3px oklch(0.62 0.19 270 / 0.08);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* ── 辉光脉冲（加载指示） ── */
+/* ═══════════════════════════════════════════
+   动画关键帧
+   ═══════════════════════════════════════════ */
+
+/* 淡入上浮 */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fade-in-up 0.3s var(--ease-out-expo);
+}
+
+/* 弹性入场（强调元素） */
+@keyframes spring-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-spring {
+  animation: spring-in 0.4s var(--ease-spring);
+}
+
+/* 辉光脉冲 */
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 1; }
 }
 .glow-dot {
   animation: glow-pulse 1.5s ease-in-out infinite;
@@ -217,28 +412,55 @@
 .glow-dot:nth-child(2) { animation-delay: 0.15s; }
 .glow-dot:nth-child(3) { animation-delay: 0.3s; }
 
-/* ── 渐变边框动画 ── */
-@keyframes border-glow {
-  0%, 100% { border-color: rgba(99, 102, 241, 0.15); }
-  50% { border-color: rgba(99, 102, 241, 0.35); }
+/* 渐变边框呼吸 */
+@keyframes border-breathe {
+  0%, 100% { border-color: oklch(0.62 0.19 270 / 0.1); }
+  50%      { border-color: oklch(0.62 0.19 270 / 0.25); }
 }
 
-/* ── 入场动画 ── */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 微光扫描（生成中效果） */
+@keyframes shimmer-scan {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
-.animate-in {
-  animation: fade-in-up 0.3s ease-out;
+.shimmer-line {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    oklch(0.62 0.19 270 / 0.06) 30%,
+    oklch(0.62 0.19 270 / 0.12) 50%,
+    oklch(0.62 0.19 270 / 0.06) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-scan 2.5s ease-in-out infinite;
 }
 
-/* ── 自定义滚动条（暗色） ── */
+/* ═══════════════════════════════════════════
+   卡片悬浮升起
+   ═══════════════════════════════════════════ */
+
+.card-lift {
+  transition: transform 0.25s var(--ease-out-smooth),
+              box-shadow 0.25s var(--ease-out-smooth),
+              border-color 0.25s var(--ease-out-smooth);
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════════════════
+   聚焦环
+   ═══════════════════════════════════════════ */
+
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-0 focus-visible:ring-offset-transparent;
+}
+
+/* ═══════════════════════════════════════════
+   自定义滚动条
+   ═══════════════════════════════════════════ */
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -246,14 +468,56 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 2px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* ── 聚焦环增强 ── */
-.focus-ring {
-  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-0;
+/* ═══════════════════════════════════════════
+   Markdown 正文排版
+   ═══════════════════════════════════════════ */
+
+.markdown-body {
+  line-height: 1.85;
+  word-break: break-word;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  color: #E8E6E0;
+}
+.markdown-body > *:first-child { margin-top: 0; }
+.markdown-body > *:last-child  { margin-bottom: 0; }
+
+/* ═══════════════════════════════════════════
+   实体高亮（编辑器内角色/词条标注）
+   ═══════════════════════════════════════════ */
+
+.markdown-body .entity-highlight {
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+.markdown-body .entity-highlight:hover {
+  box-shadow: 0 0 0 1.5px currentColor;
+  filter: brightness(1.15);
+}
+.markdown-body .entity-highlight.entity-character:hover {
+  background-color: rgba(91, 155, 213, 0.12);
+}
+.markdown-body .entity-highlight.entity-lorebook:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ═══════════════════════════════════════════
+   prefers-reduced-motion
+   ═══════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

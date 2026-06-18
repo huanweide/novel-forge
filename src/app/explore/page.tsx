@@ -7,6 +7,7 @@ import { AdoptedContentPanel } from "@/components/explore/AdoptedContentPanel";
 import { ChatPanel } from "@/components/explore/ChatPanel";
 import { OutlinePanel } from "@/components/explore/OutlinePanel";
 import { CardBrowser } from "@/components/explore/CardBrowser";
+import { Icon } from "@/components/ui/icons";
 import type {
   BuildConfig,
   ExploreStep,
@@ -520,7 +521,7 @@ export default function ExplorePage() {
               ← 返回
             </Link>
             <div className="flex items-center gap-2.5">
-              <span className="text-lg">🎯</span>
+              <Icon name="target" size={20} className="text-indigo-400" />
               <h1 className="text-base font-bold text-zinc-100">探讨模式</h1>
             </div>
             <span className="text-[10px] text-zinc-600 hidden sm:inline">
@@ -531,7 +532,7 @@ export default function ExplorePage() {
           <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06] mr-2">
             {(["chat", "cards", "outline"] as const).map((m) => {
               const active = mode === m;
-              const labels: Record<string, string> = { chat: "💬 对话", cards: "🃏 抽卡", outline: "📋 大纲" };
+              const labels: Record<string, React.ReactNode> = { chat: <span className="flex items-center gap-1"><Icon name="message" size={12} /> 对话</span>, cards: <span className="flex items-center gap-1"><Icon name="grid" size={12} /> 抽卡</span>, outline: <span className="flex items-center gap-1"><Icon name="clipboard" size={12} /> 大纲</span> };
               return (
                 <button
                   key={m}
@@ -557,7 +558,7 @@ export default function ExplorePage() {
                   : "bg-purple-500/15 text-purple-300 border-purple-400/20 hover:bg-purple-500/20 hover:border-purple-400/30 shadow-[0_0_12px_rgba(168,85,247,0.08)]"
               }`}
             >
-              {generatingAll ? "⏳ 生成中..." : "🤖 一键AI构建所有设定"}
+              {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 生成中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> 一键AI构建所有设定</span>}
             </button>
             <button
               onClick={() => setShowConfig(!showConfig)}

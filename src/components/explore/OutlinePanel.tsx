@@ -1,6 +1,7 @@
 "use client";
 
 import type { BuildConfig } from "@/core/explore/types";
+import { Icon } from "@/components/ui/icons";
 
 interface OutlineProgress {
   phase: string;
@@ -138,7 +139,7 @@ export function OutlinePanel({
               处理中...
             </span>
           ) : (
-            "📋 发送整理"
+            <span className="flex items-center gap-1.5"><Icon name="clipboard" size={14} /> 发送整理</span>
           )}
         </button>
       </div>

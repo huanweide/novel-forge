@@ -29,7 +29,7 @@ export function CenterPanel({
   refineInstruction: string; onRefineInstructionChange: (v: string) => void;
   onRefine: () => void;
   onOpenGame: () => void;
-  genStep: string; genStepLabels: Record<string, { icon: string; label: string }>;
+  genStep: string; genStepLabels: Record<string, { icon: React.ReactNode; label: string }>;
   chapterOutlineStatus: string;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);

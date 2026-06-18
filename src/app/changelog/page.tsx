@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { VERSIONS } from "@/lib/changelog-data";
+import { Icon } from "@/components/ui/icons";
 
 export default function ChangelogPage() {
   return (
@@ -10,7 +11,7 @@ export default function ChangelogPage() {
       <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-lg">📋</span>
+            <Icon name="clipboard" size={20} className="text-zinc-300" />
             <h1 className="text-base font-bold text-zinc-100">更新公告</h1>
             <span className="text-xs text-zinc-600">Novel Forge 版本记录</span>
           </div>

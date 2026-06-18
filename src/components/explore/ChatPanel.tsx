@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 import type { ExploreMessage, ExploreStep, AdoptCard } from "@/core/explore/types";
 import { EXPLORE_STEPS, STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
+import { Icon } from "@/components/ui/icons";
 
 interface Props {
   messages: ExploreMessage[];
@@ -157,7 +158,7 @@ export function ChatPanel({
           <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
             {(["chat", "cards", "outline"] as const).map((m) => {
               const active = mode === m;
-              const labels = { chat: "💬", cards: "🃏", outline: "📋" };
+              const labels: Record<string, React.ReactNode> = { chat: <Icon name="message" size={13} />, cards: <Icon name="grid" size={13} />, outline: <Icon name="clipboard" size={13} /> };
               const titles = { chat: "对话", cards: "抽卡", outline: "大纲" };
               return (
                 <button

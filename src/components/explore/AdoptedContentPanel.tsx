@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { AdoptedItem } from "@/core/explore/types";
 import { STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
+import { Icon } from "@/components/ui/icons";
 
 interface Props {
   adopted: AdoptedItem[];
@@ -45,7 +46,7 @@ export function AdoptedContentPanel({
         {adopted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-12 h-12 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center mb-3">
-              <span className="text-zinc-700 text-lg">📥</span>
+              <Icon name="inbox" size={28} className="text-zinc-700" />
             </div>
             <p className="text-xs text-zinc-600">还未采纳任何内容</p>
             <p className="text-[10px] text-zinc-700 mt-1.5 leading-relaxed max-w-[180px]">
@@ -119,7 +120,7 @@ export function AdoptedContentPanel({
                   : "bg-purple-500/10 text-purple-300 border-purple-400/20 hover:bg-purple-500/15 hover:border-purple-400/30"
               }`}
             >
-              {creating ? "⏳ 完善中..." : "🤖 AI补充缺失设定"}
+              {creating ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 完善中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> AI补充缺失设定</span>}
             </button>
           </div>
         ) : (
@@ -136,7 +137,7 @@ export function AdoptedContentPanel({
                   : "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:from-indigo-500 hover:to-indigo-400"
               }`}
             >
-              {creating ? "⏳ 创建中..." : "📦 手动创建项目"}
+              {creating ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 创建中...</span> : <span className="flex items-center gap-1"><Icon name="package" size={13} /> 手动创建项目</span>}
             </button>
           </>
         )}

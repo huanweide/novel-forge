@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Icon } from "@/components/ui/icons";
 
 const PROVIDERS = [
   { key: "siliconflow", name: "硅基流动 (SiliconFlow)", defaultModel: "deepseek-ai/DeepSeek-V4-Flash", desc: "国产，便宜，DeepSeek V4 全系" },
@@ -115,7 +116,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">← 返回</Link>
             <div className="flex items-center gap-2.5">
-              <span className="text-lg">⚙️</span>
+              <Icon name="settings" size={20} className="text-zinc-300" />
               <h1 className="text-base font-bold text-zinc-100">设置</h1>
             </div>
           </div>
@@ -186,7 +187,7 @@ export default function SettingsPage() {
                 onClick={() => setShowKey(!showKey)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
               >
-                {showKey ? "🙈" : "👁"}
+                <Icon name={showKey ? "eyeOff" : "eye"} size={15} />
               </button>
             </div>
             <button
@@ -247,7 +248,7 @@ export default function SettingsPage() {
             disabled={saving}
             className="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:from-indigo-500 hover:to-indigo-400"
           >
-            {saving ? "保存中..." : "💾 保存设置"}
+            {saving ? "保存中..." : <span className="flex items-center gap-1.5"><Icon name="save" size={15} /> 保存设置</span>}
           </button>
           {statusMsg && (
             <span className={`text-sm transition-all duration-300 ${statusMsg.startsWith("✅") ? "text-emerald-400" : "text-red-400"}`}>
