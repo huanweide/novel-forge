@@ -47,24 +47,24 @@ export function DissectAdaptPanel({
     setInput("");
     setLoading(true);
 
-    // 构建上下文摘要——给 Agent 足够的数据来做修改建议
-    const dimSummary = buildDimensionSummary(dimensions);
-
     try {
-      const res = await fetch("/api/generate/chat", {
+      // 用拆书专用对话端点——不依赖 projectId，纯 LLM 对话
+      const res = await fetch(`/api/dissect/${taskId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId: null,
-          message: `【拆书数据参考】\n${dimSummary}\n\n【用户要求】\n${text}\n\n请针对这个要求给出具体的修改方案。直接说怎么改，不要问问题。如果用户要求合理，给出修改后的设定描述。`,
-          mode: "long",
+          message: text,
+          history: messages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
 
-      if (!res.ok) throw new Error("Agent 响应失败");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Agent 响应失败 (${res.status})`);
+      }
 
       const data = await res.json();
-      const reply = data.reply || data.content || "收到。继续说说你的想法？";
+      const reply = data.reply || "收到。继续说说你的想法？";
 
       setMessages((prev) => [...prev, { role: "agent", content: reply }]);
 
@@ -171,28 +171,3 @@ export function DissectAdaptPanel({
   );
 }
 
-// ─── 辅助：构建维度摘要给 Agent ────────────────────────
-
-function buildDimensionSummary(
-  dims: Record<string, DimensionResult>,
-): string {
-  const parts: string[] = [];
-  const priority = [
-    "basic_info",
-    "story_core",
-    "worldview",
-    "characters",
-    "power_system",
-    "factions",
-    "style_analysis",
-  ];
-
-  for (const key of priority) {
-    const d = dims[key];
-    if (d && d.status === "completed" && d.content) {
-      parts.push(`【${d.label}】${d.content.slice(0, 600)}`);
-    }
-  }
-
-  return parts.join("\n\n") || "（无拆书数据）";
-}
