@@ -9,6 +9,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { getEntityMap, findEntitiesInText, getCategoryColor } from "@/core/entity-highlighter";
+import { Icon } from "@/components/ui/icons";
 import type { EntityHighlight, EntityMatch } from "@/core/entity-highlighter";
 
 // ═══════════════════════════════════════════
@@ -18,23 +19,23 @@ import type { EntityHighlight, EntityMatch } from "@/core/entity-highlighter";
 interface EntityGroup {
   key: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   entities: EntityMatch[];
 }
 
 function buildGroups(matches: EntityMatch[]): EntityGroup[] {
-  const groupDefs: Array<{ key: string; label: string; icon: string; color: string; match: (m: EntityMatch) => boolean }> = [
-    { key: "character", label: "角色", icon: "🧑", color: "#5B9BD5", match: (m) => m.type === "character" },
-    { key: "faction",   label: "势力", icon: "🏛️", color: "#70AD47", match: (m) => m.category === "faction" },
-    { key: "item",      label: "物品", icon: "💎", color: "#D4A017", match: (m) => m.category === "item" },
-    { key: "geography", label: "地点", icon: "🗺️", color: "#C55A11", match: (m) => m.category === "geography" },
-    { key: "magic",     label: "世界观", icon: "🌐", color: "#9B59B6", match: (m) => m.category === "magic_system" },
-    { key: "technique", label: "功法", icon: "⚔️", color: "#D64545", match: (m) => m.category === "technique" },
-    { key: "creature",  label: "生物", icon: "🐉", color: "#C77D9F", match: (m) => m.category === "creature" },
-    { key: "culture",   label: "文化", icon: "🎭", color: "#5DA89B", match: (m) => m.category === "culture" },
-    { key: "history",   label: "历史", icon: "📜", color: "#7B8CC4", match: (m) => m.category === "history" },
-    { key: "other",     label: "其他", icon: "📦", color: "#8B8B8B", match: () => true },
+  const groupDefs: Array<{ key: string; label: string; icon: React.ReactNode; color: string; match: (m: EntityMatch) => boolean }> = [
+    { key: "character", label: "角色", icon: <Icon name="user" size={14} />, color: "#5B9BD5", match: (m) => m.type === "character" },
+    { key: "faction",   label: "势力", icon: <Icon name="building" size={14} />, color: "#70AD47", match: (m) => m.category === "faction" },
+    { key: "item",      label: "物品", icon: <Icon name="gem" size={14} />, color: "#D4A017", match: (m) => m.category === "item" },
+    { key: "geography", label: "地点", icon: <Icon name="map" size={14} />, color: "#C55A11", match: (m) => m.category === "geography" },
+    { key: "magic",     label: "世界观", icon: <Icon name="globe" size={14} />, color: "#9B59B6", match: (m) => m.category === "magic_system" },
+    { key: "technique", label: "功法", icon: <Icon name="sparkles" size={14} />, color: "#D64545", match: (m) => m.category === "technique" },
+    { key: "creature",  label: "生物", icon: <Icon name="sparkles" size={14} className="text-violet-400" />, color: "#C77D9F", match: (m) => m.category === "creature" },
+    { key: "culture",   label: "文化", icon: <Icon name="palette" size={14} />, color: "#5DA89B", match: (m) => m.category === "culture" },
+    { key: "history",   label: "历史", icon: <Icon name="scroll" size={14} />, color: "#7B8CC4", match: (m) => m.category === "history" },
+    { key: "other",     label: "其他", icon: <Icon name="package" size={14} />, color: "#8B8B8B", match: () => true },
   ];
 
   const groups: EntityGroup[] = [];
@@ -158,7 +159,7 @@ export function ChapterEntitiesPanel({
   if (groups.length === 0) {
     return (
       <div className="p-4 text-xs text-zinc-500 text-center">
-        <p className="mb-1">📭 本章未匹配到已注册实体</p>
+        <p className="mb-1 flex items-center justify-center gap-1.5"><Icon name="inbox" size={14} className="text-zinc-600" /> 本章未匹配到已注册实体</p>
         <p>在左侧面板注册角色或词条后，正文中的名字会自动上色并出现在这里</p>
       </div>
     );
@@ -168,7 +169,7 @@ export function ChapterEntitiesPanel({
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="flex items-center justify-between px-1">
-        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">📊 本章实体</h3>
+        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5"><Icon name="chart" size={12} /> 本章实体</h3>
         <span className="text-[10px] text-zinc-600">{matches.length} 次匹配</span>
       </div>
 

@@ -8,6 +8,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { StatusDot } from "@/components/ui/icons";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -41,18 +42,18 @@ interface ForeshadowData {
 // 状态徽章
 // ═══════════════════════════════════════════
 
-const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  pending: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: "🟡" },
-  detected: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: "🟡" },
-  partially_fulfilled: { bg: "bg-blue-500/10", text: "text-blue-400", dot: "🔵" },
-  fulfilled: { bg: "bg-green-500/10", text: "text-green-400", dot: "🟢" },
-  voided: { bg: "bg-zinc-500/10", text: "text-zinc-500", dot: "⚫" },
+const STATUS_STYLE: Record<string, { bg: string; text: string; dot: React.ReactNode }> = {
+  pending: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: <StatusDot color="yellow" size={7} /> },
+  detected: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: <StatusDot color="yellow" size={7} /> },
+  partially_fulfilled: { bg: "bg-blue-500/10", text: "text-blue-400", dot: <StatusDot color="blue" size={7} /> },
+  fulfilled: { bg: "bg-green-500/10", text: "text-green-400", dot: <StatusDot color="green" size={7} /> },
+  voided: { bg: "bg-zinc-500/10", text: "text-zinc-500", dot: <StatusDot color="gray" size={7} /> },
 };
 
-const PRIORITY_LABEL: Record<string, string> = {
-  high: "🔴高",
-  medium: "🟡中",
-  low: "⚪低",
+const PRIORITY_LABEL: Record<string, React.ReactNode> = {
+  high:  <span className="flex items-center gap-1"><StatusDot color="red" size={7} /> 高</span>,
+  medium: <span className="flex items-center gap-1"><StatusDot color="yellow" size={7} /> 中</span>,
+  low:   <span className="flex items-center gap-1"><StatusDot color="gray" size={7} /> 低</span>,
 };
 
 const SOURCE_LABEL: Record<string, string> = {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
+import { Icon } from "@/components/ui/icons";
 import type { StoryNodeData, ReviewIssue } from "./types";
 
 export function CenterPanel({
@@ -53,7 +54,7 @@ export function CenterPanel({
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
               <span className="text-xs text-zinc-600">
-                {selectedNode.status === "completed" ? "✅ 已完成" : selectedNode.status === "reviewing" ? "⚠️ 待修改" : "📝 草稿"}{" "}
+                {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-emerald-400" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-amber-400" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
                 · {selectedNode.wordCount || 0} 字
               </span>
             </div>
@@ -79,7 +80,7 @@ export function CenterPanel({
                       {chapterOutlineStatus === "generating" ? (
                         <span className="text-[10px] text-indigo-400 animate-pulse px-1">⏳ 章纲生成中...</span>
                       ) : chapterOutlineStatus === "done" ? (
-                        <span className="text-[10px] text-emerald-400 font-medium px-1">✅ 章纲完成</span>
+                        <span className="text-[10px] text-emerald-400 font-medium px-1 flex items-center gap-0.5"><Icon name="check" size={10} /> 章纲完成</span>
                       ) : chapterOutlineStatus === "error" ? (
                         <span className="text-[10px] text-red-400 px-1">❌ 章纲失败</span>
                       ) : (
@@ -92,7 +93,7 @@ export function CenterPanel({
                             title="用 V4 Flash 为本章生成章纲">⚡生成</button>
                           <button onClick={onDrawChapterOutline}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-purple-800 text-purple-400 hover:bg-purple-950/30 transition-colors"
-                            title="抽卡模式——并行生成3-5条不同路线">🎴抽卡</button>
+                            title="抽卡模式——并行生成3-5条不同路线"><Icon name="grid" size={13} className="mr-1" />抽卡</button>
                         </>
                       )}
                     </div>
@@ -111,18 +112,18 @@ export function CenterPanel({
                       <Button size="sm" onClick={onWrite} className="bg-indigo-600 hover:bg-indigo-500 h-7 text-xs">▶ 生成/重写</Button>
                     )}
                     {refineMode && (
-                      <Button size="sm" onClick={onRefine} className="bg-amber-600 hover:bg-amber-500 h-7 text-xs">🔧 微调</Button>
+                      <Button size="sm" onClick={onRefine} className="bg-amber-600 hover:bg-amber-500 h-7 text-xs flex items-center gap-1"><Icon name="wrench" size={11} /> 微调</Button>
                     )}
                     <button onClick={onToggleRefineMode}
                       className={`text-xs px-2 py-1 h-7 rounded border transition-colors ${refineMode ? "border-amber-700 text-amber-400 bg-amber-950/20 hover:bg-amber-950/40" : "border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"}`}
                       title={refineMode ? "切换到生成模式" : "切换到微调模式"}>
-                      {refineMode ? "🔧 微调中" : "🔧 微调"}
+                      {refineMode ? <span className="flex items-center gap-1"><Icon name="wrench" size={11} /> 微调中</span> : <span className="flex items-center gap-1"><Icon name="wrench" size={11} /> 微调</span>}
                     </button>
                     {!isGenerating && (
                       <button onClick={onOpenGame}
                         className="text-xs px-2 py-1 h-7 rounded border border-violet-700 text-violet-400 bg-violet-950/20 hover:bg-violet-950/40 hover:border-violet-600 transition-colors"
                         title="互动游戏模式——像文字RPG一样创作本章">
-                        🎮
+                        <Icon name="gamepad" size={14} />
                       </button>
                     )}
                   </>

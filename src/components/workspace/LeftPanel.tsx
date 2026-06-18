@@ -5,6 +5,7 @@ import { WorldPanel } from "@/components/workspace/WorldPanel";
 import { StorylineList } from "@/components/workspace/StorylineList";
 import { RulesPanel } from "@/components/workspace/RulesPanel";
 import { OutlineTree } from "./OutlineTree";
+import { Icon } from "@/components/ui/icons";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData } from "./types";
 
 export function LeftPanel({
@@ -51,7 +52,7 @@ export function LeftPanel({
               <div className="flex items-center gap-1">
                 <button onClick={onToggleVolumeView}
                   className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${volumeView ? "bg-indigo-900/40 text-indigo-400" : "bg-white/[0.04] text-zinc-500"}`}>
-                  {volumeView ? "📂 分卷" : "📄 平铺"}
+                  {volumeView ? <span className="flex items-center gap-1"><Icon name="package" size={10} /> 分卷</span> : <span className="flex items-center gap-1"><Icon name="file" size={10} /> 平铺</span>}
                 </button>
                 <button onClick={onToggleBatchMode} disabled={batchGenerating}
                   className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${batchMode ? "bg-amber-900/40 text-amber-400" : "bg-white/[0.04] text-zinc-500"}`}>
