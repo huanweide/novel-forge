@@ -5,21 +5,36 @@ import { convertToProject } from "@/core/dissect/engine";
  * POST /api/dissect/[id]/to-project
  *
  * 将已完成的拆书任务转为 Novel Forge 项目。
- * 自动创建：项目基本信息、角色卡、世界观条目、风格卡、章节大纲。
+ *
+ * Body（可选）:
+ *   { modifications?: string }  — 用户与Agent讨论后的修改要求
+ *     - 不传 → 100%忠实还原原著
+ *     - 传入 → 先应用修改再创建项目（修改要求会注入全局prompt）
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
 
-    const projectId = await convertToProject(id);
+    let modifications: string | undefined;
+    try {
+      const body = await req.json();
+      modifications = body?.modifications || undefined;
+    } catch {
+      // 无 body 或解析失败 → 原样转换
+    }
+
+    const projectId = await convertToProject(id, modifications);
 
     return NextResponse.json({
       success: true,
       projectId,
-      message: "已转为项目，点击跳转",
+      adapted: !!modifications,
+      message: modifications
+        ? "改编项目已创建，已应用你的修改要求"
+        : "项目已创建，100%忠实还原原著设定",
     });
   } catch (err: any) {
     console.error("[dissect/to-project] 转换失败:", err);

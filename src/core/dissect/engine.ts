@@ -602,27 +602,41 @@ function escapeRegex(s: string): string {
  * 将拆书结果转为 Novel Forge 项目。
  * 用提取的维度数据创建：项目基本信息 + 角色卡 + 世界观条目 + 风格卡 + 章节大纲。
  */
-export async function convertToProject(taskId: string): Promise<string> {
+export async function convertToProject(
+  taskId: string,
+  modifications?: string,
+): Promise<string> {
   const task = await prisma.dissectionTask.findUnique({ where: { id: taskId } });
   if (!task) throw new Error("拆书任务不存在");
   if (task.status !== "completed") throw new Error("拆解尚未完成，无法转为项目");
 
   const dims = task.dimensions as unknown as Record<string, DimensionResult>;
   const chapters = (task.chapterList as unknown as ChapterInfo[]) || [];
+  const isAdapted = !!modifications;
 
   // 提取基本信息维度作为项目名
   const basicInfo = dims.basic_info?.content || "";
-  const projectName = task.bookName || task.taskName || "未命名拆书项目";
+  const baseName = task.bookName || task.taskName || "未命名拆书项目";
+  const projectName = isAdapted ? `[改编] ${baseName}` : baseName;
   const genre = guessGenre(basicInfo);
+
+  // 构建全局提示词——改编模式追加修改要求
+  let globalPrompt = buildGlobalPromptFromDimensions(dims);
+  if (modifications) {
+    globalPrompt = `${globalPrompt}\n\n---\n## ⚠️ 改编要求（最高优先级）\n以下是对原著的修改方案，所有生成内容必须遵守：\n\n${modifications}`;
+  }
 
   // 创建项目
   const project = await prisma.project.create({
     data: {
       name: projectName,
-      description: basicInfo.slice(0, 500),
+      description: isAdapted
+        ? `[改编自《${baseName}》] ${modifications.slice(0, 300)}`
+        : basicInfo.slice(0, 500),
       synopsis: dims.story_core?.content?.slice(0, 500) || "",
       genre,
-      globalPrompt: buildGlobalPromptFromDimensions(dims),
+      globalPrompt,
+      authorNote: isAdapted ? `改编要求:\n${modifications}` : "",
     },
   });
 

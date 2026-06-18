@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DissectProgress } from "@/components/dissect/DissectProgress";
 import { DissectDimensions } from "@/components/dissect/DissectDimensions";
-import { ImitationPanel } from "@/components/dissect/ImitationPanel";
+import { DissectAdaptPanel } from "@/components/dissect/DissectAdaptPanel";
 import type { DimensionResult, ChapterInfo } from "@/core/dissect/types";
 
 interface TaskDetail {
@@ -14,7 +14,6 @@ interface TaskDetail {
   bookName: string;
   bookAuthor: string;
   depth: string;
-  extractChapterSummaries: boolean;
   status: string;
   progress: number;
   totalChapters: number;
@@ -23,11 +22,10 @@ interface TaskDetail {
   chapterList: ChapterInfo[];
   error?: string;
   convertedToProjectId?: string;
-  createdAt: string;
-  updatedAt: string;
+  modifiedProjectId?: string;
 }
 
-const POLL_INTERVAL = 2000; // 2秒轮询
+const POLL_INTERVAL = 2000;
 
 export default function DissectDetailPage() {
   const params = useParams();
@@ -35,17 +33,11 @@ export default function DissectDetailPage() {
 
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"results" | "imitate">("results");
+  const [mode, setMode] = useState<"view" | "adapt">("view");
   const [converting, setConverting] = useState(false);
+  const [convertSuccess, setConvertSuccess] = useState<string | null>(null);
 
-  // 用 ref 存 interval——避免 useEffect 闭包陷阱
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const taskRef = useRef<TaskDetail | null>(null);
-
-  // 同步 task 到 ref（供 interval 回调读取最新值）
-  useEffect(() => {
-    taskRef.current = task;
-  }, [task]);
 
   const fetchTask = useCallback(async () => {
     if (!id) return;
@@ -55,59 +47,46 @@ export default function DissectDetailPage() {
       const data = await res.json();
       setTask(data);
     } catch {
-      // 静默失败
+      // 静默
     } finally {
       setLoading(false);
     }
   }, [id]);
 
-  // 初始加载 + 持续轮询（不管什么状态都轮，后端决定返回什么）
   useEffect(() => {
     fetchTask();
-
-    // 清除旧 interval
     if (intervalRef.current) clearInterval(intervalRef.current);
-
-    // 启动新 interval——始终轮询，不依赖 status 条件
-    intervalRef.current = setInterval(() => {
-      fetchTask();
-    }, POLL_INTERVAL);
-
+    intervalRef.current = setInterval(() => fetchTask(), POLL_INTERVAL);
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchTask]);
 
-  // 任务完成后停止频繁轮询——改为 30 秒一次（省资源）
+  // 完成后降频
   useEffect(() => {
     if (task?.status === "completed" || task?.status === "failed") {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = setInterval(() => {
-          fetchTask();
-        }, 30000); // 完成后 30 秒一次
-      }
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      };
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => fetchTask(), 30000);
     }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [task?.status, fetchTask]);
 
-  const handleConvertToProject = async () => {
+  // ─── 原样转项目 ──────────────────────────────────────
+
+  const handleDirectConvert = async () => {
     if (!id || converting) return;
     setConverting(true);
     try {
       const res = await fetch(`/api/dissect/${id}/to-project`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (res.ok) {
+        setConvertSuccess(data.projectId);
         setTask((prev) =>
           prev ? { ...prev, convertedToProjectId: data.projectId } : prev,
         );
@@ -115,7 +94,34 @@ export default function DissectDetailPage() {
         alert(data.error || "转换失败");
       }
     } catch (err: any) {
-      alert(err?.message || "转换失败");
+      alert(err?.message || "网络错误");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  // ─── 改编后转项目 ────────────────────────────────────
+
+  const handleAdaptConvert = async (modifications: string) => {
+    if (!id || converting) return;
+    setConverting(true);
+    try {
+      const res = await fetch(`/api/dissect/${id}/to-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modifications }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConvertSuccess(data.projectId);
+        setTask((prev) =>
+          prev ? { ...prev, convertedToProjectId: data.projectId } : prev,
+        );
+      } else {
+        alert(data.error || "创建改编项目失败");
+      }
+    } catch (err: any) {
+      alert(err?.message || "网络错误");
     } finally {
       setConverting(false);
     }
@@ -124,10 +130,7 @@ export default function DissectDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center text-zinc-500">
-          <div className="animate-spin text-4xl mb-4">⏳</div>
-          <p>加载中...</p>
-        </div>
+        <div className="animate-spin text-4xl">⏳</div>
       </div>
     );
   }
@@ -146,12 +149,7 @@ export default function DissectDetailPage() {
     );
   }
 
-  const depthLabel: Record<string, string> = {
-    quick: "快速",
-    standard: "标准",
-    deep: "精细",
-  };
-
+  const depthLabel: Record<string, string> = { quick: "快速", standard: "标准", deep: "精细" };
   const isRunning = task.status !== "completed" && task.status !== "failed";
 
   return (
@@ -160,52 +158,23 @@ export default function DissectDetailPage() {
       <header className="border-b border-zinc-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/dissect"
-              className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
-            >
+            <Link href="/dissect" className="text-zinc-500 hover:text-zinc-300 shrink-0">
               ← 返回
             </Link>
             <div className="min-w-0">
               <h1 className="text-lg font-bold truncate">{task.bookName}</h1>
-              <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
-                <span className="truncate">{task.taskName}</span>
-                {task.bookAuthor && <span className="shrink-0">作者：{task.bookAuthor}</span>}
-                <span className="shrink-0">深度：{depthLabel[task.depth] || task.depth}</span>
-                <span className="shrink-0">{task.totalChapters}章</span>
-              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {task.bookAuthor && <span>作者：{task.bookAuthor} · </span>}
+                深度：{depthLabel[task.depth]} · {task.totalChapters}章
+              </p>
             </div>
-          </div>
-
-          {/* 标签切换 */}
-          <div className="flex gap-1 bg-zinc-900 rounded-lg p-1 shrink-0 ml-4">
-            <button
-              onClick={() => setActiveTab("results")}
-              className={`px-4 py-1.5 rounded-md text-sm transition-colors ${
-                activeTab === "results"
-                  ? "bg-indigo-600 text-white"
-                  : "text-zinc-400 hover:text-zinc-300"
-              }`}
-            >
-              查看结果
-            </button>
-            <button
-              onClick={() => setActiveTab("imitate")}
-              className={`px-4 py-1.5 rounded-md text-sm transition-colors ${
-                activeTab === "imitate"
-                  ? "bg-indigo-600 text-white"
-                  : "text-zinc-400 hover:text-zinc-300"
-              }`}
-            >
-              仿写
-            </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-6">
-        {/* 进度区——固定 min-height 防晃动 */}
-        <div style={{ minHeight: isRunning ? 120 : 0 }}>
+        {/* 进度条 */}
+        <div style={{ minHeight: isRunning ? 100 : 0 }}>
           {isRunning && (
             <div className="mb-6 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
               <DissectProgress
@@ -220,57 +189,128 @@ export default function DissectDetailPage() {
           )}
         </div>
 
-        {/* 错误状态 */}
+        {/* 错误 */}
         {task.status === "failed" && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <h3 className="text-sm font-medium text-red-400 mb-2">拆解失败</h3>
-            <p className="text-sm text-red-300">{task.error || "未知错误"}</p>
+            <p className="text-sm text-red-400">{task.error || "拆解失败"}</p>
           </div>
         )}
 
-        {/* 内容区——固定最小高度防跳动 */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" style={{ minHeight: "60vh" }}>
-          {activeTab === "results" && (
-            task.status === "completed" ? (
-              <DissectDimensions
-                dimensions={task.dimensions || {}}
-                chapterList={task.chapterList}
-                onConvertToProject={handleConvertToProject}
-                convertedToProjectId={task.convertedToProjectId}
-                converting={converting}
-              />
-            ) : task.status === "failed" ? (
-              <div className="flex items-center justify-center" style={{ minHeight: "40vh" }}>
-                <div className="text-center">
-                  <div className="text-4xl mb-3">❌</div>
-                  <p className="text-red-400">{task.error || "拆解失败"}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center" style={{ minHeight: "40vh" }}>
-                <div className="text-center text-zinc-500">
-                  <div className="animate-spin text-4xl mb-3">⏳</div>
-                  <p>等待拆解完成...</p>
-                  <p className="text-xs mt-2">进度自动刷新中，无需手动操作</p>
-                </div>
-              </div>
-            )
-          )}
+        {/* 成功转换提示 */}
+        {convertSuccess && (
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-400">✅ 项目已创建</p>
+              <p className="text-xs text-green-500 mt-0.5">所有维度数据已导入项目</p>
+            </div>
+            <a
+              href={`/workspace/${convertSuccess}`}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-500 transition-colors"
+            >
+              进入工作区 →
+            </a>
+          </div>
+        )}
 
-          {activeTab === "imitate" && (
-            task.status === "completed" ? (
-              <ImitationPanel preselectedDissectionId={id} />
-            ) : (
-              <div className="flex items-center justify-center" style={{ minHeight: "40vh" }}>
-                <div className="text-center text-zinc-500">
-                  <div className="text-4xl mb-3">⏳</div>
-                  <p className="mb-2">拆解尚未完成</p>
-                  <p className="text-sm">请等待拆解完成后进行仿写</p>
-                </div>
+        {/* 完成状态——结果展示 */}
+        {task.status === "completed" && !convertSuccess && (
+          <>
+            {/* 两个选择——顶部醒目 */}
+            <div className="mb-6 p-5 bg-zinc-900 border border-zinc-800 rounded-xl">
+              <h2 className="text-sm font-semibold text-zinc-300 mb-3">
+                拆解完成——选择创建方式
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                {/* 原样转项目 */}
+                <button
+                  onClick={handleDirectConvert}
+                  disabled={converting}
+                  className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-500/60 transition-all text-left group"
+                >
+                  <div className="text-2xl mb-2">📦</div>
+                  <div className="text-sm font-semibold text-zinc-200 group-hover:text-indigo-300">
+                    原样转为项目
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-1">
+                    100% 忠实还原原著设定，不做任何修改。角色、世界观、情节全部照搬。
+                  </div>
+                  <div className="text-xs text-indigo-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    一键创建，即刻可用 →
+                  </div>
+                </button>
+
+                {/* 改编后转项目 */}
+                <button
+                  onClick={() => setMode("adapt")}
+                  disabled={converting}
+                  className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all text-left group"
+                >
+                  <div className="text-2xl mb-2">🎨</div>
+                  <div className="text-sm font-semibold text-zinc-200 group-hover:text-amber-300">
+                    改编后转项目
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-1">
+                    跟 Agent 讨论修改方案——换性别、改设定、调整世界观。改到你满意再创建。
+                  </div>
+                  <div className="text-xs text-amber-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    先聊再建，柔性创作 →
+                  </div>
+                </button>
               </div>
-            )
-          )}
-        </div>
+            </div>
+
+            {/* 改编面板（替代结果展示） */}
+            {mode === "adapt" ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold">🎨 讨论改编方案</h3>
+                  <button
+                    onClick={() => setMode("view")}
+                    className="text-xs text-zinc-500 hover:text-zinc-300"
+                  >
+                    返回查看结果
+                  </button>
+                </div>
+                <DissectAdaptPanel
+                  taskId={id}
+                  dimensions={task.dimensions || {}}
+                  onApplyAndCreate={handleAdaptConvert}
+                  creating={converting}
+                />
+              </div>
+            ) : (
+              /* 美化结果展示 */
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <DissectDimensions
+                  dimensions={task.dimensions || {}}
+                  chapterList={task.chapterList}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 等待中 */}
+        {isRunning && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: "40vh" }}>
+            <div className="text-center text-zinc-500">
+              <div className="animate-spin text-4xl mb-3">⏳</div>
+              <p>拆解进行中...</p>
+              <p className="text-xs mt-2">进度自动刷新，完成后可选择创建方式</p>
+            </div>
+          </div>
+        )}
+
+        {/* 已有项目时显示原结果 */}
+        {task.convertedToProjectId && !convertSuccess && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <DissectDimensions
+              dimensions={task.dimensions || {}}
+              chapterList={task.chapterList}
+              convertedToProjectId={task.convertedToProjectId}
+            />
+          </div>
+        )}
       </main>
     </div>
   );

@@ -25,15 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.29";
+export const LATEST_VERSION = "v0.20.30";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📡 SSE实时进度——拆书全程可视化，分章→维度→摘要步步可见，可随时取消",
-  "🪞 屏幕零晃动——GPU加速进度条(transform)+固定高度容器+等宽数字，稳如磐石",
-  "🔄 轮询逻辑重构——useRef防闭包陷阱，完成自动降频30s，永不丢失进度",
-  "🛡️ 长连接容错——SSE断开后DB仍有进度，重进详情页轮询恢复",
+  "🎨 拆书结果UI重设计——分组卡片+折叠展开+章节双列网格，告别裸Markdown",
+  "📦🎨 双路径创建项目——原样100%还原 / 改编Agent讨论后创建，两条路都通向工作区",
+  "💬 改编讨论面板——聊修改方案→累积要求→一键创建，改编要求写入authorNote",
+  "🏗️ 全阶段完成——1.0架构7阶段全部交付，性能+可视化+美观度全线到位",
 ];
+
+/** 完整版本历史（最新在前） */
+export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.30",
+    date: "2026-06-18",
+    title: "🎨 拆书结果UI重设计 + 双路径创建项目",
+    sections: [
+      {
+        label: "结果展示重做",
+        items: [
+          "分组卡片式：总览/世界设定/力量体系/角色剧情/物品风格 5大组可折叠",
+          "维度内嵌展开：300字预览→点击展开全部Markdown内容",
+          "章节摘要双列网格：编号+标题+摘要，一目了然",
+          "空维度自动隐藏，有内容的才显示",
+        ],
+      },
+      {
+        label: "双路径创建",
+        items: [
+          "📦 原样转项目：一键100%还原，角色/世界观/情节全部照搬",
+          "🎨 改编后转项目：与Agent讨论修改方案，改满意后应用并创建",
+          "to-project API 接受 modifications 参数，改编要求写入 authorNote + globalPrompt",
+          "改编项目名自动加[改编]前缀，方便与原版区分",
+        ],
+      },
+      {
+        label: "改编讨论面板",
+        items: [
+          "新增 DissectAdaptPanel 组件：左侧参考拆书数据，右侧Agent对话",
+          "修改要求自动累积，点击"应用修改并创建"时一起提交",
+          "复用 /api/generate/chat 端点，零额外API开销",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.29",
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
