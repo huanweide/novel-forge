@@ -25,18 +25,56 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.22";
+export const LATEST_VERSION = "v0.20.23";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎯 12维风格参数端到端打通——StyleEditor滑块值→API保存→orchestrator注入系统提示词",
-  "🔄 continue/route.ts 改用 loadGenerationContext——消除9表内联查询，与write/refine统一",
-  "📦 chapter-outline 代码去重——新建 outline-context.ts 共享模块，两路由各减60行",
-  "🔗 数据链路贯通——dimensions不再被API丢弃，12维精确调校正式生效",
+  "🛡️ 写中实时质量拦截——流式生成每200字符即时扫描禁用词，违规当场推送",
+  "📊 六维质量矩阵自动评分——废词率/展示vs讲述/PoV/句式/对话/主语，纯本地零Token",
+  "🔒 时间线感知过滤——写第7章不会注入第10章角色状态，根治跳章剧情污染",
+  "📋 待兑现事项追踪——自动检测"下次/回头"意图，下次生成时提醒AI兑现",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.23",
+    date: "2026-06-18",
+    title: "🛡️ 实时质量拦截 + 六维质量矩阵 + 记忆系统升级",
+    sections: [
+      {
+        label: "实时规则检测",
+        items: [
+          "write/route.ts 流式生成中每 ~200 字符实时扫描禁用词",
+          "违规通过 SSE rule_violation 即时推送——写中拦截，不等写完",
+          "扫描耗时 <2ms，不影响流式流畅度",
+        ],
+      },
+      {
+        label: "六维质量矩阵自动评分",
+        items: [
+          "新建 quality-analyzer.ts——废词率/展示vs讲述/PoV/句式/对话/主语，六维纯本地算法",
+          "每维 0-100 分加权总分 → A/B/C/D 四级 → 写入 StoryNode.qualityScore",
+          "复用步骤1禁用词扫描结果，避免重复计算，零 Token 消耗",
+        ],
+      },
+      {
+        label: "记忆系统——时间线过滤",
+        items: [
+          "context-loader.ts 自动按 currentNode.order 过滤摘要/事件/伏笔",
+          "根治跳章剧情污染——写第7章不会注入第10章的角色状态",
+        ],
+      },
+      {
+        label: "待兑现事项追踪",
+        items: [
+          "新增 PendingItem 模型 + /api/pending-items CRUD",
+          "post-processor 自动检测"下次/回头/以后"关键词 → 自动创建待办",
+          "下次生成时待办事项自动注入系统提示词，提醒AI兑现",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.22",
     date: "2026-06-18",
