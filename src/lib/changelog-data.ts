@@ -25,18 +25,51 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.25";
+export const LATEST_VERSION = "v0.20.26";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🤖 Agent 工具层——依赖图调度器+意图解析器+路由器+分层提示词+对话压缩，5模块720行",
-  "🔧 意图解析器——纯规则引擎零Token，关键词匹配21个工具，覆盖查/改/删/创/写/分析六大意图",
-  "📐 分层提示词——五层结构（身份/硬规则★★★/中等规则★/动态上下文/工具说明），每层独立可控",
-  "💬 对话压缩器——三层策略（自然淘汰/主动压缩/极端压缩），纯规则摘要零Token",
+  "📐 5种大纲模板——三幕式/起承转合/英雄之旅/章回体/自由结构，一键计算章节分配",
+  "🎨 文风预设11种——新增古风仙侠+现代都市，覆盖全类型创作需求",
+  "⚔️ 游戏模式就绪——707行引擎+5API+3前端组件，轮次制互动写作",
+  "🏗️ 阶段六收尾——文风+大纲+游戏三大模块全部到位",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.26",
+    date: "2026-06-18",
+    title: "📐 文风预设11种 + 5种大纲模板 + 游戏模式就绪",
+    sections: [
+      {
+        label: "大纲模板（outlines.ts 新建）",
+        items: [
+          "三幕式：建置25%→对抗50%→结局25%，电影级结构",
+          "起承转合：中国传统四段式，起20%/承35%/转30%/合15%，仙侠首选",
+          "英雄之旅：12阶段坎贝尔原型，启程30%/启蒙45%/归来25%，长篇成长型",
+          "章回体：每章独立成篇+章尾悬念钩子+对仗标题，网文连载标准节奏",
+          "自由结构：不拘套路，AI做执行者，作者做结构师",
+        ],
+      },
+      {
+        label: "文风预设扩充",
+        items: [
+          "styles.ts 从9种扩充到11种：新增古风仙侠（半文半白+修仙体系）+ 现代都市（当代中文+场景驱动）",
+          "覆盖全类型：热血/日常/黑暗/悬疑/恋爱/奇幻/科幻/情欲古风/仙侠/都市/自定义",
+          "每种预设含 stylePrompt + temperature/topP + forbiddenPatterns + pacing/dialogueGuide",
+        ],
+      },
+      {
+        label: "游戏模式（已有）",
+        items: [
+          "game-engine.ts 446行 + game-prompts.ts 261行 + types.ts + 5个API路由 + 3个前端组件",
+          "start/action/end 完整回合循环 + outline/generate + outline/chat 大纲辅助",
+          "GameCanvas + GameParticles + GameOutlineEditor 前端就绪",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.25",
     date: "2026-06-18",
