@@ -640,11 +640,11 @@ export async function convertToProject(
     },
   });
 
-  // 导入角色
+  // ── 导入角色（三策略鲁棒解析）──
   const charContent = dims.characters?.content || "";
   if (charContent) {
     const chars = parseCharacterList(charContent);
-    for (const c of chars.slice(0, 20)) {
+    for (const c of chars.slice(0, 30)) {
       await prisma.characterCard.create({
         data: {
           projectId: project.id,
@@ -658,106 +658,61 @@ export async function convertToProject(
     }
   }
 
-  // 导入世界观条目
-  const worldviewContent = dims.worldview?.content || "";
-  if (worldviewContent) {
+  // ── 全维度导入为世界书词条 ──
+  const loreDimensions: Array<{
+    dimKey: string;
+    title: string;
+    category: string;
+    keys: string[];
+    order: number;
+  }> = [
+    { dimKey: "worldview", title: "世界观概要", category: "worldview", keys: ["世界观", "世界", "设定", "背景", "天地", "宇宙"], order: 60 },
+    { dimKey: "story_core", title: "故事核心", category: "worldview", keys: ["主线", "故事", "核心", "剧情", "冲突", "主题"], order: 58 },
+    { dimKey: "factions", title: "势力阵营", category: "faction", keys: ["势力", "宗门", "组织", "帮派", "国家", "阵营", "门派", "家族"], order: 50 },
+    { dimKey: "power_system", title: "力量体系", category: "magic_system", keys: ["修炼", "境界", "力量", "等级", "突破", "实力"], order: 55 },
+    { dimKey: "cultivation", title: "功法体系", category: "magic_system", keys: ["功法", "秘籍", "法术", "神通", "武技", "秘术", "传承"], order: 54 },
+    { dimKey: "map", title: "地理地图", category: "location", keys: ["地图", "地点", "地理", "位置", "区域"], order: 40 },
+    { dimKey: "special_settings", title: "特殊设定", category: "custom", keys: ["特殊", "设定", "规则", "独特", "限制"], order: 45 },
+    { dimKey: "currency", title: "货币体系", category: "economy", keys: ["货币", "灵石", "金币", "交易", "价格", "购买", "经济"], order: 30 },
+    { dimKey: "items", title: "重要物品", category: "items", keys: ["物品", "法宝", "神器", "丹药", "兵器", "材料", "宝物"], order: 35 },
+    { dimKey: "plot_thread", title: "情节脉络", category: "plot", keys: ["情节", "剧情", "转折", "发展", "高潮", "线索"], order: 48 },
+    { dimKey: "foreshadowing", title: "伏笔系统", category: "plot", keys: ["伏笔", "悬念", "铺垫", "回收", "暗示"], order: 46 },
+    { dimKey: "outline_summary", title: "大纲摘要", category: "plot", keys: ["大纲", "摘要", "章节", "概要", "结构"], order: 44 },
+  ];
+
+  for (const ld of loreDimensions) {
+    const dimContent = dims[ld.dimKey]?.content;
+    if (!dimContent || dimContent.length < 15) continue;
+
+    // 智能提取触发关键词：从内容中找出现频率最高的专有名词
+    const extraKeys = extractKeyTerms(dimContent);
+    const allKeys = [...new Set([...ld.keys, ...extraKeys])].slice(0, 10);
+
     await prisma.lorebookEntry.create({
       data: {
         projectId: project.id,
-        title: "世界观概要",
-        category: "worldview",
-        keys: ["世界", "世界观", "设定"],
-        content: worldviewContent.slice(0, 2000),
-        insertionOrder: 60,
+        title: ld.title,
+        category: ld.category,
+        keys: allKeys,
+        content: dimContent.slice(0, 2500),
+        insertionOrder: ld.order,
       },
     });
   }
 
-  // 导入势力
-  const factionsContent = dims.factions?.content || "";
-  if (factionsContent) {
-    await prisma.lorebookEntry.create({
-      data: {
-        projectId: project.id,
-        title: "势力阵营",
-        category: "faction",
-        keys: ["势力", "宗门", "组织"],
-        content: factionsContent.slice(0, 2000),
-        insertionOrder: 50,
-      },
-    });
-  }
-
-  // 导入力量体系
-  const powerContent = dims.power_system?.content || dims.cultivation?.content || "";
-  if (powerContent) {
-    await prisma.lorebookEntry.create({
-      data: {
-        projectId: project.id,
-        title: "力量体系",
-        category: "magic_system",
-        keys: ["修炼", "功法", "境界", "力量"],
-        content: powerContent.slice(0, 2000),
-        insertionOrder: 55,
-      },
-    });
-  }
-
-  // 导入地图
-  const mapContent = dims.map?.content || "";
-  if (mapContent && mapContent.length > 20) {
-    await prisma.lorebookEntry.create({
-      data: {
-        projectId: project.id,
-        title: "地理地图",
-        category: "location",
-        keys: ["地图", "地点", "地理"],
-        content: mapContent.slice(0, 2000),
-        insertionOrder: 40,
-      },
-    });
-  }
-
-  // 导入风格卡
+  // ── 导入风格卡 ──
   const styleContent = dims.style_analysis?.content || "";
-  if (styleContent) {
+  if (styleContent && styleContent.length > 20) {
     await prisma.styleCard.create({
       data: {
         projectId: project.id,
-        styleDescription: styleContent.slice(0, 1000),
+        styleDescription: styleContent.slice(0, 1200),
         sourceChapterCount: chapters.length,
       } as any,
     });
   }
 
-  // 构建大纲节点
-  if (chapters.length > 0) {
-    const rootNode = await prisma.storyNode.create({
-      data: {
-        projectId: project.id,
-        type: "volume",
-        title: "正文",
-        order: 0,
-        status: "outline_only",
-        outline: dims.story_core?.content?.slice(0, 500) || "",
-      },
-    });
-
-    // 为每章创建节点（最多50章，避免太多）
-    for (const ch of chapters.slice(0, 50)) {
-      await prisma.storyNode.create({
-        data: {
-          projectId: project.id,
-          parentId: rootNode.id,
-          type: "chapter",
-          title: ch.title,
-          order: ch.index,
-          status: "outline_only",
-          outline: ch.summary || `第${ch.index}章`,
-        },
-      });
-    }
-  }
+  // ── 不创建章纲节点 —— 用户按自己想法写 ──
 
   // 标记任务为已转换
   await prisma.dissectionTask.update({
@@ -801,57 +756,164 @@ interface ParsedChar {
 
 function parseCharacterList(markdown: string): ParsedChar[] {
   const chars: ParsedChar[] = [];
-  // 按 ## 或 ### 或 **粗体名** 或 - 列表项切分
   const lines = markdown.split("\n");
+
+  // ── 策略1：按行扫描，识别"名称 + 角色描述"模式 ──
+  // 匹配多种格式：
+  //   ## 李尘
+  //   **李尘** - 主角
+  //   1. **李尘**：主角，炼气期弟子
+  //   - 李尘：主角
+  //   李尘——主角
+  const namePatterns = [
+    // Markdown标题: ## 李尘
+    /^#{1,3}\s*(.+)$/,
+    // 粗体名: **李尘**
+    /\*\*(.+?)\*\*/,
+    // 编号列表: 1. **李尘** 或 1. 李尘
+    /^\d+[.\)]\s*\*?\*?(.+?)\*?\*?/,
+    // 短横列表: - 李尘 或 - **李尘**
+    /^[-*]\s+\*?\*?(.+?)\*?\*?/,
+  ];
+
   let current: ParsedChar | null = null;
 
   for (const line of lines) {
-    // 检测新角色开始
-    const nameMatch =
-      line.match(/^#{1,3}\s*(.+)/) ||
-      line.match(/^\*\*(.+?)\*\*/) ||
-      line.match(/^[-*]\s*\*?\*?(.+?)\*?\*?\s*[:：]/);
+    // 尝试匹配角色名
+    let rawName = "";
+    for (const pat of namePatterns) {
+      const m = line.match(pat);
+      if (m) {
+        rawName = m[1].replace(/[:：\-\s]+$/g, "").trim();
+        break;
+      }
+    }
 
-    if (nameMatch) {
-      if (current && current.name) chars.push(current);
-      const raw = nameMatch[1].replace(/[:：]/g, "").trim();
-      // 过滤掉不是角色名的行（如"主角"、"反派"等分类标题）
-      if (raw.length <= 20 && !/^(角色|人物|主角|配角|反派|主要|其他)/.test(raw)) {
-        current = { name: raw };
-      } else {
+    // 如果没匹配到标准格式，尝试"中文字符名 - 描述"模式
+    if (!rawName) {
+      const looseMatch = line.match(/^([一-鿿]{2,4})[：:\-\s——]+(.+)/);
+      if (looseMatch) {
+        const potentialName = looseMatch[1];
+        const rest = looseMatch[2];
+        // 排除分类标题
+        if (!/^(角色|人物|主角|反派|主要|其他|说明|以上|以下|注意|备注)/.test(potentialName)) {
+          rawName = potentialName;
+          // 从rest中提取角色信息
+          if (/主角|主人公|男主|女主/.test(rest)) {
+            chars.push({ name: rawName, role: "protagonist", description: rest.slice(0, 200) });
+            continue;
+          }
+          if (/反派|敌人/.test(rest)) {
+            chars.push({ name: rawName, role: "antagonist", description: rest.slice(0, 200) });
+            continue;
+          }
+          chars.push({ name: rawName, role: "supporting", description: rest.slice(0, 200) });
+          continue;
+        }
+      }
+    }
+
+    if (rawName && rawName.length >= 2 && rawName.length <= 10) {
+      // 过滤分类标题
+      if (/^(角色|人物|主角|配角|反派|主要角色|次要角色|其他角色|龙套|背景角色)/.test(rawName)) {
         current = null;
+        continue;
+      }
+      if (/^(章节|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|第一章|第二章)/.test(rawName)) {
+        current = null;
+        continue;
+      }
+
+      // 保存上一个角色
+      if (current && current.name) chars.push(current);
+      current = { name: rawName };
+
+      // 从同一行提取角色信息
+      const afterName = line.slice(line.indexOf(rawName) + rawName.length);
+      if (afterName) {
+        extractRoleAndDesc(current, afterName);
       }
       continue;
     }
 
+    // 为当前角色追加信息
     if (current) {
-      const roleMatch = line.match(/(?:角色|身份|定位)[：:]\s*(.+)/);
-      if (roleMatch) {
-        current.role = mapRoleName(roleMatch[1]);
-      }
-      const descMatch = line.match(/(?:描述|背景|介绍)[：:]\s*(.+)/);
-      if (descMatch) {
-        current.description = (current.description || "") + descMatch[1];
-      }
+      extractRoleAndDesc(current, line);
     }
   }
 
   if (current && current.name) chars.push(current);
 
-  // 如果没解析到任何角色，尝试更暴力的方法：提取所有看起来像人名的东西
+  // ── 策略2：如果策略1颗粒无收，用暴力正则扫中文名 ──
   if (chars.length === 0) {
-    const chineseNames = markdown.match(/[一-龥]{2,4}(?=[：:，。\n])/g);
-    if (chineseNames) {
-      const unique = [...new Set(chineseNames)].slice(0, 20);
-      for (const name of unique) {
-        if (!/^(章节|第.|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么)/.test(name)) {
-          chars.push({ name, role: "supporting" });
-        }
-      }
+    const allText = markdown;
+    // 找"中文名+冒号/破折号+描述"的组合
+    const nameDescPattern = /([一-鿿]{2,4})[：:\-\s——]+(.+?)(?=[\n，。]|$)/g;
+    let m;
+    const seen = new Set<string>();
+    while ((m = nameDescPattern.exec(allText)) !== null) {
+      const name = m[1];
+      if (seen.has(name)) continue;
+      if (/^(章节|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|第一章)/.test(name)) continue;
+      seen.add(name);
+      const desc = m[2].slice(0, 200);
+      const role = guessRoleFromText(desc);
+      chars.push({ name, role, description: desc });
+      if (chars.length >= 20) break;
+    }
+  }
+
+  // ── 策略3：全扫2-4字中文名（最后手段）──
+  if (chars.length === 0) {
+    const names = allChineseNames(markdown);
+    for (const name of names.slice(0, 20)) {
+      chars.push({ name, role: "supporting" });
     }
   }
 
   return chars;
+}
+
+/** 从文本片段中提取角色定位和描述 */
+function extractRoleAndDesc(c: ParsedChar, text: string) {
+  const t = text.replace(/^[-*•\s]+/, "").trim();
+  if (!t) return;
+
+  // 角色定位
+  if (/主角|主人公|男主|女主/.test(t) && !c.role) c.role = "protagonist";
+  else if (/反派|敌人|对手|仇人/.test(t) && !c.role) c.role = "antagonist";
+  else if (/导师|师父|师傅|老师/.test(t) && !c.role) c.role = "mentor";
+  else if (/恋人|爱人|情侣|对象|道侣/.test(t) && !c.role) c.role = "love_interest";
+
+  // 性格
+  const personalityMatch = t.match(/(?:性格|个性)[：:]\s*(.+)/);
+  if (personalityMatch) {
+    c.personality = personalityMatch[1].split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  // 能力
+  const abilityMatch = t.match(/(?:能力|技能|功法|修为|境界)[：:]\s*(.+)/);
+  if (abilityMatch) {
+    c.abilities = abilityMatch[1].split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  // 描述积累
+  if (!personalityMatch && !abilityMatch && t.length < 200) {
+    c.description = c.description ? `${c.description}; ${t}` : t;
+  }
+}
+
+function guessRoleFromText(text: string): string {
+  if (/主角|主人公|男主|女主/.test(text)) return "protagonist";
+  if (/反派|敌人|对手/.test(text)) return "antagonist";
+  if (/导师|师父|师傅/.test(text)) return "mentor";
+  return "supporting";
+}
+
+function allChineseNames(text: string): string[] {
+  const names = text.match(/[一-鿿]{2,4}(?=[：:，。、\n\s\-—])/g) || [];
+  const stopWords = /^(章节|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|第一章|第二章|但是|所以|因为|如果|虽然|然而|不过|只是|已经|正在|将会|可以|必须|应该|一定|非常|特别|比较|一般|基本|大概|可能|或许|似乎)/;
+  return [...new Set(names)].filter((n) => !stopWords.test(n));
 }
 
 function mapRoleName(raw: string): string {
@@ -865,22 +927,53 @@ function mapRoleName(raw: string): string {
   return "supporting";
 }
 
+/** 从维度文本中提取关键词作为触发词 */
+function extractKeyTerms(content: string): string[] {
+  // 提取2-6字的专有名词（中文大写字母开头的词组）
+  const terms = content.match(/(?:[一-鿿]{2,6})(?=[：:，。、\n\s\-—（）\(\)])/g) || [];
+  // 去重 + 排序（按出现次数降序）
+  const freq: Record<string, number> = {};
+  for (const t of terms) {
+    if (/^(本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|但是|所以|因为|如果|虽然)/.test(t)) continue;
+    freq[t] = (freq[t] || 0) + 1;
+  }
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([k]) => k);
+}
+
 function buildGlobalPromptFromDimensions(
   dims: Record<string, DimensionResult>,
 ): string {
   const parts: string[] = [];
 
+  const story = dims.story_core?.content;
+  if (story) parts.push(`## 故事核心\n${story.slice(0, 600)}`);
+
   const worldview = dims.worldview?.content;
-  if (worldview) parts.push(`## 世界观\n${worldview.slice(0, 1000)}`);
+  if (worldview) parts.push(`## 世界观\n${worldview.slice(0, 800)}`);
 
   const factions = dims.factions?.content;
-  if (factions) parts.push(`## 势力\n${factions.slice(0, 500)}`);
+  if (factions) parts.push(`## 势力阵营\n${factions.slice(0, 500)}`);
 
   const power = dims.power_system?.content || dims.cultivation?.content;
-  if (power) parts.push(`## 力量体系\n${power.slice(0, 800)}`);
+  if (power) parts.push(`## 力量与功法\n${power.slice(0, 800)}`);
 
   const special = dims.special_settings?.content;
   if (special) parts.push(`## 特殊设定\n${special.slice(0, 500)}`);
+
+  const plot = dims.plot_thread?.content;
+  if (plot) parts.push(`## 情节脉络\n${plot.slice(0, 500)}`);
+
+  const items = dims.items?.content;
+  if (items) parts.push(`## 重要物品\n${items.slice(0, 400)}`);
+
+  const currency = dims.currency?.content;
+  if (currency) parts.push(`## 货币体系\n${currency.slice(0, 300)}`);
+
+  const map = dims.map?.content;
+  if (map) parts.push(`## 地理\n${map.slice(0, 400)}`);
 
   return parts.join("\n\n");
 }
