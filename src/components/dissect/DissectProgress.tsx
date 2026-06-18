@@ -1,7 +1,7 @@
 "use client";
 
 import type { DimensionResult } from "@/core/dissect/types";
-import { DIMENSION_LABELS, DIMENSION_ICONS } from "@/core/dissect/types";
+import { DIMENSION_LABELS } from "@/core/dissect/types";
 
 interface DissectProgressProps {
   status: string;
@@ -38,68 +38,86 @@ export function DissectProgress({
 
   const barColor =
     status === "failed"
-      ? "bg-red-500"
+      ? "#ef4444"
       : status === "completed"
-        ? "bg-green-500"
-        : "bg-indigo-500";
+        ? "#22c55e"
+        : "#6366f1";
+
+  // progress 保证在 0-100 之间
+  const pct = Math.min(100, Math.max(0, progress));
 
   return (
     <div className="space-y-4">
       {/* 状态标签 */}
       <div className="flex items-center justify-between">
         <span className={`text-sm font-medium ${statusColor[status] || "text-zinc-400"}`}>
+          {status === "extracting" && (
+            <span className="inline-block animate-spin mr-1">⏳</span>
+          )}
           {statusLabel[status] || status}
         </span>
-        <span className="text-sm text-zinc-500">{Math.round(progress)}%</span>
+        <span className="text-sm text-zinc-500 tabular-nums">{Math.round(pct)}%</span>
       </div>
 
-      {/* 进度条 */}
+      {/* 进度条——用 transform:scaleX 代替 width，GPU 合成不走 reflow */}
       <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+          className="h-full rounded-full"
+          style={{
+            backgroundColor: barColor,
+            width: "100%",
+            transformOrigin: "left center",
+            transform: `scaleX(${pct / 100})`,
+            transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+            willChange: "transform",
+          }}
         />
       </div>
 
-      {/* 章节进度 */}
-      {totalChapters > 0 && (
-        <div className="text-xs text-zinc-500">
-          章节：{completedChapters}/{totalChapters}
-        </div>
-      )}
+      {/* 章节进度——固定高度防跳动 */}
+      <div style={{ minHeight: 20 }}>
+        {totalChapters > 0 && (
+          <div className="text-xs text-zinc-500 tabular-nums">
+            章节：{completedChapters}/{totalChapters}
+          </div>
+        )}
+      </div>
 
-      {/* 维度状态网格 */}
-      {dimensions && Object.keys(dimensions).length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-3">
-          {Object.entries(dimensions).map(([key, dim]) => {
-            const icon =
-              dim.status === "completed"
-                ? "✅"
-                : dim.status === "failed"
-                  ? "❌"
-                  : dim.status === "extracting"
-                    ? "⏳"
-                    : "⬜";
-            return (
-              <div
-                key={key}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs ${
-                  dim.status === "completed"
-                    ? "bg-green-500/10 text-green-400"
-                    : dim.status === "failed"
-                      ? "bg-red-500/10 text-red-400"
-                      : dim.status === "extracting"
-                        ? "bg-indigo-500/10 text-indigo-400"
-                        : "bg-zinc-800 text-zinc-600"
-                }`}
-              >
-                <span>{icon}</span>
-                <span>{DIMENSION_LABELS[key as keyof typeof DIMENSION_LABELS] || key}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* 维度状态网格——预设最小高度，出现时不跳 */}
+      <div style={{ minHeight: 56 }}>
+        {dimensions && Object.keys(dimensions).length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {Object.entries(dimensions).map(([key, dim]) => {
+              const dimLabel = DIMENSION_LABELS[key as keyof typeof DIMENSION_LABELS] || key;
+              const icon =
+                dim.status === "completed"
+                  ? "✅"
+                  : dim.status === "failed"
+                    ? "❌"
+                    : dim.status === "extracting"
+                      ? "⏳"
+                      : "⬜";
+              const bg =
+                dim.status === "completed"
+                  ? "bg-green-500/10 text-green-400"
+                  : dim.status === "failed"
+                    ? "bg-red-500/10 text-red-400"
+                    : dim.status === "extracting"
+                      ? "bg-indigo-500/10 text-indigo-400"
+                      : "bg-zinc-800 text-zinc-600";
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs ${bg}`}
+                >
+                  <span className="shrink-0">{icon}</span>
+                  <span className="truncate">{dimLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* 错误信息 */}
       {error && (

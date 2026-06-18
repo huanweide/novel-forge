@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.28";
+export const LATEST_VERSION = "v0.20.29";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "⚡ 拆书并行化——精细模式15维并发池(8x提速)，章节摘要并发池(8x提速)",
-  "🎯 智能文本采样——按维度定向截取（角色看对话/风格看头中尾/地图看地名），省Token+提质量",
-  "🛡️ 降级容错——单维度/单章失败不阻断整体，标记failed后继续跑",
-  "🔧 通用并发池 withConcurrency()——任意批处理任务可复用，limit默认8",
+  "📡 SSE实时进度——拆书全程可视化，分章→维度→摘要步步可见，可随时取消",
+  "🪞 屏幕零晃动——GPU加速进度条(transform)+固定高度容器+等宽数字，稳如磐石",
+  "🔄 轮询逻辑重构——useRef防闭包陷阱，完成自动降频30s，永不丢失进度",
+  "🛡️ 长连接容错——SSE断开后DB仍有进度，重进详情页轮询恢复",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.29",
+    date: "2026-06-18",
+    title: "🔧 拆书进度可视化 + 防抖动优化",
+    sections: [
+      {
+        label: "SSE 实时进度",
+        items: [
+          "start API 从 fire-and-forget 改为 SSE 长连接——连接存活 = 任务在跑",
+          "不再丢异步上下文——之前 POST 返回后 Next.js 可能回收执行环境",
+          "实时推流阶段：分章→维度提取(每完成一个维度推一次)→章节摘要",
+          "前端 AbortController 支持中途取消",
+          "SSE 断开后 DB 有完整进度,重进详情页轮询恢复",
+        ],
+      },
+      {
+        label: "屏幕晃动修复",
+        items: [
+          "进度条从 width 动画改为 transform: scaleX()——GPU 合成层,不走 reflow/layout",
+          "will-change: transform 提前提升到合成层",
+          "固定 min-height 容器：进度区 120px、维度网格 56px、内容区 60vh",
+          "章节进度预分配空间(minHeight:20),文本出现不跳动",
+          "tabular-nums 数字等宽,百分比变化时数字不位移",
+        ],
+      },
+      {
+        label: "轮询逻辑重构",
+        items: [
+          "useRef 存 interval——消除 useEffect 闭包陷阱导致的重复/遗漏轮询",
+          "始终轮询(不管什么状态),后端决定返回什么——不再有条件判断导致停轮",
+          "taskRef 实时同步最新状态给 interval 回调",
+          "任务完成后降频到 30s 一次(省资源)",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.28",
     date: "2026-06-18",

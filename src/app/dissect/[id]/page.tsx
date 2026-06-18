@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DissectProgress } from "@/components/dissect/DissectProgress";
 import { DissectDimensions } from "@/components/dissect/DissectDimensions";
@@ -27,9 +27,10 @@ interface TaskDetail {
   updatedAt: string;
 }
 
+const POLL_INTERVAL = 2000; // 2秒轮询
+
 export default function DissectDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params?.id as string;
 
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -37,17 +38,20 @@ export default function DissectDetailPage() {
   const [activeTab, setActiveTab] = useState<"results" | "imitate">("results");
   const [converting, setConverting] = useState(false);
 
+  // 用 ref 存 interval——避免 useEffect 闭包陷阱
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const taskRef = useRef<TaskDetail | null>(null);
+
+  // 同步 task 到 ref（供 interval 回调读取最新值）
+  useEffect(() => {
+    taskRef.current = task;
+  }, [task]);
+
   const fetchTask = useCallback(async () => {
     if (!id) return;
     try {
       const res = await fetch(`/api/dissect/${id}`);
-      if (!res.ok) {
-        if (res.status === 404) {
-          router.push("/dissect");
-          return;
-        }
-        return;
-      }
+      if (!res.ok) return;
       const data = await res.json();
       setTask(data);
     } catch {
@@ -55,18 +59,45 @@ export default function DissectDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id]);
 
+  // 初始加载 + 持续轮询（不管什么状态都轮，后端决定返回什么）
   useEffect(() => {
     fetchTask();
-    // 如果任务还在进行中，每2秒轮询
-    const interval = setInterval(() => {
-      if (task && task.status !== "completed" && task.status !== "failed") {
-        fetchTask();
+
+    // 清除旧 interval
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    // 启动新 interval——始终轮询，不依赖 status 条件
+    intervalRef.current = setInterval(() => {
+      fetchTask();
+    }, POLL_INTERVAL);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [fetchTask, task?.status]);
+    };
+  }, [fetchTask]);
+
+  // 任务完成后停止频繁轮询——改为 30 秒一次（省资源）
+  useEffect(() => {
+    if (task?.status === "completed" || task?.status === "failed") {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(() => {
+          fetchTask();
+        }, 30000); // 完成后 30 秒一次
+      }
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    }
+  }, [task?.status, fetchTask]);
 
   const handleConvertToProject = async () => {
     if (!id || converting) return;
@@ -121,28 +152,33 @@ export default function DissectDetailPage() {
     deep: "精细",
   };
 
+  const isRunning = task.status !== "completed" && task.status !== "failed";
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-200">
       {/* 顶栏 */}
       <header className="border-b border-zinc-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/dissect" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              href="/dissect"
+              className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+            >
               ← 返回
             </Link>
-            <div>
-              <h1 className="text-lg font-bold">{task.bookName}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold truncate">{task.bookName}</h1>
               <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
-                <span>{task.taskName}</span>
-                {task.bookAuthor && <span>作者：{task.bookAuthor}</span>}
-                <span>深度：{depthLabel[task.depth] || task.depth}</span>
-                <span>{task.totalChapters}章</span>
+                <span className="truncate">{task.taskName}</span>
+                {task.bookAuthor && <span className="shrink-0">作者：{task.bookAuthor}</span>}
+                <span className="shrink-0">深度：{depthLabel[task.depth] || task.depth}</span>
+                <span className="shrink-0">{task.totalChapters}章</span>
               </div>
             </div>
           </div>
 
           {/* 标签切换 */}
-          <div className="flex gap-1 bg-zinc-900 rounded-lg p-1">
+          <div className="flex gap-1 bg-zinc-900 rounded-lg p-1 shrink-0 ml-4">
             <button
               onClick={() => setActiveTab("results")}
               className={`px-4 py-1.5 rounded-md text-sm transition-colors ${
@@ -168,19 +204,21 @@ export default function DissectDetailPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-6">
-        {/* 进度条（进行中的任务） */}
-        {task.status !== "completed" && task.status !== "failed" && (
-          <div className="mb-6 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            <DissectProgress
-              status={task.status}
-              progress={task.progress}
-              totalChapters={task.totalChapters}
-              completedChapters={task.completedChapters}
-              dimensions={task.dimensions}
-              error={task.error}
-            />
-          </div>
-        )}
+        {/* 进度区——固定 min-height 防晃动 */}
+        <div style={{ minHeight: isRunning ? 120 : 0 }}>
+          {isRunning && (
+            <div className="mb-6 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+              <DissectProgress
+                status={task.status}
+                progress={task.progress}
+                totalChapters={task.totalChapters}
+                completedChapters={task.completedChapters}
+                dimensions={task.dimensions}
+                error={task.error}
+              />
+            </div>
+          )}
+        </div>
 
         {/* 错误状态 */}
         {task.status === "failed" && (
@@ -190,10 +228,10 @@ export default function DissectDetailPage() {
           </div>
         )}
 
-        {/* 结果标签页 */}
-        {activeTab === "results" && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" style={{ minHeight: "60vh" }}>
-            {task.status === "completed" ? (
+        {/* 内容区——固定最小高度防跳动 */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" style={{ minHeight: "60vh" }}>
+          {activeTab === "results" && (
+            task.status === "completed" ? (
               <DissectDimensions
                 dimensions={task.dimensions || {}}
                 chapterList={task.chapterList}
@@ -202,33 +240,37 @@ export default function DissectDetailPage() {
                 converting={converting}
               />
             ) : task.status === "failed" ? (
-              <div className="text-center py-20 text-zinc-500">
-                <div className="text-4xl mb-3">❌</div>
-                <p className="text-red-400">{task.error || "拆解失败"}</p>
+              <div className="flex items-center justify-center" style={{ minHeight: "40vh" }}>
+                <div className="text-center">
+                  <div className="text-4xl mb-3">❌</div>
+                  <p className="text-red-400">{task.error || "拆解失败"}</p>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-20 text-zinc-500">
-                <div className="animate-spin text-4xl mb-3">⏳</div>
-                <p>等待拆解完成...</p>
+              <div className="flex items-center justify-center" style={{ minHeight: "40vh" }}>
+                <div className="text-center text-zinc-500">
+                  <div className="animate-spin text-4xl mb-3">⏳</div>
+                  <p>等待拆解完成...</p>
+                  <p className="text-xs mt-2">进度自动刷新中，无需手动操作</p>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            )
+          )}
 
-        {/* 仿写标签页 */}
-        {activeTab === "imitate" && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            {task.status === "completed" ? (
+          {activeTab === "imitate" && (
+            task.status === "completed" ? (
               <ImitationPanel preselectedDissectionId={id} />
             ) : (
-              <div className="text-center py-20 text-zinc-500">
-                <div className="text-4xl mb-3">⏳</div>
-                <p className="mb-2">拆解尚未完成</p>
-                <p className="text-sm">请等待拆解完成后进行仿写</p>
+              <div className="flex items-center justify-center" style={{ minHeight: "40vh" }}>
+                <div className="text-center text-zinc-500">
+                  <div className="text-4xl mb-3">⏳</div>
+                  <p className="mb-2">拆解尚未完成</p>
+                  <p className="text-sm">请等待拆解完成后进行仿写</p>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
       </main>
     </div>
   );
