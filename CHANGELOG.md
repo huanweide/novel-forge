@@ -2,6 +2,51 @@
 
 ---
 
+## v0.21.1 — 2026-06-18
+
+### 🎨 虚空玻璃设计体系——全站UI体系重建
+
+**3级深度表面系统**
+- `surface-base`（基底面——CSS噪点纹理消除塑料感）
+- `surface-elevated`（抬升面——卡片/面板，悬停边框辉光+阴影扩增）
+- `surface-floating`（浮起面——模态/弹窗，最高模糊+最深阴影）
+- 旧版兼容：`.glass-surface` / `.glass-surface-strong` 保留
+
+**8色功能语义色彩（OKLCH空间）**
+- 靛蓝(主操作/生成) · 翠绿(确认/保存) · 琥珀(提醒/待处理) · 玫瑰(删除/危险) · 紫罗兰(AI/魔法) · 青(提示/信息) · 金(强调/高亮) · 灰(禁用)
+
+**4档动画系统**
+- 弹性曲线(cubic-bezier 0.34,1.56,0.64,1) + 缓出/缓入/平滑
+- 4档时长：150ms(微交互) / 250ms(标准) / 400ms(强调) / 600ms(页面)
+
+**5种按钮变体**
+- `btn-primary`(靛蓝渐变) / `btn-success`(翠绿渐变) / `btn-danger`(玫瑰渐变) / `btn-creative`(紫罗兰渐变) / `btn-ghost`(幽灵按钮)
+- 统一 hover 上浮 + active 按压反馈
+- `input-glass` 统一输入框——聚焦辉光 + 悬停边框
+
+### 🧩 SVG图标系统
+
+- **30+ Lucide图标**：`src/components/ui/icons.tsx`——`<Icon name="..." size={} />` 统一接口
+- **StatusDot 彩色圆点**：替代 🟢🟡🔵🔴⚫，带辉光阴影
+- **语义色彩预设**：`iconColor.primary/success/warning/danger/creative/info/accent/muted`
+- **全站迁移**：15个页面/组件 emoji → SVG，约50处替换
+
+### 🔤 字体优化
+
+- **中文fallback链**：Geist Sans → PingFang SC → Microsoft YaHei → system-ui
+- **等宽字体**：JetBrains Mono（替代Geist Mono）用于代码/API Key
+- **4级文字明度**：L1主(#EEECE6 16:1) / L2辅(#9E9C94 6:1) / L3弱(#6B6962 3.5:1) / L4禁用(#484640)
+- **排版比例变量**：`text-2xs`→`text-2xl` + `leading-tight/normal/relaxed`
+
+### 🖱️ 悬停 + Tooltip 系统
+
+- **3级悬停阴影**：`--shadow-hover-sm/md/lg` + **3色辉光**(indigo/success/creative)
+- **Tooltip纯CSS**：`data-tooltip` 属性驱动，毛玻璃背景，零JavaScript依赖
+- **链接悬停下划线动画**：`.link-underline`——伪元素 + width过渡
+- **`prefers-reduced-motion`** 支持——尊重系统无障碍设置
+
+---
+
 ## v0.21.0 — 2026-06-18
 
 ### ✨ UI 全面升级——玻璃态设计

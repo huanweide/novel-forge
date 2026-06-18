@@ -125,7 +125,7 @@ export default function SettingsPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
         {/* 说明 */}
-        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
+        <div className="p-4 rounded-2xl surface-elevated">
           <p className="text-sm text-zinc-400 leading-relaxed">
             Novel Forge 不自带任何 API Key。填入你自己的 Key，选择模型，所有 AI 写作功能即可使用。
             <br />
@@ -178,7 +178,7 @@ export default function SettingsPage() {
             <div className="flex-1 relative">
               <input
                 type={showKey ? "text" : "password"}
-                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 pr-10 transition-all duration-200"
+                className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono pr-10"
                 placeholder={hasExistingKey ? "••••••••（留空保持不变）" : "sk-..."}
                 value={apiKey}
                 onChange={e => { setApiKey(e.target.value); setTestResult(null); }}
@@ -193,7 +193,7 @@ export default function SettingsPage() {
             <button
               onClick={handleTest}
               disabled={testing || !apiKey.trim()}
-              className="px-5 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 disabled:opacity-40 bg-white/[0.04] text-zinc-300 border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.15] shrink-0"
+              className="btn-ghost px-5 py-3 rounded-xl text-sm font-medium shrink-0 disabled:opacity-40"
             >
               {testing ? "测试中..." : "测试连接"}
             </button>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
                 ? "bg-emerald-500/[0.06] text-emerald-400 border-emerald-500/20"
                 : "bg-red-500/[0.06] text-red-400 border-red-500/20"
             }`}>
-              {testResult.ok ? "✅ 连接成功" : `❌ ${testResult.error}`}
+              {testResult.ok ? <span className="flex items-center gap-1.5"><Icon name="check" size={13} /> 连接成功</span> : <span className="flex items-center gap-1.5"><Icon name="alert" size={13} /> {testResult.error}</span>}
             </div>
           )}
         </section>
@@ -214,7 +214,7 @@ export default function SettingsPage() {
           <label className="text-sm font-semibold text-zinc-300 block mb-3">3. 模型名称</label>
           <input
             type="text"
-            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+            className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono"
             placeholder={selectedProvider?.defaultModel || "输入模型 ID"}
             value={model}
             onChange={e => setModel(e.target.value)}
@@ -230,7 +230,7 @@ export default function SettingsPage() {
             <label className="text-sm font-semibold text-zinc-300 block mb-3">API Base URL</label>
             <input
               type="text"
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono"
               placeholder="https://your-api.com/v1"
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
@@ -246,9 +246,9 @@ export default function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:from-indigo-500 hover:to-indigo-400"
+            className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
           >
-            {saving ? "保存中..." : <span className="flex items-center gap-1.5"><Icon name="save" size={15} /> 保存设置</span>}
+            {saving ? <span className="flex items-center gap-1.5"><Icon name="loader" size={14} className="animate-spin" /> 保存中...</span> : <span className="flex items-center gap-1.5"><Icon name="save" size={15} /> 保存设置</span>}
           </button>
           {statusMsg && (
             <span className={`text-sm transition-all duration-300 ${statusMsg.startsWith("✅") ? "text-emerald-400" : "text-red-400"}`}>

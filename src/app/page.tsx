@@ -122,20 +122,20 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/explore" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95 flex items-center gap-1">
+            <Link href="/explore" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="target" size={13} /> 探讨
             </Link>
-            <Link href="/dissect" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95 flex items-center gap-1">
+            <Link href="/dissect" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="book" size={13} /> 拆书
             </Link>
-            <Link href="/settings" className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95 flex items-center gap-1">
+            <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="settings" size={13} /> 设置
             </Link>
             <Button
               onClick={() => setShowCreate(true)}
-              className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/20 transition-all duration-200 active:scale-95"
+              className="btn-primary flex items-center gap-1"
             >
-              + 新建项目
+              <Icon name="plus" size={14} /> 新建项目
             </Button>
           </div>
         </div>
@@ -153,16 +153,16 @@ export default function Dashboard() {
           </div>
         ) : projects.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-5">
+            <div className="w-16 h-16 rounded-2xl surface-elevated flex items-center justify-center mx-auto mb-5">
               <Icon name="bookmarked" size={28} className="text-zinc-500" />
             </div>
             <h2 className="text-xl font-semibold text-zinc-300 mb-2">还没有小说项目</h2>
             <p className="text-zinc-500 text-sm mb-6">创建你的第一个项目，开始 AI 辅助写作</p>
             <Button
               onClick={() => setShowCreate(true)}
-              className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/20 transition-all duration-200 active:scale-95"
+              className="btn-primary flex items-center gap-1"
             >
-              开始创作
+              <Icon name="sparkles" size={14} /> 开始创作
             </Button>
           </div>
         ) : (
@@ -187,7 +187,7 @@ export default function Dashboard() {
       {/* 更新公告弹窗 */}
       {showChangelog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-zinc-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl w-full max-w-md p-6 shadow-2xl shadow-black/40">
+          <div className="surface-floating rounded-2xl w-full max-w-md p-6 animate-spring">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-1.5 h-5 rounded-full bg-indigo-400/60" />
               <h2 className="text-lg font-semibold text-zinc-100">更新公告 · {LATEST_VERSION}</h2>
@@ -203,16 +203,16 @@ export default function Dashboard() {
             <div className="flex gap-3">
               <a
                 href="/changelog"
-                className="flex-1 text-center text-sm border border-white/[0.08] rounded-xl py-2.5 text-zinc-300 hover:bg-white/[0.04] transition-all duration-200 active:scale-[0.98]"
+                className="flex-1 text-center text-sm btn-ghost rounded-xl py-2.5 active:scale-[0.98] flex items-center justify-center gap-1"
               >
-                查看完整公告 →
+                查看完整公告 <Icon name="arrowRight" size={13} />
               </a>
               <button
                 onClick={() => {
                   try { localStorage.setItem("novel-forge-last-version", LATEST_VERSION); } catch {}
                   setShowChangelog(false);
                 }}
-                className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl py-2.5 text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all duration-200 active:scale-[0.98]"
+                className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium"
               >
                 知道了
               </button>
@@ -230,17 +230,17 @@ function ProjectCard({ project, onDelete }: { project: ProjectSummary; onDelete:
   const timeAgo = getTimeAgo(new Date(project.updatedAt));
 
   return (
-    <div className="group border border-white/[0.06] rounded-2xl bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.12] hover:bg-white/[0.03] hover:-translate-y-1 hover:shadow-xl transition-all duration-200 p-5 flex flex-col">
+    <div className="group surface-elevated card-lift rounded-2xl p-5 flex flex-col">
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-base truncate flex-1 mr-2 text-zinc-200">
           {project.name}
         </h3>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
-          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all text-sm shrink-0"
+          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all shrink-0"
           title="删除项目"
         >
-          ✕
+          <Icon name="x" size={14} />
         </button>
       </div>
 
@@ -290,7 +290,7 @@ function CreateProjectDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-zinc-950/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 shadow-2xl shadow-black/40 max-h-[85vh] overflow-y-auto">
+      <div className="surface-floating rounded-2xl w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto animate-spring">
         <div className="flex items-center gap-2 mb-6">
           <span className="w-1 h-5 rounded-full bg-indigo-400/60" />
           <h2 className="text-lg font-semibold text-zinc-100">创建新项目</h2>
@@ -299,7 +299,7 @@ function CreateProjectDialog({
         <div className="space-y-4">
           <Field label="项目名称" required>
             <input
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
               placeholder="比如：星辰陨落之时"
               value={form.name}
               onChange={(e) => onChange({ ...form, name: e.target.value })}
@@ -309,7 +309,7 @@ function CreateProjectDialog({
 
           <Field label="简介">
             <textarea
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 resize-none transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm resize-none"
               rows={2}
               placeholder="一句话概括你的故事"
               value={form.description}
@@ -319,7 +319,7 @@ function CreateProjectDialog({
 
           <Field label="类型标签（逗号分隔）">
             <input
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
               placeholder="奇幻, 冒险, 悬疑"
               value={form.genre}
               onChange={(e) => onChange({ ...form, genre: e.target.value })}
@@ -328,7 +328,7 @@ function CreateProjectDialog({
 
           <Field label="主线总纲">
             <textarea
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 resize-none transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm resize-none"
               rows={4}
               placeholder="写清楚故事的主线剧情走向、核心冲突、结局方向"
               value={form.synopsis}
@@ -338,7 +338,7 @@ function CreateProjectDialog({
 
           <Field label="基调关键词（逗号分隔）">
             <input
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
               placeholder="黑暗, 史诗, 悲剧, 复仇"
               value={form.toneKeywords}
               onChange={(e) => onChange({ ...form, toneKeywords: e.target.value })}
@@ -348,7 +348,7 @@ function CreateProjectDialog({
           <Field label="目标字数">
             <input
               type="number"
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
               value={form.targetWordCount}
               onChange={(e) => onChange({ ...form, targetWordCount: parseInt(e.target.value) || 100000 })}
             />
@@ -358,14 +358,14 @@ function CreateProjectDialog({
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
           <button
             onClick={onCancel}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] text-zinc-400 hover:bg-white/[0.04] transition-all duration-200 active:scale-95"
+            className="btn-ghost px-5 py-2.5 rounded-xl text-sm font-medium"
           >
             取消
           </button>
           <button
             onClick={onConfirm}
             disabled={!form.name.trim()}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-40 transition-all duration-200 active:scale-95"
+            className="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
           >
             创建项目
           </button>

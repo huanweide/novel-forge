@@ -25,18 +25,63 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.21.0";
+export const LATEST_VERSION = "v0.21.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "✨ UI全面升级——玻璃态设计，35+组件统一高级感视觉，按钮按压反馈动画",
-  "🎯 探讨模式重构——页面拆分为独立面板组件，共享工具提取消除重复代码",
-  "📝 写作铁律自动注入——新建项目自动创建7条终极写作规则，生成时强制遵守",
-  "🔧 拆书功能增强——15维度智能拆解 + 仿写引擎 + 并行化8x提速",
+  "🎨 虚空玻璃设计体系——3级表面深度+8色功能语义+4档弹性动画+CSS噪点纹理",
+  "🧩 SVG图标系统——30+ Lucide图标+StatusDot组件，全站15个页面/组件 emoji 清零",
+  "🔤 字体链优化——Geist+Sans中文fallback+JetBrains Mono等宽，文字4级明度层级",
+  "🖱️ Tooltip系统+悬停阴影3级+链接下划线动画——纯CSS实现零依赖",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.21.1",
+    date: "2026-06-18",
+    title: "🎨 虚空玻璃设计体系 + SVG图标系统 + 字体/Tooltip优化",
+    sections: [
+      {
+        label: "虚空玻璃设计体系基建",
+        items: [
+          "3级深度表面系统：surface-base(噪点纹理)/surface-elevated(卡片)/surface-floating(模态)",
+          "8色功能语义色彩(OKLCH空间)：靛蓝(主操作)/翠绿(确认)/琥珀(提醒)/玫瑰(危险)/紫罗兰(AI)/青(信息)/金(强调)",
+          "4种按钮变体：btn-primary/success/danger/creative + btn-ghost幽灵按钮",
+          "4档动画曲线(弹性/缓出/缓入/平滑) × 4档时长(150/250/400/600ms)",
+          "统一输入框系统 input-glass + 聚焦辉光 + CSS噪点纹理消除塑料感",
+        ],
+      },
+      {
+        label: "SVG图标系统 + 全站迁移",
+        items: [
+          "新建 src/components/ui/icons.tsx——30+ Lucide图标 + StatusDot彩色圆点组件 + 语义色彩预设",
+          "全站15个页面/组件 emoji → SVG图标替换（首页/设置/更新公告/探讨/工作台核心组件）",
+          "实体面板9种类型图标SVG化 + 伏笔面板状态点(🟢🟡🔵⚫) → StatusDot",
+          "AIChatBar Bot/User头像 + 角色面板筛选标签全部图标化",
+        ],
+      },
+      {
+        label: "字体链 + 文字层级 + 悬停系统",
+        items: [
+          "字体栈：Geist Sans → PingFang SC → Microsoft YaHei → system-ui（中文fallback链）",
+          "等宽字体：JetBrains Mono替代Geist Mono——代码/API Key更清晰",
+          "4级文字明度(L1主/L2辅/L3弱/L4禁用) + 6级排版比例(text-2xs→text-2xl)",
+          "Tooltip纯CSS系统(data-tooltip属性驱动) + 链接悬停下划线动画(link-underline)",
+          "3级悬停阴影(sm/md/lg) + 3色辉光(indigo/success/creative)",
+        ],
+      },
+      {
+        label: "设计类实际应用",
+        items: [
+          "首页项目卡片 → surface-elevated + card-lift；导航链接 → btn-ghost",
+          "创建对话框/更新公告弹窗 → surface-floating + animate-spring 动画入场",
+          "设置页所有输入框 → input-glass；保存按钮 → btn-primary；测试按钮 → btn-ghost",
+          "状态消息emoji(✅❌) → Icon check/alert 组件",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.21.0",
     date: "2026-06-18",
