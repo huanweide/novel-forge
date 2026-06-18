@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
 import { Icon } from "@/components/ui/icons";
 
@@ -29,17 +28,6 @@ interface ProjectSummary {
 export default function Dashboard() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    genre: "",
-    synopsis: "",
-    toneKeywords: "",
-    targetWordCount: 100000,
-  });
-
   const [showChangelog, setShowChangelog] = useState(false);
 
   const loadProjects = useCallback(async (signal?: AbortSignal) => {
@@ -70,31 +58,6 @@ export default function Dashboard() {
     } catch { /* */ }
   }, []);
 
-  const handleCreate = async () => {
-    if (!form.name.trim()) return;
-    try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          description: form.description,
-          genre: form.genre.split(/[,，、]/).map((g) => g.trim()).filter(Boolean),
-          synopsis: form.synopsis,
-          toneKeywords: form.toneKeywords.split(/[,，、]/).map((k) => k.trim()).filter(Boolean),
-          targetWordCount: form.targetWordCount,
-        }),
-      });
-      if (res.ok) {
-        setShowCreate(false);
-        setForm({ name: "", description: "", genre: "", synopsis: "", toneKeywords: "", targetWordCount: 100000 });
-        loadProjects();
-      }
-    } catch (err) {
-      console.error("创建项目失败:", err);
-    }
-  };
-
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`确定删除「${name}」？此操作不可逆。`)) return;
     try {
@@ -122,8 +85,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/explore" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
-              <Icon name="target" size={13} /> 探讨
+            <Link href="/explore" className="btn-primary text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 font-medium">
+              <Icon name="sparkles" size={14} /> 开始创作
             </Link>
             <Link href="/dissect" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="book" size={13} /> 拆书
@@ -131,12 +94,6 @@ export default function Dashboard() {
             <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="settings" size={13} /> 设置
             </Link>
-            <Button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary flex items-center gap-1"
-            >
-              <Icon name="plus" size={14} /> 新建项目
-            </Button>
           </div>
         </div>
       </header>
@@ -154,16 +111,16 @@ export default function Dashboard() {
         ) : projects.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 rounded-2xl surface-elevated flex items-center justify-center mx-auto mb-5">
-              <Icon name="bookmarked" size={28} className="text-zinc-500" />
+              <Icon name="sparkles" size={28} className="text-zinc-500" />
             </div>
             <h2 className="text-xl font-semibold text-zinc-300 mb-2">还没有小说项目</h2>
-            <p className="text-zinc-500 text-sm mb-6">创建你的第一个项目，开始 AI 辅助写作</p>
-            <Button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary flex items-center gap-1"
+            <p className="text-zinc-500 text-sm mb-6">从探讨模式开始，对话式构建你的小说世界</p>
+            <Link
+              href="/explore"
+              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
             >
-              <Icon name="sparkles" size={14} /> 开始创作
-            </Button>
+              <Icon name="sparkles" size={15} /> 开始创作
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -173,16 +130,6 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-
-      {/* 创建对话框 */}
-      {showCreate && (
-        <CreateProjectDialog
-          form={form}
-          onChange={setForm}
-          onConfirm={handleCreate}
-          onCancel={() => setShowCreate(false)}
-        />
-      )}
 
       {/* 更新公告弹窗 */}
       {showChangelog && (
@@ -278,116 +225,7 @@ function ProjectCard({ project, onDelete }: { project: ProjectSummary; onDelete:
   );
 }
 
-// ─── 子组件：创建对话框 ─────────────────────────────────────
-
-function CreateProjectDialog({
-  form, onChange, onConfirm, onCancel,
-}: {
-  form: { name: string; description: string; genre: string; synopsis: string; toneKeywords: string; targetWordCount: number };
-  onChange: (f: typeof form) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="surface-floating rounded-2xl w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto animate-spring">
-        <div className="flex items-center gap-2 mb-6">
-          <span className="w-1 h-5 rounded-full bg-indigo-400/60" />
-          <h2 className="text-lg font-semibold text-zinc-100">创建新项目</h2>
-        </div>
-
-        <div className="space-y-4">
-          <Field label="项目名称" required>
-            <input
-              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
-              placeholder="比如：星辰陨落之时"
-              value={form.name}
-              onChange={(e) => onChange({ ...form, name: e.target.value })}
-              autoFocus
-            />
-          </Field>
-
-          <Field label="简介">
-            <textarea
-              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm resize-none"
-              rows={2}
-              placeholder="一句话概括你的故事"
-              value={form.description}
-              onChange={(e) => onChange({ ...form, description: e.target.value })}
-            />
-          </Field>
-
-          <Field label="类型标签（逗号分隔）">
-            <input
-              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
-              placeholder="奇幻, 冒险, 悬疑"
-              value={form.genre}
-              onChange={(e) => onChange({ ...form, genre: e.target.value })}
-            />
-          </Field>
-
-          <Field label="主线总纲">
-            <textarea
-              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm resize-none"
-              rows={4}
-              placeholder="写清楚故事的主线剧情走向、核心冲突、结局方向"
-              value={form.synopsis}
-              onChange={(e) => onChange({ ...form, synopsis: e.target.value })}
-            />
-          </Field>
-
-          <Field label="基调关键词（逗号分隔）">
-            <input
-              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
-              placeholder="黑暗, 史诗, 悲剧, 复仇"
-              value={form.toneKeywords}
-              onChange={(e) => onChange({ ...form, toneKeywords: e.target.value })}
-            />
-          </Field>
-
-          <Field label="目标字数">
-            <input
-              type="number"
-              className="input-glass w-full rounded-xl px-4 py-2.5 text-sm"
-              value={form.targetWordCount}
-              onChange={(e) => onChange({ ...form, targetWordCount: parseInt(e.target.value) || 100000 })}
-            />
-          </Field>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
-          <button
-            onClick={onCancel}
-            className="btn-ghost px-5 py-2.5 rounded-xl text-sm font-medium"
-          >
-            取消
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={!form.name.trim()}
-            className="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
-          >
-            创建项目
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── 助手函数 ───────────────────────────────────────────────
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-medium text-zinc-500 mb-1.5 block">
-        {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
 
 function getTimeAgo(date: Date): string {
   const now = new Date();
