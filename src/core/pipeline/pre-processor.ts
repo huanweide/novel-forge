@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveRules, injectRules } from "@/core/rules";
 import { buildPromptContext } from "@/core/agents";
 import { getTemplate } from "@/core/templates";
+import { classifyEvents } from "@/lib/memory-classifier";
 import type { CharacterCard, StoryNode } from "@/core/types";
 import type { GenerationData, LLMExtract } from "./types";
 
@@ -155,6 +156,16 @@ export function buildGenerationContext(params: {
   const { data, activeCharacters, authorNote, previousNodes, pendingCommitments = [] } = params;
   const pendingItems = (data.pendingItems || []) as any[];
 
+  // ── S/A/B 三级记忆分级 ──
+  const currentChapter = ((data.currentNode as any).order as number) + 1;
+  const tieredMemory = classifyEvents(
+    data.summaries as any,
+    data.storyBeats as any,
+    (data.pendingCommitments || []) as any,
+    (data.characters || []) as any,
+    currentChapter,
+  );
+
   return buildPromptContext({
     project: data.project as any,
     currentNode: data.currentNode as any,
@@ -167,5 +178,6 @@ export function buildGenerationContext(params: {
     authorNote,
     pendingCommitments,
     pendingItems,
+    tieredMemory,
   });
 }

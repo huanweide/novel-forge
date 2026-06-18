@@ -36,6 +36,8 @@ import { matchLoreEntries } from "@/core/assembly/trigger";
 import { safeJoin } from "@/lib/utils";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { scoreAndClassifyEvents, classifyEventCategory } from "@/core/distillation";
+import { injectOptimizedMemory, DEFAULT_BUDGET } from "@/lib/memory-injector";
+import type { TieredMemory } from "@/lib/memory-classifier";
 import { toolRegistry } from "./tool-registry";
 import type { ToolSchema, ToolContext, ToolResult } from "./tool-registry";
 
@@ -552,10 +554,11 @@ export function buildPromptContext(params: {
   storylines?: any[];
   pendingCommitments?: any[];        // 伏笔列表——S级记忆注入
   pendingItems?: any[];              // 待兑现事项——用户/蒸馏检测到的"下次/回头"意图
+  tieredMemory?: TieredMemory;       // S/A/B 三级分级记忆——classifyEvents 输出
   styleCard?: Record<string, unknown> | null;
   authorNote?: string;
 }): PromptContext {
-  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], styleCard, authorNote } = params;
+  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], tieredMemory, styleCard, authorNote } = params;
 
   // 主角极简卡
   const protagonist = characters.find((c) => c.role === "protagonist") || characters[0];
@@ -624,8 +627,24 @@ export function buildPromptContext(params: {
     ? `\n## ⚠️ 待兑现事项——之前设定但尚未完成的情节意图\n${pendingItems.map((pi: any, i: number) => `${i + 1}. ${pi.content}${pi.priority === "high" ? "（高优先级）" : ""}`).join("\n")}\n\n请在合适时机推进上述事项。这不是硬性要求——如果本章剧情不适合兑现，顺延到后面章节。\n`
     : "";
 
+  // ═══ S/A/B 三级记忆注入（Token 优化五策略） ═══
+  let memoryBlock = "";
+  if (tieredMemory && (tieredMemory.sTier.length > 0 || tieredMemory.aTier.length > 0 || tieredMemory.bTier.length > 0)) {
+    // 构建去重上下文：当前大纲 + 最近章摘要 + 最近节点内容
+    const dedupContext = [
+      currentNode.outline || "",
+      ...chapterSummaries.slice(0, 3).map((s: any) => s.summary || ""),
+      ...previousNodes.slice(-2).map((n) => n.content || n.outline || ""),
+    ].join(" ");
+    try {
+      memoryBlock = injectOptimizedMemory(tieredMemory, dedupContext, DEFAULT_BUDGET, countTokens);
+    } catch (_) {
+      // 记忆注入异常静默降级——不影响正文生成
+    }
+  }
+
   //   //   //   // 构建系统提示——白金修仙模拟引擎 v8.0 + 逍遥散仙创作方法论
-  let systemPrompt = `${styleBlock}${cardContext}${pendingBlock}# Role: 白金级玄幻修仙网文作家
+  let systemPrompt = `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}# Role: 白金级玄幻修仙网文作家
 
 你是一名专业的玄幻修仙小说作家。你不仅仅是在写小说，更是在运行一个严密的修仙模拟游戏。你必须同时兼顾【文学性】（文笔、剧情与逻辑性）。
 

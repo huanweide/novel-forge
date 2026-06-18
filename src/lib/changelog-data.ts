@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.23";
+export const LATEST_VERSION = "v0.20.24";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛡️ 写中实时质量拦截——流式生成每200字符即时扫描禁用词，违规当场推送",
-  "📊 六维质量矩阵自动评分——废词率/展示vs讲述/PoV/句式/对话/主语，纯本地零Token",
-  "🔒 时间线感知过滤——写第7章不会注入第10章角色状态，根治跳章剧情污染",
-  "📋 待兑现事项追踪——自动检测下次/回头意图，下次生成时提醒AI兑现",
+  "🧠 S/A/B三级记忆注入——五策略Token优化（JSON结构化+去重+压缩+截断），注入prompt",
+  "⏳ 长效记忆衰减引擎——S级永久/A级30章/B级15章/C级5章，过期自动降级删除",
+  "🕐 衰减清理API——GET /api/cron/memory-decay，dryRun预览+正式执行统计",
+  "📦 memory-injector+memory-decay 双模块，700行纯逻辑，零外部依赖",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.24",
+    date: "2026-06-18",
+    title: "🧠 S/A/B 三级记忆注入 + Token 优化五策略 + 长效记忆衰减",
+    sections: [
+      {
+        label: "S/A/B 三级记忆注入（Token 优化五策略）",
+        items: [
+          "memory-injector.ts——JSON结构化（省40%）、选择性字段、增量去重、引用压缩、分层截断",
+          "pre-processor.ts 自动调用 classifyEvents 做 S/A/B 分级，orchestrator 注入 systemPrompt",
+          "S级用紧凑JSON、A级只注章节号+描述、B级用关键词索引，综合节省~60% Token",
+        ],
+      },
+      {
+        label: "长效记忆衰减引擎",
+        items: [
+          "memory-decay.ts——S级永久/A级30章/B级15章/C级5章，过期自动逐级降级",
+          "computeEventDecay() 单事件衰减计算，支持多级跳跃（A→C一次性跨级）",
+          "cleanupExpiredMemories() 遍历所有 ChapterSummary.eventImportances 应用衰减",
+        ],
+      },
+      {
+        label: "衰减清理 API",
+        items: [
+          "GET /api/cron/memory-decay?projectId=xxx&dryRun=true——预览/执行两种模式",
+          "正式执行返回 kept/downgraded/deleted + S/A/B/C 各层级分布统计",
+          "dryRun 模式轻量预览：不写库，仅返回衰减规则+当前摘要数+最新章号",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.23",
     date: "2026-06-18",

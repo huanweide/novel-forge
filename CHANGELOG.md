@@ -2,6 +2,31 @@
 
 ---
 
+## v0.20.24 — 2026-06-18
+
+### 🧠 S/A/B 三级记忆注入 + 长效记忆衰减
+
+**S/A/B 三级记忆注入（Token 优化五策略）**
+- 新建 `src/lib/memory-injector.ts`——把分级记忆转成优化文本块注入 prompt
+- 策略1 JSON结构化：S 级用 `{"ch":3,"e":"事件","imp":"角色"}` 紧凑 JSON，省 ~40%
+- 策略2 选择性字段：A 级只输出 Ch+描述，不输出元数据
+- 策略3 增量去重：与最近上下文 30 字符窗口匹配，已出现的事件自动跳过
+- 策略4 引用压缩：B 级用 `Ch3:玉佩伏笔 | Ch5:秘境试炼` 关键词索引
+- 策略5 分层截断：S全量(40%)→A摘要(40%)→B关键词(20%)，超预算静默丢弃
+- `pre-processor.ts` 在构建 context 前自动调用 `classifyEvents` 做 S/A/B 分级
+- `orchestrator.ts` 在 systemPrompt 中注入优化后的分级记忆块
+
+**长效记忆衰减引擎**
+- 新建 `src/lib/memory-decay.ts`——模拟人类记忆遗忘曲线
+- 衰减规则：S级永久 / A级30章 / B级15章 / C级5章
+- 过期事件自动逐级降级（A→B→C→删除），一次性计算多级跳跃
+- `cleanupExpiredMemories(projectId)` 遍历所有章节摘要，应用衰减后写库
+
+**衰减清理 API**
+- 新建 `GET /api/cron/memory-decay?projectId=xxx&dryRun=true`
+- dryRun 模式预览衰减规则+当前统计，不实际写入
+- 正式执行返回完整统计：kept/downgraded/deleted + 各层级事件分布
+
 ## v0.20.23 — 2026-06-18
 
 ### 🛡️ 写中实时质量拦截 + 六维质量矩阵 + 记忆系统时间线过滤
