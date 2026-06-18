@@ -135,6 +135,9 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/dissect" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+              📚 拆书
+            </Link>
             <Link href="/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
               ⚙️ 设置
             </Link>

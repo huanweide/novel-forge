@@ -403,6 +403,28 @@ model StyleCard {
   @@index([projectId])
 }
 
+// ─── 拆书任务 (Dissection Task) —— 整本小说导入+多维拆解 ──
+
+model DissectionTask {
+  id            String   @id @default(uuid())
+  taskName      String                     // 用户命名的任务名
+  bookName      String                     // 原书名称
+  bookAuthor    String   @default("")      // 原书作者
+  originalText  String   @db.Text          // 上传的原始文本（全文）
+  depth         String   @default("standard") // quick | standard | deep
+  extractChapterSummaries Boolean @default(false) // 是否逐章提取摘要
+  status        String   @default("pending") // pending | chunking | extracting | completed | failed
+  progress      Float    @default(0)       // 0-100
+  totalChapters Int      @default(0)
+  completedChapters Int   @default(0)
+  dimensions    Json     @default("{}")    // 15维度数据: { worldview: {...}, characters: [...], ... }
+  chapterList   Json     @default("[]")    // [{index, title, startPos, endPos}]
+  error         String?                    // 错误信息
+  convertedToProjectId String?             // 转为项目后的ID
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 // ─── 待兑现事项追踪 (Pending Item) ──────────────────────
 
 model PendingItem {
