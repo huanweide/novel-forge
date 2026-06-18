@@ -217,7 +217,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-        <div className="bg-zinc-900 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
           <p className="text-zinc-400">加载中…</p>
         </div>
       </div>
@@ -228,15 +228,15 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* 头部 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
           <h2 className="text-lg font-semibold">🎨 文风与质量控制</h2>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
         </div>
 
         {/* Tab 切换 */}
-        <div className="flex border-b border-zinc-800 shrink-0">
+        <div className="flex border-b border-white/[0.06] shrink-0">
           {([
             { key: "style" as const, icon: "🎨", label: "文风维度" },
             { key: "forbidden" as const, icon: "🚫", label: "废词检测" },
@@ -268,7 +268,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     ];
                     return extended.map((t) => (
                       <button key={t.id} onClick={() => handleSelectTemplate(t.id)}
-                        className={`text-[10px] py-1.5 px-1 rounded-lg text-center transition-colors leading-tight ${config.styleTemplateId === t.id ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+                        className={`text-[10px] py-1.5 px-1 rounded-lg text-center transition-colors leading-tight ${config.styleTemplateId === t.id ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700"}`}
                         title={t.description}>
                         <div className="text-sm">{t.icon}</div>
                         <div className="mt-0.5">{t.name}</div>
@@ -293,7 +293,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                         min={dim.min} max={dim.max} step={dim.step}
                         value={config.dimensions[dim.key] || 5}
                         onChange={(e) => setDimension(dim.key, parseFloat(e.target.value))}
-                        className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer
+                        className="w-full h-1.5 bg-white/[0.04] rounded-full appearance-none cursor-pointer
                           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
                           [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:cursor-pointer"
                         title={dim.description}
@@ -307,7 +307,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               <div>
                 <label className="text-sm text-zinc-400 mb-2 block">📝 风格笔记（追加到 System Prompt）</label>
                 <textarea
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-indigo-500"
                   rows={3}
                   value={config.customStyleNotes}
                   onChange={(e) => setConfig({ ...config, customStyleNotes: e.target.value })}
@@ -349,7 +349,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                 <label className="text-sm text-zinc-400 mb-2 block">➕ 自定义禁用词/句式</label>
                 <div className="flex gap-2 mb-2">
                   <input
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-red-500"
+                    className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-red-500"
                     value={newForbidden}
                     onChange={(e) => setNewForbidden(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addForbidden()}
@@ -372,7 +372,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               </div>
 
               {/* 扫描按钮 */}
-              <div className="border-t border-zinc-800 pt-4">
+              <div className="border-t border-white/[0.06] pt-4">
                 <div className="flex items-center gap-3">
                   <Button onClick={runScan} disabled={scanning || !chapterContent}
                     className={`text-xs h-8 ${scanning ? "bg-zinc-700" : "bg-indigo-600 hover:bg-indigo-500"}`}>
@@ -402,13 +402,13 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                       return (
                         <button key={cat.key}
                           onClick={() => setActiveScanCategory(activeScanCategory === cat.key ? null : cat.key)}
-                          className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${activeScanCategory === cat.key ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>
+                          className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${activeScanCategory === cat.key ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700"}`}>
                           {cat.icon} {cat.label} ×{count}
                         </button>
                       );
                     })}
                     {scanResult.fuzzyDensity > 0 && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-red-950/50 text-red-400" : "bg-zinc-800 text-zinc-400"}`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-red-950/50 text-red-400" : "bg-white/[0.04] text-zinc-400"}`}>
                         🌫️ 模糊词密度 {scanResult.fuzzyDensity.toFixed(1)}/500字
                       </span>
                     )}
@@ -456,7 +456,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                   <input type="number" step="0.05" min="0" max="2"
                     value={config.temperature}
                     onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) || 0.85 })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
                   <div className="text-[10px] text-zinc-600 mt-0.5 text-center">越高越奔放</div>
                 </div>
                 <div>
@@ -464,18 +464,18 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                   <input type="number" step="0.05" min="0" max="1"
                     value={config.topP}
                     onChange={(e) => setConfig({ ...config, topP: parseFloat(e.target.value) || 0.95 })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
                 </div>
                 <div>
                   <label className="text-xs text-zinc-500 mb-1 block">每节字数</label>
                   <input type="number" step="100" min="200" max="5000"
                     value={config.targetWordsPerSection}
                     onChange={(e) => setConfig({ ...config, targetWordsPerSection: parseInt(e.target.value) || 1000 })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
                 </div>
               </div>
 
-              <div className="border-t border-zinc-800 pt-4">
+              <div className="border-t border-white/[0.06] pt-4">
                 <p className="text-xs text-zinc-500 leading-relaxed">
                   Temperature 控制随机性：越低越稳定保守，越高越有创意但可能跑偏。<br />
                   Top-P 控制词汇选择范围：越低越集中，越高越多样。<br />
@@ -487,14 +487,14 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         </div>
 
         {/* 底部按钮 */}
-        <div className="flex justify-between items-center px-5 py-3 border-t border-zinc-800 shrink-0">
+        <div className="flex justify-between items-center px-5 py-3 border-t border-white/[0.06] shrink-0">
           <div className="text-[10px] text-zinc-600">
             {config.styleTemplateId !== "custom" && (
               <span>📦 预设：{STYLE_TEMPLATES.find(t => t.id === config.styleTemplateId)?.name || config.styleTemplateId}</span>
             )}
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} className="border-zinc-700 text-xs">取消</Button>
+            <Button variant="outline" onClick={onClose} className="border-white/[0.08] text-xs">取消</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-500 text-xs">
               {saving ? "保存中…" : "保存文风"}
             </Button>

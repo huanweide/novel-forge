@@ -3,7 +3,7 @@
 export function DialogOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -43,13 +43,13 @@ export function DialogInput({
         placeholder={placeholder}
         rows={rows}
         autoFocus={autoFocus}
-        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-indigo-700 placeholder:text-zinc-600"
+        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-indigo-700 placeholder:text-zinc-600"
       />
     );
   }
   return (
     <input
-      className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+      className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

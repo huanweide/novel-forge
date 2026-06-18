@@ -42,5 +42,6 @@ next-env.d.ts
 
 /src/generated/prisma
 
-.vercel
-.env*
+# database (local only)
+*.db
+*.db-journal

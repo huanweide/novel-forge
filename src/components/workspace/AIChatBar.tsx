@@ -351,7 +351,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
   return (
     <div className={`flex flex-col min-h-0 flex-1 ${className}`}>
       {/* ═══ Agent 标识头 ═══ */}
-      <div className="shrink-0 px-3 py-2 border-b border-zinc-800 bg-gradient-to-r from-indigo-950/50 via-zinc-900 to-zinc-900">
+      <div className="shrink-0 px-3 py-2 border-b border-white/[0.06] bg-gradient-to-r from-indigo-950/50 via-zinc-900 to-zinc-900">
         <div className="flex items-center gap-2">
           <div className="relative">
             <div className={`w-2 h-2 rounded-full ${loading ? "bg-amber-400" : "bg-emerald-400"}`} />
@@ -380,7 +380,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
         {/* 消息列表 */}
         {messages.map((msg, i) => (
-          <div key={i} className={`px-3 py-2.5 border-b border-zinc-800/30 ${msg.role === "user" ? "bg-zinc-900/50" : "bg-zinc-900/20"}`}>
+          <div key={i} className={`px-3 py-2.5 border-b border-white/[0.06]/30 ${msg.role === "user" ? "bg-white/[0.02] backdrop-blur-sm" : "bg-zinc-900/20"}`}>
             <div className="flex items-start gap-2">
               <span className="text-xs shrink-0 mt-0.5">{msg.role === "user" ? "👤" : "🤖"}</span>
               <div className="flex-1 min-w-0">
@@ -400,7 +400,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                     <summary className="text-[10px] text-zinc-500 cursor-pointer hover:text-zinc-400">
                       查看思考过程
                     </summary>
-                    <div className="mt-1 space-y-0.5 pl-2 border-l border-zinc-700/50">
+                    <div className="mt-1 space-y-0.5 pl-2 border-l border-white/[0.08]/50">
                       {msg.trace.map((t, j) => (
                         <div key={j} className="text-[10px] text-zinc-500 flex items-center gap-1">
                           <span className="text-zinc-600">└</span>
@@ -462,7 +462,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
         {/* 思考动画——实时展示工具调用 */}
         {loading && pendingSteps.length > 0 && (
-          <div className="px-3 py-3 border-b border-zinc-800/30 bg-indigo-950/10">
+          <div className="px-3 py-3 border-b border-white/[0.06]/30 bg-indigo-950/10">
             <div className="flex items-center gap-3 mb-2">
               <div className="relative w-5 h-5 shrink-0">
                 <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
@@ -497,7 +497,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
         {/* 加载中但还没步骤 */}
         {loading && pendingSteps.length === 0 && (
-          <div className="px-3 py-3 border-b border-zinc-800/30 bg-indigo-950/10">
+          <div className="px-3 py-3 border-b border-white/[0.06]/30 bg-indigo-950/10">
             <div className="flex items-center gap-3">
               <div className="relative w-5 h-5 shrink-0">
                 <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
@@ -525,13 +525,13 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
       {/* ═══ 建议区 ═══ */}
       {!hasHistory && !loading && (
-        <div className="flex gap-1.5 px-3 py-2 overflow-x-auto text-[10px] text-zinc-500 border-t border-zinc-800/30 shrink-0">
+        <div className="flex gap-1.5 px-3 py-2 overflow-x-auto text-[10px] text-zinc-500 border-t border-white/[0.06]/30 shrink-0">
           <span className="text-zinc-600 shrink-0">试试：</span>
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
               onClick={() => handleSuggestion(s)}
-              className="shrink-0 px-2 py-0.5 rounded-full border border-zinc-800 hover:border-indigo-700 hover:text-indigo-300 transition-colors"
+              className="shrink-0 px-2 py-0.5 rounded-full border border-white/[0.06] hover:border-indigo-700 hover:text-indigo-300 transition-colors"
             >
               {s}
             </button>
@@ -540,7 +540,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
       )}
 
       {/* ═══ 输入区 ═══ */}
-      <div className="shrink-0 border-t border-zinc-800 bg-zinc-950/80">
+      <div className="shrink-0 border-t border-white/[0.06] bg-zinc-950/80">
         <div className="flex items-center gap-2 px-3 py-2.5">
           {selectedText && (
             <span className="text-[10px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded shrink-0 max-w-[140px] truncate" title={selectedText}>
@@ -568,7 +568,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
             <button
               onClick={handleSend}
               disabled={!message.trim()}
-              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white transition-all"
+              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 disabled:bg-white/[0.04] disabled:text-zinc-600 text-white transition-all"
               title="发送"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

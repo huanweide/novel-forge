@@ -271,7 +271,7 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* 控制栏 */}
-      <div className="shrink-0 px-3 py-1.5 flex items-center gap-2 text-[9px] border-b border-zinc-800/50 flex-wrap">
+      <div className="shrink-0 px-3 py-1.5 flex items-center gap-2 text-[9px] border-b border-white/[0.06]/50 flex-wrap">
         <span className="text-zinc-500">图例：</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />亲缘</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />敌对</span>
@@ -411,7 +411,7 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
 
       {/* 焦点角色详情 */}
       {focusNode && (
-        <div className="shrink-0 border-t border-zinc-800 px-3 py-2 bg-zinc-900/50 max-h-[140px] overflow-y-auto">
+        <div className="shrink-0 border-t border-white/[0.06] px-3 py-2 bg-white/[0.02] backdrop-blur-sm max-h-[140px] overflow-y-auto">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2 h-2 rounded-full" style={{ background: roleColor(focusNode.role) }} />
             <span className="text-xs font-medium text-zinc-200">{focusNode.name}</span>
@@ -428,7 +428,7 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
                     {edge.dynamic && <span className="text-zinc-600 truncate">· {edge.dynamic}</span>}
                   </div>
                   {edge.evidence && (
-                    <div className="text-[8px] text-zinc-600 mt-0.5 pl-1 border-l border-zinc-800">
+                    <div className="text-[8px] text-zinc-600 mt-0.5 pl-1 border-l border-white/[0.06]">
                       📖 {edge.evidence.slice(0, 60)}{edge.evidence.length > 60 ? "…" : ""}
                       {edge.chapterTitle && <span className="text-zinc-700 ml-1">— {edge.chapterTitle}</span>}
                     </div>

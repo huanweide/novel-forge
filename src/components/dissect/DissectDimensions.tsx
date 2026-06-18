@@ -70,6 +70,20 @@ export function DissectDimensions({
   );
   const [expandedDims, setExpandedDims] = useState<Record<string, boolean>>({});
 
+  // 统计数据用于导入预览
+  const charContent = dimensions.characters?.content || "";
+  const charPreview = parseCharPreviewDetailed(charContent);
+  const loreCount = Object.entries(dimensions).filter(
+    ([k, v]) =>
+      k !== "characters" &&
+      k !== "style_analysis" &&
+      k !== "basic_info" &&
+      v?.status === "completed" &&
+      v?.content &&
+      v.content.length >= 15,
+  ).length;
+  const hasStyle = dimensions.style_analysis?.content && dimensions.style_analysis.content.length > 20;
+
   if (entries.length === 0) {
     return (
       <div className="text-center py-12 text-zinc-500">
@@ -95,6 +109,106 @@ export function DissectDimensions({
 
   return (
     <div className="space-y-4">
+      {/* ── 导入预设总览卡片 ── */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* 角色卡片——迷你角色卡格式，匹配工作区CharacterList */}
+        <div className={`p-4 rounded-xl border ${charPreview.length > 0 ? "bg-indigo-500/5 border-indigo-500/30" : "bg-white/[0.02] backdrop-blur-sm border-white/[0.06]"}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">👥</span>
+            <span className="text-sm font-semibold text-zinc-200">角色</span>
+            {charPreview.length > 0 && (
+              <span className="text-xs bg-indigo-600/30 text-indigo-400 px-1.5 py-0.5 rounded-full">{charPreview.length}个</span>
+            )}
+          </div>
+          {charPreview.length > 0 ? (
+            <div className="space-y-1 max-h-36 overflow-y-auto">
+              {charPreview.slice(0, 8).map((c, i) => (
+                <div key={i} className="flex items-center gap-2 py-0.5 px-1.5 rounded text-[11px] bg-zinc-800/50 hover:bg-white/[0.04]">
+                  <span className="w-4 h-4 rounded-full bg-indigo-700/50 flex items-center justify-center text-[9px] shrink-0">
+                    {c.name[0]}
+                  </span>
+                  <span className="font-medium text-zinc-300 truncate">{c.name}</span>
+                  <span className={`text-[9px] px-1 py-0 rounded-full shrink-0 ${
+                    c.role === "protagonist" ? "bg-amber-600/30 text-amber-400" :
+                    c.role === "antagonist" ? "bg-red-600/30 text-red-400" :
+                    c.role === "mentor" ? "bg-blue-600/30 text-blue-400" :
+                    "bg-zinc-700 text-zinc-500"
+                  }`}>
+                    {c.role === "protagonist" ? "★主角" : c.role === "antagonist" ? "◆反派" : c.role === "mentor" ? "◈导师" : "●配角"}
+                  </span>
+                  {c.description && (
+                    <span className="text-[9px] text-zinc-500 truncate hidden md:inline">{c.description.slice(0, 30)}</span>
+                  )}
+                </div>
+              ))}
+              {charPreview.length > 8 && (
+                <p className="text-[10px] text-zinc-600 px-1.5">+{charPreview.length - 8}个角色...</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600">未能提取到角色，将从其他维度兜底扫描</p>
+          )}
+        </div>
+
+        {/* 世界书卡片 */}
+        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-emerald-500/5 border-emerald-500/30" : "bg-white/[0.02] backdrop-blur-sm border-white/[0.06]"}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">📚</span>
+            <span className="text-sm font-semibold text-zinc-200">世界书词条</span>
+            {loreCount > 0 && (
+              <span className="text-xs bg-emerald-600/30 text-emerald-400 px-1.5 py-0.5 rounded-full">{loreCount}条</span>
+            )}
+          </div>
+          {loreCount > 0 ? (
+            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+              {[
+                { key: "worldview", label: "世界观" },
+                { key: "story_core", label: "故事核心" },
+                { key: "factions", label: "势力阵营" },
+                { key: "power_system", label: "力量体系" },
+                { key: "cultivation", label: "功法体系" },
+                { key: "map", label: "地理地图" },
+                { key: "special_settings", label: "特殊设定" },
+                { key: "currency", label: "货币体系" },
+                { key: "items", label: "重要物品" },
+                { key: "plot_thread", label: "情节脉络" },
+                { key: "foreshadowing", label: "伏笔系统" },
+                { key: "outline_summary", label: "大纲摘要" },
+              ]
+                .filter((d) => {
+                  const content = dimensions[d.key]?.content;
+                  return content && content.length >= 15;
+                })
+                .map((d) => (
+                  <span key={d.key} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400">
+                    {d.label}
+                  </span>
+                ))}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600">无足够维度数据</p>
+          )}
+        </div>
+
+        {/* 文风卡片 */}
+        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-amber-500/5 border-amber-500/30" : "bg-white/[0.02] backdrop-blur-sm border-white/[0.06]"}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">✍️</span>
+            <span className="text-sm font-semibold text-zinc-200">文笔风格</span>
+            {hasStyle && (
+              <span className="text-xs bg-amber-600/30 text-amber-400 px-1.5 py-0.5 rounded-full">已提取</span>
+            )}
+          </div>
+          {hasStyle ? (
+            <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-3">
+              {dimensions.style_analysis?.content?.slice(0, 200)}
+            </p>
+          ) : (
+            <p className="text-xs text-zinc-600">未提取到风格数据</p>
+          )}
+        </div>
+      </div>
+
       {/* 分组卡片 */}
       {DIMENSION_GROUPS_UI.map((group) => {
         const groupDims = group.dims.filter(hasContent);
@@ -105,7 +219,7 @@ export function DissectDimensions({
         return (
           <div
             key={group.id}
-            className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden"
+            className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden"
           >
             {/* 组标题 */}
             <button
@@ -132,7 +246,7 @@ export function DissectDimensions({
                   return (
                     <div
                       key={key}
-                      className="bg-zinc-900 border border-zinc-800/50 rounded-lg overflow-hidden"
+                      className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06]/50 rounded-lg overflow-hidden"
                     >
                       {/* 维度标题行 */}
                       <button
@@ -185,7 +299,7 @@ export function DissectDimensions({
 
       {/* 章节列表（如果有摘要） */}
       {chapterList && chapterList.length > 0 && chapterList.some((c) => c.summary) && (
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden">
           <button
             onClick={() => toggleGroup("chapters")}
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-zinc-800/50 transition-colors text-left"
@@ -204,7 +318,7 @@ export function DissectDimensions({
                 .map((ch: any) => (
                   <div
                     key={ch.index}
-                    className="p-3 bg-zinc-900 border border-zinc-800/50 rounded-lg"
+                    className="p-3 bg-white/[0.03] backdrop-blur-sm border border-white/[0.06]/50 rounded-lg"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs text-zinc-600 font-mono">#{ch.index}</span>
@@ -239,7 +353,7 @@ export function DissectDimensions({
                 disabled={converting}
                 className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
                   converting
-                    ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                    ? "bg-white/[0.04] text-zinc-500 cursor-not-allowed"
                     : "bg-indigo-600 text-white hover:bg-indigo-500"
                 }`}
               >
@@ -251,4 +365,79 @@ export function DissectDimensions({
       )}
     </div>
   );
+}
+
+/** 从角色维度内容中提取结构化角色预览（匹配工作区CharacterCard字段） */
+interface CharPreviewItem {
+  name: string;
+  role: string;
+  description: string;
+  abilities: string[];
+}
+function parseCharPreviewDetailed(charContent: string): CharPreviewItem[] {
+  if (!charContent || charContent.length < 10) return [];
+  const chars: CharPreviewItem[] = [];
+  const lines = charContent.split("\n");
+
+  const roleLabels: Record<string, string> = {
+    "主角": "protagonist", "主人公": "protagonist", "男主": "protagonist", "女主": "protagonist",
+    "反派": "antagonist", "敌人": "antagonist",
+    "导师": "mentor", "师父": "mentor", "师傅": "mentor",
+    "配角": "supporting", "主要配角": "supporting", "其他角色": "supporting",
+  };
+
+  // 逐行匹配角色名+角色描述
+  for (const line of lines) {
+    // 跳过标题行和字段标签行
+    if (/^(#{1,3}\s*)?(角色|人物|主角|配角|反派|主要|其他|说明|以上|以下|注意|备注|一、|二、|三、)/.test(line.trim())) continue;
+
+    // 匹配 "**名字** - 角色定位" 或 "名字：描述"
+    let name = "";
+    let rest = "";
+
+    const boldMatch = line.match(/\*\*(.+?)\*\*\s*[-:：]\s*(.+)/);
+    if (boldMatch) { name = boldMatch[1].trim(); rest = boldMatch[2].trim(); }
+
+    if (!name) {
+      const bulletMatch = line.match(/^[-*]\s+\*?\*?(.+?)\*?\*?\s*[-:：]?\s*(.*)/);
+      if (bulletMatch && bulletMatch[1].length >= 2 && bulletMatch[1].length <= 10) {
+        name = bulletMatch[1].trim(); rest = bulletMatch[2].trim();
+      }
+    }
+
+    if (!name) {
+      const looseMatch = line.match(/^([一-鿿]{2,4})\s*[-:：——]\s*(.+)/);
+      if (looseMatch) { name = looseMatch[1].trim(); rest = looseMatch[2].trim(); }
+    }
+
+    // 过滤字段标签
+    if (!name || name.length < 2 || name.length > 10) continue;
+    if (/^(角色|人物|性别|年龄|外貌|性格|能力|背景|动机|别名|称号|说话风格|关键剧情|节点|关系|作用|头发|发型|发色|眼睛|身高|体型|特征|印记|着装|装备|功法|修为|境界|技能|武器|介绍)$/.test(name)) continue;
+    if (/^[在背与性说别年外能动关一二三四五六七八九十]$/.test(name)) continue;
+
+    // 猜测角色定位
+    let role = "supporting";
+    const combined = `${name} ${rest}`;
+    for (const [label, r] of Object.entries(roleLabels)) {
+      if (combined.includes(label)) { role = r; break; }
+    }
+
+    // 提取描述和能力
+    const abilities: string[] = [];
+    const abMatch = rest.match(/(?:能力|技能|功法|擅长)[：:]\s*(.+)/);
+    if (abMatch) {
+      abilities.push(...abMatch[1].split(/[,，、]/).map((s) => s.trim()).filter(Boolean).slice(0, 5));
+    }
+
+    chars.push({
+      name,
+      role,
+      description: rest.slice(0, 80).replace(name, "").replace(/^[-:：\s]+/, ""),
+      abilities,
+    });
+
+    if (chars.length >= 15) break;
+  }
+
+  return chars;
 }

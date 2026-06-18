@@ -234,7 +234,79 @@ export async function POST(request: Request) {
         // ═══════════════════════════════════════════════════════
 
         const chars = await prisma.characterCard.findMany({ where: { id: { in: characterIds } } });
-        send({ type: "progress", stage: "audit", message: `🔍 预处理 ${chars.length} 张卡——审计中...`, pct: 1 });
+        send({ type: "progress", stage: "audit", message: `🔍 预处理 ${chars.length} 张卡——硬过滤+审计中...`, pct: 1 });
+
+        // ── Step 0: 硬过滤——名字明显不是角色的直接删除，不等AI判断 ──
+        const hardDeleteLog: string[] = [];
+        const hardDeleteIds = new Set<string>();
+        const newCharsToCreate: Array<{ name: string; sourceId: string }> = [];
+
+        for (const c of chars) {
+          // 处理"/"分隔的复合名——拆开分别判断
+          if (c.name.includes("/") || c.name.includes("／")) {
+            const parts = c.name.split(/[\/／]/).map(s => s.trim()).filter(Boolean);
+            const validParts = parts.filter(p => isValidCharName(p));
+            if (validParts.length > 0) {
+              // 保留第一个有效名给原卡，其余的标记新建
+              hardDeleteIds.add(c.id); // 删原复合卡
+              for (const part of validParts) {
+                newCharsToCreate.push({ name: part, sourceId: c.id });
+              }
+              hardDeleteLog.push(`${c.name}→${validParts.join("+")}`);
+            } else {
+              hardDeleteIds.add(c.id);
+              hardDeleteLog.push(c.name);
+            }
+            continue;
+          }
+
+          if (!isValidCharName(c.name)) {
+            hardDeleteIds.add(c.id);
+            hardDeleteLog.push(c.name);
+          }
+        }
+
+        // 执行硬删除
+        if (hardDeleteIds.size > 0) {
+          await prisma.characterCard.deleteMany({ where: { id: { in: [...hardDeleteIds] } } });
+        }
+
+        // 为拆出的有效名新建角色卡
+        const splitNewLog: string[] = [];
+        for (const nc of newCharsToCreate) {
+          const srcChar = chars.find(c => c.id === nc.sourceId);
+          try {
+            await prisma.characterCard.create({
+              data: {
+                projectId,
+                name: nc.name,
+                role: srcChar?.role || "supporting",
+                quickImportContent: srcChar?.quickImportContent || "",
+                background: srcChar?.background || "",
+                abilities: srcChar?.abilities || [],
+                personality: srcChar?.personality || ({} as any),
+                tags: ["🆕 自动拆分"],
+                currentStatus: "alive",
+              } as any,
+            });
+            splitNewLog.push(nc.name);
+          } catch { /* 重名跳过 */ }
+        }
+
+        const hardFilterMsg: string[] = [];
+        if (hardDeleteLog.length > 0) hardFilterMsg.push(`🗑️ 硬过滤删除 ${hardDeleteLog.length} 个非角色: ${hardDeleteLog.join("、")}`);
+        if (splitNewLog.length > 0) hardFilterMsg.push(`✂️ 拆分新建 ${splitNewLog.length} 个: ${splitNewLog.join("、")}`);
+        if (hardFilterMsg.length > 0) {
+          send({ type: "progress", stage: "preprocess", message: hardFilterMsg.join(" | "), pct: 2 });
+        }
+
+        // 从原始列表中排除已硬删除的
+        const survivingChars = chars.filter(c => !hardDeleteIds.has(c.id));
+        if (survivingChars.length === 0) {
+          send({ type: "error", message: "所有角色均被硬过滤删除——没有真实人名" });
+          controller.close();
+          return;
+        }
 
         // ── Step 1: AI 批量审计 —— 一次调用完成三件事 ──
         //   a) 检测非角色（地名/物品/势力/概念混入角色列表的）
@@ -252,11 +324,11 @@ export async function POST(request: Request) {
 
         const auditResults: AuditResult[] = [];
 
-        if (chars.length > 0) {
+        if (survivingChars.length > 0) {
           // 构建完整角色名列表（用于缺失检测）
-          const allKnownNames = chars.map(c => c.name).join("、");
+          const allKnownNames = survivingChars.map(c => c.name).join("、");
 
-          const charListForAudit = chars.map(c => {
+          const charListForAudit = survivingChars.map(c => {
             const bg = ((c.background || "") as string).slice(0, 500);
             const abs = (c.abilities || []).join("、").slice(0, 100);
             const role = c.role || "supporting";
@@ -266,12 +338,30 @@ export async function POST(request: Request) {
           const auditSystem = `你是角色卡审计员。逐张检查每张卡，完成三项任务：
 
 1. 【是否真实人物】判断这条记录是不是一个"人"。
-   - 地名（XX城/XX大陆/XX森林/XX山脉）→ 不是角色
-   - 物品/器物（XX剑/XX丹/XX符/XX秘籍）→ 不是角色
-   - 势力/组织（XX宗/XX派/XX殿/XX阁/XX教/XX会）→ 不是角色
-   - 概念/能力名（XX之道/XX之术/XX法则）→ 不是角色
-   - 如果 background 完全描述的是地点/势力/物品特征而非人的特征 → 不是角色
-   - 有名字的个体人物（包括配角、路人、龙套）→ 是角色
+
+【🚨 绝对非角色——以下任何名称直接标记 isCharacter=false 🚨】
+  • 字段标签类（来自角色提取指令的字段名，绝不可能为人名）：
+    "性别"、"年龄"、"外貌"、"性格"、"能力"、"背景"、"动机"、"别名"、"称号"、"别名/称号"
+    "说话风格"、"说话"、"风格"、"关键剧情"、"关键剧情节点"、"剧情节点"、"节点"
+    "与主角关系"、"主角关系"、"在剧情中的作用"、"剧情作用"、"中的作用"
+    "头发"、"发型"、"发色"、"眼睛"、"眼眸"、"瞳孔"、"眼色"
+    "身高"、"个子"、"体型"、"身材"、"体态"、"特征"、"印记"、"特点"、"着装"、"服饰"
+  • 分段标题类：
+    "一、主角"、"二、主要配角"、"三、反派"、"四、其他角色"、"一"、"二"、"三"、"四"
+    "主要角色"、"次要角色"、"其他角色"、"龙套"、"背景角色"、"角色列表"
+  • 属性描述类（仅1-2字的属性名词，不是人名）：
+    "男"、"女"、"未知"、"存活"、"死亡"、"失踪"、"在"、"背"、"与"、"性"、"说"、"年"、"外"、"能"、"动"、"别"、"关"
+
+【可能是角色】
+  - 有姓名的个体人物（2-4字中文名，含常见姓氏如李王张刘陈杨赵黄周吴徐孙马胡朱郭何罗高等）
+  - 有明确的人物身份描述（如"XX宗弟子""XX国太子"）
+
+【其他非角色类型】
+  - 地名（XX城/XX大陆/XX森林/XX山脉）→ 不是角色
+  - 物品/器物（XX剑/XX丹/XX符/XX秘籍）→ 不是角色
+  - 势力/组织（XX宗/XX派/XX殿/XX阁/XX教/XX会）→ 不是角色
+  - 概念/能力名（XX之道/XX之术/XX法则）→ 不是角色
+  - 如果 background 完全描述的是地点/势力/物品特征而非人的特征 → 不是角色
 
 2. 【是否组合卡】名字里是否包含多个人。
    - 分隔符明显："张三、李四""王五/赵六" → 拆分
@@ -283,12 +373,13 @@ export async function POST(request: Request) {
    - 扫描 background 中是否出现了不在已知名单中的新人物名
    - 如果发现新人物（2-4字中文名，从上下文判断是独立个体），添加到 missingCharacters 数组
    - 注意区分：组织名/地名/招式名/物品名不是人物，不要加入
+   - 字段标签名（见上方列表）绝对不要加入
 
 输出纯JSON数组：
 [{"id":"卡id","isCharacter":true/false,"reason":"简短理由≤20字","splitNames":["拆出的人名"],"missingCharacters":["新发现的人名"]}]
 splitNames和missingCharacters都可能是空数组。`;
 
-          const auditPrompt = `审计以下${chars.length}张角色卡。逐张判断：是否真实人物？是否组合卡？background 里是否提到了还没建卡的人物？
+          const auditPrompt = `审计以下${survivingChars.length}张角色卡。逐张判断：是否真实人物？是否组合卡？background 里是否提到了还没建卡的人物？
 
 格式：id|姓名|定位|能力|背景
 ---
@@ -653,4 +744,40 @@ ${charListForAudit}
   return new Response(stream, {
     headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
   });
+}
+
+// ─── 硬过滤：名字合法性校验（内联版，与 engine.ts 保持一致） ──
+
+const HARD_STOP_NAMES = new Set([
+  "性别","年龄","外貌","性格","能力","背景","动机","别名","称号","别名/称号",
+  "说话风格","说话","风格","关键剧情","关键剧情节点","剧情节点","节点",
+  "与主角关系","主角关系","在剧情中的作用","剧情作用","中的作用",
+  "头发","发型","发色","眼睛","眼眸","瞳孔","眼色",
+  "身高","个子","体型","身材","体态","特征","印记","特点","着装","服饰",
+  "一、主角","二、主要配角","三、反派","四、其他角色",
+  "主要角色","次要角色","其他角色","龙套","背景角色","角色列表",
+  "一","二","三","四","五","六","七","八","九","十",
+  "在","背","与","性","说","年","外","能","动","别","关",
+  "男","女","未知","存活","死亡","失踪",
+]);
+
+const COMMON_SURNAMES_HARD = new Set([
+  "李","王","张","刘","陈","杨","赵","黄","周","吴","徐","孙","马","胡","朱","郭",
+  "何","罗","高","林","郑","梁","谢","唐","许","邓","韩","冯","曹","彭","曾","萧",
+  "田","董","潘","袁","蔡","蒋","于","杜","叶","程","魏","苏","吕","丁","任","卢",
+  "姚","沈","钟","崔","谭","陆","汪","范","金","石","廖","贾","夏","韦","付","方",
+  "白","邹","孟","熊","秦","邱","江","尹","薛","闫","段","雷","侯","龙","史","陶",
+  "黎","贺","顾","毛","郝","龚","邵","万","钱","严","覃","武","戴","莫","孔","向",
+  "季","裴","柳","温","常","汤","阎","段","易",
+]);
+
+function isValidCharName(name: string): boolean {
+  const trimmed = name.trim();
+  if (trimmed.length < 2 || trimmed.length > 10) return false;
+  if (!/^[一-鿿]{2,10}$/.test(trimmed)) return false;
+  if (HARD_STOP_NAMES.has(trimmed)) return false;
+  if (/[、，/／]/.test(trimmed)) return false; // 含分隔符的先拆再判断
+  // 2字名必须以常见姓氏开头
+  if (trimmed.length === 2 && !COMMON_SURNAMES_HARD.has(trimmed[0])) return false;
+  return true;
 }

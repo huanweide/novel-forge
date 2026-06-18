@@ -25,18 +25,265 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.30";
+export const LATEST_VERSION = "v0.21.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎨 拆书结果UI重设计——分组卡片+折叠展开+章节双列网格，告别裸Markdown",
-  "📦🎨 双路径创建项目——原样100%还原 / 改编Agent讨论后创建，两条路都通向工作区",
-  "💬 改编讨论面板——聊修改方案→累积要求→一键创建，改编要求写入authorNote",
-  "🏗️ 全阶段完成——1.0架构7阶段全部交付，性能+可视化+美观度全线到位",
+  "✨ UI全面升级——玻璃态设计，35+组件统一高级感视觉，按钮按压反馈动画",
+  "🎯 探讨模式重构——页面拆分为独立面板组件，共享工具提取消除重复代码",
+  "📝 写作铁律自动注入——新建项目自动创建7条终极写作规则，生成时强制遵守",
+  "🔧 拆书功能增强——15维度智能拆解 + 仿写引擎 + 并行化8x提速",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.21.0",
+    date: "2026-06-18",
+    title: "✨ UI全面升级 + 探讨模式重构 + 写作铁律注入",
+    sections: [
+      {
+        label: "UI 全面升级——玻璃态设计",
+        items: [
+          "35+组件统一视觉：玻璃表面(bg-white/[0.02] backdrop-blur-sm) + 按压反馈(active:scale-[0.97])",
+          "首页/设置/更新公告/探讨/工作台/拆书 全部页面 Premium 化",
+          "新增设计 token：glass-surface / btn-press / card-lift / glow-pulse / fade-in-up 动画类",
+          "自定义滚动条 + 聚焦光环 + 渐变按钮阴影 + 悬停上浮效果",
+          "探讨页面拆分为 ChatPanel(230行) / OutlinePanel(210行) / CardBrowser(100行) 独立组件",
+        ],
+      },
+      {
+        label: "探讨模式架构重构",
+        items: [
+          "新增共享工具模块 src/core/explore/utils.ts——消除 stepToCategory/extractJson/extractKeysFromText 三处重复",
+          "chat/route.ts 复用 shared utils 的 extractJson（-15行重复代码）",
+          "adopt/route.ts 复用 stepToCategory + tryExtractStructured + extractCharacterKeys（-55行重复代码）",
+          "create/route.ts 复用 stepToCategory + extractKeysFromText，重写 generateDefaultRules()",
+          "删除废弃端点 outline/route.ts（207行死代码，零引用）",
+        ],
+      },
+      {
+        label: "写作铁律自动注入系统",
+        items: [
+          "新建项目时自动创建7条写作铁律到 Rule 表（scope=write_only, priority=94~100）",
+          "句式铁律——长短交错，禁止短句堆砌 | 人物指代——名字优先，禁止他/她连用",
+          "禁用符号与禁用句式 | 禁止描写声音/语气/眼神/视线",
+          "白描铁律——可观察/可直感/零解读 | 节奏控制——详略与描写密度 | 情节与情绪——拉扯/抑扬/反转",
+          "生成时自动注入：getActiveRules(\"write_only\") → injectRules() → 拼入 Prompt 顶部",
+        ],
+      },
+      {
+        label: "拆书功能增强",
+        items: [
+          "15维度智能拆解 + 仿写引擎 + 并行化8x提速",
+          "拆书结果 UI 重设计——双路径创建项目（直接导入 / AI完善后导入）",
+          "角色扩展 Step 0 硬过滤 + 复合名智能拆分 + 预览迷你卡",
+          "世界书 AI 扩展五步管线——审计→拆分→删非词条→去重合并→扩展",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.36",
+    date: "2026-06-18",
+    title: "🎯 探讨模式——对话式构建小说世界",
+    sections: [
+      {
+        label: "探讨模式核心",
+        items: [
+          "/explore 页面——三栏布局：左构建配置 / 中AI对话 / 右已采纳内容",
+          "11个构建步骤导航：开篇→世界观→主角→金手指→冲突→势力→力量→货币→地图→情节→自由讨论",
+          "双模式切换：💬对话模式(自由交流) / 🃏抽卡模式(AI出3-5张候选卡，点选采纳)",
+          "POST /api/explore/chat——AI对话端点，上下文来自构建配置+已采纳内容+当前步骤",
+        ],
+      },
+      {
+        label: "构建配置面板",
+        items: [
+          "基础字段：小说名称/主角名称/创作方向",
+          "类型选择：12种小说类型(玄幻/仙侠/都市/科幻/历史/言情/悬疑/武侠/奇幻/末世/游戏/军事)",
+          "流派标签：60+流派(系统流/重生/穿越/无敌流等)，多选自由组合",
+          "受众定位+篇幅字数+情节结构(五幕式/三幕式/英雄之旅/起承转合/序破急)",
+          "风格偏好8选+力量体系40选+金手指50选+核心冲突+强制原创命名+自动生成故事线",
+        ],
+      },
+      {
+        label: "创建项目",
+        items: [
+          "POST /api/explore/create——从构建配置+已采纳内容创建项目",
+          "📦 直接创建——采纳的设定→世界书词条(按步骤自动分类)+主角名→角色卡",
+          "🤖 AI完善后创建——LLM检测缺失设定并补充后再创建",
+          "导航栏新增「🎯 探讨」入口，与拆书/设置并列",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.35",
+    date: "2026-06-18",
+    title: "🛡️ Step 0硬过滤 + 复合名拆分 + 拆书预览迷你卡",
+    sections: [
+      {
+        label: "Step 0 硬过滤",
+        items: [
+          "characters/expand 在AI审计前增加代码级预过滤——isValidCharName()内联实现",
+          "100+字段标签硬黑名单（性别/年龄/外貌/一、主角/二、配角/在/背/与/性/说...）",
+          "100+常见姓氏白名单——2字名须以姓氏开头",
+          "硬过滤先删→再AI审计→再扩展，三步递进确保零垃圾残留",
+        ],
+      },
+      {
+        label: "复合名智能拆分",
+        items: [
+          "「叶临渊 / 林玄言」在硬过滤阶段检测到斜杠→自动拆为两个独立角色卡",
+          "拆分后继承原卡的background/abilities/personality等数据",
+          "自动标记「🆕 自动拆分」标签",
+        ],
+      },
+      {
+        label: "拆书预览迷你卡",
+        items: [
+          "DissectDimensions角色预览从简单name标签→迷你角色卡（头像+名字+角色badge+描述）",
+          "角色定位badge色彩区分：★主角(amber)/◆反派(red)/◈导师(blue)/●配角(gray)",
+          "parseCharPreviewDetailed()返回CharPreviewItem结构（name+role+description+abilities）",
+          "预览格式匹配工作区CharacterList，导入前后视觉完全一致",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.34",
+    date: "2026-06-18",
+    title: "🔧 AI审计prompt修复——字段标签黑名单",
+    sections: [
+      {
+        label: "角色扩展审计修复",
+        items: [
+          "新增【绝对非角色】黑名单——50+字段标签（性别/年龄/外貌/说话风格/别名/称号等）",
+          "分段标题检测——「一、主角」「二、主要配角」「三、反派」等直接标记为非角色",
+          "单字属性检测——「在」「背」「与」「性」「说」「年」「外」「能」「动」「别」「关」",
+          "常见姓氏引导——李王张刘陈杨赵黄周吴等100+姓氏作为角色识别辅助",
+        ],
+      },
+      {
+        label: "世界书扩展审计修复",
+        items: [
+          "新增【绝对非词条】黑名单——角色字段标签+分段标题+角色名检测",
+          "2-4字中文姓名检测——不会再把角色名保留在世界书列表中",
+          "审计失败降级为全保留——避免误删正常词条",
+        ],
+      },
+      {
+        label: "端到端检验",
+        items: [
+          "琼明神女录项目实测：30角色→AI审计合并13组重复→17个去重后→扩展中",
+          "修复后再次扩展将正确删除「在剧情中的作用」等12个字段标签",
+          "最终预期：保留3-5个真实角色（裴语涵/季婵溪/叶临渊/林玄言/俞小塘）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.33",
+    date: "2026-06-18",
+    title: "📚 世界书AI扩展 + 五步管线",
+    sections: [
+      {
+        label: "世界书AI扩展",
+        items: [
+          "POST /api/lorebook/expand — SSE流式，12并发，对标角色卡扩展端点",
+          "五步管线：AI审计 → 拆分组合词条 → 删除非词条 → 去重合并 → 并发扩展",
+          "每完成一个词条即时推送SSE进度 + 结果弹窗展示成功/失败列表",
+          "LorebookList新增「🤖 AI扩展」按钮——勾选词条后一键处理",
+        ],
+      },
+      {
+        label: "AI审计",
+        items: [
+          "检测非词条——角色名/无关内容混入世界书列表→自动删除",
+          "检测组合词条——一个词条涵盖多个独立主题→自动拆分新建",
+          "检测分类错误——标题/内容与category不匹配→自动修正（geography/faction/magic_system等10类）",
+          "审计失败不阻塞流程——降级为保留原数据继续扩展",
+        ],
+      },
+      {
+        label: "单词条扩展",
+        items: [
+          "补全短内容/空内容——基于标题和项目世界观推断",
+          "生成触发词——从扩展后内容提取5-8个关键词",
+          "拆分请求——AI判断内容混杂时返回shouldSplit+splitEntries",
+          "失败降级——解析失败用safeMerge保留原数据",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.32",
+    date: "2026-06-18",
+    title: "🔧 角色名合法性校验 + AI批量结构化 + 智能拆分",
+    sections: [
+      {
+        label: "角色名合法性校验",
+        items: [
+          "常见中文姓氏库（100+单姓+20+复姓）——2字名必须以常见姓氏开头才认",
+          "FIELD_LABELS 过滤集（100+字段标签）——性别/年龄/外貌/说话风格等永不误认",
+          "isValidCharacterName() 统一校验——纯中文/长度2-5/含姓氏/不在标签集",
+          "含顿号分段标题过滤——「一、主角」「二、主要配角」不被当成角色名",
+        ],
+      },
+      {
+        label: "AI批量结构化",
+        items: [
+          "aiStructureCharacters()——一次LLM调用补全所有兜底角色的年龄/性别/外貌/性格",
+          "结构化输出匹配 CharacterCard 完整字段：appearance/personality/background/abilities/aliases",
+          "AI失败自动降级为仅名字导入，不影响流程",
+          "兜底导入角色自动加「🤖AI补全」标签，方便识别",
+        ],
+      },
+      {
+        label: "智能拆分与后处理",
+        items: [
+          "「叶临渊 / 林玄言」→ 自动拆分为两个独立角色，共享原有描述上下文",
+          "parseCharacterList 结尾统一过滤——所有策略的产出都过合法性校验",
+          "extractCharacterNamesFromAllDimensions 双重过滤——parseCharacterList + isValidCharacterName",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.31",
+    date: "2026-06-18",
+    title: "🔧 角色导入修复 + AI填满按钮 + 格式统一",
+    sections: [
+      {
+        label: "角色导入修复",
+        items: [
+          "quick模式分割重试：维度内容<20字符自动模糊匹配+独立LLM重试",
+          "全字段映射：age/gender/aliases/appearance/dialogueStyle完整导入CharacterCard",
+          "兜底扫描：角色维度解析失败时从大纲摘要/故事核心/势力阵营扫描角色名",
+          "角色预览：拆书完成页显示提取到的角色名列表，一目了然",
+        ],
+      },
+      {
+        label: "AI填满按钮",
+        items: [
+          "角色卡编辑：🤖 AI填满按钮检测空白字段（外貌/性格/对话风格/背景等）自动补全",
+          "世界书编辑：🤖 AI填满按钮补全词条内容和触发关键词",
+          "POST /api/characters/[id]/autofill + /api/lorebook/[id]/autofill 两个端点",
+          "补全后自动去除「📥拆书导入」标签，标记为已人工处理",
+        ],
+      },
+      {
+        label: "格式统一",
+        items: [
+          "拆书导入映射完整CharacterCard字段：appearance/personality/dialogueStyle/hiddenMotives等",
+          "缺失字段留空（年龄=未知/性别=未知），不伪造数据",
+          "DissectDimensions顶部新增三卡片导入预览：角色数/世界书词条数/文风状态",
+          "characterPreview函数快速预扫角色名，不依赖完整解析",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.30",
     date: "2026-06-18",

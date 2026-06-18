@@ -15,8 +15,8 @@ export function BatchProgressPanel({
   const total = entries.length;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-72 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900">
+    <div className="fixed bottom-4 right-4 z-50 w-72 bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-zinc-900">
         <div>
           <span className="text-sm font-medium">📝 批量生成</span>
           <span className="text-xs text-zinc-500 ml-2">{done + failed}/{total}</span>
@@ -36,7 +36,7 @@ export function BatchProgressPanel({
           );
         })}
       </div>
-      <div className="border-t border-zinc-800 px-4 py-2 flex items-center gap-3 text-xs text-zinc-500">
+      <div className="border-t border-white/[0.06] px-4 py-2 flex items-center gap-3 text-xs text-zinc-500">
         <span>✅ {done}</span><span>❌ {failed}</span><span>○ {total - done - failed}</span>
         {generating && <span className="text-amber-400 ml-auto animate-pulse">{nodes.find((n) => n.id === generating[0])?.title?.slice(0, 15)}...</span>}
       </div>

@@ -51,8 +51,8 @@ export function StyleSelector({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 w-96 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
-            <div className="p-2 border-b border-zinc-800 text-xs text-zinc-500 flex justify-between">
+          <div className="absolute right-0 top-full mt-1 z-50 w-96 bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden">
+            <div className="p-2 border-b border-white/[0.06] text-xs text-zinc-500 flex justify-between">
               <span>选择文风模板</span>
               <span>{STYLE_TEMPLATES.length} 个模板</span>
             </div>
@@ -62,7 +62,7 @@ export function StyleSelector({
                   key={t.id}
                   onClick={() => handleSelect(t)}
                   onMouseEnter={() => setPreviewTemplate(t)}
-                  className={`w-full text-left px-3 py-2 hover:bg-zinc-800 transition-colors flex items-start gap-3 ${
+                  className={`w-full text-left px-3 py-2 hover:bg-white/[0.04] transition-colors flex items-start gap-3 ${
                     currentStyleId === t.id ? "bg-indigo-900/30 border-l-2 border-indigo-500" : ""
                   }`}
                 >
@@ -78,7 +78,7 @@ export function StyleSelector({
             </div>
             {/* 预览 */}
             {previewTemplate && previewTemplate.id !== "custom" && (
-              <div className="border-t border-zinc-800 p-3 text-xs space-y-1.5 bg-zinc-950">
+              <div className="border-t border-white/[0.06] p-3 text-xs space-y-1.5 bg-zinc-950">
                 <div className="text-zinc-400">
                   🌡 温度: <span className="text-zinc-300">{previewTemplate.temperature}</span>
                   {" · "}

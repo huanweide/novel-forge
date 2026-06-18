@@ -169,3 +169,91 @@
 .markdown-body > *:last-child {
   margin-bottom: 0;
 }
+
+/* ═══════════════════════════════════════════
+   探讨模式 — 高级感 UI 设计令牌
+   ═══════════════════════════════════════════ */
+
+/* ── 玻璃拟态表面 ── */
+.glass-surface {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-surface-strong {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ── 按钮按压反馈 ── */
+.btn-press {
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* ── 卡片悬浮升起 ── */
+.card-lift {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
+              border-color 0.2s ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* ── 辉光脉冲（加载指示） ── */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.glow-dot {
+  animation: glow-pulse 1.5s ease-in-out infinite;
+}
+.glow-dot:nth-child(2) { animation-delay: 0.15s; }
+.glow-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* ── 渐变边框动画 ── */
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.15); }
+  50% { border-color: rgba(99, 102, 241, 0.35); }
+}
+
+/* ── 入场动画 ── */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: fade-in-up 0.3s ease-out;
+}
+
+/* ── 自定义滚动条（暗色） ── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── 聚焦环增强 ── */
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-0;
+}

@@ -92,6 +92,56 @@ export function CharacterEditDialog({
     currentStatus: character.currentStatus || "alive",
   });
 
+  const [autofilling, setAutofilling] = useState(false);
+  const [autofillMsg, setAutofillMsg] = useState("");
+
+  const handleAutofill = async () => {
+    setAutofilling(true);
+    setAutofillMsg("AI正在补全...");
+    try {
+      const res = await fetch(`/api/characters/${character.id}/autofill`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "补全失败");
+
+      // 用返回的数据更新表单
+      const updated = data.character;
+      if (updated) {
+        const ua = (updated.appearance || {}) as Record<string, unknown>;
+        const ud = (updated.dialogueStyle || {}) as Record<string, unknown>;
+        setForm({
+          name: updated.name || form.name,
+          aliases: (updated.aliases || []).join("、"),
+          role: updated.role || form.role,
+          age: updated.age || form.age,
+          gender: updated.gender || form.gender,
+          appearanceHair: String(ua.hair || form.appearanceHair),
+          appearanceEyes: String(ua.eyes || form.appearanceEyes),
+          appearanceHeight: String(ua.height || form.appearanceHeight),
+          appearanceBuild: String(ua.build || form.appearanceBuild),
+          appearanceFeatures: String(ua.features || form.appearanceFeatures),
+          appearanceAttire: String(ua.attire || form.appearanceAttire),
+          personality: toText(updated.personality) || form.personality,
+          background: updated.background || form.background,
+          abilities: (updated.abilities || form.abilities.split(/[,，、\n]+/).filter(Boolean)).join("、"),
+          hiddenMotives: (updated.hiddenMotives || form.hiddenMotives.split(/[,，、\n]+/).filter(Boolean)).join("、"),
+          relationships: form.relationships,
+          dialogueDesc: String(ud.description || form.dialogueDesc),
+          dialogueExamples: (Array.isArray(ud.examples) ? ud.examples as string[] : form.dialogueExamples.split("\n").filter(Boolean)).join("\n"),
+          dialogueVocab: (Array.isArray(ud.vocabulary) ? ud.vocabulary as string[] : form.dialogueVocab.split(/[,，、]/).filter(Boolean)).join("、"),
+          dialoguePatterns: (Array.isArray(ud.speechPatterns) ? ud.speechPatterns as string[] : form.dialoguePatterns.split("\n").filter(Boolean)).join("\n"),
+          timeline: form.timeline,
+          arcProgress: updated.arcProgress || form.arcProgress,
+          currentStatus: updated.currentStatus || form.currentStatus,
+        });
+      }
+      setAutofillMsg(`✅ ${data.message || "补全完成"}`);
+    } catch (err: any) {
+      setAutofillMsg(`❌ ${err.message}`);
+    } finally {
+      setAutofilling(false);
+    }
+  };
+
   const handleSave = async () => {
     const relLines = form.relationships.split("\n").filter(Boolean);
     const relationships = relLines.map(line => {
@@ -126,26 +176,44 @@ export function CharacterEditDialog({
   const field = (label: string, value: string, set: (v: string) => void, opts?: { placeholder?: string; textarea?: boolean; rows?: number }) =>
     <DialogField label={label}>
       {opts?.textarea
-        ? <textarea className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm resize-y" style={{ minHeight: `${(opts.rows || 2) * 24}px` }} value={value} onChange={e => set(e.target.value)} placeholder={opts?.placeholder} />
+        ? <textarea className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm resize-y" style={{ minHeight: `${(opts.rows || 2) * 24}px` }} value={value} onChange={e => set(e.target.value)} placeholder={opts?.placeholder} />
         : <DialogInput value={value} onChange={set} placeholder={opts?.placeholder} />}
     </DialogField>;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-3 border-b border-zinc-800 shrink-0">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-white/[0.06] shrink-0 flex items-center justify-between">
           <h3 className="text-lg font-semibold">编辑角色：{character.name}</h3>
+          <div className="flex items-center gap-2">
+            {autofillMsg && (
+              <span className={`text-xs ${autofillMsg.startsWith("✅") ? "text-green-400" : autofillMsg.startsWith("❌") ? "text-red-400" : "text-amber-400"}`}>
+                {autofillMsg}
+              </span>
+            )}
+            <button
+              onClick={handleAutofill}
+              disabled={autofilling}
+              className={`text-xs px-3 py-1 rounded-lg font-medium transition-colors ${
+                autofilling
+                  ? "bg-white/[0.04] text-zinc-500 cursor-not-allowed"
+                  : "bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 border border-purple-600/30"
+              }`}
+            >
+              {autofilling ? "⏳ AI补全中..." : "🤖 AI填满"}
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* 基本标识 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">基本标识</h4>
             <div className="space-y-2">
               {field("姓名", form.name, v => setForm({ ...form, name: v }))}
               {field("别名（逗号分隔）", form.aliases, v => setForm({ ...form, aliases: v }), { placeholder: "阿三, 剑圣, 老疯" })}
               <div className="grid grid-cols-3 gap-2">
                 <DialogField label="角色定位">
-                  <select className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                  <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
                     <option value="protagonist">主角</option>
                     <option value="antagonist">反派</option>
                     <option value="supporting">配角</option>
@@ -158,7 +226,7 @@ export function CharacterEditDialog({
                 {field("性别", form.gender, v => setForm({ ...form, gender: v }), { placeholder: "男" })}
               </div>
               <DialogField label="当前状态">
-                <select className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm" value={form.currentStatus} onChange={e => setForm({ ...form, currentStatus: e.target.value })}>
+                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm" value={form.currentStatus} onChange={e => setForm({ ...form, currentStatus: e.target.value })}>
                   <option value="alive">存活</option>
                   <option value="dead">死亡</option>
                   <option value="missing">失踪</option>
@@ -168,7 +236,7 @@ export function CharacterEditDialog({
             </div>
           </div>
           {/* 外貌 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">外貌</h4>
             <div className="grid grid-cols-3 gap-2">
               {field("发型发色", form.appearanceHair, v => setForm({ ...form, appearanceHair: v }), { placeholder: "黑长直" })}
@@ -184,34 +252,34 @@ export function CharacterEditDialog({
             </div>
           </div>
           {/* 性格 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">性格详析</h4>
             {field("性格特征", form.personality, v => setForm({ ...form, personality: v }), { textarea: true, rows: 5, placeholder: "主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠，对熟人话多" })}
           </div>
           {/* 背景 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">背景状态</h4>
             {field("背景", form.background, v => setForm({ ...form, background: v }), { textarea: true, rows: 16, placeholder: "1)所在位置与境遇：xxx\n2)当前短期目标：xxx\n3)长期欲望：xxx\n4)所持资源与限制：xxx\n5)卷入核心事件的方式与态度：xxx" })}
           </div>
           {/* 能力 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">能力/功法</h4>
             {field("能力（每行一个，或用逗号分隔）", form.abilities, v => setForm({ ...form, abilities: v }), { textarea: true, rows: 6, placeholder: "步频幻觉\n伪九号回撤\n节奏变奏\n逆足终结" })}
             {field("隐藏动机（每行一个，或用逗号分隔）", form.hiddenMotives, v => setForm({ ...form, hiddenMotives: v }), { textarea: true, rows: 3, placeholder: "暗中寻找灭门仇人\n表面臣服实则谋反" })}
           </div>
           {/* 时间线 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">📅 经历时间线（防OOC——每行：X岁：事件（时间参照））</h4>
             {field("时间线", form.timeline, v => setForm({ ...form, timeline: v }), { textarea: true, rows: 5, placeholder: "0岁：出生于青云镇铁匠铺（故事开始前18年）\n12岁：拜入青云宗外门（故事开始前6年）\n16岁：觉醒剑灵血脉（故事开始前2年）\n18岁：故事起点——宗门大比夺冠（第一卷）" })}
             <p className="text-xs text-zinc-500 mt-1">设定角色人生关键时间点，防止AI把前期角色写成后期状态。age 填该事件时角色的年龄。</p>
           </div>
           {/* 关系 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">人际关系（每行：人物名：关系：动态）</h4>
             {field("关系", form.relationships, v => setForm({ ...form, relationships: v }), { textarea: true, rows: 3, placeholder: "张三：师徒：亦师亦友\n李四：宿敌：互相欣赏但立场对立\n王五：暗恋对象：尚未表白" })}
           </div>
           {/* 对话风格 */}
-          <div className="border-b border-zinc-800 pb-3">
+          <div className="border-b border-white/[0.06] pb-3">
             <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wider">对话风格</h4>
             {field("风格描述", form.dialogueDesc, v => setForm({ ...form, dialogueDesc: v }), { placeholder: "冷漠寡言，但关键时字字千钧" })}
             {field("典型台词（每行一句）", form.dialogueExamples, v => setForm({ ...form, dialogueExamples: v }), { textarea: true, rows: 2, placeholder: "哼，就这？\n我欠你一条命。" })}
@@ -224,8 +292,8 @@ export function CharacterEditDialog({
             {field("弧光进度", form.arcProgress, v => setForm({ ...form, arcProgress: v }), { textarea: true, rows: 2, placeholder: "信念动摇触发点：xxx\n蜕变方向：xxx→xxx\n堕落风险：xxx" })}
           </div>
         </div>
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-zinc-800 shrink-0">
-          <Button variant="outline" onClick={onClose} className="border-zinc-700">取消</Button>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-white/[0.06] shrink-0">
+          <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
           <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500">保存</Button>
         </div>
       </div>

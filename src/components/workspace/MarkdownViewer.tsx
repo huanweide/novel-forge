@@ -83,7 +83,7 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="bg-zinc-800 text-amber-300 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
+        <code className="bg-white/[0.04] text-amber-300 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
           {children}
         </code>
       );
@@ -99,7 +99,7 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
       {children}
     </pre>
   ),
-  hr: (props: any) => <hr className="border-zinc-800 my-8" {...props} />,
+  hr: (props: any) => <hr className="border-white/[0.06] my-8" {...props} />,
   table: ({ children, ...props }: any) => (
     <div className="overflow-x-auto my-4">
       <table className="min-w-full border-collapse text-[15px]" {...props}>
@@ -108,7 +108,7 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
     </div>
   ),
   thead: ({ children, ...props }: any) => (
-    <thead className="border-b border-zinc-700" {...props}>
+    <thead className="border-b border-white/[0.08]" {...props}>
       {children}
     </thead>
   ),
@@ -118,7 +118,7 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
     </th>
   ),
   td: ({ children, ...props }: any) => (
-    <td className="px-3 py-2 text-zinc-300 border-t border-zinc-800" {...props}>
+    <td className="px-3 py-2 text-zinc-300 border-t border-white/[0.06]" {...props}>
       {children}
     </td>
   ),
@@ -230,7 +230,7 @@ function EntityLegend({ entityMap }: { entityMap: Map<string, EntityHighlight> }
   if (active.length === 0) return null;
 
   return (
-    <div className="mt-6 pt-4 border-t border-zinc-800 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+    <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
       <span className="text-zinc-600">图例：</span>
       {active.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1">

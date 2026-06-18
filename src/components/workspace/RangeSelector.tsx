@@ -101,7 +101,7 @@ export function RangeSelector({
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         placeholder={placeholder || `1-${total}`}
-        className="w-24 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-amber-700"
+        className="w-24 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-amber-700"
       />
       {lastApplied && (
         <span className="text-[10px] text-zinc-600">

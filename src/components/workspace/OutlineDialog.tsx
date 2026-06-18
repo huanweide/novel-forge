@@ -31,8 +31,8 @@ export function OutlineDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
           <div>
             <h2 className="text-lg font-semibold">🤖 AI 生成大纲</h2>
             <p className="text-xs text-zinc-500 mt-0.5">《{projectName}》</p>
@@ -46,7 +46,7 @@ export function OutlineDialog({
             <div className="flex gap-2 flex-wrap">
               {chapterOptions.map((opt) => (
                 <button key={opt.value} onClick={() => onChapterCountChange(opt.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${chapterCount === opt.value ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"}`}>
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${chapterCount === opt.value ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"}`}>
                   {opt.label}
                 </button>
               ))}
@@ -55,7 +55,7 @@ export function OutlineDialog({
               <input type="number" min={1} max={30} value={customChapterCount}
                 onChange={(e) => onCustomChapterCountChange(e.target.value)}
                 placeholder="输入章节数 (1-30)"
-                className="mt-2 w-32 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+                className="mt-2 w-32 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
             )}
           </div>
           {/* 提示词 */}
@@ -69,7 +69,7 @@ export function OutlineDialog({
             </label>
             <textarea value={customPrompt} onChange={(e) => onCustomPromptChange(e.target.value)}
               placeholder={`不填则自动基于角色、世界书、总纲用 V4 Pro 生成。\n\n填写则按你的提示词生成章纲。例如：\n"重点写主角从懦弱到勇敢的转变过程，前三章铺垫，中间爆发，最后两章收尾"`}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-indigo-500"
               rows={3} disabled={isGenerating} />
             <p className="text-xs text-zinc-600 mt-1">有提示词 → {useFlash ? "V4 Flash" : "V4 Pro"} 快速响应 · 无提示词 → V4 Pro 深度创作</p>
           </div>
@@ -94,7 +94,7 @@ export function OutlineDialog({
           </div>
           {/* 总览文本 */}
           {rawOutline && (
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3">
+            <div className="bg-zinc-800/50 border border-white/[0.08] rounded-lg p-3">
               <p className="text-xs text-zinc-500 mb-1">📋 大纲总览</p>
               <p className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">{rawOutline}</p>
             </div>
@@ -105,17 +105,17 @@ export function OutlineDialog({
               <p className="text-sm text-zinc-400 mb-2">📖 章节预览（{previewChapters.length} 章 · 点击可编辑）</p>
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                 {previewChapters.map((ch, i) => (
-                  <div key={i} className={`border rounded-lg p-3 transition-colors ${editingIndex === i ? "border-indigo-600 bg-indigo-950/20" : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"}`}>
+                  <div key={i} className={`border rounded-lg p-3 transition-colors ${editingIndex === i ? "border-indigo-600 bg-indigo-950/20" : "border-white/[0.06] bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.08]"}`}>
                     {editingIndex === i ? (
                       <div className="space-y-2">
-                        <input className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+                        <input className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
                           value={ch.title} onChange={(e) => onUpdateChapter(i, "title", e.target.value)} autoFocus />
-                        <textarea className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-300 resize-none focus:outline-none focus:border-indigo-500"
+                        <textarea className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-sm text-zinc-300 resize-none focus:outline-none focus:border-indigo-500"
                           rows={3} value={ch.summary} onChange={(e) => onUpdateChapter(i, "summary", e.target.value)} placeholder="本章梗概..." />
                         <div className="flex gap-2">
-                          <input className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-400 focus:outline-none focus:border-indigo-500"
+                          <input className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-zinc-400 focus:outline-none focus:border-indigo-500"
                             value={ch.coreConflict} onChange={(e) => onUpdateChapter(i, "coreConflict", e.target.value)} placeholder="核心冲突（可选）" />
-                          <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)} className="text-xs border-zinc-700 h-7">完成</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)} className="text-xs border-white/[0.08] h-7">完成</Button>
                         </div>
                       </div>
                     ) : (
@@ -135,10 +135,10 @@ export function OutlineDialog({
           )}
         </div>
         {hasPreview && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-800 shrink-0 bg-zinc-900">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.06] shrink-0 bg-zinc-900">
             <p className="text-xs text-zinc-500">可点击章节编辑标题和梗概，确认后写入大纲树</p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => { onClose(); }} className="border-zinc-700 text-sm">取消</Button>
+              <Button variant="outline" onClick={() => { onClose(); }} className="border-white/[0.08] text-sm">取消</Button>
               <Button onClick={onConfirm} disabled={isGenerating} className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm">✅ 确认写入 ({previewChapters.length} 章)</Button>
             </div>
           </div>

@@ -136,9 +136,9 @@ export function DrawCards({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* 头部 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
           <div>
             <h2 className="text-lg font-semibold">🎴 抽卡模式——「{nodeTitle}」</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
@@ -147,7 +147,7 @@ export function DrawCards({
           </div>
           <div className="flex items-center gap-2">
             <select value={drawCount} onChange={e => setDrawCount(parseInt(e.target.value))}
-              className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs">
+              className="bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs">
               <option value={3}>3张</option><option value={4}>4张</option><option value={5}>5张</option>
             </select>
             <button onClick={() => doDraw(drawCount)} disabled={loading}
@@ -193,12 +193,12 @@ export function DrawCards({
                     className={`rounded-xl border-2 p-4 cursor-pointer transition-all hover:scale-[1.02] ${
                       isSelected
                         ? "border-indigo-500 bg-indigo-950/30 shadow-lg shadow-indigo-900/20"
-                        : `border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 ${moodColor}`
+                        : `border-white/[0.06] bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.08] ${moodColor}`
                     } ${card.error ? "opacity-50" : ""}`}>
                     {/* 卡片标签 */}
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        isSelected ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-300"
+                        isSelected ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-300"
                       }`}>
                         {card.cardLabel || `路线${i + 1}`}
                       </span>
@@ -237,10 +237,10 @@ export function DrawCards({
 
                     {/* 出场角色 */}
                     {card.characters.length > 0 && (
-                      <div className="flex gap-1 flex-wrap mt-auto pt-2 border-t border-zinc-800">
+                      <div className="flex gap-1 flex-wrap mt-auto pt-2 border-t border-white/[0.06]">
                         {card.characters.map(name => { const detail = charDetails.find(c => c.name === name);
                           return (
-                            <span key={name} className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                            <span key={name} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400">
                               {roleLabel[detail?.role || ""] ? `${roleLabel[detail?.role || ""]} ` : ""}{name}
                             </span>
                           );
@@ -258,14 +258,14 @@ export function DrawCards({
 
         {/* 底部 */}
         {!loading && !error && cards.length > 0 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-800 shrink-0 bg-zinc-900">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.06] shrink-0 bg-zinc-900">
             <p className="text-xs text-zinc-500">
               {selectedIndex !== null
                 ? `已选中「${cards[selectedIndex]?.cardLabel}」——点击采用写入章纲`
                 : "点击一张卡片选中，然后点「采用」"}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose} className="border-zinc-700">取消</Button>
+              <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
               <Button onClick={handleSelect} disabled={selectedIndex === null}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50">
                 ✅ 采用此路线

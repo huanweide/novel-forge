@@ -106,7 +106,7 @@ export function DissectAdaptPanel({
               className={`max-w-[80%] px-4 py-2.5 rounded-xl text-sm leading-relaxed ${
                 msg.role === "user"
                   ? "bg-indigo-600 text-white rounded-br-sm"
-                  : "bg-zinc-800 text-zinc-300 rounded-bl-sm"
+                  : "bg-white/[0.04] text-zinc-300 rounded-bl-sm"
               }`}
             >
               {msg.role === "agent" ? (
@@ -121,7 +121,7 @@ export function DissectAdaptPanel({
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-zinc-800 text-zinc-500 px-4 py-2.5 rounded-xl rounded-bl-sm text-sm">
+            <div className="bg-white/[0.04] text-zinc-500 px-4 py-2.5 rounded-xl rounded-bl-sm text-sm">
               <span className="animate-pulse">思考中...</span>
             </div>
           </div>
@@ -138,7 +138,7 @@ export function DissectAdaptPanel({
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="说说你想怎么改..."
           disabled={loading}
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+          className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
         />
         <button
           onClick={handleSend}
@@ -155,10 +155,10 @@ export function DissectAdaptPanel({
         disabled={creating || messages.length <= 1}
         className={`mt-4 w-full py-3 rounded-lg text-sm font-medium transition-colors ${
           creating
-            ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+            ? "bg-white/[0.04] text-zinc-500 cursor-not-allowed"
             : messages.length > 1
               ? "bg-green-600 text-white hover:bg-green-500"
-              : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+              : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"
         }`}
       >
         {creating

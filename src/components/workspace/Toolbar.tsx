@@ -29,7 +29,7 @@ export function Toolbar({
   };
 
   return (
-    <header className="h-12 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4 shrink-0 relative">
+    <header className="h-12 border-b border-white/[0.06] bg-zinc-900 flex items-center justify-between px-4 shrink-0 relative">
       <div className="flex items-center gap-3 min-w-0">
         <button onClick={onBack} className="text-zinc-500 hover:text-zinc-300 text-sm shrink-0">← 返回</button>
         <span className="text-zinc-700 shrink-0">|</span>
@@ -48,31 +48,31 @@ export function Toolbar({
         )}
         {!styleCard?.styleDescription && (
           <Button size="sm" variant="outline" onClick={onEditStyle} disabled={isGenerating}
-            className="text-xs border-zinc-700 h-7" title="文风卡（未设定）">🎨 文风</Button>
+            className="text-xs border-white/[0.08] h-7" title="文风卡（未设定）">🎨 文风</Button>
         )}
         <span className="text-zinc-800 mx-0.5">|</span>
         <StyleSelector projectId={projectId} currentStyleId={styleTemplateId} onSelect={onStyleSelect} />
         <button onClick={onGenerateOutline} disabled={isGenerating || outlineGenerating}
-          className="text-xs border border-zinc-700 rounded px-2.5 h-7 text-zinc-300 hover:bg-zinc-700/80 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          className="text-xs border border-white/[0.08] rounded px-2.5 h-7 text-zinc-300 hover:bg-zinc-700/80 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {outlineGenerating ? "⏳" : "🤖"} 大纲
         </button>
         <Button size="sm" variant="outline" onClick={onSummarize} disabled={isGenerating || summarizing}
-          className="text-xs border-zinc-700 h-7">{summarizing ? "⏳" : "📦"} 摘要</Button>
+          className="text-xs border-white/[0.08] h-7">{summarizing ? "⏳" : "📦"} 摘要</Button>
         <Button size="sm" variant="outline" onClick={onImportSettings} disabled={isGenerating}
           className="text-xs border-indigo-700 text-indigo-400 hover:text-indigo-300 h-7">📋 设定</Button>
         <Button size="sm" variant="outline" onClick={onImportChapters} disabled={isGenerating}
           className="text-xs border-purple-700 text-purple-400 hover:text-purple-300 h-7">📥 导入</Button>
         <div className="relative">
           <Button size="sm" variant="outline" onClick={() => setShowExport(!showExport)}
-            disabled={isGenerating} className="text-xs border-zinc-700 h-7">📤 导出</Button>
+            disabled={isGenerating} className="text-xs border-white/[0.08] h-7">📤 导出</Button>
           {showExport && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
-              <div className="absolute right-0 top-full mt-1 z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl overflow-hidden w-36">
+              <div className="absolute right-0 top-full mt-1 z-50 bg-zinc-900 border border-white/[0.08] rounded-lg shadow-xl overflow-hidden w-36">
                 <button onClick={() => { onExport("markdown"); setShowExport(false); }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-800 transition-colors">📝 Markdown (.md)</button>
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-white/[0.04] transition-colors">📝 Markdown (.md)</button>
                 <button onClick={() => { onExport("txt"); setShowExport(false); }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-800 transition-colors">📄 纯文本 (.txt)</button>
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-white/[0.04] transition-colors">📄 纯文本 (.txt)</button>
               </div>
             </>
           )}

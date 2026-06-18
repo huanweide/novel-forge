@@ -196,7 +196,7 @@ export function WorldPanel({
   return (
     <div className="flex flex-col h-full">
       {/* 板块选择器 */}
-      <div className="flex-shrink-0 p-2 space-y-0.5 max-h-[40%] overflow-y-auto border-b border-zinc-800">
+      <div className="flex-shrink-0 p-2 space-y-0.5 max-h-[40%] overflow-y-auto border-b border-white/[0.06]">
         {WORLD_MODULES.map((mod) => {
           const count = getCount(mod.key);
           const active = activeModule === mod.key;
@@ -225,7 +225,7 @@ export function WorldPanel({
       {/* 当前板块内容 */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800/50 shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06]/50 shrink-0">
           <div>
             <span className="text-sm font-medium text-zinc-200">{moduleInfo?.icon} {moduleInfo?.label}</span>
             <p className="text-[10px] text-zinc-600">{moduleInfo?.desc}</p>
@@ -240,13 +240,13 @@ export function WorldPanel({
 
         {/* 新建表单 */}
         {showCreate && (
-          <div className="p-3 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
+          <div className="p-3 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-sm shrink-0">
             {activeModule !== "character_relationship" && (
               <input
                 value={createForm["title"] || ""}
                 onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder={`${moduleInfo?.label}名称`}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs mb-2 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs mb-2 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
               />
             )}
             {currentFields.map((f) =>
@@ -257,7 +257,7 @@ export function WorldPanel({
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
                   rows={2}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs mb-1.5 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600 resize-none"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs mb-1.5 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600 resize-none"
                 />
               ) : (
                 <input
@@ -265,7 +265,7 @@ export function WorldPanel({
                   value={createForm[f.key] || ""}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs mb-1.5 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs mb-1.5 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
                 />
               )
             )}
@@ -275,7 +275,7 @@ export function WorldPanel({
                 {saving ? "创建中..." : "💾 保存"}
               </button>
               <button onClick={() => setShowCreate(false)}
-                className="text-[10px] px-2 py-1 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200">
+                className="text-[10px] px-2 py-1 rounded border border-white/[0.08] text-zinc-400 hover:text-zinc-200">
                 取消
               </button>
             </div>
@@ -292,7 +292,7 @@ export function WorldPanel({
           )}
           {moduleEntries.map((entry) => (
             <div key={entry.id}
-              className="p-2 rounded-lg border border-zinc-800/50 bg-zinc-900/30 hover:border-zinc-700/50 transition-colors group"
+              className="p-2 rounded-lg border border-white/[0.06]/50 bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.08]/50 transition-colors group"
             >
               <div className="flex items-start justify-between">
                 <span className="text-xs text-zinc-300 font-medium leading-tight">{entry.title}</span>
@@ -312,7 +312,7 @@ export function WorldPanel({
               {entry.keys && entry.keys.length > 0 && (
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {entry.keys.slice(0, 4).map((k, i) => (
-                    <span key={i} className="text-[8px] px-1 py-0.5 rounded bg-zinc-800 text-zinc-600">{k}</span>
+                    <span key={i} className="text-[8px] px-1 py-0.5 rounded bg-white/[0.04] text-zinc-600">{k}</span>
                   ))}
                 </div>
               )}

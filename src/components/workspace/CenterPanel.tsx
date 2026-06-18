@@ -49,7 +49,7 @@ export function CenterPanel({
       {selectedNode ? (
         <>
           {/* 控制栏 */}
-          <div className="border-b border-zinc-800 px-4 py-3 shrink-0">
+          <div className="border-b border-white/[0.06] px-4 py-3 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
               <span className="text-xs text-zinc-600">
@@ -61,7 +61,7 @@ export function CenterPanel({
             <div className="mb-2">
               {editingOutline ? (
                 <div className="flex gap-2">
-                  <textarea className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs resize-none" rows={2}
+                  <textarea className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs resize-none" rows={2}
                     value={outlineDraft} onChange={(e) => setOutlineDraft(e.target.value)} placeholder="输入本节点大纲..." />
                   <div className="flex flex-col gap-1">
                     <button onClick={() => { onEditOutline(outlineDraft); setEditingOutline(false); }} className="text-xs text-green-400 hover:text-green-300">保存</button>
@@ -86,7 +86,7 @@ export function CenterPanel({
                         <>
                           <input value={chapterOutlinePrompt} onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
                             placeholder="Flash提示词（留空自动生成）"
-                            className="w-32 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-cyan-700" />
+                            className="w-32 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-cyan-700" />
                           <button onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors"
                             title="用 V4 Flash 为本章生成章纲">⚡生成</button>
@@ -114,7 +114,7 @@ export function CenterPanel({
                       <Button size="sm" onClick={onRefine} className="bg-amber-600 hover:bg-amber-500 h-7 text-xs">🔧 微调</Button>
                     )}
                     <button onClick={onToggleRefineMode}
-                      className={`text-xs px-2 py-1 h-7 rounded border transition-colors ${refineMode ? "border-amber-700 text-amber-400 bg-amber-950/20 hover:bg-amber-950/40" : "border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"}`}
+                      className={`text-xs px-2 py-1 h-7 rounded border transition-colors ${refineMode ? "border-amber-700 text-amber-400 bg-amber-950/20 hover:bg-amber-950/40" : "border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"}`}
                       title={refineMode ? "切换到生成模式" : "切换到微调模式"}>
                       {refineMode ? "🔧 微调中" : "🔧 微调"}
                     </button>
@@ -128,12 +128,12 @@ export function CenterPanel({
                   </>
                 )}
                 <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 800)}
-                  className="w-16 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-center" title="目标字数" />
+                  className="w-16 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-center" title="目标字数" />
                 <span className="text-xs text-zinc-600">字</span>
                 <input placeholder={refineMode ? "微调指令（改对话/加描写/续写500字）..." : "作者指令（高优先级）..."}
                   value={refineMode ? refineInstruction : authorNote}
                   onChange={(e) => refineMode ? onRefineInstructionChange(e.target.value) : onAuthorNoteChange(e.target.value)}
-                  className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs placeholder:text-zinc-600" />
+                  className="flex-1 min-w-0 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs placeholder:text-zinc-600" />
               </div>
               {refineMode && !isGenerating && (
                 <p className="text-[10px] text-amber-600/70">微调模式：不重写正文，按指令修改现有内容或续写补长。字数不够会自动补，中途打断可续写。</p>

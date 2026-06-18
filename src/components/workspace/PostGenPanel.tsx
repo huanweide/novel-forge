@@ -197,9 +197,9 @@ export function PostGenPanel({
   if (!extractionData && !distillSummary && !reviewResult) return null;
 
   return (
-    <div className="mt-6 border border-zinc-800 rounded-xl bg-zinc-900/60 overflow-hidden">
+    <div className="mt-6 border border-white/[0.06] rounded-xl bg-zinc-900/60 overflow-hidden">
       {/* 头部 stats */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/80">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-zinc-900/80">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-medium text-zinc-200">📊 本章分析</h3>
           {extractionData && (
@@ -228,7 +228,7 @@ export function PostGenPanel({
       </div>
 
       {/* Tab 栏 */}
-      <div className="flex border-b border-zinc-800">
+      <div className="flex border-b border-white/[0.06]">
         {TABS.map((t) => {
           const hasContent =
             (t.key === "extraction" && extractionData) ||
@@ -399,7 +399,7 @@ export function PostGenPanel({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-zinc-300">{f.description}</span>
-                            <span className={`text-[10px] px-1 rounded ${f.importance === "极高" ? "bg-red-950/40 text-red-400" : f.importance === "高" ? "bg-amber-950/40 text-amber-400" : "bg-zinc-800 text-zinc-500"}`}>
+                            <span className={`text-[10px] px-1 rounded ${f.importance === "极高" ? "bg-red-950/40 text-red-400" : f.importance === "高" ? "bg-amber-950/40 text-amber-400" : "bg-white/[0.04] text-zinc-500"}`}>
                               {f.importance}
                             </span>
                           </div>
@@ -475,7 +475,7 @@ export function PostGenPanel({
                   </span>
                   <span className="text-[10px] text-zinc-500">质量分 {forbiddenScanResult.qualityScore}/100</span>
                   {forbiddenScanResult.fuzzyDensity > 0 && (
-                    <span className={`text-[10px] px-1.5 rounded ${forbiddenScanResult.fuzzyDensity > 3 ? "bg-red-950/30 text-red-400" : "bg-zinc-800 text-zinc-500"}`}>
+                    <span className={`text-[10px] px-1.5 rounded ${forbiddenScanResult.fuzzyDensity > 3 ? "bg-red-950/30 text-red-400" : "bg-white/[0.04] text-zinc-500"}`}>
                       🌫️ 模糊词 {forbiddenScanResult.fuzzyDensity.toFixed(1)}/500字
                     </span>
                   )}

@@ -126,7 +126,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   return (
     <div className="flex flex-col h-full">
       {/* 顶部统计 */}
-      <div className="px-3 py-2 border-b border-zinc-800 text-[10px] text-zinc-500">
+      <div className="px-3 py-2 border-b border-white/[0.06] text-[10px] text-zinc-500">
         共 {data.total} 条伏笔 · {data.groups.pending?.count || 0} 待回收
       </div>
 
@@ -139,7 +139,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
           const isCollapsed = collapsed.has(key);
 
           return (
-            <div key={key} className="border-b border-zinc-800/50">
+            <div key={key} className="border-b border-white/[0.06]/50">
               {/* 分组标题 */}
               <button
                 onClick={() => toggleGroup(key)}

@@ -173,7 +173,7 @@ export function ChapterEntitiesPanel({
       </div>
 
       {groups.map((group) => (
-        <div key={group.key} className="rounded-lg bg-zinc-900/50 border border-zinc-800/60 overflow-hidden">
+        <div key={group.key} className="rounded-lg bg-white/[0.02] backdrop-blur-sm border border-white/[0.06]/60 overflow-hidden">
           {/* 分组头 */}
           <button
             onClick={() => toggleGroup(group.key)}
@@ -187,7 +187,7 @@ export function ChapterEntitiesPanel({
 
           {/* 实体列表 */}
           {!collapsed.has(group.key) && (
-          <div className="divide-y divide-zinc-800/30 border-t border-zinc-800/40">
+          <div className="divide-y divide-zinc-800/30 border-t border-white/[0.06]/40">
             {group.entities.map((entity) => {
               const charId = entity.type === "character" ? findCharId(entity.name) : undefined;
               const loreId = entity.type === "lorebook" ? findLoreId(entity.name) : undefined;

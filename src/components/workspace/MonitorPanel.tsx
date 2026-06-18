@@ -48,7 +48,7 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* 总览 */}
-      <div className="p-3 border-b border-zinc-800">
+      <div className="p-3 border-b border-white/[0.06]">
         <div className="text-[10px] text-zinc-500 mb-2">📊 字数概览</div>
         <div className="grid grid-cols-2 gap-2">
           <StatBlock label="总字数" value={fmt(data.totalWords)} color="text-zinc-200" />
@@ -61,7 +61,7 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
       </div>
 
       {/* Token 估算 */}
-      <div className="p-3 border-b border-zinc-800">
+      <div className="p-3 border-b border-white/[0.06]">
         <div className="text-[10px] text-zinc-500 mb-2">🔢 Token 估算</div>
         <div className="space-y-1.5">
           <TokenRow label="生成Token" value={data.tokens.estimatedGenerated} color="text-emerald-400" />
@@ -72,7 +72,7 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
       </div>
 
       {/* 章节分布 */}
-      <div className="p-3 border-b border-zinc-800">
+      <div className="p-3 border-b border-white/[0.06]">
         <div className="text-[10px] text-zinc-500 mb-2">📈 章节分布</div>
         <div className="space-y-1">
           <Row label="有内容章节" value={`${data.distribution.chaptersWithContent} / ${data.totalChapters}`} />

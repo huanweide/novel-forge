@@ -124,7 +124,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
 
       {/* 支线 */}
       {sideLines.map(s => (
-        <div key={s.id} className="border border-zinc-800 rounded-lg bg-zinc-900/30 overflow-hidden">
+        <div key={s.id} className="border border-white/[0.06] rounded-lg bg-white/[0.02] backdrop-blur-sm overflow-hidden">
           <div className="flex items-center gap-1 px-2 py-1.5">
             <span className="text-[10px]">↳</span>
             <span className="text-xs text-zinc-300 flex-1 truncate">{s.title}</span>
@@ -149,22 +149,22 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       {/* 编辑弹窗 */}
       {editingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditingId(null)}>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-4">编辑故事线</h3>
             <div className="space-y-3">
               <div>
                 <label className="text-xs text-zinc-400 block mb-1">标题</label>
-                <input className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500"
+                <input className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500"
                   value={editForm.title || ""} onChange={e => updateField("title", e.target.value)} />
               </div>
               <div>
                 <label className="text-xs text-zinc-400 block mb-1">简述</label>
-                <input className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500"
+                <input className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500"
                   value={editForm.description || ""} onChange={e => updateField("description", e.target.value)} />
               </div>
               <div>
                 <label className="text-xs text-zinc-400 block mb-1">状态</label>
-                <select className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm"
+                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-1.5 text-sm"
                   value={editForm.status || "active"}
                   onChange={e => updateField("status", e.target.value)}>
                   <option value="active">活跃中</option>
@@ -175,14 +175,14 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
               {Object.entries(ELEMENT_LABELS).map(([key, { emoji, label }]) => (
                 <div key={key}>
                   <label className="text-xs text-zinc-400 block mb-1">{emoji} {label}</label>
-                  <textarea className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm resize-none focus:outline-none focus:border-indigo-500"
+                  <textarea className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-1.5 text-sm resize-none focus:outline-none focus:border-indigo-500"
                     rows={2} value={(editForm as any)[key] || ""}
                     onChange={e => updateField(key, e.target.value)} />
                 </div>
               ))}
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setEditingId(null)} className="border-zinc-700">取消</Button>
+              <Button variant="outline" onClick={() => setEditingId(null)} className="border-white/[0.08]">取消</Button>
               <Button onClick={() => handleSave(editingId)} className="bg-indigo-600 hover:bg-indigo-500">保存</Button>
             </div>
           </div>

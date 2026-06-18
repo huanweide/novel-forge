@@ -373,26 +373,95 @@ async function extractDimensionsBatch(
 
   // 按 ## 标题将结果拆分到各维度
   const results: Record<string, DimensionResult> = {};
+  const failedDims: DimensionKey[] = [];
+
   for (const dim of dimensions) {
     const label = DIMENSION_LABELS[dim];
-    // 尝试从全文提取该维度的段落
-    const sectionRegex = new RegExp(
-      `##\\s*${escapeRegex(label)}[\\s\\S]*?(?=##\\s|$)`,
-      "i",
-    );
-    const match = fullContent.match(sectionRegex);
-    const content = match ? match[0].replace(/^##\s*[^\n]+\n?/, "").trim() : "";
+
+    // 策略1：精确匹配 ## label
+    let content = extractSectionByLabel(fullContent, label);
+
+    // 策略2：如果精确匹配结果太短，尝试模糊匹配（允许 label 前后有修饰词）
+    if (content.length < 20) {
+      content = extractSectionFuzzy(fullContent, label);
+    }
 
     results[dim] = {
       dimension: dim,
       label,
       icon: DIMENSION_ICONS[dim],
       content: content || `（未提取到${label}相关内容）`,
-      status: "completed",
+      status: content.length >= 10 ? "completed" : "failed",
+      error: content.length < 10 ? `${label}提取内容过短（${content.length}字）` : undefined,
     };
+
+    if (content.length < 10) {
+      failedDims.push(dim);
+    }
+  }
+
+  // 策略3：对失败维度发起独立 LLM 调用补救
+  if (failedDims.length > 0) {
+    console.log(`[dissect] quick模式分割后${failedDims.length}个维度内容过短，逐一重试...`);
+    for (const dim of failedDims) {
+      try {
+        const retryResult = await extractSingleDimension(
+          client, model, dim, textSample, chapterCount,
+        );
+        results[dim] = retryResult;
+      } catch (err: any) {
+        results[dim].error = `重试失败: ${err?.message || "未知错误"}`;
+      }
+    }
   }
 
   return results;
+}
+
+// ─── AI输出分割辅助 ──────────────────────────────────────
+
+/**
+ * 从 AI 批量输出中按标签精确匹配段落。
+ * 匹配模式：## label 开头，到下一个 ## 或字符串结尾。
+ */
+function extractSectionByLabel(fullContent: string, label: string): string {
+  const sectionRegex = new RegExp(
+    `##\\s*${escapeRegex(label)}[\\s\\S]*?(?=##\\s|$)`,
+    "i",
+  );
+  const match = fullContent.match(sectionRegex);
+  if (!match) return "";
+  return match[0].replace(/^##\s*[^\n]+\n?/, "").trim();
+}
+
+/**
+ * 模糊匹配：允许标题有其他变体。
+ * 尝试匹配包含 label 的标题（如 "## 角色信息"、"## 主要角色"、"### 角色"）。
+ */
+function extractSectionFuzzy(fullContent: string, label: string): string {
+  // 尝试多种标题变体
+  const variants = [
+    label,                          // 角色
+    `${label}信息`,                 // 角色信息
+    `${label}分析`,                 // 角色分析
+    `主要${label}`,                 // 主要角色
+    `${label}列表`,                 // 角色列表
+    `${label}设定`,                 // 角色设定
+  ];
+
+  for (const variant of variants) {
+    const content = extractSectionByLabel(fullContent, variant);
+    if (content.length >= 20) return content;
+  }
+
+  // 最后兜底：用更宽松的正则——允许标签前后有任意字符
+  const looseRegex = new RegExp(
+    `#{1,3}\\s*[^\\n]*${escapeRegex(label)}[^\\n]*[\\s\\S]*?(?=#{1,3}\\s|$)`,
+    "i",
+  );
+  const match = fullContent.match(looseRegex);
+  if (!match) return "";
+  return match[0].replace(/^#{1,3}\s*[^\n]+\n?/, "").trim();
 }
 
 /**
@@ -640,23 +709,59 @@ export async function convertToProject(
     },
   });
 
-  // ── 导入角色（三策略鲁棒解析）──
+  // ── 导入角色（多策略：维度解析 → 兜底扫描 → AI批量结构化）──
   const charContent = dims.characters?.content || "";
-  if (charContent) {
-    const chars = parseCharacterList(charContent);
-    for (const c of chars.slice(0, 30)) {
-      await prisma.characterCard.create({
-        data: {
-          projectId: project.id,
-          name: c.name,
-          role: c.role || "supporting",
-          background: c.description || "",
-          abilities: c.abilities || [],
-          personality: c.personality || ([] as any),
-        },
-      });
+  let chars: ParsedChar[] = [];
+  let fromFallback = false;
+
+  if (charContent && charContent.length >= 20) {
+    // 主策略：解析角色维度内容（已有合法性过滤）
+    chars = parseCharacterList(charContent);
+  }
+
+  // 兜底策略：如果角色维度解析颗粒无收，从其他维度扫描角色名
+  if (chars.length === 0) {
+    console.log("[convertToProject] 角色维度解析为空，启用全维度兜底扫描...");
+    const fallbackNames = extractCharacterNamesFromAllDimensions(dims);
+    fromFallback = true;
+
+    if (fallbackNames.length > 0) {
+      // 尝试AI批量结构化（一次LLM调用补全所有角色的年龄/性别/外貌等）
+      console.log(`[convertToProject] 兜底扫描到${fallbackNames.length}个角色名，AI批量结构化...`);
+      chars = await aiStructureCharacters(fallbackNames, dims);
+
+      // 如果AI结构化失败，降级为只填名字
+      if (chars.length === 0) {
+        console.log("[convertToProject] AI结构化失败，降级为仅名字导入");
+        chars = fallbackNames.map((name) => ({
+          name,
+          role: guessRoleFromNameAndContext(name, dims),
+          description: `从拆书维度自动提取的角色：${name}`,
+        }));
+      }
     }
   }
+
+  // 导入角色卡——映射到完整 CharacterCard 字段
+  for (const c of chars.slice(0, 30)) {
+    await prisma.characterCard.create({
+      data: {
+        projectId: project.id,
+        name: c.name,
+        role: c.role || "supporting",
+        age: c.age || "未知",
+        gender: c.gender || "未知",
+        aliases: c.aliases || [],
+        background: c.description || "",
+        abilities: c.abilities || [],
+        personality: c.personality || ([] as any),
+        appearance: (c.appearance || {}) as any,
+        dialogueStyle: (c.dialogueStyle || {}) as any,
+        tags: fromFallback ? ["📥拆书导入", "🤖AI补全"] : ["📥拆书导入"],
+      },
+    });
+  }
+  console.log(`[convertToProject] 导入了 ${chars.length} 个角色（${fromFallback ? "兜底+AI结构化" : "主策略解析"}）`);
 
   // ── 全维度导入为世界书词条 ──
   const loreDimensions: Array<{
@@ -751,7 +856,183 @@ interface ParsedChar {
   role?: string;
   description?: string;
   abilities?: string[];
-  personality?: string[];
+  personality?: string[] | any;
+  age?: string;
+  gender?: string;
+  aliases?: string[];
+  appearance?: Record<string, string>;
+  dialogueStyle?: Record<string, unknown>;
+}
+
+/**
+ * 从所有维度中扫描角色名（兜底策略）。
+ * 扫描大纲摘要、故事核心、势力阵营、情节脉络等维度。
+ */
+function extractCharacterNamesFromAllDimensions(
+  dims: Record<string, DimensionResult>,
+): string[] {
+  const priorityDims = ["outline_summary", "story_core", "factions", "plot_thread"];
+  const allNames = new Set<string>();
+
+  for (const key of priorityDims) {
+    const content = dims[key]?.content;
+    if (!content || content.length < 20) continue;
+
+    // 策略1：用角色解析器的三策略提取（内部已过滤）
+    const parsed = parseCharacterList(content);
+    for (const p of parsed) {
+      if (p.name && p.name.length >= 2 && isValidCharacterName(p.name)) {
+        allNames.add(p.name);
+      }
+    }
+
+    // 策略2：补充暴力中文名扫描（通过合法性校验）
+    if (allNames.size < 3) {
+      const names = allChineseNames(content);
+      for (const n of names) {
+        if (isValidCharacterName(n)) allNames.add(n);
+        if (allNames.size >= 30) break;
+      }
+    }
+  }
+
+  return [...allNames].slice(0, 30);
+}
+
+/**
+ * 根据角色名和上下文猜测角色定位。
+ */
+/**
+ * AI批量结构化角色。
+ * 当角色名来自兜底扫描（只有名字没有详细信息）时，
+ * 一次LLM调用将所有角色结构化为完整数据，映射到CharacterCard字段。
+ */
+async function aiStructureCharacters(
+  charNames: string[],
+  dims: Record<string, DimensionResult>,
+): Promise<ParsedChar[]> {
+  if (charNames.length === 0) return [];
+
+  const config = await getEffectiveConfig();
+  const client = createLLMClient(config);
+  const model = config.extractorModel || config.writerModel;
+
+  // 收集上下文
+  const storyCore = dims.story_core?.content?.slice(0, 800) || "";
+  const worldview = dims.worldview?.content?.slice(0, 500) || "";
+  const factions = dims.factions?.content?.slice(0, 500) || "";
+  const outline = dims.outline_summary?.content?.slice(0, 800) || "";
+  const styleAnalysis = dims.style_analysis?.content?.slice(0, 500) || "";
+
+  const namesList = charNames.map((n, i) => `${i + 1}. ${n}`).join("\n");
+
+  const prompt = `你是一位专业小说角色设计师。请为以下角色列表逐一完善详细信息。
+
+【角色名列表】
+${namesList}
+
+【小说上下文】
+${storyCore ? `故事核心：${storyCore}` : ""}
+${worldview ? `世界观：${worldview}` : ""}
+${factions ? `势力阵营：${factions}` : ""}
+${outline ? `大纲摘要：${outline.slice(0, 600)}` : ""}
+${styleAnalysis ? `写作风格：${styleAnalysis}` : ""}
+
+【要求】
+为每个角色输出：
+- role: protagonist/antagonist/mentor/love_interest/supporting
+- age: 年龄描述（如"25岁"、"外表18岁实际300岁"）
+- gender: 男/女/未知
+- background: 2-4句话背景（位置境遇+短期目标+长期欲望+卷入方式）
+- abilities: 能力/技能列表（3-6项，用逗号分隔）
+- personality: 性格详析JSON {dominant, drive, contradiction, habits: [], socialMask}
+- appearance: 外貌JSON {hair, eyes, height, build, features, attire}
+- aliases: 别名列表
+
+【输出格式——严格JSON数组】
+[
+  {
+    "name": "角色名",
+    "role": "protagonist",
+    "age": "25岁",
+    "gender": "男",
+    "background": "背景描述...",
+    "abilities": ["能力1", "能力2", "能力3"],
+    "personality": {"dominant": "外冷内热", "drive": "复仇", "contradiction": "渴望认可但自尊极强", "habits": ["咬指甲"], "socialMask": "对外冷漠"},
+    "appearance": {"hair": "黑长直", "eyes": "丹凤眼", "height": "178cm", "build": "修长", "features": "左脸刀疤", "attire": "黑色劲装"},
+    "aliases": ["别号1", "别号2"]
+  },
+  ...
+]
+
+只能输出JSON数组，不要其他文字。如果某个角色的某个字段无法推断，用"未知"或空数组。`;
+
+  try {
+    const response = await client.chat({
+      model,
+      messages: [
+        { role: "system", content: "你是一位小说角色设计师。只返回严格JSON数组，不客套。" },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.5,
+      maxTokens: 4096,
+    });
+
+    const rawContent = response.content || "";
+    const jsonMatch = rawContent.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error("[aiStructureCharacters] 无法从AI输出中提取JSON数组:", rawContent.slice(0, 300));
+      return [];
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed)) return [];
+
+    const result: ParsedChar[] = [];
+    for (const item of parsed) {
+      if (!item.name || !isValidCharacterName(item.name)) continue;
+
+      const pc: ParsedChar = {
+        name: item.name,
+        role: item.role || "supporting",
+        age: item.age || "未知",
+        gender: item.gender || "未知",
+        description: item.background || "",
+        abilities: Array.isArray(item.abilities) ? item.abilities : [],
+        aliases: Array.isArray(item.aliases) ? item.aliases : [],
+        appearance: item.appearance || {},
+        personality: item.personality || [],
+      };
+
+      result.push(pc);
+    }
+
+    return result;
+  } catch (err) {
+    console.error("[aiStructureCharacters] 解析失败:", err);
+    return [];
+  }
+}
+
+function guessRoleFromNameAndContext(
+  name: string,
+  dims: Record<string, DimensionResult>,
+): string {
+  const storyCore = dims.story_core?.content || "";
+  const outline = dims.outline_summary?.content || "";
+  const combined = `${storyCore} ${outline}`;
+
+  // 在上下文中搜索该角色名附近的角色标记
+  const idx = combined.indexOf(name);
+  if (idx >= 0) {
+    const context = combined.slice(Math.max(0, idx - 30), idx + name.length + 50);
+    if (/主角|主人公|男主|女主/.test(context)) return "protagonist";
+    if (/反派|敌人|对手|仇人/.test(context)) return "antagonist";
+    if (/导师|师父|师傅|老师/.test(context)) return "mentor";
+    if (/恋人|爱人|情侣|道侣/.test(context)) return "love_interest";
+  }
+
+  return "supporting";
 }
 
 function parseCharacterList(markdown: string): ParsedChar[] {
@@ -795,26 +1076,28 @@ function parseCharacterList(markdown: string): ParsedChar[] {
       if (looseMatch) {
         const potentialName = looseMatch[1];
         const rest = looseMatch[2];
-        // 排除分类标题
-        if (!/^(角色|人物|主角|反派|主要|其他|说明|以上|以下|注意|备注)/.test(potentialName)) {
-          rawName = potentialName;
-          // 从rest中提取角色信息
-          if (/主角|主人公|男主|女主/.test(rest)) {
-            chars.push({ name: rawName, role: "protagonist", description: rest.slice(0, 200) });
-            continue;
-          }
-          if (/反派|敌人/.test(rest)) {
-            chars.push({ name: rawName, role: "antagonist", description: rest.slice(0, 200) });
-            continue;
-          }
-          chars.push({ name: rawName, role: "supporting", description: rest.slice(0, 200) });
+        // 排除分类标题、字段标签、不含姓氏的2字词
+        if (/^(角色|人物|主角|反派|主要|其他|说明|以上|以下|注意|备注)/.test(potentialName)) continue;
+        if (FIELD_LABELS.has(potentialName)) continue;
+        if (potentialName.length === 2 && !COMMON_SURNAMES.has(potentialName[0])) continue;
+
+        rawName = potentialName;
+        // 从rest中提取角色信息
+        if (/主角|主人公|男主|女主/.test(rest)) {
+          chars.push({ name: rawName, role: "protagonist", description: rest.slice(0, 200) });
           continue;
         }
+        if (/反派|敌人/.test(rest)) {
+          chars.push({ name: rawName, role: "antagonist", description: rest.slice(0, 200) });
+          continue;
+        }
+        chars.push({ name: rawName, role: "supporting", description: rest.slice(0, 200) });
+        continue;
       }
     }
 
     if (rawName && rawName.length >= 2 && rawName.length <= 10) {
-      // 过滤分类标题
+      // 过滤分类标题和字段标签
       if (/^(角色|人物|主角|配角|反派|主要角色|次要角色|其他角色|龙套|背景角色)/.test(rawName)) {
         current = null;
         continue;
@@ -822,6 +1105,20 @@ function parseCharacterList(markdown: string): ParsedChar[] {
       if (/^(章节|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|第一章|第二章)/.test(rawName)) {
         current = null;
         continue;
+      }
+      // 过滤含顿号的分段标题（如 "一、主角"、"二、主要配角"）
+      if (/[、，]/.test(rawName)) {
+        current = null;
+        continue;
+      }
+      // 过滤纯字段标签
+      if (FIELD_LABELS.has(rawName)) {
+        current = null;
+        continue;
+      }
+      // 过滤不以常见姓氏开头的2字词（大概率不是人名）
+      if (rawName.length === 2 && !COMMON_SURNAMES.has(rawName[0])) {
+        continue; // 跳过此行但保留当前角色上下文
       }
 
       // 保存上一个角色
@@ -871,7 +1168,22 @@ function parseCharacterList(markdown: string): ParsedChar[] {
     }
   }
 
-  return chars;
+  // ── 后处理：拆分"/"分隔的复合名 + 合法性过滤 ──
+  const processed: ParsedChar[] = [];
+  for (const c of chars) {
+    // 处理 "叶临渊 / 林玄言" 这种复合名
+    if (c.name.includes("/") || c.name.includes("／")) {
+      const parts = c.name.split(/[\/／]/).map((s) => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        if (isValidCharacterName(part)) {
+          processed.push({ ...c, name: part });
+        }
+      }
+    } else if (isValidCharacterName(c.name)) {
+      processed.push(c);
+    }
+  }
+  return processed;
 }
 
 /** 从文本片段中提取角色定位和描述 */
@@ -885,6 +1197,40 @@ function extractRoleAndDesc(c: ParsedChar, text: string) {
   else if (/导师|师父|师傅|老师/.test(t) && !c.role) c.role = "mentor";
   else if (/恋人|爱人|情侣|对象|道侣/.test(t) && !c.role) c.role = "love_interest";
 
+  // 年龄
+  const ageMatch = t.match(/(?:年龄|岁数)[：:]\s*(\S+)/);
+  if (ageMatch) c.age = ageMatch[1];
+  else {
+    const ageNum = t.match(/(\d{1,3})\s*岁/);
+    if (ageNum) c.age = `${ageNum[1]}岁`;
+  }
+
+  // 性别
+  if (/男[性子人]/.test(t)) c.gender = "男";
+  else if (/女[性子人]/.test(t)) c.gender = "女";
+
+  // 别名
+  const aliasMatch = t.match(/(?:别名|称号|绰号|外号|又称)[：:]\s*(.+)/);
+  if (aliasMatch) {
+    c.aliases = aliasMatch[1].split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  // 外貌
+  const appearanceHints: Record<string, string> = {};
+  const hairMatch = t.match(/(?:头发|发型|发色)[：:]\s*(\S+)/);
+  if (hairMatch) appearanceHints.hair = hairMatch[1];
+  const eyeMatch = t.match(/(?:眼睛|眼眸|瞳孔|眼色)[：:]\s*(\S+)/);
+  if (eyeMatch) appearanceHints.eyes = eyeMatch[1];
+  const heightMatch = t.match(/(?:身高|个子)[：:]\s*(\S+)/);
+  if (heightMatch) appearanceHints.height = heightMatch[1];
+  const buildMatch = t.match(/(?:体型|身材|体态)[：:]\s*(\S+)/);
+  if (buildMatch) appearanceHints.build = buildMatch[1];
+  const featureMatch = t.match(/(?:特征|印记|特点)[：:]\s*(\S+)/);
+  if (featureMatch) appearanceHints.features = featureMatch[1];
+  if (Object.keys(appearanceHints).length > 0) {
+    c.appearance = { ...(c.appearance || {}), ...appearanceHints };
+  }
+
   // 性格
   const personalityMatch = t.match(/(?:性格|个性)[：:]\s*(.+)/);
   if (personalityMatch) {
@@ -892,7 +1238,7 @@ function extractRoleAndDesc(c: ParsedChar, text: string) {
   }
 
   // 能力
-  const abilityMatch = t.match(/(?:能力|技能|功法|修为|境界)[：:]\s*(.+)/);
+  const abilityMatch = t.match(/(?:能力|技能|功法|修为|境界|擅长)[：:]\s*(.+)/);
   if (abilityMatch) {
     c.abilities = abilityMatch[1].split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
   }
@@ -912,8 +1258,98 @@ function guessRoleFromText(text: string): string {
 
 function allChineseNames(text: string): string[] {
   const names = text.match(/[一-鿿]{2,4}(?=[：:，。、\n\s\-—])/g) || [];
-  const stopWords = /^(章节|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|第一章|第二章|但是|所以|因为|如果|虽然|然而|不过|只是|已经|正在|将会|可以|必须|应该|一定|非常|特别|比较|一般|基本|大概|可能|或许|似乎)/;
+  const stopWords = /^(章节|本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|第一章|第二章|但是|所以|因为|如果|虽然|然而|不过|只是|已经|正在|将会|可以|必须|应该|一定|非常|特别|比较|一般|基本|大概|可能|或许|似乎|系统|世界|修炼|境界|主角|反派|势力|宗门|家族|组织|国家|大陆|功法|法术|神通|秘籍|丹药|法宝|神器|灵石|金币|交易|购买|拍卖|价格|价值|材料|剧情|情节|转折|发展|高潮|线索|伏笔|悬念|铺垫|回收|暗示|大纲|摘要|章节|概要|结构|物品|兵器|地图|地点|地理|位置|区域|货币|经济|设定|背景|规则|独特|限制|描写|分析|统计|数据|计算|估计|总计|总计|平均|以上|以下|综合|评估|评级|等级|等级|分类|类型)/;
   return [...new Set(names)].filter((n) => !stopWords.test(n));
+}
+
+/** 常见中文姓氏——用于姓名合法性校验 */
+const COMMON_SURNAMES = new Set([
+  "李","王","张","刘","陈","杨","赵","黄","周","吴","徐","孙","马","胡","朱","郭",
+  "何","罗","高","林","郑","梁","谢","唐","许","邓","韩","冯","曹","彭","曾","萧",
+  "田","董","潘","袁","蔡","蒋","于","杜","叶","程","魏","苏","吕","丁","任","卢",
+  "姚","沈","钟","崔","谭","陆","汪","范","金","石","廖","贾","夏","韦","付","方",
+  "白","邹","孟","熊","秦","邱","江","尹","薛","闫","段","雷","侯","龙","史","陶",
+  "黎","贺","顾","毛","郝","龚","邵","万","钱","严","覃","武","戴","莫","孔","向",
+  "季","裴","柳","温","常","汤","阎","段","易","欧阳","上官","慕容","南宫","夏侯",
+  "诸葛","司马","司徒","尉迟","长孙","独孤","皇甫","令狐","宇文","东方",
+]);
+
+/**
+ * AI输出中常见的字段标签——这些不是角色名。
+ * 包括维度提取指令中的所有字段名。
+ */
+const FIELD_LABELS = new Set([
+  // 角色维度字段标签（来自 prompts.ts getDimensionInstruction("characters")）
+  "姓名","性别","年龄","外貌","性格","能力","背景","动机","别名","称号",
+  "说话风格","说话","风格","关键剧情","关键","剧情节点","节点",
+  "在剧情","剧情中的","作用","中的作用","在剧情中的作用",
+  "与主角","与主角关系","主角关系","关系",
+  "能力技能","功法修为","修为境界","境界",
+  "别名称号","绰号","外号","又称",
+  "主角","主人公","男主","女主","主要角色","主角身份","身份",
+  "反派","敌人","对手","仇人","主要配角","配角","其他角色","龙套","背景角色",
+  "一","二","三","四","五","六","七","八","九","十",
+  "一主角","二主要配角","三反派","四其他",
+  "外貌描述","性格特点","能力技能","动机目标","关系网",
+  "头发","发型","发色","眼睛","眼眸","瞳孔","眼色",
+  "身高","个子","体型","身材","体态","特征","印记","特点",
+  "标志","着装","服饰","装备",
+  // 其他维度常见字段
+  "书名","作者","总字数","章节数","类型","流派","简介","读者群",
+  "世界背景","核心规则","历史脉络","种族文明","天地灵气","魔法","科技",
+  "主线","故事核心","核心冲突","主题","母题","高潮","结局",
+  "时间线","叙事节奏","故事线","单线","多线","网状",
+  "力量等级","等级划分","提升方式","战斗方式","规则限制",
+  "势力范围","核心成员","势力关系","势力目标","实力评估",
+  "品级","等级","修炼条件","效果特点","出处传承",
+  "货币种类","兑换关系","物价水平","经济来源","资源稀缺","交易方式",
+  "地理位置","所属势力","首次出现","功能特点",
+  "句子长度","对话占比","描写密度","叙事视角","语言风格","节奏特点",
+  "擅长场景","代表性","精彩段落",
+  // 常见分析词
+  "分析","总结","概述","描述","特点","特征","备注","说明","补充","注意",
+  "状态","进度","完成","待办","计划","目标",
+  // 数字和序号
+  "第一章","第二章","第三章","第四章","第五章",
+  "第一节","第二节","第三节",
+  "第一部","第二部","第三部",
+]);
+
+/**
+ * 校验一个字符串是否看起来像真实的中文角色名。
+ * 过滤规则：
+ *   1. 2-4个中文字符
+ *   2. 不在字段标签集中
+ *   3. 如果2字——必须以常见姓氏开头
+ *   4. 如果3-4字——常见姓氏开头 或 不包含明显非名字词
+ *   5. 不包含标点/数字/英文
+ */
+function isValidCharacterName(name: string): boolean {
+  const trimmed = name.trim();
+  // 基础长度校验
+  if (trimmed.length < 2 || trimmed.length > 5) return false;
+  // 必须是纯中文
+  if (!/^[一-鿿]{2,5}$/.test(trimmed)) return false;
+  // 不能是字段标签
+  if (FIELD_LABELS.has(trimmed)) return false;
+  // 不能是单字标签组合
+  if (/^[在背与性说别年外能动关一二三四五六七八九十]$/.test(trimmed)) return false;
+
+  // 2字名：必须以常见姓氏开头
+  if (trimmed.length === 2) {
+    const first = trimmed[0];
+    if (!COMMON_SURNAMES.has(first)) return false;
+  }
+
+  // 3-4字名：常见姓氏开头 或 复姓开头
+  if (trimmed.length >= 3) {
+    const first = trimmed[0];
+    const firstTwo = trimmed.slice(0, 2);
+    const hasSurname = COMMON_SURNAMES.has(first) || COMMON_SURNAMES.has(firstTwo);
+    if (!hasSurname) return false;
+  }
+
+  return true;
 }
 
 function mapRoleName(raw: string): string {

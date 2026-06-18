@@ -60,7 +60,7 @@ export function DissectProgress({
       </div>
 
       {/* 进度条——用 transform:scaleX 代替 width，GPU 合成不走 reflow */}
-      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full"
           style={{
@@ -104,7 +104,7 @@ export function DissectProgress({
                     ? "bg-red-500/10 text-red-400"
                     : dim.status === "extracting"
                       ? "bg-indigo-500/10 text-indigo-400"
-                      : "bg-zinc-800 text-zinc-600";
+                      : "bg-white/[0.04] text-zinc-600";
               return (
                 <div
                   key={key}

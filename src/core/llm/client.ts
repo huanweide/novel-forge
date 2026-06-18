@@ -99,6 +99,7 @@ export function createLLMClient(config: LLMConfig) {
           Authorization: `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(180_000), // 3分钟超时
       });
 
       if (!response.ok) {
@@ -107,8 +108,38 @@ export function createLLMClient(config: LLMConfig) {
       }
 
       const data = await response.json();
+
+      // 容错：API 可能因内容过滤返回空 choices
+      if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+        // 检查是否有错误信息
+        if (data.error) {
+          throw new Error(`LLM API 拒绝: ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error)}`);
+        }
+        // 静默返回空内容——上游内容过滤
+        return {
+          content: "",
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      }
+
       const choice = data.choices[0];
       const message = choice?.message;
+
+      // 如果 message 也为空（内容过滤的另一种表现）
+      if (!message) {
+        return {
+          content: "",
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      }
+
+      // 检查 finish_reason——content_filter 表示被拦截
+      if (choice.finish_reason === "content_filter") {
+        return {
+          content: "",
+          usage: { promptTokens: data.usage?.prompt_tokens || 0, completionTokens: 0, totalTokens: data.usage?.total_tokens || 0 },
+        };
+      }
 
       // 解析工具调用
       let toolCalls: LLMResponse["toolCalls"] | undefined;
@@ -150,6 +181,7 @@ export function createLLMClient(config: LLMConfig) {
           stream: true,
           ...(request.thinking ? { thinking: request.thinking } : {}),
         }),
+        signal: AbortSignal.timeout(300_000), // 5分钟超时
       });
 
       if (!response.ok) {

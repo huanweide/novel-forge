@@ -74,6 +74,15 @@ export function LorebookList({
   const [importTotal, setImportTotal] = useState(0);
   const [importResult, setImportResult] = useState<{ ok: boolean; message: string } | null>(null);
 
+  // AI扩展
+  const [expanding, setExpanding] = useState(false);
+  const [expandProgress, setExpandProgress] = useState<Array<{ name: string; status: string; error?: string }>>([]);
+  const [expandDone, setExpandDone] = useState(0);
+  const [expandTotal, setExpandTotal] = useState(0);
+  const [expandResult, setExpandResult] = useState<{
+    okList: string[]; failList: Array<{ name: string; reason: string }>; total: number;
+  } | null>(null);
+
   const allSelected = entries.length > 0 && selectedIds.size === entries.length;
 
   const toggleAll = () => {
@@ -221,6 +230,101 @@ export function LorebookList({
     setPreviewId("");
   };
 
+  const handleExpand = async () => {
+    if (selectedIds.size === 0) return;
+    setExpandResult(null);
+    setExpanding(true);
+    setExpandProgress([]);
+    setExpandDone(0);
+    setExpandTotal(selectedIds.size);
+
+    try {
+      const res = await fetch("/api/lorebook/expand", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, entryIds: [...selectedIds] }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        alert(`扩展请求失败: ${errBody.error || res.status}`);
+        setExpanding(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("无响应流");
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (value) buf += decoder.decode(value, { stream: true });
+        const chunks = buf.split("\n\n");
+        buf = chunks.pop() || "";
+        for (const chunk of chunks) {
+          const t = chunk.trim();
+          if (!t) continue;
+          const dataLine = chunk.split("\n").find(l => l.trim().startsWith("data: "));
+          if (!dataLine) continue;
+          try {
+            const ev = JSON.parse(dataLine.trim().slice(6));
+            if (ev.type === "progress") {
+              if (ev.done !== undefined) setExpandDone(ev.done as number);
+              if (ev.total) setExpandTotal(ev.total as number);
+              if (ev.stage === "entry-done" || ev.stage === "entry-failed") {
+                setExpandProgress((p) => [...p, { name: ev.name as string, status: ev.status as string || ev.stage as string, error: ev.error as string | undefined }]);
+              }
+              if (ev.stage === "start" || ev.stage === "preprocess" || ev.stage === "audit") {
+                setExpandProgress((p) => [...p, { name: ev.message as string, status: ev.stage as string }]);
+              }
+            } else if (ev.type === "done") {
+              setSelectedIds(new Set());
+              onRefresh();
+              setExpandResult({
+                okList: (ev.okList || []) as string[],
+                failList: (ev.failList || []) as Array<{ name: string; reason: string }>,
+                total: ev.total as number,
+              });
+            } else if (ev.type === "error") {
+              setExpandResult({
+                okList: [],
+                failList: [{ name: "全局错误", reason: ev.message as string }],
+                total: 0,
+              });
+            }
+          } catch { /* skip */ }
+        }
+        if (done) break;
+      }
+
+      if (buf.trim()) {
+        const dataLine = buf.split("\n").find(l => l.trim().startsWith("data: "));
+        if (dataLine) {
+          try {
+            const ev = JSON.parse(dataLine.trim().slice(6));
+            if (ev.type === "done") {
+              setSelectedIds(new Set());
+              onRefresh();
+              setExpandResult({
+                okList: (ev.okList || []) as string[],
+                failList: (ev.failList || []) as Array<{ name: string; reason: string }>,
+                total: ev.total as number,
+              });
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (e) {
+      setExpandResult({
+        okList: [],
+        failList: [{ name: "连接中断", reason: (e instanceof Error ? e.message : "网络错误").slice(0, 200) }],
+        total: 0,
+      });
+    } finally {
+      setExpanding(false);
+    }
+  };
+
   const handleImport = async () => {
     if (!importText.trim() || importText.trim().length < 10) return;
     setImporting(true);
@@ -304,6 +408,17 @@ export function LorebookList({
             📥 导入
           </button>
           <button
+            onClick={handleExpand}
+            disabled={selectedIds.size === 0 || expanding}
+            className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+              selectedIds.size > 0 && !expanding
+                ? "bg-purple-900/40 text-purple-400 hover:bg-purple-900/60"
+                : "text-zinc-600 cursor-not-allowed"
+            }`}
+          >
+            {expanding ? `⏳ ${expandDone}/${expandTotal}` : `🤖 AI扩展 (${selectedIds.size})`}
+          </button>
+          <button
             onClick={handleSummarize}
             disabled={selectedIds.size < 2 || summarizing}
             className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
@@ -324,7 +439,7 @@ export function LorebookList({
             <span>{sumProgress}</span>
             <span>{sumDone}/{sumTotal}</span>
           </div>
-          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-500 rounded-full transition-all duration-300"
               style={{ width: `${Math.max(sumPct, 5)}%` }}
@@ -360,7 +475,7 @@ export function LorebookList({
             {preview.groups.map((group, gi) => (
               <div
                 key={gi}
-                className={`px-2 py-1.5 border-b border-zinc-800/50 ${
+                className={`px-2 py-1.5 border-b border-white/[0.06]/50 ${
                   gi % 2 === 0 ? "bg-transparent" : "bg-zinc-900/20"
                 }`}
               >
@@ -406,7 +521,7 @@ export function LorebookList({
           </div>
 
           {/* 操作栏 */}
-          <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-900/30 border-t border-zinc-800/50">
+          <div className="flex items-center justify-between px-2 py-1.5 bg-white/[0.02] backdrop-blur-sm border-t border-white/[0.06]/50">
             <span className="text-[10px] text-zinc-500">
               ⚠️ 将删除 {preview.sourceCount} 条词条，新建 {preview.resultCount} 条
             </span>
@@ -451,7 +566,7 @@ export function LorebookList({
             placeholder="粘贴设定文本…（如：青云宗是天下第一仙门，位于青云山脉。掌门青云子修为已至大乘期…）"
             rows={4}
             disabled={importing}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 resize-none focus:outline-none focus:border-green-700"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 resize-none focus:outline-none focus:border-green-700"
           />
           <div className="flex items-center justify-between">
             <button
@@ -479,7 +594,7 @@ export function LorebookList({
                 <span>{importMsg}</span>
                 <span>{importDone}/{importTotal || "?"}</span>
               </div>
-              <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-green-500 rounded-full transition-all duration-300"
                   style={{ width: `${Math.max(importPct, 5)}%` }}
@@ -498,6 +613,105 @@ export function LorebookList({
               {importResult.message}
             </div>
           )}
+        </div>
+      )}
+
+      {/* AI扩展进度 */}
+      {expanding && (
+        <div className="mb-2 p-2 rounded bg-purple-950/20 border border-purple-900/30 max-h-40 overflow-y-auto">
+          {expandProgress.length === 0 && (
+            <div className="flex items-center gap-2 text-xs text-purple-400">
+              <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              加载上下文 + AI审计中...
+            </div>
+          )}
+          {expandProgress.map((p, i) => {
+            const isInfo = p.status === "start" || p.status === "audit" || p.status === "preprocess";
+            const isOk = p.status === "ok" || p.status === "entry-done";
+            const isFailed = p.status === "failed" || p.status === "entry-failed";
+            if (isInfo) return (
+              <div key={i} className="text-xs text-zinc-500 py-0.5">{p.name}</div>
+            );
+            return (
+              <div key={i} className={`text-xs ${isOk ? "text-emerald-400" : isFailed ? "text-red-400" : "text-zinc-500"}`}>
+                <span className="inline-flex items-center gap-1">
+                  <span>{isOk ? "✅" : isFailed ? "⚠️" : "⏳"}</span>
+                  <span>{p.name}</span>
+                  {p.error && <span className="text-red-400/60 text-[10px] ml-1">— {p.error}</span>}
+                </span>
+              </div>
+            );
+          })}
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+              <div className="h-full bg-purple-500 rounded-full transition-all" style={{
+                width: `${expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%`
+              }} />
+            </div>
+            <span className="text-xs text-zinc-500 shrink-0">{expandDone}/{expandTotal} · {expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* AI扩展结果弹窗 */}
+      {expandResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
+          <div className="bg-zinc-900 border border-white/[0.08] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+              <h3 className="text-base font-bold text-zinc-200">
+                {expandResult.failList.length === 0 ? "🎉 全部扩展成功" : "📋 扩展结果"}
+              </h3>
+              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none">✕</button>
+            </div>
+            <div className="px-5 py-3 flex gap-4 text-sm border-b border-white/[0.06]/50">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold text-lg">{expandResult.okList.length}</span>
+                <span className="text-zinc-500">成功</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={expandResult.failList.length > 0 ? "text-red-400 font-bold text-lg" : "text-zinc-500 font-bold text-lg"}>{expandResult.failList.length}</span>
+                <span className="text-zinc-500">失败</span>
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-zinc-500 text-xs">共 {expandResult.total} 个词条</span>
+              </div>
+            </div>
+            <div className="overflow-y-auto px-5 py-3 flex-1 max-h-[50vh]">
+              {expandResult.okList.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-emerald-500 font-medium mb-1.5">✅ 成功 ({expandResult.okList.length})</div>
+                  <div className="flex flex-wrap gap-1">
+                    {expandResult.okList.map((name, i) => (
+                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-emerald-950/30 text-emerald-300 border border-emerald-900/30">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {expandResult.failList.length > 0 && (
+                <div>
+                  <div className="text-xs text-red-400 font-medium mb-1.5">⚠️ 失败 ({expandResult.failList.length})</div>
+                  <div className="space-y-1.5">
+                    {expandResult.failList.map((f, i) => (
+                      <div key={i} className="p-2 rounded bg-red-950/20 border border-red-900/20">
+                        <div className="text-xs text-red-300 font-medium">{f.name}</div>
+                        <div className="text-[11px] text-red-400/70 mt-0.5">{f.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-white/[0.06] flex gap-2 justify-end">
+              <button
+                onClick={() => setExpandResult(null)}
+                className="px-4 py-1.5 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium"
+              >
+                知道了
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

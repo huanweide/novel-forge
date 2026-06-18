@@ -41,7 +41,7 @@ export function RightPanel(props: RightPanelProps) {
   // ── 最小化状态 ──
   if (minimized) {
     return (
-      <aside className="w-10 border-l border-zinc-800 bg-zinc-900/30 flex flex-col items-center py-3 gap-3 shrink-0">
+      <aside className="w-10 border-l border-white/[0.06] bg-white/[0.02] backdrop-blur-sm flex flex-col items-center py-3 gap-3 shrink-0">
         <button onClick={() => setMinimized(false)} className="text-zinc-500 hover:text-zinc-300 text-xs" title="展开面板">◀</button>
         <div className="flex-1 flex flex-col items-center gap-3 text-[10px] text-zinc-600">
           {TOP_TABS.map((t) => (
@@ -58,9 +58,9 @@ export function RightPanel(props: RightPanelProps) {
 
   // ── 展开状态 ──
   return (
-    <aside className="w-80 border-l border-zinc-800 bg-zinc-900/30 flex flex-col shrink-0 overflow-hidden max-h-full">
+    <aside className="w-80 border-l border-white/[0.06] bg-white/[0.02] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden max-h-full">
       {/* 顶部三tab */}
-      <div className="flex border-b border-zinc-800 shrink-0">
+      <div className="flex border-b border-white/[0.06] shrink-0">
         {TOP_TABS.map((t) => (
           <button
             key={t.key}
@@ -96,7 +96,7 @@ export function RightPanel(props: RightPanelProps) {
         {topTab === "query" && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* 子tab */}
-            <div className="flex border-b border-zinc-800 shrink-0">
+            <div className="flex border-b border-white/[0.06] shrink-0">
               <button
                 onClick={() => setQuerySubTab("entities")}
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
@@ -150,7 +150,7 @@ export function RightPanel(props: RightPanelProps) {
       </div>
 
       {/* 底部：折叠的统计 + 上下文 */}
-      <div className="border-t border-zinc-800 shrink-0">
+      <div className="border-t border-white/[0.06] shrink-0">
         <div className="px-4 py-2 space-y-1">
           <StatRow label="总字数" value={String(project.storyNodes.reduce((sum, n) => sum + (n.wordCount || 0), 0))} />
           <StatRow label="角色" value={String(project.characters.length)} />

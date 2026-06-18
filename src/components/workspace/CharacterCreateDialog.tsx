@@ -47,7 +47,7 @@ export function CharacterCreateDialog({
           <DialogInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} autoFocus />
         </DialogField>
         <DialogField label="角色定位">
-          <select className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+          <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
             <option value="protagonist">主角</option>
             <option value="antagonist">反派</option>
             <option value="supporting">配角</option>
@@ -58,11 +58,11 @@ export function CharacterCreateDialog({
           </select>
         </DialogField>
         <DialogField label="性格特征（逗号分隔）">
-          <textarea className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm min-h-[80px] resize-y" value={form.personality} onChange={(e) => setForm({ ...form, personality: e.target.value })} placeholder={`主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠`} />
+          <textarea className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm min-h-[80px] resize-y" value={form.personality} onChange={(e) => setForm({ ...form, personality: e.target.value })} placeholder={`主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠`} />
         </DialogField>
       </div>
       <div className="flex justify-end gap-2 mt-5">
-        <Button variant="outline" onClick={onClose} className="border-zinc-700">取消</Button>
+        <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
         <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500" disabled={!form.name.trim()}>创建</Button>
       </div>
     </DialogOverlay>

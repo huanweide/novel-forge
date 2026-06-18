@@ -406,7 +406,7 @@ export function CharacterList({
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="搜索角色…"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
+          className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
         />
       </div>
 
@@ -425,7 +425,7 @@ export function CharacterList({
             key={o.key}
             onClick={() => { setRoleFilter(roleFilter === o.key ? "all" : o.key); setTagFilter("all"); }}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              roleFilter === o.key ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+              roleFilter === o.key ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
@@ -440,7 +440,7 @@ export function CharacterList({
             key={o.key}
             onClick={() => { setStatusFilter(statusFilter === o.key ? "all" : o.key); }}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              statusFilter === o.key ? "bg-zinc-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+              statusFilter === o.key ? "bg-zinc-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
@@ -449,7 +449,7 @@ export function CharacterList({
         {(roleFilter !== "all" || tagFilter !== "all" || statusFilter !== "all") && (
           <button
             onClick={() => { setRoleFilter("all"); setTagFilter("all"); setStatusFilter("all"); }}
-            className="text-[10px] px-1.5 py-0.5 rounded-full text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+            className="text-[10px] px-1.5 py-0.5 rounded-full text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]"
           >
             ✕
           </button>
@@ -468,7 +468,7 @@ export function CharacterList({
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
               tagFilter === o.key
                 ? "bg-amber-600 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
@@ -507,7 +507,7 @@ export function CharacterList({
               setSelectedIds(next);
             }
           }}
-          className="text-xs px-1.5 py-0.5 rounded text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700"
+          className="text-xs px-1.5 py-0.5 rounded text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:border-white/[0.08]"
         >
           {allInViewSelected ? "取消全选" : `全选(${filtered.length})`}
         </button>
@@ -522,7 +522,7 @@ export function CharacterList({
           className={`text-xs px-2 py-0.5 rounded transition-colors ${
             selectedIds.size > 0 && !expanding
               ? "bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 border border-amber-700/40"
-              : "text-zinc-600 border border-zinc-800 cursor-not-allowed"
+              : "text-zinc-600 border border-white/[0.06] cursor-not-allowed"
           }`}
         >
           {expanding ? `⏳ ${expandDone}/${expandTotal}` : `✨ AI扩展 (${selectedIds.size})`}
@@ -553,7 +553,7 @@ export function CharacterList({
         <div className="mb-2 p-2 rounded bg-purple-950/20 border border-purple-900/30">
           <p className="text-xs text-purple-400">{classifyMsg}</p>
           <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
               <div className="h-full bg-purple-500 rounded-full transition-all" style={{
                 width: `${classifyTotal > 0 ? Math.round((classifyDone / classifyTotal) * 100) : 5}%`
               }} />
@@ -564,7 +564,7 @@ export function CharacterList({
       )}
       {/* 分类面板：用户审查 & 勾选 */}
       {!classifying && classifyGroups && classifyGroups.length > 0 && (
-        <div className="mb-2 rounded bg-zinc-900/50 border border-purple-900/30 overflow-hidden">
+        <div className="mb-2 rounded bg-white/[0.02] backdrop-blur-sm border border-purple-900/30 overflow-hidden">
           {/* 面板标题 */}
           <div className="flex items-center justify-between px-2 py-1.5 bg-purple-950/30 border-b border-purple-900/20">
             <span className="text-[10px] text-purple-400 font-medium">
@@ -600,7 +600,7 @@ export function CharacterList({
                     const sel = groupSelections.get(g.label) || new Set<string>();
                     const allSelected = g.memberIds.length > 0 && sel.size === g.memberIds.length;
                     return (
-                      <div key={g.label} className="mb-1 rounded bg-zinc-800/50 border border-zinc-800">
+                      <div key={g.label} className="mb-1 rounded bg-zinc-800/50 border border-white/[0.06]">
                         {/* 分类头：全选/取消 */}
                         <button
                           onClick={() => toggleGroup(g.label)}
@@ -631,7 +631,7 @@ export function CharacterList({
                                 className={`text-[9px] px-1.5 py-0.5 rounded-full transition-colors ${
                                   checked
                                     ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
-                                    : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700 border border-transparent"
+                                    : "bg-white/[0.04] text-zinc-500 hover:bg-zinc-700 border border-transparent"
                                 }`}
                               >
                                 {name}
@@ -647,7 +647,7 @@ export function CharacterList({
             })()}
           </div>
           {/* 底部操作栏 */}
-          <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-900 border-t border-zinc-800">
+          <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-900 border-t border-white/[0.06]">
             <span className="text-[9px] text-zinc-600">
               {selectedTagCount} 个标签分配给 {selectedCharIds.size} 人
             </span>
@@ -712,7 +712,7 @@ export function CharacterList({
             );
           })}
           <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
               <div className="h-full bg-amber-500 rounded-full transition-all" style={{
                 width: `${expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%`
               }} />
@@ -725,9 +725,9 @@ export function CharacterList({
       {/* 扩展结果弹窗 */}
       {expandResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-zinc-900 border border-white/[0.08] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* 头部 */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
               <h3 className="text-base font-bold text-zinc-200">
                 {expandResult.failList.length === 0 ? "🎉 全部扩展成功" : "📋 扩展结果"}
               </h3>
@@ -735,7 +735,7 @@ export function CharacterList({
             </div>
 
             {/* 统计 */}
-            <div className="px-5 py-3 flex gap-4 text-sm border-b border-zinc-800/50">
+            <div className="px-5 py-3 flex gap-4 text-sm border-b border-white/[0.06]/50">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold text-lg">{expandResult.okList.length}</span>
                 <span className="text-zinc-500">成功</span>
@@ -786,7 +786,7 @@ export function CharacterList({
             </div>
 
             {/* 底部按钮 */}
-            <div className="px-5 py-3 border-t border-zinc-800 flex gap-2 justify-end">
+            <div className="px-5 py-3 border-t border-white/[0.06] flex gap-2 justify-end">
               <button
                 onClick={() => setExpandResult(null)}
                 className="px-4 py-1.5 text-sm rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium"
@@ -829,7 +829,7 @@ export function CharacterList({
                             key={t}
                             onClick={e => { e.stopPropagation(); setTagFilter(t); }}
                             className={`text-[9px] px-1 py-0 rounded transition-colors ${
-                              tagFilter === t ? "bg-purple-600 text-white" : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
+                              tagFilter === t ? "bg-purple-600 text-white" : "bg-white/[0.04] text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
                             }`}
                           >{t}</button>
                         ))}

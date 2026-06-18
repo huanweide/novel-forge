@@ -109,7 +109,7 @@ export function SettingsImporter({
       onClick={onClose}
     >
       <div
-        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] flex flex-col"
+        className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -129,7 +129,7 @@ export function SettingsImporter({
               className={`flex-1 px-3 py-2.5 rounded-xl text-sm text-left transition-all border ${
                 mode === opt.mode
                   ? "bg-indigo-950/50 border-indigo-500/50 text-indigo-300"
-                  : "bg-zinc-800/50 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
+                  : "bg-zinc-800/50 border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
               }`}
             >
               <div className="font-medium">
@@ -154,7 +154,7 @@ export function SettingsImporter({
         {!result ? (
           <>
             <textarea
-              className="flex-1 min-h-[260px] bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-indigo-500 font-mono leading-relaxed"
+              className="flex-1 min-h-[260px] bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-indigo-500 font-mono leading-relaxed"
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               placeholder={`在这里粘贴你的${mode === "lorebook" ? "世界观设定" : mode === "style" ? "文本（用于分析风格）" : "设定文本"}...
@@ -189,7 +189,7 @@ ${
             )}
 
             <div className="flex justify-end gap-3 mt-4 shrink-0">
-              <Button variant="outline" onClick={onClose} className="border-zinc-700">
+              <Button variant="outline" onClick={onClose} className="border-white/[0.08]">
                 取消
               </Button>
               <Button

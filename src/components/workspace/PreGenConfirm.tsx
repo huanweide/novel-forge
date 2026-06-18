@@ -73,8 +73,8 @@ export function PreGenConfirm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
           <div>
             <h2 className="text-lg font-semibold">📋 {title || "生成前确认——角色调度"}</h2>
             {storyInfo && <p className="text-xs text-zinc-500 mt-0.5">{storyInfo.storyPhase} · {storyInfo.sceneContext || "未确定场景"} · 「{storyInfo.chapterTitle}」</p>}
@@ -106,12 +106,12 @@ export function PreGenConfirm({
                 {cards.map(c => {
                   const checked = selected.has(c.id);
                   return (
-                    <label key={c.id} className={`flex items-start gap-2 p-2.5 rounded-lg cursor-pointer border transition-colors text-xs ${checked ? "border-indigo-700 bg-indigo-950/20" : "border-zinc-800 bg-zinc-900/50 opacity-60"}`}>
+                    <label key={c.id} className={`flex items-start gap-2 p-2.5 rounded-lg cursor-pointer border transition-colors text-xs ${checked ? "border-indigo-700 bg-indigo-950/20" : "border-white/[0.06] bg-white/[0.02] backdrop-blur-sm opacity-60"}`}>
                       <input type="checkbox" checked={checked} onChange={() => toggleCard(c.id)} className="mt-0.5 rounded shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-zinc-200">{c.name}</span>
-                          <span className="text-[10px] px-1 py-0.5 rounded bg-zinc-800 text-zinc-400">{roleLabel(c.role)}</span>
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-white/[0.04] text-zinc-400">{roleLabel(c.role)}</span>
                           <span className="text-[10px] text-zinc-500">{c.affiliation}</span>
                           {c.isNew && <span className="text-[9px] px-1 py-0.5 rounded bg-amber-900/40 text-amber-400">🆕</span>}
                           <span className="text-[10px] text-zinc-600 ml-auto">分{c.score}</span>
@@ -120,7 +120,7 @@ export function PreGenConfirm({
                         {c.background && <p className="text-[10px] text-zinc-600 mt-0.5 line-clamp-4 whitespace-pre-line">背景：{c.background}</p>}
                         <input value={cardNotes[c.id] || ""} onChange={e => setCardNotes(prev => ({ ...prev, [c.id]: e.target.value }))}
                           placeholder="备注（出场理由/特殊要求）..."
-                          className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-indigo-700"
+                          className="w-full mt-1 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-indigo-700"
                           onClick={e => e.stopPropagation()} />
                       </div>
                     </label>
@@ -142,8 +142,8 @@ export function PreGenConfirm({
                 <input value={newCharInput} onChange={e => setNewCharInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") addNewChar(); }}
                   placeholder="输入角色名让AI自建..."
-                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs placeholder:text-zinc-600 focus:outline-none focus:border-indigo-700" />
-                <button onClick={addNewChar} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-zinc-700">+添加</button>
+                  className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs placeholder:text-zinc-600 focus:outline-none focus:border-indigo-700" />
+                <button onClick={addNewChar} className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:bg-zinc-700">+添加</button>
               </div>
               {newChars.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
@@ -159,16 +159,16 @@ export function PreGenConfirm({
                 <label className="text-xs text-zinc-400 mb-1 block">📝 作者指令（本章权重——与大纲等同）</label>
                 <textarea value={localAuthorNote} onChange={e => { setLocalAuthorNote(e.target.value); onAuthorNoteChange(e.target.value); }}
                   placeholder="角色出场要求、特殊情节约束、本章基调调整..."
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-indigo-700" rows={3} />
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-indigo-700" rows={3} />
               </div>
             </>
           )}
         </div>
         {!loading && !error && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800 shrink-0">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.06] shrink-0">
             <span className="text-xs text-zinc-600">确认后将带着 {selected.size} 张卡{newChars.length > 0 ? ` + ${newChars.length}个新角色` : ""} 开始生成</span>
             <div className="flex gap-2">
-              <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-lg border border-zinc-700 text-zinc-400 hover:text-zinc-200">取消</button>
+              <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-lg border border-white/[0.08] text-zinc-400 hover:text-zinc-200">取消</button>
               <button onClick={handleConfirm} className="px-4 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium">✅ 确认生成</button>
             </div>
           </div>

@@ -192,7 +192,7 @@ export function ContextPreview({
           </button>
 
           {expanded === key && (
-            <div className="ml-4 mt-1 text-xs text-zinc-500 space-y-1 border-l border-zinc-800 pl-3">
+            <div className="ml-4 mt-1 text-xs text-zinc-500 space-y-1 border-l border-white/[0.06] pl-3">
               {key === "systemPrompt" && <div>{(d as any).preview}...</div>}
               {key === "globalMemory" && (
                 <>
@@ -227,7 +227,7 @@ export function ContextPreview({
       ))}
 
       {/* 角色读取统计 */}
-      <div className="border-t border-zinc-800 pt-3 space-y-2">
+      <div className="border-t border-white/[0.06] pt-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="text-zinc-500">📊 角色卡读取</span>
           <span className="font-mono">
@@ -237,7 +237,7 @@ export function ContextPreview({
           </span>
         </div>
         {/* 小进度条 */}
-        <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
           <div
             className="h-full bg-indigo-600 rounded-full transition-all"
             style={{ width: `${(data.totalCharacterCount ?? 1) > 0 ? ((data.activeCharacterCount ?? activeCharacters.length) / (data.totalCharacterCount ?? 1) * 100) : 0}%` }}
@@ -256,7 +256,7 @@ export function ContextPreview({
                       ? "bg-amber-900/50 text-amber-400"
                       : c.role === "antagonist"
                       ? "bg-red-900/50 text-red-400"
-                      : "bg-zinc-800 text-zinc-400"
+                      : "bg-white/[0.04] text-zinc-400"
                   }`}
                 >
                   {c.name}

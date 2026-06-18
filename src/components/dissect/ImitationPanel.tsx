@@ -181,7 +181,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
         <select
           value={selectedTaskId}
           onChange={(e) => handleTaskSelect(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
         >
           <option value="">请选择拆书记录...</option>
           {tasks.map((t) => (
@@ -214,7 +214,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
               className={`p-2.5 rounded-lg border text-left transition-colors ${
                 mode === opt.id
                   ? "border-indigo-500 bg-indigo-500/10"
-                  : "border-zinc-700 bg-zinc-900 hover:border-zinc-600"
+                  : "border-white/[0.08] bg-white/[0.03] backdrop-blur-sm hover:border-zinc-600"
               }`}
             >
               <div className="text-xs font-medium text-zinc-200">{opt.label}</div>
@@ -273,7 +273,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs cursor-pointer transition-colors ${
                   selectedDimensions.includes(dim.key as DimensionKey)
                     ? "bg-indigo-500/15 text-indigo-300"
-                    : "bg-zinc-800 text-zinc-500 hover:text-zinc-400"
+                    : "bg-white/[0.04] text-zinc-500 hover:text-zinc-400"
                 }`}
               >
                 <input
@@ -301,7 +301,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
             min={500}
             max={50000}
             step={500}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
           />
         </div>
         <div>
@@ -312,7 +312,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
             onChange={(e) => setChapterCount(Math.max(1, Math.min(20, Number(e.target.value))))}
             min={1}
             max={20}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
           />
         </div>
       </div>
@@ -328,7 +328,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           onChange={(e) => setCustomRequirement(e.target.value)}
           placeholder="可填写额外的仿写要求，如：主角改为女性、背景设定在现代都市..."
           rows={3}
-          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 resize-y"
+          className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 resize-y"
         />
       </div>
 
@@ -339,7 +339,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
         className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
           selectedTaskId && selectedDimensions.length > 0 && !generating
             ? "bg-indigo-600 text-white hover:bg-indigo-500"
-            : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+            : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"
         }`}
       >
         {generating ? "⏳ 仿写生成中..." : "开始仿写"}
@@ -366,7 +366,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
               📋 复制
             </button>
           </div>
-          <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg max-h-96 overflow-y-auto">
+          <div className="p-4 bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-lg max-h-96 overflow-y-auto">
             <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed">
               {output}
             </div>

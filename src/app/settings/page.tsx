@@ -36,10 +36,7 @@ export default function SettingsPage() {
         setModel(s.llmModel || "");
         setBaseUrl(s.llmBaseUrl || "");
         setHasExistingKey(!!s.hasKey);
-        if (s.hasKey) {
-          // 已有 Key：显示掩码，让用户知道之前配过
-          setApiKey("");
-        }
+        if (s.hasKey) setApiKey("");
       }
     } catch { /* */ }
   }
@@ -96,7 +93,7 @@ export default function SettingsPage() {
       if (res.ok) {
         setStatusMsg("✅ 设置已保存，所有 AI 功能即刻生效");
         setHasExistingKey(true);
-        setApiKey(""); // 清空输入
+        setApiKey("");
       } else {
         const d = await res.json().catch(() => ({}));
         setStatusMsg(`❌ 保存失败：${d.error || "未知错误"}`);
@@ -113,68 +110,98 @@ export default function SettingsPage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-200">
       {/* 顶栏 */}
-      <header className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">← 返回</Link>
-          <h1 className="text-lg font-semibold">⚙️ 设置</h1>
+      <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">← 返回</Link>
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg">⚙️</span>
+              <h1 className="text-base font-bold text-zinc-100">设置</h1>
+            </div>
+          </div>
         </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
         {/* 说明 */}
-        <div className="text-sm text-zinc-500 leading-relaxed">
-          Novel Forge 不自带任何 API Key。填入你自己的 Key，选择模型，所有 AI 写作功能即可使用。
-          <br />
-          Key 保存在本地数据库，不会上传到任何第三方。
+        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Novel Forge 不自带任何 API Key。填入你自己的 Key，选择模型，所有 AI 写作功能即可使用。
+            <br />
+            <span className="text-zinc-600 text-xs">Key 保存在本地数据库，不会上传到任何第三方。</span>
+          </p>
         </div>
 
         {/* 提供商选择 */}
         <section>
-          <label className="text-sm font-medium text-zinc-300 block mb-2">LLM 提供商</label>
-          <div className="space-y-1.5">
-            {PROVIDERS.map(p => (
-              <button key={p.key}
-                onClick={() => handleProviderChange(p.key)}
-                className={`w-full text-left px-4 py-3 rounded-lg border transition-colors text-sm ${
-                  provider === p.key
-                    ? "border-indigo-500 bg-indigo-500/10 text-zinc-100"
-                    : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-700"
-                }`}>
-                <div className="font-medium">{p.name}</div>
-                <div className="text-xs text-zinc-600 mt-0.5">{p.desc}</div>
-              </button>
-            ))}
+          <label className="text-sm font-semibold text-zinc-300 block mb-3">
+            1. 选择 LLM 提供商
+          </label>
+          <div className="space-y-2">
+            {PROVIDERS.map(p => {
+              const active = provider === p.key;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => handleProviderChange(p.key)}
+                  className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-200 active:scale-[0.98] ${
+                    active
+                      ? "bg-indigo-500/[0.08] border-indigo-400/30 shadow-[0_0_16px_rgba(99,102,241,0.1)]"
+                      : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {active && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
+                    )}
+                    <span className={`font-medium text-sm ${active ? "text-zinc-100" : "text-zinc-400"}`}>
+                      {p.name}
+                    </span>
+                  </div>
+                  <div className="text-xs text-zinc-600 mt-1 ml-3.5">{p.desc}</div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
         {/* API Key */}
         <section>
-          <label className="text-sm font-medium text-zinc-300 block mb-2">
-            API Key
-            {hasExistingKey && <span className="text-xs text-zinc-600 ml-2">（已有配置，留空则不修改）</span>}
+          <label className="text-sm font-semibold text-zinc-300 block mb-3">
+            2. API Key
+            {hasExistingKey && (
+              <span className="text-xs text-zinc-600 ml-2 font-normal">（已有配置，留空则不修改）</span>
+            )}
           </label>
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <input
                 type={showKey ? "text" : "password"}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-indigo-500 pr-10"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 pr-10 transition-all duration-200"
                 placeholder={hasExistingKey ? "••••••••（留空保持不变）" : "sk-..."}
                 value={apiKey}
                 onChange={e => { setApiKey(e.target.value); setTestResult(null); }}
               />
-              <button onClick={() => setShowKey(!showKey)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-600 hover:text-zinc-400">
+              <button
+                onClick={() => setShowKey(!showKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
                 {showKey ? "🙈" : "👁"}
               </button>
             </div>
-            <button onClick={handleTest} disabled={testing || !apiKey.trim()}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700 shrink-0">
+            <button
+              onClick={handleTest}
+              disabled={testing || !apiKey.trim()}
+              className="px-5 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 disabled:opacity-40 bg-white/[0.04] text-zinc-300 border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.15] shrink-0"
+            >
               {testing ? "测试中..." : "测试连接"}
             </button>
           </div>
           {testResult && (
-            <div className={`mt-2 text-xs px-3 py-2 rounded-lg ${
-              testResult.ok ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-red-500/10 text-red-400 border border-red-500/30"
+            <div className={`mt-3 text-xs px-4 py-3 rounded-xl border transition-all duration-200 ${
+              testResult.ok
+                ? "bg-emerald-500/[0.06] text-emerald-400 border-emerald-500/20"
+                : "bg-red-500/[0.06] text-red-400 border-red-500/20"
             }`}>
               {testResult.ok ? "✅ 连接成功" : `❌ ${testResult.error}`}
             </div>
@@ -183,44 +210,47 @@ export default function SettingsPage() {
 
         {/* Model */}
         <section>
-          <label className="text-sm font-medium text-zinc-300 block mb-2">模型名称</label>
+          <label className="text-sm font-semibold text-zinc-300 block mb-3">3. 模型名称</label>
           <input
             type="text"
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-indigo-500"
+            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
             placeholder={selectedProvider?.defaultModel || "输入模型 ID"}
             value={model}
             onChange={e => setModel(e.target.value)}
           />
-          <p className="text-xs text-zinc-600 mt-1">
+          <p className="text-xs text-zinc-600 mt-2">
             切换提供商会自动填入推荐模型。你也可以手动改。
           </p>
         </section>
 
-        {/* 自定义 Base URL（仅 custom 提供商） */}
+        {/* 自定义 Base URL */}
         {provider === "custom" && (
           <section>
-            <label className="text-sm font-medium text-zinc-300 block mb-2">API Base URL</label>
+            <label className="text-sm font-semibold text-zinc-300 block mb-3">API Base URL</label>
             <input
               type="text"
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
               placeholder="https://your-api.com/v1"
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
             />
-            <p className="text-xs text-zinc-600 mt-1">
+            <p className="text-xs text-zinc-600 mt-2">
               只需填到 /v1 即可，会自动拼接 /chat/completions
             </p>
           </section>
         )}
 
         {/* 保存 */}
-        <div className="flex items-center gap-4 pt-4 border-t border-zinc-800">
-          <button onClick={handleSave} disabled={saving}
-            className="px-6 py-2.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-colors">
+        <div className="flex items-center gap-4 pt-6 border-t border-white/[0.06]">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:from-indigo-500 hover:to-indigo-400"
+          >
             {saving ? "保存中..." : "💾 保存设置"}
           </button>
           {statusMsg && (
-            <span className={`text-sm ${statusMsg.startsWith("✅") ? "text-emerald-400" : "text-red-400"}`}>
+            <span className={`text-sm transition-all duration-300 ${statusMsg.startsWith("✅") ? "text-emerald-400" : "text-red-400"}`}>
               {statusMsg}
             </span>
           )}

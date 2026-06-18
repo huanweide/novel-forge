@@ -533,7 +533,15 @@ export default function WorkspacePage() {
   // 渲染
   // ═══════════════════════════════════════════
 
-  if (loading) return <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">加载中...</div>;
+  if (loading) return (
+    <div className="h-screen bg-zinc-950 flex items-center justify-center">
+      <span className="inline-flex items-center gap-2 text-zinc-500">
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-150" />
+        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-300" />
+      </span>
+    </div>
+  );
   if (!project) return (
     <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">
       项目不存在

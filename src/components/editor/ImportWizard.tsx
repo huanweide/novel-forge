@@ -434,11 +434,11 @@ export function ImportWizard({
       onClick={(e) => { if (step === "input" || step === "done") onClose(); }}
     >
       <div
-        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl"
+        className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
           <h2 className="text-lg font-semibold">
             📥 {step === "input" ? "导入文本" : step === "parsing" ? "AI 分析中..." : step === "preview" ? "预览确认" : step === "committing" ? "写入中..." : "导入完成"}
           </h2>
@@ -470,7 +470,7 @@ export function ImportWizard({
                       className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
                         importMode === opt.key
                           ? "bg-indigo-600 text-white border-2 border-indigo-400 shadow-lg"
-                          : "bg-zinc-800 text-zinc-400 border-2 border-zinc-700 hover:border-zinc-600"
+                          : "bg-white/[0.04] text-zinc-400 border-2 border-white/[0.08] hover:border-zinc-600"
                       }`}
                     >
                       <div>{opt.label}</div>
@@ -514,7 +514,7 @@ export function ImportWizard({
               )}
 
               <div
-                className="border-2 border-dashed border-zinc-700 rounded-xl p-4 hover:border-indigo-600 transition-colors cursor-pointer"
+                className="border-2 border-dashed border-white/[0.08] rounded-xl p-4 hover:border-indigo-600 transition-colors cursor-pointer"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleFileDrop}
                 onClick={() => fileInputRef.current?.click()}
@@ -532,7 +532,7 @@ export function ImportWizard({
               </div>
 
               <textarea
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm font-mono resize-none focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm font-mono resize-none focus:outline-none focus:border-indigo-500"
                 rows={16}
                 value={rawText}
                 onChange={(e) => { setRawText(e.target.value); setError(""); }}
@@ -551,7 +551,7 @@ export function ImportWizard({
                   {rawText.length > 0 ? `${rawText.length} 字符` : "等待输入"}
                 </span>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={onClose} className="border-zinc-700">取消</Button>
+                  <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
                   {importMode === "quick" ? (
                     <Button
                       onClick={handleQuickImport}
@@ -583,7 +583,7 @@ export function ImportWizard({
 
               {/* ── 快速导入进度 / 结果 ── */}
               {(quickLoading || quickResult) && (
-                <div className="mt-4 p-4 rounded-xl bg-zinc-800/50 border border-zinc-700 space-y-3">
+                <div className="mt-4 p-4 rounded-xl bg-zinc-800/50 border border-white/[0.08] space-y-3">
                   {/* 进度条（仅加载中） */}
                   {quickLoading && (
                     <div>
@@ -675,7 +675,7 @@ export function ImportWizard({
                     <span>总进度</span>
                     <span>{parsePct}%</span>
                   </div>
-                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
                     <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${parsePct}%` }} />
                   </div>
                 </div>
@@ -686,14 +686,14 @@ export function ImportWizard({
                 <div className="w-full max-w-md space-y-1.5 mt-2">
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-pink-400 w-24 shrink-0">👤 A路 DeepSeek</span>
-                    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
                       <div className="h-full bg-pink-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-a-done" ? "100" : "40"}%` }} />
                     </div>
                     <span className="text-zinc-500 w-16 text-right text-[10px]">{currentStage === "path-a-done" ? "✅完成" : "进行中"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-emerald-400 w-24 shrink-0">🌍 B路 Flash</span>
-                    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-b-done" ? "100" : "40"}%` }} />
                     </div>
                     <span className="text-zinc-500 w-16 text-right text-[10px]">{currentStage === "path-b-done" ? "✅完成" : "进行中"}</span>
@@ -773,7 +773,7 @@ export function ImportWizard({
                   <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
                     {editedChapters.map((ch, i) => (
                       <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
-                        selectedChapters.has(i) ? "border-indigo-700 bg-indigo-950/30" : "border-zinc-800 bg-zinc-900/50"
+                        selectedChapters.has(i) ? "border-indigo-700 bg-indigo-950/30" : "border-white/[0.06] bg-white/[0.02] backdrop-blur-sm"
                       }`}>
                         <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                           <input
@@ -830,7 +830,7 @@ export function ImportWizard({
                   <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
                     {editedCharacters.map((char, i) => (
                       <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
-                        selectedChars.has(i) ? "border-pink-700 bg-pink-950/30" : "border-zinc-800 bg-zinc-900/50"
+                        selectedChars.has(i) ? "border-pink-700 bg-pink-950/30" : "border-white/[0.06] bg-white/[0.02] backdrop-blur-sm"
                       }`}>
                         <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                           <input
@@ -851,7 +851,7 @@ export function ImportWizard({
                             {Array.isArray(char.personality) && char.personality.length > 0 && (
                               <div className="flex flex-wrap gap-0.5 mt-0.5">
                                 {char.personality.slice(0, 4).map((p: string, j: number) => (
-                                  <span key={j} className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">{p}</span>
+                                  <span key={j} className="px-1 py-0.5 rounded bg-white/[0.04] text-zinc-400 text-[10px]">{p}</span>
                                 ))}
                               </div>
                             )}
@@ -900,7 +900,7 @@ export function ImportWizard({
                     <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
                       {editedLore.map((entry, i) => (
                         <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
-                          selectedLore.has(i) ? "border-emerald-700 bg-emerald-950/30" : "border-zinc-800 bg-zinc-900/50"
+                          selectedLore.has(i) ? "border-emerald-700 bg-emerald-950/30" : "border-white/[0.06] bg-white/[0.02] backdrop-blur-sm"
                         }`}>
                           <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                             <input
@@ -919,7 +919,7 @@ export function ImportWizard({
                               {entry.keys && entry.keys.length > 0 && (
                                 <div className="flex flex-wrap gap-0.5 mt-0.5">
                                   {entry.keys.slice(0, 4).map((k, j) => (
-                                    <span key={j} className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-500 text-[10px]">🔑{k}</span>
+                                    <span key={j} className="px-1 py-0.5 rounded bg-white/[0.04] text-zinc-500 text-[10px]">🔑{k}</span>
                                   ))}
                                 </div>
                               )}
@@ -951,9 +951,9 @@ export function ImportWizard({
               </div>
 
               {/* 操作按钮 */}
-              <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
+              <div className="flex justify-between items-center pt-3 border-t border-white/[0.06]">
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep("input")} className="border-zinc-700 text-xs">
+                  <Button variant="outline" onClick={() => setStep("input")} className="border-white/[0.08] text-xs">
                     ← 返回修改
                   </Button>
                   <Button
@@ -1047,7 +1047,7 @@ export function ImportWizard({
               <p className="text-lg text-zinc-200 font-medium">{message}</p>
               <p className="text-sm text-zinc-500">数据已写入数据库，可以开始查看了</p>
               <div className="flex gap-3 mt-4">
-                <Button variant="outline" onClick={onClose} className="border-zinc-700">
+                <Button variant="outline" onClick={onClose} className="border-white/[0.08]">
                   关闭
                 </Button>
                 <Button
@@ -1076,7 +1076,7 @@ export function ImportWizard({
 
 function StatBox({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 text-center">
+    <div className="bg-zinc-800/50 border border-white/[0.08] rounded-xl p-3 text-center">
       <div className={`text-2xl font-bold ${color}`}>{value}</div>
       <div className="text-xs text-zinc-500 mt-1">{label}</div>
     </div>
@@ -1085,7 +1085,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
 
 function StyleCardPreview({ style }: { style: ExtractedStyle }) {
   return (
-    <div className="border border-zinc-700 rounded-xl p-3 bg-zinc-800/30">
+    <div className="border border-white/[0.08] rounded-xl p-3 bg-zinc-800/30">
       <h3 className="text-sm font-medium text-zinc-300 mb-2">🎨 文风分析</h3>
 
       {style.styleDescription && (
@@ -1127,7 +1127,7 @@ function StyleCardPreview({ style }: { style: ExtractedStyle }) {
 
       {/* 语气特征 */}
       {style.tonalMarkers && Object.keys(style.tonalMarkers).length > 0 && (
-        <div className="mt-2 pt-2 border-t border-zinc-700">
+        <div className="mt-2 pt-2 border-t border-white/[0.08]">
           <span className="text-zinc-500 text-[10px] block mb-1">语气特征</span>
           <div className="flex flex-wrap gap-1">
             {Object.entries(style.tonalMarkers)
@@ -1143,7 +1143,7 @@ function StyleCardPreview({ style }: { style: ExtractedStyle }) {
 
       {/* 样本 */}
       {style.sampleText && (
-        <div className="mt-2 pt-2 border-t border-zinc-700">
+        <div className="mt-2 pt-2 border-t border-white/[0.08]">
           <span className="text-zinc-500 text-[10px] block mb-1">代表性段落</span>
           <p className="text-[11px] text-zinc-400 leading-relaxed italic line-clamp-4">
             {style.sampleText}
