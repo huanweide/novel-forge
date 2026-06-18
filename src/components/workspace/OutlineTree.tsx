@@ -1,17 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { StoryNodeData } from "./types";
 
 export function NodeTreeItem({
   node, allNodes, selectedNode, onSelectNode, onAddSection, depth,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode,
+  projectId,
 }: {
   node: StoryNodeData; allNodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
   depth: number; batchMode?: boolean; selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
+  projectId: string;
 }) {
+  const router = useRouter();
   const children = allNodes.filter((n) => n.parentId === node.id);
   const isSelected = selectedNode?.id === node.id;
   const isImported = node.content?.includes("📥") || false;
@@ -41,13 +45,18 @@ export function NodeTreeItem({
           <button onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
             className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity" title="删除此章节">✕</button>
         )}
+        {isChapter && (
+          <button onClick={(e) => { e.stopPropagation(); router.push(`/workspace/${projectId}/game/${node.id}`); }}
+            className="opacity-0 group-hover:opacity-100 text-violet-400/70 hover:text-violet-300 text-[12px] px-0.5 transition-opacity" title="🎮 游戏模式创作本章">🎮</button>
+        )}
         <span className="text-zinc-600 text-[10px]">{node.wordCount > 0 ? `${node.wordCount}字` : ""}</span>
       </div>
       {children.map((child) => (
         <NodeTreeItem key={child.id} node={child} allNodes={allNodes} selectedNode={selectedNode}
           onSelectNode={onSelectNode} onAddSection={onAddSection} depth={depth + 1}
           batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} />
+          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+          projectId={projectId} />
       ))}
     </div>
   );
@@ -56,12 +65,14 @@ export function NodeTreeItem({
 export function VolumeGroup({
   volume, children, allNodes, selectedNode, onSelectNode, onAddSection,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode,
+  projectId,
 }: {
   volume: StoryNodeData; children: StoryNodeData[]; allNodes: StoryNodeData[];
   selectedNode: StoryNodeData | null; onSelectNode: (n: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; batchMode?: boolean;
   selectedChapterIds?: Set<string>; onToggleChapterSelect?: (id: string) => void;
   onDeleteNode?: (id: string) => void;
+  projectId: string;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const totalWords = children.reduce((sum, c) => sum + (c.wordCount || 0), 0);
@@ -80,7 +91,8 @@ export function VolumeGroup({
             <NodeTreeItem key={ch.id} node={ch} allNodes={allNodes} selectedNode={selectedNode}
               onSelectNode={onSelectNode} onAddSection={onAddSection} depth={1}
               batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-              onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} />
+              onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+              projectId={projectId} />
           ))}
           <button onClick={(e) => { e.stopPropagation(); onAddSection(volume.id); }}
             className="w-full text-left text-xs text-zinc-600 hover:text-zinc-400 py-0.5 px-1.5" style={{ paddingLeft: "18px" }}>
@@ -95,11 +107,13 @@ export function VolumeGroup({
 export function OutlineTree({
   nodes, selectedNode, onSelectNode, onAddSection, volumeView,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode,
+  projectId,
 }: {
   nodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
   volumeView: boolean; batchMode?: boolean; selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
+  projectId: string;
 }) {
   const volumeNodes = nodes.filter((n) => n.type === "volume");
   const nonVolumeRoots = nodes.filter((n) => !n.parentId && n.type !== "volume");
@@ -112,13 +126,15 @@ export function OutlineTree({
           return <VolumeGroup key={vol.id} volume={vol} children={volChildren} allNodes={nodes}
             selectedNode={selectedNode} onSelectNode={onSelectNode} onAddSection={onAddSection}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} />;
+            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+            projectId={projectId} />;
         })}
         {nonVolumeRoots.map((root) => (
           <NodeTreeItem key={root.id} node={root} allNodes={nodes} selectedNode={selectedNode}
             onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} />
+            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+            projectId={projectId} />
         ))}
         <button onClick={() => onAddSection(null)}
           className="w-full text-left text-xs text-zinc-600 hover:text-zinc-400 py-1 px-2 mt-2">+ 添加章节/分卷</button>
@@ -145,7 +161,8 @@ export function OutlineTree({
         <NodeTreeItem key={root.id} node={root} allNodes={nodes} selectedNode={selectedNode}
           onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
           batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} />
+          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+          projectId={projectId} />
       ))}
       <button onClick={() => onAddSection(null)}
         className="w-full text-left text-xs text-zinc-600 hover:text-zinc-400 py-1 px-2 mt-2">+ 添加章节</button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { CharacterList } from "@/components/workspace/CharacterList";
-import { LorebookList } from "@/components/workspace/LorebookList";
+import { WorldPanel } from "@/components/workspace/WorldPanel";
 import { StorylineList } from "@/components/workspace/StorylineList";
 import { RulesPanel } from "@/components/workspace/RulesPanel";
 import { OutlineTree } from "./OutlineTree";
@@ -15,7 +15,7 @@ export function LeftPanel({
   batchGenerating, onBatchGenerate, onDeleteNode,
 }: {
   project: ProjectData; activeTab: string;
-  onTabChange: (tab: "characters" | "lorebook" | "outline" | "storylines" | "rules") => void;
+  onTabChange: (tab: "characters" | "world" | "lorebook" | "outline" | "storylines" | "rules") => void;
   selectedNode: StoryNodeData | null; onSelectNode: (node: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
   onEditLore: (l: LorebookData) => void; onNewCharacter: () => void; onNewLore: () => void;
@@ -29,7 +29,7 @@ export function LeftPanel({
     { key: "outline", label: "大纲" },
     { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
     { key: "characters", label: `角色 (${project.characters.length})` },
-    { key: "lorebook", label: `世界书 (${project.lorebookEntries.length})` },
+    { key: "world", label: `世界 (${project.lorebookEntries?.length || 0})` },
     { key: "rules", label: "规则" },
   ] as const;
 
@@ -72,7 +72,7 @@ export function LeftPanel({
             <OutlineTree nodes={project.storyNodes} selectedNode={selectedNode} onSelectNode={onSelectNode}
               onAddSection={onAddSection} volumeView={volumeView} batchMode={batchMode}
               selectedChapterIds={selectedChapterIds} onToggleChapterSelect={onToggleChapterSelect}
-              onDeleteNode={onDeleteNode} />
+              onDeleteNode={onDeleteNode} projectId={project.id} />
           </>
         )}
         {activeTab === "storylines" && (
@@ -84,10 +84,11 @@ export function LeftPanel({
             onDelete={async (id) => { await fetch(`/api/characters/${id}`, { method: "DELETE" }); loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
+        {activeTab === "world" && (
+          <WorldPanel projectId={project.id} entries={project.lorebookEntries} onRefresh={loadProject} />
+        )}
         {activeTab === "lorebook" && (
-          <LorebookList projectId={project.id} entries={project.lorebookEntries} onEdit={onEditLore}
-            onDelete={async (id) => { await fetch(`/api/lorebook/${id}`, { method: "DELETE" }); loadProject(); }}
-            onNew={onNewLore} onRefresh={loadProject} />
+          <WorldPanel projectId={project.id} entries={project.lorebookEntries} onRefresh={loadProject} />
         )}
         {activeTab === "rules" && (
           <RulesPanel projectId={project.id} onRefresh={loadProject} />

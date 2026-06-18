@@ -116,6 +116,38 @@ export async function POST(request: Request) {
 
 判断标准：如果把这个变化写在角色卡/世界书上，一个月后再看还有意义吗？
 
+🌐 世界观构建——除了角色和世界书，还要提取本章对世界本身的揭示：
+✅ 时代背景（如"末法时代"、"黄金纪元"）
+✅ 核心规则（如"帝路重启百人可成帝"、"天道沉睡"）
+✅ 特殊元素（如"天穹裂缝"、"黑暗渗透"）
+✅ 主要冲突（如"裂缝后的黑暗即将降临"）
+✅ 社会结构（如"九天十地的阶级体系"）
+✅ 历史背景（如"上一纪元末的大事件"）
+→ 这些填入 worldSettings 字段，每个分类一个文本值。本章没揭示的不要填。
+
+📖 故事核心——本章对主线/谜题/主题的推进：
+✅ 主线推进（如"帝路争锋正式拉开序幕"）
+✅ 核心谜题（如"裂缝后的黑暗是什么"）
+✅ 主题呈现（如"绝望中寻找希望"）
+→ 这些填入 storyCore 字段。
+
+⏱️ 全局时间线——本章发生的关键事件（非角色级别，是世界级大事件）：
+✅ 预言发布、异象出现、重大变故
+→ 填入 globalTimeline 数组，每项 title+eventType+description+importance+characters。
+
+📌 情节脉络与支线——本章对主线/支线的推进：
+✅ 主线推进（如"帝路争锋进入第一阶段"）——填入 plotLines 数组
+✅ 支线展开（如"萧家内部权力斗争浮现"）——填入 subPlots 数组
+→ 每条包含 title（情节线名称）、type（main/side）、progress（本章推进了什么）、stage（当前所处七阶段：desire/obstacle/action/result/twist/turn/ending）、characters（关联角色名数组）
+
+👥 人物关系——只需报告本章内两个角色之间的互动关系（A对B的关系）：
+✅ A和B在本章中有直接互动或提及彼此
+✅ 关系类型简洁明确：仇恨/爱慕/盟友/敌对/师徒/主仆/同门/血亲/恩人/仇人/利用/敬仰/嫉妒/竞争/合作
+✅ 附带一句话原因（如"因为A抢走了B的未婚妻"）
+→ 填入 characterRelations 数组，每条包含 sourceName/targetName/relation/reason
+→ 过去章节已有的关系不要再报——只报本章新建立或改变的关系
+→ 没有明显人物互动就不填
+
 重要：significance只标记high或medium。low的项目会被自动过滤不显示给用户。
 
 输出纯 JSON，不要markdown代码块包裹。`;
@@ -174,7 +206,7 @@ ${contentSnippet}
   "newLoreEntries": [
     {
       "title": "新设定名（简洁，见名知义）",
-      "category": "geography(地点/设施)/faction(组织/势力/队伍)/magic_system(规则/战术体系)/history(历史)/culture(文化/惯例/传统)/creature(生物)/item(物品/装备)/law(规则/法则)/custom(自定义)",
+      "category": "geography(地点/设施)/faction(组织/势力/队伍)/magic_system(力量体系/规则)/technique(功法/技能/传承)/history(历史)/culture(文化/惯例/传统)/creature(生物)/item(物品/装备/丹药/法宝)/law(规则/法则)/custom(自定义)",
       "keys": ["触发关键词——角色名、地点名、术语，用于后续章节自动匹配"],
       "content": "设定内容——写清楚是什么、怎么运作、为什么重要（2-5句）",
       "significance": "high/medium/low——high是主线核心设定，medium是值得记录的细节",
@@ -185,6 +217,61 @@ ${contentSnippet}
     "detected": false,
     "description": "如果有明显文风变化描述之，无则填null"
   },
+  "newForeshadowings": [
+    {
+      "description": "伏笔描述",
+      "relatedCharacters": ["关联角色名"],
+      "suggestedPayoff": "建议回收方式"
+    }
+  ],
+  "worldSettings": {
+    "时代背景": "本章揭示的时代背景（空则省略此键）",
+    "核心规则": "本章揭示的世界法则/天道规则",
+    "特殊元素": "本章引入的特殊元素/系统",
+    "主要冲突": "本章揭示的主要矛盾/冲突",
+    "社会结构": "本章揭示的社会层级/组织结构",
+    "历史背景": "本章揭示的历史事件"
+  },
+  "storyCore": {
+    "主线推进": "本章对主线剧情的推进（一句话）",
+    "核心谜题": "本章揭示或深化的核心谜题",
+    "主题呈现": "本章体现的故事主题"
+  },
+  "globalTimeline": [
+    {
+      "title": "事件名（简洁）",
+      "eventType": "主线情节/角色弧线/伏笔呼应/关键对话/背景事件",
+      "description": "事件概述（一句话）",
+      "importance": "核心/重要/一般",
+      "characters": ["参与角色名"]
+    }
+  ],
+  "plotLines": [
+    {
+      "title": "情节线名称（如'帝路争锋'）",
+      "type": "main",
+      "progress": "本章对该线的推进（一句话）",
+      "stage": "desire/obstacle/action/result/twist/turn/ending",
+      "characters": ["关联角色名"]
+    }
+  ],
+  "subPlots": [
+    {
+      "title": "支线名称（如'萧家内部斗争'）",
+      "type": "side",
+      "progress": "本章对该支线的推进（一句话）",
+      "stage": "desire/obstacle/action/result/twist/turn/ending",
+      "characters": ["关联角色名"]
+    }
+  ],
+  "characterRelations": [
+    {
+      "sourceName": "关系发起方角色名",
+      "targetName": "关系接收方角色名",
+      "relation": "仇恨/爱慕/盟友/敌对/师徒/主仆/同门/血亲/恩人/利用/敬仰/嫉妒/竞争/合作",
+      "reason": "一句话说明为什么（如'因为A被B当众羞辱'）"
+    }
+  ],
   "summary": "一句话概括本章的主要变化"
 }
 
@@ -192,6 +279,8 @@ ${contentSnippet}
 - significance 为 low 的项会被用户忽略，所以 trivial 的事干脆不要报
 - changes 字段只填发生变化的部分，没变的省略
 - 没变化不列入 characterUpdates
+- worldSettings/storyCore 只需填本章**新揭示**的内容，之前已知道的不要重复
+- globalTimeline 只列本章发生的关键事件（≤5个）
 - 所有推断标注文本依据`;
 
     // 调用 LLM —— 从全局设置动态读取 API Key / Base URL / Model
@@ -261,6 +350,12 @@ ${contentSnippet}
       newLoreEntries: result.newLoreEntries || [],
       styleShift: result.styleShift || { detected: false },
       newForeshadowings: result.newForeshadowings || [],
+      worldSettings: result.worldSettings || {},
+      storyCore: result.storyCore || {},
+      globalTimeline: result.globalTimeline || [],
+      plotLines: result.plotLines || [],
+      subPlots: result.subPlots || [],
+      characterRelations: result.characterRelations || [],
       summary: result.summary || "",
       meta: {
         existingCharCount: characters.length,

@@ -7,6 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getTemplate } from "@/core/templates";
 
 /**
  * 构建并写入 globalPrompt。
@@ -15,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 export async function syncGlobalPrompt(projectId: string): Promise<string | null> {
   try {
     const [project, characters, loreEntries, styleCard] = await Promise.all([
-      prisma.project.findUnique({ where: { id: projectId }, select: { name: true, genre: true, synopsis: true, toneKeywords: true, authorNote: true } }),
+      prisma.project.findUnique({ where: { id: projectId }, select: { name: true, genre: true, synopsis: true, toneKeywords: true, authorNote: true, llmConfig: true } }),
       prisma.characterCard.findMany({ where: { projectId } }),
       prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
       prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
@@ -39,7 +40,7 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
 }
 
 function buildGlobalPrompt(
-  project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string },
+  project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string; llmConfig?: any },
   characters: any[],
   loreEntries: any[],
   styleCard: Record<string, unknown> | null,
@@ -226,6 +227,33 @@ ${project.authorNote}`);
     if (s.sampleText) sParts.push(`- 风格样本：${String(s.sampleText).slice(0, 400)}`);
 
     parts.push(sParts.join("\n"));
+  }
+
+  // ═══════════════════════════════════════════
+  // 第五部分：文风模板（最高优先级）
+  // ═══════════════════════════════════════════
+  if (project.llmConfig) {
+    const config = project.llmConfig as Record<string, unknown>;
+    const templateId = (config.styleTemplateId as string) || "";
+    if (templateId && templateId !== "custom") {
+      const template = getTemplate(templateId);
+      if (template) {
+        parts.push(`\n# 文风模板——${template.name}——最高优先级`);
+        if (template.stylePrompt) {
+          parts.push(template.stylePrompt);
+        }
+        if (template.forbiddenPatterns.length > 0) {
+          parts.push(`\n## 禁止以下表达`);
+          parts.push(template.forbiddenPatterns.map((p) => `- 禁止使用：${p}`).join("\n"));
+        }
+        if (template.pacingGuide) {
+          parts.push(`\n## 节奏指引\n${template.pacingGuide}`);
+        }
+        if (template.dialogueGuide) {
+          parts.push(`\n## 对话指引\n${template.dialogueGuide}`);
+        }
+      }
+    }
   }
 
   return parts.join("\n");

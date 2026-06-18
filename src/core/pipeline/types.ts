@@ -19,6 +19,8 @@ export interface GenerationData {
   summaries: ChapterSummary[];
   storyBeats: StoryBeat[];
   styleCard: Record<string, unknown> | null;
+  pendingCommitments?: any[];
+  pendingItems?: any[];
 }
 
 // ─── 预处理 ───────────────────────────────────────────────

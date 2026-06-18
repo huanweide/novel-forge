@@ -101,13 +101,13 @@ export async function POST(request: Request) {
       styleText += "\n" + String(llmConfig.customStyleNotes).slice(0, 300);
     }
 
-    // ── 硅基流动配置 ──
-    const baseURL = "https://api.siliconflow.cn/v1";
-    const apiKey = process.env.LLM_API_KEY || "";
-    // 从全局设置读取模型名
+    // ── 从全局设置读取 LLM 配置 ──
+    const settings = await getSettings();
+    const baseURL = settings.baseUrl;
+    const apiKey = settings.apiKey;
+    const model = settings.model;
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
     const shouldUseFlash = useFlash || hasCustomPrompt;
-    const { model } = await getSettings();
 
     // ── 中文数字 ──
     const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];

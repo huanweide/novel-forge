@@ -36,6 +36,8 @@ import { matchLoreEntries } from "@/core/assembly/trigger";
 import { safeJoin } from "@/lib/utils";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { scoreAndClassifyEvents, classifyEventCategory } from "@/core/distillation";
+import { toolRegistry } from "./tool-registry";
+import type { ToolSchema, ToolContext, ToolResult } from "./tool-registry";
 
 // ─── Prompt 模板 ─────────────────────────────────────────────
 
@@ -382,6 +384,18 @@ ${generatedContent}
     return { ...parsed, eventImportances };
   }
 
+  // ─── 工具调用 ─────────────────────────────────────────────
+
+  /** 返回所有已注册工具的 function schema（用于 LLM tools 参数） */
+  getToolSchemas(): ToolSchema[] {
+    return toolRegistry.getAllSchemas();
+  }
+
+  /** 执行指定工具调用 */
+  async executeToolCall(name: string, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
+    return toolRegistry.execute(name, args, ctx);
+  }
+
   // ─── 私有方法 ─────────────────────────────────────────────
 
   private parseReviewResponse(response: string, nodeOutline: string): ReviewLog {
@@ -535,11 +549,13 @@ export function buildPromptContext(params: {
   loreEntries: LorebookEntry[];
   chapterSummaries: ChapterSummary[];
   storyBeats?: StoryBeat[];
-  storylines?: any[];                // 新增：故事线列表
+  storylines?: any[];
+  pendingCommitments?: any[];        // 伏笔列表——S级记忆注入
+  pendingItems?: any[];              // 待兑现事项——用户/蒸馏检测到的"下次/回头"意图
   styleCard?: Record<string, unknown> | null;
   authorNote?: string;
 }): PromptContext {
-  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], styleCard, authorNote } = params;
+  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], styleCard, authorNote } = params;
 
   // 主角极简卡
   const protagonist = characters.find((c) => c.role === "protagonist") || characters[0];
@@ -582,14 +598,34 @@ export function buildPromptContext(params: {
     }
   }
 
+  // ── 12维风格参数注入（从 llmConfig.dimensions 读取）──
+  const DIM_LABELS: Record<string, string> = {
+    vocabularyRichness: "词汇丰富度", sentenceLength: "句子长度",
+    descriptionDensity: "描写密度", dialogueRatio: "对话比例",
+    rhetoricLevel: "修辞手法", pacingSpeed: "节奏速度",
+    psychoDesc: "心理描写", envDesc: "环境描写",
+    colloquialism: "口语化", humorLevel: "幽默感",
+    violenceLevel: "暴力程度", eroticLevel: "暧昧程度",
+  };
+  const llmCfg = (project as any).llmConfig as Record<string, unknown> | undefined;
+  const dims = llmCfg?.dimensions as Record<string, number> | undefined;
+  const styleBlock = dims && Object.keys(dims).length > 0
+    ? `\n## 12维风格参数（精确调校——必须体现在正文中）\n${Object.entries(dims).map(([k, v]) => `- ${DIM_LABELS[k] || k}: ${v}/10`).join("\n")}\n\n上述参数是作者对本章文风的精确设定，请在写作时严格执行：\n- 描写密度、环境描写、心理描写决定段落的画面感比例\n- 对话比例、口语化决定角色台词的风格和频次\n- 节奏速度决定情节推进的快慢\n- 修辞手法、词汇丰富度决定语言的华丽程度\n- 幽默感、暴力程度、暧昧程度是内容过滤器\n`
+    : "";
+
   // ── 预缓存：从 project.globalPrompt 读取已编译的三卡数据，避免重复查库 ──
   const cachedCards = (project as any).globalPrompt as string | undefined;
   const cardContext = cachedCards && cachedCards.length > 100
     ? `\n# 系统设定（已预编译——角色卡+世界书+风格卡）\n${cachedCards}\n`
     : "";
 
+  // ═══ 待兑现事项注入 ═══
+  const pendingBlock = pendingItems.length > 0
+    ? `\n## ⚠️ 待兑现事项——之前设定但尚未完成的情节意图\n${pendingItems.map((pi: any, i: number) => `${i + 1}. ${pi.content}${pi.priority === "high" ? "（高优先级）" : ""}`).join("\n")}\n\n请在合适时机推进上述事项。这不是硬性要求——如果本章剧情不适合兑现，顺延到后面章节。\n`
+    : "";
+
   //   //   //   // 构建系统提示——白金修仙模拟引擎 v8.0 + 逍遥散仙创作方法论
-  let systemPrompt = `${cardContext}# Role: 白金级玄幻修仙网文作家
+  let systemPrompt = `${styleBlock}${cardContext}${pendingBlock}# Role: 白金级玄幻修仙网文作家
 
 你是一名专业的玄幻修仙小说作家。你不仅仅是在写小说，更是在运行一个严密的修仙模拟游戏。你必须同时兼顾【文学性】（文笔、剧情与逻辑性）。
 
@@ -1387,6 +1423,22 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
     systemPrompt += `\n\n【📊 比赛/比分记录——必须保证前后一致】\n${matchLines.join("\n")}`;
   }
 
+  // ── 注入角色关系网（世界书 character_relationship 条目，必定读取）──
+  const scheduledNamesArr = [...scheduledNames];
+  const relationshipEntries = loreEntries.filter((l) => {
+    if (l.category !== "character_relationship") return false;
+    const keys = l.keys || [];
+    // 条目的 keys 中包含任意一个被调度角色的名字，就命中
+    return keys.some((k: string) => scheduledNamesArr.includes(k));
+  });
+  if (relationshipEntries.length > 0) {
+    const relLines = relationshipEntries.map((l) => {
+      const relatedChars = (l.keys || []).filter((k: string) => scheduledNamesArr.includes(k));
+      return `【${relatedChars.join(" ↔ ")}】${l.title}：${(l.content || "").slice(0, 200)}`;
+    });
+    systemPrompt += `\n\n【🕸️ 角色关系网——本章涉及角色之间的关系，生成对话/互动时必须参考】\n${relLines.join("\n")}`;
+  }
+
   return {
     systemPrompt,
     globalMemory: {
@@ -1405,6 +1457,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
     authorNote: authorNote || null,
     characters,
     storylines,
+    pendingCommitments: pendingCommitments.length > 0 ? pendingCommitments : undefined,
   };
 }
 

@@ -49,7 +49,6 @@ interface WriterState {
   isGenerating: boolean;
   generatedContent: string;
   generatedTokens: number;
-  reviewPanelOpen: boolean;
   authorNote: string;
   streamBuffer: string;
 
@@ -59,7 +58,6 @@ interface WriterState {
   appendContent: (token: string) => void;
   setGeneratedContent: (content: string) => void;
   setGeneratedTokens: (n: number) => void;
-  setReviewPanelOpen: (v: boolean) => void;
   setAuthorNote: (note: string) => void;
   resetStream: () => void;
 }
@@ -69,7 +67,6 @@ export const useWriterStore = create<WriterState>((set) => ({
   isGenerating: false,
   generatedContent: "",
   generatedTokens: 0,
-  reviewPanelOpen: false,
   authorNote: "",
   streamBuffer: "",
 
@@ -82,7 +79,6 @@ export const useWriterStore = create<WriterState>((set) => ({
     })),
   setGeneratedContent: (generatedContent) => set({ generatedContent }),
   setGeneratedTokens: (generatedTokens) => set({ generatedTokens }),
-  setReviewPanelOpen: (reviewPanelOpen) => set({ reviewPanelOpen }),
   setAuthorNote: (authorNote) => set({ authorNote }),
   resetStream: () => set({ generatedContent: "", streamBuffer: "", generatedTokens: 0 }),
 }));

@@ -17,7 +17,6 @@ model Project {
   targetWordCount Int     @default(100000)
   synopsis       String   @default("")  // 主线总纲
   toneKeywords   String[] @default([])  // 基调关键词
-  povCharacterId String?                 // 当前视角主角
 
   globalPrompt String @default("")  // 世界书+风格卡缓存摘要——扩展角色时直接用
   authorNote   String @default("")  // 作者指令——持久化，所有生成端点统一读取
@@ -37,6 +36,8 @@ model Project {
   styleCards    StyleCard[]
   rules         Rule[]
   pendingCommitments PendingCommitment[]
+  gameSessions  GameSession[]
+  pendingItems  PendingItem[]
 }
 
 // ─── 人物卡 (Character Card) ───────────────────────────────
@@ -117,7 +118,6 @@ model StoryNode {
   // 分支
   branchId           String?
   isMainBranch       Boolean @default(true)
-  previousVersionId  String?
 
   // 元数据
   activeCharacters  String[] @default([])
@@ -126,9 +126,10 @@ model StoryNode {
   settingDescription String?
   notes             String?
 
-  // 审校
+  // 审校 + 质量
   reviewLogs    Json @default("[]")       // ReviewLog[]
   revisionCount Int @default(0)
+  qualityScore  Float?                    // 六维质量自动评分(0-100)，null=未评估
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,6 +137,9 @@ model StoryNode {
   // 自引用
   parent   StoryNode?  @relation("NodeTree", fields: [parentId], references: [id])
   children StoryNode[] @relation("NodeTree")
+
+  // 游戏会话
+  gameSessions GameSession[]
 
   // 分支关联
   branch StoryBranch? @relation(fields: [branchId], references: [id])
@@ -277,6 +281,50 @@ model Storyline {
   @@index([parentId])
 }
 
+// ─── 游戏会话 (Game Session) —— 互动文本冒险 ──────────────────
+
+model GameSession {
+  id           String   @id @default(cuid())
+  projectId    String
+  nodeId       String   // 对应的 StoryNode（章节节点）
+  status       String   @default("active") // active | completed | abandoned
+  currentRound Int      @default(0)
+  totalWords   Int      @default(0)
+  maxWords     Int      @default(3000)     // 单章游戏模式字数上限
+  plotProgress Int      @default(0)        // 情节进度 0-100
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  node    StoryNode  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  states  GameState[]
+
+  @@index([projectId])
+  @@index([nodeId])
+  @@unique([projectId, nodeId])  // 一个章节同一时间只有一个活跃游戏会话
+}
+
+// ─── 游戏状态快照 (Game State) —— 每轮一次 ──────────────────
+
+model GameState {
+  id           String   @id @default(cuid())
+  sessionId    String
+  round        Int
+  playerAction String                    // 用户选择的行动文本
+  narrative    String   @default("")     // AI 生成的叙事正文
+  options      Json     @default("[]")   // 下一轮选项: string[]
+  entities     Json     @default("[]")   // 追踪实体: {name, type, desc}[]
+  items        Json     @default("[]")   // 背包物品: {name, qty, source}[]
+  plotProgress Int      @default(0)
+  wordCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, round])
+}
+
 // ─── 规则 (Rule) —— 写作规则/约束 ──────────────────────────────
 
 model Rule {
@@ -353,4 +401,28 @@ model StyleCard {
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
+}
+
+// ─── 待兑现事项追踪 (Pending Item) ──────────────────────
+
+model PendingItem {
+  id               String   @id @default(uuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  itemType         String   // foreshadow_recovery / character_arc / plot_turn / user_note
+  content          String   @db.Text
+  priority         String   @default("medium") // high / medium / low
+  status           String   @default("pending") // pending / fulfilled / discarded
+  source           String   @default("user")    // user / distillation / outline
+  sourceNodeId     String?
+  deadlineChapter  Int?
+  fulfilledAt      DateTime?
+  fulfilledNodeId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
 }

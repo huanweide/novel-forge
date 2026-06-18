@@ -3,6 +3,47 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
+// ─── P0 格式行类型着色 ───────────────────────────────────
+
+const P0_LINE_COLORS: Record<string, string> = {
+  "C|": "text-cyan-400",
+  "L0|": "text-red-400/70",
+  "L1|": "text-amber-400/70",
+  "L2|": "text-orange-400/70",
+  "R|": "text-green-400",
+  "L|": "text-teal-400",
+  "G|": "text-yellow-400",
+  "P|": "text-gray-400",
+  "CF|": "text-purple-400",
+  "M|": "text-rose-400",
+  "K|": "text-amber-300",
+  "EL|": "text-pink-400",
+  "T|": "text-cyan-300",
+  "【章首衔接】": "text-blue-400",
+  "【章尾悬念】": "text-blue-400",
+  "⟨✍": "text-violet-400/60 italic",
+};
+
+function getP0LineColor(line: string): string {
+  for (const [prefix, color] of Object.entries(P0_LINE_COLORS)) {
+    if (line.trimStart().startsWith(prefix)) return color;
+  }
+  return "text-gray-500";
+}
+
+function P0HighlightedPreview({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <pre className="text-xs leading-relaxed font-mono whitespace-pre-wrap">
+      {lines.map((line, i) => (
+        <div key={i} className={getP0LineColor(line)}>
+          {line || " "}
+        </div>
+      ))}
+    </pre>
+  );
+}
+
 interface DrawCard {
   outline: string; characters: string[]; coreConflict: string;
   mood: string; foreshadowing: string; cardLabel: string;
@@ -171,10 +212,10 @@ export function DrawCards({
                       </p>
                     )}
 
-                    {/* 章纲正文 */}
+                    {/* 章纲正文——P0格式高亮 */}
                     {card.outline && (
-                      <div className="text-xs text-zinc-300 leading-relaxed mb-3 whitespace-pre-wrap line-clamp-12">
-                        {card.outline}
+                      <div className="text-xs leading-relaxed mb-3 max-h-64 overflow-y-auto scrollbar-thin">
+                        <P0HighlightedPreview text={card.outline} />
                       </div>
                     )}
 

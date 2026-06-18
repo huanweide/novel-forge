@@ -25,18 +25,618 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.1";
+export const LATEST_VERSION = "v0.20.22";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔑 修复 401 Invalid token——parser/update-cards 绕过数据库导致空 token",
-  "🔗 全部 LLM 调用路径统一走 AppSettings 动态读取——改 Key 即时生效",
-  "parseSettings/parseLorebookOnly/parseStyleOnly：fallback 改为 getEffectiveConfig()",
-  "update-cards 变化检测：从 env vars 改为数据库动态读取",
+  "🎯 12维风格参数端到端打通——StyleEditor滑块值→API保存→orchestrator注入系统提示词",
+  "🔄 continue/route.ts 改用 loadGenerationContext——消除9表内联查询，与write/refine统一",
+  "📦 chapter-outline 代码去重——新建 outline-context.ts 共享模块，两路由各减60行",
+  "🔗 数据链路贯通——dimensions不再被API丢弃，12维精确调校正式生效",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.22",
+    date: "2026-06-18",
+    title: "🎯 12维风格参数注入 + 代码去重",
+    sections: [
+      {
+        label: "12维风格参数端到端打通",
+        items: [
+          "修复 Style API PUT——body.dimensions 不再被静默丢弃，正确存入 llmConfig",
+          "修复 Style API GET——返回 dimensions 字段",
+          "orchestrator.ts 读取 llmConfig.dimensions → 生成风格参数块注入系统提示词",
+          "12维标签完整映射：词汇丰富度/句子长度/描写密度/对话比例/修辞手法/节奏速度/心理描写/环境描写/口语化/幽默感/暴力程度/暧昧程度",
+        ],
+      },
+      {
+        label: "continue/route.ts 消除内联查询",
+        items: [
+          "改用 loadGenerationContext(projectId, currentNodeId, 5)，与 write/refine 统一",
+          "删除 9 表 Promise.all 内联查询块",
+        ],
+      },
+      {
+        label: "chapter-outline 路由代码去重",
+        items: [
+          "新建 src/core/pipeline/outline-context.ts 共享模块",
+          "6 个共享函数：loadOutlineData/extractPrevContext/extractNextContext/buildCharacterList/prepareOutlineDirective/formatSummaries",
+          "chapter-outline/route.ts 和 draw/route.ts 各减少 ~60 行重复代码",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.21",
+    date: "2026-06-17",
+    title: "🧹 全站架构自查+清理",
+    sections: [
+      {
+        label: "前端死代码清理（-2300行）",
+        items: [
+          "CardUpdater（1051行）— PostGenPanel 替代",
+          "ChapterExtractionPanel（612行）— PostGenPanel 替代",
+          "OutlineGenerator（327行）— OutlineDialog 替代",
+          "EntityDetector（253行）— 旧UI残留",
+          "StreamingText（11行）— MarkdownViewer 替代",
+        ],
+      },
+      {
+        label: "后端死代码清理",
+        items: [
+          "/api/agent/logic-check — post-processor 已内联相同逻辑且更完整",
+          "/api/generate/check-all-cards — 前端不调用",
+          "/api/generate/update-style-card — 文风走 projects/[id]/style",
+          "commitment-tracker.ts — 完整类从未实例化",
+        ],
+      },
+      {
+        label: "Schema + Store 清理",
+        items: [
+          "移除 Project.povCharacterId / StoryNode.previousVersionId 死字段",
+          "移除 Store reviewPanelOpen 死状态",
+          "移除 core/types 中对应的死类型定义",
+        ],
+      },
+      {
+        label: "重复修复 + P0 集成",
+        items: [
+          "ReviewPanel 不再在 CenterPanel 重复渲染，审校结果只看 PostGenPanel",
+          "PostGenPanel 改用统一 ReviewIssue 类型",
+          "抽卡 DrawCards API 输出 P0 标准格式章纲 + 语法高亮着色",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.20",
+    date: "2026-06-17",
+    title: "📋 P0标准格式章纲系统 + 游戏页内置编辑器",
+    sections: [
+      {
+        label: "结构化章纲格式",
+        items: [
+          "三层架构：元信息(C|/L0|/L1|/L2|) → 叙事段落(R|/L|/G|/P|/⟨✍⟩) → 技术规格(CF|/M|/K|/EL|/T|)",
+          "R|角色行动 L|场景切换 G|金手指 P|剧情推进 CF|伏笔 M|情绪 K|金句 EL|弧线 T|过渡",
+          "⟨✍ 写作指令⟩ 导演批注，不构成故事内容，只指导AI怎么写",
+        ],
+      },
+      {
+        label: "章纲生成API",
+        items: [
+          "/api/game/outline/generate — Agent按P0格式一键生成，自动匹配角色白名单+地点+伏笔+前后章约束",
+          "/api/game/outline/chat — 多轮对话确认章纲（SSE流式），支持探讨-反馈-定稿循环",
+        ],
+      },
+      {
+        label: "游戏页内置章纲编辑器",
+        items: [
+          "三模式切换：✏️编辑（语法高亮） / 👁预览（着色渲染） / 💬对话（AI对话确认）",
+          "10种行类型着色：C|青 R|绿 L|青 G|金 P|灰 CF|紫 M|玫瑰 K|琥珀 EL|粉 T|青",
+          "⚡AI生成按钮 + 💾保存到StoryNode.outline",
+        ],
+      },
+      {
+        label: "章节树游戏入口",
+        items: [
+          "每个章节/分节节点悬停即显示🎮按钮，点击直接进入游戏模式",
+          "无需先在workspace选中章节再点游戏按钮",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.19",
+    date: "2026-06-17",
+    title: "🎮 游戏模式上线——互动文本冒险写作",
+    sections: [
+      {
+        label: "独立沉浸式 UI",
+        items: [
+          "全新路由 /workspace/[pid]/game/[nid]，全屏暗黑主题三栏布局",
+          "6 个快捷动作按钮：观察/对话/战斗/探索/使用物品/休息 + 自定义文本输入",
+          "简单星空粒子背景动画，安静不喧宾夺主",
+        ],
+      },
+      {
+        label: "核心游戏循环",
+        items: [
+          "SSE 流式输出：用户行动 → AI 生成 300-600 字叙事 → 2-4 个编号选项 → 循环",
+          "每轮产出实体追踪（NE|格式）+ 背包变动（CI|格式）+ 情节进度百分比",
+          "左侧面板：情节/角色/势力 Tab，右侧面板：正文/背包/世界 Tab",
+        ],
+      },
+      {
+        label: "结束并导出",
+        items: [
+          "点击\"结束并导出\"→检查章纲\"章尾悬念\"钩子→有钩子用钩子收尾，无钩子自然收束",
+          "拼接全部累积正文→保存为 StoryNode.content，与 AI 直写无差别",
+          "返回工作区即可看到完整章节正文",
+        ],
+      },
+      {
+        label: "后端新增",
+        items: [
+          "新增 GameSession + GameState 两张数据表",
+          "3 条 API：/api/game/start /action（SSE） /end",
+          "新增 src/core/game/ 模块：game-engine.ts / game-prompts.ts / types.ts",
+          "CenterPanel 新增 🎮 游戏模式入口按钮",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.18",
+    date: "2026-06-17",
+    title: "文风面板12维度升级 + 统一分析面板 + 逻辑自查 + 前端大清理",
+    sections: [
+      {
+        label: "文风面板全面升级",
+        items: [
+          "10种预设风格库（热血/日常/黑暗/悬疑/恋爱/史诗/科幻/古风/极简/自定义），一键切换",
+          "12维度滑块微调：词汇丰富度/句子长度/描写密度/对话比例/修辞手法/节奏速度/心理描写/环境描写/口语化/幽默感/暴力/暧昧",
+          "废词检测引擎v3.0：5类检测器（精确禁用词/句式模式/身体模板/模糊词密度/AI高频词），内置50+规则，质量评分0-100",
+          "三Tab面板：文风维度/废词检测（含扫描按钮）/LLM参数",
+        ],
+      },
+      {
+        label: "统一分析面板 PostGenPanel",
+        items: [
+          "4 Tab：📊章节提取/🔍逻辑自查/⚡本地蒸馏/📝审校，替代旧版6个碎片UI",
+          "删除2个浮动横幅+1个浮动按钮+1个全屏加载遮罩+ChapterExtractionPanel+CardUpdater",
+          "\"继续写下一节\"按钮移至PostGenPanel底部操作栏，\"AI分析本章变化\"改为自动触发",
+        ],
+      },
+      {
+        label: "逻辑自查自动化",
+        items: [
+          "新增 /api/agent/logic-check：角色死活一致性/时间线连续/关系突变/物品追踪，零Token",
+          "切换到逻辑自查Tab自动运行，可手动重新检查",
+        ],
+      },
+      {
+        label: "前端大清理",
+        items: [
+          "删除 autoAnalyzeChapter 旧函数，统一为 autoExtractChapter → PostGenPanel",
+          "删除 cardUpdatePending/pendingCardUpdateNodeId/autoUpdateNotification/preCardUpdateResult 等过时state",
+          "CenterPanel 删除\"继续写下一节\"和\"AI分析本章变化\"两个按钮",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.17",
+    date: "2026-06-17",
+    title: "章节自动提取系统 + 角色关系维度 + Agent 会话记忆",
+    sections: [
+      {
+        label: "章节自动提取（12 维度）",
+        items: [
+          "生成完自动弹出提取面板：角色/场景/势力/道具/伏笔/情绪/台词/摘要/衔接/要素/经历/关系",
+          "逐项采纳/编辑/取消，智能路人检测（提及<3次+无对话+无行动→不建卡）",
+          "批量写入 5 张表：角色卡/世界书/伏笔/章节摘要/下章大纲",
+          "替代旧 CardUpdater 自动触发，CardUpdater 保留手动入口作后备",
+        ],
+      },
+      {
+        label: "角色关系——世界书新维度",
+        items: [
+          "关系存为世界书条目 (character_relationship)，零 schema 变更",
+          "Agent 从正文自动提取关系 → 融合替代写入世界书",
+          "正文生成时强制注入涉及角色的关系条目（不走触发词，直接按角色名查）",
+          "WorldPanel 新增「角色关系」板块，RelationshipGraph 重写为正文分析驱动",
+        ],
+      },
+      {
+        label: "Agent 会话记忆 + 写后分析",
+        items: [
+          "会话记忆：内存存储，按项目隔离，最多 20 条，30 分钟过期",
+          "写后分析：对比正文 vs 角色卡，一键采纳更新能力/性格/关系/别名/状态/外貌",
+          "新增 4 个 Agent 工具：analyze_chapter / analyze_relationships / relation_sync / extract_chapter",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.16",
+    date: "2026-06-17",
+    title: "右侧栏重构——三 tab 一体化",
+    sections: [
+      {
+        label: "三 tab 架构",
+        items: [
+          "🤖 AI助手——AI 对话栏从页面底部移入右侧面板",
+          "🔍 查询实体——实体追踪 + 伏笔，子 tab 切换",
+          "📊 监测——字数概览/Token估算/章节分布/数据记录",
+        ],
+      },
+      {
+        label: "监测面板",
+        items: [
+          "总字数/完成率/当前章字数/均章字数 实时展示",
+          "Token 估算：生成/提示/总计（中文 1字≈0.8生成token）",
+          "章节分布：最多/最少字数、完成进度",
+        ],
+      },
+      {
+        label: "交互优化",
+        items: [
+          "最小化状态三条竖排标签可点击切 tab",
+          "底部统计栏 + 可折叠上下文监控保留",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.15",
+    date: "2026-06-17",
+    title: "Agent 工具箱全面升级——21 工具接管所有按钮",
+    sections: [
+      {
+        label: "角色管理 (5)",
+        items: [
+          "character_list/get/create/update/delete——完整 CRUD，create 支持快速导入原文描述",
+          "character_get 返回完整信息：性格/外貌/对话风格/关系网/时间线/弧光",
+        ],
+      },
+      {
+        label: "世界书管理 (5)",
+        items: [
+          "lore_list/get/create/update/delete——覆盖地理/势力/物品/功法/生物/文化等全部 10 种分类",
+          "lore_create 自动设置触发关键词，正文出现关键词时自动注入",
+        ],
+      },
+      {
+        label: "大纲管理 (4)",
+        items: [
+          "outline_list 返回完整大纲树（卷→章→节层级，含状态/字数）",
+          "outline_create/update/delete——支持指定父节点、递归删除子节点",
+        ],
+      },
+      {
+        label: "伏笔 + 正文 + 其他 (7)",
+        items: [
+          "foreshadowing_list/create/update——创建/追踪/回收伏笔",
+          "chapter_get/generate——查询正文 + 触发写作面板（frontendAction 机制）",
+          "detect_entities + project_info——实体扫描 + 项目统计",
+        ],
+      },
+      {
+        label: "前端工具箱",
+        items: [
+          "AIChatBar 新增 6 个工具按钮：🧑查角色 📖查设定 🔮查伏笔 🔍扫实体 📋大纲 📊项目",
+          "/api/tools/execute 接口——前端按钮直接执行任意工具",
+          "chat route 支持 frontendAction 透传——工具可以通知前端弹面板",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.14",
+    date: "2026-06-17",
+    title: "记忆系统闭环 + Agent 工具层",
+    sections: [
+      {
+        label: "规则分类接入",
+        items: [
+          "memory-classifier 新增 tieredMemoryToImportances + classifyAndConvert 转换函数",
+          "post-processor step 4.5 自动运行规则分类，LLM+规则双保险合并存入 ChapterSummary",
+          "SSE classify_done 事件推送分类统计，失败降级不阻塞",
+        ],
+      },
+      {
+        label: "伏笔页签",
+        items: [
+          "ForeshadowingPanel 新组件——按状态分组（埋设中/部分回收/已回收/已废弃）",
+          "/api/foreshadowing/list 新接口，按 projectId 返回分组伏笔列表",
+          "RightPanel 支持实体/伏笔双 tab 切换，最小化状态动态显示当前 tab 名",
+        ],
+      },
+      {
+        label: "Agent 工具层",
+        items: [
+          "tool-registry 单例注册表——detect_entities/query_characters/query_lore/check_foreshadowing",
+          "LLM client 支持 tools 参数 + toolCalls 解析 + tool 角色消息",
+          "chat route 工具调用循环——LLM 可主动查角色/设定/伏笔后作答（最多 3 轮）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.13",
+    date: "2026-06-17",
+    title: "记忆系统——S级伏笔强制注入",
+    sections: [
+      {
+        label: "S级记忆",
+        items: [
+          "buildForeshadowingSection——从 PendingCommitment 加载未回收伏笔，按到期章号排序",
+          "标注 ⚠️ 待回收 + 预计回收章 + 关联角色，Token 预算 5%",
+          "context-loader 并行加载 pendingCommitments（最多 30 条），所有路由自动生效",
+        ],
+      },
+      {
+        label: "记忆分级引擎",
+        items: [
+          "memory-classifier.ts — S/A/B 三级：伏笔+major→S，近5章→A，老章节→B归档",
+          "formatTieredMemory() 按 token 预算智能截断注入",
+        ],
+      },
+      {
+        label: "Token 预算调整",
+        items: [
+          "新增 foreshadowing 5%（从 shortTerm 分出）",
+          "shortTerm: 25%→20%，其他不变",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.12",
+    date: "2026-06-17",
+    title: "右侧实体追踪面板 + 底部 AI 对话栏",
+    sections: [
+      {
+        label: "实体追踪面板",
+        items: [
+          "ChapterEntitiesPanel 扫描章节正文，按 6 组分类展示已出现实体（角色/势力/物品/地点/世界观/功法）",
+          "颜色圆点 + 实体名 + 数量标记，点击实体名打开编辑弹窗",
+          "未注册实体标记提示，底部统计已注册总数和本章匹配次数",
+          "RightPanel 标题改为「实体追踪」，原上下文监控折叠到底部",
+        ],
+      },
+      {
+        label: "AI 对话栏",
+        items: [
+          "AIChatBar 页面底部常驻：输入框 + 发送按钮 + 4 条快捷建议",
+          "选中正文区间自动带上文发送，AI 回复显示在输入框上方",
+          "新 API /api/generate/chat —— 200 字以内回复，温度 0.7",
+        ],
+      },
+      {
+        label: "共享逻辑",
+        items: [
+          "findEntitiesInText() 从 rehype 插件抽取到 entity-highlighter.ts",
+          "高亮渲染和面板扫描共用同一套匹配逻辑（最长名优先 + 词边界检测）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.11",
+    date: "2026-06-17",
+    title: "Markdown 渲染 + 实体高亮 + 阅读排版",
+    sections: [
+      {
+        label: "Markdown 渲染",
+        items: [
+          "MarkdownViewer 组件——react-markdown + remark-gfm，替换纯文本 StreamingText",
+          "支持标题/粗斜体/引用块/列表/表格/代码块/删除线/链接，深色主题定制样式",
+        ],
+      },
+      {
+        label: "阅读排版",
+        items: [
+          "正文字号 14px→17px，行距 1.6→1.85，字间距 0.02em，内容区 700px 居中",
+          "颜色纯白→柔白 #e2e2e2，章节标题自动居中，护眼舒适",
+        ],
+      },
+      {
+        label: "实体颜色高亮",
+        items: [
+          "低饱和度色板：柔蓝 #5B9BD5 / 苔绿 #70AD47 / 暗金 #D4A017 / 赭石 #C55A11 / 淡紫 #9B59B6",
+          "API 路由加载→客户端 fetch + 60s 内存缓存",
+          "rehype 插件遍历 HAST 包裹彩色 span，跳过 code/pre/a 标签",
+          "正文底部实体图例 + 流式兼容",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.10",
+    date: "2026-06-17",
+    title: "文风系统接通——模板 stylePrompt 真正注入生成提示词",
+    sections: [
+      {
+        label: "核心修复",
+        items: [
+          "sync-global-prompt.ts 现读 llmConfig.styleTemplateId→加载模板→注入 stylePrompt+禁用词+节奏+对话指引",
+          "style/route.ts 切换模板后自动调 syncGlobalPrompt 刷新缓存",
+          "此前 9 个预设模板完全写好但 applyTemplate() 从未被任何生成路由调用——stylePrompt 只影响 temperature/topP",
+        ],
+      },
+      {
+        label: "注入内容",
+        items: [
+          "stylePrompt：200-300 字详细写作指令，标注为「最高优先级」",
+          "禁用词/句式：从 forbiddenPatterns 转为 prompt 指令（不再仅后处理检查）",
+          "节奏指引 pacingGuide + 对话指引 dialogueGuide 一并注入",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.9",
+    date: "2026-06-17",
+    title: "人物关系独立提取 + 自动应用模式",
+    sections: [
+      {
+        label: "人物关系提取",
+        items: [
+          "update-cards prompt 新增 characterRelations 输出（sourceName/targetName/relation/reason）",
+          "关系类型 15 种：仇恨/爱慕/盟友/敌对/师徒/主仆/同门/血亲/恩人/利用/敬仰/嫉妒/竞争/合作",
+          "apply-updates 多向总结：已存在关系→追加动态和原因，不存在→新建",
+          "CardUpdater 新增 👥人物关系展示区域（粉色高亮）",
+        ],
+      },
+      {
+        label: "自动应用模式",
+        items: [
+          "CardUpdater 新增自动应用复选框——localStorage 持久化",
+          "勾选后全选所有提取结果→自动调 apply-updates→关闭，跳过手动确认",
+          "不勾选保持原有手动确认流程",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.8",
+    date: "2026-06-17",
+    title: "世界构建面板拆分——11 板块独立管理",
+    sections: [
+      {
+        label: "WorldPanel 组件",
+        items: [
+          "新建 WorldPanel 组件：11 个独立板块（地理/势力/物品/力量/功法/生物/文化/历史/法则/货币/特殊设定）",
+          "每板块独立字段模板——地理有类型+父级，功法有品阶+属性+传承，货币有材质+层级+流通",
+          "LeftPanel 集成：世界书→世界 tab，点击切换板块，空板块显示引导",
+          "数据仍存 LorebookEntry，category 区分板块，不改数据库",
+        ],
+      },
+      {
+        label: "Prompt 注入优化",
+        items: [
+          "buildLoreSection 改为按板块分组注入，每板块独立小标题（如 🗺️地理环境）",
+          "宽松格式：- 条目名：内容描述，纯自然语言，不给 LLM 结构化压力",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.7",
+    date: "2026-06-17",
+    title: "情节脉络+支线故事自动提取——Storyline 七要素映射",
+    sections: [
+      {
+        label: "情节脉络 & 支线故事",
+        items: [
+          "update-cards prompt 新增 plotLines/subPlots 输出（title/type/progress/stage/characters）",
+          "apply-updates 写入 Storyline 表：同名线→追加阶段进展，新线→创建，七要素字段自动填充",
+          "chapterBindings 自动绑定当前章节，stage 映射到七阶段之一",
+          "CardUpdater 新增 📌情节脉络推进 / 🌿支线故事展开 展示区域",
+        ],
+      },
+      {
+        label: "功法体系",
+        items: [
+          "newLoreEntries category 新增 technique（功法/技能/传承）选项",
+          "entity-auto-creator 已经能把功法实体写入 LorebookEntry",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.6",
+    date: "2026-06-17",
+    title: "章节摘要→17模块自动映射（第一阶段）",
+    sections: [
+      {
+        label: "修复 + 扩展",
+        items: [
+          "修复 apply-updates 伏笔写入 bug：newForeshadowings 现在自动创建 PendingCommitment 记录",
+          "update-cards prompt 扩展：新增 worldSettings（6维）/ storyCore（3维）/ globalTimeline 输出字段",
+          "apply-updates 写入路径扩展：worldSettings→Project.description，storyCore→Project.synopsis，globalTimeline→StoryBeat",
+          "CardUpdater 面板新增 3 个展示区域：世界观设定/故事核心/全局时间线",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.5",
+    date: "2026-06-17",
+    title: "前端 SSE 事件补全——蒸馏结果实时可见",
+    sections: [
+      {
+        label: "SSE 事件处理",
+        items: [
+          "workspace/page.tsx：streamSSE 新增 6 种事件处理（distill_local_start/done、foreshadow_update、entity_auto_created/skip/error）",
+          "types.ts：SSEEvent 类型扩展 stats/stateChanges/foreshadowEvents/newEntities/created/updated",
+          "绿色蒸馏完成通知横幅——生成后自动弹出，显示完整蒸馏统计",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.4",
+    date: "2026-06-17",
+    title: "数据反哺——新实体自动入库",
+    sections: [
+      {
+        label: "实体自动创建",
+        items: [
+          "entity-auto-creator.ts：新实体自动创建器——角色→CharacterCard，地点→LorebookEntry(geography)，丹药/法宝/材料→LorebookEntry(item)，功法→LorebookEntry(technique)",
+          "查重：大小写不敏感对比已有角色名+世界书标题，避免重复创建",
+          "新增SSE事件：entity_auto_create_start / entity_auto_created / entity_auto_skip / entity_auto_create_error",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.3",
+    date: "2026-06-17",
+    title: "伏笔自动检测——本地蒸馏驱动五状态机",
+    sections: [
+      {
+        label: "伏笔信号自动入库",
+        items: [
+          "post-processor.ts：蒸馏完成后自动处理伏笔——埋设信号（20个词）→创建PendingCommitment，回收信号（13个词）→标记fulfilled，深化信号（7个词）→标记partially_fulfilled",
+          "去重机制：同一信号词每章只处理一次，取置信度最高者",
+          "新增SSE事件：foreshadow_update（汇总通知前端）/ foreshadow_update_error（单个伏笔失败不阻塞）",
+        ],
+      },
+      {
+        label: "默认模型修正",
+        items: [
+          "settings/page.tsx：DeepSeek 默认模型 deepseek-v4-pro → deepseek-v4-flash（匹配 CodeX/CCX 当前配置）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.20.2",
+    date: "2026-06-17",
+    title: "本地蒸馏引擎——实体检测不再烧 Token",
+    sections: [
+      {
+        label: "命名模式库 + 四遍扫描",
+        items: [
+          "entity-detector.ts：5 类正则（丹药/法宝/功法/地点/材料）+ 排除词库 + 归属推断（属格/动词前置/段落主人）",
+          "distillation-runner.ts：四遍扫描（实体识别→状态变化→伏笔匹配→一致性校验），零 Token，<1秒/万字",
+          "post-processor.ts：Step 3 和 Step 4 之间插入本地蒸馏，LLM summarize 继续运行——双轨并行",
+        ],
+      },
+      {
+        label: "全局默认模型切换",
+        items: [
+          "默认提供商：硅基流动 → DeepSeek 官方（api.deepseek.com）",
+          "默认模型：deepseek-ai/DeepSeek-V4-Flash → deepseek-v4-pro",
+          "修复 outline/route.ts 和 characters/expand/route.ts 硬编码硅基流动 URL",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.1",
     date: "2026-06-17",

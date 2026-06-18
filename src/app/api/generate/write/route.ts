@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
-import { collectForbiddenPatterns } from "@/lib/forbidden-checker";
+import { collectForbiddenPatterns, scanForbiddenWordsEnhanced } from "@/lib/forbidden-checker";
 import {
   loadGenerationContext,
   handleNewCharacters,
@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote,
       previousNodes: previousNodes as any,
+      pendingCommitments: data.pendingCommitments,
     });
 
     // ── 7. 撰写指令（rules 已通过 systemPrompt 注入，这里只用原始 authorNote）──
@@ -110,6 +111,12 @@ export async function POST(request: Request) {
           // Phase 1: 流式生成
           let saveCounter = 0;
           let saving = false;
+          let scanBuffer = "";                    // 累积待扫描的新字符
+          let lastScanLength = 0;                 // 上次扫描时的总字符数
+          const rtPatterns = collectForbiddenPatterns(
+            template?.forbiddenPatterns || [],
+            customForbidden,
+          );
           for await (const chunk of orchestrator.writeSection(
             promptContext,
             partialDraft
@@ -124,6 +131,36 @@ export async function POST(request: Request) {
             if (chunk.type === "token") {
               newContent += chunk.content;
               send({ type: "token", content: chunk.content });
+
+              // ── 实时规则检测：每积累 ~200 字符扫描一次 ──
+              scanBuffer += chunk.content;
+              if (scanBuffer.length >= 200) {
+                try {
+                  const rtResult = scanForbiddenWordsEnhanced(scanBuffer, {
+                    customExactWords: rtPatterns.filter((p: any) => typeof p === "string" ? !p.startsWith("/") : !p.pattern?.startsWith("/")),
+                  });
+                  if (rtResult.matches.length > 0) {
+                    // 调整位置偏移（加上之前已扫描的部分）
+                    const adjusted = rtResult.matches
+                      .filter((m) => m.severity === "error" || m.severity === "warning")
+                      .slice(0, 5);
+                    for (const m of adjusted) {
+                      send({
+                        type: "rule_violation",
+                        pattern: m.pattern,
+                        severity: m.severity,
+                        context: m.context,
+                        suggestion: m.suggestion,
+                        position: lastScanLength + m.index,
+                      });
+                    }
+                  }
+                } catch (_) {
+                  // 实时扫描异常静默降级——不打断生成流
+                }
+                lastScanLength += scanBuffer.length;
+                scanBuffer = "";
+              }
 
               // 每 ~300 字保存草稿
               saveCounter += chunk.content.length;

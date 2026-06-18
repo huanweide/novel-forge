@@ -11,8 +11,12 @@ export const maxDuration = 120;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getActiveRules, injectRules } from "@/core/rules";
 
+
+import {
+  loadOutlineData, extractPrevContext,
+  buildCharacterList, prepareOutlineDirective, formatSummaries,
+} from "@/core/pipeline/outline-context";
 import { callSiliconFlow } from "@/lib/llm";
 
 export async function POST(request: Request) {
@@ -26,64 +30,25 @@ export async function POST(request: Request) {
     const drawCount = Math.min(Math.max(count, 3), 5); // 3-5张
 
     // ═══════════════════════════════════════════════
-    // Step 1: 读数据（复用 chapter-outline 的数据准备逻辑）
+    // Step 1: 读数据——使用共享模块
     // ═══════════════════════════════════════════════
-    const [project, node, allNodes, characters, summaries] = await Promise.all([
-      prisma.project.findUnique({ where: { id: projectId } }),
-      prisma.storyNode.findUnique({ where: { id: nodeId } }),
-      prisma.storyNode.findMany({
-        where: { projectId, parentId: null, type: { not: "volume" } },
-        orderBy: { order: "asc" },
-      }),
-      prisma.characterCard.findMany({ where: { projectId } }),
-      prisma.chapterSummary.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 3 }),
-    ]);
 
+    const { project, node, allNodes, characters, summaries } = await loadOutlineData(projectId, nodeId, 3);
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
 
-    const nodeIndex = allNodes.findIndex((n) => n.id === nodeId);
+    const prevContext = extractPrevContext(allNodes, nodeId);
 
-    // 前5章上下文
-    const prevNodes = allNodes.slice(Math.max(0, nodeIndex - 5), nodeIndex);
-    const prevContext = prevNodes.map(n => {
-      const outline = n.outline ? `\n  大纲：${n.outline.slice(0, 500)}` : "";
-      const ending = n.content ? `\n  正文末段：${n.content.slice(-800)}` : "";
-      return `[${n.title}]${outline}${ending}`;
-    }).join("\n\n");
-
-    // 作者指令
-    const effectiveAuthorNote = explicitAuthorNote?.trim() || project.authorNote?.trim() || "";
-
-    // ── Rules 系统注入 ──
-    const outlineRules = await getActiveRules(projectId, "outline_only");
-    const finalAuthorDirective = injectRules(effectiveAuthorNote, outlineRules);
-
-    const authorDirective = finalAuthorDirective
-      ? `\n## ⚠️ 作者指令——最高优先级\n${finalAuthorDirective}\n`
+    const authorDirectiveRaw = await prepareOutlineDirective(projectId, explicitAuthorNote || project.authorNote);
+    const authorDirective = authorDirectiveRaw
+      ? `\n## ⚠️ 作者指令——最高优先级\n${authorDirectiveRaw}\n`
       : "";
 
-    // 角色列表
-    const roleLabel: Record<string, string> = {
-      protagonist: "★主角", antagonist: "◆反派", mentor: "◈导师",
-      love_interest: "♡恋爱", supporting: "●配角", background: "○背景",
-    };
-    const characterList = characters.map((c: any) => {
-      const p = typeof c.personality === "object" && !Array.isArray(c.personality) ? c.personality as Record<string, unknown> : {};
-      const traits = [p.dominant, p.drive, p.contradiction].filter(Boolean).join("·") || "";
-      const brief = [
-        `${roleLabel[c.role] || c.role} | ${c.currentStatus || "存活"}`,
-        traits ? `性格：${traits}` : "",
-        c.background ? c.background.slice(0, 80).replace(/\n/g, " ") : "",
-      ].filter(Boolean).join(" | ");
-      return `- 【${c.name}】${c.aliases?.length ? `（${c.aliases.join("、")}）` : ""} ${brief}`;
-    }).join("\n");
-
-    const recentSummary = summaries.length > 0
-      ? summaries.map(s => `[${s.chapterTitle}] ${s.summary}`).join("\n")
-      : "";
-
+    // draw 模式带性格特征
+    const characterList = buildCharacterList(characters, true);
+    const recentSummary = formatSummaries(summaries);
+    const nodeIndex = allNodes.findIndex((n: any) => n.id === nodeId);
     const hasCustomPrompt = customPrompt?.trim();
 
     // ═══════════════════════════════════════════════
@@ -93,7 +58,7 @@ export async function POST(request: Request) {
 
 【卡片格式——纯JSON】
 {
-  "outline": "300-600字的完整章纲（核心冲突→情感基调→场景序列→关键对话→衔接钩子）",
+  "outline": "完整的标准格式章纲（详见下方）",
   "characters": ["角色名1", "角色名2"],
   "coreConflict": "一句话——谁和谁因为什么对立",
   "mood": "情感基调标签（如：暗流涌动 / 热血沸腾 / 哀而不伤）",
@@ -101,17 +66,39 @@ export async function POST(request: Request) {
   "cardLabel": "这张卡片的特色标签（如：🔥高冲突向 / 🧊冷峻智斗向 / 💔情感向 / ⚡快节奏动作向）"
 }
 
-【选角原则】
-1. 作者指令提到的人物→必须出场
-2. 前文末段正在发展的人物线→自然延续
-3. 章纲目标需要的人物→剧情需要谁就选谁
-4. 不强行塞无关人物
+【outline 字段必须严格按以下P0标准格式输出——三层结构】
 
-【铁律】
-- 作者指令 > 章纲目标 > 前文惯性
-- 绝不让角色做出违背其性格和关系的行为
-- 不允许凭空创造新角色
-- 每条路线的章纲必须有明显不同的侧重点`;
+### 第一部分：章节元信息
+C| 章节号 | 章节标题 | 开头承接（时间+地点+氛围）| 主视角人物
+L0| ✅ 平台合规 | ✅ 数据有效性 | ✅ 剧情连贯
+L1| ✅ 信息不对称 | ✅ 延迟揭示 | ✅ 章尾钩子(类型)
+L2| ✅ 否定对比式比喻禁令 | ✅ 内省配额(<20%) | ✅ 段尾硬停 | ✅ 行为说话
+
+### 第二部分：叙事段落
+- 【章首衔接】：[与C行第三列一致的时空描写]
+以下行按需交替使用（每行单独占一行）：
+R| [角色名][标签] [动作] [对象/地点] [结果/状态]
+⟨✍ 写作指令⟩（可选，给AI的导演批注）
+L| [地点名] [场景氛围描述]
+G| [金手指名称] [触发条件/表现]
+P| [事件描述]
+K| [台词内容] | [说话人] | [情境]
+- 【章尾悬念】：[本章最后一行]
+
+### 第三部分：技术规格
+CF| [伏笔名] | [操作类型:埋设/呼应/暗示/回收] | [操作细节]
+M| [情绪类型] | [强度1-10] | [通过什么描写手段实现]
+K| [金句内容] | [说话人] | [情境]
+EL| [当前幕名] | [本章情绪定位] | [对整体曲线的贡献]
+T| [下一章标题] | [剧情目标/需承接的状态]
+
+【规则】
+- 所有角色/地点/势力来自给定的白名单，不创造新角色
+- 每章至少3个R|行,1-2个L|行
+- 【章首衔接】和【章尾悬念】强制且必须存在
+- CF| 伏笔操作要明确写出埋设了什么和如何体现
+- 5条路线的章纲必须有明显不同的侧重点和走向
+- 路线间的差异应体现在：核心冲突不同、角色侧重不同、章尾钩子类型不同、伏笔方向不同`;
 
     const userPrompt = `${authorDirective}
 【章纲目标】

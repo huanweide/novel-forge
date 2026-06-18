@@ -2,35 +2,33 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { StreamingText } from "./StreamingText";
-import { ReviewPanel } from "./ReviewPanel";
+import { MarkdownViewer } from "./MarkdownViewer";
 import type { StoryNodeData, ReviewIssue } from "./types";
 
 export function CenterPanel({
   selectedNode, streamContent, isGenerating, reviewResult,
   authorNote, onAuthorNoteChange, targetWordCount, onTargetWordCountChange,
-  onWrite, onStop, onContinue, onEditOutline, onGenerateChapterOutline, onDrawChapterOutline,
-  projectId, lastGeneratedText, onEntitiesCreated, onOpenCardUpdater,
+  onWrite, onStop, onEditOutline, onGenerateChapterOutline, onDrawChapterOutline,
+  projectId,
   refineMode, onToggleRefineMode, refineInstruction, onRefineInstructionChange, onRefine,
   chapterOutlinePrompt, onChapterOutlinePromptChange,
   genStep, genStepLabels, chapterOutlineStatus,
-  onReviewDismiss, onReviewExplain, onReviewFix,
+  onOpenGame,
 }: {
   selectedNode: StoryNodeData | null; streamContent: string; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
   authorNote: string; onAuthorNoteChange: (v: string) => void;
   targetWordCount: number; onTargetWordCountChange: (v: number) => void;
-  onWrite: () => void; onStop: () => void; onContinue: () => void;
+  onWrite: () => void; onStop: () => void;
   onEditOutline: (outline: string) => void;
   onGenerateChapterOutline: (flashPrompt: string) => void;
   onDrawChapterOutline: () => void;
   chapterOutlinePrompt: string; onChapterOutlinePromptChange: (v: string) => void;
-  projectId: string; lastGeneratedText: string; onEntitiesCreated: () => void;
-  onOpenCardUpdater: () => void; refineMode: boolean; onToggleRefineMode: () => void;
+  projectId: string;
+  refineMode: boolean; onToggleRefineMode: () => void;
   refineInstruction: string; onRefineInstructionChange: (v: string) => void;
-  onRefine: () => void; onReviewDismiss: () => void;
-  onReviewExplain: (issue: ReviewIssue, note: string) => void;
-  onReviewFix: (issue: ReviewIssue, note: string) => void;
+  onRefine: () => void;
+  onOpenGame: () => void;
   genStep: string; genStepLabels: Record<string, { icon: string; label: string }>;
   chapterOutlineStatus: string;
 }) {
@@ -120,6 +118,13 @@ export function CenterPanel({
                       title={refineMode ? "切换到生成模式" : "切换到微调模式"}>
                       {refineMode ? "🔧 微调中" : "🔧 微调"}
                     </button>
+                    {!isGenerating && (
+                      <button onClick={onOpenGame}
+                        className="text-xs px-2 py-1 h-7 rounded border border-violet-700 text-violet-400 bg-violet-950/20 hover:bg-violet-950/40 hover:border-violet-600 transition-colors"
+                        title="互动游戏模式——像文字RPG一样创作本章">
+                        🎮
+                      </button>
+                    )}
                   </>
                 )}
                 <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 800)}
@@ -138,21 +143,14 @@ export function CenterPanel({
           {/* 正文显示区 */}
           <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-4">
             {displayContent ? (
-              <div className="max-w-2xl mx-auto">
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <StreamingText content={displayContent} isStreaming={isGenerating} />
-                </div>
-                {reviewResult && <ReviewPanel reviewResult={reviewResult} onDismiss={onReviewDismiss} onExplain={onReviewExplain} onFix={onReviewFix} />}
-                {!isGenerating && displayContent && (
-                  <div className="mt-6 space-y-4">
-                    <div className="flex justify-center">
-                      <Button onClick={onContinue} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium px-6 py-2 text-sm">✨ 继续写下一节</Button>
-                    </div>
-                    <div className="flex justify-center">
-                      <Button onClick={onOpenCardUpdater} variant="outline" className="text-xs border-amber-700 text-amber-400 hover:text-amber-300">🔄 AI 分析本章变化 · 更新三卡</Button>
-                    </div>
-                  </div>
+              <div className="max-w-[700px] mx-auto">
+                {/* 章节标题 */}
+                {selectedNode?.title && (
+                  <h1 className="text-xl font-bold text-zinc-200 text-center mb-6 mt-2 tracking-wide">
+                    {selectedNode.title}
+                  </h1>
                 )}
+                <MarkdownViewer content={displayContent} projectId={projectId} isStreaming={isGenerating} />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-zinc-600 text-sm">

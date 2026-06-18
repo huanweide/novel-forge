@@ -161,7 +161,7 @@ export async function parseSettings(
   let effectiveModel: string;
   if (client) {
     llm = client;
-    effectiveModel = process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+    effectiveModel = process.env.LLM_MODEL || "";
   } else {
     const config = await getEffectiveConfig();
     llm = createLLMClient(config);
@@ -436,7 +436,7 @@ export async function parseLorebookOnly(
   let effectiveModel: string;
   if (client) {
     llm = client;
-    effectiveModel = process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+    effectiveModel = process.env.LLM_MODEL || "";
   } else {
     const config = await getEffectiveConfig();
     llm = createLLMClient(config);
@@ -548,7 +548,7 @@ export async function parseStyleOnly(
   let effectiveModel: string;
   if (client) {
     llm = client;
-    effectiveModel = process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+    effectiveModel = process.env.LLM_MODEL || "";
   } else {
     const config = await getEffectiveConfig();
     llm = createLLMClient(config);

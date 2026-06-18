@@ -150,8 +150,10 @@ export function buildGenerationContext(params: {
   activeCharacters: CharacterCard[];
   authorNote: string;
   previousNodes: StoryNode[];
+  pendingCommitments?: any[];
 }) {
-  const { data, activeCharacters, authorNote, previousNodes } = params;
+  const { data, activeCharacters, authorNote, previousNodes, pendingCommitments = [] } = params;
+  const pendingItems = (data.pendingItems || []) as any[];
 
   return buildPromptContext({
     project: data.project as any,
@@ -163,5 +165,7 @@ export function buildGenerationContext(params: {
     storyBeats: data.storyBeats as any,
     styleCard: data.styleCard as any,
     authorNote,
+    pendingCommitments,
+    pendingItems,
   });
 }

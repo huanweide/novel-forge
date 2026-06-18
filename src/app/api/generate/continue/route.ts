@@ -30,18 +30,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "缺少 projectId 或 currentNodeId" }, { status: 400 });
     }
 
-    // ── 加载当前节点数据 ──
-    const [project, currentNode, allNodes, characters, loreEntries, summaries, storyBeats, styleCard] =
-      await Promise.all([
-        prisma.project.findUnique({ where: { id: projectId } }),
-        prisma.storyNode.findUnique({ where: { id: currentNodeId } }),
-        prisma.storyNode.findMany({ where: { projectId }, orderBy: { order: "asc" } }),
-        prisma.characterCard.findMany({ where: { projectId } }),
-        prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
-        prisma.chapterSummary.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 5 }),
-        prisma.storyBeat.findMany({ where: { projectId }, orderBy: { chapterNumber: "desc" }, take: 20 }),
-        prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
-      ]);
+    // ── 加载上下文（复用 loadGenerationContext，与 write/refine 一致）──
+    const genData = await loadGenerationContext(projectId, currentNodeId, 5);
+    const { project, currentNode, allNodes, characters, loreEntries, summaries, storyBeats, styleCard, pendingCommitments } = genData;
 
     if (!project || !currentNode) {
       return NextResponse.json({ error: "项目或节点不存在" }, { status: 404 });
@@ -115,6 +106,7 @@ export async function POST(request: Request) {
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote || undefined as any,
       previousNodes: previousNodes as any,
+      pendingCommitments: pendingCommitments as any[],
     });
 
     // ── 撰写指令 ──

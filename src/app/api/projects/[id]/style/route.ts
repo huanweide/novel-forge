@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { STYLE_TEMPLATES, getTemplate } from "@/core/templates";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 /**
  * GET /api/projects/[id]/style
@@ -31,6 +32,7 @@ export async function GET(
       targetWordsPerSection: (config.targetWordsPerSection as number) ?? template?.targetWordsPerSection ?? 1000,
       customForbiddenPatterns: (config.customForbiddenPatterns as string[]) || [],
       customStyleNotes: (config.customStyleNotes as string) || "",
+      dimensions: (config.dimensions as Record<string, number>) || {},
       template: template || null,
     });
   } catch (err) {
@@ -93,11 +95,17 @@ export async function PUT(
       targetWordsPerSection: body.targetWordsPerSection ?? (templateConfig.targetWordsPerSection as number | undefined) ?? (currentConfig.targetWordsPerSection as number | undefined) ?? 1000,
       customForbiddenPatterns: body.customForbiddenPatterns ?? (currentConfig.customForbiddenPatterns as string[]) ?? [],
       customStyleNotes: body.customStyleNotes ?? (currentConfig.customStyleNotes as string) ?? "",
+      dimensions: body.dimensions ?? (currentConfig.dimensions as Record<string, number>) ?? {},
     };
 
     await prisma.project.update({
       where: { id },
       data: { llmConfig: newConfig as any },
+    });
+
+    // 切换文风模板后立即刷新 globalPrompt，让下次生成生效
+    syncGlobalPrompt(id).catch((e) => {
+      console.error("文风切换后 globalPrompt 刷新失败:", e instanceof Error ? e.message : String(e));
     });
 
     return NextResponse.json(newConfig);

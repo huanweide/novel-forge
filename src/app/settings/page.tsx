@@ -5,14 +5,14 @@ import Link from "next/link";
 
 const PROVIDERS = [
   { key: "siliconflow", name: "硅基流动 (SiliconFlow)", defaultModel: "deepseek-ai/DeepSeek-V4-Flash", desc: "国产，便宜，DeepSeek V4 全系" },
-  { key: "deepseek", name: "DeepSeek 官方", defaultModel: "deepseek-chat", desc: "DeepSeek 官方 API，兼容 OpenAI 格式" },
+  { key: "deepseek", name: "DeepSeek 官方", defaultModel: "deepseek-v4-flash", desc: "DeepSeek 官方 API，兼容 OpenAI 格式" },
   { key: "openai", name: "OpenAI", defaultModel: "gpt-4o", desc: "GPT-4o / GPT-4.1 系列" },
   { key: "groq", name: "Groq", defaultModel: "llama-3.3-70b-versatile", desc: "极速推理，开源模型" },
   { key: "custom", name: "自定义 (OpenAI 兼容)", defaultModel: "", desc: "任何兼容 OpenAI API 的服务" },
 ];
 
 export default function SettingsPage() {
-  const [provider, setProvider] = useState("siliconflow");
+  const [provider, setProvider] = useState("deepseek");
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("");
   const [baseUrl, setBaseUrl] = useState("");

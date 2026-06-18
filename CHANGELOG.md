@@ -2,6 +2,607 @@
 
 ---
 
+## v0.20.22 — 2026-06-18
+
+### 🎯 12维风格参数注入生成提示词 + 代码去重
+
+**12维风格参数端到端打通**
+- 修复 Style API PUT 路由——`body.dimensions` 不再被静默丢弃，正确存入 `llmConfig`
+- 修复 Style API GET 路由——返回 `dimensions` 字段
+- orchestrator.ts `buildPromptContext` 读取 `llmConfig.dimensions`，生成风格参数块注入系统提示词
+- 12维标签：词汇丰富度/句子长度/描写密度/对话比例/修辞手法/节奏速度/心理描写/环境描写/口语化/幽默感/暴力程度/暧昧程度
+
+**continue/route.ts 消除内联查询**
+- 改用 `loadGenerationContext(projectId, currentNodeId, 5)`，与 write/refine 统一
+- 删除 9 表 Promise.all 内联查询
+
+**chapter-outline 路由代码去重**
+- 新建 `src/core/pipeline/outline-context.ts` 共享模块
+- 提取 6 个共享函数：loadOutlineData / extractPrevContext / extractNextContext / buildCharacterList / prepareOutlineDirective / formatSummaries
+- chapter-outline/route.ts 和 draw/route.ts 都改用共享函数，各减少 ~60 行重复代码
+
+## v0.20.21 — 2026-06-17
+
+### 🧹 全站架构自查+清理——砍掉 ~3500 行死代码
+
+**前端死代码（5组件）**
+- CardUpdater（1051行）— PostGenPanel 替代，已删
+- ChapterExtractionPanel（612行）— PostGenPanel 替代，已删
+- OutlineGenerator（327行）— OutlineDialog 替代，已删
+- EntityDetector（253行）— 旧UI残留，已删
+- StreamingText（11行）— MarkdownViewer 替代，已删
+
+**后端死代码**
+- /api/agent/logic-check — post-processor 已内联相同逻辑且更完整，已删
+- /api/generate/check-all-cards — 三相位检查，前端不调用，已删
+- /api/generate/update-style-card — 文风更新走 projects/[id]/style，已删
+- commitment-tracker.ts — 完整类定义从未实例化，已删
+
+**Schema 清理**
+- Project.povCharacterId — 从未写入的死字段，已移除
+- StoryNode.previousVersionId — 从未写入的死字段，已移除
+- Store reviewPanelOpen — 不再有 ReviewPanel 组件，已移除
+
+**重复修复**
+- ReviewPanel 不再在 CenterPanel 中重复渲染（审校结果只在 PostGenPanel 看）
+- PostGenPanel 改用统一的 ReviewIssue 类型，消除内联重复定义
+- continue/route.ts 移除未使用的 loadGenerationContext 导入
+
+**抽卡集成 P0 格式**
+- DrawCards API 输出 P0 标准格式章纲（C|/R|/L|/G|/P|/CF|/M|/K|/EL|/T|）
+- DrawCards 组件新增 P0 语法高亮着色（与 GameOutlineEditor 配色一致）
+
+## v0.20.20 — 2026-06-17
+
+### 📋 P0标准格式章纲系统 + 游戏页内置编辑器
+
+**结构化章纲格式**
+- 三层架构：章节元信息（C|/L0|/L1|/L2|）→ 叙事段落（R|/L|/G|/P|/⟨✍⟩）→ 技术规格（CF|/M|/K|/EL|/T|）
+- 每行精确语义：R|角色行动 / L|场景切换 / G|金手指触发 / P|剧情推进 / CF|伏笔操作 / M|情绪 / K|金句 / EL|弧线 / T|过渡
+- 写作指令 ⟨✍⟩ 作为导演批注，不构成故事内容
+
+**章纲生成API**
+- POST /api/game/outline/generate — Agent按P0格式一键生成章纲
+- POST /api/game/outline/chat — 多轮对话确认章纲（SSE流式），支持"探讨-反馈-定稿"
+
+**游戏页内嵌章纲编辑器**
+- 三模式切换：✏️编辑（语法高亮） / 👁预览（着色渲染） / 💬对话（AI对话确认）
+- 行类型着色：C|青 R|绿 L|青 G|金 P|灰 CF|紫 M|玫瑰 K|琥珀 EL|粉 T|青
+- ⚡AI生成按钮 + 💾保存到StoryNode.outline
+
+**章节树🎮入口**
+- 每个章节节点悬停即显示🎮按钮，点击进入游戏模式
+- 无需先在workspace选中章节再点游戏按钮
+
+## v0.20.19 — 2026-06-17
+
+### 🎮 游戏模式——互动文本冒险写作
+
+**独立沉浸式 UI 页面**
+- 全新路由 `/workspace/[pid]/game/[nid]`，全屏暗黑主题
+- 三栏布局：左侧（情节/角色/势力）+ 主画布（叙事流+选项）+ 右侧（正文/背包/世界）
+- 简单星空粒子背景，安静不喧闹
+
+**核心游戏循环**
+- 6 个快捷动作：观察/对话/战斗/探索/使用物品/休息 + 自定义文本输入
+- AI 逐段生成 300-600 字叙事，每轮给出 2-4 个编号选项
+- SSE 流式输出，实时打字感
+
+**实体与背包追踪**
+- 每轮自动追踪新实体（NE|格式），类型：角色/地点/物品/势力/功法/生物
+- 背包系统（CI|格式），获得/消耗/装备追踪，右侧面板分类展示
+- 情节进度百分比，基于章纲情节点自动推进
+
+**结束并导出**
+- 点击"结束并导出"→检查章尾悬念钩子→有钩子用钩子收尾，无钩子自然收束
+- 拼接全部累积正文→保存为 StoryNode.content，与正常 AI 直写无差别
+- 返回工作区即可看到完整章节正文
+
+**后端**
+- 新增 GameSession + GameState 两张数据表
+- 新增 3 条 API：/api/game/start（初始化）/ /api/game/action（SSE回合）/ /api/game/end（导出）
+- 新增 src/core/game/ 模块：game-engine.ts / game-prompts.ts / types.ts
+- CenterPanel 新增 🎮 游戏模式入口按钮
+
+## v0.20.18 — 2026-06-17
+
+### 🎨 文风面板全面升级——12维度 + 废词检测内置
+
+**文风编辑器重写**
+- 10 种预设风格库（热血/日常/黑暗/悬疑/恋爱/史诗/科幻/古风/极简/自定义），一键切换
+- 12 维度滑块微调：词汇丰富度、句子长度、描写密度、对话比例、修辞手法、节奏速度、心理描写、环境描写、口语化、幽默感、暴力程度、暧昧程度
+- 三项 Tab：文风维度 / 废词检测 / LLM参数
+
+**废词检测引擎 v3.0**
+- 5 类检测器：精确禁用词、句式模式（正则）、身体模板（正则）、模糊词密度（每500字）、AI高频特征词
+- 内置 50+ 条检测规则，支持自定义禁用词和正则表达式
+- 质量评分 0-100，按严重度/类别分组展示
+- [扫描当前章节] 按钮——即时检测并展示上下文+替换建议
+
+### 📊 统一分析面板——4 Tab 替代旧版碎片UI
+
+**PostGenPanel 内联面板**
+- 替代旧版 ChapterExtractionPanel（全屏弹窗）+ CardUpdater（旧三卡）+ distillSummary 浮动横幅 + autoUpdateNotification 浮动横幅 + cardUpdatePending 浮动按钮 + "AI分析本章变化"正文下方按钮
+- 4 Tab：📊章节提取 / 🔍逻辑自查 / ⚡本地蒸馏 / 📝审校
+- 底部操作栏：[全部采纳] [✨继续写下一节] [关闭]
+
+### 🔍 逻辑自查自动化
+
+**新增 /api/agent/logic-check**
+- 角色死活一致性：前文标记 dead 的角色本章出场 → error
+- 时间线连续：前章时间标记 > 本章 → warning
+- 关系突变检测：前文盟友 → 本章敌对，检查过渡描写
+- 物品追踪：前3章出现的物品本章未提及 → info
+
+### 🧹 前端大清理
+
+**删除的重复/过时元素**
+- ❌ 2 个浮动横幅（蒸馏通知 + 提取通知）
+- ❌ 1 个浮动按钮（三卡待更新）
+- ❌ 1 个全屏加载遮罩
+- ❌ 2 个正文下方按钮（继续写下一节 + AI分析本章变化 → 移至 PostGenPanel）
+- ❌ ChapterExtractionPanel 全屏弹窗
+- ❌ CardUpdater 旧三卡分析弹窗
+- ❌ autoAnalyzeChapter 旧函数
+
+**保留但整合的**
+- ✅ 章节提取 → PostGenPanel 📊提取 Tab
+- ✅ 本地蒸馏 → PostGenPanel ⚡蒸馏 Tab
+- ✅ 审校结果 → PostGenPanel 📝审校 Tab
+- ✅ 继续写下一节 → PostGenPanel 底部按钮
+
+---
+
+## v0.20.17 — 2026-06-17
+
+### 🤖 章节自动提取系统——12 维度一键入库
+
+**生成完自动弹出提取面板**
+- 一次 LLM 调用提取 12 个维度：出场角色、场景地点、势力阵营、道具物品、伏笔线索、情绪节奏、关键台词、章节摘要、下章衔接、写作要素、角色经历、关系变化
+- 逐项展示，可单独采纳/编辑/取消，支持全部采纳/全部忽略
+- 智能路人检测：提及 < 3 次 + 无对话 + 无行动 → 标记"疑似路人"，不自动建卡
+- 提取结果自动写入对应数据表：角色卡（新建/经历追加/能力追加）、世界书（地点/势力/道具）、伏笔表、章节摘要、下章大纲衔接
+
+**替代旧三卡分析**
+- 旧的 CardUpdater 自动触发改为新的提取面板
+- CardUpdater 保留手动触发（按钮+浮动按钮）作后备
+- 提取失败自动回退到 CardUpdater
+
+**上下游完整贯通**
+- 后处理管线 → SSE done → 自动调提取 API → 面板弹出 → 用户选择 → 批量写入 → loadProject 刷新
+- 与现有 post-processor 无冲突——提取面板 upsert chapterSummary，不重复写入
+
+### 🕸️ 角色关系——世界书新维度
+
+**数据模型**
+- 关系存为世界书条目（`category=character_relationship`），零 schema 变更
+- 关系条目格式：A ↔ B：关系类型，含原因、动态、正文证据
+- WorldPanel 新增「角色关系」板块，支持手动创建和编辑
+
+**Agent 自动同步**
+- `relation_sync` 工具：从正文提取关系 → 自动写入世界书
+- 融合替代策略：已有同角色关系 → 追加新内容；没有 → 新建条目
+- `/api/agent/sync-relations` API
+
+**生成时强制注入**
+- 正文生成时，根据当前调度角色名强制加载对应的关系条目
+- 注入到 systemPrompt「角色关系网」区域——不走触发词匹配，直接按角色名查询，保证不漏
+
+**关系可视化**
+- RelationshipGraph 重写为 Agent 正文分析驱动
+- 每条关系带正文原句证据 + 来源章节
+- 标记"角色卡记录但正文未体现"的过时关系
+
+### 🧠 Agent 会话记忆 + 写后分析
+
+**会话记忆**
+- `src/lib/chat-sessions.ts`：内存存储，按 projectId 隔离
+- 最多 20 条消息，30 分钟自动过期
+- Agent 记住本轮对话上下文，问完"最强角色"再问"他和凌霜什么关系"——知道"他"是谁
+
+**写后分析**
+- `analyze_chapter` 工具：对比正文 vs 角色卡，找出 6 类缺失（能力/性格/关系/别名/状态/外貌）
+- 分析结果卡片展示 + 一键采纳 → 自动更新角色卡
+- `/api/agent/analyze-chapter` API
+
+### 📐 变更
+
+- `api/agent/extract-chapter/route.ts` — **新建**：LLM 一次提取 12 维度
+- `api/agent/apply-extraction/route.ts` — **新建**：批量写入 5 张表
+- `api/agent/sync-relations/route.ts` — **新建**：关系同步到世界书
+- `api/agent/analyze-chapter/route.ts` — **新建**：章节 vs 角色卡对比
+- `api/agent/analyze-relationships/route.ts` — **新建**：Agent 读正文提取关系网
+- `components/workspace/ChapterExtractionPanel.tsx` — **新建**：提取面板 UI
+- `components/workspace/RelationshipGraph.tsx` — **重写**：Agent 驱动的关系图
+- `lib/chat-sessions.ts` — **新建**：Agent 会话记忆
+- `page.tsx` — 集成提取面板，自动触发替代旧三卡分析
+- `orchestrator.ts` — 生成时强制注入角色关系条目
+- `tool-registry.ts` — +4 工具（analyze_chapter/analyze_relationships/relation_sync/extract_chapter），category 映射
+- `WorldPanel.tsx` — +角色关系板块 + 字段模板
+- `RightPanel.tsx` — +关系图子tab
+- `AIChatBar.tsx` — 分析结果展示 + 一键采纳 + 关系同步
+- `chat/route.ts` — 会话注入 + 路径E/F + 新工具速查
+- `types/index.ts` — LoreCategory 新增 character_relationship
+
+---
+
+## v0.20.16 — 2026-06-17
+
+### 🎨 右侧栏重构——三 tab 一体化
+
+**顶部三 tab 切换**
+- 🤖 **AI助手** — AI 对话栏从页面底部移入右侧面板，始终可见
+- 🔍 **查询实体** — 实体追踪 + 伏笔，子 tab 切换
+- 📊 **监测** — 实时统计数据面板
+
+**监测面板**
+- 字数概览：总字数、完成率、当前章字数、均章字数
+- Token 估算：生成/提示/总计 Token 消耗（基于字数智能估算）
+- 章节分布：最多/最少字数、完成进度
+- 数据记录：摘要数、转折点数、伏笔数
+- API：`/api/stats/monitor` 聚合查询
+
+**交互**
+- 最小化状态三条竖排标签可点击切 tab
+- 底部统计栏 + 可折叠上下文监控保留
+
+### 📐 变更
+- `RightPanel.tsx` — 重写，三 tab 架构
+- `MonitorPanel.tsx` — 新建
+- `/api/stats/monitor` — 新建
+- `page.tsx` — 移除底部 AIChatBar，AI 对话移入右侧面板
+
+---
+
+## v0.20.15 — 2026-06-17
+
+### 🤖 Agent 工具箱全面升级——21 工具接管所有按钮
+
+**从 4 工具扩展到 21 工具，覆盖全部 CRUD 操作：**
+
+**🧑 角色管理 (5)**
+- `character_list` — 列出全部角色（可按类型筛选）
+- `character_get` — 查单个角色完整信息（性格/外貌/关系网/时间线/弧光）
+- `character_create` — 创建角色（支持快速导入原文描述）
+- `character_update` — 修改角色属性（姓名/性格/状态/弧光等）
+- `character_delete` — 删除角色
+
+**📖 世界书管理 (5)**
+- `lore_list` — 列出世界书条目（按分类筛选：地理/势力/物品/功法等）
+- `lore_get` — 按关键词查设定完整内容
+- `lore_create` — 创建世界设定/势力/物品/功法
+- `lore_update` — 修改词条
+- `lore_delete` — 删除词条
+
+**📋 大纲管理 (4)**
+- `outline_list` — 查看大纲树（卷→章→节层级，含状态/字数）
+- `outline_create` — 创建节点（可指定父节点）
+- `outline_update` — 修改标题/大纲/状态
+- `outline_delete` — 删除节点（含递归删除子节点）
+
+**🔮 伏笔管理 (3)**
+- `foreshadowing_list` — 列出伏笔（按状态筛选）
+- `foreshadowing_create` — 创建伏笔
+- `foreshadowing_update` — 修改状态/描述
+
+**📝 正文 (2)**
+- `chapter_get` — 查询章节正文内容
+- `chapter_generate` — 触发 AI 写作面板（frontendAction 机制——通知前端弹面板）
+
+**🔍 其他 (2)**
+- `detect_entities` — 扫描正文实体引用
+- `project_info` — 查看项目统计
+
+**🖥️ 前端工具箱**
+- AIChatBar 新增 6 个工具按钮：查角色/查设定/查伏笔/扫实体/大纲/项目
+- 按钮点击→调 `/api/tools/execute`→显示格式化结果
+- 工具输入行支持回车执行、Esc 取消
+- `chapter_generate` 返回 `frontendAction`→前端可据此弹出写作面板
+
+**🏗️ 架构**
+- `tool-registry.ts` — 重写，ToolContext 新增 `prisma` 字段支持写操作
+- `/api/tools/execute` — 新建接口，承接前端工具按钮调用
+- `chat/route.ts` — 工具调用循环升级，支持 frontendAction 透传
+
+### 📐 变更清单
+- 重写 1 文件（tool-registry.ts 4→21 工具）
+- 新建 1 文件（/api/tools/execute）
+- 修改 2 文件（chat route + AIChatBar）
+
+## v0.20.14 — 2026-06-17
+
+### 🧠 记忆系统闭环 + Agent 工具层
+
+**📊 规则分类接入后处理**
+- `memory-classifier.ts`：新增 `tieredMemoryToImportances()` 和 `classifyAndConvert()` —— 将规则分级的 S/A/B 事件转为 EventImportances 格式
+- `post-processor.ts`：step 4.5 —— LLM 摘要存储后，自动运行基于规则的 classifyEvents
+  - 合并 LLM 的事件分层 + 规则分类结果，双保险
+  - SSE 事件 `classify_done` 推送分类统计
+  - 失败降级不阻塞主流程
+
+**🔮 右侧伏笔页签**
+- `ForeshadowingPanel.tsx` — **[新]** 伏笔追踪面板——按状态分组（⏳埋设中/🔄部分回收/✅已回收/❌已废弃）
+  - 可折叠分组，点伏笔查看详情（预计回收章号、来源、完成度）
+  - 状态徽章颜色编码：黄=待处理 蓝=部分 绿=已回收 灰=废弃
+- `/api/foreshadowing/list` — **[新]** GET 接口，按 projectId 返回按状态分组的伏笔列表
+- `RightPanel.tsx`：新增 tab 切换——📊 实体 | 🔮 伏笔，最小化状态显示当前 tab 名
+
+**🤖 Agent 工具层**
+- `tool-registry.ts` — **[新]** 工具注册表（单例），4 个内置工具：
+  - `detect_entities`：扫描正文片段中的实体引用
+  - `query_characters`：按名称模糊查角色卡
+  - `query_lore`：按关键词查世界书词条
+  - `check_foreshadowing`：按描述匹配已有伏笔
+- `orchestrator.ts`：新增 `getToolSchemas()` 和 `executeToolCall()` 方法
+- `llm/client.ts`：LLMRequest 支持 `tools` 参数，LLMResponse 支持 `toolCalls` 解析，ChatMessage 支持 tool 角色
+- `chat/route.ts`：工具调用循环——LLM 可主动调用工具查询角色/设定/伏笔后再作答（最多 3 轮）
+
+### 📐 架构变更
+- 无 Prisma schema 变更
+- 新增 3 文件，修改 6 文件
+
+### 🧠 记忆系统——S级伏笔强制注入，AI不再忘掉自己埋的线
+
+**🔴 S级记忆——未回收伏笔强制注入（最高优先级）**
+- `assembly/engine.ts`：新增 `buildForeshadowingSection`——从 PendingCommitment 表加载所有未回收伏笔
+  - 按到期章号排序（即将到期的排最前），注入 prompt 顶部
+  - 标注 ⚠️ 待回收、预计回收章号、关联角色
+  - Token 预算：从短期记忆分出 5% 给 S 级记忆
+- `context-loader.ts`：所有生成路由并行加载 `pendingCommitment`（最多 30 条）
+- `types/index.ts`：PromptContext 新增 `pendingCommitments` 字段
+- `TokenAllocation` 新增 `foreshadowing` 预算项
+
+**📊 记忆分级引擎**
+- `memory-classifier.ts` — **[新]** S/A/B 三级分类逻辑
+  - S 级：未回收伏笔 + impact=major 转折点 + 核心角色状态变化
+  - A 级：最近 5 章 keyEvents + 角色重叠排序
+  - B 级：更早章节 1 行摘要归档
+  - `formatTieredMemory()` 按 token 预算截断注入
+
+**🔗 数据流**
+- `pre-processor.ts`：buildGenerationContext 透传 pendingCommitments
+- `orchestrator.ts`：buildPromptContext 接收并传入 PromptContext
+- `write/refine/continue` 三路由：通过共享的 context-loader 自动获得伏笔数据
+
+**📐 Token 预算调整**
+```
+systemPrompt:  8%  ─ 不变
+globalMemory: 10%  ─ 不变
+triggeredLore:15%  ─ 不变
+foreshadowing: 5%  ─ 新增（从 shortTerm 分出）
+shortTerm:    20%  ─ 从 25% 降至 20%
+mediumTerm:   10%  ─ 不变
+longTerm:      5%  ─ 不变
+responseReserve:23% ─ 不变
+```
+
+---
+
+## v0.20.12 — 2026-06-17
+
+### 📊 右侧实体追踪面板 + 💬 底部 AI 对话栏
+
+**📊 实体追踪面板（替换上下文监控）**
+- `ChapterEntitiesPanel.tsx` — **[新]** 扫描当前章节正文，按类型分组显示已出现的实体
+  - 6 组：角色🧑 / 势力🏛️ / 物品💎 / 地点🗺️ / 世界观🌐 / 功法⚔️
+  - 每组显示颜色圆点 + 实体名 + 数量标记
+  - 点击实体名 → 打开编辑弹窗（复用 CharacterEditDialog / LorebookEditDialog）
+  - 未在数据库中注册的实体标记为「未注册」
+  - 底部统计：已注册实体数 + 本章匹配次数
+- `RightPanel.tsx`：标题从"上下文监控"→"实体追踪"，上下文监控折叠到最底部
+- `entity-highlighter.ts`：抽取 `findEntitiesInText()` 共享匹配逻辑（rehype 插件 + 面板复用）
+- `rehype-entity-highlight.ts`：委托共享函数替换本地实现
+
+**💬 底部 AI 对话栏**
+- `AIChatBar.tsx` — **[新]** 页面底部常驻对话输入区
+  - 4 条快捷建议按钮（改对话/加描写/查逻辑/加习惯动作）
+  - 选中正文区间后自动带上文发送——显示"已选中：xxx…"标签
+  - AI 回复显示在输入框上方，再次发送自动替换
+  - Enter 发送，Shift+Enter 换行
+- `api/generate/chat/route.ts` — **[新]** 短对话 API，200 字以内回复，温度 0.7
+- workspace 页面：新增 `selectedText` 状态，三栏容器 `onMouseUp` 追踪选中文本
+
+---
+
+## v0.20.11 — 2026-06-17
+
+### 📝 Markdown 默认渲染 + 实体颜色高亮 + 阅读排版优化
+
+**🎨 正文显示升级——从纯文本到富文本**
+- `MarkdownViewer.tsx` — **[新]** 基于 react-markdown + remark-gfm 的正文渲染组件
+  - 支持标题（h1-h3）、粗体/斜体、引用块、列表、表格、代码块、删除线、链接
+  - 深色主题定制样式——h1 居中大号、引用块左侧竖线、代码块琥珀色高亮
+
+**📐 阅读排版优化——护眼舒适**
+- 正文字号从 14px → **17px**，行距从 1.6 → **1.85 倍**
+- 字间距 `0.02em`，颜色从刺眼纯白 → **柔白 #e2e2e2**
+- 内容区最大宽度 **700px 居中**，左右留白呼吸感
+- 章节标题自动居中显示（读 `selectedNode.title`）
+
+**🔍 实体颜色高亮——低饱和度克制点缀**
+- `entity-highlighter.ts` + API 路由 + rehype 插件
+- 颜色从高饱和改为暗色背景适配的**低饱和度色板**：
+  - 角色 `#5B9BD5` 柔蓝 / 势力 `#70AD47` 苔绿 / 物品 `#D4A017` 暗金
+  - 地点 `#C55A11` 赭石 / 世界观 `#9B59B6` 淡紫 / 功法 `#D64545` 暗红
+- 正文底部实体图例（颜色方块+类型名+计数）
+- hover 时 1.5px 边框 + 同色背景晕染
+
+**📋 流式兼容**
+- 流式生成期间先渲染纯 Markdown（不加实体高亮，避免部分匹配误判）
+- 流式结束后实体映射异步加载 → 自动补上高亮
+
+---
+
+## v0.20.10 — 2026-06-17
+
+### 🎨 文风系统接通——模板 stylePrompt 真正注入生成提示词
+
+**🔧 核心修复——模板选了白选的历史问题**
+- `sync-global-prompt.ts`：现在读 `project.llmConfig.styleTemplateId` → 加载模板 → 注入 `stylePrompt` + 禁用词 + 节奏指引 + 对话指引 到 `globalPrompt`
+- `style/route.ts`：切换模板后自动调 `syncGlobalPrompt` 刷新缓存，下次生成立即生效
+
+**📋 注入内容（四个维度的风格约束）**
+- `stylePrompt`：200-300 字详细写作指令，标注为「最高优先级」
+- 禁用词/句式：从 `forbiddenPatterns` 转为 prompt 指令（不再仅后处理检查，LLM 生成时就知道要避开）
+- 节奏指引 `pacingGuide`：场景节奏（慢→快→爆 / 流水式 / 压抑→爆发 等）
+- 对话指引 `dialogueGuide`：对话风格（角色语域 / 占比 / 打断规则）
+
+**⚠️ 之前状态**：9 个模板预设完全写好，`applyTemplate()` 函数存在但从未被任何生成路由调用。`stylePrompt` 只在一个 debug 端点（preview-context）中展示——不影响实际生成。用户选模板只影响 temperature/topP，本质的风格约束完全落空。
+
+---
+
+## v0.20.9 — 2026-06-17
+
+### 👥 人物关系独立提取 + 自动应用模式
+
+**🆕 人物关系——简单直白的 A对B 关系提取**
+- `update-cards/route.ts`：prompt 新增 `characterRelations` 输出——sourceName/targetName/relation/reason 四字段
+  - 关系类型：仇恨/爱慕/盟友/敌对/师徒/主仆/同门/血亲/恩人/利用/敬仰/嫉妒/竞争/合作
+  - 附带一句话原因（如"因为A被B当众羞辱"）
+- `apply-updates/route.ts`：多向总结——已存在的关系→追加原因，不存在→新建
+- CardUpdater 新增 👥人物关系展示区域
+
+**⚡ 自动应用模式——不再每次弹窗确认**
+- CardUpdater 新增"自动应用"复选框（localStorage 持久化）
+- 勾选后：章节写完 → 全选所有提取结果 → 自动调用 apply-updates → 关闭
+- 不勾选保持原流程：弹出 CardUpdater → 手动勾选 → 手动应用
+
+---
+
+## v0.20.8 — 2026-06-17
+
+### 🏗️ 世界构建面板拆分——11 板块独立管理
+
+**🖥️ WorldPanel 替换单一世界书列表**
+- `components/workspace/WorldPanel.tsx` — **[新]** 11 个独立板块，每个有自己的图标/描述/字段模板/新建表单
+  - 🗺️地理地图 / ⚔️势力阵营 / 💎物品列表 / ⚡力量体系 / 📜功法体系
+  - 🐉生物种族 / 🎭文化风俗 / 📚历史背景 / ⚖️规则法则 / 💰货币体系 / 🔮特殊设定
+- `LeftPanel.tsx` — "世界书" tab 替换为 "世界" tab，集成 WorldPanel
+- 每个板块独立计数，点击切换，空板块显示引导提示
+
+**📝 独立新建表单——每板块字段不同**
+- 地理：类型/父级/描述；势力：类型/阵营/首领/领地/描述
+- 物品：类型/稀有度/持有者/状态/描述；功法：类型/品阶/属性/传承方式/描述
+- 力量体系：等级序列/能量来源/突破条件/描述
+- 货币：材质形态/价值层级/流通范围/描述
+- 数据仍存入 LorebookEntry，category 字段区分板块
+
+**💉 Prompt 注入按板块分组**
+- `engine.ts`：`buildLoreSection` 改为按 category 分组注入
+- 每板块独立小标题（如"🗺️ 地理环境"），宽松自然语言格式
+- 格式：`- 条目名：内容描述`，不给 LLM 结构化压力
+
+---
+
+## v0.20.7 — 2026-06-17
+
+### 📌 情节脉络 + 支线故事自动提取
+
+**🆕 章节摘要 → Storyline 自动映射**
+- `update-cards/route.ts`：prompt 新增 `plotLines`（情节脉络）和 `subPlots`（支线故事）两个输出维度
+  - 每条包含 title/type/progress/stage（七阶段之一）/characters
+- `apply-updates/route.ts`：
+  - 自动创建/更新 Storyline 记录——已有同名线→追加阶段进展，新线→创建
+  - 七要素自动填充：desire/obstacle/action/result/twist/turn/ending
+  - chapterBindings 自动绑定当前章节
+- `CardUpdater.tsx`：新增 📌情节脉络推进 / 🌿支线故事展开 两个展示区域
+
+### 🔧 功法体系 category 补充
+- `update-cards/route.ts`：newLoreEntries 的 category 选项新增 `technique`（功法体系）
+
+---
+
+## v0.20.6 — 2026-06-17
+
+### 🔗 章节摘要 → 17 模块自动映射（第一阶段）
+
+**🐛 修复伏笔数据被丢弃的 bug**
+- `apply-updates/route.ts`：`newForeshadowings` 一直被接收但从未写入数据库——现在自动创建 PendingCommitment 记录（status: "detected"），关联角色 ID + 闭环条件
+
+**🆕 扩展 LLM 提取维度**
+- `update-cards/route.ts`：prompt 新增世界观构建/故事核心/全局时间线 3 个维度
+  - `worldSettings`：时代背景/核心规则/特殊元素/主要冲突/社会结构/历史背景
+  - `storyCore`：主线推进/核心谜题/主题呈现
+  - `globalTimeline`：本章关键事件（标题/类型/重要性/参与角色）
+- 新增字段全部加入 JSON schema 和 API 返回
+
+**🆕 扩展数据写入路径**
+- `apply-updates/route.ts`：
+  - `worldSettings` → Project.description（追加合并）
+  - `storyCore` → Project.synopsis（追加合并）
+  - `globalTimeline` → StoryBeat 表（按事件逐条创建）
+
+**🖥️ CardUpdater 面板扩展**
+- 新增 3 个展示区域：🌐世界观设定 / 📖故事核心 / ⏱️全局时间线
+- 用户确认后一键写入全部模块
+
+---
+
+## v0.20.5 — 2026-06-17
+
+### 📡 前端 SSE 事件补全——蒸馏结果实时可见
+
+**🖥️ 生成过程中实时展示本地蒸馏结果**
+- `workspace/[projectId]/page.tsx`：`streamSSE` 新增 6 种事件处理——`distill_local_start/done`、`foreshadow_update`、`entity_auto_created/skip/error`
+- `components/workspace/types.ts`：`SSEEvent` 类型扩展——`stats`/`stateChanges`/`foreshadowEvents`/`newEntities`/`created`/`updated`
+- 绿色蒸馏完成通知横幅——生成完成后自动弹出，显示实体数/状态变化/伏笔信号/自动创建数
+- 通知优先级：蒸馏通知 → AI深度分析通知 → CardUpdater 对话框，不堆叠
+- 蒸馏累计数据在每次生成开始时自动重置
+
+---
+
+## v0.20.4 — 2026-06-17
+
+### ♻️ 数据反哺——新实体自动入库
+
+**🆕 蒸馏发现的实体不再只是展示，直接写入数据库**
+- `src/lib/entity-auto-creator.ts` — 新实体自动创建器：
+  - 角色 → CharacterCard（role: "supporting"，标记 🆕自动发现）
+  - 地点 → LorebookEntry（category: "geography"）
+  - 丹药/法宝/材料 → LorebookEntry（category: "item"）
+  - 功法 → LorebookEntry（category: "technique"）
+- 查重：大小写不敏感对比已有角色名 + 世界书标题，避免重复创建
+- 新增 SSE 事件：`entity_auto_create_start` / `entity_auto_created` / `entity_auto_skip` / `entity_auto_create_error`
+- 实体创建失败降级——单个实体失败不阻塞其他实体和后续流程
+
+---
+
+## v0.20.3 — 2026-06-17
+
+### 🔮 伏笔自动检测——本地蒸馏驱动五状态机
+
+**🆕 蒸馏发现的伏笔信号自动入库**
+- `src/core/pipeline/post-processor.ts` — 本地蒸馏完成后自动处理伏笔事件：
+  - 埋设信号（"他并不知道""冥冥之中"等 20 个）→ 自动创建 PendingCommitment（status: "detected"）
+  - 回收信号（"原来""恍然大悟"等 13 个）→ 匹配已有伏笔 → 标记为 fulfilled
+  - 深化信号（"再次出现""越来越"等 7 个）→ 匹配已有伏笔 → 标记为 partially_fulfilled
+- 去重机制：同一信号词每章只处理一次，取置信度最高者
+- 新增 SSE 事件：`foreshadow_update` / `foreshadow_update_error`
+- 伏笔处理失败不阻塞主流程——单个伏笔异常不影响其他伏笔和后续 LLM summarize
+
+### 🔧 默认模型修正
+- `settings/page.tsx`：DeepSeek 默认模型 `deepseek-v4-pro` → `deepseek-v4-flash`（匹配当前 CodeX/CCX 配置）
+
+---
+
+## v0.20.2 — 2026-06-17
+
+### 🧪 本地蒸馏引擎——实体检测不再烧 Token
+
+**🆕 命名模式库 + 四遍扫描（双轨并行）**
+- `src/lib/entity-detector.ts` — 命名模式库：5 类正则（丹药/法宝/功法/地点/材料）+ 排除词库 + 归属推断三层策略（属格 0.95 / 动词前置 0.85 / 段落主人 0.6）
+- `src/lib/distillation-runner.ts` — 四遍本地扫描：实体识别 → 状态变化检测 → 伏笔模式匹配 → 一致性校验。零 Token 消耗，<1 秒/万字
+- `src/core/pipeline/post-processor.ts` — Step 3（保存）和 Step 4（LLM 摘要）之间插入本地蒸馏。结果通过 SSE `distill_local_done` 推送前端
+- 新增 SSE 事件：`distill_local_start` / `distill_local_done` / `distill_local_error`
+- LLM summarize 继续运行不受影响——双轨并行，积累对比数据后再决定切换
+
+### 🌐 全局默认模型切换
+- 默认提供商：硅基流动 → **DeepSeek 官方**（`api.deepseek.com`）
+- 默认模型：`deepseek-ai/DeepSeek-V4-Flash` → **`deepseek-v4-pro`**
+- 修复 `outline/route.ts` 和 `characters/expand/route.ts` 中硬编码的硅基流动 URL，统一走全局设置
+
+---
+
 ## v0.20.1 — 2026-06-17
 
 ### 🔑 API Key 动态透传——全局设置全面生效

@@ -1,7 +1,7 @@
 /**
  * POST /api/characters/expand
  *
- * v2: 16并发 · deepseek-ai/DeepSeek-V4-Flash · 不截断源文本 · 16384 tokens 输出
+ * v2: 16并发 · deepseek-v4-pro · 不截断源文本 · 16384 tokens 输出
  *
  * SSE 流式：逐角色独立并行扩展。
  * 每完成一个角色即时推 SSE 进度。
@@ -14,14 +14,8 @@ import { getSettings } from "@/lib/llm";
 
 export const maxDuration = 300;
 
-const DS_URL = "https://api.siliconflow.cn/v1/chat/completions";
-// 模型名从全局设置动态读取，不再硬编码
 const CONCURRENCY = 16;
 const MAX_TOKENS = 32768;
-
-function getDSKey(): string {
-  return process.env.LLM_API_KEY || "";
-}
 
 // ─── 安全合并 ──────────────────────────────────────
 
@@ -53,16 +47,17 @@ function slimContext(
 ${styleText ? "文风: " + styleText : ""}`;
 }
 
-// ─── DeepSeek API 调用 ─────────────────────────────
+// ─── LLM API 调用（URL/Key 从全局设置动态获取） ───
 
-async function callDS(system: string, prompt: string, model: string): Promise<{ raw: string } | { error: string }> {
-  const key = getDSKey();
-  if (key.length < 10) return { error: "DeepSeek API Key 未配置" };
+async function callDS(system: string, prompt: string, model: string, baseUrl: string, apiKey: string): Promise<{ raw: string } | { error: string }> {
+  if (apiKey.length < 10) return { error: "API Key 未配置" };
+
+  const url = baseUrl.endsWith("/v1") ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
   try {
-    const r = await fetch(DS_URL, {
+    const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages: [
@@ -95,6 +90,8 @@ async function expandOne(
   char: { id: string; name: string; card: Record<string, unknown> },
   context: string,
   model: string,
+  baseUrl: string,
+  apiKey: string,
 ): Promise<{ id: string; name: string; result: Record<string, unknown> | null; error?: string }> {
   const qic = (char.card.quickImportContent as string) || "";
   const bg = (char.card.background as string) || "";
@@ -143,6 +140,8 @@ ${JSON.stringify(char.card)}
     "扩展角色卡。少总结多复述，原文照搬不缩写，空字段基于世界观推敲补全。只输出JSON。",
     prompt,
     model,
+    baseUrl,
+    apiKey,
   );
 
   if ("error" in result) {
@@ -196,14 +195,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "缺少 projectId 或 characterIds" }, { status: 400 });
   }
 
-  const dsKey = getDSKey();
-  if (dsKey.length < 10) {
-    return NextResponse.json({ error: "硅基流动 API Key 未配置。请在环境变量中设置 LLM_API_KEY。" }, { status: 500 });
-  }
-
-  // 从全局设置读取模型名
+  // 从全局设置读取 LLM 配置
   const settings = await getSettings();
   const dsModel = settings.model;
+  const dsBaseUrl = settings.baseUrl;
+  const dsKey = settings.apiKey;
+
+  if (dsKey.length < 10) {
+    return NextResponse.json({ error: "API Key 未配置。请在设置页面填入 Key。" }, { status: 500 });
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -300,7 +300,7 @@ ${charListForAudit}
 [{"id":"...", "isCharacter":true/false, "reason":"...", "splitNames":[...], "missingCharacters":[...]}]`;
 
           try {
-            const auditRaw = await callDS(auditSystem, auditPrompt, dsModel);
+            const auditRaw = await callDS(auditSystem, auditPrompt, dsModel, dsBaseUrl, dsKey);
             if ("raw" in auditRaw) {
               const parsed = parseAIJson(auditRaw.raw);
               if (Array.isArray(parsed)) {
@@ -564,7 +564,7 @@ ${charListForAudit}
         const fallbackMap = new Map(charItems.map(c => [c.id, c.card]));
 
         await withConcurrency(charItems, async (item) => {
-          const { result: r, error } = await expandOne(item, context, dsModel);
+          const { result: r, error } = await expandOne(item, context, dsModel, dsBaseUrl, dsKey);
           let finalError = error;
 
           if (r) {

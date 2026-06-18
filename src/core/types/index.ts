@@ -99,6 +99,7 @@ export type LoreCategory =
   | "creature"         // 生物/种族
   | "item"             // 关键物品
   | "law"              // 法则/规则
+  | "character_relationship"  // 角色关系
   | "custom";          // 自定义
 
 // ─── 故事结构系统 (Story Structure) ────────────────────────
@@ -121,7 +122,6 @@ export interface StoryNode {
   // 分支管理
   branchId: string | null;        // 所属分支ID
   isMainBranch: boolean;          // 是否为主线分支
-  previousVersionId: string | null; // 重生成前的版本ID
 
   // 元数据
   activeCharacters: string[];     // 本节点出场角色ID
@@ -212,6 +212,7 @@ export interface PromptContext {
   authorNote: string | null;      // 作者强制介入指令
   characters?: CharacterCard[];   // 角色列表（用于角色重叠检索和弧光追踪）
   storylines?: Storyline[];       // 故事线列表（用于活跃故事线追踪）
+  pendingCommitments?: PendingCommitment[]; // 伏笔列表（用于S级记忆注入）
 }
 
 export interface GlobalMemory {
@@ -412,7 +413,6 @@ export interface Project {
   targetWordCount: number;        // 目标字数
   synopsis: string;               // 主线总纲（浓缩版）
   toneKeywords: string[];         // 基调关键词
-  povCharacterId: string | null;  // 当前视角主角
   llmConfig: LLMConfig;           // 模型配置
   createdAt: Date;
   updatedAt: Date;
@@ -504,7 +504,6 @@ export interface WriterState {
   generatedTokens: number;
   activeCharacters: CharacterCard[];
   activeLoreEntries: LorebookEntry[];
-  reviewPanelOpen: boolean;
   authorNote: string;
 }
 
@@ -525,6 +524,7 @@ export interface TokenAllocation {
   shortTermMemory: number;
   mediumTermMemory: number;
   longTermMemory: number;
+  foreshadowing: number;          // S级记忆：未回收伏笔
   authorNote: number;
   responseReserve: number;        // 留给生成的Token
 }

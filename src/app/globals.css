@@ -128,3 +128,44 @@
     @apply font-sans;
   }
 }
+
+/* ═══════════════════════════════════════════
+   实体高亮样式 — 正文内彩色标注（低饱和度）
+   ═══════════════════════════════════════════ */
+
+.markdown-body .entity-highlight {
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.markdown-body .entity-highlight:hover {
+  box-shadow: 0 0 0 1.5px currentColor;
+  filter: brightness(1.15);
+}
+
+.markdown-body .entity-highlight.entity-character:hover {
+  background-color: rgba(91, 155, 213, 0.12);
+}
+
+.markdown-body .entity-highlight.entity-lorebook:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Markdown 正文排版 ── */
+.markdown-body {
+  line-height: 1.85;
+  word-break: break-word;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  color: #e2e2e2;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}

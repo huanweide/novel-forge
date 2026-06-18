@@ -40,11 +40,12 @@ const BUDGET_RATIOS = {
   triggeredLore: 0.15,   // 15%
   arcMemory: 0.01,       // 1%  —— 角色弧光追踪
   storylineMemory: 0.01, // 1%  —— 活跃故事线进度
-  shortTerm: 0.25,       // 25% —— 近期正文最重要
+  shortTerm: 0.20,       // 20% —— 近期正文（让5%给出S级记忆）
   mediumTerm: 0.10,      // 10%
   longTerm: 0.05,        // 5%
+  foreshadowing: 0.05,   // 5%  —— S级记忆：未回收伏笔+major转折
   authorNote: 0.02,      // 2%
-  responseReserve: 0.23, // 23% —— 留给出文（比原来少2%，给弧光和故事线）
+  responseReserve: 0.23, // 23% —— 留给出文
 };
 
 // ─── 核心组装函数 ───────────────────────────────────────────
@@ -79,17 +80,22 @@ export function assemblePrompt(
   // 5. 活跃故事线进度
   const storylineSection = buildStorylineSection(context.storylines, budget.allocations.storylineMemory);
 
-  // 6. 长期记忆（关键转折点）
+  // 6. S级记忆：未回收伏笔（最高优先级——防止AI忘掉自己埋的线）
+  const foreshadowingSection = buildForeshadowingSection(
+    context.pendingCommitments, budget.allocations.foreshadowing,
+  );
+
+  // 7. 长期记忆（关键转折点+章节S级事件）
   const longSection = buildLongTermSection(context.slidingWindow, budget.allocations.longTermMemory);
 
-  // 7. 中期记忆（章节摘要）—— 带角色重叠检索
+  // 8. 中期记忆（章节摘要）—— 带角色重叠检索
   const currentCharacterNames = context.characters?.map(c => c.name) || undefined;
   const mediumSection = buildMediumTermSection(context.slidingWindow, budget.allocations.mediumTermMemory, currentCharacterNames);
 
-  // 8. 短期记忆（近期正文）
+  // 9. 短期记忆（近期正文）
   const shortSection = buildShortTermSection(context.slidingWindow, budget.allocations.shortTermMemory);
 
-  // 9. 作者注释
+  // 10. 作者注释
   const authorSection = context.authorNote
     ? buildAuthorSection(context.authorNote, budget.allocations.authorNote)
     : "";
@@ -101,6 +107,7 @@ export function assemblePrompt(
     loreSection,
     arcSection,
     storylineSection,
+    foreshadowingSection,
     longSection,
     mediumSection,
     shortSection,
@@ -159,18 +166,48 @@ function buildGlobalMemorySection(memory: GlobalMemory, maxTokens: number): stri
   return truncateByTokens(fullContent, maxTokens);
 }
 
+/** 板块分类标签——宽松的自然语言格式，不给 LLM 压力 */
+const CATEGORY_SECTIONS: Record<string, { emoji: string; label: string }> = {
+  geography:    { emoji: "🗺️", label: "地理环境" },
+  faction:      { emoji: "⚔️", label: "势力阵营" },
+  item:         { emoji: "💎", label: "重要物品" },
+  magic_system: { emoji: "⚡", label: "力量体系" },
+  technique:    { emoji: "📜", label: "功法技能" },
+  creature:     { emoji: "🐉", label: "生物种族" },
+  culture:      { emoji: "🎭", label: "文化风俗" },
+  history:      { emoji: "📚", label: "历史背景" },
+  law:          { emoji: "⚖️", label: "世界法则" },
+  currency:     { emoji: "💰", label: "货币体系" },
+  custom:       { emoji: "🔮", label: "特殊设定" },
+};
+
 function buildLoreSection(
   triggeredLore: TriggeredLore[],
   maxTokens: number
 ): string {
   if (triggeredLore.length === 0) return "";
 
-  // 每个词条的内容 + 触发标注
-  const entries = triggeredLore.map(
-    (t) => `[触发词：${t.triggerKeyword}]\n【${t.entry.title}】\n${t.entry.content}`
-  );
+  // 按板块分组注入，每板块独立小标题——格式宽松，纯自然语言
+  const grouped = new Map<string, TriggeredLore[]>();
+  for (const t of triggeredLore) {
+    const cat = (t.entry as any).category || "custom";
+    const key = CATEGORY_SECTIONS[cat] ? cat : "custom";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(t);
+  }
 
-  let result = `【当前场景相关设定】\n${entries.join("\n\n")}`;
+  const sections: string[] = [];
+  for (const [cat, items] of grouped) {
+    const sec = CATEGORY_SECTIONS[cat] || CATEGORY_SECTIONS.custom;
+    const lines = items.map((t) => {
+      const title = t.entry.title;
+      const content = (t.entry.content || "").replace(/\n/g, "；");
+      return `- ${title}：${content}`;
+    });
+    sections.push(`【${sec.emoji} ${sec.label}】\n${lines.join("\n")}`);
+  }
+
+  let result = sections.join("\n\n");
   return truncateByTokens(result, maxTokens);
 }
 
@@ -267,6 +304,43 @@ function buildMediumTermSection(
   return result ? `【本章之前的故事摘要】\n${result}` : "";
 }
 
+function buildForeshadowingSection(
+  commitments: any[] | undefined,
+  maxTokens: number,
+): string {
+  if (!commitments || commitments.length === 0) return "";
+
+  // 只取未回收的伏笔——区分紧迫度
+  const unresolved = commitments.filter(
+    (c: any) => c.status !== "resolved" && c.status !== "abandoned",
+  );
+
+  if (unresolved.length === 0) return "";
+
+  // 排序：有 expiryChapter 的排前面（即将到期），然后按创建时间
+  unresolved.sort((a: any, b: any) => {
+    const aExp = a.expiryChapter || 999;
+    const bExp = b.expiryChapter || 999;
+    return aExp - bExp;
+  });
+
+  const lines: string[] = [];
+  let used = 0;
+  for (const c of unresolved) {
+    let line = `⚠️ 待回收：${c.description}`;
+    if (c.expiryChapter) line += `（预计第${c.expiryChapter}章回收）`;
+    if (c.relatedCharacters?.length) line += ` [关联：${c.relatedCharacters.join("、")}]`;
+    const t = countTokens(line);
+    if (used + t > maxTokens) break;
+    lines.push(line);
+    used += t;
+  }
+
+  return lines.length > 0
+    ? `【🔴 S级记忆——未回收的伏笔承诺（最高优先级，写了前面埋的必须圆）】\n${lines.map((l) => `- ${l}`).join("\n")}`
+    : "";
+}
+
 function buildLongTermSection(
   window: SlidingWindow,
   maxTokens: number
@@ -290,7 +364,7 @@ function buildLongTermSection(
     result = candidate;
   }
 
-  return result ? `【前文关键伏笔与转折点】\n${result}` : "";
+  return result ? `【前文关键转折点——Major事件优先】\n${result}` : "";
 }
 
 function buildArcSection(characters: CharacterCard[] | undefined, maxTokens: number): string {
@@ -334,6 +408,7 @@ function calculateBudget(contextWindowSize: number): TokenBudget {
     shortTermMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.shortTerm),
     mediumTermMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.mediumTerm),
     longTermMemory: Math.floor(contextWindowSize * BUDGET_RATIOS.longTerm),
+    foreshadowing: Math.floor(contextWindowSize * BUDGET_RATIOS.foreshadowing),
     authorNote: Math.floor(contextWindowSize * BUDGET_RATIOS.authorNote),
     responseReserve: Math.floor(contextWindowSize * BUDGET_RATIOS.responseReserve),
   };

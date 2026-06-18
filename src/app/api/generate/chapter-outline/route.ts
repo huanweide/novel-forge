@@ -18,8 +18,12 @@ export const maxDuration = 120;
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getActiveRules, injectRules } from "@/core/rules";
 
+
+import {
+  loadOutlineData, extractPrevContext, extractNextContext,
+  buildCharacterList, prepareOutlineDirective, formatSummaries,
+} from "@/core/pipeline/outline-context";
 import { callSiliconFlow } from "@/lib/llm";
 
 export async function POST(request: Request) {
@@ -31,68 +35,26 @@ export async function POST(request: Request) {
     }
 
     // ═══════════════════════════════════════════════
-    // Step 1: 读数据——前文上下文 + 角色卡 + 作者指令
+    // Step 1: 读数据——使用共享模块
     // ═══════════════════════════════════════════════
-    const [project, node, allNodes, characters, summaries] = await Promise.all([
-      prisma.project.findUnique({ where: { id: projectId } }),
-      prisma.storyNode.findUnique({ where: { id: nodeId } }),
-      prisma.storyNode.findMany({
-        where: { projectId, parentId: null, type: { not: "volume" } },
-        orderBy: { order: "asc" },
-      }),
-      prisma.characterCard.findMany({ where: { projectId } }),
-      prisma.chapterSummary.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 3 }),
-    ]);
 
+    const { project, node, allNodes, characters, summaries } = await loadOutlineData(projectId, nodeId, 3);
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
 
-    const nodeIndex = allNodes.findIndex((n) => n.id === nodeId);
+    const prevContext = extractPrevContext(allNodes, nodeId);
+    const nextContext = extractNextContext(allNodes, nodeId);
 
-    // ── 前 5 章上下文（章纲 + 上一章正文末段 800 字）──
-    const prevNodes = allNodes.slice(Math.max(0, nodeIndex - 5), nodeIndex);
-    const prevContext = prevNodes.map(n => {
-      const outline = n.outline ? `\n  大纲：${n.outline.slice(0, 500)}` : "";
-      const ending = n.content ? `\n  正文末段：${n.content.slice(-800)}` : "";
-      return `[${n.title}]${outline}${ending}`;
-    }).join("\n\n");
-
-    // 后文（如果后面有已规划的章节）
-    const nextNodes = allNodes.slice(nodeIndex + 1, Math.min(allNodes.length, nodeIndex + 3));
-    const nextContext = nextNodes.map(n =>
-      `[${n.title}]${n.outline ? `\n  大纲：${n.outline.slice(0, 300)}` : ""}`
-    ).join("\n\n");
-
-    // ── 作者指令（最高优先级）──
-    const effectiveAuthorNote = explicitAuthorNote?.trim() || project.authorNote?.trim() || "";
-
-    // ── Rules 系统注入 ──
-    const outlineRules = await getActiveRules(projectId, "outline_only");
-    const finalAuthorDirective = injectRules(effectiveAuthorNote, outlineRules);
-
-    const authorDirective = finalAuthorDirective
-      ? `\n## ⚠️ 作者指令——最高优先级，必须逐条遵守\n${finalAuthorDirective}\n`
+    const authorDirectiveRaw = await prepareOutlineDirective(projectId, explicitAuthorNote || project.authorNote);
+    const authorDirective = authorDirectiveRaw
+      ? `\n## ⚠️ 作者指令——最高优先级，必须逐条遵守\n${authorDirectiveRaw}\n`
       : "";
 
-    // ── 角色卡简要列表（供 AI 选角用）──
-    const roleLabel: Record<string, string> = {
-      protagonist: "★主角", antagonist: "◆反派", mentor: "◈导师",
-      love_interest: "♡恋爱", supporting: "●配角", background: "○背景",
-    };
-    const characterList = characters.map((c: any) => {
-      const p = typeof c.personality === "object" && !Array.isArray(c.personality) ? c.personality as Record<string, unknown> : {};
-      const brief = [
-        `${roleLabel[c.role] || c.role} | ${c.currentStatus || "存活"}`,
-        c.background ? c.background.slice(0, 80).replace(/\n/g, " ") : "",
-      ].filter(Boolean).join(" | ");
-      return `- 【${c.name}】${c.aliases?.length ? `（${c.aliases.join("、")}）` : ""} ${brief}`;
-    }).join("\n");
-
-    // 最近摘要
-    const recentSummary = summaries.length > 0
-      ? summaries.map(s => `[${s.chapterTitle}] ${s.summary}`).join("\n")
-      : "";
+    const characterList = buildCharacterList(characters, false);
+    const recentSummary = formatSummaries(summaries);
+    const nodeIndex = allNodes.findIndex((n: any) => n.id === nodeId);
+    const effectiveAuthorNote = explicitAuthorNote?.trim() || (project as any).authorNote?.trim() || "";
 
     // ═══════════════════════════════════════════════
     // Step 2: AI 选角——根据章纲目标 + 前文 + 作者指令 → 决定谁出场

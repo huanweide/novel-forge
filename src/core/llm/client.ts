@@ -14,8 +14,16 @@ import type { LLMConfig } from "@/core/types";
 // ─── 类型定义 ───────────────────────────────────────────────
 
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
+  /** tool_calls 的 ID（role=tool 时必填） */
+  tool_call_id?: string;
+  /** assistant 消息可能包含 tool_calls */
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }>;
 }
 
 export interface LLMRequest {
@@ -27,6 +35,15 @@ export interface LLMRequest {
   stream?: boolean;
   /** 推理模式：仅 DeepSeek 官方 API 支持，硅基流动等第三方不用传 */
   thinking?: { type: "enabled" | "disabled" };
+  /** OpenAI 兼容的工具定义 */
+  tools?: Array<{
+    type: "function";
+    function: {
+      name: string;
+      description: string;
+      parameters: Record<string, unknown>;
+    };
+  }>;
 }
 
 export interface LLMResponse {
@@ -36,6 +53,12 @@ export interface LLMResponse {
     completionTokens: number;
     totalTokens: number;
   };
+  /** 工具调用请求（LLM 要求执行工具时返回） */
+  toolCalls?: Array<{
+    id: string;
+    name: string;
+    arguments: string; // JSON string
+  }>;
 }
 
 export type LLMClient = ReturnType<typeof createLLMClient>;
@@ -53,21 +76,29 @@ export function createLLMClient(config: LLMConfig) {
      * 同步调用 —— 等全部生成完再返回
      */
     async chat(request: Omit<LLMRequest, "stream">): Promise<LLMResponse> {
+      const body: Record<string, unknown> = {
+        model: request.model,
+        messages: request.messages,
+        temperature: request.temperature ?? config.defaultTemperature,
+        top_p: request.topP ?? config.defaultTopP,
+        max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
+        stream: false,
+        ...(request.thinking ? { thinking: request.thinking } : {}),
+      };
+
+      // 工具调用支持
+      if (request.tools && request.tools.length > 0) {
+        body.tools = request.tools;
+        body.tool_choice = "auto";
+      }
+
       const response = await fetch(`${baseURL}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${config.apiKey}`,
         },
-        body: JSON.stringify({
-          model: request.model,
-          messages: request.messages,
-          temperature: request.temperature ?? config.defaultTemperature,
-          top_p: request.topP ?? config.defaultTopP,
-          max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
-          stream: false,
-          ...(request.thinking ? { thinking: request.thinking } : {}),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -76,13 +107,27 @@ export function createLLMClient(config: LLMConfig) {
       }
 
       const data = await response.json();
+      const choice = data.choices[0];
+      const message = choice?.message;
+
+      // 解析工具调用
+      let toolCalls: LLMResponse["toolCalls"] | undefined;
+      if (message?.tool_calls && Array.isArray(message.tool_calls)) {
+        toolCalls = message.tool_calls.map((tc: any) => ({
+          id: tc.id || "",
+          name: tc.function?.name || "",
+          arguments: tc.function?.arguments || "{}",
+        }));
+      }
+
       return {
-        content: data.choices[0]?.message?.content || "",
+        content: message?.content || "",
         usage: {
           promptTokens: data.usage?.prompt_tokens || 0,
           completionTokens: data.usage?.completion_tokens || 0,
           totalTokens: data.usage?.total_tokens || 0,
         },
+        toolCalls,
       };
     },
 
@@ -217,10 +262,10 @@ export async function createLLMClientFromSettings(overrides?: Partial<LLMConfig>
 /**
  * 获取当前设置中的模型名（同步版本——仅用于已缓存的场景）
  *
- * @deprecated 优先使用 getEffectiveConfig()。此函数仅在同步代码路径中作为 fallback。
+ * @deprecated 优先使用 getEffectiveConfig()。不返回硬编码默认值——调用方自行处理 undefined。
  */
-export function getFallbackModel(): string {
-  return process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash";
+export function getFallbackModel(): string | undefined {
+  return process.env.LLM_MODEL || undefined;
 }
 
 // ─── 向后兼容导出 ──────────────────────────────────────────
@@ -229,13 +274,14 @@ export function getFallbackModel(): string {
  * @deprecated 使用 getEffectiveConfig() 替代
  */
 export function getDefaultLLMConfig(): LLMConfig {
+  const m = getFallbackModel() || "";
   return {
-    architectModel: getFallbackModel(),
-    writerModel: getFallbackModel(),
-    reviewerModel: getFallbackModel(),
-    summarizeModel: getFallbackModel(),
-    extractorModel: getFallbackModel(),
-    baseURL: process.env.LLM_BASE_URL || "https://api.siliconflow.cn/v1",
+    architectModel: m,
+    writerModel: m,
+    reviewerModel: m,
+    summarizeModel: m,
+    extractorModel: m,
+    baseURL: process.env.LLM_BASE_URL || "https://api.deepseek.com",
     apiKey: process.env.LLM_API_KEY || "",
     defaultTemperature: 0.8,
     defaultTopP: 0.95,

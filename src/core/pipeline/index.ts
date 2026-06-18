@@ -9,4 +9,13 @@ export {
   buildGenerationContext,
 } from "./pre-processor";
 export { runPostGenerationPipeline } from "./post-processor";
+export {
+  loadOutlineData,
+  extractPrevContext,
+  extractNextContext,
+  buildCharacterList,
+  prepareOutlineDirective,
+  formatSummaries,
+} from "./outline-context";
+export type { OutlineContextData } from "./outline-context";
 export type { GenerationData, LLMExtract, PostPipelineParams, PostPipelineResult } from "./types";

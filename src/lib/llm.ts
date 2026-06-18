@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 const PROVIDER_BASE_URLS: Record<string, string> = {
   openai: "https://api.openai.com/v1",
   siliconflow: "https://api.siliconflow.cn/v1",
-  deepseek: "https://api.deepseek.com/v1",
+  deepseek: "https://api.deepseek.com",
   groq: "https://api.groq.com/openai/v1",
 };
 
@@ -39,29 +39,41 @@ export async function getSettings(): Promise<LLMSettings> {
 
   try {
     const db = await prisma.appSettings.findUnique({ where: { id: "default" } });
-    if (db?.llmApiKey) {
-      const provider = db.llmProvider || "siliconflow";
-      const baseUrl = db.llmBaseUrl || PROVIDER_BASE_URLS[provider] || PROVIDER_BASE_URLS.siliconflow;
+    if (db?.llmApiKey && db?.llmModel) {
+      const provider = db.llmProvider;
+      if (!provider) throw new Error("LLM 提供商未配置——请在设置页面选择提供商");
+      const baseUrl = db.llmBaseUrl || PROVIDER_BASE_URLS[provider];
+      if (!baseUrl) throw new Error(`无法解析提供商 "${provider}" 的 API 地址——请在设置页面手动填写 Base URL`);
       cachedSettings = {
         provider,
         apiKey: db.llmApiKey,
-        model: db.llmModel || "deepseek-ai/DeepSeek-V4-Flash",
+        model: db.llmModel,
         baseUrl,
       };
       cacheTimestamp = now;
       return cachedSettings;
     }
-  } catch {
+    if (db?.llmApiKey && !db?.llmModel) {
+      throw new Error("LLM 模型未配置——请在设置页面选择模型");
+    }
+  } catch (e) {
+    // 如果是我们主动抛出的配置错误，直接向上传播
+    if (e instanceof Error && e.message.includes("LLM")) throw e;
     // DB 不可用时退到环境变量
   }
 
-  // 回退到环境变量
-  const envKey = process.env.LLM_API_KEY || "";
+  // 回退到环境变量（不硬编码模型名——没配就报错）
+  const envKey = process.env.LLM_API_KEY;
+  const envModel = process.env.LLM_MODEL;
+  if (!envKey) throw new Error("LLM API Key 未配置——请在设置页面填入 Key，或在 .env 中设置 LLM_API_KEY");
+  if (!envModel) throw new Error("LLM 模型未配置——请在 .env 中设置 LLM_MODEL，或在设置页面选择模型");
+
+  const envProvider = process.env.LLM_PROVIDER || "deepseek";
   cachedSettings = {
-    provider: "siliconflow",
+    provider: envProvider,
     apiKey: envKey,
-    model: "deepseek-ai/DeepSeek-V4-Flash",
-    baseUrl: PROVIDER_BASE_URLS.siliconflow,
+    model: envModel,
+    baseUrl: process.env.LLM_BASE_URL || PROVIDER_BASE_URLS[envProvider] || "",
   };
   cacheTimestamp = now;
   return cachedSettings;

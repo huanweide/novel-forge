@@ -95,13 +95,34 @@ export interface SSEEvent {
   usage?: { completionTokens: number; totalTokens: number };
   nodeId?: string;
   status?: string;
+  // 本地蒸馏事件
+  stats?: { totalElapsedMs: number; entityCount: number; stateChangeCount: number; foreshadowCount: number; consistencyIssueCount: number };
+  stateChanges?: Array<{ type: string; description: string }>;
+  foreshadowEvents?: Array<{ type: string; description: string }>;
+  consistencyIssues?: Array<{ type: string; description: string; severity: string }>;
+  newEntities?: Array<{ name: string; type: string; confidence: number }>;
+  // 伏笔更新
+  created?: string[];
+  updated?: string[];
+  // 实体自动创建
+  skipped?: string;
+  matches?: Array<{ word: string; locations: string[] }>;
+  totalMatches?: number;
+  // 废词扫描 v3
+  qualityScore?: number;
+  fuzzyDensity?: number;
+  bySeverity?: Record<string, number>;
+  byCategory?: Record<string, number>;
+  // 逻辑自查
+  summary?: string;
 }
 
 export function categoryLabel(cat: string): string {
   const map: Record<string, string> = {
     geography: "地理", faction: "势力组织", magic_system: "力量体系",
-    history: "历史", culture: "文化风俗", creature: "生物种族",
-    item: "器物法宝", custom: "自定义",
+    technique: "功法体系", history: "历史", culture: "文化风俗",
+    creature: "生物种族", item: "器物法宝", law: "规则法则",
+    currency: "货币体系", custom: "自定义",
   };
   return map[cat] || cat;
 }

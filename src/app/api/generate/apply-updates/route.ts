@@ -7,9 +7,21 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+// 故事线七要素 → 数据库字段映射
+const ELEMENT_FIELDS: Record<string, string> = {
+  desire: "desire",
+  obstacle: "obstacle",
+  action: "action",
+  result: "result",
+  twist: "twist",
+  turn: "turn",
+  ending: "ending",
+};
+
 interface CharChange { characterId: string; name: string; changes: Record<string, unknown>; isNew?: boolean }
 interface NewChar { name: string; role?: string; personality?: unknown; abilities?: string[]; evidence?: string }
 interface NewLore { title: string; category?: string; keys?: string[]; content?: string; evidence?: string }
+interface NewForeshadowing { description: string; relatedCharacters?: string[]; suggestedPayoff?: string }
 
 export async function POST(request: Request) {
   try {
@@ -22,12 +34,18 @@ export async function POST(request: Request) {
       newLoreEntries = [],
       styleShift,
       newForeshadowings = [],
+      worldSettings,
+      storyCore,
+      globalTimeline = [],
+      plotLines = [],
+      subPlots = [],
+      characterRelations = [],
     } = body;
 
     if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
-    const applied: { chars: number; newChars: number; lore: number; style: boolean; foreshadowings: number } = {
-      chars: 0, newChars: 0, lore: 0, style: false, foreshadowings: 0,
+    const applied: { chars: number; newChars: number; lore: number; style: boolean; foreshadowings: number; worldSettings: boolean; storyCore: boolean; timelineEvents: number; plotLines: number; subPlots: number } = {
+      chars: 0, newChars: 0, lore: 0, style: false, foreshadowings: 0, worldSettings: false, storyCore: false, timelineEvents: 0, plotLines: 0, subPlots: 0,
     };
 
     // ─── 更新已有角色 ─────────────────────────────────────
@@ -252,6 +270,202 @@ export async function POST(request: Request) {
       applied.lore++;
     }
 
+    // ─── 写入伏笔到 PendingCommitment ─────────────────────
+    for (const fs of (newForeshadowings as NewForeshadowing[])) {
+      if (!fs.description) continue;
+      // 查找关联角色 ID
+      const relatedIds: string[] = [];
+      if (Array.isArray(fs.relatedCharacters)) {
+        for (const name of fs.relatedCharacters) {
+          const matched = await prisma.characterCard.findFirst({
+            where: { projectId, name },
+            select: { id: true },
+          });
+          if (matched) relatedIds.push(matched.id);
+        }
+      }
+      // 构建闭环条件
+      const closureConditions: Array<{ type: string; value: string; required: boolean }> = [];
+      if (fs.suggestedPayoff) {
+        closureConditions.push({ type: "action", value: fs.suggestedPayoff, required: false });
+      }
+      await prisma.pendingCommitment.create({
+        data: {
+          projectId,
+          source: "ai_inference",
+          priority: "medium",
+          description: fs.description,
+          entityIds: relatedIds,
+          closureConditions,
+          status: "detected",
+          detectedAt: new Date(),
+          fulfillmentRatio: 0,
+          statusHistory: [{
+            from: "pending",
+            to: "detected",
+            trigger: "chapter_analysis",
+            chapterId: "",
+            timestamp: new Date().toISOString(),
+            details: chapterNumber ? `第${chapterNumber}章 AI 分析自动发现` : "AI 分析自动发现",
+          }],
+        },
+      });
+      applied.foreshadowings++;
+    }
+
+    // ─── 世界观设定 → Project.description ─────────────────
+    if (worldSettings && typeof worldSettings === "object") {
+      const ws = worldSettings as Record<string, string>;
+      const filled = Object.entries(ws).filter(([, v]) => v && String(v).trim());
+      if (filled.length > 0) {
+        const project = await prisma.project.findUnique({ where: { id: projectId }, select: { description: true } });
+        const newLines = filled.map(([k, v]) => `【${k}】${String(v).trim()}`);
+        const merged = project?.description
+          ? project.description + "\n\n" + newLines.join("\n")
+          : newLines.join("\n");
+        await prisma.project.update({ where: { id: projectId }, data: { description: merged } });
+        applied.worldSettings = true;
+      }
+    }
+
+    // ─── 故事核心 → Project.synopsis ──────────────────────
+    if (storyCore && typeof storyCore === "object") {
+      const sc = storyCore as Record<string, string>;
+      const filled = Object.entries(sc).filter(([, v]) => v && String(v).trim());
+      if (filled.length > 0) {
+        const project = await prisma.project.findUnique({ where: { id: projectId }, select: { synopsis: true } });
+        const newLines = filled.map(([k, v]) => `【${k}】${String(v).trim()}`);
+        const merged = project?.synopsis
+          ? project.synopsis + "\n" + newLines.join("\n")
+          : newLines.join("\n");
+        await prisma.project.update({ where: { id: projectId }, data: { synopsis: merged } });
+        applied.storyCore = true;
+      }
+    }
+
+    // ─── 全局时间线 → StoryBeat ───────────────────────────
+    for (const event of globalTimeline as Array<Record<string, unknown>>) {
+      if (!event.title && !event.description) continue;
+      await prisma.storyBeat.create({
+        data: {
+          projectId,
+          nodeId: "",
+          description: `[${event.eventType || "关键事件"}] ${event.title || ""}：${event.description || ""}${event.characters ? `（${Array.isArray(event.characters) ? event.characters.join("、") : event.characters}）` : ""}`,
+          chapterNumber: chapterNumber ? parseInt(chapterNumber) || 0 : 0,
+          impact: event.importance === "核心" ? "major" : "minor",
+        },
+      });
+      applied.timelineEvents++;
+    }
+
+    // ─── 情节脉络/支线故事 → Storyline 表 ─────────────────
+    interface StorylineInput { title?: string; type?: string; progress?: string; stage?: string; characters?: string[] }
+    const allStorylines: Array<StorylineInput & { lineType: "main" | "side" }> = [
+      ...(plotLines as StorylineInput[]).map((p) => ({ ...p, lineType: "main" as const })),
+      ...(subPlots as StorylineInput[]).map((p) => ({ ...p, lineType: "side" as const })),
+    ];
+    for (const line of allStorylines) {
+      if (!line.title || !line.progress) continue;
+      const title = String(line.title).trim();
+      const progress = String(line.progress);
+      const stage = String(line.stage || "action"); // 默认行动阶段
+      const isMain = line.lineType === "main";
+
+      // 查找是否已有同名故事线
+      const existing = await prisma.storyline.findFirst({
+        where: { projectId, title },
+      });
+
+      if (existing) {
+        // 更新对应阶段字段 + 追加 chapterBindings
+        const updateData: Record<string, unknown> = {
+          description: existing.description
+            ? existing.description + `\n[${chapterNumber || "本章"}] ${progress}`
+            : `[${chapterNumber || "本章"}] ${progress}`,
+        };
+        // 填充七要素中对应的阶段字段
+        if (stage && stage in ELEMENT_FIELDS) {
+          const field = ELEMENT_FIELDS[stage];
+          const existingVal = (existing as Record<string, unknown>)[field] || "";
+          updateData[field] = existingVal
+            ? `${existingVal}\n[${chapterNumber || "本章"}] ${progress}`
+            : `[${chapterNumber || "本章"}] ${progress}`;
+        }
+        // 追加 chapterBindings
+        const existingBindings = (existing.chapterBindings || []) as Array<Record<string, unknown>>;
+        updateData.chapterBindings = [...existingBindings, {
+          element: stage,
+          chapterId: "",
+          note: progress,
+        }];
+        await prisma.storyline.update({ where: { id: existing.id }, data: updateData as any });
+      } else {
+        // 创建新故事线
+        const createData: Record<string, unknown> = {
+          projectId,
+          type: isMain ? "main" : "side",
+          title,
+          description: `[${chapterNumber || "本章"}] ${progress}`,
+          status: "active",
+        };
+        // 填充对应阶段字段
+        if (stage && stage in ELEMENT_FIELDS) {
+          createData[ELEMENT_FIELDS[stage]] = `[${chapterNumber || "本章"}] ${progress}`;
+        }
+        createData.chapterBindings = [{ element: stage, chapterId: "", note: progress }];
+        await prisma.storyline.create({ data: createData as any });
+      }
+      if (isMain) applied.plotLines++; else applied.subPlots++;
+    }
+
+    // ─── 人物关系 → CharacterCard.relationships（多向总结）──
+    interface CharRelation { sourceName?: string; targetName?: string; relation?: string; reason?: string }
+    for (const rel of (characterRelations as CharRelation[])) {
+      if (!rel.sourceName || !rel.targetName || !rel.relation) continue;
+      const sourceChar = await prisma.characterCard.findFirst({
+        where: { projectId, name: rel.sourceName },
+      });
+      if (!sourceChar) continue;
+      // 查找 target 角色 ID
+      let targetId = "";
+      const targetChar = await prisma.characterCard.findFirst({
+        where: { projectId, name: rel.targetName },
+      });
+      if (targetChar) targetId = targetChar.id;
+
+      const existingRels = (sourceChar.relationships || []) as Array<Record<string, unknown>>;
+      // 多向总结：检查是否已有同 target 的关系
+      const dupIdx = existingRels.findIndex((r) => r.targetName === rel.targetName);
+      const newRel = {
+        targetCharacterId: targetId,
+        targetName: rel.targetName,
+        relation: rel.relation,
+        dynamic: rel.reason || "",
+        notes: chapterNumber ? `第${chapterNumber}章${dupIdx >= 0 ? "更新" : "建立"}。${rel.reason || ""}` : (rel.reason || ""),
+      };
+      if (dupIdx >= 0) {
+        // 已存在→更新（保留历史原因，追加新原因）
+        const oldRel = existingRels[dupIdx];
+        existingRels[dupIdx] = {
+          ...oldRel,
+          relation: rel.relation, // 更新为最新关系类型
+          dynamic: oldRel.dynamic ? `${oldRel.dynamic}；${rel.reason || ""}` : (rel.reason || ""),
+          notes: oldRel.notes ? `${oldRel.notes} | ${newRel.notes}` : newRel.notes,
+        };
+        await prisma.characterCard.update({
+          where: { id: sourceChar.id },
+          data: { relationships: existingRels as any },
+        });
+      } else {
+        // 不存在→新建
+        await prisma.characterCard.update({
+          where: { id: sourceChar.id },
+          data: { relationships: [...existingRels, newRel] as any },
+        });
+      }
+      applied.chars++;
+    }
+
     // ─── 更新风格卡 ───────────────────────────────────────
     if (styleShift && (styleShift as Record<string, unknown>).detected) {
       const desc = (styleShift as Record<string, unknown>).description;
@@ -277,7 +491,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       applied,
-      message: `更新完成：${applied.chars}角色更新 +${applied.newChars}新角色 +${applied.lore}新词条${applied.style ? " +风格调整" : ""}${applied.foreshadowings > 0 ? ` +${applied.foreshadowings}伏笔` : ""}`,
+      message: `更新完成：${applied.chars}角色更新 +${applied.newChars}新角色 +${applied.lore}新词条${applied.foreshadowings > 0 ? ` +${applied.foreshadowings}伏笔` : ""}${applied.worldSettings ? " +世界观设定" : ""}${applied.storyCore ? " +故事核心" : ""}${applied.timelineEvents > 0 ? ` +${applied.timelineEvents}时间线事件` : ""}${applied.plotLines > 0 ? ` +${applied.plotLines}情节线` : ""}${applied.subPlots > 0 ? ` +${applied.subPlots}支线` : ""}${applied.style ? " +风格调整" : ""}`,
     });
   } catch (err) {
     console.error("应用更新失败:", err);

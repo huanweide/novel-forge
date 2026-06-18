@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote,
       previousNodes: previousNodes as any,
+      pendingCommitments: data.pendingCommitments,
     });
 
     // ── 7. 微调指令（路由特有逻辑）──

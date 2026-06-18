@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SettingsImporter } from "@/components/dashboard/SettingsImporter";
 import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
-import { CardUpdater } from "@/components/editor/CardUpdater";
+import { PostGenPanel } from "@/components/workspace/PostGenPanel";
 import { Toolbar } from "@/components/workspace/Toolbar";
 import { LeftPanel } from "@/components/workspace/LeftPanel";
 import { CenterPanel } from "@/components/workspace/CenterPanel";
@@ -60,6 +60,9 @@ export default function WorkspacePage() {
   const [reviewResult, setReviewResult] = useState<{ passed: boolean; issues: ReviewIssue[] } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // ── 选中文本（传给 AI 对话栏） ──────────
+  const [selectedText, setSelectedText] = useState("");
+
   // ── 作者指令 ──────────────────────────────
   const [authorNote, setAuthorNote] = useState("");
   const authorNoteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,7 +83,7 @@ export default function WorkspacePage() {
   const [targetWordCount, setTargetWordCount] = useState(800);
 
   // ── 面板状态 ──────────────────────────────
-  const [leftPanel, setLeftPanel] = useState<"characters" | "lorebook" | "outline" | "storylines" | "rules">("outline");
+  const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "lorebook" | "outline" | "storylines" | "rules">("outline");
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   // ── 角色/词条编辑弹窗 ──────────────────────
@@ -93,7 +96,8 @@ export default function WorkspacePage() {
   const [showSettingsImport, setShowSettingsImport] = useState(false);
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
-  const [showCardUpdater, setShowCardUpdater] = useState(false);
+  const [extractionData, setExtractionData] = useState<any>(null);
+  const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [contextRefreshKey, setContextRefreshKey] = useState(0);
   const [volumeView, setVolumeView] = useState(true);
@@ -128,14 +132,23 @@ export default function WorkspacePage() {
   // ── 章节更新系统 ──────────────────────────
   const [lastChapterContent, setLastChapterContent] = useState("");
   const [lastChapterTitle, setLastChapterTitle] = useState("");
-  const [autoUpdateNotification, setAutoUpdateNotification] = useState<{
-    summary: string; charCount: number; newCharCount: number; loreCount: number;
+  // 本地蒸馏结果（SSE 推送 → PostGenPanel 展示）
+  const [distillSummary, setDistillSummary] = useState<{
+    entityCount: number; stateChangeCount: number; foreshadowCount: number;
+    consistencyIssueCount: number; elapsedMs: number;
+    foreshadowCreated: number; foreshadowUpdated: number;
+    entitiesAutoCreated: number; entitiesSkipped: number;
   } | null>(null);
-  const [cardUpdatePending, setCardUpdatePending] = useState(false);
-  const [pendingCardUpdateNodeId, setPendingCardUpdateNodeId] = useState("");
-  const [autoAnalyzing, setAutoAnalyzing] = useState(false);
-  const [preCardUpdateResult, setPreCardUpdateResult] = useState<any>(null);
-  const [lastGeneratedText, setLastGeneratedText] = useState("");
+  // 废词扫描结果（SSE 推送）
+  const [forbiddenScanResult, setForbiddenScanResult] = useState<{
+    passed: boolean; qualityScore: number; fuzzyDensity: number;
+    bySeverity: Record<string, number>; byCategory: Record<string, number>;
+    matches: any[]; totalMatches: number; summary: string;
+  } | null>(null);
+  // 逻辑自查结果（SSE 推送）
+  const [logicCheckResult, setLogicCheckResult] = useState<{
+    passed: boolean; issues: any[]; summary: string;
+  } | null>(null);
 
   // ── 批量生成 ──────────────────────────────
   const [batchMode, setBatchMode] = useState(false);
@@ -232,32 +245,23 @@ export default function WorkspacePage() {
     finally { setLoading(false); }
   }, [projectId, router]);
 
-  const autoAnalyzeChapter = useCallback(async (content: string, title: string) => {
+  // ── 自动提取（12 维度，生成完成后自动运行）──
+  const autoExtractChapter = useCallback(async (content: string, title: string) => {
     if (!content || content.length < 200 || !projectId) return;
     setLastChapterContent(content); setLastChapterTitle(title || "");
-    setCardUpdatePending(true);
-    if (selectedNode?.id) setPendingCardUpdateNodeId(selectedNode.id);
-    setAutoAnalyzing(true);
+    setExtractionLoading(true);
     try {
-      const res = await fetch("/api/generate/update-cards", {
+      const res = await fetch("/api/agent/extract-chapter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, chapterContent: content, chapterTitle: title || "", chapterNumber: (() => { const m = (title || "").match(/第([一二三四五六七八九十百千\d]+)章/); return m?.[1] || ""; })() }),
+        body: JSON.stringify({ projectId, chapterContent: content, chapterTitle: title || "", nodeId: selectedNode?.id }),
       });
-      const resText = await res.text();
-      let data: any;
-      try { data = JSON.parse(resText); } catch { throw new Error(`API返回格式异常：${resText.slice(0, 200)}`); }
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error || `服务器错误 ${res.status}`);
-      setPreCardUpdateResult(data);
-      const charUpdates = data.characterUpdates || [];
-      const newChars = data.newCharacters || [];
-      const newLores = data.newLoreEntries || [];
-      setAutoUpdateNotification({ summary: data.summary || "AI 分析完成", charCount: charUpdates.length, newCharCount: newChars.length, loreCount: newLores.length });
-      setShowCardUpdater(true);
+      setExtractionData(data);
     } catch (err) {
-      console.error("自动分析失败:", err);
-      setAutoUpdateNotification({ summary: `分析失败：${err instanceof Error ? err.message : "请手动分析"}`, charCount: 0, newCharCount: 0, loreCount: 0 });
-    } finally { setAutoAnalyzing(false); }
+      console.error("自动提取失败:", err);
+    } finally { setExtractionLoading(false); }
   }, [projectId, selectedNode?.id]);
 
   useEffect(() => { loadProject(); }, [loadProject]);
@@ -320,10 +324,20 @@ export default function WorkspacePage() {
   const handleRefine = async () => { if (!selectedNode || !project) return; setGenStep("confirming"); setPreGenMode("refine"); setPreGenOpen(true); };
   const handleContinue = async () => { if (!selectedNode || !project) return; setGenStep("confirming"); setPreGenMode("continue"); setPreGenOpen(true); };
 
+  // 本地蒸馏累计数据（在 SSE 流中逐步累积）
+  const distillAccum = useRef<{
+    entityCount: number; stateChangeCount: number; foreshadowCount: number;
+    consistencyIssueCount: number; elapsedMs: number;
+    foreshadowCreated: number; foreshadowUpdated: number;
+    entitiesAutoCreated: number; entitiesSkipped: number;
+  }>({ entityCount: 0, stateChangeCount: 0, foreshadowCount: 0, consistencyIssueCount: 0, elapsedMs: 0, foreshadowCreated: 0, foreshadowUpdated: 0, entitiesAutoCreated: 0, entitiesSkipped: 0 });
+
   const streamSSE = async (url: string, body: Record<string, unknown>, onDone?: () => void) => {
     const controller = new AbortController();
     abortRef.current = controller;
     let accumulated = "";
+    // 重置蒸馏累计
+    distillAccum.current = { entityCount: 0, stateChangeCount: 0, foreshadowCount: 0, consistencyIssueCount: 0, elapsedMs: 0, foreshadowCreated: 0, foreshadowUpdated: 0, entitiesAutoCreated: 0, entitiesSkipped: 0 };
     try {
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: controller.signal });
       const reader = res.body?.getReader();
@@ -345,14 +359,57 @@ export default function WorkspacePage() {
             else if (event.type === "review_start") setGenStep("reviewing");
             else if (event.type === "summarize_start") setGenStep("summarizing");
             else if (event.type === "review_result") setReviewResult({ passed: event.passed ?? false, issues: event.issues || [] });
+            // ── 本地蒸馏事件 ──
+            else if (event.type === "distill_local_start") setGenStep("summarizing");
+            else if (event.type === "distill_local_done" && event.stats) {
+              distillAccum.current.entityCount = event.stats.entityCount;
+              distillAccum.current.stateChangeCount = event.stats.stateChangeCount;
+              distillAccum.current.foreshadowCount = event.stats.foreshadowCount;
+              distillAccum.current.consistencyIssueCount = event.stats.consistencyIssueCount;
+              distillAccum.current.elapsedMs = event.stats.totalElapsedMs;
+            }
+            // ── 伏笔更新 ──
+            else if (event.type === "foreshadow_update") {
+              distillAccum.current.foreshadowCreated = (event.created || []).length;
+              distillAccum.current.foreshadowUpdated = (event.updated || []).length;
+            }
+            // ── 实体自动创建 ──
+            else if (event.type === "entity_auto_created") {
+              distillAccum.current.entitiesAutoCreated = (event.created as any[])?.length || 0;
+            }
+            else if (event.type === "entity_auto_skip" && event.content) {
+              distillAccum.current.entitiesSkipped = event.content.split("、").length;
+            }
+            // ── 废词扫描 v3 ──
+            else if (event.type === "forbidden_scan_v3") {
+              setForbiddenScanResult({
+                passed: event.passed ?? false,
+                qualityScore: event.qualityScore ?? 100,
+                fuzzyDensity: event.fuzzyDensity ?? 0,
+                bySeverity: event.bySeverity || {},
+                byCategory: event.byCategory || {},
+                matches: event.matches || [],
+                totalMatches: event.totalMatches || 0,
+                summary: event.content || "",
+              });
+            }
+            // ── 逻辑自查 ──
+            else if (event.type === "logic_check_done") {
+              setLogicCheckResult({
+                passed: event.passed ?? false,
+                issues: event.issues || [],
+                summary: event.content || "",
+              });
+            }
             else if (event.type === "done") {
               setGenStep("done"); setTimeout(() => setGenStep(""), 5000);
+              // 把本地蒸馏累计数据写入 state（触发 UI 通知）
+              setDistillSummary({ ...distillAccum.current });
               const finalContent = accumulated + (event.content || "");
               setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
-              setLastGeneratedText((prev) => prev + finalContent);
               loadProject();
-              autoAnalyzeChapter(finalContent, selectedNode?.title || "");
+              autoExtractChapter(finalContent, selectedNode?.title || "");
               onDone?.();
             }
             else if (event.type === "error") { setGenStep("error"); console.error("生成错误:", event.content); }
@@ -476,16 +533,16 @@ export default function WorkspacePage() {
   // 渲染
   // ═══════════════════════════════════════════
 
-  if (loading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">加载中...</div>;
+  if (loading) return <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">加载中...</div>;
   if (!project) return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">
+    <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">
       项目不存在
       <Button variant="outline" onClick={() => router.push("/")} className="ml-4">返回首页</Button>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
@@ -496,7 +553,10 @@ export default function WorkspacePage() {
         onStyleSelect={(t: StyleTemplate) => setStyleTemplateId(t.id)} styleCard={project.styleCard}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden" onMouseUp={() => {
+        const sel = window.getSelection()?.toString()?.trim();
+        if (sel && sel.length > 0) setSelectedText(sel);
+      }}>
         <LeftPanel project={project} activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
           onAddSection={handleAddSection} onEditCharacter={setEditingCharacter} onEditLore={setEditingLore}
@@ -507,50 +567,86 @@ export default function WorkspacePage() {
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
           batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={handleDeleteNode} />
 
-        <CenterPanel selectedNode={selectedNode} streamContent={streamContent}
-          isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
-          authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
-          targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
-          onWrite={handleWrite} onStop={handleStop} onContinue={handleContinue}
-          onEditOutline={async (outline) => { if (!selectedNode) return; setSelectedNode({ ...selectedNode, outline }); try { await fetch(`/api/story/nodes/${selectedNode.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outline }) }); } catch { /* 乐观更新已生效 */ } }}
-          onDrawChapterOutline={handleDrawChapterOutline}
-          onGenerateChapterOutline={async (flashPrompt: string) => {
-            if (!selectedNode || !project) { alert("请先选中一个章节节点"); return; }
-            setChapterOutlineStatus("generating");
-            try {
-              const res = await fetch("/api/generate/chapter-outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId: selectedNode.id, prompt: flashPrompt || undefined, authorNote: authorNote || undefined }) });
-              const data = await res.json();
-              if (!res.ok || data.error) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`); return; }
-              if (data.outline) {
-                setChapterOutlineStatus("done"); setTimeout(() => setChapterOutlineStatus(""), 4000);
-                setSelectedNode({ ...selectedNode, outline: data.outline });
-                const selectedInfo = data.selectedCharacters?.length ? `\n📋 AI 选角（${data.selectedCharacters.length}/${data.totalCharacters}人）：${data.selectedCharacters.map((c: any) => c.name).join("、")}${data.selectionReason ? `\n💬 ${data.selectionReason}` : ""}` : "";
-                setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）${selectedInfo}。点击大纲文字可编辑。` }] });
-                await loadProject();
-              } else { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert("API 返回空内容，请重试"); }
-            } catch (err) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
-          }}
-          projectId={project.id} lastGeneratedText={lastGeneratedText}
-          onEntitiesCreated={loadProject} onOpenCardUpdater={() => setShowCardUpdater(true)}
-          refineMode={refineMode} onToggleRefineMode={() => setRefineMode(!refineMode)}
-          refineInstruction={refineInstruction} onRefineInstructionChange={handleRefineInstructionChange} onRefine={handleRefine}
-          chapterOutlinePrompt={chapterOutlinePrompt} onChapterOutlinePromptChange={handleChapterOutlinePromptChange}
-          genStep={genStep} genStepLabels={genStepLabels} chapterOutlineStatus={chapterOutlineStatus}
-          onReviewDismiss={() => setReviewResult(null)}
-          onReviewExplain={(issue: ReviewIssue, note: string) => {
-            setReviewResult((prev) => prev ? { ...prev, issues: prev.issues.filter((_: ReviewIssue, j: number) => j !== prev.issues.indexOf(issue)), passed: prev.issues.length <= 1 } : null);
-          }}
-          onReviewFix={(issue: ReviewIssue, note: string) => {
-            setRefineMode(true);
-            const loc = issue.location ? `\n问题位置（正文原文）："${issue.location}"` : "";
-            const sug = issue.suggestion ? `\nAI建议：${issue.suggestion}` : "";
-            setRefineInstruction(`【精准修复——只改这一处，其余逐字保留】\n问题：${issue.description}${loc}${sug}\n用户说明：${note || "按AI建议修改"}\n\n【铁律】\n1. 只修改问题位置涉及的那几句话，正文其余部分原封不动\n2. 不重写、不润色、不调整未出问题段落的结构\n3. 输出完整的修改后全文`);
-            setReviewResult((prev) => prev ? { ...prev, issues: prev.issues.filter((_: ReviewIssue, j: number) => j !== prev.issues.indexOf(issue)), passed: prev.issues.length <= 1 } : null);
-          }} />
+        {/* 中间列：正文 + 分析面板 */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <CenterPanel selectedNode={selectedNode} streamContent={streamContent}
+            isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
+            authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
+            targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
+            onWrite={handleWrite} onStop={handleStop}
+            onEditOutline={async (outline) => { if (!selectedNode) return; setSelectedNode({ ...selectedNode, outline }); try { await fetch(`/api/story/nodes/${selectedNode.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outline }) }); } catch { /* 乐观更新已生效 */ } }}
+            onDrawChapterOutline={handleDrawChapterOutline}
+            onGenerateChapterOutline={async (flashPrompt: string) => {
+              if (!selectedNode || !project) { alert("请先选中一个章节节点"); return; }
+              setChapterOutlineStatus("generating");
+              try {
+                const res = await fetch("/api/generate/chapter-outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId: selectedNode.id, prompt: flashPrompt || undefined, authorNote: authorNote || undefined }) });
+                const data = await res.json();
+                if (!res.ok || data.error) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`); return; }
+                if (data.outline) {
+                  setChapterOutlineStatus("done"); setTimeout(() => setChapterOutlineStatus(""), 4000);
+                  setSelectedNode({ ...selectedNode, outline: data.outline });
+                  const selectedInfo = data.selectedCharacters?.length ? `\n📋 AI 选角（${data.selectedCharacters.length}/${data.totalCharacters}人）：${data.selectedCharacters.map((c: any) => c.name).join("、")}${data.selectionReason ? `\n💬 ${data.selectionReason}` : ""}` : "";
+                  setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）${selectedInfo}。点击大纲文字可编辑。` }] });
+                  await loadProject();
+                } else { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert("API 返回空内容，请重试"); }
+              } catch (err) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
+            }}
+            projectId={project.id}
+            refineMode={refineMode} onToggleRefineMode={() => setRefineMode(!refineMode)}
+            refineInstruction={refineInstruction} onRefineInstructionChange={handleRefineInstructionChange} onRefine={handleRefine}
+            chapterOutlinePrompt={chapterOutlinePrompt} onChapterOutlinePromptChange={handleChapterOutlinePromptChange}
+            genStep={genStep} genStepLabels={genStepLabels} chapterOutlineStatus={chapterOutlineStatus}
+            onOpenGame={() => {
+              if (selectedNode?.id) {
+                router.push(`/workspace/${project.id}/game/${selectedNode.id}`);
+              }
+            }}
+          />
+
+          {/* 统一分析面板（替代旧版浮动横幅+弹窗+按钮） */}
+          {(extractionData || distillSummary || forbiddenScanResult || logicCheckResult || reviewResult) && selectedNode && (
+            <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
+              <PostGenPanel
+                projectId={project.id}
+                nodeId={selectedNode.id}
+                chapterTitle={lastChapterTitle || selectedNode.title || ""}
+                chapterContent={selectedNode.content || lastChapterContent || ""}
+                extractionData={extractionData}
+                extractionLoading={extractionLoading}
+                distillSummary={distillSummary}
+                forbiddenScanResult={forbiddenScanResult}
+                logicCheckResult={logicCheckResult}
+                reviewResult={reviewResult}
+                onApplyExtraction={async (selected: any) => {
+                  const res = await fetch("/api/agent/apply-extraction", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ projectId: project.id, nodeId: selectedNode.id, chapterTitle: lastChapterTitle || selectedNode.title || "", selected }),
+                  });
+                  return res.json();
+                }}
+                onContinueWriting={handleContinue}
+                onClose={() => { setExtractionData(null); setDistillSummary(null); setForbiddenScanResult(null); setLogicCheckResult(null); setReviewResult(null); }}
+                onRefresh={loadProject}
+              />
+            </div>
+          )}
+        </div>
 
         {rightPanelOpen && (
           <RightPanel selectedNode={selectedNode} project={project}
-            onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote} />
+            onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
+            selectedText={selectedText || undefined}
+            onEditCharacter={(id) => {
+              const c = project.characters.find((x) => x.id === id);
+              if (c) setEditingCharacter(c);
+            }}
+            onEditLore={(id) => {
+              const l = project.lorebookEntries.find((x) => x.id === id);
+              if (l) setEditingLore(l);
+            }}
+          />
         )}
       </div>
 
@@ -560,35 +656,9 @@ export default function WorkspacePage() {
       {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={loadProject} />}
       {showNewLore && <LorebookCreateDialog projectId={project.id} onClose={() => setShowNewLore(false)} onSave={loadProject} />}
       {showSettingsImport && <SettingsImporter projectId={project.id} onClose={() => setShowSettingsImport(false)} onImported={loadProject} />}
-      {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} />}
+      {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
       {showImportWizard && <ImportWizard projectId={project.id} onClose={() => setShowImportWizard(false)} onImported={loadProject} />}
       {batchGenerating && <BatchProgressPanel progress={batchProgress} nodes={project.storyNodes} onAbort={() => setBatchAbort(true)} />}
-
-      {/* 自动检测通知横幅 */}
-      {autoUpdateNotification && !showCardUpdater && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-950/95 to-purple-950/95 border border-indigo-700/60 shadow-2xl backdrop-blur">
-            <div className="flex items-center gap-2">
-              {autoAnalyzing ? <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" /> : <span className="text-lg">🔍</span>}
-              <div>
-                <p className="text-sm text-zinc-200 font-medium">{autoAnalyzing ? "正在分析本章变化..." : autoUpdateNotification.summary}</p>
-                {!autoAnalyzing && (
-                  <p className="text-xs text-zinc-500">
-                    {autoUpdateNotification.charCount > 0 && `🔄 ${autoUpdateNotification.charCount}角色更新 `}
-                    {autoUpdateNotification.newCharCount > 0 && `🆕 ${autoUpdateNotification.newCharCount}新角色 `}
-                    {autoUpdateNotification.loreCount > 0 && `🌍 ${autoUpdateNotification.loreCount}新设定`}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { setAutoUpdateNotification(null); setShowCardUpdater(true); }} disabled={autoAnalyzing}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50">查看详情</button>
-              <button onClick={() => setAutoUpdateNotification(null)} className="px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">忽略</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 大纲生成对话框 */}
       {showOutlineDialog && (
@@ -629,31 +699,6 @@ export default function WorkspacePage() {
           onCancel={() => { setPreGenOpen(false); setOutlineGenConfig(null); }} />
       )}
 
-      {/* 三卡更新待处理浮动按钮 */}
-      {cardUpdatePending && !showCardUpdater && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <button onClick={() => {
-            if (selectedNode?.id !== pendingCardUpdateNodeId) { setLastChapterContent(selectedNode?.content || ""); setLastChapterTitle(selectedNode?.title || ""); setPendingCardUpdateNodeId(selectedNode?.id || ""); }
-            setShowCardUpdater(true);
-          }}
-            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-2xl shadow-indigo-900/40 transition-all hover:scale-105 active:scale-95">
-            <span className="text-lg">🔍</span>
-            <div className="text-left"><div className="text-sm font-medium">三卡待更新</div><div className="text-[10px] text-white/60">点击分析本章变化</div></div>
-          </button>
-        </div>
-      )}
-
-      {/* 三卡更新弹窗 */}
-      {showCardUpdater && (
-        <CardUpdater projectId={project.id}
-          chapterContent={selectedNode?.content || lastChapterContent}
-          chapterTitle={selectedNode?.title || lastChapterTitle}
-          chapterNumber={(() => { const m = (selectedNode?.title || "").match(/第([一二三四五六七八九十百千\d]+)章/); return m?.[1] || undefined; })()}
-          preAnalysisResult={preCardUpdateResult}
-          existingCharacters={project.characters?.map((c: any) => ({ id: c.id, name: c.name, role: c.role })) || []}
-          onApplied={() => { loadProject(); setAutoUpdateNotification(null); setCardUpdatePending(false); setPreCardUpdateResult(null); }}
-          onClose={() => { setShowCardUpdater(false); setPreCardUpdateResult(null); }} />
-      )}
     </div>
   );
 }
