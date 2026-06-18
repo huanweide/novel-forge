@@ -25,18 +25,43 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.20.24";
+export const LATEST_VERSION = "v0.20.25";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧠 S/A/B三级记忆注入——五策略Token优化（JSON结构化+去重+压缩+截断），注入prompt",
-  "⏳ 长效记忆衰减引擎——S级永久/A级30章/B级15章/C级5章，过期自动降级删除",
-  "🕐 衰减清理API——GET /api/cron/memory-decay，dryRun预览+正式执行统计",
-  "📦 memory-injector+memory-decay 双模块，700行纯逻辑，零外部依赖",
+  "🤖 Agent 工具层——依赖图调度器+意图解析器+路由器+分层提示词+对话压缩，5模块720行",
+  "🔧 意图解析器——纯规则引擎零Token，关键词匹配21个工具，覆盖查/改/删/创/写/分析六大意图",
+  "📐 分层提示词——五层结构（身份/硬规则★★★/中等规则★/动态上下文/工具说明），每层独立可控",
+  "💬 对话压缩器——三层策略（自然淘汰/主动压缩/极端压缩），纯规则摘要零Token",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.20.25",
+    date: "2026-06-18",
+    title: "🤖 Agent 工具层——智能调度 + 意图解析 + 分层提示词 + 对话压缩",
+    sections: [
+      {
+        label: "工具依赖图调度 + 意图解析 + 路由",
+        items: [
+          "tool-scheduler.ts——拓扑排序自动分析21个工具依赖，18个并行+3个串行",
+          "intent-parser.ts——纯规则引擎，关键词+正则拆解自然语言，覆盖六大意图类别",
+          "agent-router.ts——一条管道串起 解析→调度→执行→汇总，21种工具各有专属摘要模板",
+          "低置信度/空结果→needsLLMFallback()返回true，上游LLM兜底",
+        ],
+      },
+      {
+        label: "分层提示词 + 对话压缩",
+        items: [
+          "layered-prompt.ts——五层结构：身份/硬规则★★★/中等规则★/动态上下文/工具说明",
+          "每层独立可启用/禁用/编辑，assembleLayeredPrompt()按层组装",
+          "conversation-compressor.ts——三层策略压缩对话，纯规则摘要零Token",
+          "主动压缩(6000+token→300摘要) / 极端压缩(8000+→仅保留最近3轮)",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.20.24",
     date: "2026-06-18",
