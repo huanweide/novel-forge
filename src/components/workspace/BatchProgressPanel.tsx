@@ -1,6 +1,7 @@
 "use client";
 
 import type { StoryNodeData } from "./types";
+import { Icon } from "@/components/ui/icons";
 
 export function BatchProgressPanel({
   progress, nodes, onAbort,
@@ -18,7 +19,7 @@ export function BatchProgressPanel({
     <div className="fixed bottom-4 right-4 z-50 w-72 bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-zinc-900">
         <div>
-          <span className="text-sm font-medium">📝 批量生成</span>
+          <span className="text-sm font-medium flex items-center gap-1.5"><Icon name="pencil" size={14} /> 批量生成</span>
           <span className="text-xs text-zinc-500 ml-2">{done + failed}/{total}</span>
         </div>
         <button onClick={onAbort} className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded border border-red-800 hover:border-red-700">停止</button>

@@ -2,27 +2,28 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 
 type ParseMode = "all" | "lorebook" | "style";
 
-const MODE_OPTIONS: { mode: ParseMode; label: string; desc: string; icon: string }[] = [
+const MODE_OPTIONS: { mode: ParseMode; label: string; desc: string; icon: React.ReactNode }[] = [
   {
     mode: "all",
     label: "全部三卡",
     desc: "角色卡 + 世界书 + 风格卡，一键全出",
-    icon: "🃏",
+    icon: <Icon name="grid" size={18} />,
   },
   {
     mode: "lorebook",
     label: "仅世界卡",
     desc: "复述蒸馏——提取全部世界观设定，不总结不压缩",
-    icon: "📖",
+    icon: <Icon name="book" size={18} />,
   },
   {
     mode: "style",
     label: "仅风格卡",
     desc: "复述蒸馏——分析全部风格维度 + 提取写作规则",
-    icon: "🎨",
+    icon: <Icon name="palette" size={18} />,
   },
 ];
 
@@ -113,7 +114,7 @@ export function SettingsImporter({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">📋 批量导入设定</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Icon name="clipboard" size={18} /> 批量导入设定</h2>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
             ✕
           </button>
@@ -198,8 +199,8 @@ ${
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50"
               >
                 {parsing
-                  ? `🤖 AI 正在${mode === "lorebook" ? "蒸馏世界观" : mode === "style" ? "分析风格" : "解析"}中...`
-                  : `${modeInfo.icon} ${parsing ? "" : "开始"}${mode === "lorebook" ? "蒸馏世界设定" : mode === "style" ? "分析写作风格" : "解析全部三卡"}`}
+                  ? <span className="flex items-center gap-1.5"><Icon name="bot" size={14} /> AI 正在{mode === "lorebook" ? "蒸馏世界观" : mode === "style" ? "分析风格" : "解析"}中...</span>
+                  : <span className="flex items-center gap-1.5">{modeInfo.icon} 开始{mode === "lorebook" ? "蒸馏世界设定" : mode === "style" ? "分析写作风格" : "解析全部三卡"}</span>}
               </Button>
             </div>
           </>
@@ -237,7 +238,7 @@ ${
               )}
               {result.synopsis && (
                 <p className="text-zinc-500 mt-2 max-w-md">
-                  📌 自动提取总纲：{result.synopsis.slice(0, 100)}...
+                  <span className="flex items-center gap-1"><Icon name="pin" size={12} /> 自动提取总纲：{result.synopsis.slice(0, 100)}...</span>
                 </p>
               )}
             </div>
