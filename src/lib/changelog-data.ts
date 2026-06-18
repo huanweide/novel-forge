@@ -64,17 +64,12 @@ export const VERSIONS: VersionEntry[] = [
         label: "改编讨论面板",
         items: [
           "新增 DissectAdaptPanel 组件：左侧参考拆书数据，右侧Agent对话",
-          "修改要求自动累积，点击"应用修改并创建"时一起提交",
+          "修改要求自动累积，点击「应用修改并创建」时一起提交",
           "复用 /api/generate/chat 端点，零额外API开销",
         ],
       },
     ],
   },
-  {
-    version: "v0.20.29",
-
-/** 完整版本历史（最新在前） */
-export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.20.29",
     date: "2026-06-18",
