@@ -25,18 +25,44 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.21.1";
+export const LATEST_VERSION = "v0.21.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎨 虚空玻璃设计体系——3级表面深度+8色功能语义+4档弹性动画+CSS噪点纹理",
-  "🧩 SVG图标系统——30+ Lucide图标+StatusDot组件，全站15个页面/组件 emoji 清零",
-  "🔤 字体链优化——Geist+Sans中文fallback+JetBrains Mono等宽，文字4级明度层级",
-  "🖱️ Tooltip系统+悬停阴影3级+链接下划线动画——纯CSS实现零依赖",
+  "🐳 Docker 一键安装——一条命令启动数据库，不用手动装 PostgreSQL",
+  "📖 README 重写——双路径安装指南（Docker 推荐 + 手动备选），补 Git 依赖，修 PG 路径",
+  "🚀 新增「生产部署」章节——npm run build && npm start，日常使用更快更省资源",
+  "❓ 常见问题扩充——Docker 关库、公网部署、不想装 PG 怎么办",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.21.2",
+    date: "2026-06-21",
+    title: "🐳 Docker 一键安装 + README 重写优化安装体验",
+    sections: [
+      {
+        label: "README 重写",
+        items: [
+          "Docker 作为首选安装方式——docker compose up -d 替代手动 PostgreSQL",
+          "快速开始拆为两条路径：Docker（推荐，7行命令）和手动安装",
+          "详细教程新增「方式一：Docker」完整4步指南——从零到跑起来",
+          "环境表格补上 Git 依赖，之前克隆项目的工具反而没列",
+          "PostgreSQL 创建命令从硬编码 PostgreSQL\\16 改为 createdb 直调",
+          "新增「生产部署」章节——npm run build && npm start 日常使用",
+        ]
+      },
+      {
+        label: "常见问题扩充",
+        items: [
+          "新增：不想装 PostgreSQL 怎么办（推荐 Docker）",
+          "新增：怎么关掉数据库释放内存（Docker + 手动安装两条路）",
+          "新增：能部署到服务器上公网访问吗",
+        ]
+      },
+    ]
+  },
   {
     version: "v0.21.1",
     date: "2026-06-18",

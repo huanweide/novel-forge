@@ -11,6 +11,8 @@
 - [功能全景](#功能全景)
 - [快速开始](#快速开始)
 - [详细安装教程](#详细安装教程)
+  - [方式一：Docker（推荐）](#方式一docker推荐零基础友好)
+  - [方式二：手动安装 PostgreSQL](#方式二手动安装-postgresql)
   - [1. 环境准备](#1-环境准备)
   - [2. 克隆项目](#2-克隆项目)
   - [3. 安装依赖](#3-安装依赖)
@@ -57,10 +59,27 @@ Novel Forge
 
 ## 快速开始
 
+### 🐳 方式一：Docker（推荐，无需单独装数据库）
+
+```bash
+# 0. 装 Docker Desktop → https://www.docker.com/products/docker-desktop/
+git clone https://github.com/huanweide/novel-forge.git
+cd novel-forge
+docker compose up -d                          # 数据库一条命令启动
+echo DATABASE_URL="postgresql://novelforge:novelforge123@localhost:5432/novelforge" > .env
+npm install
+npx prisma db push
+npm run dev
+# 浏览器打开 http://localhost:3001
+```
+
+### 🛠️ 方式二：手动安装 PostgreSQL
+
 ```bash
 git clone https://github.com/huanweide/novel-forge.git
 cd novel-forge
 npm install
+# 需要先装好 PostgreSQL 并创建数据库（详见下方详细教程 → 方式二）
 npx prisma db push
 npm run dev
 # 浏览器打开 http://localhost:3001
@@ -70,15 +89,65 @@ npm run dev
 
 ## 详细安装教程
 
+### 方式一：Docker（推荐，零基础友好）
+
+用 Docker 启动数据库，**不用手动装 PostgreSQL**。适合不想折腾数据库的同学。
+
+#### 1. 安装 Docker Desktop
+
+去 [docker.com](https://www.docker.com/products/docker-desktop/) 下载 Docker Desktop，安装后启动。任务栏出现鲸鱼图标就说明在运行了。
+
+> 💡 Docker Desktop 免费，装一次以后所有需要数据库的项目都能复用。
+
+#### 2. 克隆项目并启动数据库
+
+```bash
+git clone https://github.com/huanweide/novel-forge.git
+cd novel-forge
+docker compose up -d
+```
+
+`docker compose up -d` 在后台启动 PostgreSQL 数据库。输出 `✔ Container novel-forge-db Started` 即成功。
+
+> 💡 默认用户名 `novelforge`，密码 `novelforge123`，数据库名 `novelforge`。这些定义在 `docker-compose.yml` 里，可以自己改。
+
+#### 3. 配置环境变量
+
+```bash
+echo DATABASE_URL="postgresql://novelforge:novelforge123@localhost:5432/novelforge" > .env
+```
+
+#### 4. 安装依赖并启动
+
+```bash
+npm install
+npx prisma db push
+npm run dev
+# 浏览器打开 http://localhost:3001
+```
+
+看到 `▲ Next.js 16.x.x (Turbopack) - Local: http://localhost:3001 ✓ Ready` 就成功了。
+
+> 💡 以后再次使用：先 `docker compose up -d` 启动数据库，再 `npm run dev`。数据存在 Docker volume 里，不会丢。
+
+---
+
+### 方式二：手动安装 PostgreSQL
+
+适合已经装了 PostgreSQL 或想完全手动控制的同学。
+
 ### 1. 环境准备
 
 Novel Forge 需要以下软件：
 
 | 软件 | 最低版本 | 检查方式 | 说明 |
 |------|---------|---------|------|
+| **Git** | 任意 | `git --version` | 克隆项目用 |
 | **Node.js** | 18.x | `node -v` | JavaScript 运行时 |
 | **npm** | 9.x | `npm -v` | 随 Node.js 一起安装 |
 | **PostgreSQL** | 14+ | `psql --version` | 数据库，存储所有小说数据 |
+
+**安装 Git**：去 [git-scm.com](https://git-scm.com/download/win) 下载安装包，一路下一步就行。
 
 **安装 Node.js**：去 [nodejs.org](https://nodejs.org) 下载 LTS 版本（如 20.x），一路下一步就行。
 
@@ -113,10 +182,15 @@ npm install --registry=https://registry.npmmirror.com
 **创建数据库**：
 
 ```bash
-# Windows PowerShell，以管理员身份运行
-& "C:\Program Files\PostgreSQL\16\bin\createdb.exe" -U postgres novelforge
+# Windows PowerShell
+createdb -U postgres novelforge
 # 输入你安装时设置的 postgres 密码
 ```
+
+> 如果提示 `createdb` 命令找不到，说明 PostgreSQL 没加到 PATH。用完整路径运行（**把 `17` 换成你装的版本号**）：
+> ```bash
+> & "C:\Program Files\PostgreSQL\17\bin\createdb.exe" -U postgres novelforge
+> ```
 
 或者用 pgAdmin（PostgreSQL 自带的图形化管理工具）：
 1. 打开 pgAdmin → 右键 "Databases" → Create → Database
@@ -395,6 +469,17 @@ A: 目前的架构是本地优先的——每个作者在自己的电脑上跑�
 ### Q: 支持什么格式的导入？
 A: 拆书系统支持 `.txt` 文件。字体编码建议 UTF-8。
 
+### Q: 不想装 PostgreSQL，有没有简单办法？
+A: 用 Docker，一条命令搞定数据库。见上方 [详细安装教程 → 方式一](#方式一docker推荐零基础友好)。
+
+### Q: 怎么关掉数据库（释放内存）？
+A:
+- Docker 用户：`docker compose down`（数据不丢，下次 `docker compose up -d` 恢复）
+- 手动安装用户：Win+R → `services.msc` → 找到 `postgresql-x64-xx` → 停止
+
+### Q: 能部署到服务器上公网访问吗？
+A: 可以。先跑 `npm run build`，然后用 `npm start` 启动生产模式（见下方 [生产部署](#生产部署)）。注意把 `DATABASE_URL` 指向服务器上的 PostgreSQL，并配置防火墙开放端口。
+
 ---
 
 ## 技术栈
@@ -418,6 +503,27 @@ npx tsc --noEmit       # TypeScript 编译检查（零错误才算过）
 npx prisma studio      # 数据库可视化管理面板 (localhost:5555)
 npx prisma db push     # 同步 Prisma schema → 数据库表
 ```
+
+---
+
+## 生产部署
+
+如果不想每次写小说都手动 `npm run dev`，可以构建生产版——启动更快、更省资源。
+
+```bash
+npm run build          # 构建生产版本
+npm start              # 启动生产服务器 (localhost:3001)
+```
+
+配合 Docker 数据库自启：
+
+```bash
+# 以后打开电脑只需要这两条
+docker compose up -d   # 启动数据库
+npm start              # 启动应用
+```
+
+> 💡 `npm start` 不会热更新（改了代码需要重新 `build`），但平时写小说不需要改代码，这是日常使用的最佳方式。
 
 ---
 

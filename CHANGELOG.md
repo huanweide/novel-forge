@@ -2,6 +2,26 @@
 
 ---
 
+## v0.21.2 — 2026-06-21
+
+### 📖 README 重写——安装体验大幅优化
+
+**Docker 一键安装（最大改进）**
+- 🐳 新增 Docker 作为首选安装方式——一条 `docker compose up -d` 替代手动装 PostgreSQL
+- 快速开始拆为两条路径：Docker（推荐）和手动安装，各自独立可复制
+- 详细教程新增"方式一：Docker"完整指南——4步从零到跑起来
+- 补充 Docker 常见问题：关数据库、公网部署
+
+**修复旧版 README 的坑**
+- 环境表格补上 Git（之前只列了 Node.js/npm/PostgreSQL，克隆项目用的 Git 反而没写）
+- PostgreSQL 创建命令从硬编码路径 `PostgreSQL\16` 改为 `createdb` 直调 + 版本号替换说明
+- 新增"生产部署"章节——`npm run build && npm start`，日常使用更省资源
+
+### 🔧 次要修复
+- README 目录更新，新增 Docker 锚点链接
+
+---
+
 ## v0.21.1 — 2026-06-18
 
 ### 🎨 虚空玻璃设计体系——全站UI体系重建
