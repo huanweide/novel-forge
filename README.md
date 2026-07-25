@@ -84,8 +84,9 @@ npm run dev
 ```bash
 git clone https://github.com/huanweide/novel-forge.git
 cd novel-forge
+# 写入数据库连接串（改成你本地 PostgreSQL 的账号/密码/库名）
+echo DATABASE_URL="postgresql://novelforge:novelforge123@localhost:5432/novelforge" > .env
 npm install
-# 需要先装好 PostgreSQL 并创建数据库（详见下方详细教程 → 方式二）
 npx prisma db push
 npm run dev
 # 浏览器打开 http://localhost:3001
@@ -149,13 +150,13 @@ Novel Forge 需要以下软件：
 | 软件 | 最低版本 | 检查方式 | 说明 |
 |------|---------|---------|------|
 | **Git** | 任意 | `git --version` | 克隆项目用 |
-| **Node.js** | 18.x | `node -v` | JavaScript 运行时 |
+| **Node.js** | 20.x（≥20，Next 16 要求） | `node -v` | JavaScript 运行时 |
 | **npm** | 9.x | `npm -v` | 随 Node.js 一起安装 |
 | **PostgreSQL** | 14+ | `psql --version` | 数据库，存储所有小说数据 |
 
 **安装 Git**：去 [git-scm.com](https://git-scm.com/download/win) 下载安装包，一路下一步就行。
 
-**安装 Node.js**：去 [nodejs.org](https://nodejs.org) 下载 LTS 版本（如 20.x），一路下一步就行。
+**安装 Node.js**：去 [nodejs.org](https://nodejs.org) 下载 **LTS 20.x 或更高**版本并安装——Next 16 要求 Node ≥ 20，低于 20 会启动失败。一路下一步就行。
 
 **安装 PostgreSQL**：去 [postgresql.org](https://www.postgresql.org/download/windows/) 下载安装包。安装时记住你设置的 `postgres` 用户密码（比如设为 `postgres`）。
 

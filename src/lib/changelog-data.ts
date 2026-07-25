@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.1";
+export const LATEST_VERSION = "v0.24.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🖥️ 前端错误不再静默——删除项目/拆书列表/拆书详情失败都显式弹窗或报错条+重试",
+  "🚪 修复端口错配——dev/start 对齐 3001，照 README 打开不再空白页（曾致「完全不能用」）",
+  "🔧 package.json 加 engines:node>=20，README 校正 Node 版本与方式二 .env 步骤",
+  "🖥️ 前端错误不再静默——删除/拆书列表/拆书详情失败都显式提示+重试",
   "📋 站内「更新面板」——顶部突出当前版本号，每次改动都登记版本+内容",
-  "🧱 全局错误边界——任何未捕获异常显示中文友好页，不再白屏崩溃",
-  "📟 高频路由错误可读化——失败返回中文 {error,code,hint} 操作指引",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.2",
+    date: "2026-07-26",
+    title: "🚪 修复部署启动链路（直击「完全不能用」真实根因）",
+    sections: [
+      {
+        label: "端口错配修复（最关键）",
+        items: [
+          "README/AGENTS 全程写 `localhost:3001`，但 npm 脚本原是 `next dev`（默认 3000），用户照文档打开 3001 必空白页",
+          "`dev`/`start` 改为 `next dev -p 3001` / `next start -p 3001`，与文档完全对齐",
+        ],
+      },
+      {
+        label: "环境要求校正",
+        items: [
+          "package.json 加 `engines: { node: \">=20\" }`，Next 16 强要求 Node ≥20",
+          "README 表格 Node 版本 18.x → 20.x（≥20），安装说明同步强调；方式二手动 PG 补上 `echo DATABASE_URL > .env` 步骤（此前漏写会导致 db push 直接失败）",
+        ],
+      },
+      {
+        label: "配套（v0.24.0/v0.24.1）",
+        items: [
+          "系统自检横幅 + /api/health 探针，打开即提示 DB/AI 是否就绪",
+          "npm run doctor 启动前自检；前端删除/拆书失败显式提示",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.1",
     date: "2026-07-26",
