@@ -43,6 +43,7 @@ export default function WorkspacePage() {
   // ── 项目数据 ──────────────────────────────
   const [project, setProject] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
 
   const handleSelectNode = (node: StoryNodeData) => {
@@ -214,6 +215,7 @@ export default function WorkspacePage() {
   // ═══════════════════════════════════════════
 
   const loadProject = useCallback(async () => {
+    setLoadError(null);
     try {
       const [projRes, styleRes] = await Promise.all([
         fetch(`/api/projects/${projectId}`),
@@ -241,9 +243,15 @@ export default function WorkspacePage() {
           }
           return null;
         });
-      } else { router.push("/"); }
-    } catch (err) { console.error("加载项目失败:", err); }
-    finally { setLoading(false); }
+      } else if (projRes.status === 404) {
+        router.push("/");
+      } else {
+        setLoadError(`加载项目失败（HTTP ${projRes.status}），请检查后端服务是否已启动并连接数据库。`);
+      }
+    } catch (err) {
+      console.error("加载项目失败:", err);
+      setLoadError("加载项目失败：" + (err instanceof Error ? err.message : "网络错误，请检查后端服务是否已启动并连接数据库。"));
+    } finally { setLoading(false); }
   }, [projectId, router]);
 
   // ── 自动提取（12 维度，生成完成后自动运行）──
@@ -543,6 +551,16 @@ export default function WorkspacePage() {
       </span>
     </div>
   );
+  if (loadError) return (
+    <div className="h-screen bg-zinc-950 flex flex-col items-center justify-center text-zinc-300 gap-4">
+      <div className="text-rose-400 text-lg font-semibold">⚠ 项目加载失败</div>
+      <div className="text-zinc-500 text-sm max-w-md text-center px-6">{loadError}</div>
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={() => { setLoadError(null); loadProject(); }}>重试</Button>
+        <Button variant="outline" onClick={() => router.push("/")}>返回首页</Button>
+      </div>
+    </div>
+  );
   if (!project) return (
     <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">
       项目不存在
@@ -583,7 +601,26 @@ export default function WorkspacePage() {
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
             targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
             onWrite={handleWrite} onStop={handleStop}
-            onEditOutline={async (outline) => { if (!selectedNode) return; setSelectedNode({ ...selectedNode, outline }); try { await fetch(`/api/story/nodes/${selectedNode.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outline }) }); } catch { /* 乐观更新已生效 */ } }}
+            onEditOutline={async (outline) => {
+              if (!selectedNode) return;
+              const prev = selectedNode;
+              setSelectedNode({ ...selectedNode, outline });
+              try {
+                const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ outline }),
+                });
+                if (!res.ok) {
+                  const d = (await res.json().catch(() => ({}))) as { error?: string };
+                  setSelectedNode(prev);
+                  alert(d.error || `大纲保存失败（${res.status}）`);
+                }
+              } catch (err) {
+                setSelectedNode(prev);
+                alert("大纲保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+              }
+            }}
             onDrawChapterOutline={handleDrawChapterOutline}
             onGenerateChapterOutline={async (flashPrompt: string) => {
               if (!selectedNode || !project) { alert("请先选中一个章节节点"); return; }

@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.2";
+export const LATEST_VERSION = "v0.24.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🚪 修复端口错配——dev/start 对齐 3001，照 README 打开不再空白页（曾致「完全不能用」）",
-  "🔧 package.json 加 engines:node>=20，README 校正 Node 版本与方式二 .env 步骤",
-  "🖥️ 前端错误不再静默——删除/拆书列表/拆书详情失败都显式提示+重试",
-  "📋 站内「更新面板」——顶部突出当前版本号，每次改动都登记版本+内容",
+  "🛠️ 工作台加载失败不再白屏——网络/5xx 显示可读错误+重试，404 才判「项目不存在」",
+  "💾 大纲保存假成功修复——失败回滚+明确提示，不再静默丢数据",
+  "🖥️ 前端错误不再静默（v0.24.1）——删除/拆书列表/拆书详情失败均显式提示",
+  "📋 站内「更新面板」持续记录每个版本号与更新内容，可随时回看",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.3",
+    date: "2026-07-26",
+    title: "🛠️ 工作台静默错误清零（修白屏 + 修假成功）",
+    sections: [
+      {
+        label: "工作台加载失败不再白屏",
+        items: [
+          "workspace/[projectId] 的 loadProject 原本 catch 仅 console.error → 后端/DB 未就绪时整页白屏且无任何提示",
+          "现统一错误状态：网络异常或 5xx 显示可读错误卡片（含原因）+「重试」按钮；仅 404 判定「项目不存在」跳转首页",
+          "错误提示明确指引：请检查后端服务是否已启动并连接数据库",
+        ],
+      },
+      {
+        label: "大纲保存假成功修复",
+        items: [
+          "onEditOutline 原 catch {} 乐观更新后静默吞错 → 保存其实失败时用户以为成功、数据已丢",
+          "现捕获 prev、请求非 2xx 或网络异常时回滚选中节点并 alert 明确原因，杜绝静默丢数据",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.2",
     date: "2026-07-26",
