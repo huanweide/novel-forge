@@ -1,3 +1,9 @@
+<!-- badges -->
+[![License](https://img.shields.io/github/license/huanweide/novel-forge)](LICENSE)
+[![CI](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/huanweide/novel-forge)](https://github.com/huanweide/novel-forge/stargazers)
+<!-- /badges -->
+
 # Novel Forge — AI 小说工坊
 
 用 LLM 辅助长篇网文创作。玻璃态 Premium UI，支持多 LLM 提供商，从构思到章节生成全流程覆盖。
