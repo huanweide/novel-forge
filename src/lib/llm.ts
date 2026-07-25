@@ -18,6 +18,30 @@ const PROVIDER_BASE_URLS: Record<string, string> = {
   groq: "https://api.groq.com/openai/v1",
 };
 
+// ─── 错误翻译 ────────────────────────────────────────────
+
+/**
+ * 将 LLM HTTP 错误翻译成用户可读的中文提示。
+ * 上游 API 返回的状态码 / 原始报错对用户不友好，统一在此收敛，
+ * 避免出现 "LLM API Error 401: ..." 这类让人不知所措的报错。
+ */
+export function mapLLMError(status: number, bodyText: string, model?: string): string {
+  const hint = bodyText ? `（服务端返回：${bodyText.slice(0, 160)}）` : "";
+  switch (status) {
+    case 401:
+      return `AI 服务拒绝访问（401）：API Key 无效、已过期或格式错误。请到「设置」页确认 Key 是否正确、是否已失效、是否还有余额。${hint}`;
+    case 403:
+      return `AI 服务无权限（403）：该 API Key 无权访问当前模型或接口。请检查 Key 的权限范围与所属账号。${hint}`;
+    case 404:
+      return `模型不存在（404）：${model ? `当前模型「${model}」` : "请求的模型"}在服务商处找不到。请检查模型名格式（硅基流动 deepseek-ai/DeepSeek-V4-Flash 与 DeepSeek 官方 deepseek-v4-flash 勿混用）。${hint}`;
+    case 429:
+      return `触发限流（429）：请求过于频繁或额度已耗尽。请稍后重试，或到提供商后台升级套餐 / 充值。${hint}`;
+    default:
+      if (status >= 500) return `AI 服务端异常（${status}）：服务暂时不可用，请稍后重试。${hint}`;
+      return `AI 服务调用失败（${status}）。${hint}`;
+  }
+}
+
 // ─── 配置缓存 ────────────────────────────────────────────
 
 export interface LLMSettings {
@@ -149,7 +173,7 @@ export async function callLLM(options: LLMCallOptions): Promise<string> {
 
     if (!res.ok) {
       const err = await res.text().catch(() => "");
-      throw new Error(`LLM API ${res.status}: ${err.slice(0, 200)}`);
+      throw new Error(mapLLMError(res.status, err, model));
     }
 
     const data = await res.json().catch(() => null);

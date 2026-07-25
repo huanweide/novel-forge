@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { toolRegistry } from "@/core/agents/tool-registry";
 import type { ToolContext } from "@/core/agents/tool-registry";
+import { jsonError } from "@/lib/api-error";
 
 export async function POST(request: Request) {
   try {
@@ -95,8 +96,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (err) {
+    const info = err instanceof Error ? err.message : "工具执行失败";
     return NextResponse.json(
-      { toolName: "unknown", success: false, data: null, error: err instanceof Error ? err.message : "工具执行失败" },
+      { toolName: "unknown", success: false, data: null, error: info },
       { status: 500 },
     );
   }

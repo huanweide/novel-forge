@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { clearLLMCache } from "@/lib/llm";
+import { jsonError } from "@/lib/api-error";
 
 function maskKey(key: string): string {
   if (!key || key.length <= 4) return key ? "****" : "";
@@ -25,7 +26,7 @@ export async function GET() {
       hasKey: !!settings.llmApiKey,
     });
   } catch (err) {
-    return NextResponse.json({ error: "读取设置失败" }, { status: 500 });
+    return jsonError(err);
   }
 }
 
@@ -55,6 +56,6 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: "保存设置失败" }, { status: 500 });
+    return jsonError(err);
   }
 }

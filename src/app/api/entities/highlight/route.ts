@@ -7,6 +7,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   try {
@@ -69,9 +70,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ entities });
   } catch (err) {
     console.error("实体高亮数据加载失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "加载失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

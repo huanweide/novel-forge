@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonError } from "@/lib/api-error";
 
 /**
  * GET /api/dissect/[id]
@@ -39,10 +40,7 @@ export async function GET(
     });
   } catch (err: any) {
     console.error("[dissect/[id]] 查询失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "查询失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 
@@ -68,9 +66,6 @@ export async function DELETE(
     return NextResponse.json({ success: true, message: "任务已删除" });
   } catch (err: any) {
     console.error("[dissect/[id]] 删除失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "删除失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

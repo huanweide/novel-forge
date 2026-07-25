@@ -25,18 +25,111 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.21.2";
+export const LATEST_VERSION = "v0.24.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🐳 Docker 一键安装——一条命令启动数据库，不用手动装 PostgreSQL",
-  "📖 README 重写——双路径安装指南（Docker 推荐 + 手动备选），补 Git 依赖，修 PG 路径",
-  "🚀 新增「生产部署」章节——npm run build && npm start，日常使用更快更省资源",
-  "❓ 常见问题扩充——Docker 关库、公网部署、不想装 PG 怎么办",
+  "📋 站内「更新面板」上线——顶部突出当前版本号，每次改动都登记版本+内容，随时回看",
+  "🧱 新增全局错误边界——任何未捕获异常显示中文友好页，不再白屏崩溃",
+  "📟 高频路由错误可读化——探讨/采纳/拆书/实体高亮/Agent工具失败都返回中文操作指引",
+  "🩺 系统自检横幅 + /api/health 探针——打开即提示「数据库没连 / AI 没配」并给一键修复命令",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.0",
+    date: "2026-07-26",
+    title: "📋 站内更新面板 + 高频路由错误可读化",
+    sections: [
+      {
+        label: "站内更新面板（/changelog）",
+        items: [
+          "页面顶部突出「当前版本」号与「最新」徽标，用户随时回看每个版本的版本号与更新内容",
+          "固化记录协议：每次改动都在本文件的 VERSIONS 数组插入条目 + 同步根目录 CHANGELOG.md（两文件一起提交），面板即唯一记录出口",
+        ],
+      },
+      {
+        label: "高频 API 路由错误可读化",
+        items: [
+          "探讨「采纳」、拆书「查询/删除/启动」、实体高亮、Agent 工具执行 等 5 个高频路由的 catch 统一改用 jsonError，返回 {error, code, hint} 中文操作指引",
+          "彻底告别「点了没反应却不知为何」——前端拿到可读错误即可直接展示",
+        ],
+      },
+      {
+        label: "健壮性修复",
+        items: [
+          "修复 /api/health 中 llm.hint 可能 undefined 的类型错误",
+          "新增全局 error.tsx / global-error.tsx 错误边界，未捕获异常显示中文友好页而非白屏",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.23.0",
+    date: "2026-07-25",
+    title: "🩺 系统自检与首启动引导（失败可读化）",
+    sections: [
+      {
+        label: "系统状态自检横幅",
+        items: [
+          "根布局挂载全局 SystemStatusBanner，打开任意页面即调用 /api/health 探测 DB 与 AI 配置",
+          "数据库未连接 / AI 未配置时顶部弹出琥珀色横幅：说明原因 + 给出 `docker compose up -d && npx prisma db push` 一键修复命令（可复制）或「去设置页填 Key」入口",
+          "直击此前「完全不能用却找不到原因」的核心痛点——失败现在可读、可操作，而非静默空白",
+        ],
+      },
+      {
+        label: "健康检查探针",
+        items: [
+          "新增 GET /api/health——只读轻量探针，返回 { db:{ok,error,hint}, llm:{ok,error,hint}, version }",
+          "DB 探测用 SELECT 1 实际连库（区分「环境变量存在 ≠ 有效」）；LLM 探测复用 getSettings 配置优先级",
+          "任何异常都被吞掉并返回结构化结果，自检本身绝不拖垮页面",
+        ],
+      },
+      {
+        label: "API 错误可读化",
+        items: [
+          "新增 src/lib/api-error.ts：classifyError 把 Prisma 错误码（P1001 连不上 / P1000 登录失败 / P2021 表不存在 / P2024 连接池耗尽 / P2002 唯一冲突 …）翻译为中文操作指引",
+          "jsonError() 统一返回 { error, code, hint }，已接入 /api/projects 与 /api/settings 两个首个触点路由",
+        ],
+      },
+      {
+        label: "首页加载失败可见",
+        items: [
+          "仪表盘加载项目失败时不再误显示「还没有小说项目」空态，改为明确报错卡片 + 重试按钮",
+          "提示用户查看顶部黄色自检横幅按指引修复",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v0.22.0",
+    date: "2026-07-25",
+    title: "🛡️ 稳定性与可观测性加固（可读错误 + 启动自检）",
+    sections: [
+      {
+        label: "AI 错误可读化",
+        items: [
+          "所有 LLM 调用（流式/非流式）的报错从原始 `LLM API Error 401: ...` 统一翻译为可操作中文提示",
+          "覆盖 401(Key 无效/过期) / 403(无权限) / 404(模型不存在，附硅基流动 vs DeepSeek 格式提示) / 429(限流) / 5xx(服务端异常)",
+          "网络层异常（Base URL 配错、服务断连）也会给出明确指引，不再静默失败",
+        ],
+      },
+      {
+        label: "启动自检 doctor",
+        items: [
+          "新增 `npm run doctor`——启动前自动校验 PostgreSQL 可连接、LLM 配置是否就绪",
+          "明确区分「环境变量存在 ≠ 有效」，避免「完全不能用」却找不到原因",
+        ],
+      },
+      {
+        label: "更新表同步",
+        items: [
+          "CHANGELOG.md 与 src/lib/changelog-data.ts 同步更新至 v0.22.0",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.21.2",
     date: "2026-06-21",

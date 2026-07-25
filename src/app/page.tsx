@@ -28,6 +28,7 @@ interface ProjectSummary {
 export default function Dashboard() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showChangelog, setShowChangelog] = useState(false);
 
   const loadProjects = useCallback(async (signal?: AbortSignal) => {
@@ -36,6 +37,10 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         setProjects(data);
+        setLoadError(null);
+      } else {
+        const d = (await res.json().catch(() => ({}))) as { error?: string; hint?: string };
+        setLoadError(d.error || d.hint || "加载项目失败");
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
@@ -107,6 +112,21 @@ export default function Dashboard() {
               <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-150" />
               <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-300" />
             </span>
+          </div>
+        ) : loadError && projects.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 rounded-2xl surface-elevated flex items-center justify-center mx-auto mb-5">
+              <Icon name="alert" size={28} className="text-amber-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-zinc-300 mb-2">加载失败</h2>
+            <p className="text-zinc-500 text-sm mb-2">{loadError}</p>
+            <p className="text-zinc-600 text-xs mb-6">多数情况是数据库未连接或 AI 未配置——看页面顶部黄色提示，按指引修复即可。</p>
+            <button
+              onClick={() => loadProjects()}
+              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
+            >
+              重试
+            </button>
           </div>
         ) : projects.length === 0 ? (
           <div className="text-center py-20">

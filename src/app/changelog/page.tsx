@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { VERSIONS } from "@/lib/changelog-data";
+import { VERSIONS, LATEST_VERSION } from "@/lib/changelog-data";
 import { Icon } from "@/components/ui/icons";
 
 export default function ChangelogPage() {
@@ -12,8 +12,8 @@ export default function ChangelogPage() {
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Icon name="clipboard" size={20} className="text-zinc-300" />
-            <h1 className="text-base font-bold text-zinc-100">更新公告</h1>
-            <span className="text-xs text-zinc-600">Novel Forge 版本记录</span>
+            <h1 className="text-base font-bold text-zinc-100">更新面板</h1>
+            <span className="text-xs text-zinc-600">Novel Forge 版本与更新记录</span>
           </div>
           <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
             ← 回首页
@@ -22,8 +22,22 @@ export default function ChangelogPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-6 py-10">
+        {/* 当前版本卡 */}
+        <div className="mb-10 rounded-2xl border border-indigo-400/20 bg-indigo-500/[0.06] p-5 flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+            <Icon name="sparkles" size={22} />
+          </div>
+          <div>
+            <p className="text-xs text-zinc-500">当前版本</p>
+            <p className="font-mono text-2xl font-bold text-indigo-200">{LATEST_VERSION}</p>
+          </div>
+          <p className="ml-auto max-w-[14rem] text-xs text-zinc-500">
+            每一次改动都会在这里登记版本号与更新内容，可随时回看。
+          </p>
+        </div>
+
         <div className="space-y-8">
-          {VERSIONS.map((v) => (
+          {VERSIONS.map((v, idx) => (
             <div key={v.version} className="relative pl-6 border-l-2 border-white/[0.06]">
               {/* 时间线圆点 */}
               <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-zinc-950 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
@@ -35,6 +49,11 @@ export default function ChangelogPage() {
                     {v.version}
                   </span>
                   <span className="text-xs text-zinc-600">{v.date}</span>
+                  {idx === 0 ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-400/20">
+                      最新
+                    </span>
+                  ) : null}
                 </div>
                 <h2 className="text-lg font-semibold text-zinc-100 mt-2">{v.title}</h2>
               </div>

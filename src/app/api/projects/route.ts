@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 // GET /api/projects —— 获取所有项目
 export async function GET() {
@@ -18,10 +19,7 @@ export async function GET() {
     });
     return NextResponse.json(projects);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取项目失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -41,9 +39,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建项目失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

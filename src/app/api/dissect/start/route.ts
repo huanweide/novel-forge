@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runDissection } from "@/core/dissect/engine";
 import type { DissectDepth, DissectStatus } from "@/core/dissect/types";
+import { jsonError } from "@/lib/api-error";
 
 /**
  * POST /api/dissect/start
@@ -86,10 +87,7 @@ export async function POST(req: NextRequest) {
     });
     taskId = task.id;
   } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err?.message || "创建任务失败" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return jsonError(err);
   }
 
   // 3. SSE 流式响应——整个拆解过程保持连接存活

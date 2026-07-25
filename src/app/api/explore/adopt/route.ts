@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { jsonError } from "@/lib/api-error";
 import type { BuildConfig, ExploreStep } from "@/core/explore/types";
 import { STEP_LABELS } from "@/core/explore/types";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -144,10 +145,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[explore/adopt] 采纳失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "采纳失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

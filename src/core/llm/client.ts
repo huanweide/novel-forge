@@ -8,7 +8,7 @@
  *    用户设置页改什么模型，所有 API 调用即时生效。
  */
 
-import { getSettings } from "@/lib/llm";
+import { getSettings, mapLLMError } from "@/lib/llm";
 import type { LLMConfig } from "@/core/types";
 
 // ─── 类型定义 ───────────────────────────────────────────────
@@ -92,19 +92,27 @@ export function createLLMClient(config: LLMConfig) {
         body.tool_choice = "auto";
       }
 
-      const response = await fetch(`${baseURL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(180_000), // 3分钟超时
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${baseURL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(180_000), // 3分钟超时
+        });
+      } catch (e) {
+        if (e instanceof TypeError) {
+          throw new Error(`无法连接 AI 服务：请检查 Base URL（${baseURL}）与网络是否可达。`);
+        }
+        throw e;
+      }
 
       if (!response.ok) {
         const err = await response.text();
-        throw new Error(`LLM API Error ${response.status}: ${err}`);
+        throw new Error(mapLLMError(response.status, err, request.model));
       }
 
       const data = await response.json();
@@ -166,27 +174,35 @@ export function createLLMClient(config: LLMConfig) {
      * 流式调用 —— 返回 AsyncGenerator
      */
     async *chatStream(request: Omit<LLMRequest, "stream">) {
-      const response = await fetch(`${baseURL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: request.model,
-          messages: request.messages,
-          temperature: request.temperature ?? config.defaultTemperature,
-          top_p: request.topP ?? config.defaultTopP,
-          max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
-          stream: true,
-          ...(request.thinking ? { thinking: request.thinking } : {}),
-        }),
-        signal: AbortSignal.timeout(300_000), // 5分钟超时
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${baseURL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: request.model,
+            messages: request.messages,
+            temperature: request.temperature ?? config.defaultTemperature,
+            top_p: request.topP ?? config.defaultTopP,
+            max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
+            stream: true,
+            ...(request.thinking ? { thinking: request.thinking } : {}),
+          }),
+          signal: AbortSignal.timeout(300_000), // 5分钟超时
+        });
+      } catch (e) {
+        if (e instanceof TypeError) {
+          throw new Error(`无法连接 AI 服务：请检查 Base URL（${baseURL}）与网络是否可达。`);
+        }
+        throw e;
+      }
 
       if (!response.ok) {
         const err = await response.text();
-        throw new Error(`LLM API Error ${response.status}: ${err}`);
+        throw new Error(mapLLMError(response.status, err, request.model));
       }
 
       const reader = response.body?.getReader();
