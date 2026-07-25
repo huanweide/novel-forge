@@ -17,6 +17,7 @@ import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import type { BuildConfig, AdoptedItem, ExploreStep } from "@/core/explore/types";
 import { STEP_LABELS } from "@/core/explore/types";
 import { stepToCategory, extractKeysFromText } from "@/core/explore/utils";
+import { jsonError } from "@/lib/api-error";
 
 export const maxDuration = 120;
 
@@ -119,12 +120,9 @@ export async function POST(req: NextRequest) {
       projectId: project.id,
       message: `项目「${projectName}」已创建，包含 ${adopted.length} 条世界设定`,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[explore/create] 创建失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "创建项目失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

@@ -20,6 +20,7 @@ import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import type { BuildConfig, AdoptedItem, ExploreStep, AdoptCard } from "@/core/explore/types";
 import { EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS } from "@/core/explore/types";
 import { extractJson } from "@/core/explore/utils";
+import { jsonError } from "@/lib/api-error";
 
 export const maxDuration = 180;
 
@@ -122,12 +123,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ reply, cards });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[explore/chat] 对话失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "对话失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 
@@ -301,11 +299,9 @@ ${EXPLORE_STEPS.map(s => `- ${STEP_LABELS[s]}: ${STEP_DESCRIPTIONS[s].slice(0, 6
       allCards,
       mode: "generate_all",
     });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message || "一键生成失败" },
-      { status: 500 },
-    );
+  } catch (err) {
+    console.error("[explore/chat:generate_all] 失败:", err);
+    return jsonError(err);
   }
 }
 
@@ -594,12 +590,9 @@ ${config?.genre ? `小说类型：${config.genre}` : ""}
       mode: "outline",
       stats: { chunks: chunks.length, textLen: cleanText.length },
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[explore/chat:outline] 处理失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "大纲处理失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

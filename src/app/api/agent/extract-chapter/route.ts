@@ -11,6 +11,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { jsonError } from "@/lib/api-error";
 
 export const maxDuration = 90;
 
@@ -403,9 +404,6 @@ ${chapterContent.slice(0, 6000)}
     return NextResponse.json(result);
   } catch (err) {
     console.error("章节提取失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "提取失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

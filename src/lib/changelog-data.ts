@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.3";
+export const LATEST_VERSION = "v0.24.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛠️ 工作台加载失败不再白屏——网络/5xx 显示可读错误+重试，404 才判「项目不存在」",
-  "💾 大纲保存假成功修复——失败回滚+明确提示，不再静默丢数据",
-  "🖥️ 前端错误不再静默（v0.24.1）——删除/拆书列表/拆书详情失败均显式提示",
+  "🔧 后端错误结构化——explore/create·chat·extract-chapter·imitate/start 等 6 处 catch 统一 jsonError（{error,code,hint}）",
+  "🧹 删除死文件 conversation-compressor.ts（0 引用），消除历史遗留冗余",
+  "🛠️ 工作台白屏/假成功修复已随 v0.24.3 交付，配合系统自检横幅让失败可读",
   "📋 站内「更新面板」持续记录每个版本号与更新内容，可随时回看",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.4",
+    date: "2026-07-26",
+    title: "🔧 后端错误结构化 + 死代码清理",
+    sections: [
+      {
+        label: "后端错误响应结构化",
+        items: [
+          "explore/create、explore/chat（对话/一键生成/大纲三处）、agent/extract-chapter、imitate/start 外层共 6 个 catch 统一改用 jsonError",
+          "返回标准化 { error, code, hint }：Prisma/网络连接错误给出针对性中文修复指引（如「请执行 npx prisma db push 建表」），不再只甩原始堆栈",
+          "SSE 流式错误（explore 大纲流、imitate 流内）此前已用 SSE error 事件推送，保持不变；settings/test 维持 { ok:false, error } 前端契约不改",
+        ],
+      },
+      {
+        label: "死代码清理",
+        items: [
+          "删除 src/lib/conversation-compressor.ts——全代码库 0 引用（仅更新日志历史文本提及），属历史遗留冗余模块",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.3",
     date: "2026-07-26",

@@ -2,6 +2,20 @@
 
 ---
 
+## v0.24.4 — 2026-07-26
+
+### 🔧 后端错误结构化 + 死代码清理
+
+**后端错误响应结构化**
+- explore/create、explore/chat（对话/一键生成/大纲三处）、agent/extract-chapter、imitate/start 外层共 6 个 catch 统一改用 `jsonError`
+- 返回标准化 `{ error, code, hint }`：Prisma/网络连接错误给出针对性中文修复指引（如「请执行 `npx prisma db push` 建表」），不再只甩原始堆栈
+- SSE 流式错误（explore 大纲流、imitate 流内）此前已用 SSE error 事件推送，保持不变；settings/test 维持 `{ ok:false, error }` 前端契约不改
+
+**死代码清理**
+- 删除 `src/lib/conversation-compressor.ts`——全代码库 0 引用（仅更新日志历史文本提及），属历史遗留冗余模块
+
+---
+
 ## v0.24.3 — 2026-07-26
 
 ### 🛠️ 工作台静默错误清零（修白屏 + 修假成功）

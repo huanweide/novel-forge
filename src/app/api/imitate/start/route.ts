@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { streamImitation } from "@/core/dissect/imitation-engine";
 import type { ImitationRequest, ImitationMode, DimensionKey } from "@/core/dissect/types";
 import { DISSECT_DIMENSIONS } from "@/core/dissect/types";
+import { jsonError } from "@/lib/api-error";
 
 /**
  * POST /api/imitate/start
@@ -116,11 +117,8 @@ export async function POST(req: NextRequest) {
         Connection: "keep-alive",
       },
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[imitate/start] 启动失败:", err);
-    return new Response(
-      JSON.stringify({ error: err?.message || "启动仿写失败" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return jsonError(err);
   }
 }
