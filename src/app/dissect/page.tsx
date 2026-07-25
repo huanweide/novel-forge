@@ -21,6 +21,7 @@ interface TaskBrief {
 export default function DissectPage() {
   const [tasks, setTasks] = useState<TaskBrief[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,10 +34,15 @@ export default function DissectPage() {
   async function loadTasks() {
     try {
       const res = await fetch("/api/dissect/list");
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        setLoadError(d.error || `加载失败（${res.status}）`);
+        return;
+      }
       const data = await res.json();
       setTasks(data.tasks || []);
     } catch {
-      // 静默失败
+      setLoadError("网络错误，无法加载拆书任务");
     } finally {
       setLoading(false);
     }
@@ -102,7 +108,20 @@ export default function DissectPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {loading ? (
+        {loadError ? (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+            ⚠️ {loadError}
+            <button
+              onClick={() => {
+                setLoadError(null);
+                loadTasks();
+              }}
+              className="ml-3 underline underline-offset-2 hover:text-white"
+            >
+              重试
+            </button>
+          </div>
+        ) : loading ? (
           <div className="text-center py-20 text-zinc-500">
             <div className="animate-spin text-4xl mb-4">⏳</div>
             <p>加载中...</p>

@@ -66,10 +66,15 @@ export default function Dashboard() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`确定删除「${name}」？此操作不可逆。`)) return;
     try {
-      await fetch(`/api/projects/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(d.error || "删除失败");
+        return;
+      }
       loadProjects();
     } catch (err) {
-      console.error("删除失败:", err);
+      alert("删除失败：" + (err instanceof Error ? err.message : "网络错误"));
     }
   };
 
@@ -84,7 +89,7 @@ export default function Dashboard() {
               <p className="text-xs text-zinc-500">
                 AI 小说工坊 ·{" "}
                 <a href="/changelog" className="text-indigo-400 hover:text-indigo-300 transition-colors">
-                  更新公告
+                  更新面板
                 </a>
               </p>
             </div>

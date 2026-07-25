@@ -33,6 +33,7 @@ export default function DissectDetailPage() {
 
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pollError, setPollError] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "adapt">("view");
   const [converting, setConverting] = useState(false);
   const [convertSuccess, setConvertSuccess] = useState<string | null>(null);
@@ -43,11 +44,16 @@ export default function DissectDetailPage() {
     if (!id) return;
     try {
       const res = await fetch(`/api/dissect/${id}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        setPollError(d.error || `加载失败（${res.status}）`);
+        return;
+      }
+      setPollError(null);
       const data = await res.json();
       setTask(data);
     } catch {
-      // 静默
+      setPollError("网络错误，无法加载拆书详情");
     } finally {
       setLoading(false);
     }
@@ -154,6 +160,20 @@ export default function DissectDetailPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-200">
+      {pollError ? (
+        <div className="border-b border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm text-rose-200">
+          ⚠️ {pollError}
+          <button
+            onClick={() => {
+              setPollError(null);
+              fetchTask();
+            }}
+            className="ml-3 underline underline-offset-2 hover:text-white"
+          >
+            重试
+          </button>
+        </div>
+      ) : null}
       {/* 顶栏 */}
       <header className="border-b border-zinc-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
