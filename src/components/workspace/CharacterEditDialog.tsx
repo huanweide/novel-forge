@@ -148,29 +148,38 @@ export function CharacterEditDialog({
       const parts = line.split(/[：:]/);
       return { targetName: parts[0]?.trim() || "", relation: parts[1]?.trim() || "", dynamic: parts[2]?.trim() || "" };
     });
-    await fetch(`/api/characters/${character.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        aliases: form.aliases.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
-        role: form.role,
-        age: form.age,
-        gender: form.gender,
-        appearance: { hair: form.appearanceHair, eyes: form.appearanceEyes, height: form.appearanceHeight, build: form.appearanceBuild, features: form.appearanceFeatures, attire: form.appearanceAttire },
-        personality: fromText(form.personality),
-        background: form.background,
-        abilities: form.abilities.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
-        hiddenMotives: form.hiddenMotives.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
-        relationships,
-        dialogueStyle: { description: form.dialogueDesc, examples: form.dialogueExamples.split("\n").filter(Boolean), vocabulary: form.dialogueVocab.split(/[,，、]/).map(s => s.trim()).filter(Boolean), speechPatterns: form.dialoguePatterns.split("\n").filter(Boolean) },
-        timeline: textToTimeline(form.timeline),
-        arcProgress: form.arcProgress,
-        currentStatus: form.currentStatus,
-      }),
-    });
-    onSave();
-    onClose();
+    try {
+      const res = await fetch(`/api/characters/${character.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          aliases: form.aliases.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+          role: form.role,
+          age: form.age,
+          gender: form.gender,
+          appearance: { hair: form.appearanceHair, eyes: form.appearanceEyes, height: form.appearanceHeight, build: form.appearanceBuild, features: form.appearanceFeatures, attire: form.appearanceAttire },
+          personality: fromText(form.personality),
+          background: form.background,
+          abilities: form.abilities.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
+          hiddenMotives: form.hiddenMotives.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
+          relationships,
+          dialogueStyle: { description: form.dialogueDesc, examples: form.dialogueExamples.split("\n").filter(Boolean), vocabulary: form.dialogueVocab.split(/[,，、]/).map(s => s.trim()).filter(Boolean), speechPatterns: form.dialoguePatterns.split("\n").filter(Boolean) },
+          timeline: textToTimeline(form.timeline),
+          arcProgress: form.arcProgress,
+          currentStatus: form.currentStatus,
+        }),
+      });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(d.error || "角色保存失败，请重试");
+        return;
+      }
+      onSave();
+      onClose();
+    } catch (err) {
+      alert("角色保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
   };
 
   const field = (label: string, value: string, set: (v: string) => void, opts?: { placeholder?: string; textarea?: boolean; rows?: number }) =>

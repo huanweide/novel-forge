@@ -30,13 +30,22 @@ export function CharacterCreateDialog({
       else if (line.startsWith("面具：") || line.startsWith("面具:")) socialMask = line.replace(/^面具[：:]\s*/, "").trim();
       else if (line.trim()) { if (!dominant) dominant = line.trim(); else habits.push(line.trim()); }
     }
-    await fetch("/api/characters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, name: form.name, role: form.role, age: form.age, gender: form.gender, personality: { dominant, drive, contradiction, habits, socialMask }, currentStatus: form.currentStatus }),
-    });
-    onSave();
-    onClose();
+    try {
+      const res = await fetch("/api/characters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, name: form.name, role: form.role, age: form.age, gender: form.gender, personality: { dominant, drive, contradiction, habits, socialMask }, currentStatus: form.currentStatus }),
+      });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(d.error || "角色创建失败，请重试");
+        return;
+      }
+      onSave();
+      onClose();
+    } catch (err) {
+      alert("角色创建失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
   };
 
   return (

@@ -19,13 +19,22 @@ export function LorebookCreateDialog({
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
-    await fetch("/api/lorebook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, title: form.title, category: form.category, keys: form.keys.split(/[,，、]/).map((s) => s.trim()).filter(Boolean), content: form.content }),
-    });
-    onSave();
-    onClose();
+    try {
+      const res = await fetch("/api/lorebook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, title: form.title, category: form.category, keys: form.keys.split(/[,，、]/).map((s) => s.trim()).filter(Boolean), content: form.content }),
+      });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(d.error || "词条创建失败，请重试");
+        return;
+      }
+      onSave();
+      onClose();
+    } catch (err) {
+      alert("词条创建失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
   };
 
   return (

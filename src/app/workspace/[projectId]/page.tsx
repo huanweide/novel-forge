@@ -74,12 +74,18 @@ export default function WorkspacePage() {
     if (authorNoteSaveTimer.current) clearTimeout(authorNoteSaveTimer.current);
     authorNoteSaveTimer.current = setTimeout(async () => {
       try {
-        await fetch(`/api/projects/${projectId}`, {
+        const res = await fetch(`/api/projects/${projectId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ authorNote: v }),
         });
-      } catch { /* 静默保存 */ }
+        if (!res.ok) {
+          const d = (await res.json().catch(() => ({}))) as { error?: string };
+          alert(d.error || "作者注记保存失败，请检查后端服务是否已启动");
+        }
+      } catch (err) {
+        alert("作者注记保存失败：" + (err instanceof Error ? err.message : "网络错误") + "（已暂存本地，可稍后重试）");
+      }
     }, 1500);
   };
   const [targetWordCount, setTargetWordCount] = useState(800);
@@ -187,22 +193,29 @@ export default function WorkspacePage() {
     if (!selectedNode) return;
     setShowDrawCards(false);
     try {
-      await fetch(`/api/story/nodes/${selectedNode.id}`, {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ outline: card.outline }),
       });
-    } catch { /* 乐观更新已生效，保存失败后续刷新会体现 */ }
-    setSelectedNode({ ...selectedNode, outline: card.outline });
-    setReviewResult({
-      passed: true,
-      issues: [{
-        type: "info", severity: "minor",
-        description: `🎴 已采用「${card.cardLabel || "抽卡路线"}」章纲 · ${card.characters.length}角色出场 · ${card.coreConflict || ""} · 🎭${card.mood || ""}`,
-      }],
-    });
-    setChapterOutlineStatus("done");
-    setTimeout(() => { setChapterOutlineStatus(""); setReviewResult(null); }, 5000);
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(d.error || "章纲保存失败，请重试");
+        return;
+      }
+      setSelectedNode({ ...selectedNode, outline: card.outline });
+      setReviewResult({
+        passed: true,
+        issues: [{
+          type: "info", severity: "minor",
+          description: `🎴 已采用「${card.cardLabel || "抽卡路线"}」章纲 · ${card.characters.length}角色出场 · ${card.coreConflict || ""} · 🎭${card.mood || ""}`,
+        }],
+      });
+      setChapterOutlineStatus("done");
+      setTimeout(() => { setChapterOutlineStatus(""); setReviewResult(null); }, 5000);
+    } catch (err) {
+      alert("章纲保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
   };
 
   // ── 生成前确认 ────────────────────────────

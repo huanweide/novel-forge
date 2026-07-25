@@ -2,6 +2,25 @@
 
 ---
 
+## v0.24.5 — 2026-07-26
+
+### 🛡️ 修 P0 假成功/数据丢失（抽卡章纲 + 角色/词条弹窗 + 作者注记）
+
+**抽卡章纲保存（handleDrawSelect）**
+- 原逻辑：PUT 保存失败被 `catch {}` 静默吞掉，仍乐观显示「已采用」→ 用户以为章纲已存，刷新后丢失
+- 现改为：先请求成功（`res.ok`）才更新显示「已采用」；失败 `alert` 明确原因，不再误导
+
+**角色/词条 编辑·创建弹窗**
+- CharacterEditDialog / LorebookEditDialog 的 `handleSave`：原直接 `await fetch` 后 `onSave+onClose`，不检查 `res.ok` → PUT 失败弹窗关闭=假成功（编辑丢失）
+- CharacterCreateDialog / LorebookCreateDialog 的 `handleSave`：POST 失败无提示 → 点了没反应
+- 现四个弹窗统一：检查 `res.ok`，失败 `alert` 且不关闭弹窗（保留用户输入可重试），成功才 `onSave+onClose`
+
+**作者注记自动保存（handleAuthorNoteChange）**
+- 防抖 PATCH 原 `catch {}` 静默 → 服务端未存时刷新即丢注记，用户无感
+- 现失败 `alert` 提示（区分 5xx/网络），并保留 `localStorage` 兜底
+
+---
+
 ## v0.24.4 — 2026-07-26
 
 ### 🔧 后端错误结构化 + 死代码清理
