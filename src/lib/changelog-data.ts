@@ -25,18 +25,32 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.7";
+export const LATEST_VERSION = "v0.24.8";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔍 收口最后 4 处写操作假成功 + 4 处加载失败可见化——角色卡采纳/世界书新建/文风应用·保存/设置·上下文·拆书·文风加载失败均显式报错",
-  "🤝 角色卡采纳建议（AIChatBar）：GET/PUT 失败显式提示，不再静默丢采纳",
-  "🎨 文风应用/保存（StyleSelector/StyleEditor）：PUT 失败 alert 且不关窗，杜绝「以为应用了其实没存」",
-  "🧩 加载失败可见化：设置页、上下文预览、拆书任务/维度、文风配置加载失败显式报错，不再误显空/转圈",
+  "🗑️ 修最后 1 处必须修：拆书任务删除未查 res.ok（服务端失败却从列表移除=假删除）→ 现失败 alert 且不移除",
+  "✅ 至此前端所有写操作与加载失败均显式可见，无剩余「必须修」静默吞错/假成功",
+  "📋 站内「更新面板」持续记录至 v0.24.8，可随时回看每个版本号与更新内容",
+  "🚀 沙箱可验证范围内已达收敛；部署侧 `docker compose up -d` 起库即可跑站（详见交付报告）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.8",
+    date: "2026-07-26",
+    title: "🗑️ 修最后 1 处必须修：拆书任务删除假成功（未查 res.ok）",
+    sections: [
+      {
+        label: "拆书任务删除（dissect/page.tsx handleDelete）",
+        items: [
+          "原逻辑：`await fetch(DELETE)` 后直接 `setTasks(filter)` 移除列表项，不检查 res.ok → 服务端 4xx/5xx 时 UI 显示已删而服务端仍在=假删除成功",
+          "现改为：先判 `res.ok`，失败 alert 具体 HTTP 状态且不移除列表项，成功才移除",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.7",
     date: "2026-07-26",

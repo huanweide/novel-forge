@@ -52,7 +52,8 @@ export default function DissectPage() {
     if (!confirm("确定删除这个拆书任务？")) return;
     setDeletingId(id);
     try {
-      await fetch(`/api/dissect/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/dissect/${id}`, { method: "DELETE" });
+      if (!res.ok) { alert("删除失败（HTTP " + res.status + "）"); return; }
       setTasks((prev) => prev.filter((t) => t.id !== id));
     } catch {
       alert("删除失败");
