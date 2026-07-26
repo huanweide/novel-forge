@@ -25,18 +25,52 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.26.0";
+export const LATEST_VERSION = "v0.26.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔔 全新全局 Toast / Confirm / Prompt 系统：所有提示与确认弹窗改为虚空玻璃风格，错误不再静默、成功有正向反馈",
-  "🔘 按钮交互全面升级：按压下沉 + 加载 Spinner + 禁用态，每个按钮都有响应、互动感与确定感",
-  "🗑 7 类删除操作改为 styled 确认弹窗 + 忙态锁定，误删风险归零；新建章节/小节输入框同风格化",
-  "🟢 DeepSeek 跑通：模型按 Provider 自动默认，只填 Key 即可运行；实测连接返回 200 与正确中文内容",
+  "🧹 抽离共享 useConfirmDelete Hook：7 处删除确认逻辑（角色/故事线/规则/世界书/项目/拆书/章节节点）统一收口，消除约 90 行重复样板与各自为政的错误处理",
+  "🔧 移除矛盾的重复标签：工作台侧栏原 world 与 lorebook 两个标签渲染同一面板，造成重复/矛盾入口，已删除冗余的 lorebook 标签",
+  "🔘 补全按钮加载态：大纲树章节节点删除按钮此前缺失禁用/忙态，现接入 deletingId，删除中锁定防重复点击，消除「点了没反应」的观感",
+  "✅ 质量自检：tsc --noEmit 零错误，生产构建 64 页零警告通过；本地服务所有页面路由返回 200",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.26.1",
+    date: "2026-07-26",
+    title: "🧹 前端按钮去重与矛盾消除：共享删除 Hook、冗余标签清理、加载态补全",
+    sections: [
+      {
+        label: "删除逻辑去重（重构）",
+        items: [
+          "新增共享 Hook `useConfirmDelete`（src/components/workspace/useConfirmDelete.ts）：统一封装「确认弹窗 → 忙态锁定 → 删除 → 成功刷新 / 失败 toast」流程",
+          "7 处删除入口（角色 / 故事线 / 规则 / 世界书条目 / 项目 / 拆书任务 / 章节节点）改用该 Hook，移除约 90 行重复样板，并消除各文件删除错误处理不一致、提示文案凌乱的隐患",
+        ],
+      },
+      {
+        label: "矛盾按钮消除（修复）",
+        items: [
+          "工作台侧栏原 `world` 与 `lorebook` 两个标签渲染同一 WorldPanel，形成重复且矛盾的入口；删除冗余的 lorebook 标签，仅保留 world 单一入口",
+          "CharacterList 的 `onDelete` 由 `() => void` 修正为 `() => Promise<void>`，删除失败现在能被 Hook 正确捕获并提示，不再被静默吞掉",
+        ],
+      },
+      {
+        label: "按钮加载态补全（修复）",
+        items: [
+          "大纲树（OutlineTree）章节节点删除按钮此前缺失禁用/忙态，点击后无视觉反馈；现接入 `deletingId`，删除进行中禁用并锁定该按钮，防重复点击，消除「点了没反应」的矛盾观感",
+        ],
+      },
+      {
+        label: "构建与自检（质量）",
+        items: [
+          "tsc --noEmit 零错误；生产构建 64 个页面零警告通过",
+          "本地服务自检：首页 / 设置 / 更新面板 / 探索 / 拆书 等所有页面路由返回 200，渲染真实内容（非错误边界）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.26.0",
     date: "2026-07-26",

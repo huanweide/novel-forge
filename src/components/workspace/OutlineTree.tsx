@@ -6,13 +6,14 @@ import type { StoryNodeData } from "./types";
 
 export function NodeTreeItem({
   node, allNodes, selectedNode, onSelectNode, onAddSection, depth,
-  batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode,
+  batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
   projectId,
 }: {
   node: StoryNodeData; allNodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
   depth: number; batchMode?: boolean; selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
+  deletingId?: string | null;
   projectId: string;
 }) {
   const router = useRouter();
@@ -43,7 +44,8 @@ export function NodeTreeItem({
         {isImported && <span className="text-purple-400/70 text-[10px]" title="从导入文本创建">📥</span>}
         {onDeleteNode && (node.type === "chapter" || node.type === "section") && (
           <button onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
-            className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity" title="删除此章节">✕</button>
+            disabled={deletingId === node.id}
+            className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity disabled:opacity-40" title="删除此章节">✕</button>
         )}
         {isChapter && (
           <button onClick={(e) => { e.stopPropagation(); router.push(`/workspace/${projectId}/game/${node.id}`); }}
@@ -55,7 +57,7 @@ export function NodeTreeItem({
         <NodeTreeItem key={child.id} node={child} allNodes={allNodes} selectedNode={selectedNode}
           onSelectNode={onSelectNode} onAddSection={onAddSection} depth={depth + 1}
           batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
           projectId={projectId} />
       ))}
     </div>
@@ -64,16 +66,17 @@ export function NodeTreeItem({
 
 export function VolumeGroup({
   volume, children, allNodes, selectedNode, onSelectNode, onAddSection,
-  batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode,
+  batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
   projectId,
 }: {
   volume: StoryNodeData; children: StoryNodeData[]; allNodes: StoryNodeData[];
   selectedNode: StoryNodeData | null; onSelectNode: (n: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; batchMode?: boolean;
-  selectedChapterIds?: Set<string>; onToggleChapterSelect?: (id: string) => void;
-  onDeleteNode?: (id: string) => void;
-  projectId: string;
-}) {
+  selectedChapterIds?: Set<string>;     onToggleChapterSelect?: (id: string) => void;
+    onDeleteNode?: (id: string) => void;
+    deletingId?: string | null;
+    projectId: string;
+  }) {
   const [collapsed, setCollapsed] = useState(false);
   const totalWords = children.reduce((sum, c) => sum + (c.wordCount || 0), 0);
 
@@ -91,7 +94,7 @@ export function VolumeGroup({
             <NodeTreeItem key={ch.id} node={ch} allNodes={allNodes} selectedNode={selectedNode}
               onSelectNode={onSelectNode} onAddSection={onAddSection} depth={1}
               batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-              onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+              onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
               projectId={projectId} />
           ))}
           <button onClick={(e) => { e.stopPropagation(); onAddSection(volume.id); }}
@@ -106,13 +109,14 @@ export function VolumeGroup({
 
 export function OutlineTree({
   nodes, selectedNode, onSelectNode, onAddSection, volumeView,
-  batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode,
+  batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
   projectId,
 }: {
   nodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
   volumeView: boolean; batchMode?: boolean; selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
+  deletingId?: string | null;
   projectId: string;
 }) {
   const volumeNodes = nodes.filter((n) => n.type === "volume");
@@ -126,14 +130,14 @@ export function OutlineTree({
           return <VolumeGroup key={vol.id} volume={vol} children={volChildren} allNodes={nodes}
             selectedNode={selectedNode} onSelectNode={onSelectNode} onAddSection={onAddSection}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
             projectId={projectId} />;
         })}
         {nonVolumeRoots.map((root) => (
           <NodeTreeItem key={root.id} node={root} allNodes={nodes} selectedNode={selectedNode}
             onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
             projectId={projectId} />
         ))}
         <button onClick={() => onAddSection(null)}
@@ -161,7 +165,7 @@ export function OutlineTree({
         <NodeTreeItem key={root.id} node={root} allNodes={nodes} selectedNode={selectedNode}
           onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
           batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode}
+          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
           projectId={projectId} />
       ))}
       <button onClick={() => onAddSection(null)}

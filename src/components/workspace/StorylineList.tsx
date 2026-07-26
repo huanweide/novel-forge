@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 export interface StorylineData {
   id: string; projectId: string;
@@ -29,7 +30,6 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<StorylineData>>({});
 
@@ -82,16 +82,16 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
     } catch (err) { toastError("故事线保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!(await confirmDialog({ title: "删除故事线", description: "确定删除这条故事线？此操作不可恢复。", danger: true }))) return;
-    setDeletingId(id);
-    try {
+  const { deletingId, remove: deleteStoryline } = useConfirmDelete({
+    title: "删除故事线",
+    description: "确定删除这条故事线？此操作不可恢复。",
+    deleteFn: async (id) => {
       const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
-      load();
-    } catch (err) { toastError("删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
-    finally { setDeletingId(null); }
-  };
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); }
+    },
+    onSuccess: () => load(),
+    errorPrefix: "删除失败",
+  });
 
   const startEdit = (s: StorylineData) => {
     setEditingId(s.id);
@@ -131,7 +131,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           </div>
           <StorylineDetail storyline={mainLine} expanded={expandedId === mainLine.id}
             onToggle={() => setExpandedId(expandedId === mainLine.id ? null : mainLine.id)}
-            onEdit={() => startEdit(mainLine)} onDelete={() => handleDelete(mainLine.id)} deletingId={deletingId} />
+            onEdit={() => startEdit(mainLine)} onDelete={() => deleteStoryline(mainLine.id)} deletingId={deletingId} />
         </div>
       )}
 
@@ -145,7 +145,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           </div>
           <StorylineDetail storyline={s} expanded={expandedId === s.id}
             onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
-            onEdit={() => startEdit(s)} onDelete={() => handleDelete(s.id)} deletingId={deletingId} />
+            onEdit={() => startEdit(s)} onDelete={() => deleteStoryline(s.id)} deletingId={deletingId} />
         </div>
       ))}
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
 import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -31,7 +32,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadProjects = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -65,23 +65,19 @@ export default function Dashboard() {
     } catch { /* */ }
   }, []);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!(await confirmDialog({ title: "删除项目", description: `确定删除「${name}」？此操作不可逆。`, danger: true }))) return;
-    setDeletingId(id);
-    try {
+  const { deletingId, remove: deleteProject } = useConfirmDelete({
+    title: "删除项目",
+    description: (id, name) => `确定删除「${name}」？此操作不可逆。`,
+    deleteFn: async (id) => {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        toastError(d.error || "删除失败");
-        return;
+        throw new Error(d.error || "删除失败");
       }
-      loadProjects();
-    } catch (err) {
-      toastError("删除失败：" + (err instanceof Error ? err.message : "网络错误"));
-    } finally {
-      setDeletingId(null);
-    }
-  };
+    },
+    onSuccess: () => loadProjects(),
+    errorPrefix: "删除失败",
+  });
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -174,7 +170,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} onDelete={() => handleDelete(p.id, p.name)} deletingId={deletingId} />
+              <ProjectCard key={p.id} project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
             ))}
           </div>
         )}

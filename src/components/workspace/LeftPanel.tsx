@@ -14,7 +14,7 @@ export function LeftPanel({
   onEditCharacter, onEditLore, onNewCharacter, onNewLore, loadProject,
   volumeView, onToggleVolumeView, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
-  batchGenerating, onBatchGenerate, onDeleteNode,
+  batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId,
 }: {
   project: ProjectData; activeTab: string;
   onTabChange: (tab: "characters" | "world" | "lorebook" | "outline" | "storylines" | "rules") => void;
@@ -26,6 +26,7 @@ export function LeftPanel({
   onToggleChapterSelect: (id: string) => void; onSelectAll: () => void;
   onClearSelection: () => void; batchGenerating: boolean; onBatchGenerate: () => void;
   onDeleteNode?: (id: string) => void;
+  deletingNodeId?: string | null;
 }) {
   const tabs = [
     { key: "outline", label: "大纲" },
@@ -74,7 +75,7 @@ export function LeftPanel({
             <OutlineTree nodes={project.storyNodes} selectedNode={selectedNode} onSelectNode={onSelectNode}
               onAddSection={onAddSection} volumeView={volumeView} batchMode={batchMode}
               selectedChapterIds={selectedChapterIds} onToggleChapterSelect={onToggleChapterSelect}
-              onDeleteNode={onDeleteNode} projectId={project.id} />
+              onDeleteNode={onDeleteNode} projectId={project.id} deletingId={deletingNodeId} />
           </>
         )}
         {activeTab === "storylines" && (
@@ -83,13 +84,10 @@ export function LeftPanel({
 
         {activeTab === "characters" && (
           <CharacterList characters={project.characters} projectId={project.id} onEdit={onEditCharacter}
-            onDelete={async (id) => { try { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("角色删除失败：" + (d.error || `HTTP ${res.status}`)); return; } } catch (err) { toastError("角色删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); return; } loadProject(); }}
+            onDelete={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
         {activeTab === "world" && (
-          <WorldPanel projectId={project.id} entries={project.lorebookEntries} onRefresh={loadProject} />
-        )}
-        {activeTab === "lorebook" && (
           <WorldPanel projectId={project.id} entries={project.lorebookEntries} onRefresh={loadProject} />
         )}
         {activeTab === "rules" && (

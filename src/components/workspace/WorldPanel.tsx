@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { LorebookData } from "./types";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 // ─── 板块定义：每个板块独立的词汇、图标、描述 ──────────────
 
@@ -127,7 +128,6 @@ export function WorldPanel({
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // 按当前板块过滤
   const moduleEntries = entries.filter((e) => {
@@ -187,16 +187,16 @@ export function WorldPanel({
   };
 
   // 删除
-  const handleDelete = async (id: string) => {
-    if (!(await confirmDialog({ title: "删除条目", description: "确定删除此世界书条目？此操作不可恢复。", danger: true }))) return;
-    setDeletingId(id);
-    try {
+  const { deletingId, remove: deleteEntry } = useConfirmDelete({
+    title: "删除条目",
+    description: "确定删除此世界书条目？此操作不可恢复。",
+    deleteFn: async (id) => {
       const res = await fetch(`/api/lorebook/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("条目删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
-      onRefresh();
-    } catch (err) { toastError("条目删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
-    finally { setDeletingId(null); }
-  };
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); }
+    },
+    onSuccess: onRefresh,
+    errorPrefix: "条目删除失败",
+  });
 
   const moduleInfo = WORLD_MODULES.find((m) => m.key === activeModule);
   const currentFields = MODULE_FIELDS[activeModule];
@@ -305,7 +305,7 @@ export function WorldPanel({
               <div className="flex items-start justify-between">
                 <span className="text-xs text-zinc-300 font-medium leading-tight">{entry.title}</span>
                 <button
-                  onClick={() => handleDelete(entry.id)}
+                  onClick={() => deleteEntry(entry.id)}
                   disabled={deletingId === entry.id}
                   className="text-[10px] text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-1 disabled:opacity-40"
                 >

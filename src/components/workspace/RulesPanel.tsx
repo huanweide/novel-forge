@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 interface RuleData {
   id: string; projectId: string; name: string; content: string;
@@ -22,7 +23,6 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RuleData | null>(null);
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "", content: "", category: "writing", priority: 0, scope: "all",
@@ -62,16 +62,16 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!(await confirmDialog({ title: "删除规则", description: "确定删除这条规则？此操作不可恢复。", danger: true }))) return;
-    setDeletingId(id);
-    try {
+  const { deletingId, remove: deleteRule } = useConfirmDelete({
+    title: "删除规则",
+    description: "确定删除这条规则？此操作不可恢复。",
+    deleteFn: async (id) => {
       const res = await fetch(`/api/rules/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("规则删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
-      loadRules(); onRefresh?.();
-    } catch (err) { toastError("规则删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
-    finally { setDeletingId(null); }
-  };
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); }
+    },
+    onSuccess: () => { loadRules(); onRefresh?.(); },
+    errorPrefix: "规则删除失败",
+  });
 
   const handleToggle = async (rule: RuleData) => {
     try {
@@ -123,13 +123,13 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         )}
 
         {enabledRules.map(r => (
-          <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={handleDelete} deletingId={deletingId} />
+          <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={deleteRule} deletingId={deletingId} />
         ))}
         {disabledRules.length > 0 && (
           <>
             <div className="text-[10px] text-zinc-600 pt-2 pb-1 px-1">已禁用</div>
             {disabledRules.map(r => (
-              <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={handleDelete} deletingId={deletingId} />
+              <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={deleteRule} deletingId={deletingId} />
             ))}
           </>
         )}
@@ -215,6 +215,7 @@ function RuleRow({ rule, onToggle, onEdit, onDelete, deletingId }: {
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <button onClick={() => onEdit(rule)} className="text-xs text-zinc-500 hover:text-zinc-300">✏️</button>
         <button onClick={() => onDelete(rule.id)} disabled={deletingId === rule.id} className="text-xs text-zinc-500 hover:text-red-400 disabled:opacity-40">🗑</button>
+            {/* onDelete 由父组件传入，已接入 useConfirmDelete */}
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ import { DrawCards } from "@/components/workspace/DrawCards";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import type { StyleTemplate } from "@/core/templates";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 export default function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -46,7 +47,6 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
-  const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
 
   const handleSelectNode = (node: StoryNodeData) => {
     if (selectedNode?.id !== node.id) {
@@ -494,19 +494,22 @@ export default function WorkspacePage() {
     } catch (err) { console.error("创建节点失败:", err); toastError("新建节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
-  const handleDeleteNode = async (nodeId: string) => {
-    if (!project) return;
-    if (deletingNodeId === nodeId) return;
-    const node = project.storyNodes.find(n => n.id === nodeId);
-    if (!(await confirmDialog({ title: "删除章节节点", description: `确定删除「${node?.title || "此节点"}」？\n删除后后续章节将自动重新编号。`, danger: true }))) return;
-    setDeletingNodeId(nodeId);
-    try {
+  const { deletingId, remove: deleteNode } = useConfirmDelete({
+    title: "删除章节节点",
+    description: (id) => {
+      const node = project?.storyNodes.find((n) => n.id === id);
+      return `确定删除「${node?.title || "此节点"}」？\n删除后后续章节将自动重新编号。`;
+    },
+    deleteFn: async (nodeId) => {
       const res = await fetch(`/api/story/nodes/${nodeId}`, { method: "DELETE" });
-      if (res.ok) { if (selectedNode?.id === nodeId) { setSelectedNode(null); setStreamContent(""); setReviewResult(null); } await loadProject(); }
-      else { const err = await res.json().catch(() => ({ error: "未知错误" })); toastError("删除失败: " + (err.error || "请重试")); }
-    } catch (err) { console.error("删除节点失败:", err); toastError("删除节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
-    finally { setDeletingNodeId(null); }
-  };
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(err.error || `HTTP ${res.status}`); }
+    },
+    onSuccess: (nodeId) => {
+      if (selectedNode?.id === nodeId) { setSelectedNode(null); setStreamContent(""); setReviewResult(null); }
+      loadProject();
+    },
+    errorPrefix: "删除失败",
+  });
 
   const handleSummarize = async () => {
     if (!selectedNode || !project) return;
@@ -621,7 +624,7 @@ export default function WorkspacePage() {
           batchMode={batchMode} onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
           selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
-          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={handleDeleteNode} />
+          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={deleteNode} deletingNodeId={deletingId} />
 
         {/* 中间列：正文 + 分析面板 */}
         <div className="flex flex-col flex-1 overflow-hidden">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 interface TaskBrief {
   id: string;
@@ -23,7 +24,6 @@ export default function DissectPage() {
   const [tasks, setTasks] = useState<TaskBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTasks();
@@ -49,19 +49,16 @@ export default function DissectPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!(await confirmDialog({ title: "删除拆书任务", description: "确定删除这个拆书任务？此操作不可恢复。", danger: true }))) return;
-    setDeletingId(id);
-    try {
+  const { deletingId, remove: deleteTask } = useConfirmDelete({
+    title: "删除拆书任务",
+    description: "确定删除这个拆书任务？此操作不可恢复。",
+    deleteFn: async (id) => {
       const res = await fetch(`/api/dissect/${id}`, { method: "DELETE" });
-      if (!res.ok) { toastError("删除失败（HTTP " + res.status + "）"); return; }
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-    } catch {
-      toastError("删除失败");
-    } finally {
-      setDeletingId(null);
-    }
-  }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    },
+    onSuccess: (id) => setTasks((prev) => prev.filter((t) => t.id !== id)),
+    errorPrefix: "删除失败",
+  });
 
   const depthLabel: Record<string, string> = {
     quick: "快速",
@@ -189,7 +186,7 @@ export default function DissectPage() {
                       </Link>
                     )}
                     <button
-                      onClick={() => handleDelete(task.id)}
+                      onClick={() => deleteTask(task.id)}
                       disabled={deletingId === task.id}
                       className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                     >
