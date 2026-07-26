@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonError } from "@/lib/api-error";
 
 /**
  * GET /api/dissect/list
@@ -31,11 +32,8 @@ export async function GET() {
     });
 
     return NextResponse.json({ tasks });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[dissect/list] 查询失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "查询列表失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

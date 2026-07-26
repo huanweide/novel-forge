@@ -2,6 +2,52 @@
 
 ---
 
+## v0.26.3 — 2026-07-26
+
+### 🛡 API 错误收敛与优雅降级：环境变量配置 DeepSeek、拆书页无 DB 不崩溃
+
+**API 错误收敛与可读化**
+- 拆书列表 `/api/dissect/list`、项目详情 `/api/projects/[id]`、角色 `/api/characters/[id]`、`/api/characters`、规则 `/api/rules`、故事线 `/api/storylines`、待办 `/api/pending-items`、统计 `/api/stats/monitor`、节点 `/api/story/nodes`、伏笔 `/api/foreshadowing/list`、世界书 `/api/lorebook/[id]` 等路由的 catch 块统一改为 `jsonError(err)`
+- 消除数据库未连接时 API 返回的原始 `__TURBOPACK__...` / `prisma.xxx.findMany()` 内部堆栈，前端拿到的是 `{error, code, hint}` 结构化的中文可读错误
+
+**无数据库时的优雅降级**
+- 拆书页 `/dissect` 加载失败时不再弹出内部错误边界，改为居中友好空状态：标题「拆书任务加载失败」+ 错误原因 + 修复指引 +「重试」按钮
+- 拆书页在加载错误期间暂停 3 秒自动轮询，避免反复请求失败接口
+
+**环境变量配置 API**
+- 在用户目录 `novel-forge-github/.env` 与沙箱仓库 `.env` 写入 DeepSeek 配置：`LLM_PROVIDER=deepseek`、`LLM_API_KEY`（用户提供）、`LLM_MODEL=deepseek-v4-flash`、`LLM_BASE_URL=https://api.deepseek.com`
+- `DATABASE_URL` 默认指向 `docker compose up -d` 启动的 PostgreSQL，用户只需启动 Docker 即可让数据层跑通
+
+**质量验证**
+- `npx tsc --noEmit`：零错误
+- `npm run build`：64 页静态生成通过
+- 本地 3001 服务重启后 `/`、`/changelog`、`/settings`、`/explore`、`/dissect` 全部 200，浏览器控制台无 JS 报错
+- `curl /api/dissect/list` 验证返回结构化中文错误，不再暴露 Prisma 内部路径
+
+---
+
+## v0.26.2 — 2026-07-26
+
+### 🛡 Pipeline 检查与 bug 修复：数组空值兜底、lorebook 死代码清理、类型对齐
+
+**运行时 bug 修复**
+- LeftPanel 向子组件传递的数组统一加 `?? []` 兜底：`project.storyNodes ?? []` / `project.characters ?? []` / `project.lorebookEntries ?? []`，避免后端数据缺少字段时进入对应 tab 白屏
+- CharacterList / WorldPanel 的数组 prop 改为可选（`characters?: CharacterData[]`、`entries?: LorebookData[]`）并默认空数组，从调用方到组件自身双层防御空值
+
+**lorebook 死代码清理**
+- v0.26.1 移除工作台冗余 lorebook 标签后，`onNewLore` / `showNewLore` / `<LorebookCreateDialog>` 已没有任何入口可触发，成为死代码；已清理 LeftPanel 与 workspace/[projectId]/page.tsx 中相关 props/state/渲染
+- 删除无人引用的组件文件 `LorebookList.tsx`（全仓 0 import）与 `LorebookCreateDialog.tsx`（仅被死代码渲染），精简代码库
+
+**类型与一致性**
+- LeftPanel 与 workspace 页面的 tab 联合类型移除已废弃的 `"lorebook"`，避免误切到无对应渲染分支的空白面板
+
+**pipeline 检查**
+- 运行 `npx tsc --noEmit`：零错误
+- 运行 `npm run lint`：680 个既有 `no-explicit-any` 历史债务（memory-classifier/memory-decay 等），本次改动未引入新 lint 错误
+- 浏览器自动化检查 3001 首页/设置/探索/拆书/公告页：无客户端 JS 报错，无崩溃
+
+---
+
 ## v0.26.1 — 2026-07-26
 
 ### 🧹 前端按钮去重与矛盾消除：共享删除 Hook、冗余标签清理、加载态补全

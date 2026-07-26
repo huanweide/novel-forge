@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // POST /api/lorebook
@@ -22,9 +23,6 @@ export async function POST(request: Request) {
     syncGlobalPrompt(body.projectId).catch(() => {});
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建词条失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

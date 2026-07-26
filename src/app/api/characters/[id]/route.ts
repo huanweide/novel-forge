@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // GET /api/characters/[id]
@@ -15,10 +16,7 @@ export async function GET(
     }
     return NextResponse.json(character);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取角色失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -54,10 +52,7 @@ export async function PUT(
     syncGlobalPrompt(body.projectId || character.projectId).catch(() => {});
     return NextResponse.json(character);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新角色失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -73,9 +68,6 @@ export async function DELETE(
     if (card?.projectId) syncGlobalPrompt(card.projectId).catch(() => {});
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "删除角色失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

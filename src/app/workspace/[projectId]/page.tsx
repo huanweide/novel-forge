@@ -15,7 +15,6 @@ import { RightPanel } from "@/components/workspace/RightPanel";
 import { CharacterEditDialog } from "@/components/workspace/CharacterEditDialog";
 import { CharacterCreateDialog } from "@/components/workspace/CharacterCreateDialog";
 import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
-import { LorebookCreateDialog } from "@/components/workspace/LorebookCreateDialog";
 import { BatchProgressPanel } from "@/components/workspace/BatchProgressPanel";
 import { OutlineDialog } from "@/components/workspace/OutlineDialog";
 import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
@@ -93,14 +92,13 @@ export default function WorkspacePage() {
   const [targetWordCount, setTargetWordCount] = useState(800);
 
   // ── 面板状态 ──────────────────────────────
-  const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "lorebook" | "outline" | "storylines" | "rules">("outline");
+  const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "outline" | "storylines" | "rules">("outline");
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   // ── 角色/词条编辑弹窗 ──────────────────────
   const [editingCharacter, setEditingCharacter] = useState<CharacterData | null>(null);
   const [editingLore, setEditingLore] = useState<LorebookData | null>(null);
   const [showNewCharacter, setShowNewCharacter] = useState(false);
-  const [showNewLore, setShowNewLore] = useState(false);
 
   // ── 弹窗状态 ──────────────────────────────
   const [showSettingsImport, setShowSettingsImport] = useState(false);
@@ -619,7 +617,7 @@ export default function WorkspacePage() {
         <LeftPanel project={project} activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
           onAddSection={handleAddSection} onEditCharacter={setEditingCharacter} onEditLore={setEditingLore}
-          onNewCharacter={() => setShowNewCharacter(true)} onNewLore={() => setShowNewLore(true)}
+          onNewCharacter={() => setShowNewCharacter(true)}
           loadProject={loadProject} volumeView={volumeView} onToggleVolumeView={() => setVolumeView(!volumeView)}
           batchMode={batchMode} onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
           selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
@@ -732,7 +730,6 @@ export default function WorkspacePage() {
       {editingCharacter && <CharacterEditDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={loadProject} />}
       {showNewCharacter && <CharacterCreateDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={loadProject} />}
       {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={loadProject} />}
-      {showNewLore && <LorebookCreateDialog projectId={project.id} onClose={() => setShowNewLore(false)} onSave={loadProject} />}
       {showSettingsImport && <SettingsImporter projectId={project.id} onClose={() => setShowSettingsImport(false)} onImported={loadProject} />}
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
       {showImportWizard && <ImportWizard projectId={project.id} onClose={() => setShowImportWizard(false)} onImported={loadProject} />}

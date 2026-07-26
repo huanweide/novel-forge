@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // POST /api/characters
@@ -31,9 +32,6 @@ export async function POST(request: Request) {
     syncGlobalPrompt(body.projectId).catch(() => {});
     return NextResponse.json(character, { status: 201 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建角色失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

@@ -11,16 +11,16 @@ import { toastError } from "@/components/ui/toast";
 
 export function LeftPanel({
   project, activeTab, onTabChange, selectedNode, onSelectNode, onAddSection,
-  onEditCharacter, onEditLore, onNewCharacter, onNewLore, loadProject,
+  onEditCharacter, onEditLore, onNewCharacter, loadProject,
   volumeView, onToggleVolumeView, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
   batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId,
 }: {
   project: ProjectData; activeTab: string;
-  onTabChange: (tab: "characters" | "world" | "lorebook" | "outline" | "storylines" | "rules") => void;
+  onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules") => void;
   selectedNode: StoryNodeData | null; onSelectNode: (node: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
-  onEditLore: (l: LorebookData) => void; onNewCharacter: () => void; onNewLore: () => void;
+  onEditLore: (l: LorebookData) => void; onNewCharacter: () => void;
   loadProject: () => void; volumeView: boolean; onToggleVolumeView: () => void;
   batchMode: boolean; onToggleBatchMode: () => void; selectedChapterIds: Set<string>;
   onToggleChapterSelect: (id: string) => void; onSelectAll: () => void;
@@ -31,7 +31,7 @@ export function LeftPanel({
   const tabs = [
     { key: "outline", label: "大纲" },
     { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
-    { key: "characters", label: `角色 (${project.characters.length})` },
+    { key: "characters", label: `角色 (${project.characters?.length || 0})` },
     { key: "world", label: `世界 (${project.lorebookEntries?.length || 0})` },
     { key: "rules", label: "规则" },
   ] as const;
@@ -72,7 +72,7 @@ export function LeftPanel({
                 )}
               </div>
             )}
-            <OutlineTree nodes={project.storyNodes} selectedNode={selectedNode} onSelectNode={onSelectNode}
+            <OutlineTree nodes={project.storyNodes ?? []} selectedNode={selectedNode} onSelectNode={onSelectNode}
               onAddSection={onAddSection} volumeView={volumeView} batchMode={batchMode}
               selectedChapterIds={selectedChapterIds} onToggleChapterSelect={onToggleChapterSelect}
               onDeleteNode={onDeleteNode} projectId={project.id} deletingId={deletingNodeId} />
@@ -83,12 +83,12 @@ export function LeftPanel({
         )}
 
         {activeTab === "characters" && (
-          <CharacterList characters={project.characters} projectId={project.id} onEdit={onEditCharacter}
+          <CharacterList characters={project.characters ?? []} projectId={project.id} onEdit={onEditCharacter}
             onDelete={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
         {activeTab === "world" && (
-          <WorldPanel projectId={project.id} entries={project.lorebookEntries} onRefresh={loadProject} />
+          <WorldPanel projectId={project.id} entries={project.lorebookEntries ?? []} onRefresh={loadProject} />
         )}
         {activeTab === "rules" && (
           <RulesPanel projectId={project.id} onRefresh={loadProject} />

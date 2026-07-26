@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // PUT /api/lorebook/[id]
@@ -26,10 +27,7 @@ export async function PUT(
     syncGlobalPrompt(body.projectId || entry.projectId).catch(() => {});
     return NextResponse.json(entry);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新词条失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -45,9 +43,6 @@ export async function DELETE(
     if (entry?.projectId) syncGlobalPrompt(entry.projectId).catch(() => {});
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "删除词条失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

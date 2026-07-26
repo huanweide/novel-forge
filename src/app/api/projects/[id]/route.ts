@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 // GET /api/projects/[id]
 export async function GET(
@@ -23,10 +24,7 @@ export async function GET(
     }
     return NextResponse.json(project);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取项目失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -54,10 +52,7 @@ export async function PATCH(
     });
     return NextResponse.json(updated);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新项目失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -71,9 +66,6 @@ export async function DELETE(
     await prisma.project.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "删除项目失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

@@ -7,6 +7,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -46,9 +47,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取伏笔列表失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

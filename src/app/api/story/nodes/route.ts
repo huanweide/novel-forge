@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 // POST /api/story/nodes
 export async function POST(request: Request) {
@@ -27,9 +28,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(node, { status: 201 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建节点失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

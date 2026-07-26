@@ -5,17 +5,22 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const projectId = searchParams.get("projectId");
-  if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
+  try {
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get("projectId");
+    if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
-  const storylines = await prisma.storyline.findMany({
-    where: { projectId },
-    orderBy: [{ type: "asc" }, { order: "asc" }],
-  });
-  return NextResponse.json(storylines);
+    const storylines = await prisma.storyline.findMany({
+      where: { projectId },
+      orderBy: [{ type: "asc" }, { order: "asc" }],
+    });
+    return NextResponse.json(storylines);
+  } catch (err) {
+    return jsonError(err);
+  }
 }
 
 export async function POST(request: Request) {
@@ -47,6 +52,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(storyline, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "创建失败" }, { status: 500 });
+    return jsonError(err);
   }
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
@@ -24,26 +25,32 @@ export default function DissectPage() {
   const [tasks, setTasks] = useState<TaskBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadHint, setLoadHint] = useState<string | null>(null);
 
   useEffect(() => {
     loadTasks();
-    // 每3秒刷新（可能有正在运行的任务）
-    const interval = setInterval(loadTasks, 3000);
+    // 每3秒刷新（可能有正在运行的任务）；出错后暂停轮询，避免反复报错
+    const interval = setInterval(() => {
+      if (!loadError) loadTasks();
+    }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadError]);
 
   async function loadTasks() {
     try {
       const res = await fetch("/api/dissect/list");
+      const data = (await res.json().catch(() => ({}))) as { tasks?: TaskBrief[]; error?: string; hint?: string };
       if (!res.ok) {
-        const d = (await res.json().catch(() => ({}))) as { error?: string };
-        setLoadError(d.error || `加载失败（${res.status}）`);
+        setLoadError(data.error || `加载失败（${res.status}）`);
+        setLoadHint(data.hint || "");
         return;
       }
-      const data = await res.json();
       setTasks(data.tasks || []);
+      setLoadError(null);
+      setLoadHint(null);
     } catch {
       setLoadError("网络错误，无法加载拆书任务");
+      setLoadHint("请检查本地 3001 服务是否仍在运行。");
     } finally {
       setLoading(false);
     }
@@ -108,14 +115,20 @@ export default function DissectPage() {
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {loadError ? (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
-            ⚠️ {loadError}
+          <div className="text-center py-20">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-5">
+              <Icon name="alert" size={28} className="text-amber-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-zinc-300 mb-2">拆书任务加载失败</h2>
+            <p className="text-zinc-500 text-sm mb-2">{loadError}</p>
+            {loadHint && <p className="text-zinc-600 text-xs mb-6 max-w-md mx-auto">{loadHint}</p>}
             <button
               onClick={() => {
                 setLoadError(null);
+                setLoadHint(null);
                 loadTasks();
               }}
-              className="ml-3 underline underline-offset-2 hover:text-white"
+              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
             >
               重试
             </button>

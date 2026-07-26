@@ -120,9 +120,9 @@ const MODULE_FIELDS: Record<ModuleKey, Array<{ key: string; label: string; place
 // ─── 组件 ──────────────────────────────────────────────────
 
 export function WorldPanel({
-  projectId, entries, onRefresh,
+  projectId, entries = [], onRefresh,
 }: {
-  projectId: string; entries: LorebookData[]; onRefresh: () => void;
+  projectId: string; entries?: LorebookData[]; onRefresh: () => void;
 }) {
   const [activeModule, setActiveModule] = useState<ModuleKey>("geography");
   const [showCreate, setShowCreate] = useState(false);

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error";
 
 // GET /api/rules —— 获取规则列表（按 projectId 过滤）
 export async function GET(request: Request) {
@@ -16,10 +17,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(rules);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取规则失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -49,9 +47,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(rule, { status: 201 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建规则失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

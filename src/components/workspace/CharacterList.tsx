@@ -8,14 +8,14 @@ import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 export function CharacterList({
-  characters,
+  characters = [],
   projectId,
   onEdit,
   onDelete,
   onNew,
   onExpanded,
 }: {
-  characters: CharacterData[];
+  characters?: CharacterData[];
   projectId: string;
   onEdit: (c: CharacterData) => void;
   onDelete: (id: string) => Promise<void>;
