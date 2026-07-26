@@ -25,19 +25,22 @@ const ELEMENT_LABELS: Record<string, { emoji: string; label: string }> = {
 export function StorylineList({ projectId, onRefresh }: { projectId: string; onRefresh: () => void }) {
   const [storylines, setStorylines] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<StorylineData>>({});
 
   const load = async (signal?: AbortSignal) => {
-    setLoading(true);
+    setLoading(true); setLoadError(null);
     try {
       const res = await fetch(`/api/storylines?projectId=${projectId}`, { signal });
       if (res.ok) setStorylines(await res.json());
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); setLoadError(d.error || `加载失败（HTTP ${res.status}）`); }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       console.error("加载故事线失败:", err);
+      setLoadError("加载故事线失败：" + (err instanceof Error ? err.message : "网络错误，请稍后重试"));
     }
     finally { setLoading(false); }
   };
@@ -65,19 +68,25 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   };
 
   const handleSave = async (id: string) => {
-    await fetch(`/api/storylines/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
-    setEditingId(null);
-    load();
+    try {
+      const res = await fetch(`/api/storylines/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("故事线保存失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      setEditingId(null);
+      load();
+    } catch (err) { alert("故事线保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定删除这条故事线？")) return;
-    await fetch(`/api/storylines/${id}`, { method: "DELETE" });
-    load();
+    try {
+      const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      load();
+    } catch (err) { alert("删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const startEdit = (s: StorylineData) => {
@@ -136,7 +145,13 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         </div>
       ))}
 
-      {storylines.length === 0 && !loading && (
+      {loadError && !loading && (
+        <div className="text-center text-rose-400 text-xs py-6 px-4">
+          <p className="mb-2">⚠ {loadError}</p>
+          <button onClick={() => load()} className="text-indigo-400 hover:text-indigo-300 text-[10px]">重试</button>
+        </div>
+      )}
+      {storylines.length === 0 && !loading && !loadError && (
         <div className="text-center text-zinc-600 text-xs py-6">
           <p className="mb-2">还没有故事线</p>
           <button onClick={handleGenerate} disabled={generating}

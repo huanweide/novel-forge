@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.5";
+export const LATEST_VERSION = "v0.24.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛡️ 修 P0 假成功/数据丢失——抽卡章纲保存、角色/词条编辑·创建弹窗、作者注记自动保存失败均显式提示",
-  "🎴 抽卡章纲：先保存成功才显示「已采用」，失败 alert 而非静默丢章纲",
-  "✏️ 角色/词条弹窗：PUT/POST 失败 alert 且不关闭，杜绝「以为存了其实没存」",
-  "📋 站内「更新面板」持续记录每个版本号与更新内容，可随时回看",
+  "🔍 收尾 P1 静默吞错——章节自动提取、新建/摘要节点、故事线加载/保存/删除、关系同步、角色/词条/规则 删除·开关 失败均可见",
+  "📥 章节自动提取（autoExtractChapter）：提取失败 alert 明确提示，不再「生成中转圈却空结果」",
+  "🧵 故事线面板：加载失败显式报错+重试（不再误显「还没有故事线」）；保存/删除失败 alert 不丢数据",
+  "🤝 关系同步 + 角色/词条/规则：删除·开关·同步失败均 alert，杜绝「点了没反应 / 假成功」",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.6",
+    date: "2026-07-26",
+    title: "🔍 收尾 P1 静默吞错（章节提取/节点操作/故事线/关系同步/角色·词条·规则删除·开关）",
+    sections: [
+      {
+        label: "章节与节点操作",
+        items: [
+          "autoExtractChapter（12 维度自动提取）：失败原仅 console.error 静默 → 现 alert 明确提示，不再「转圈后无结果」",
+          "handleAddSection / handleSummarize：非 200 原静默 → 现失败 alert 具体原因；网络异常也提示",
+          "handleDeleteNode：网络异常原静默 → 现 alert",
+        ],
+      },
+      {
+        label: "故事线面板（StorylineList）",
+        items: [
+          "加载失败原误显「还没有故事线」空态 → 现显式报错条 + 重试按钮，区分「无数据」与「加载失败」",
+          "handleSave / handleDelete：原不检查 res.ok（保存失败仍关弹窗=假成功）→ 现失败 alert 且不关弹窗/不刷新",
+        ],
+      },
+      {
+        label: "关系同步与侧栏删除·开关",
+        items: [
+          "AIChatBar relation_sync：原不检查 syncRes.ok 且 catch 静默 → 现非 200 抛错 + 失败 alert，同步真实结果才提示",
+          "AIChatBar analyze_relationships 的 catch 静默 → 现失败 alert",
+          "LeftPanel 角色删除 / WorldPanel 词条删除 / RulesPanel 规则删除·开关：原不检查 res.ok → 现失败 alert 且不刷新（避免误以为已删/已切换）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.5",
     date: "2026-07-26",

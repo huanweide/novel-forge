@@ -283,6 +283,7 @@ export default function WorkspacePage() {
       setExtractionData(data);
     } catch (err) {
       console.error("自动提取失败:", err);
+      alert("章节自动提取失败：" + (err instanceof Error ? err.message : "请重试"));
     } finally { setExtractionLoading(false); }
   }, [projectId, selectedNode?.id]);
 
@@ -479,7 +480,8 @@ export default function WorkspacePage() {
     try {
       const res = await fetch("/api/story/nodes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, parentId, type: parentId ? "section" : "chapter", title, order: project.storyNodes.length }) });
       if (res.ok) await loadProject();
-    } catch (err) { console.error("创建节点失败:", err); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("新建节点失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { console.error("创建节点失败:", err); alert("新建节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const handleDeleteNode = async (nodeId: string) => {
@@ -490,7 +492,7 @@ export default function WorkspacePage() {
       const res = await fetch(`/api/story/nodes/${nodeId}`, { method: "DELETE" });
       if (res.ok) { if (selectedNode?.id === nodeId) { setSelectedNode(null); setStreamContent(""); setReviewResult(null); } await loadProject(); }
       else { const err = await res.json().catch(() => ({ error: "未知错误" })); alert("删除失败: " + (err.error || "请重试")); }
-    } catch (err) { console.error("删除节点失败:", err); }
+    } catch (err) { console.error("删除节点失败:", err); alert("删除节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const handleSummarize = async () => {
@@ -500,7 +502,8 @@ export default function WorkspacePage() {
     try {
       const res = await fetch("/api/generate/summarize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapterId: selectedNode.id }) });
       if (res.ok) { const data = await res.json(); alert(`摘要完成！\n${data.summary.summary}\n\n关键事件：\n${data.keyEvents.join("\n")}`); loadProject(); }
-    } catch (err) { console.error("摘要失败:", err); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("摘要失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { console.error("摘要失败:", err); alert("摘要失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSummarizing(false); }
   };
 

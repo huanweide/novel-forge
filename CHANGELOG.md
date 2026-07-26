@@ -2,6 +2,26 @@
 
 ---
 
+## v0.24.6 — 2026-07-26
+
+### 🔍 收尾 P1 静默吞错（章节提取/节点操作/故事线/关系同步/角色·词条·规则删除·开关）
+
+**章节与节点操作**
+- autoExtractChapter（12 维度自动提取）：失败原仅 console.error 静默 → 现 alert 明确提示，不再「转圈后无结果」
+- handleAddSection / handleSummarize：非 200 原静默 → 现失败 alert 具体原因；网络异常也提示
+- handleDeleteNode：网络异常原静默 → 现 alert
+
+**故事线面板（StorylineList）**
+- 加载失败原误显「还没有故事线」空态 → 现显式报错条 + 重试按钮，区分「无数据」与「加载失败」
+- handleSave / handleDelete：原不检查 res.ok（保存失败仍关弹窗=假成功）→ 现失败 alert 且不关弹窗/不刷新
+
+**关系同步与侧栏删除·开关**
+- AIChatBar relation_sync：原不检查 syncRes.ok 且 catch 静默 → 现非 200 抛错 + 失败 alert，同步真实结果才提示
+- AIChatBar analyze_relationships 的 catch 静默 → 现失败 alert
+- LeftPanel 角色删除 / WorldPanel 词条删除 / RulesPanel 规则删除·开关：原不检查 res.ok → 现失败 alert 且不刷新（避免误以为已删/已切换）
+
+---
+
 ## v0.24.5 — 2026-07-26
 
 ### 🛡️ 修 P0 假成功/数据丢失（抽卡章纲 + 角色/词条弹窗 + 作者注记）

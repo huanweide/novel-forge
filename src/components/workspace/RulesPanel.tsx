@@ -55,28 +55,30 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         setShowForm(false); setEditing(null);
         setForm({ name: "", content: "", category: "writing", priority: 0, scope: "all" });
         loadRules(); onRefresh?.();
-      }
-    } catch (err) { console.error("保存规则失败:", err); }
+      } else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("规则保存失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { alert("规则保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定删除这条规则？")) return;
     try {
-      await fetch(`/api/rules/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/rules/${id}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("规则删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
       loadRules(); onRefresh?.();
-    } catch (err) { console.error("删除规则失败:", err); }
+    } catch (err) { alert("规则删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const handleToggle = async (rule: RuleData) => {
     try {
-      await fetch(`/api/rules/${rule.id}`, {
+      const res = await fetch(`/api/rules/${rule.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !rule.enabled }),
       });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("规则开关失败：" + (d.error || `HTTP ${res.status}`)); return; }
       loadRules();
-    } catch (err) { console.error("切换规则失败:", err); }
+    } catch (err) { alert("规则开关失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const openEdit = (rule: RuleData) => {

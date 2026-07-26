@@ -288,7 +288,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                   ts: Date.now(),
                 }]);
               }
-            } catch { /* 分析失败不影响对话 */ }
+            } catch (err) { if (!(err instanceof Error && err.name === "AbortError")) alert("关系分析失败：" + (err instanceof Error ? err.message : "请重试")); }
             setPendingSteps([]);
           }
           // ── 关系同步动作 ──
@@ -307,6 +307,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 signal: controller.signal,
               });
               const syncData = await syncRes.json();
+              if (!syncRes.ok) throw new Error(syncData.error || `同步失败（HTTP ${syncRes.status}）`);
               if (!controller.signal.aborted) {
                 const created = syncData.created || 0;
                 const updated = syncData.updated || 0;
@@ -321,7 +322,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                   ts: Date.now(),
                 }]);
               }
-            } catch { /* 同步失败不影响对话 */ }
+            } catch (err) { if (!(err instanceof Error && err.name === "AbortError")) alert("关系同步失败：" + (err instanceof Error ? err.message : "请重试")); }
             setPendingSteps([]);
           }
         }

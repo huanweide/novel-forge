@@ -186,8 +186,11 @@ export function WorldPanel({
   // 删除
   const handleDelete = async (id: string) => {
     if (!confirm("确定删除此条目？")) return;
-    await fetch(`/api/lorebook/${id}`, { method: "DELETE" });
-    onRefresh();
+    try {
+      const res = await fetch(`/api/lorebook/${id}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("条目删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      onRefresh();
+    } catch (err) { alert("条目删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const moduleInfo = WORLD_MODULES.find((m) => m.key === activeModule);
