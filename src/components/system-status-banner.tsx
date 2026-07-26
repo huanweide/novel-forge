@@ -83,7 +83,7 @@ export function SystemStatusBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-50 border-b border-amber-500/30 bg-amber-500/[0.08] backdrop-blur-md">
+    <div className="relative border-b border-amber-500/30 bg-amber-500/[0.08] backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-start gap-3">
         <Icon name="alert" size={18} className="text-amber-400 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">

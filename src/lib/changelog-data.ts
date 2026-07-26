@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.9";
+export const LATEST_VERSION = "v0.25.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🏗️ 成品化：移除 next/font/google 远程字体，改用系统字体栈——任意环境（含无外网）`next build` 均能成功",
-  "✅ 64 个页面静态生成全部通过，TypeScript 零错误，整站进入可部署成品状态",
-  "🧹 next.config.ts 声明 turbopack.root，消除 workspace root 误判警告（构建输出更干净）",
-  "📋 站内「更新面板」持续记录至 v0.24.9：构建可离线、可部署",
+  "🎨 UI 优化：修复系统自检横幅与页头 sticky 重叠导致页头被遮挡的布局缺陷",
+  "🏠 首页新增 Hero 欢迎区 + 起步引导卡（探讨 / 拆书 / 配置 AI），首屏更有产品感",
+  "📱 顶栏按钮在移动端自动隐藏文字只留图标，窄屏不再拥挤",
+  "🟣 更新面板「最新」徽标由绿色统一为靛蓝，配色与设计令牌一致",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.25.0",
+    date: "2026-07-26",
+    title: "🎨 UI 优化：首页重塑、布局修复与响应式打磨",
+    sections: [
+      {
+        label: "布局缺陷修复（必须修）",
+        items: [
+          "系统自检横幅原为 `sticky top-0 z-50`，与页面 `sticky top-0 z-10` 页头争抢顶部导致页头被遮挡；改为 `relative` 后横幅处于文档流顶部、滚动时自然让位给粘性页头，重叠消除",
+        ],
+      },
+      {
+        label: "首页重塑",
+        items: [
+          "新增 Hero 欢迎区（标题 + 一句话定位 + 开始创作 / 拆书分析双 CTA），首屏更有产品感",
+          "空项目状态由居中提示改为三张「起步引导卡」：探讨模式、拆书分析、配置 AI，直接引导用户完成关键第一步",
+        ],
+      },
+      {
+        label: "响应式与一致性",
+        items: [
+          "顶栏「开始创作 / 拆书 / 设置」按钮在移动端（<640px）自动隐藏文字仅留图标，窄屏不再拥挤",
+          "更新面板「最新」徽标由 emerald 绿统一为 indigo 靛蓝，与该页及全站设计令牌一致",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.9",
     date: "2026-07-26",

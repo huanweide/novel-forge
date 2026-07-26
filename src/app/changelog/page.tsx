@@ -50,7 +50,7 @@ export default function ChangelogPage() {
                   </span>
                   <span className="text-xs text-zinc-600">{v.date}</span>
                   {idx === 0 ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-400/20">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-400/20">
                       最新
                     </span>
                   ) : null}

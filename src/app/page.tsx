@@ -96,17 +96,41 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Link href="/explore" className="btn-primary text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 font-medium">
-              <Icon name="sparkles" size={14} /> 开始创作
+              <Icon name="sparkles" size={14} /> <span className="hidden sm:inline">开始创作</span>
             </Link>
             <Link href="/dissect" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
-              <Icon name="book" size={13} /> 拆书
+              <Icon name="book" size={13} /> <span className="hidden sm:inline">拆书</span>
             </Link>
             <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
-              <Icon name="settings" size={13} /> 设置
+              <Icon name="settings" size={13} /> <span className="hidden sm:inline">设置</span>
             </Link>
           </div>
         </div>
       </header>
+
+      {/* Hero 欢迎区 */}
+      <section className="border-b border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent">
+        <div className="max-w-7xl mx-auto px-6 py-12 md:py-16">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-100">
+                构建你的<span className="text-indigo-400">小说宇宙</span>
+              </h2>
+              <p className="mt-3 text-zinc-500 leading-relaxed">
+                用 AI 探讨灵感、拆解好书、管理角色与世界观——从一句话构思到完整成稿，一站式完成。
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-3">
+              <Link href="/explore" className="btn-primary text-sm px-5 py-2.5 rounded-xl inline-flex items-center gap-1.5 font-medium">
+                <Icon name="sparkles" size={15} /> 开始创作
+              </Link>
+              <Link href="/dissect" className="btn-ghost text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5">
+                <Icon name="book" size={14} /> 拆书分析
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* 主区 */}
       <main className="max-w-7xl mx-auto px-6 py-10">
@@ -134,18 +158,13 @@ export default function Dashboard() {
             </button>
           </div>
         ) : projects.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl surface-elevated flex items-center justify-center mx-auto mb-5">
-              <Icon name="sparkles" size={28} className="text-zinc-500" />
+          <div className="py-10">
+            <p className="text-center text-zinc-500 text-sm mb-8">还没有小说项目，从下面任选一种方式开始：</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FeatureCard icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲" href="/explore" cta="开始探讨" />
+              <FeatureCard icon="book" title="拆书分析" desc="上传文本，逆向学习结构与文风" href="/dissect" cta="去拆书" />
+              <FeatureCard icon="settings" title="配置 AI" desc="先填好 LLM Key，功能才能跑通" href="/settings" cta="去设置" />
             </div>
-            <h2 className="text-xl font-semibold text-zinc-300 mb-2">还没有小说项目</h2>
-            <p className="text-zinc-500 text-sm mb-6">从探讨模式开始，对话式构建你的小说世界</p>
-            <Link
-              href="/explore"
-              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
-            >
-              <Icon name="sparkles" size={15} /> 开始创作
-            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -247,6 +266,38 @@ function ProjectCard({ project, onDelete }: { project: ProjectSummary; onDelete:
         </Link>
       </div>
     </div>
+  );
+}
+
+// ─── 子组件：起步引导卡 ─────────────────────────────────────
+
+function FeatureCard({
+  icon,
+  title,
+  desc,
+  href,
+  cta,
+}: {
+  icon: "sparkles" | "book" | "settings";
+  title: string;
+  desc: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group surface-elevated rounded-2xl p-5 flex flex-col hover:border-indigo-400/30 transition-all"
+    >
+      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-300 flex items-center justify-center mb-3">
+        <Icon name={icon} size={20} />
+      </div>
+      <h3 className="font-semibold text-zinc-200 mb-1">{title}</h3>
+      <p className="text-sm text-zinc-500 leading-relaxed flex-1 mb-3">{desc}</p>
+      <span className="text-xs text-indigo-400 group-hover:text-indigo-300 font-medium inline-flex items-center gap-1">
+        {cta} <Icon name="arrowRight" size={12} />
+      </span>
+    </Link>
   );
 }
 
