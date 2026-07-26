@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.25.0";
+export const LATEST_VERSION = "v0.26.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎨 UI 优化：修复系统自检横幅与页头 sticky 重叠导致页头被遮挡的布局缺陷",
-  "🏠 首页新增 Hero 欢迎区 + 起步引导卡（探讨 / 拆书 / 配置 AI），首屏更有产品感",
-  "📱 顶栏按钮在移动端自动隐藏文字只留图标，窄屏不再拥挤",
-  "🟣 更新面板「最新」徽标由绿色统一为靛蓝，配色与设计令牌一致",
+  "🔔 全新全局 Toast / Confirm / Prompt 系统：所有提示与确认弹窗改为虚空玻璃风格，错误不再静默、成功有正向反馈",
+  "🔘 按钮交互全面升级：按压下沉 + 加载 Spinner + 禁用态，每个按钮都有响应、互动感与确定感",
+  "🗑 7 类删除操作改为 styled 确认弹窗 + 忙态锁定，误删风险归零；新建章节/小节输入框同风格化",
+  "🟢 DeepSeek 跑通：模型按 Provider 自动默认，只填 Key 即可运行；实测连接返回 200 与正确中文内容",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.26.0",
+    date: "2026-07-26",
+    title: "🔔 交互硬化与 UI 美化：全局提示系统、按钮反馈与 DeepSeek 跑通",
+    sections: [
+      {
+        label: "全局交互系统（新增）",
+        items: [
+          "新增全局 Toast + Confirm + Prompt 组件（src/components/ui/toast.tsx），统一替代所有原生 alert / confirm / prompt：右下角滑入、按类型（成功/错误/警告/信息）着色、自动消失、可手动关闭；确认/输入弹窗为虚空玻璃风格模态框，返回 Promise，Provider 未挂载时安全退化为原生对话框",
+          "全局按钮基础样式（globals.css）：所有按钮（含原生 <button>）统一具备点击下沉、禁用态、聚焦光环的视觉按压反馈",
+          "共享 Button 组件新增 `loading` 属性：异步操作期间显示 Spinner 并自动禁用，点击「有确定感」",
+        ],
+      },
+      {
+        label: "全站交互硬化（修复）",
+        items: [
+          "19 个文件原生 alert 全部替换为分类型 toast：错误不再被静默吞掉，成功/信息有明确正向反馈",
+          "7 处破坏性删除（角色 / 故事线 / 规则 / 世界书条目 / 项目 / 拆书任务 / 章节节点）原生 confirm 替换为 styled 确认弹窗，并加 deleting 忙态锁定删除按钮，误删风险归零",
+          "工作台「新建章节 / 小节」原生 prompt 替换为 styled 输入框弹窗（promptDialog），保持视觉一致",
+        ],
+      },
+      {
+        label: "DeepSeek 跑通（新增 / 修复）",
+        items: [
+          "llm.ts 新增各 Provider 默认模型表（DeepSeek → deepseek-v4-flash 等）；模型留空不再硬报错，读者只填 Key 即可跑",
+          "testLLMConnection 默认模型按 Provider 取值，并兼容 DeepSeek v4 等推理模型（先思考后输出正文）——连接测试不再误判「返回格式异常」",
+          "实测：以用户提供的 DeepSeek Key 经 /api/settings/test 与原始 HTTP 调用均返回 200 与正确中文内容，集成已跑通",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.25.0",
     date: "2026-07-26",

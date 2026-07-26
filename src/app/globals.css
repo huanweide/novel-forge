@@ -216,6 +216,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* 全局按钮交互基线：所有按钮（含裸 Tailwind 按钮）统一拥有过渡、按压回弹、禁用态、聚焦环 */
+  button {
+    @apply transition-all duration-150 outline-none;
+  }
+  button:active:not(:disabled) {
+    @apply scale-[0.98];
+  }
+  button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  button:focus-visible {
+    @apply ring-2 ring-ring/50;
+  }
+
   body {
     @apply bg-background text-foreground;
     background-color: #050508;
@@ -612,4 +627,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Toast 自动消失进度条 ── */
+@keyframes toastProgress {
+  from { width: 100%; }
+  to   { width: 0%; }
 }

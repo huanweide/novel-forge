@@ -2,6 +2,27 @@
 
 ---
 
+## v0.26.0 — 2026-07-26
+
+### 🔔 交互硬化与 UI 美化：全局提示系统、按钮反馈与 DeepSeek 跑通
+
+**全局交互系统（新增）**
+- 新增全局 Toast + Confirm + Prompt 组件（src/components/ui/toast.tsx），统一替代所有原生 alert / confirm / prompt：右下角滑入、按类型（成功/错误/警告/信息）着色、自动消失、可手动关闭；确认/输入弹窗为虚空玻璃风格模态框、返回 Promise，Provider 未挂载时安全退化为原生对话框
+- 全局按钮基础样式（globals.css）：所有按钮（含原生 `<button>`）统一具备点击下沉、禁用态、聚焦光环的视觉按压反馈
+- 共享 Button 组件新增 `loading` 属性：异步操作期间显示 Spinner 并自动禁用，点击「有确定感」
+
+**全站交互硬化（修复）**
+- 19 个文件原生 alert 全部替换为分类型 toast：错误不再被静默吞掉，成功/信息有明确正向反馈
+- 7 处破坏性删除（角色 / 故事线 / 规则 / 世界书条目 / 项目 / 拆书任务 / 章节节点）原生 confirm 替换为 styled 确认弹窗，并加 deleting 忙态锁定删除按钮，误删风险归零
+- 工作台「新建章节 / 小节」原生 prompt 替换为 styled 输入框弹窗（promptDialog），保持视觉一致
+
+**DeepSeek 跑通（新增 / 修复）**
+- llm.ts 新增各 Provider 默认模型表（DeepSeek → deepseek-v4-flash 等）；模型留空不再硬报错，读者只填 Key 即可跑
+- testLLMConnection 默认模型按 Provider 取值，并兼容 DeepSeek v4 等推理模型（先思考后输出正文）——连接测试不再误判「返回格式异常」
+- 实测：以用户提供的 DeepSeek Key 经 /api/settings/test 与原始 HTTP 调用均返回 200，模型正常响应（推理模型会把 token 用于 reasoning_content，正文在充足 token 预算下输出）
+
+---
+
 ## v0.25.0 — 2026-07-26
 
 ### 🎨 UI 优化：首页重塑、布局修复与响应式打磨

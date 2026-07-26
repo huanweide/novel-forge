@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { LorebookData } from "./types";
 import { categoryLabel } from "./types";
 import { RangeSelector } from "./RangeSelector";
+import { toastError } from "@/components/ui/toast";
 
 // 预览结果类型（与 SSE preview 事件一致）
 // 预览结果类型（SSE 只传摘要，不含完整 content）
@@ -246,7 +247,7 @@ export function LorebookList({
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        alert(`扩展请求失败: ${errBody.error || res.status}`);
+        toastError(`扩展请求失败: ${errBody.error || res.status}`);
         setExpanding(false);
         return;
       }

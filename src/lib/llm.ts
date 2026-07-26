@@ -18,6 +18,14 @@ const PROVIDER_BASE_URLS: Record<string, string> = {
   groq: "https://api.groq.com/openai/v1",
 };
 
+// ─── 各提供商默认模型（未显式配置时使用，避免「模型未配置」硬报错）───
+const DEFAULT_MODELS: Record<string, string> = {
+  deepseek: "deepseek-v4-flash",
+  openai: "gpt-3.5-turbo",
+  siliconflow: "deepseek-ai/DeepSeek-V4-Flash",
+  groq: "llama-3.3-70b-versatile",
+};
+
 // ─── 错误翻译 ────────────────────────────────────────────
 
 /**
@@ -63,22 +71,21 @@ export async function getSettings(): Promise<LLMSettings> {
 
   try {
     const db = await prisma.appSettings.findUnique({ where: { id: "default" } });
-    if (db?.llmApiKey && db?.llmModel) {
+    if (db?.llmApiKey) {
       const provider = db.llmProvider;
       if (!provider) throw new Error("LLM 提供商未配置——请在设置页面选择提供商");
       const baseUrl = db.llmBaseUrl || PROVIDER_BASE_URLS[provider];
       if (!baseUrl) throw new Error(`无法解析提供商 "${provider}" 的 API 地址——请在设置页面手动填写 Base URL`);
+      const model = db.llmModel || DEFAULT_MODELS[provider];
+      if (!model) throw new Error("LLM 模型未配置——请在设置页面选择模型");
       cachedSettings = {
         provider,
         apiKey: db.llmApiKey,
-        model: db.llmModel,
+        model,
         baseUrl,
       };
       cacheTimestamp = now;
       return cachedSettings;
-    }
-    if (db?.llmApiKey && !db?.llmModel) {
-      throw new Error("LLM 模型未配置——请在设置页面选择模型");
     }
   } catch (e) {
     // 如果是我们主动抛出的配置错误，直接向上传播
@@ -86,13 +93,13 @@ export async function getSettings(): Promise<LLMSettings> {
     // DB 不可用时退到环境变量
   }
 
-  // 回退到环境变量（不硬编码模型名——没配就报错）
+  // 回退到环境变量（模型未配时按提供商兜底，避免「模型未配置」硬报错）
   const envKey = process.env.LLM_API_KEY;
-  const envModel = process.env.LLM_MODEL;
-  if (!envKey) throw new Error("LLM API Key 未配置——请在设置页面填入 Key，或在 .env 中设置 LLM_API_KEY");
-  if (!envModel) throw new Error("LLM 模型未配置——请在 .env 中设置 LLM_MODEL，或在设置页面选择模型");
-
   const envProvider = process.env.LLM_PROVIDER || "deepseek";
+  if (!envKey) throw new Error("LLM API Key 未配置——请在设置页面填入 Key，或在 .env 中设置 LLM_API_KEY");
+  const envModel = process.env.LLM_MODEL || DEFAULT_MODELS[envProvider];
+  if (!envModel) throw new Error("LLM 模型未配置——请在 .env 中设置 LLM_MODEL（DeepSeek 可用 deepseek-v4-flash），或在设置页面选择模型");
+
   cachedSettings = {
     provider: envProvider,
     apiKey: envKey,
@@ -195,10 +202,10 @@ export async function callLLM(options: LLMCallOptions): Promise<string> {
  */
 export async function testLLMConnection(provider: string, apiKey: string, baseUrl?: string, model?: string): Promise<{ ok: boolean; error?: string }> {
   const resolvedBaseUrl = baseUrl || PROVIDER_BASE_URLS[provider] || PROVIDER_BASE_URLS.siliconflow;
-  const resolvedModel = model || "gpt-3.5-turbo";
+  const resolvedModel = model || DEFAULT_MODELS[provider] || "gpt-3.5-turbo";
 
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15000);
+  const timer = setTimeout(() => ctrl.abort(), 25000);
 
   try {
     const res = await fetch(`${resolvedBaseUrl}/chat/completions`, {
@@ -209,8 +216,10 @@ export async function testLLMConnection(provider: string, apiKey: string, baseUr
       },
       body: JSON.stringify({
         model: resolvedModel,
-        messages: [{ role: "user", content: "Hi" }],
-        max_tokens: 5,
+        // 用一句明确指令；给足 token 让推理模型（如 DeepSeek v4）先完成思考再输出正文，
+        // 否则推理模型会把全部 token 用在 reasoning_content 上，导致 content 为空被误判失败
+        messages: [{ role: "user", content: "请只回复「连接成功」四个字，不要多余内容。" }],
+        max_tokens: 1024,
         stream: false,
       }),
       signal: ctrl.signal,
@@ -222,8 +231,15 @@ export async function testLLMConnection(provider: string, apiKey: string, baseUr
     }
 
     const data = await res.json().catch(() => null);
-    if (!data?.choices?.[0]?.message?.content) {
+    // 兼容推理模型：只要返回了合法的 choices[0]（无论正文 content 还是 reasoning_content）即视为连接成功
+    const choice = data?.choices?.[0];
+    if (!choice) {
       return { ok: false, error: "返回格式异常（不是 OpenAI 兼容 API？）" };
+    }
+    const content = choice.message?.content ?? "";
+    const reasoning = choice.message?.reasoning_content ?? "";
+    if (!content && !reasoning) {
+      return { ok: false, error: "返回内容为空（不是 OpenAI 兼容 API？）" };
     }
 
     return { ok: true };

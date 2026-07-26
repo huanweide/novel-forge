@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
 import { RangeSelector } from "./RangeSelector";
 import { Icon, StatusDot } from "@/components/ui/icons";
+import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 
 export function CharacterList({
   characters,
@@ -45,6 +46,7 @@ export function CharacterList({
   const [roleFilter, setRoleFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
@@ -141,7 +143,7 @@ export function CharacterList({
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        alert(`扩展请求失败: ${errBody.error || res.status}`);
+        toastError(`扩展请求失败: ${errBody.error || res.status}`);
         setExpanding(false);
         return;
       }
@@ -350,7 +352,7 @@ export function CharacterList({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "失败" }));
-        alert(`❌ 应用失败: ${err.error}`);
+        toastError(`❌ 应用失败: ${err.error}`);
         return;
       }
       const data = await res.json();
@@ -358,9 +360,19 @@ export function CharacterList({
       setClassifyGroups(null); // 关闭分类面板
       onExpanded(); // 刷新角色列表
     } catch (e) {
-      alert("❌ " + (e instanceof Error ? e.message : "网络错误"));
+      toastError("❌ " + (e instanceof Error ? e.message : "网络错误"));
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleDeleteCharacter = async (id: string, name: string) => {
+    if (!(await confirmDialog({ title: "删除角色", description: `确定删除角色「${name}」？此操作不可恢复。`, danger: true }))) return;
+    setDeletingId(id);
+    try {
+      await onDelete(id);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -842,8 +854,9 @@ export function CharacterList({
                   </div>
                 </div>
                 <button
-                  onClick={e => { e.stopPropagation(); if (confirm(`删除角色「${c.name}」？`)) onDelete(c.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 shrink-0"
+                  onClick={(e) => { e.stopPropagation(); handleDeleteCharacter(c.id, c.name); }}
+                  disabled={deletingId === c.id}
+                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 shrink-0 disabled:opacity-40"
                 >✕</button>
               </div>
             ))}

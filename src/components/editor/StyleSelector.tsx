@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { STYLE_TEMPLATES, type StyleTemplate } from "@/core/templates";
+import { toastError } from "@/components/ui/toast";
 
 /**
  * 文风模板选择器
@@ -30,10 +31,10 @@ export function StyleSelector({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ styleTemplateId: template.id }),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("应用文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("应用文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
       onSelect(template);
       setOpen(false);
-    } catch (err) { alert("应用文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    } catch (err) { toastError("应用文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   return (

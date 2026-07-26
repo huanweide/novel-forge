@@ -16,6 +16,7 @@ import type {
   AdoptCard,
 } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS } from "@/core/explore/types";
+import { toastError, toastSuccess } from "@/components/ui/toast";
 
 export default function ExplorePage() {
   const [config, setConfig] = useState<BuildConfig>(DEFAULT_BUILD_CONFIG);
@@ -285,7 +286,7 @@ export default function ExplorePage() {
         }
       }
     } catch (err: any) {
-      alert(err?.message || "网络错误");
+      toastError(err?.message || "网络错误");
       setOutlineProgress(null);
     } finally {
       outlineLoadingRef.current = false;
@@ -422,9 +423,9 @@ export default function ExplorePage() {
         msgParts.push(`\n⚠️ ${charFail + loreFail}条写入失败`);
         if (errors.length > 0) msgParts.push(`\n${errors.slice(0, 3).join("\n")}`);
       }
-      alert(msgParts.join(""));
+      toastSuccess(msgParts.join(""));
     } catch (err: any) {
-      alert(err?.message || "创建失败");
+      toastError(err?.message || "创建失败");
     } finally {
       creatingRef.current = false;
       setCreating(false);
@@ -456,10 +457,10 @@ export default function ExplorePage() {
           },
         ]);
       } else {
-        alert(data.error || "生成失败");
+        toastError(data.error || "生成失败");
       }
     } catch (err: any) {
-      alert(err?.message || "网络错误");
+      toastError(err?.message || "网络错误");
     } finally {
       setGeneratingAll(false);
     }
@@ -482,10 +483,10 @@ export default function ExplorePage() {
         if (res.ok) {
           setCreatedProjectId(data.projectId);
         } else {
-          alert(data.error || "创建失败");
+          toastError(data.error || "创建失败");
         }
       } catch (err: any) {
-        alert(err?.message || "网络错误");
+        toastError(err?.message || "网络错误");
       } finally {
         creatingRef.current = false;
         setCreating(false);

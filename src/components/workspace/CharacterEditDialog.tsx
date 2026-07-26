@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
 import type { CharacterData } from "./types";
+import { toastError } from "@/components/ui/toast";
 
 function toText(p: unknown) {
   if (typeof p === "object" && p !== null && !Array.isArray(p)) {
@@ -172,13 +173,13 @@ export function CharacterEditDialog({
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        alert(d.error || "角色保存失败，请重试");
+        toastError(d.error || "角色保存失败，请重试");
         return;
       }
       onSave();
       onClose();
     } catch (err) {
-      alert("角色保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+      toastError("角色保存失败：" + (err instanceof Error ? err.message : "网络错误"));
     }
   };
 

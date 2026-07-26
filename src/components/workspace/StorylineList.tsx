@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 
 export interface StorylineData {
   id: string; projectId: string;
@@ -28,6 +29,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<StorylineData>>({});
 
@@ -60,10 +62,10 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         body: JSON.stringify({ projectId }),
       });
       const data = await res.json();
-      if (!res.ok) { alert(`生成失败：${data.error}`); return; }
+      if (!res.ok) { toastError(`生成失败：${data.error}`); return; }
       setStorylines(data.storylines);
       onRefresh();
-    } catch (err) { alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
+    } catch (err) { toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
     finally { setGenerating(false); }
   };
 
@@ -74,19 +76,21 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("故事线保存失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("故事线保存失败：" + (d.error || `HTTP ${res.status}`)); return; }
       setEditingId(null);
       load();
-    } catch (err) { alert("故事线保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    } catch (err) { toastError("故事线保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("确定删除这条故事线？")) return;
+    if (!(await confirmDialog({ title: "删除故事线", description: "确定删除这条故事线？此操作不可恢复。", danger: true }))) return;
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
       load();
-    } catch (err) { alert("删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    } catch (err) { toastError("删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    finally { setDeletingId(null); }
   };
 
   const startEdit = (s: StorylineData) => {
@@ -127,7 +131,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           </div>
           <StorylineDetail storyline={mainLine} expanded={expandedId === mainLine.id}
             onToggle={() => setExpandedId(expandedId === mainLine.id ? null : mainLine.id)}
-            onEdit={() => startEdit(mainLine)} onDelete={() => handleDelete(mainLine.id)} />
+            onEdit={() => startEdit(mainLine)} onDelete={() => handleDelete(mainLine.id)} deletingId={deletingId} />
         </div>
       )}
 
@@ -141,7 +145,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           </div>
           <StorylineDetail storyline={s} expanded={expandedId === s.id}
             onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
-            onEdit={() => startEdit(s)} onDelete={() => handleDelete(s.id)} />
+            onEdit={() => startEdit(s)} onDelete={() => handleDelete(s.id)} deletingId={deletingId} />
         </div>
       ))}
 
@@ -207,16 +211,17 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   );
 }
 
-function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete }: {
+function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete, deletingId }: {
   storyline: StorylineData; expanded: boolean;
   onToggle: () => void; onEdit: () => void; onDelete: () => void;
+  deletingId: string | null;
 }) {
   if (!expanded) {
     return (
       <div className="px-2 pb-1.5 flex items-center gap-2">
         <button onClick={onToggle} className="text-[10px] text-zinc-500 hover:text-zinc-300">展开 ▼</button>
         <button onClick={onEdit} className="text-[10px] text-zinc-600 hover:text-zinc-400">✏️</button>
-        <button onClick={onDelete} className="text-[10px] text-zinc-600 hover:text-red-400">✕</button>
+        <button onClick={onDelete} disabled={deletingId === storyline.id} className="text-[10px] text-zinc-600 hover:text-red-400 disabled:opacity-40">✕</button>
         {storyline.description && <span className="text-[10px] text-zinc-600 truncate flex-1">{storyline.description}</span>}
       </div>
     );
@@ -227,7 +232,7 @@ function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete }: {
       <div className="flex items-center gap-2 mb-1">
         <button onClick={onToggle} className="text-[10px] text-zinc-500 hover:text-zinc-300">收起 ▲</button>
         <button onClick={onEdit} className="text-[10px] text-zinc-600 hover:text-zinc-400">✏️ 编辑</button>
-        <button onClick={onDelete} className="text-[10px] text-zinc-600 hover:text-red-400">✕ 删除</button>
+        <button onClick={onDelete} disabled={deletingId === storyline.id} className="text-[10px] text-zinc-600 hover:text-red-400 disabled:opacity-40">✕ 删除</button>
       </div>
       {Object.entries(ELEMENT_LABELS).map(([key, { emoji, label }]) => {
         const value = (storyline as any)[key] as string;

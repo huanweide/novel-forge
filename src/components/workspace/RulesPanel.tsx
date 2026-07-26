@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 
 interface RuleData {
   id: string; projectId: string; name: string; content: string;
@@ -21,6 +22,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RuleData | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "", content: "", category: "writing", priority: 0, scope: "all",
@@ -55,18 +57,20 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         setShowForm(false); setEditing(null);
         setForm({ name: "", content: "", category: "writing", priority: 0, scope: "all" });
         loadRules(); onRefresh?.();
-      } else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("规则保存失败：" + (d.error || `HTTP ${res.status}`)); }
-    } catch (err) { alert("规则保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+      } else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("规则保存失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { toastError("规则保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("确定删除这条规则？")) return;
+    if (!(await confirmDialog({ title: "删除规则", description: "确定删除这条规则？此操作不可恢复。", danger: true }))) return;
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/rules/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("规则删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("规则删除失败：" + (d.error || `HTTP ${res.status}`)); return; }
       loadRules(); onRefresh?.();
-    } catch (err) { alert("规则删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    } catch (err) { toastError("规则删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    finally { setDeletingId(null); }
   };
 
   const handleToggle = async (rule: RuleData) => {
@@ -76,9 +80,9 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !rule.enabled }),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("规则开关失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("规则开关失败：" + (d.error || `HTTP ${res.status}`)); return; }
       loadRules();
-    } catch (err) { alert("规则开关失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    } catch (err) { toastError("规则开关失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const openEdit = (rule: RuleData) => {
@@ -119,13 +123,13 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         )}
 
         {enabledRules.map(r => (
-          <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={handleDelete} />
+          <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={handleDelete} deletingId={deletingId} />
         ))}
         {disabledRules.length > 0 && (
           <>
             <div className="text-[10px] text-zinc-600 pt-2 pb-1 px-1">已禁用</div>
             {disabledRules.map(r => (
-              <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={handleDelete} />
+              <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={handleDelete} deletingId={deletingId} />
             ))}
           </>
         )}
@@ -185,11 +189,12 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
   );
 }
 
-function RuleRow({ rule, onToggle, onEdit, onDelete }: {
+function RuleRow({ rule, onToggle, onEdit, onDelete, deletingId }: {
   rule: RuleData;
   onToggle: (r: RuleData) => void;
   onEdit: (r: RuleData) => void;
   onDelete: (id: string) => void;
+  deletingId: string | null;
 }) {
   return (
     <div className={`group flex items-start gap-2 px-2 py-1.5 rounded-lg border transition-colors ${
@@ -209,7 +214,7 @@ function RuleRow({ rule, onToggle, onEdit, onDelete }: {
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <button onClick={() => onEdit(rule)} className="text-xs text-zinc-500 hover:text-zinc-300">✏️</button>
-        <button onClick={() => onDelete(rule.id)} className="text-xs text-zinc-500 hover:text-red-400">🗑</button>
+        <button onClick={() => onDelete(rule.id)} disabled={deletingId === rule.id} className="text-xs text-zinc-500 hover:text-red-400 disabled:opacity-40">🗑</button>
       </div>
     </div>
   );

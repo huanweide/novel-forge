@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SystemStatusBanner } from "@/components/system-status-banner";
+import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "Novel Forge — AI 小说工坊",
@@ -44,7 +45,7 @@ if('serviceWorker' in navigator){
       </head>
       <body className="min-h-full flex flex-col">
         <SystemStatusBanner />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

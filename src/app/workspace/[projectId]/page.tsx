@@ -22,6 +22,7 @@ import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
 import { DrawCards } from "@/components/workspace/DrawCards";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import type { StyleTemplate } from "@/core/templates";
+import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 
 export default function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -45,6 +46,7 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
+  const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
 
   const handleSelectNode = (node: StoryNodeData) => {
     if (selectedNode?.id !== node.id) {
@@ -81,10 +83,10 @@ export default function WorkspacePage() {
         });
         if (!res.ok) {
           const d = (await res.json().catch(() => ({}))) as { error?: string };
-          alert(d.error || "作者注记保存失败，请检查后端服务是否已启动");
+          toastError(d.error || "作者注记保存失败，请检查后端服务是否已启动");
         }
       } catch (err) {
-        alert("作者注记保存失败：" + (err instanceof Error ? err.message : "网络错误") + "（已暂存本地，可稍后重试）");
+        toastError("作者注记保存失败：" + (err instanceof Error ? err.message : "网络错误") + "（已暂存本地，可稍后重试）");
       }
     }, 1500);
   };
@@ -185,7 +187,7 @@ export default function WorkspacePage() {
   const [showDrawCards, setShowDrawCards] = useState(false);
 
   const handleDrawChapterOutline = () => {
-    if (!selectedNode || !project) { alert("请先选中一个章节节点"); return; }
+    if (!selectedNode || !project) { toastInfo("请先选中一个章节节点"); return; }
     setShowDrawCards(true);
   };
 
@@ -200,7 +202,7 @@ export default function WorkspacePage() {
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        alert(d.error || "章纲保存失败，请重试");
+        toastError(d.error || "章纲保存失败，请重试");
         return;
       }
       setSelectedNode({ ...selectedNode, outline: card.outline });
@@ -214,7 +216,7 @@ export default function WorkspacePage() {
       setChapterOutlineStatus("done");
       setTimeout(() => { setChapterOutlineStatus(""); setReviewResult(null); }, 5000);
     } catch (err) {
-      alert("章纲保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+      toastError("章纲保存失败：" + (err instanceof Error ? err.message : "网络错误"));
     }
   };
 
@@ -283,7 +285,7 @@ export default function WorkspacePage() {
       setExtractionData(data);
     } catch (err) {
       console.error("自动提取失败:", err);
-      alert("章节自动提取失败：" + (err instanceof Error ? err.message : "请重试"));
+      toastError("章节自动提取失败：" + (err instanceof Error ? err.message : "请重试"));
     } finally { setExtractionLoading(false); }
   }, [projectId, selectedNode?.id]);
 
@@ -328,10 +330,10 @@ export default function WorkspacePage() {
     setOutlineGenerating(true);
     try {
       const putRes = await fetch("/api/generate/outline", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapters: outlinePreviewChapters, replaceAll: !outlineAppendMode }) });
-      if (!putRes.ok) { const err = await putRes.json().catch(() => ({ error: "创建失败" })); alert("创建章节节点失败: " + (err.error || putRes.status)); return; }
+      if (!putRes.ok) { const err = await putRes.json().catch(() => ({ error: "创建失败" })); toastError("创建章节节点失败: " + (err.error || putRes.status)); return; }
       setShowOutlineDialog(false); setOutlinePreviewChapters([]); setOutlineCustomPrompt("");
       await loadProject();
-    } catch (err) { alert("写入大纲出错: " + (err instanceof Error ? err.message : "网络错误")); }
+    } catch (err) { toastError("写入大纲出错: " + (err instanceof Error ? err.message : "网络错误")); }
     finally { setOutlineGenerating(false); }
   };
 
@@ -475,35 +477,46 @@ export default function WorkspacePage() {
     const isChapter = !parentId;
     let defaultTitle = "";
     if (isChapter) { const chapters = project.storyNodes.filter((n) => n.type === "chapter"); const chapterNum = chapters.length + 1; defaultTitle = `第${chapterNum}章：`; }
-    const title = prompt(isChapter ? `新建章节（已有${project.storyNodes.filter(n => n.type === "chapter").length}章，自动编号为第${project.storyNodes.filter(n => n.type === "chapter").length + 1}章）：` : "请输入小节标题：", defaultTitle || undefined);
+    const title = await promptDialog({
+      title: isChapter ? "新建章节" : "新建小节",
+      description: isChapter
+        ? `已有 ${project.storyNodes.filter((n) => n.type === "chapter").length} 章，自动编号为第 ${project.storyNodes.filter((n) => n.type === "chapter").length + 1} 章。可修改标题后确定：`
+        : "请输入小节标题：",
+      defaultValue: defaultTitle || "",
+      placeholder: isChapter ? "第N章：标题" : "小节标题",
+      confirmText: "创建",
+    });
     if (!title) return;
     try {
       const res = await fetch("/api/story/nodes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, parentId, type: parentId ? "section" : "chapter", title, order: project.storyNodes.length }) });
       if (res.ok) await loadProject();
-      else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("新建节点失败：" + (d.error || `HTTP ${res.status}`)); }
-    } catch (err) { console.error("创建节点失败:", err); alert("新建节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("新建节点失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { console.error("创建节点失败:", err); toastError("新建节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   const handleDeleteNode = async (nodeId: string) => {
     if (!project) return;
+    if (deletingNodeId === nodeId) return;
     const node = project.storyNodes.find(n => n.id === nodeId);
-    if (!confirm(`确定删除「${node?.title || "此节点"}」？\n删除后后续章节将自动重新编号。`)) return;
+    if (!(await confirmDialog({ title: "删除章节节点", description: `确定删除「${node?.title || "此节点"}」？\n删除后后续章节将自动重新编号。`, danger: true }))) return;
+    setDeletingNodeId(nodeId);
     try {
       const res = await fetch(`/api/story/nodes/${nodeId}`, { method: "DELETE" });
       if (res.ok) { if (selectedNode?.id === nodeId) { setSelectedNode(null); setStreamContent(""); setReviewResult(null); } await loadProject(); }
-      else { const err = await res.json().catch(() => ({ error: "未知错误" })); alert("删除失败: " + (err.error || "请重试")); }
-    } catch (err) { console.error("删除节点失败:", err); alert("删除节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+      else { const err = await res.json().catch(() => ({ error: "未知错误" })); toastError("删除失败: " + (err.error || "请重试")); }
+    } catch (err) { console.error("删除节点失败:", err); toastError("删除节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    finally { setDeletingNodeId(null); }
   };
 
   const handleSummarize = async () => {
     if (!selectedNode || !project) return;
-    if (!selectedNode.content) { alert("该节点还没有内容，无法摘要"); return; }
+    if (!selectedNode.content) { toastInfo("该节点还没有内容，无法摘要"); return; }
     setSummarizing(true);
     try {
       const res = await fetch("/api/generate/summarize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapterId: selectedNode.id }) });
-      if (res.ok) { const data = await res.json(); alert(`摘要完成！\n${data.summary.summary}\n\n关键事件：\n${data.keyEvents.join("\n")}`); loadProject(); }
-      else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("摘要失败：" + (d.error || `HTTP ${res.status}`)); }
-    } catch (err) { console.error("摘要失败:", err); alert("摘要失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+      if (res.ok) { const data = await res.json(); toastSuccess(`摘要完成！\n${data.summary.summary}\n\n关键事件：\n${data.keyEvents.join("\n")}`); loadProject(); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("摘要失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { console.error("摘要失败:", err); toastError("摘要失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSummarizing(false); }
   };
 
@@ -630,29 +643,29 @@ export default function WorkspacePage() {
                 if (!res.ok) {
                   const d = (await res.json().catch(() => ({}))) as { error?: string };
                   setSelectedNode(prev);
-                  alert(d.error || `大纲保存失败（${res.status}）`);
+                  toastError(d.error || `大纲保存失败（${res.status}）`);
                 }
               } catch (err) {
                 setSelectedNode(prev);
-                alert("大纲保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+                toastError("大纲保存失败：" + (err instanceof Error ? err.message : "网络错误"));
               }
             }}
             onDrawChapterOutline={handleDrawChapterOutline}
             onGenerateChapterOutline={async (flashPrompt: string) => {
-              if (!selectedNode || !project) { alert("请先选中一个章节节点"); return; }
+              if (!selectedNode || !project) { toastInfo("请先选中一个章节节点"); return; }
               setChapterOutlineStatus("generating");
               try {
                 const res = await fetch("/api/generate/chapter-outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId: selectedNode.id, prompt: flashPrompt || undefined, authorNote: authorNote || undefined }) });
                 const data = await res.json();
-                if (!res.ok || data.error) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert(`章纲生成失败：${data.error || `HTTP ${res.status}`}`); return; }
+                if (!res.ok || data.error) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError(`章纲生成失败：${data.error || `HTTP ${res.status}`}`); return; }
                 if (data.outline) {
                   setChapterOutlineStatus("done"); setTimeout(() => setChapterOutlineStatus(""), 4000);
                   setSelectedNode({ ...selectedNode, outline: data.outline });
                   const selectedInfo = data.selectedCharacters?.length ? `\n📋 AI 选角（${data.selectedCharacters.length}/${data.totalCharacters}人）：${data.selectedCharacters.map((c: any) => c.name).join("、")}${data.selectionReason ? `\n💬 ${data.selectionReason}` : ""}` : "";
                   setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）${selectedInfo}。点击大纲文字可编辑。` }] });
                   await loadProject();
-                } else { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert("API 返回空内容，请重试"); }
-              } catch (err) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); alert(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
+                } else { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError("API 返回空内容，请重试"); }
+              } catch (err) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
             }}
             projectId={project.id}
             refineMode={refineMode} onToggleRefineMode={() => setRefineMode(!refineMode)}

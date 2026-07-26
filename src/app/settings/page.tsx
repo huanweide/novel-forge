@@ -199,7 +199,7 @@ export default function SettingsPage() {
               disabled={testing || !apiKey.trim()}
               className="btn-ghost px-5 py-3 rounded-xl text-sm font-medium shrink-0 disabled:opacity-40"
             >
-              {testing ? "测试中..." : "测试连接"}
+              {testing ? <span className="flex items-center gap-1.5"><Icon name="loader" size={14} className="animate-spin" /> 测试中...</span> : "测试连接"}
             </button>
           </div>
           {testResult && (

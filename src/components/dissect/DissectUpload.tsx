@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { toastError } from "@/components/ui/toast";
 
 interface DissectUploadProps {
   onStart: (data: {
@@ -40,7 +41,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
         setText(content);
       };
       reader.onerror = () => {
-        alert("文件读取失败，请确认是 UTF-8 编码的文本文件");
+        toastError("文件读取失败，请确认是 UTF-8 编码的文本文件");
       };
       reader.readAsText(file, "UTF-8");
     },

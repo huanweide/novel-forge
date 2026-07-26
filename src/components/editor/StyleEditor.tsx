@@ -13,6 +13,7 @@ import {
   type ForbiddenCategory,
   type EnhancedScanOptions,
 } from "@/lib/forbidden-checker";
+import { toastError } from "@/components/ui/toast";
 
 // ═══════════════════════════════════════════
 // 12 维度定义
@@ -209,10 +210,10 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("保存文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("保存文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
       onSaved(config.styleTemplateId);
       onClose();
-    } catch (err) { alert("保存文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+    } catch (err) { toastError("保存文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
 

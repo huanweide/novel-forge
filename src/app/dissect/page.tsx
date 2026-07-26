@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 
 interface TaskBrief {
   id: string;
@@ -49,14 +50,14 @@ export default function DissectPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("确定删除这个拆书任务？")) return;
+    if (!(await confirmDialog({ title: "删除拆书任务", description: "确定删除这个拆书任务？此操作不可恢复。", danger: true }))) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/dissect/${id}`, { method: "DELETE" });
-      if (!res.ok) { alert("删除失败（HTTP " + res.status + "）"); return; }
+      if (!res.ok) { toastError("删除失败（HTTP " + res.status + "）"); return; }
       setTasks((prev) => prev.filter((t) => t.id !== id));
     } catch {
-      alert("删除失败");
+      toastError("删除失败");
     } finally {
       setDeletingId(null);
     }

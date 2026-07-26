@@ -7,6 +7,7 @@ import { DissectProgress } from "@/components/dissect/DissectProgress";
 import { DissectDimensions } from "@/components/dissect/DissectDimensions";
 import { DissectAdaptPanel } from "@/components/dissect/DissectAdaptPanel";
 import type { DimensionResult, ChapterInfo } from "@/core/dissect/types";
+import { toastError } from "@/components/ui/toast";
 
 interface TaskDetail {
   id: string;
@@ -97,10 +98,10 @@ export default function DissectDetailPage() {
           prev ? { ...prev, convertedToProjectId: data.projectId } : prev,
         );
       } else {
-        alert(data.error || "转换失败");
+        toastError(data.error || "转换失败");
       }
     } catch (err: any) {
-      alert(err?.message || "网络错误");
+      toastError(err?.message || "网络错误");
     } finally {
       setConverting(false);
     }
@@ -124,10 +125,10 @@ export default function DissectDetailPage() {
           prev ? { ...prev, convertedToProjectId: data.projectId } : prev,
         );
       } else {
-        alert(data.error || "创建改编项目失败");
+        toastError(data.error || "创建改编项目失败");
       }
     } catch (err: any) {
-      alert(err?.message || "网络错误");
+      toastError(err?.message || "网络错误");
     } finally {
       setConverting(false);
     }

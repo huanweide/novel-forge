@@ -7,6 +7,7 @@ import { RulesPanel } from "@/components/workspace/RulesPanel";
 import { OutlineTree } from "./OutlineTree";
 import { Icon } from "@/components/ui/icons";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData } from "./types";
+import { toastError } from "@/components/ui/toast";
 
 export function LeftPanel({
   project, activeTab, onTabChange, selectedNode, onSelectNode, onAddSection,
@@ -82,7 +83,7 @@ export function LeftPanel({
 
         {activeTab === "characters" && (
           <CharacterList characters={project.characters} projectId={project.id} onEdit={onEditCharacter}
-            onDelete={async (id) => { try { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("角色删除失败：" + (d.error || `HTTP ${res.status}`)); return; } } catch (err) { alert("角色删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); return; } loadProject(); }}
+            onDelete={async (id) => { try { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("角色删除失败：" + (d.error || `HTTP ${res.status}`)); return; } } catch (err) { toastError("角色删除失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); return; } loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
         {activeTab === "world" && (

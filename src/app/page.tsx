@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
 import { Icon } from "@/components/ui/icons";
+import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadProjects = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -64,17 +66,20 @@ export default function Dashboard() {
   }, []);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`确定删除「${name}」？此操作不可逆。`)) return;
+    if (!(await confirmDialog({ title: "删除项目", description: `确定删除「${name}」？此操作不可逆。`, danger: true }))) return;
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        alert(d.error || "删除失败");
+        toastError(d.error || "删除失败");
         return;
       }
       loadProjects();
     } catch (err) {
-      alert("删除失败：" + (err instanceof Error ? err.message : "网络错误"));
+      toastError("删除失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -169,7 +174,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} onDelete={() => handleDelete(p.id, p.name)} />
+              <ProjectCard key={p.id} project={p} onDelete={() => handleDelete(p.id, p.name)} deletingId={deletingId} />
             ))}
           </div>
         )}
@@ -217,7 +222,7 @@ export default function Dashboard() {
 
 // ─── 子组件：项目卡片 ───────────────────────────────────────
 
-function ProjectCard({ project, onDelete }: { project: ProjectSummary; onDelete: () => void }) {
+function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; }) {
   const timeAgo = getTimeAgo(new Date(project.updatedAt));
 
   return (
@@ -228,7 +233,8 @@ function ProjectCard({ project, onDelete }: { project: ProjectSummary; onDelete:
         </h3>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
-          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all shrink-0"
+          disabled={deletingId === project.id}
+          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all shrink-0 disabled:opacity-40"
           title="删除项目"
         >
           <Icon name="x" size={14} />

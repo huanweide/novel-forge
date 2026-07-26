@@ -8,6 +8,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Icon } from "@/components/ui/icons";
+import { toastError } from "@/components/ui/toast";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -292,7 +293,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                   ts: Date.now(),
                 }]);
               }
-            } catch (err) { if (!(err instanceof Error && err.name === "AbortError")) alert("关系分析失败：" + (err instanceof Error ? err.message : "请重试")); }
+            } catch (err) { if (!(err instanceof Error && err.name === "AbortError")) toastError("关系分析失败：" + (err instanceof Error ? err.message : "请重试")); }
             setPendingSteps([]);
           }
           // ── 关系同步动作 ──
@@ -326,7 +327,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                   ts: Date.now(),
                 }]);
               }
-            } catch (err) { if (!(err instanceof Error && err.name === "AbortError")) alert("关系同步失败：" + (err instanceof Error ? err.message : "请重试")); }
+            } catch (err) { if (!(err instanceof Error && err.name === "AbortError")) toastError("关系同步失败：" + (err instanceof Error ? err.message : "请重试")); }
             setPendingSteps([]);
           }
         }

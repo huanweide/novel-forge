@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
 import type { LorebookData } from "./types";
+import { toastError } from "@/components/ui/toast";
 
 export function LorebookEditDialog({
   entry,
@@ -64,13 +65,13 @@ export function LorebookEditDialog({
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        alert(d.error || "词条保存失败，请重试");
+        toastError(d.error || "词条保存失败，请重试");
         return;
       }
       onSave();
       onClose();
     } catch (err) {
-      alert("词条保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+      toastError("词条保存失败：" + (err instanceof Error ? err.message : "网络错误"));
     }
   };
 
