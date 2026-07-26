@@ -2,6 +2,22 @@
 
 ---
 
+## v0.24.9 — 2026-07-26
+
+### 🏗️ 成品化：去远程字体依赖，整站可离线构建
+
+**移除 next/font/google 远程字体（layout.tsx + globals.css）**
+- 原：`layout.tsx` 用 `next/font/google` 拉取 Geist / Geist_Mono / JetBrains Mono，构建期需联网；无外网环境（如隔离沙箱）`next build` 必然失败
+- 现：`layout.tsx` 移除三处远程字体声明；`globals.css` 顶层 `:root` 定义 `--font-geist-sans/mono`、`--font-jetbrains` 为系统字体栈（中文回退 PingFang SC / Microsoft YaHei），Tailwind `@theme inline` 与页面字体变量无缝衔接
+- 效果：任意环境（含无外网）`next build` 均可成功，64 页静态生成通过，TypeScript 零错误
+
+**消除 Turbopack workspace root 误判警告（next.config.ts）**
+- 原：构建警告「Next.js inferred your workspace root... detected multiple lockfiles」，因上层目录存在多余 lockfile 误判 root
+- 现：`next.config.ts` 显式 `turbopack: { root: process.cwd() }`，构建输出干净无警告
+
+**可移植性提升**
+- 部署不再依赖构建期联网拉字体；`docker compose up -d` + `npx prisma db push` + `npm run dev`（端口 3001）即可起站
+
 ## v0.24.8 — 2026-07-26
 
 ### 🗑️ 修最后 1 处必须修：拆书任务删除假成功（未查 res.ok）

@@ -25,18 +25,44 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.8";
+export const LATEST_VERSION = "v0.24.9";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🗑️ 修最后 1 处必须修：拆书任务删除未查 res.ok（服务端失败却从列表移除=假删除）→ 现失败 alert 且不移除",
-  "✅ 至此前端所有写操作与加载失败均显式可见，无剩余「必须修」静默吞错/假成功",
-  "📋 站内「更新面板」持续记录至 v0.24.8，可随时回看每个版本号与更新内容",
-  "🚀 沙箱可验证范围内已达收敛；部署侧 `docker compose up -d` 起库即可跑站（详见交付报告）",
+  "🏗️ 成品化：移除 next/font/google 远程字体，改用系统字体栈——任意环境（含无外网）`next build` 均能成功",
+  "✅ 64 个页面静态生成全部通过，TypeScript 零错误，整站进入可部署成品状态",
+  "🧹 next.config.ts 声明 turbopack.root，消除 workspace root 误判警告（构建输出更干净）",
+  "📋 站内「更新面板」持续记录至 v0.24.9：构建可离线、可部署",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.9",
+    date: "2026-07-26",
+    title: "🏗️ 成品化：去远程字体依赖，整站可离线构建",
+    sections: [
+      {
+        label: "构建成品化",
+        items: [
+          "移除 next/font/google 的 Geist / JetBrains Mono 远程拉取，改用系统字体栈（中文回退 PingFang SC / Microsoft YaHei）——任意环境（含无外网）`next build` 均可成功",
+          "64 个页面静态生成全部通过，TypeScript 零错误，整站进入可部署成品状态",
+        ],
+      },
+      {
+        label: "构建警告清除",
+        items: [
+          "next.config.ts 显式声明 `turbopack.root = process.cwd()`，消除因上层目录多余 lockfile 导致的 workspace root 误判警告",
+        ],
+      },
+      {
+        label: "可移植性",
+        items: [
+          "部署不再依赖构建期联网拉取字体；`docker compose up -d` + `npx prisma db push` + `npm run dev` 即可起站",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.8",
     date: "2026-07-26",

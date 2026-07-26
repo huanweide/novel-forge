@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── 字体栈（离线优先：不再依赖 Google Fonts，避免无网环境 next build 失败） ──
+   原模板用 next/font/google 拉 Geist / JetBrains Mono，需联网；
+   改为系统字体栈后，任意环境均可构建，中文站以 PingFang SC / Microsoft YaHei 回退。 */
+:root {
+  --font-geist-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  --font-geist-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, "Courier New", monospace;
+  --font-jetbrains: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, "Courier New", monospace;
+}
+
 /* ═══════════════════════════════════════════
    Novel Forge · 虚空玻璃 (Void Glass) 设计体系
    三层深度 + 功能色彩 + 弹性动画 + 微纹理
