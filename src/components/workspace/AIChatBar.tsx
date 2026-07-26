@@ -111,6 +111,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
     if (!d.characterId) return;
     try {
       const res = await fetch(`/api/characters/${d.characterId}`, { method: "GET" });
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: "未知错误" })); setError("采纳失败：" + (e.error || `HTTP ${res.status}`)); return; }
       const charData = await res.json();
       const card = charData.character || charData;
 
@@ -169,9 +170,12 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
             };
           }),
         );
+      } else {
+        const e = await putRes.json().catch(() => ({ error: "未知错误" }));
+        setError("采纳失败：" + (e.error || `HTTP ${putRes.status}`));
       }
-    } catch {
-      setError("采纳失败，请重试");
+    } catch (err) {
+      setError("采纳失败：" + (err instanceof Error ? err.message : "请重试"));
     }
   };
 

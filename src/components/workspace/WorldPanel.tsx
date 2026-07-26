@@ -179,7 +179,8 @@ export function WorldPanel({
         }),
       });
       if (res.ok) { setShowCreate(false); setCreateForm({}); onRefresh(); }
-    } catch (err) { console.error("创建失败:", err); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("条目创建失败：" + (d.error || `HTTP ${res.status}`)); }
+    } catch (err) { alert("条目创建失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
 

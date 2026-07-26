@@ -57,6 +57,7 @@ export function ContextPreview({
   const [data, setData] = useState<ContextData | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -70,17 +71,20 @@ export function ContextPreview({
 
     const fetchData = async () => {
       try {
-        const r = await fetch("/api/generate/preview-context", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId, nodeId, authorNote }),
-          signal: controller.signal,
-        });
-        const d = await r.json();
-        if (!d.error) setData(d);
+      const r = await fetch("/api/generate/preview-context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, nodeId, authorNote }),
+        signal: controller.signal,
+      });
+      if (!r.ok) { setLoadError("加载上下文失败（HTTP " + r.status + "）"); setLoading(false); return; }
+      const d = await r.json();
+      if (!d.error) setData(d);
+      else setLoadError(d.error || "加载上下文失败");
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         console.error(err);
+        setLoadError("加载上下文失败：" + (err instanceof Error ? err.message : "请重试"));
       } finally {
         setLoading(false);
       }
@@ -97,6 +101,10 @@ export function ContextPreview({
 
   if (loading) {
     return <div className="text-xs text-zinc-500 p-4 animate-pulse">分析中...</div>;
+  }
+
+  if (loadError) {
+    return <div className="text-xs text-rose-400 p-4">⚠ {loadError}</div>;
   }
 
   if (!data) {

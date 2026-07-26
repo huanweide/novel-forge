@@ -102,6 +102,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   const [scanError, setScanError] = useState("");
   const [activeScanCategory, setActiveScanCategory] = useState<ForbiddenCategory | null>(null);
   const [showBuiltinRules, setShowBuiltinRules] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // ── 面板Tab ──
   const [tab, setTab] = useState<"style" | "forbidden" | "params">("style");
@@ -116,9 +117,10 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
     const fetchData = async () => {
       try {
-        const r = await fetch(`/api/projects/${projectId}/style`, { signal: controller.signal });
-        const data = await r.json();
-        if (!data.error) {
+      const r = await fetch(`/api/projects/${projectId}/style`, { signal: controller.signal });
+      if (!r.ok) { setLoadError("加载文风配置失败（HTTP " + r.status + "）"); setLoading(false); return; }
+      const data = await r.json();
+      if (!data.error) {
           const savedDimensions = data.dimensions || {};
           const templateId = data.styleTemplateId || "custom";
           const mergedDimensions = { ...(PRESET_DIMENSIONS[templateId] || PRESET_DIMENSIONS.custom), ...savedDimensions };
@@ -131,10 +133,11 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             customStyleNotes: data.customStyleNotes || "",
             dimensions: mergedDimensions,
           });
-        }
+        } else { setLoadError(data.error || "加载文风配置失败"); }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         console.error(err);
+        setLoadError("加载文风配置失败：" + (err instanceof Error ? err.message : "请重试"));
       } finally { setLoading(false); }
     };
     fetchData();
@@ -201,14 +204,15 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetch(`/api/projects/${projectId}/style`, {
+      const res = await fetch(`/api/projects/${projectId}/style`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("保存文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
       onSaved(config.styleTemplateId);
       onClose();
-    } catch (err) { console.error("保存文风失败:", err); }
+    } catch (err) { alert("保存文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
 
@@ -219,6 +223,17 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
         <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
           <p className="text-zinc-400">加载中…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+        <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <p className="text-rose-400 mb-3">⚠ {loadError}</p>
+          <Button onClick={onClose}>关闭</Button>
         </div>
       </div>
     );

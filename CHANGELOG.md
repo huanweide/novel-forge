@@ -2,6 +2,23 @@
 
 ---
 
+## v0.24.7 — 2026-07-26
+
+### 🔍 收口全局静默吞错（角色卡采纳/世界书新建/文风应用·保存 + 加载失败可见化）
+
+**写操作假成功（4 处必须修）**
+- AIChatBar handleAdoptSuggestion：采纳角色卡建议原不检查 GET/PUT 的 res.ok（非 2xx 静默）→ 现 GET 失败显式提示并 return、PUT 失败显式提示，不再「点了没反应」
+- WorldPanel 新建世界书：原 `if(res.ok)` 无 else、catch 静默 → 现失败 alert 且不关闭表单
+- StyleSelector 应用文风 / StyleEditor 保存文风：PUT 失败仍关弹窗=假成功 → 现失败 alert 且不开窗/不关闭，成功才生效
+
+**加载失败可见化（4 处）**
+- settings 加载设置：原 `if(res.ok)` 无 else、catch 空 → 现失败显式提示
+- ContextPreview 上下文预览：加载失败原静默显示「无法加载上下文数据」→ 现显式报错条 + 原因
+- StyleEditor 加载文风配置：失败原静默用默认配置 → 现显式报错弹窗
+- ImitationPanel 拆书任务列表/维度加载：原 catch 静默置空 → 现显式提示失败原因
+
+---
+
 ## v0.24.6 — 2026-07-26
 
 ### 🔍 收尾 P1 静默吞错（章节提取/节点操作/故事线/关系同步/角色·词条·规则删除·开关）

@@ -62,7 +62,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           setSelectedTaskId(preselectedDissectionId);
         }
       })
-      .catch(() => setTasks([]))
+      .catch((err) => { setTasks([]); setError("加载拆书任务失败：" + (err instanceof Error ? err.message : "请重试")); })
       .finally(() => setLoadingTasks(false));
   }, [preselectedDissectionId]);
 
@@ -76,13 +76,15 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
 
     try {
       const res = await fetch(`/api/dissect/${taskId}/dimensions`);
+      if (!res.ok) { setError("加载维度失败（HTTP " + res.status + "）"); setAvailableDimensions([]); return; }
       const data = await res.json();
       setAvailableDimensions(data.availableDimensions || []);
       // 默认全选
       const allKeys = (data.availableDimensions || []).map((d: AvailableDimension) => d.key);
       setSelectedDimensions(allKeys);
-    } catch {
+    } catch (err) {
       setAvailableDimensions([]);
+      setError("加载维度失败：" + (err instanceof Error ? err.message : "请重试"));
     }
   }, []);
 

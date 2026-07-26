@@ -25,18 +25,42 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.24.6";
+export const LATEST_VERSION = "v0.24.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔍 收尾 P1 静默吞错——章节自动提取、新建/摘要节点、故事线加载/保存/删除、关系同步、角色/词条/规则 删除·开关 失败均可见",
-  "📥 章节自动提取（autoExtractChapter）：提取失败 alert 明确提示，不再「生成中转圈却空结果」",
-  "🧵 故事线面板：加载失败显式报错+重试（不再误显「还没有故事线」）；保存/删除失败 alert 不丢数据",
-  "🤝 关系同步 + 角色/词条/规则：删除·开关·同步失败均 alert，杜绝「点了没反应 / 假成功」",
+  "🔍 收口最后 4 处写操作假成功 + 4 处加载失败可见化——角色卡采纳/世界书新建/文风应用·保存/设置·上下文·拆书·文风加载失败均显式报错",
+  "🤝 角色卡采纳建议（AIChatBar）：GET/PUT 失败显式提示，不再静默丢采纳",
+  "🎨 文风应用/保存（StyleSelector/StyleEditor）：PUT 失败 alert 且不关窗，杜绝「以为应用了其实没存」",
+  "🧩 加载失败可见化：设置页、上下文预览、拆书任务/维度、文风配置加载失败显式报错，不再误显空/转圈",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.24.7",
+    date: "2026-07-26",
+    title: "🔍 收口全局静默吞错（角色卡采纳/世界书新建/文风应用·保存 + 加载失败可见化）",
+    sections: [
+      {
+        label: "写操作假成功（4 处必须修）",
+        items: [
+          "AIChatBar handleAdoptSuggestion：采纳角色卡建议原不检查 GET/PUT 的 res.ok（非 2xx 静默）→ 现 GET 失败显式提示并 return、PUT 失败显式提示，不再「点了没反应」",
+          "WorldPanel 新建世界书：原 `if(res.ok)` 无 else、catch 静默 → 现失败 alert 且不关闭表单",
+          "StyleSelector 应用文风 / StyleEditor 保存文风：PUT 失败仍关弹窗=假成功 → 现失败 alert 且不开窗/不关闭，成功才生效",
+        ],
+      },
+      {
+        label: "加载失败可见化（4 处）",
+        items: [
+          "settings 加载设置：原 `if(res.ok)` 无 else、catch 空 → 现失败显式提示",
+          "ContextPreview 上下文预览：加载失败原静默显示「无法加载上下文数据」→ 现显式报错条 + 原因",
+          "StyleEditor 加载文风配置：失败原静默用默认配置 → 现显式报错弹窗",
+          "ImitationPanel 拆书任务列表/维度加载：原 catch 静默置空 → 现显式提示失败原因",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.24.6",
     date: "2026-07-26",

@@ -25,16 +25,15 @@ export function StyleSelector({
 
   const handleSelect = async (template: StyleTemplate) => {
     try {
-      await fetch(`/api/projects/${projectId}/style`, {
+      const res = await fetch(`/api/projects/${projectId}/style`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ styleTemplateId: template.id }),
       });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); alert("应用文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
       onSelect(template);
       setOpen(false);
-    } catch (err) {
-      console.error("设置文风失败:", err);
-    }
+    } catch (err) { alert("应用文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
   return (

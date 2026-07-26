@@ -38,8 +38,12 @@ export default function SettingsPage() {
         setBaseUrl(s.llmBaseUrl || "");
         setHasExistingKey(!!s.hasKey);
         if (s.hasKey) setApiKey("");
+      } else {
+        setStatusMsg("加载设置失败（HTTP " + res.status + "）");
       }
-    } catch { /* */ }
+    } catch (err) {
+      setStatusMsg("加载设置失败：" + (err instanceof Error ? err.message : "请重试"));
+    }
   }
 
   function handleProviderChange(key: string) {
