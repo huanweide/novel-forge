@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.30.2";
+export const LATEST_VERSION = "v0.31.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔍 究极用户端五维诊断：按钮交互 / 前后端统一 / 重叠审计 / 功能落地 / 功能意义 全维度真实点击验证通过",
-  "🧪 后端实测 17 项 + 浏览器真实点击：宝宝流闭环铁证——写章节后表格自动更新（applied:1）",
-  "🛠️ 工作台 hydration 修复：localStorage 持久化移入 useEffect，消除初始化期水合不匹配",
-  "✅ 重叠按钮审计：12 组嫌疑入口均属合理分化，未删功能；用户体验诊断契合写作者目的",
+  "📚 内置预设大幅扩充：把参考资料里的所有预设概念实体化为 12 个系统内置预设（表格模板 / 剧情推进 / 文风 / 世界观 / 角色卡）",
+  "🔗 创意工坊预设贴合进入写作上下文：pg 直连证明 apply 后 StyleCard / CharacterCard / LoreTable 真实落库，写章节时经 globalPrompt 与召回块注入正文",
+  "🖱️ 每个内置按钮实测可交互：Tab 过滤 / 搜索 / 应用到项目 / 复刻 / 上传预设 / 目标项目下拉 全部真实点击验证通过",
+  "✅ 生产模式（next build + start）全新渲染验证：创意工坊 12 卡片完整渲染，无死按钮",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.31.0",
+    date: "2026-07-27",
+    title: "📚 内置文档预设概念 + 创意工坊进入写作上下文 + 按钮全交互实测",
+    sections: [
+      {
+        label: "内置预设概念（来自参考资料）",
+        items: [
+          "把参考资料教程里命名的所有预设类别实体化为系统内置预设：表格模板 3 个（主角信息表/属性·关系·资产、骰子随机事件表、宫斗·妃嫔居住建筑表）、剧情推进 2 个（缝合怪·多线剧情推进、好感度·分阶段人设模板）、文风 2 个（快节奏·爽文笔、古风·严谨文笔）、世界观 1 个（仙侠·世界观骨架）、角色卡 1 个（示范角色·苏苏）",
+          "保留原 4 个示范预设，系统内置预设总数由 4 增至 12，覆盖 type: table_template / story_progression / style / worldview / character",
+        ],
+      },
+      {
+        label: "创意工坊贴合进入写作上下文（链路确证）",
+        items: [
+          "「应用到项目」真实落库经 pg 直连验证：文风→StyleCard(1)、角色卡→CharacterCard(2)、表格模板→LoreTable(3) 全部写入项目库",
+          "写章节时预设经 loadGenerationContext / buildPromptContext / buildRecallBlock 注入正文 globalPrompt 与召回块——「参考资料预设→项目库→写作上下文」主链路闭环成立",
+        ],
+      },
+      {
+        label: "每个内置按钮可交互（真实点击验证）",
+        items: [
+          "创意工坊 Tab 过滤、搜索框、应用到项目、复刻、上传预设（填表+发布）、目标项目下拉 全部真实点击验证通过，无死按钮",
+          "上传预设功能端到端验证：表单填表→POST /api/presets→后端真实创建入库",
+          "生产模式（next build + start）全新渲染：创意工坊 12 张卡片完整渲染、交互正常",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.30.2",
     date: "2026-07-27",
