@@ -610,6 +610,15 @@ export default function WorkspacePage() {
         onStyleSelect={(t: StyleTemplate) => setStyleTemplateId(t.id)} styleCard={project.styleCard}
       />
 
+      <div className="px-4 py-2 border-b border-white/[0.06] flex items-center gap-2">
+        <button onClick={() => router.push(`/workspace/${project.id}/tables`)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
+          🗂 结构化表格（宝宝流数据库）
+        </button>
+        <button onClick={() => router.push("/workshop")} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
+          ✨ 创意工坊
+        </button>
+      </div>
+
       <div className="flex flex-1 overflow-hidden" onMouseUp={() => {
         const sel = window.getSelection()?.toString()?.trim();
         if (sel && sel.length > 0) setSelectedText(sel);

@@ -1,0 +1,22 @@
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import { recallContext } from "@/core/babylore/recall";
+
+// POST /api/babylore/recall  { projectId, context }
+// 剧情推进=记忆召回：根据上下文匹配世界书(绿灯)与结构化表格行，返回应注入的记忆。
+export async function POST(request: Request) {
+  try {
+    const { projectId, context } = (await request.json()) as any;
+    if (!projectId || !context) {
+      return NextResponse.json({ error: "缺少 projectId 或 context" }, { status: 400 });
+    }
+    const [lore, tables] = await Promise.all([
+      prisma.lorebookEntry.findMany({ where: { projectId } }),
+      prisma.loreTable.findMany({ where: { projectId } }),
+    ]);
+    const items = recallContext(context, lore as any, tables as any);
+    return NextResponse.json({ items, count: items.length });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "召回失败" }, { status: 500 });
+  }
+}

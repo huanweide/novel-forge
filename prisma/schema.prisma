@@ -28,6 +28,7 @@ model Project {
 
   characters    CharacterCard[]
   lorebookEntries LorebookEntry[]
+  loreTables    LoreTable[]
   storyNodes    StoryNode[]
   storyBranches StoryBranch[]
   chapterSummaries ChapterSummary[]
@@ -447,4 +448,53 @@ model PendingItem {
 
   @@index([projectId])
   @@index([status])
+}
+
+// ─── 结构化表格 (Lore Table) —— 宝宝流数据库内核 ────────
+// 世界书升级为结构化表格：每行是一条例证数据，由 LLM 自动填表抽取。
+// JSON 行操作协议等价于宝宝流 SQL 模式（insert/update/delete），但在应用层用 JS 落地，避免动态 SQL。
+
+model LoreTable {
+  id        String @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name     String                    // 表名，如「妃嫔居住建筑表」
+  key      String                    // 英文标识，如 woman_live
+  note     String @default("")       // 表格说明（每列含义）
+  category String @default("custom") // person|place|item|attribute|timeline|custom
+  marker   String @default("")       // 数据隔离标记，如 [ACU-{projectId}]
+
+  columns  Json @default("[]")       // [{key,label,type}]  例 [{key:"name",label:"妃嫔名称",type:"text"}]
+  rows     Json @default("[]")       // [{row_id, ...列值}]  例 [{row_id:1,name:"甄嬛",live:"碎玉轩",status:"已入住",note:"初入宫"}]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([key])
+}
+
+// ─── 预设 (Preset) —— 创意工坊/共创社区资产 ─────────────
+// 把「参考资料本身就是个预设」实体化：表格模板预设 + 剧情推进预设 + 文风 + 世界观 + 角色卡
+// 用户可在创意工坊上传/共享/Fork 这些预设（免费、非商业）。
+
+model Preset {
+  id            String   @id @default(uuid())
+  type          String                    // table_template | story_progression | style | worldview | character
+  title         String
+  description   String @default("")
+  content       Json @default("{}")       // 预设载荷（结构随 type 而定）
+  author        String @default("系统")
+  tags          String[] @default([])     // 题材标签：玄幻/言情/科幻...
+  downloads     Int @default(0)
+  isPublic      Boolean @default(true)
+  isBuiltin     Boolean @default(false)   // 系统内置示范预设
+  forkedFromId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type])
+  @@index([isPublic])
+  @@index([tags])
 }

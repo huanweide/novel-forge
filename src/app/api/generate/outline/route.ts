@@ -84,6 +84,24 @@ export async function POST(request: Request) {
       .map((l: any) => `[${l.title}](${l.category}) ${(l.content || "").slice(0, 120)}`)
       .join("\n");
 
+    // ── 宝宝流·剧情推进=记忆召回（增量注入）──
+    // 根据当前上下文（总纲+基调+提示词）匹配世界书绿灯关键词，召回应注入的记忆片段。
+    // 注：大纲阶段尚无章节正文，结构化表格召回主要在章节写作时生效；此处先注入世界书命中项。
+    let recallText = "";
+    try {
+      const { recallContext } = await import("@/core/babylore/recall");
+      const recallItems = recallContext(
+        `${project.synopsis}\n${project.toneKeywords.join("、")}\n${customPrompt || ""}`,
+        loreEntries as any,
+        [],
+      );
+      if (recallItems.length > 0) {
+        recallText =
+          "\n【记忆召回·精准注入】\n" +
+          recallItems.map((it) => `[${it.title}] ${it.content}`).join("\n");
+      }
+    } catch { /* 召回失败不影响大纲主流程 */ }
+
     // ── 文风 ──
     const styleCards = (project.styleCards || []) as any[];
     const llmConfig = (project.llmConfig || {}) as Record<string, unknown>;

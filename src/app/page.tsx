@@ -102,6 +102,9 @@ export default function Dashboard() {
             <Link href="/dissect" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="book" size={13} /> <span className="hidden sm:inline">拆书</span>
             </Link>
+            <Link href="/workshop" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
+              <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">创意工坊</span>
+            </Link>
             <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="settings" size={13} /> <span className="hidden sm:inline">设置</span>
             </Link>
