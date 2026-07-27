@@ -339,15 +339,20 @@ const BUILTINS: any[] = [
 ];
 
 export async function POST() {
-  let created = 0;
-  for (const b of BUILTINS) {
-    const exists = await prisma.preset.findFirst({
-      where: { type: b.type, title: b.title, isBuiltin: true },
-    });
-    if (!exists) {
-      await prisma.preset.create({ data: { ...b, isBuiltin: true, isPublic: true } as any });
-      created++;
+  try {
+    let created = 0;
+    for (const b of BUILTINS) {
+      const exists = await prisma.preset.findFirst({
+        where: { type: b.type, title: b.title, isBuiltin: true },
+      });
+      if (!exists) {
+        await prisma.preset.create({ data: { ...b, isBuiltin: true, isPublic: true } as any });
+        created++;
+      }
     }
+    return NextResponse.json({ ok: true, created, total: BUILTINS.length });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: `播种预设失败：${msg}` }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, created, total: BUILTINS.length });
 }

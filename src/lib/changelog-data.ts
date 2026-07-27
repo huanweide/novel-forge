@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.32.0";
+export const LATEST_VERSION = "v0.32.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎨 全模块上线「虚空玻璃」暗色设计体系：surface/border/主色令牌统一，按钮 hover / 点击 / 禁用态差异化，告别平行色板",
-  "🧹 全站 UI 装饰 emoji 清零，统一收编为 Icon 组件（业务数据标签 📥📝 保留语义）",
-  "🔔 所有「创建 / 添加」操作接入统一响应弹窗：新建角色 / 世界书 / 规则 / 故事线 / 项目 均弹「XX「名称」已创建 / 已添加」（绿色辉光 + 勾选动画）",
-  "✅ 修复 3 处阻塞构建的类型错误，tsc 类型检查 + 生产 next build 全通过（69 路由全量生成）",
+  "API 路由健壮性加固：修复预设详情 / 删除 / 更新与内置预设播种两处路由缺失的异常捕获",
+  "预设路由异常不再暴露无信息 500：统一返回 {error} 结构，前端可稳定识别并提示",
+  "按诊断规范完成六维度自检：TypeScript 编译 / Prisma 校验 / 服务健康 / 反模式扫描全部通过",
+  "优化建议清单已整理：SSE 统一 finally 关闭、巨型组件拆分、大列表虚拟化、空态与对比度/A11y 列入后续迭代",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.32.1",
+    date: "2026-07-28",
+    title: "API 路由健壮性加固（预设路由异常捕获）",
+    sections: [
+      {
+        label: "API 路由健壮性",
+        items: [
+          "修复 /api/presets/[id] 的 GET/PUT/DELETE 与 /api/seed/presets 的 POST 缺失 try/catch 的问题：prisma 异常原会返回无 {error} 的 500，导致前端解析崩溃",
+          "统一异常响应：各 handler 包装 try/catch，返回 { error: string } + 对应 HTTP 状态（404/500），前端可稳定识别并 toastError",
+        ],
+      },
+      {
+        label: "诊断自检",
+        items: [
+          "按 novel-forge-diagnostic 六维度扫描：tsc 零错误、Prisma schema 校验通过、服务健康 200、无死代码、核心 SSE 路由已有外层 try/catch 兜底",
+          "其余优化点（SSE finally 统一关闭、巨型组件拆分、大列表虚拟化、空态 / 对比度 / A11y）整理为优化建议清单，列入后续迭代",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.32.0",
     date: "2026-07-27",

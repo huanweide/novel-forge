@@ -2,6 +2,20 @@
 
 ---
 
+## v0.32.1 — 2026-07-28
+
+### API 路由健壮性加固（预设路由异常捕获）
+
+**API 路由健壮性**
+- 修复 /api/presets/[id] 的 GET/PUT/DELETE 与 /api/seed/presets 的 POST 缺失 try/catch 的问题：prisma 异常原会返回无 {error} 的 500，导致前端解析崩溃
+- 统一异常响应：各 handler 包装 try/catch，返回 { error: string } + 对应 HTTP 状态（404/500），前端可稳定识别并 toastError
+
+**诊断自检**
+- 按 novel-forge-diagnostic 六维度扫描：tsc 零错误、Prisma schema 校验通过、服务健康 200、无死代码、核心 SSE 路由已有外层 try/catch 兜底
+- 其余优化点（SSE finally 统一关闭、巨型组件拆分、大列表虚拟化、空态 / 对比度 / A11y）整理为优化建议清单，列入后续迭代
+
+---
+
 ## v0.32.0 — 2026-07-27
 
 ### 🎨 全模块视觉美化 + 创建/添加统一响应弹窗（虚空玻璃设计体系）
