@@ -12,8 +12,7 @@ import {
   buildGenerationContext,
   runPostGenerationPipeline,
 } from "@/core/pipeline";
-import { recallContext } from "@/core/babylore/recall";
-import { babyloreFill } from "@/core/babylore/fill";
+import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 
 /**
  * POST /api/generate/write
@@ -87,45 +86,18 @@ export async function POST(request: Request) {
     writingInstruction +=
       "\n\n【格式铁律】绝不在正文首行或任意位置写「第X章」「第X节」或章节标题。章节标题由系统管理，正文直接切入动作/对话。";
 
-    // ── 6.5 宝宝流记忆召回（剧情推进 = 记忆召回） ──
-    // 用本节大纲 + 作者指令 + 前文 + 角色名 作为召回上下文，
-    // 把命中的世界书条目 / 结构化表格行注入本轮撰写指令，保证设定一致性。
-    const loreTablesRaw = await prisma.loreTable.findMany({ where: { projectId } });
-    const recallText = [
-      data.currentNode.outline || "",
-      cleanAuthorNote || "",
-      activeChars.map((c: any) => c.name).join("、"),
-      previousNodes.map((n: any) => n.content || n.outline || "").join("\n"),
-    ].join("\n");
-    // 过滤"自动发现"占位世界书（内容含 [自动发现]，仅为待补充设定，召回会污染 prompt）
-    const cleanLore = (data.loreEntries || []).filter(
-      (e: any) => !((e.content || "") as string).includes("[自动发现]"),
-    );
-    const recallRaw = recallContext(
-      recallText,
-      cleanLore as any,
-      loreTablesRaw.map((t: any) => ({
-        name: t.name,
-        columns: t.columns || [],
-        rows: t.rows || [],
-      })),
-    );
-    // 优先保留结构化表格命中（精确），限制总数避免 prompt 膨胀
-    const recallItems = [
-      ...recallRaw.filter((i) => i.source === "table"),
-      ...recallRaw.filter((i) => i.source === "lorebook"),
-    ].slice(0, 12);
-    if (recallItems.length > 0) {
-      const recallBlock =
-        "\n\n## 🧠 宝宝流记忆召回（剧情推进 = 记忆召回——请在写作中自然呼应，保持设定一致，但不要复述原文）\n" +
-        recallItems
-          .map(
-            (it) =>
-              `【${it.source === "lorebook" ? "世界书" : "结构化表格"}｜${it.title}】\n${it.content}`,
-          )
-          .join("\n\n");
-      writingInstruction += recallBlock;
-    }
+    // ── 6.5 宝宝流记忆召回（剧情推进 = 记忆召回，与 refine/continue 共享 loop.ts） ──
+    const { block: recallBlock, items: recallItems } = await buildRecallBlock({
+      projectId,
+      recallText: [
+        data.currentNode.outline || "",
+        cleanAuthorNote || "",
+        activeChars.map((c: any) => c.name).join("、"),
+        previousNodes.map((n: any) => n.content || n.outline || "").join("\n"),
+      ].join("\n"),
+      loreEntries: data.loreEntries,
+    });
+    if (recallBlock) writingInstruction += recallBlock;
 
     // ── 8. 调度器 ──
     const orchestrator = await AgentOrchestrator.fromSettings({
@@ -278,29 +250,7 @@ export async function POST(request: Request) {
 
           // ── 宝宝流自动填表（正文 → 填表，闭合「正文→填表→召回→正文」写作闭环） ──
           // 每章写完后自动用 DeepSeek 抽取结构化事实回填表格；失败不影响正文交付。
-          let babylore: { ok: boolean; operations: number; applied: number; error: string } = {
-            ok: false,
-            operations: 0,
-            applied: 0,
-            error: "",
-          };
-          try {
-            const fillRes = await babyloreFill(projectId, fullContent);
-            babylore = {
-              ok: fillRes.ok,
-              operations: fillRes.operations,
-              applied: fillRes.applied,
-              error: fillRes.error || "",
-            };
-          } catch (e) {
-            babylore = {
-              ok: false,
-              operations: 0,
-              applied: 0,
-              error: e instanceof Error ? e.message : "填表异常",
-            };
-          }
-          send({ type: "babylore_fill", ...babylore });
+          const babylore = await safeFillAfterWriting({ projectId, content: fullContent, send });
 
           // Token 用量
           send({

@@ -20,6 +20,7 @@ import {
   buildGenerationContext,
   runPostGenerationPipeline,
 } from "@/core/pipeline";
+import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 
 export async function POST(request: Request) {
   try {
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
           .filter(Boolean).join("\n")
       : "";
 
-    const writingInstruction = hasContent
+    let writingInstruction = hasContent
       ? `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}【${isTargetedFix ? "精准修复" : "微调"}任务——在以下已有正文上进行${isTargetedFix ? "定点修改" : "修改/续写"}，不要从头重写】
 
 已有正文（共${existingContent.length}字）：
@@ -102,6 +103,18 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 - 续写字数约${targetWords}字。`}`
       : `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
 
+    // ── 7.5 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──
+    const { block: refineRecallBlock, items: refineRecallItems } = await buildRecallBlock({
+      projectId,
+      recallText: [
+        refineInstruction,
+        (data.currentNode.content || "").slice(-1500),
+        activeChars.map((c: any) => c.name).join("、"),
+      ].join("\n"),
+      loreEntries: data.loreEntries,
+    });
+    if (refineRecallBlock) writingInstruction += refineRecallBlock;
+
     // ── 8. 调度器 ──
     const orchestrator = await AgentOrchestrator.fromSettings({
       defaultTemperature: effectiveTemperature,
@@ -118,6 +131,10 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 
         try {
           let newContent = "";
+
+          if (refineRecallItems.length > 0) {
+            send({ type: "babylore_recall", items: refineRecallItems });
+          }
 
           for await (const chunk of orchestrator.writeSection(
             promptContext, writingInstruction, targetWords,
@@ -138,26 +155,36 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             template?.forbiddenPatterns || [], customForbidden,
           );
 
-          const result = await runPostGenerationPipeline({
-            send, orchestrator, projectId, nodeId,
-            content: newContent,
-            nodeOutline: data.currentNode.outline || "",
-            activeCharacters: activeChars as any,
-            activeLore: [] as any,
-            chapterSummaries: data.summaries as any,
-            currentNode: data.currentNode as any,
-            chapterTitle: data.currentNode.title || "",
-            chapterOrder: data.currentNode.order,
-            forbiddenPatterns,
-            skipReview: true,
-            skipSummarize: true,
-          });
+          let result: any = { nodeId, status: "completed" };
+          try {
+            result = await runPostGenerationPipeline({
+              send, orchestrator, projectId, nodeId,
+              content: newContent,
+              nodeOutline: data.currentNode.outline || "",
+              activeCharacters: activeChars as any,
+              activeLore: [] as any,
+              chapterSummaries: data.summaries as any,
+              currentNode: data.currentNode as any,
+              chapterTitle: data.currentNode.title || "",
+              chapterOrder: data.currentNode.order,
+              forbiddenPatterns,
+              skipReview: true,
+              skipSummarize: true,
+            });
+          } catch (e) {
+            console.error("微调后处理失败（已降级为仅生成）:", e instanceof Error ? e.message : e);
+            send({ type: "postprocess_skip", content: e instanceof Error ? e.message : "后处理跳过" });
+          }
+
+          // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
+          const babylore = await safeFillAfterWriting({ projectId, content: newContent, send });
 
           const tokenCount = countTokens(newContent);
           send({
-            type: "done", content: "", nodeId: result.nodeId, status: result.status,
+            type: "done", content: "", nodeId: result?.nodeId || nodeId, status: result?.status || "completed",
             mode: hasContent ? "refine" : "write", wordCount: newContent.length,
             usage: { completionTokens: tokenCount, totalTokens: tokenCount },
+            babylore,
           });
         } catch (err) {
           send({ type: "error", content: err instanceof Error ? err.message : "微调失败" });

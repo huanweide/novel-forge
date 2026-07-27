@@ -12,6 +12,7 @@ import {
   buildGenerationContext,
   runPostGenerationPipeline,
 } from "@/core/pipeline";
+import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 
 /**
  * POST /api/generate/continue
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
           .filter(Boolean).join("\n")
       : "";
 
-    const writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText + "\n" : ""}请接着上文继续撰写下一节。
+    let writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText + "\n" : ""}请接着上文继续撰写下一节。
 
 【上文末段——从这里衔接】
 ${lastParagraphs}
@@ -130,6 +131,19 @@ ${lastParagraphs}
 【本节大纲】${nextOutline || "基于前文剧情自然推进"}
 
 注意：与上文无缝衔接，保持叙事视角一致。`;
+
+    // ── 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──
+    const { block: contRecallBlock, items: contRecallItems } = await buildRecallBlock({
+      projectId,
+      recallText: [
+        lastParagraphs,
+        nextTitle,
+        nextOutline || "",
+        activeChars.map((c: any) => c.name).join("、"),
+      ].join("\n"),
+      loreEntries: data.loreEntries,
+    });
+    if (contRecallBlock) writingInstruction += contRecallBlock;
 
     // ── 调度器 ──
     const orchestrator = await AgentOrchestrator.fromSettings({
@@ -147,6 +161,10 @@ ${lastParagraphs}
 
         try {
           let fullContent = "";
+
+          if (contRecallItems.length > 0) {
+            send({ type: "babylore_recall", items: contRecallItems });
+          }
 
           // Phase 1: 流式生成
           let saveCounter = 0;
@@ -187,25 +205,35 @@ ${lastParagraphs}
             template?.forbiddenPatterns || [], customForbidden,
           );
 
-          const result = await runPostGenerationPipeline({
-            send, orchestrator, projectId,
-            nodeId: nextNode.id,
-            content: fullContent,
-            nodeOutline: nextOutline || "",
-            activeCharacters: activeChars.filter((c: any) => activeCharIds.includes(c.id)) as any,
-            activeLore: (loreEntries as any[]).filter((l: any) => activeLoreIds.includes(l.id)) as any,
-            chapterSummaries: summaries as any,
-            currentNode: nextNode as any,
-            chapterTitle: nextTitle,
-            chapterOrder: (nextNode as any).order,
-            forbiddenPatterns,
-          });
+          let result: any = { nodeId: nextNode.id, status: "completed" };
+          try {
+            result = await runPostGenerationPipeline({
+              send, orchestrator, projectId,
+              nodeId: nextNode.id,
+              content: fullContent,
+              nodeOutline: nextOutline || "",
+              activeCharacters: activeChars.filter((c: any) => activeCharIds.includes(c.id)) as any,
+              activeLore: (loreEntries as any[]).filter((l: any) => activeLoreIds.includes(l.id)) as any,
+              chapterSummaries: summaries as any,
+              currentNode: nextNode as any,
+              chapterTitle: nextTitle,
+              chapterOrder: (nextNode as any).order,
+              forbiddenPatterns,
+            });
+          } catch (e) {
+            console.error("续写后处理失败（已降级为仅生成）:", e instanceof Error ? e.message : e);
+            send({ type: "postprocess_skip", content: e instanceof Error ? e.message : "后处理跳过" });
+          }
+
+          // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
+          const babylore = await safeFillAfterWriting({ projectId, content: fullContent, send });
 
           send({
             type: "done", content: "",
-            nodeId: result.nodeId, title: nextTitle, order: (nextNode as any).order,
-            status: result.status,
+            nodeId: result?.nodeId || nextNode.id, title: nextTitle, order: (nextNode as any).order,
+            status: result?.status || "completed",
             nextAction: `已自动创建并完成「${nextTitle}」，可继续续写`,
+            babylore,
           });
         } catch (err) {
           send({ type: "error", content: err instanceof Error ? err.message : "续写失败" });

@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.28.0";
+export const LATEST_VERSION = "v0.29.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔁 写作闭环打通：写章节时自动「记忆召回」+ 写完后自动「LLM 填表」，正文→填表→召回→正文 全程无需手动",
-  "🧠 召回净化：自动过滤「[自动发现]」占位世界书，结构化表格命中优先，单次召回上限 12 条，prompt 不再被噪声撑爆",
-  "🛡 后处理容错：审校/摘要 LLM 限流超时不阻断交付，降级为「仅生成」并继续自动填表，章节照样写完",
-  "📡 透明可见：前端实时提示「宝宝流记忆召回 N 条」「自动填表完成：写入 M 行」，闭环每一步用户都看得见",
+  "🔁 闭环覆盖全部生成路径：写章节 / 微调 refine / 续写 continue 三条路由现在都自动「记忆召回 + 写后填表」",
+  "🧩 抽共享模块 src/core/babylore/loop.ts：召回净化与自动填表单一事实来源，三路由零重复逻辑",
+  "🛡 后处理容错对齐：refine/continue 的后处理失败也降级为「仅生成」并继续填表，与 write 一致",
+  "✅ 端到端验证：微调「甄嬛居所改为棠梨宫」被自动抽取，表格 甄嬛:碎玉轩 → 甄嬛:棠梨宫 实时更新",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.29.0",
+    date: "2026-07-27",
+    title: "🔁 写作闭环覆盖全部生成路径（写章节 / 微调 / 续写 三路由统一）",
+    sections: [
+      {
+        label: "闭环扩展到全部路径",
+        items: [
+          "写章节 / 微调 refine / 续写 continue 三条生成路由现在都自动「记忆召回」+ 写后「LLM 填表」，参考资料承诺的正文→填表→召回→正文 在任意创作方式下都闭合",
+          "端到端验证：微调指令「甄嬛居所改为棠梨宫」被 DeepSeek 自动抽取，结构化表格 甄嬛:碎玉轩 → 甄嬛:棠梨宫 实时更新；续写路径也正确召回角色设定",
+        ],
+      },
+      {
+        label: "架构精简（删冗余）",
+        items: [
+          "抽共享模块 src/core/babylore/loop.ts：把「召回净化（过滤[自动发现]占位世界书、表格命中优先、上限12条）+ 写后自动填表（失败不影响交付）」沉淀为单一事实来源",
+          "write/refine/continue 三路由统一调用 buildRecallBlock 与 safeFillAfterWriting，消除三套重复逻辑、保证行为一致",
+        ],
+      },
+      {
+        label: "健壮性对齐",
+        items: [
+          "refine/continue 的后处理管线（审校/摘要）也加容错：LLM 限流/超时不再中断交付，降级为「仅生成」并继续自动填表、照常发 done",
+          "前端 streamSSE 本就是 write/refine/continue 共用，宝宝流召回/填表的实时 toast 在三条路径自动透明展示",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.28.0",
     date: "2026-07-27",
