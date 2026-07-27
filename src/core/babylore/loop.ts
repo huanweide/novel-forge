@@ -11,6 +11,7 @@
 import { prisma } from "@/lib/prisma";
 import { recallContext, RecallItem } from "./recall";
 import { babyloreFill, FillResult } from "./fill";
+import { evaluateIfCell } from "./ifcell";
 
 export interface RecallBuildInput {
   projectId: string;
@@ -37,15 +38,14 @@ export async function buildRecallBlock(input: RecallBuildInput): Promise<RecallB
     (e: any) => !((e.content || "") as string).includes("[自动发现]"),
   );
 
-  const recallRaw = recallContext(
-    recallText,
-    cleanLore as any,
-    loreTablesRaw.map((t: any) => ({
-      name: t.name,
-      columns: t.columns || [],
-      rows: t.rows || [],
-    })),
-  );
+  // 表格形态（供召回匹配 + <if cell> 分阶段人设求值共用）
+  const tableShapes = loreTablesRaw.map((t: any) => ({
+    name: t.name,
+    columns: t.columns || [],
+    rows: t.rows || [],
+  }));
+
+  const recallRaw = recallContext(recallText, cleanLore as any, tableShapes);
 
   // 优先保留结构化表格命中（精确），限制总数避免 prompt 膨胀
   const recallItems = [
@@ -55,16 +55,26 @@ export async function buildRecallBlock(input: RecallBuildInput): Promise<RecallB
 
   if (recallItems.length === 0) return { block: "", items: [] };
 
+  // 世界书条目若含 <if cell> 分阶段人设语法，则按当前表格数值求值，
+  // 注入"当前激活的人设阶段"纯文本（而非把语法标签丢给 LLM）。
+  // 同时把求值结果写回 items，使 babylore_recall 事件携带的是已求值内容（透明可见）。
+  const evaluatedItems = recallItems.map((it) => {
+    if (it.source === "lorebook" && (it.content || "").includes("<if cell")) {
+      return { ...it, content: evaluateIfCell(it.content, tableShapes), evaluated: true } as any;
+    }
+    return it;
+  });
+
   const block =
     "\n\n## 🧠 宝宝流记忆召回（剧情推进 = 记忆召回——请在写作中自然呼应，保持设定一致，但不要复述原文）\n" +
-    recallItems
+    evaluatedItems
       .map(
         (it) =>
           `【${it.source === "lorebook" ? "世界书" : "结构化表格"}｜${it.title}】\n${it.content}`,
       )
       .join("\n\n");
 
-  return { block, items: recallItems };
+  return { block, items: evaluatedItems };
 }
 
 export interface FillAfterWritingInput {
