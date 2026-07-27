@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
 import type { LorebookData } from "./types";
 import { toastError } from "@/components/ui/toast";
@@ -48,9 +49,9 @@ export function LorebookEditDialog({
           insertionOrder: form.insertionOrder,
         });
       }
-      setAutofillMsg(`✅ ${data.message || "补全完成"}`);
+      setAutofillMsg(`补全完成：${data.message || ""}`);
     } catch (err: any) {
-      setAutofillMsg(`❌ ${err.message}`);
+      setAutofillMsg(`补全失败：${err.message}`);
     } finally {
       setAutofilling(false);
     }
@@ -81,7 +82,7 @@ export function LorebookEditDialog({
         <h3 className="text-lg font-semibold">编辑词条：{entry.title}</h3>
         <div className="flex items-center gap-2">
           {autofillMsg && (
-            <span className={`text-xs ${autofillMsg.startsWith("✅") ? "text-green-400" : autofillMsg.startsWith("❌") ? "text-red-400" : "text-amber-400"}`}>
+            <span className={`text-xs ${autofillMsg.startsWith("补全完成") ? "text-[var(--nv-success)]" : autofillMsg.startsWith("补全失败") ? "text-[var(--nv-danger)]" : "text-[var(--nv-accent)]"}`}>
               {autofillMsg}
             </span>
           )}
@@ -90,11 +91,11 @@ export function LorebookEditDialog({
             disabled={autofilling}
             className={`text-xs px-3 py-1 rounded-lg font-medium transition-colors ${
               autofilling
-                ? "bg-white/[0.04] text-zinc-500 cursor-not-allowed"
-                : "bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 border border-purple-600/30"
+                ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)] cursor-not-allowed"
+                : "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] hover:bg-[var(--nv-creative)]/20 border border-[var(--nv-creative)]/30"
             }`}
           >
-            {autofilling ? "⏳ AI补全中..." : "🤖 AI填满"}
+            {autofilling ? <><Icon name="loader" size={12} className="animate-spin" /> AI补全中...</> : <><Icon name="bot" size={12} /> AI填满</>}
           </button>
         </div>
       </div>
@@ -103,7 +104,7 @@ export function LorebookEditDialog({
           <DialogInput value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
         </DialogField>
         <DialogField label="分类">
-          <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+          <select className="input-glass w-full rounded px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             <option value="geography">地理</option>
             <option value="faction">势力/组织</option>
             <option value="magic_system">魔法体系</option>

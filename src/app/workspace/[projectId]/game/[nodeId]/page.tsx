@@ -4,7 +4,10 @@
  * 游戏模式页面 —— 沉浸式互动文本冒险
  *
  * 路由：/workspace/[projectId]/game/[nodeId]
- * 独立的暗黑沉浸式 UI，与 workspace 主页面分离
+ * 独立的暗黑沉浸式 UI，与 workspace 主页面分离。
+ * 视觉遵循「虚空玻璃 (Void Glass)」设计体系：以 --nv-void 为底，
+ * surface 层级承载容器，--nv-creative(紫罗兰) 作为游戏主调，
+ * 禁止 emoji、统一用 <Icon> 组件。
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -12,6 +15,8 @@ import { useParams, useRouter } from "next/navigation";
 import GameCanvas from "@/components/game/GameCanvas";
 import GameParticles from "@/components/game/GameParticles";
 import GameOutlineEditor from "@/components/game/GameOutlineEditor";
+import { Icon, type IconName } from "@/components/ui/icons";
+import { EmptyState, LoadingDots } from "@/components/ui/States";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
 
 // ─── 类型 ─────────────────────────────────────────────────────
@@ -38,16 +43,30 @@ interface TurnRecord {
   narrative: string;
 }
 
-// ─── 快捷动作 ─────────────────────────────────────────────────
+// ─── 快捷动作（图标名对应 icons.tsx） ────────────────────────
 
 const QUICK_ACTIONS = [
-  { type: "observe", label: "观察", icon: "🔍", desc: "观察环境/人物" },
-  { type: "dialogue", label: "对话", icon: "💬", desc: "与角色交谈" },
-  { type: "combat", label: "战斗", icon: "⚔️", desc: "进入战斗" },
-  { type: "explore", label: "探索", icon: "🗺️", desc: "探索新区域" },
-  { type: "use_item", label: "使用物品", icon: "🎒", desc: "使用背包物品" },
-  { type: "rest", label: "休息", icon: "💤", desc: "休息恢复" },
+  { type: "observe", label: "观察", icon: "search", desc: "观察环境/人物" },
+  { type: "dialogue", label: "对话", icon: "message", desc: "与角色交谈" },
+  { type: "combat", label: "战斗", icon: "sword", desc: "进入战斗" },
+  { type: "explore", label: "探索", icon: "map", desc: "探索新区域" },
+  { type: "use_item", label: "使用物品", icon: "backpack", desc: "使用背包物品" },
+  { type: "rest", label: "休息", icon: "moon", desc: "休息恢复" },
 ];
+
+// 左栏标签
+const LEFT_TABS = [
+  { key: "plot", label: "情节", icon: "book" },
+  { key: "characters", label: "角色", icon: "user" },
+  { key: "factions", label: "势力", icon: "building" },
+] as const;
+
+// 右栏标签
+const RIGHT_TABS = [
+  { key: "text", label: "正文", icon: "file" },
+  { key: "backpack", label: "背包", icon: "backpack" },
+  { key: "world", label: "世界", icon: "globe" },
+] as const;
 
 // ─── 主页面 ───────────────────────────────────────────────────
 
@@ -80,6 +99,7 @@ export default function GamePage() {
   const [endingNarrative, setEndingNarrative] = useState("");
   const [showOutlineEditor, setShowOutlineEditor] = useState(false);
   const [nodeOutline, setNodeOutline] = useState<string | null>(null);
+  const [lorebook, setLorebook] = useState<any[]>([]);
   const streamRef = useRef<AbortController | null>(null);
 
   // ── 初始化 ──────────────────────────────────────────────
@@ -102,6 +122,7 @@ export default function GamePage() {
       }));
 
       setNodeOutline(node.outline || null);
+      setLorebook(projData.lorebookEntries || []);
       setTurns([]);
       setEndingNarrative("");
     } catch (err: any) {
@@ -326,10 +347,11 @@ export default function GamePage() {
   // ── 加载状态 ────────────────────────────────────────────
   if (state.status === "loading") {
     return (
-      <div className="h-screen bg-[#0a0a1a] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse">🎮</div>
-          <p className="text-violet-300 text-lg">正在初始化游戏模式...</p>
+      <div className="flex h-screen items-center justify-center bg-[var(--nv-void)]">
+        <div className="surface-floating flex flex-col items-center gap-4 rounded-2xl px-12 py-14">
+          <Icon name="gamepad" size={42} className="animate-pulse text-[var(--nv-creative)]" />
+          <p className="text-lg text-[var(--nv-text-secondary)]">正在初始化游戏模式...</p>
+          <LoadingDots label="接入故事引擎" />
         </div>
       </div>
     );
@@ -340,45 +362,47 @@ export default function GamePage() {
     state.status === "ready" || (state.status === "ended" && !state.narrative);
 
   return (
-    <div className="h-screen bg-[#0a0a1a] text-gray-200 flex flex-col overflow-hidden font-sans">
+    <div className="flex h-screen flex-col overflow-hidden bg-[var(--nv-void)] font-sans text-[var(--nv-text-secondary)]">
       <GameParticles />
 
       {/* ═══ 顶栏 ═══ */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-violet-900/40 bg-[#0d0d24]/90 backdrop-blur-sm">
+      <header className="relative z-10 flex items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <button
             onClick={handleBack}
-            className="text-gray-400 hover:text-white transition-colors text-lg"
             title="返回工作区"
+            aria-label="返回工作区"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]"
           >
-            ←
+            <Icon name="arrowLeft" size={18} />
           </button>
           <div>
-            <h1 className="text-base font-semibold text-violet-200">
-              🎮 游戏模式 — {state.bookName}
+            <h1 className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
+              <Icon name="gamepad" size={18} className="text-[var(--nv-creative)]" />
+              游戏模式 — {state.bookName}
             </h1>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--nv-text-tertiary)]">
               第{state.currentRound || "?"}轮 · {state.chapterTitle}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-sm text-gray-400">
+        <div className="flex items-center gap-3 text-sm text-[var(--nv-text-tertiary)]">
           <button
             onClick={() => setShowOutlineEditor(!showOutlineEditor)}
-            className={`px-3 py-1 rounded-md text-xs border transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
               showOutlineEditor
-                ? "bg-cyan-900/30 border-cyan-600/50 text-cyan-300"
-                : "border-violet-800/30 text-gray-500 hover:text-gray-300 hover:border-violet-600/40"
+                ? "border-[var(--nv-info)]/50 bg-[var(--nv-info-soft)] text-[var(--nv-info)]"
+                : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
-            📋 章纲
+            <Icon name="clipboard" size={14} /> 章纲
           </button>
-          <span>轮次 {state.currentRound}</span>
-          <span>字数 {state.totalWords}</span>
+          <span className="hidden sm:inline">轮次 {state.currentRound}</span>
+          <span className="hidden sm:inline">字数 {state.totalWords}</span>
           {state.status === "playing" && (
             <button
               onClick={handleEnd}
-              className="px-4 py-1.5 bg-violet-600/80 hover:bg-violet-500 text-white rounded-md text-sm transition-all"
+              className="btn-creative rounded-lg px-4 py-1.5 text-sm font-medium text-white"
             >
               结束并导出
             </button>
@@ -387,86 +411,92 @@ export default function GamePage() {
       </header>
 
       {/* ═══ 主体三栏 ═══ */}
-      <div className="flex-1 flex overflow-hidden relative z-10">
+      <div className="relative z-10 flex flex-1 overflow-hidden">
         {/* 左侧栏 */}
-        <aside className="w-52 border-r border-violet-900/30 bg-[#0d0d24]/60 flex flex-col shrink-0">
-          <div className="flex border-b border-violet-900/20">
-            {(["plot", "characters", "factions"] as const).map((tab) => (
+        <aside className="flex w-52 shrink-0 flex-col border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
+          <div className="flex border-b border-[var(--nv-border-2)]">
+            {LEFT_TABS.map(({ key, label, icon }) => (
               <button
-                key={tab}
-                onClick={() => setLeftTab(tab)}
-                className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
-                  leftTab === tab
-                    ? "text-violet-300 border-b-2 border-violet-500 bg-violet-900/20"
-                    : "text-gray-500 hover:text-gray-300"
+                key={key}
+                onClick={() => setLeftTab(key)}
+                className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-xs font-medium transition-colors ${
+                  leftTab === key
+                    ? "border-b-2 border-[var(--nv-creative)] bg-[var(--nv-creative-soft)] text-[var(--nv-creative)]"
+                    : "border-b-2 border-transparent text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
                 }`}
               >
-                {{ plot: "📖 情节", characters: "👤 角色", factions: "🏛️ 势力" }[tab]}
+                <Icon name={icon} size={13} /> {label}
               </button>
             ))}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 text-xs text-gray-400">
+          <div className="custom-scrollbar flex-1 overflow-y-auto p-3 text-xs">
             {leftTab === "plot" && (
               <div>
-                <p className="text-violet-300 font-medium mb-2">情节进度</p>
-                <div className="w-full h-2 bg-gray-800 rounded-full mb-2">
+                <p className="mb-2 font-medium text-[var(--nv-text-primary)]">情节进度</p>
+                <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
                   <div
-                    className="h-full bg-violet-500 rounded-full transition-all duration-700"
+                    className="h-full rounded-full bg-[var(--nv-creative)] transition-all duration-700"
                     style={{ width: `${state.plotProgress}%` }}
                   />
                 </div>
-                <p className="text-right text-violet-400">{state.plotProgress}%</p>
+                <p className="text-right text-[var(--nv-creative)]">{state.plotProgress}%</p>
                 {turns.length === 0 && (
-                  <p className="mt-4 text-gray-600 italic">暂无情节点数据</p>
+                  <p className="mt-4 italic text-[var(--nv-text-muted)]">暂无情节点数据</p>
                 )}
                 {turns.map((t) => (
-                  <div key={t.round} className="mt-2 py-1.5 px-2 bg-violet-900/10 rounded border border-violet-900/20">
-                    <p className="text-violet-400">第{t.round}轮</p>
-                    <p className="text-gray-500 mt-0.5 line-clamp-2">{t.playerAction}</p>
+                  <div key={t.round} className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1.5">
+                    <p className="text-[var(--nv-creative)]">第{t.round}轮</p>
+                    <p className="mt-0.5 line-clamp-2 text-[var(--nv-text-tertiary)]">{t.playerAction}</p>
                   </div>
                 ))}
               </div>
             )}
             {leftTab === "characters" && (
               <div>
-                <p className="text-violet-300 font-medium mb-2">本章角色</p>
+                <p className="mb-2 font-medium text-[var(--nv-text-primary)]">本章角色</p>
                 {state.entities.filter((e) => e.type === "角色").length === 0 && (
-                  <p className="text-gray-600 italic">暂无角色数据</p>
+                  <p className="italic text-[var(--nv-text-muted)]">暂无角色数据</p>
                 )}
                 {state.entities
                   .filter((e) => e.type === "角色")
                   .map((e) => (
                     <div
                       key={e.name}
-                      className="mt-2 py-1.5 px-2 bg-violet-900/10 rounded border border-violet-900/20"
+                      className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1.5"
                     >
-                      <p className="text-violet-300">{e.name}</p>
-                      <p className="text-gray-600 text-xs mt-0.5">{e.description}</p>
+                      <p className="flex items-center gap-1.5 text-[var(--nv-text-primary)]">
+                        <Icon name="user" size={12} className="text-[var(--nv-text-tertiary)]" />
+                        {e.name}
+                      </p>
+                      <p className="mt-0.5 text-[var(--nv-text-muted)]">{e.description}</p>
                     </div>
                   ))}
               </div>
             )}
             {leftTab === "factions" && (
               <div>
-                <p className="text-violet-300 font-medium mb-2">涉及势力</p>
+                <p className="mb-2 font-medium text-[var(--nv-text-primary)]">涉及势力</p>
                 {state.entities.filter((e) => e.type === "势力").length === 0 && (
-                  <p className="text-gray-600 italic">暂无势力数据</p>
+                  <p className="italic text-[var(--nv-text-muted)]">暂无势力数据</p>
                 )}
                 {state.entities
                   .filter((e) => e.type === "势力")
                   .map((e) => (
                     <div
                       key={e.name}
-                      className="mt-2 py-1.5 px-2 bg-violet-900/10 rounded border border-violet-900/20"
+                      className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1.5"
                     >
-                      <p className="text-violet-300">{e.name}</p>
+                      <p className="flex items-center gap-1.5 text-[var(--nv-text-primary)]">
+                        <Icon name="building" size={12} className="text-[var(--nv-text-tertiary)]" />
+                        {e.name}
+                      </p>
                     </div>
                   ))}
               </div>
             )}
           </div>
           {/* 左侧底部控制 */}
-          <div className="p-3 border-t border-violet-900/20 space-y-2">
+          <div className="space-y-2 border-t border-[var(--nv-border-2)] p-3">
             <button
               onClick={() => {
                 // 回退：移除最后一轮
@@ -483,14 +513,14 @@ export default function GamePage() {
                 }
               }}
               disabled={turns.length <= 1}
-              className="w-full py-1.5 text-xs bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 rounded disabled:opacity-30 transition-colors"
+              className="w-full rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] py-1.5 text-xs font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
             >
               回退
             </button>
             <button
               onClick={() => handleAction("custom", "自动推进剧情")}
               disabled={state.status !== "playing"}
-              className="w-full py-1.5 text-xs bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 rounded disabled:opacity-30 transition-colors"
+              className="w-full rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] py-1.5 text-xs font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
             >
               自动推进
             </button>
@@ -498,24 +528,24 @@ export default function GamePage() {
         </aside>
 
         {/* 主画布 */}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden">
           {showStartScreen ? (
             /* 开始界面 */
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-6">🎮</div>
-                <h2 className="text-2xl font-bold text-violet-300 mb-2">
-                  游戏模式已就绪
-                </h2>
-                <p className="text-gray-500 mb-2">
+            <div className="flex flex-1 items-center justify-center p-6">
+              <div className="surface-floating flex max-w-md flex-col items-center rounded-3xl px-12 py-14 text-center">
+                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--nv-creative-soft)] text-[var(--nv-creative)]">
+                  <Icon name="gamepad" size={40} />
+                </div>
+                <h2 className="mb-2 text-2xl font-bold text-[var(--nv-text-primary)]">游戏模式已就绪</h2>
+                <p className="mb-1 text-[var(--nv-text-secondary)]">
                   章节：{state.chapterTitle}
                 </p>
-                <p className="text-gray-600 text-sm mb-8">
+                <p className="mb-8 text-sm text-[var(--nv-text-tertiary)]">
                   AI 将以互动方式与你共同创作本章正文
                 </p>
                 <button
                   onClick={handleStart}
-                  className="px-10 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-lg font-medium transition-all hover:shadow-lg hover:shadow-violet-900/40 active:scale-95"
+                  className="btn-creative rounded-xl px-10 py-3 text-lg font-medium text-white shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
                 >
                   开始游戏
                 </button>
@@ -523,21 +553,21 @@ export default function GamePage() {
                   <div className="mt-4">
                     <button
                       onClick={handleBack}
-                      className="px-6 py-2 border border-violet-500/50 text-violet-300 rounded-lg hover:bg-violet-900/20 transition-all"
+                      className="rounded-lg border border-[var(--nv-border-3)] px-6 py-2 font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative)] hover:text-[var(--nv-creative)]"
                     >
                       返回工作区查看正文
                     </button>
                   </div>
                 )}
                 {state.error && (
-                  <p className="mt-4 text-red-400 text-sm">{state.error}</p>
+                  <p className="mt-4 text-sm text-[var(--nv-danger)]">{state.error}</p>
                 )}
               </div>
             </div>
           ) : (
             /* 游戏进行中 */
             <>
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="custom-scrollbar flex-1 overflow-y-auto p-6">
                 <GameCanvas
                   turns={turns}
                   lastNarrative={state.lastNarrative}
@@ -550,19 +580,19 @@ export default function GamePage() {
               {/* 选项区 */}
               {state.options.length > 0 && state.status === "playing" && (
                 <div className="px-6 pb-3">
-                  <div className="grid grid-cols-2 gap-3 max-w-3xl mx-auto">
+                  <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3">
                     {state.options.map((opt) => (
                       <button
                         key={opt.index}
                         onClick={() =>
                           handleAction("option", `选择：${opt.text}`, opt.index)
                         }
-                        className="text-left px-4 py-3 bg-violet-900/20 hover:bg-violet-900/40 border border-violet-700/30 hover:border-violet-500/50 rounded-lg text-sm text-gray-300 hover:text-white transition-all group"
+                        className="group flex items-start gap-2 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3 text-left text-sm text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative-soft)] hover:text-[var(--nv-text-primary)] active:scale-[0.98]"
                       >
-                        <span className="text-violet-400 mr-2 font-mono">
+                        <span className="font-mono text-[var(--nv-creative)]">
                           {opt.index}.
                         </span>
-                        {opt.text}
+                        <span>{opt.text}</span>
                       </button>
                     ))}
                   </div>
@@ -573,39 +603,41 @@ export default function GamePage() {
         </main>
 
         {/* 右侧信息面板 */}
-        <aside className="w-64 border-l border-violet-900/30 bg-[#0d0d24]/60 flex flex-col shrink-0">
-          <div className="flex border-b border-violet-900/20">
-            {(["text", "backpack", "world"] as const).map((tab) => (
+        <aside className="flex w-64 shrink-0 flex-col border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
+          <div className="flex border-b border-[var(--nv-border-2)]">
+            {RIGHT_TABS.map(({ key, label, icon }) => (
               <button
-                key={tab}
-                onClick={() => setRightTab(tab)}
-                className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
-                  rightTab === tab
-                    ? "text-violet-300 border-b-2 border-violet-500 bg-violet-900/20"
-                    : "text-gray-500 hover:text-gray-300"
+                key={key}
+                onClick={() => setRightTab(key)}
+                className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-xs font-medium transition-colors ${
+                  rightTab === key
+                    ? "border-b-2 border-[var(--nv-creative)] bg-[var(--nv-creative-soft)] text-[var(--nv-creative)]"
+                    : "border-b-2 border-transparent text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
                 }`}
               >
-                {{ text: "正文", backpack: "🎒 背包", world: "🌍 世界" }[tab]}
+                <Icon name={icon} size={13} /> {label}
               </button>
             ))}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 text-xs text-gray-400">
+          <div className="custom-scrollbar flex-1 overflow-y-auto p-3 text-xs">
             {rightTab === "text" && (
               <div>
-                <p className="text-violet-300 font-medium mb-2">正文进度</p>
-                <div className="w-full h-2 bg-gray-800 rounded-full mb-2">
+                <p className="mb-2 flex items-center gap-1.5 font-medium text-[var(--nv-text-primary)]">
+                  <Icon name="file" size={14} className="text-[var(--nv-creative)]" /> 正文进度
+                </p>
+                <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
                   <div
-                    className="h-full bg-violet-500 rounded-full transition-all duration-700"
+                    className="h-full rounded-full bg-[var(--nv-creative)] transition-all duration-700"
                     style={{
                       width: `${Math.min(100, (state.totalWords / 3000) * 100)}%`,
                     }}
                   />
                 </div>
-                <p className="text-right text-gray-500">
+                <p className="text-right text-[var(--nv-text-tertiary)]">
                   总字数：{state.totalWords}
                 </p>
-                <div className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
-                  <div className="text-gray-400 whitespace-pre-wrap leading-relaxed opacity-80 text-xs">
+                <div className="custom-scrollbar mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                  <div className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--nv-text-secondary)] opacity-80">
                     {state.narrative || "正文将在游戏互动过程中实时生成..."}
                   </div>
                 </div>
@@ -613,9 +645,11 @@ export default function GamePage() {
             )}
             {rightTab === "backpack" && (
               <div>
-                <p className="text-violet-300 font-medium mb-3">当前背包</p>
+                <p className="mb-3 flex items-center gap-1.5 font-medium text-[var(--nv-text-primary)]">
+                  <Icon name="backpack" size={14} className="text-[var(--nv-creative)]" /> 当前背包
+                </p>
                 {state.items.length === 0 ? (
-                  <p className="text-gray-600 italic">
+                  <p className="italic text-[var(--nv-text-muted)]">
                     背包空空如也，在冒险中获取物品吧
                   </p>
                 ) : (
@@ -637,19 +671,19 @@ export default function GamePage() {
                         <>
                           {consumables.length > 0 && (
                             <>
-                              <p className="text-gray-500 text-[10px] uppercase tracking-wider">
+                              <p className="mt-1 text-[10px] uppercase tracking-wider text-[var(--nv-text-tertiary)]">
                                 【消耗品】
                               </p>
                               {consumables.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="py-1 px-2 bg-violet-900/10 rounded border border-violet-900/20"
+                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
                                 >
-                                  <span className="text-gray-300">{i.name}</span>
-                                  <span className="text-violet-400 ml-2">
+                                  <span className="text-[var(--nv-text-primary)]">{i.name}</span>
+                                  <span className="ml-2 text-[var(--nv-creative)]">
                                     ×{i.quantity}
                                   </span>
-                                  <p className="text-gray-600 text-[10px] mt-0.5">
+                                  <p className="mt-0.5 text-[10px] text-[var(--nv-text-muted)]">
                                     {i.source}
                                   </p>
                                 </div>
@@ -658,16 +692,16 @@ export default function GamePage() {
                           )}
                           {equipment.length > 0 && (
                             <>
-                              <p className="text-gray-500 text-[10px] uppercase tracking-wider mt-3">
+                              <p className="mt-3 text-[10px] uppercase tracking-wider text-[var(--nv-text-tertiary)]">
                                 【装备】
                               </p>
                               {equipment.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="py-1 px-2 bg-violet-900/10 rounded border border-violet-900/20"
+                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
                                 >
-                                  <span className="text-gray-300">{i.name}</span>
-                                  <span className="text-green-400 ml-2">
+                                  <span className="text-[var(--nv-text-primary)]">{i.name}</span>
+                                  <span className="ml-2 text-[var(--nv-success)]">
                                     ×{i.quantity}
                                   </span>
                                 </div>
@@ -676,31 +710,31 @@ export default function GamePage() {
                           )}
                           {questItems.length > 0 && (
                             <>
-                              <p className="text-gray-500 text-[10px] uppercase tracking-wider mt-3">
+                              <p className="mt-3 text-[10px] uppercase tracking-wider text-[var(--nv-text-tertiary)]">
                                 【任务道具】
                               </p>
                               {questItems.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="py-1 px-2 bg-violet-900/10 rounded border border-violet-900/20"
+                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
                                 >
-                                  <span className="text-amber-300">{i.name}</span>
+                                  <span className="text-[var(--nv-warning)]">{i.name}</span>
                                 </div>
                               ))}
                             </>
                           )}
                           {currency.length > 0 && (
                             <>
-                              <p className="text-gray-500 text-[10px] uppercase tracking-wider mt-3">
+                              <p className="mt-3 text-[10px] uppercase tracking-wider text-[var(--nv-text-tertiary)]">
                                 【货币】
                               </p>
                               {currency.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="py-1 px-2 bg-violet-900/10 rounded border border-violet-900/20"
+                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
                                 >
-                                  <span className="text-yellow-400">{i.name}</span>
-                                  <span className="text-yellow-500 ml-2">
+                                  <span className="text-[var(--nv-accent)]">{i.name}</span>
+                                  <span className="ml-2 text-[var(--nv-accent)]">
                                     ×{i.quantity}
                                   </span>
                                 </div>
@@ -716,19 +750,64 @@ export default function GamePage() {
             )}
             {rightTab === "world" && (
               <div>
-                <p className="text-violet-300 font-medium mb-2">世界观</p>
-                <p className="text-gray-600 italic">当前场景信息</p>
-                {/* 这里可以扩展显示世界设定 */}
+                <p className="mb-3 flex items-center gap-1.5 font-medium text-[var(--nv-text-primary)]">
+                  <Icon name="globe" size={14} className="text-[var(--nv-creative)]" /> 世界设定
+                </p>
+                {lorebook.length === 0 && !nodeOutline ? (
+                  <EmptyState
+                    icon="globe"
+                    title="还没有世界设定"
+                    description="在 workspace 的世界书与章节大纲中添加设定，将在此实时呈现"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {nodeOutline && (
+                      <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--nv-text-tertiary)]">
+                          <Icon name="book" size={12} /> 本章大纲
+                        </p>
+                        <p className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--nv-text-secondary)]">
+                          {nodeOutline}
+                        </p>
+                      </div>
+                    )}
+                    {lorebook.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--nv-text-tertiary)]">
+                          世界书 ({lorebook.length})
+                        </p>
+                        {lorebook.map((e) => (
+                          <div
+                            key={e.id}
+                            className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3 transition-colors hover:border-[var(--nv-creative-soft)]"
+                          >
+                            <p className="flex items-center justify-between gap-2 text-xs font-medium text-[var(--nv-text-primary)]">
+                              <span className="truncate">{e.title}</span>
+                              {e.category && e.category !== "custom" && (
+                                <span className="shrink-0 rounded-full bg-[var(--nv-creative-soft)] px-2 py-0.5 text-[10px] text-[var(--nv-creative)]">
+                                  {e.category}
+                                </span>
+                              )}
+                            </p>
+                            <p className="mt-1.5 line-clamp-4 text-[11px] leading-relaxed text-[var(--nv-text-tertiary)]">
+                              {e.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
           {/* 右侧底部按钮 */}
-          <div className="p-3 border-t border-violet-900/20">
+          <div className="border-t border-[var(--nv-border-2)] p-3">
             {state.narrative && (
               <button
                 onClick={handleEnd}
                 disabled={state.status !== "playing"}
-                className="w-full py-2.5 bg-violet-600/80 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-creative w-full rounded-lg py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 结束并导出
               </button>
@@ -740,7 +819,7 @@ export default function GamePage() {
       {/* ═══ 章纲编辑器浮层 ═══ */}
       {showOutlineEditor && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-[900px] h-[85vh] max-h-[800px]">
+          <div className="h-[85vh] max-h-[800px] w-[900px]">
             <GameOutlineEditor
               projectId={projectId}
               nodeId={nodeId}
@@ -757,27 +836,25 @@ export default function GamePage() {
 
       {/* ═══ 底部动作栏 ═══ */}
       {state.status === "playing" && (
-        <footer className="relative z-10 border-t border-violet-900/40 bg-[#0d0d24]/90 backdrop-blur-sm px-4 py-3">
+        <footer className="relative z-10 border-t border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-4 py-3 backdrop-blur-sm">
           {/* 快捷动作按钮 */}
-          <div className="flex gap-2 mb-3 max-w-3xl mx-auto">
+          <div className="mx-auto flex max-w-3xl gap-2">
             {QUICK_ACTIONS.map((action) => (
               <button
                 key={action.type}
-                onClick={() =>
-                  handleAction(action.type, action.label)
-                }
+                onClick={() => handleAction(action.type, action.label)}
                 disabled={state.status !== "playing"}
-                className="flex-1 py-2 px-1 bg-violet-900/20 hover:bg-violet-900/40 border border-violet-800/30 hover:border-violet-600/50 rounded-lg text-xs text-gray-300 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 title={action.desc}
+                className="group flex flex-1 flex-col items-center gap-1 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-1 py-2.5 text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative-soft)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <div className="text-base mb-0.5">{action.icon}</div>
-                <div>{action.label}</div>
+                <Icon name={action.icon as IconName} size={16} className="transition-colors group-hover:text-[var(--nv-creative)]" />
+                <span className="text-[11px]">{action.label}</span>
               </button>
             ))}
           </div>
 
           {/* 文本输入框 */}
-          <div className="flex gap-3 max-w-3xl mx-auto">
+          <div className="mx-auto mt-3 flex max-w-3xl gap-3">
             <input
               type="text"
               value={customInput}
@@ -789,23 +866,23 @@ export default function GamePage() {
               }}
               placeholder="描述你想要的剧情发展，或输入角色的行动..."
               disabled={state.status !== "playing"}
-              className="flex-1 bg-gray-900/60 border border-violet-800/40 focus:border-violet-500/60 rounded-lg px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 outline-none transition-colors disabled:opacity-40"
+              className="flex-1 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-2.5 text-sm text-[var(--nv-text-primary)] outline-none transition-colors placeholder:text-[var(--nv-text-muted)] focus:border-[var(--nv-creative-soft)] disabled:cursor-not-allowed disabled:opacity-40"
             />
             <button
               onClick={() => {
                 if (customInput.trim()) handleAction("custom", customInput.trim());
               }}
               disabled={state.status !== "playing" || !customInput.trim()}
-              className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+              className="btn-creative rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              ✏️ 发送
+              发送
             </button>
             {(state.status as string) === "generating" && (
               <button
                 onClick={handleStop}
-                className="px-4 py-2.5 bg-red-800/60 hover:bg-red-700/60 text-red-200 rounded-lg text-sm transition-all"
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-danger-soft)] px-4 py-2.5 text-sm font-medium text-[var(--nv-danger)] transition-all hover:bg-[var(--nv-danger)] hover:text-white active:scale-95"
               >
-                ⏹ 停止
+                <Icon name="stop" size={14} /> 停止
               </button>
             )}
           </div>
@@ -814,15 +891,15 @@ export default function GamePage() {
 
       {/* 已结束状态底部 */}
       {state.status === "ended" && (
-        <footer className="relative z-10 border-t border-violet-900/40 bg-[#0d0d24]/90 backdrop-blur-sm px-6 py-4 text-center">
-          <p className="text-green-400 mb-3">
-            ✅ 章节已导出并保存为正文，返回工作区查看
+        <footer className="relative z-10 border-t border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-4 text-center backdrop-blur-sm">
+          <p className="mb-3 flex items-center justify-center gap-2 text-[var(--nv-success)]">
+            <Icon name="check" size={16} /> 章节已导出并保存为正文，返回工作区查看
           </p>
           <button
             onClick={handleBack}
-            className="px-8 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-all"
+            className="btn-primary rounded-lg px-8 py-2.5 text-sm font-medium text-white"
           >
-            ← 返回工作区
+            返回工作区
           </button>
         </footer>
       )}

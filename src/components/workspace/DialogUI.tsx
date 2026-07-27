@@ -3,7 +3,7 @@
 export function DialogOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="surface-floating rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -13,9 +13,9 @@ export function DialogOverlay({ children, onClose }: { children: React.ReactNode
 export function DialogField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-sm text-zinc-400 mb-1 block">
+      <span className="text-sm text-[var(--nv-text-secondary)] mb-1 block">
         {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
+        {required && <span className="text-[var(--nv-danger)] ml-1">*</span>}
       </span>
       {children}
     </label>
@@ -43,13 +43,13 @@ export function DialogInput({
         placeholder={placeholder}
         rows={rows}
         autoFocus={autoFocus}
-        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-indigo-700 placeholder:text-zinc-600"
+        className="input-glass w-full rounded-lg px-3 py-2 text-xs resize-none focus:border-[var(--nv-primary)] placeholder:text-[var(--nv-text-tertiary)]"
       />
     );
   }
   return (
     <input
-      className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+      className="input-glass w-full rounded px-3 py-2 text-sm focus:border-[var(--nv-primary)]"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

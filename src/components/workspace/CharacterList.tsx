@@ -89,7 +89,7 @@ export function CharacterList({
   const statDead = characters.filter(c => ["dead","missing","presumed_dead"].includes(c.currentStatus)).length;
 
   const roleOrder = ["protagonist", "antagonist", "mentor", "love_interest", "supporting", "background"];
-  const roleLabel: Record<string, string> = { protagonist: "★ 主角", antagonist: "◆ 反派", mentor: "◈ 导师", love_interest: "♡ 恋爱", supporting: "● 配角", background: "○ 背景" };
+  const roleLabel: Record<string, string> = { protagonist: "主角", antagonist: "反派", mentor: "导师", love_interest: "恋爱", supporting: "配角", background: "背景" };
   const grouped: Record<string, CharacterData[]> = {};
   for (const c of filtered) {
     const r = c.role || "supporting";
@@ -241,7 +241,7 @@ export function CharacterList({
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        setClassifyResult({ ok: false, message: `❌ ${errBody.error || "请求失败"}` });
+        setClassifyResult({ ok: false, message: `${errBody.error || "请求失败"}` });
         return;
       }
       const reader = res.body?.getReader();
@@ -275,7 +275,7 @@ export function CharacterList({
                   setClassifyResult({ ok: ev.ok !== false, message: ev.message as string });
                   setClassifyDone(100); setClassifyTotal(100);
                 } else if (ev.type === "error") {
-                  setClassifyResult({ ok: false, message: `❌ ${ev.message}` });
+                  setClassifyResult({ ok: false, message: `${ev.message}` });
                 }
               } catch { /* skip */ }
             }
@@ -315,13 +315,13 @@ export function CharacterList({
               setClassifyResult({ ok: ev.ok !== false, message: ev.message as string });
               setClassifyDone(100); setClassifyTotal(100);
             } else if (ev.type === "error") {
-              setClassifyResult({ ok: false, message: `❌ ${ev.message}` });
+              setClassifyResult({ ok: false, message: `${ev.message}` });
             }
           } catch { /* skip */ }
         }
       }
     } catch (e) {
-      setClassifyResult({ ok: false, message: `❌ ${e instanceof Error ? e.message : "网络错误"}` });
+      setClassifyResult({ ok: false, message: `${e instanceof Error ? e.message : "网络错误"}` });
     } finally {
       setClassifying(false);
     }
@@ -352,15 +352,15 @@ export function CharacterList({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "失败" }));
-        toastError(`❌ 应用失败: ${err.error}`);
+        toastError(`应用失败: ${err.error}`);
         return;
       }
       const data = await res.json();
-      setClassifyResult({ ok: true, message: `✅ 已为 ${data.updated} 个角色应用标签` });
+      setClassifyResult({ ok: true, message: `已为 ${data.updated} 个角色应用标签` });
       setClassifyGroups(null); // 关闭分类面板
       onExpanded(); // 刷新角色列表
     } catch (e) {
-      toastError("❌ " + (e instanceof Error ? e.message : "网络错误"));
+      toastError("" + (e instanceof Error ? e.message : "网络错误"));
     } finally {
       setApplying(false);
     }
@@ -416,7 +416,7 @@ export function CharacterList({
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="搜索角色…"
-          className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
+          className="w-full bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] rounded px-2 py-1 text-xs text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)]"
         />
       </div>
 
@@ -424,24 +424,24 @@ export function CharacterList({
       <div className="flex gap-0.5 mb-1 flex-wrap items-center">
         {[
           { key: "all", label: "全部", count: characters.length },
-          { key: "protagonist", label: "★主角", count: statRole("protagonist") },
-          { key: "antagonist", label: "◆反派", count: statRole("antagonist") },
-          { key: "mentor", label: "◈导师", count: statRole("mentor") },
-          { key: "love_interest", label: "♡恋爱", count: statRole("love_interest") },
-          { key: "supporting", label: "●配角", count: statRole("supporting") },
-          { key: "background", label: "○背景", count: statRole("background") },
+          { key: "protagonist", label: "主角", count: statRole("protagonist") },
+          { key: "antagonist", label: "反派", count: statRole("antagonist") },
+          { key: "mentor", label: "导师", count: statRole("mentor") },
+          { key: "love_interest", label: "恋爱", count: statRole("love_interest") },
+          { key: "supporting", label: "配角", count: statRole("supporting") },
+          { key: "background", label: "背景", count: statRole("background") },
         ].filter(o => o.count > 0 || o.key === "all").map(o => (
           <button
             key={o.key}
             onClick={() => { setRoleFilter(roleFilter === o.key ? "all" : o.key); setTagFilter("all"); }}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              roleFilter === o.key ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+              roleFilter === o.key ? "bg-[var(--nv-primary)] text-white" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
           </button>
         ))}
-        <span className="text-zinc-700 mx-0.5">|</span>
+        <span className="text-[var(--nv-border-3)] mx-0.5">|</span>
         {[
           { key: "alive", label: <span className="flex items-center gap-1"><StatusDot color="green" size={6} /> 存活</span>, count: characters.length - statDead },
           { key: "dead", label: <span className="flex items-center gap-1"><Icon name="skull" size={10} /> 离场</span>, count: statDead },
@@ -450,7 +450,7 @@ export function CharacterList({
             key={o.key}
             onClick={() => { setStatusFilter(statusFilter === o.key ? "all" : o.key); }}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              statusFilter === o.key ? "bg-zinc-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+              statusFilter === o.key ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
@@ -459,9 +459,9 @@ export function CharacterList({
         {(roleFilter !== "all" || tagFilter !== "all" || statusFilter !== "all") && (
           <button
             onClick={() => { setRoleFilter("all"); setTagFilter("all"); setStatusFilter("all"); }}
-            className="text-[10px] px-1.5 py-0.5 rounded-full text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]"
+            className="text-[10px] px-1.5 py-0.5 rounded-full text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-1)]"
           >
-            ✕
+            <Icon name="x" size={11} />
           </button>
         )}
       </div>
@@ -477,29 +477,29 @@ export function CharacterList({
             onClick={() => setTagFilter(tagFilter === o.key ? "all" : o.key)}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
               tagFilter === o.key
-                ? "bg-amber-600 text-white"
-                : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                ? "bg-[var(--nv-accent)] text-white"
+                : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
           </button>
         ))}
-        {allTags.length > 0 && <span className="text-zinc-700 mx-0.5">·</span>}
+        {allTags.length > 0 && <span className="text-[var(--nv-border-3)] mx-0.5">·</span>}
         {allTags.slice(0, 12).map(t => (
           <button
             key={t}
             onClick={() => setTagFilter(tagFilter === t ? "all" : t)}
             className={`text-[9px] px-1 py-0 rounded transition-colors ${
               tagFilter === t
-                ? "bg-purple-600 text-white"
-                : "bg-zinc-800/50 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
+                ? "bg-[var(--nv-creative)] text-white"
+                : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {t}
           </button>
         ))}
         {allTags.length > 12 && (
-          <span className="text-[9px] text-zinc-600">+{allTags.length - 12}</span>
+          <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{allTags.length - 12}</span>
         )}
       </div>
 
@@ -517,7 +517,7 @@ export function CharacterList({
               setSelectedIds(next);
             }
           }}
-          className="text-xs px-1.5 py-0.5 rounded text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:border-white/[0.08]"
+          className="text-xs px-1.5 py-0.5 rounded text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] border border-[var(--nv-border-1)] hover:border-[var(--nv-border-2)]"
         >
           {allInViewSelected ? "取消全选" : `全选(${filtered.length})`}
         </button>
@@ -531,19 +531,19 @@ export function CharacterList({
           disabled={selectedIds.size === 0 || expanding}
           className={`text-xs px-2 py-0.5 rounded transition-colors ${
             selectedIds.size > 0 && !expanding
-              ? "bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 border border-amber-700/40"
-              : "text-zinc-600 border border-white/[0.06] cursor-not-allowed"
+              ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)] hover:bg-[var(--nv-accent-soft)] border border-[var(--nv-accent-soft)]"
+              : "text-[var(--nv-text-tertiary)] border border-[var(--nv-border-1)] cursor-not-allowed"
           }`}
         >
-          {expanding ? `⏳ ${expandDone}/${expandTotal}` : `✨ AI扩展 (${selectedIds.size})`}
+          {expanding ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />{expandDone}/{expandTotal}</span> : <span className="flex items-center gap-1"><Icon name="sparkles" size={10} className="text-[var(--nv-accent)]" />AI扩展 ({selectedIds.size})</span>}
         </button>
         <button
           onClick={handleClassify}
           disabled={classifying}
           className={`text-xs px-2 py-0.5 rounded transition-colors ${
             classifying
-              ? "bg-purple-600/20 text-purple-400 border border-purple-700/40"
-              : "bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 border border-purple-800/30 hover:border-purple-700/40"
+              ? "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] border border-[var(--nv-creative-soft)]"
+              : "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] hover:bg-[var(--nv-creative-soft)] border border-[var(--nv-creative-soft)] hover:border-[var(--nv-creative-soft)]"
           }`}
         >
           {classifying ? <span className="flex items-center gap-1"><Icon name="tag" size={10} /> {classifyDone}/{classifyTotal || "?"}</span> : <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 自动分类</span>}
@@ -551,7 +551,7 @@ export function CharacterList({
         {selectedIds.size > 0 && !expanding && (
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-zinc-500 hover:text-zinc-300"
+            className="text-xs text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
           >
             清空
           </button>
@@ -560,30 +560,30 @@ export function CharacterList({
 
       {/* 分类进度 */}
       {classifying && (
-        <div className="mb-2 p-2 rounded bg-purple-950/20 border border-purple-900/30">
-          <p className="text-xs text-purple-400">{classifyMsg}</p>
+        <div className="mb-2 p-2 rounded bg-[var(--nv-creative-soft)] border border-[var(--nv-creative-soft)]">
+          <p className="text-xs text-[var(--nv-creative)]">{classifyMsg}</p>
           <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-              <div className="h-full bg-purple-500 rounded-full transition-all" style={{
+            <div className="flex-1 h-1.5 bg-[var(--nv-surface-1)] rounded-full overflow-hidden">
+              <div className="h-full bg-[var(--nv-creative)] rounded-full transition-all" style={{
                 width: `${classifyTotal > 0 ? Math.round((classifyDone / classifyTotal) * 100) : 5}%`
               }} />
             </div>
-            <span className="text-xs text-zinc-500 shrink-0">{classifyDone}%</span>
+            <span className="text-xs text-[var(--nv-text-secondary)] shrink-0">{classifyDone}%</span>
           </div>
         </div>
       )}
       {/* 分类面板：用户审查 & 勾选 */}
       {!classifying && classifyGroups && classifyGroups.length > 0 && (
-        <div className="mb-2 rounded bg-white/[0.02] backdrop-blur-sm border border-purple-900/30 overflow-hidden">
+        <div className="mb-2 rounded bg-[var(--nv-surface-1)] backdrop-blur-sm border border-[var(--nv-creative-soft)] overflow-hidden">
           {/* 面板标题 */}
-          <div className="flex items-center justify-between px-2 py-1.5 bg-purple-950/30 border-b border-purple-900/20">
-            <span className="text-[10px] text-purple-400 font-medium">
+          <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--nv-creative-soft)] border-b border-[var(--nv-creative-soft)]">
+            <span className="text-[10px] text-[var(--nv-creative)] font-medium">
               <Icon name="tag" size={10} /> 分类建议 · {classifyGroups.length} 组 · {selectedCharIds.size} 人
             </span>
             <button
               onClick={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
-              className="text-[10px] text-zinc-500 hover:text-zinc-300"
-            >✕ 关闭</button>
+              className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
+            ><Icon name="x" size={11} /> 关闭</button>
           </div>
           {/* 分类列表——按 category 分组 */}
           <div className="max-h-80 overflow-y-auto p-1.5 space-y-2">
@@ -603,27 +603,27 @@ export function CharacterList({
               }
               return catOrder.filter(c => grouped.has(c)).map(cat => (
                 <div key={cat}>
-                  <div className="text-[10px] text-zinc-500 px-1 mb-0.5 font-medium">
+                  <div className="text-[10px] text-[var(--nv-text-secondary)] px-1 mb-0.5 font-medium">
                     {catLabel[cat] || cat}
                   </div>
                   {grouped.get(cat)!.map(g => {
                     const sel = groupSelections.get(g.label) || new Set<string>();
                     const allSelected = g.memberIds.length > 0 && sel.size === g.memberIds.length;
                     return (
-                      <div key={g.label} className="mb-1 rounded bg-zinc-800/50 border border-white/[0.06]">
+                      <div key={g.label} className="mb-1 rounded bg-[var(--nv-surface-2)] border border-[var(--nv-border-1)]">
                         {/* 分类头：全选/取消 */}
                         <button
                           onClick={() => toggleGroup(g.label)}
-                          className="w-full flex items-center gap-1.5 px-2 py-1 text-left hover:bg-zinc-800/80 transition-colors rounded-t"
+                          className="w-full flex items-center gap-1.5 px-2 py-1 text-left hover:bg-[var(--nv-surface-3)] transition-colors rounded-t"
                         >
-                          <span className={`text-xs ${allSelected ? "text-purple-400" : "text-zinc-600"}`}>
-                            {allSelected ? "☑" : "☐"}
+                          <span className={`text-xs ${allSelected ? "text-[var(--nv-creative)]" : "text-[var(--nv-text-tertiary)]"}`}>
+                            {allSelected ? <Icon name="check" size={12} /> : <Icon name="circle" size={12} />}
                           </span>
-                          <span className="text-[11px] text-zinc-300 font-medium">{g.label}</span>
+                          <span className="text-[11px] text-[var(--nv-text-primary)] font-medium">{g.label}</span>
                           {g.description && (
-                            <span className="text-[9px] text-zinc-500">— {g.description}</span>
+                            <span className="text-[9px] text-[var(--nv-text-secondary)]">— {g.description}</span>
                           )}
-                          <span className="text-[9px] text-zinc-600 ml-auto">
+                          <span className="text-[9px] text-[var(--nv-text-tertiary)] ml-auto">
                             {sel.size}/{g.memberIds.length}
                           </span>
                         </button>
@@ -640,8 +640,8 @@ export function CharacterList({
                                 onClick={() => mid && toggleMember(g.label, mid)}
                                 className={`text-[9px] px-1.5 py-0.5 rounded-full transition-colors ${
                                   checked
-                                    ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
-                                    : "bg-white/[0.04] text-zinc-500 hover:bg-zinc-700 border border-transparent"
+                                    ? "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] border border-[var(--nv-creative-soft)]"
+                                    : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] border border-transparent"
                                 }`}
                               >
                                 {name}
@@ -657,14 +657,14 @@ export function CharacterList({
             })()}
           </div>
           {/* 底部操作栏 */}
-          <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-900 border-t border-white/[0.06]">
-            <span className="text-[9px] text-zinc-600">
+          <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--nv-surface-2)] border-t border-[var(--nv-border-1)]">
+            <span className="text-[9px] text-[var(--nv-text-tertiary)]">
               {selectedTagCount} 个标签分配给 {selectedCharIds.size} 人
             </span>
             <div className="flex gap-1">
               <button
                 onClick={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
-                className="text-[10px] px-2 py-0.5 rounded text-zinc-500 hover:text-zinc-300"
+                className="text-[10px] px-2 py-0.5 rounded text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
               >
                 取消
               </button>
@@ -673,11 +673,11 @@ export function CharacterList({
                 disabled={selectedTagCount === 0 || applying}
                 className={`text-[10px] px-3 py-0.5 rounded font-medium transition-colors ${
                   selectedTagCount > 0 && !applying
-                    ? "bg-purple-600 text-white hover:bg-purple-500"
-                    : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                    ? "bg-[var(--nv-creative)] text-white hover:bg-[var(--nv-creative)]"
+                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] cursor-not-allowed"
                 }`}
               >
-                {applying ? "⏳ 应用中…" : `✅ 应用标签 (${selectedTagCount})`}
+                {applying ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />应用中…</span> : <span className="flex items-center gap-1"><Icon name="check" size={10} />应用标签 ({selectedTagCount})</span>}
               </button>
             </div>
           </div>
@@ -687,20 +687,20 @@ export function CharacterList({
       {!classifying && !classifyGroups && classifyResult && (
         <div className={`mb-2 px-2 py-1 rounded text-[10px] ${
           classifyResult.ok
-            ? "bg-purple-950/20 text-purple-400 border border-purple-900/30"
-            : "bg-red-950/30 text-red-400 border border-red-900/20"
+            ? "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] border border-[var(--nv-creative-soft)]"
+            : "bg-[var(--nv-danger-soft)] text-[var(--nv-danger)] border border-[var(--nv-danger-soft)]"
         }`}>
           {classifyResult.message}
-          <button onClick={() => setClassifyResult(null)} className="ml-2 text-zinc-500 hover:text-zinc-300">✕</button>
+          <button onClick={() => setClassifyResult(null)} className="ml-2 text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"><Icon name="x" size={12} className="align-middle" /></button>
         </div>
       )}
 
       {/* 扩展进度 */}
       {expanding && (
-        <div className="mb-2 p-2 rounded bg-amber-950/20 border border-amber-900/30 max-h-40 overflow-y-auto">
+        <div className="mb-2 p-2 rounded bg-[var(--nv-accent-soft)] border border-[var(--nv-accent-soft)] max-h-40 overflow-y-auto">
           {expandProgress.length === 0 && (
-            <div className="flex items-center gap-2 text-xs text-amber-400">
-              <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-2 text-xs text-[var(--nv-accent)]">
+              <div className="w-3 h-3 border-2 border-[var(--nv-accent)] border-t-transparent rounded-full animate-spin" />
               加载全局上下文...
             </div>
           )}
@@ -709,25 +709,25 @@ export function CharacterList({
             const isOk = p.status === "ok" || p.status === "char-done";
             const isFailed = p.status === "failed" || p.status === "char-failed";
             if (isInfo) return (
-              <div key={i} className="text-xs text-zinc-500 py-0.5">{p.name}</div>
+              <div key={i} className="text-xs text-[var(--nv-text-secondary)] py-0.5">{p.name}</div>
             );
             return (
-              <div key={i} className={`text-xs ${isOk ? "text-emerald-400" : isFailed ? "text-red-400" : "text-zinc-500"}`}>
+              <div key={i} className={`text-xs ${isOk ? "text-[var(--nv-success)]" : isFailed ? "text-[var(--nv-danger)]" : "text-[var(--nv-text-secondary)]"}`}>
                 <span className="inline-flex items-center gap-1">
-                  <span>{isOk ? "✅" : isFailed ? "⚠️" : "⏳"}</span>
+                  <span>{isOk ? <Icon name="check" size={12} /> : isFailed ? <Icon name="alert" size={12} /> : <Icon name="loader" size={12} className="animate-spin" />}</span>
                   <span>{p.name}</span>
-                  {p.error && <span className="text-red-400/60 text-[10px] ml-1">— {p.error}</span>}
+                  {p.error && <span className="text-[var(--nv-danger)]/60 text-[10px] ml-1">— {p.error}</span>}
                 </span>
               </div>
             );
           })}
           <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-              <div className="h-full bg-amber-500 rounded-full transition-all" style={{
+            <div className="flex-1 h-1.5 bg-[var(--nv-surface-1)] rounded-full overflow-hidden">
+              <div className="h-full bg-[var(--nv-accent)] rounded-full transition-all" style={{
                 width: `${expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%`
               }} />
             </div>
-            <span className="text-xs text-zinc-500 shrink-0">{expandDone}/{expandTotal} · {expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%</span>
+            <span className="text-xs text-[var(--nv-text-secondary)] shrink-0">{expandDone}/{expandTotal} · {expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%</span>
           </div>
         </div>
       )}
@@ -735,27 +735,27 @@ export function CharacterList({
       {/* 扩展结果弹窗 */}
       {expandResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
-          <div className="bg-zinc-900 border border-white/[0.08] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* 头部 */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-              <h3 className="text-base font-bold text-zinc-200">
-                {expandResult.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-emerald-400" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-1)]">
+              <h3 className="text-base font-bold text-[var(--nv-text-primary)]">
+                {expandResult.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-[var(--nv-success)]" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
               </h3>
-              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none">✕</button>
+              <button onClick={() => setExpandResult(null)} className="text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] text-lg leading-none"><Icon name="x" size={12} className="align-middle" /></button>
             </div>
 
             {/* 统计 */}
-            <div className="px-5 py-3 flex gap-4 text-sm border-b border-white/[0.06]/50">
+            <div className="px-5 py-3 flex gap-4 text-sm border-b border-[var(--nv-border-1)]/50">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold text-lg">{expandResult.okList.length}</span>
-                <span className="text-zinc-500">成功</span>
+                <span className="text-[var(--nv-success)] font-bold text-lg">{expandResult.okList.length}</span>
+                <span className="text-[var(--nv-text-secondary)]">成功</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className={expandResult.failList.length > 0 ? "text-red-400 font-bold text-lg" : "text-zinc-500 font-bold text-lg"}>{expandResult.failList.length}</span>
-                <span className="text-zinc-500">失败</span>
+                <span className={expandResult.failList.length > 0 ? "text-[var(--nv-danger)] font-bold text-lg" : "text-[var(--nv-text-secondary)] font-bold text-lg"}>{expandResult.failList.length}</span>
+                <span className="text-[var(--nv-text-secondary)]">失败</span>
               </div>
               <div className="flex items-center gap-2 ml-auto">
-                <span className="text-zinc-500 text-xs">共 {expandResult.total} 个角色</span>
+                <span className="text-[var(--nv-text-secondary)] text-xs">共 {expandResult.total} 个角色</span>
               </div>
             </div>
 
@@ -764,10 +764,10 @@ export function CharacterList({
               {/* 成功列表 */}
               {expandResult.okList.length > 0 && (
                 <div className="mb-3">
-                  <div className="text-xs text-emerald-500 font-medium mb-1.5">✅ 成功 ({expandResult.okList.length})</div>
+                  <div className="text-xs text-[var(--nv-success)] font-medium mb-1.5 flex items-center gap-1"><Icon name="check" size={12} />成功 ({expandResult.okList.length})</div>
                   <div className="flex flex-wrap gap-1">
                     {expandResult.okList.map((name, i) => (
-                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-emerald-950/30 text-emerald-300 border border-emerald-900/30">
+                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[var(--nv-success-soft)] text-[var(--nv-success)] border border-[var(--nv-success-soft)]">
                         {name}
                       </span>
                     ))}
@@ -778,12 +778,12 @@ export function CharacterList({
               {/* 失败列表 + 原因 */}
               {expandResult.failList.length > 0 && (
                 <div>
-                  <div className="text-xs text-red-400 font-medium mb-1.5">⚠️ 失败 ({expandResult.failList.length})</div>
+                  <div className="text-xs text-[var(--nv-danger)] font-medium mb-1.5 flex items-center gap-1"><Icon name="alert" size={12} />失败 ({expandResult.failList.length})</div>
                   <div className="space-y-1.5">
                     {expandResult.failList.map((f, i) => (
-                      <div key={i} className="p-2 rounded bg-red-950/20 border border-red-900/20">
-                        <div className="text-xs text-red-300 font-medium">{f.name}</div>
-                        <div className="text-[11px] text-red-400/70 mt-0.5">{f.reason}</div>
+                      <div key={i} className="p-2 rounded bg-[var(--nv-danger-soft)] border border-[var(--nv-danger-soft)]">
+                        <div className="text-xs text-[var(--nv-danger)] font-medium">{f.name}</div>
+                        <div className="text-[11px] text-[var(--nv-danger)]/70 mt-0.5">{f.reason}</div>
                       </div>
                     ))}
                   </div>
@@ -791,15 +791,15 @@ export function CharacterList({
               )}
 
               {expandResult.okList.length === 0 && expandResult.failList.length === 0 && (
-                <div className="text-sm text-zinc-500 text-center py-8">无结果数据</div>
+                <div className="text-sm text-[var(--nv-text-secondary)] text-center py-8">无结果数据</div>
               )}
             </div>
 
             {/* 底部按钮 */}
-            <div className="px-5 py-3 border-t border-white/[0.06] flex gap-2 justify-end">
+            <div className="px-5 py-3 border-t border-[var(--nv-border-1)] flex gap-2 justify-end">
               <button
                 onClick={() => setExpandResult(null)}
-                className="px-4 py-1.5 text-sm rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium"
+                className="px-4 py-1.5 text-sm rounded-lg bg-[var(--nv-accent)] hover:bg-[var(--nv-accent)]/80 text-white font-medium"
               >
                 知道了
               </button>
@@ -814,24 +814,24 @@ export function CharacterList({
         if (!items || items.length === 0) return null;
         return (
           <div key={role} className="mb-2">
-            <div className="text-[10px] text-zinc-600 px-2 mb-0.5 font-medium uppercase tracking-wider">
+            <div className="text-[10px] text-[var(--nv-text-tertiary)] px-2 mb-0.5 font-medium uppercase tracking-wider">
               {roleLabel[role] || role} ({items.length})
             </div>
             {items.map(c => (
-              <div key={c.id} className="flex items-center gap-2 py-1 px-2 rounded text-xs text-zinc-400 hover:bg-zinc-800/50 group">
+              <div key={c.id} className="flex items-center gap-2 py-1 px-2 rounded text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] group">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(c.id)}
                   onChange={() => toggleSelect(c.id)}
                   onClick={e => e.stopPropagation()}
-                  className="rounded accent-amber-600 shrink-0"
+                  className="rounded accent-[var(--nv-accent)] shrink-0"
                 />
                 <div onClick={() => onEdit(c)} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
-                  <span className="w-5 h-5 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-[var(--nv-surface-2)] flex items-center justify-center text-[10px] shrink-0">
                     {c.name[0]}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="truncate block hover:text-zinc-300">{c.name}</span>
+                    <span className="truncate block hover:text-[var(--nv-text-primary)]">{c.name}</span>
                     {(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0 && (
                       <div className="flex gap-0.5 mt-0.5 flex-wrap">
                         {(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).slice(0, 5).map((t: string) => (
@@ -839,12 +839,12 @@ export function CharacterList({
                             key={t}
                             onClick={e => { e.stopPropagation(); setTagFilter(t); }}
                             className={`text-[9px] px-1 py-0 rounded transition-colors ${
-                              tagFilter === t ? "bg-purple-600 text-white" : "bg-white/[0.04] text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
+                              tagFilter === t ? "bg-[var(--nv-creative)] text-white" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
                             }`}
                           >{t}</button>
                         ))}
                         {(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 5 && (
-                          <span className="text-[9px] text-zinc-600">+{(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length - 5}</span>
+                          <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length - 5}</span>
                         )}
                       </div>
                     )}
@@ -853,8 +853,8 @@ export function CharacterList({
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteCharacter(c.id, c.name); }}
                   disabled={deletingId === c.id}
-                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 shrink-0 disabled:opacity-40"
-                >✕</button>
+                  className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] shrink-0 disabled:opacity-40"
+                ><Icon name="x" size={12} className="align-middle" /></button>
               </div>
             ))}
           </div>
@@ -862,10 +862,10 @@ export function CharacterList({
       })}
 
       {filtered.length === 0 && (
-        <p className="text-xs text-zinc-600 px-2 py-2">无匹配角色</p>
+        <p className="text-xs text-[var(--nv-text-tertiary)] px-2 py-2">无匹配角色</p>
       )}
 
-      <button onClick={onNew} className="w-full text-left text-xs text-indigo-400 hover:text-indigo-300 py-1 px-2">
+      <button onClick={onNew} className="w-full text-left text-xs text-[var(--nv-primary)] hover:text-[var(--nv-primary)] py-1 px-2">
         + 添加角色
       </button>
     </div>

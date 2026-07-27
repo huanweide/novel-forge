@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
-import { toastSuccess, toastError } from "@/components/ui/toast";
+import { toastSuccess, toastError, confirmDialog, toastCreated } from "@/components/ui/toast";
+import { EmptyState, Loading } from "@/components/ui/States";
 
 interface LoreTableT {
   id: string;
@@ -63,7 +64,14 @@ export default function TablesPage() {
   };
 
   const deleteTable = async (t: LoreTableT) => {
-    if (!confirm(`删除表格「${t.name}」？`)) return;
+    const ok = await confirmDialog({
+      title: "删除表格",
+      description: `确定要删除表格「${t.name}」吗？此操作不可撤销，表格内的所有行数据将一并删除。`,
+      confirmText: "删除",
+      cancelText: "取消",
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/lore-tables/${t.id}`, { method: "DELETE" });
@@ -86,7 +94,7 @@ export default function TablesPage() {
         body: JSON.stringify({ name: create.name.trim(), key: create.key.trim(), note: create.note, category: create.category, columns, rows: [] }),
       });
       if (res.ok) {
-        toastSuccess("已建表");
+        toastCreated(create.name.trim(), "表格");
         setShowCreate(false);
         setCreate({ name: "", key: "", note: "", category: "custom", columnsText: "name:名称,status:状态" });
         load();
@@ -160,12 +168,12 @@ export default function TablesPage() {
               onChange={(e) => setChapterText(e.target.value)}
               rows={6}
               placeholder="在此粘贴刚写完的一章正文…"
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono"
+              className="input-glass w-full rounded-xl px-3 py-2 text-xs font-mono"
             />
-            <button onClick={runFill} disabled={busy} className="btn-primary text-xs py-2 px-4 rounded-xl mt-2 disabled:opacity-50">运行自动填表</button>
+            <button onClick={runFill} disabled={busy} className="btn-primary text-xs py-2 px-4 rounded-xl mt-2 disabled:cursor-not-allowed disabled:opacity-50">{busy ? "运行中…" : "运行自动填表"}</button>
             {fillResult && (
-              <div className={`mt-3 text-xs ${fillResult.ok ? "text-emerald-400" : "text-amber-400"}`}>
-                {fillResult.ok ? `✅ 操作 ${fillResult.operations} 条，应用 ${fillResult.applied} 条` : `⚠️ ${fillResult.error}`}
+              <div className={`mt-3 text-xs ${fillResult.ok ? "text-[var(--nv-success)]" : "text-[var(--nv-warning)]"}`}>
+                {fillResult.ok ? `操作 ${fillResult.operations} 条，应用 ${fillResult.applied} 条` : `⚠️ ${fillResult.error}`}
               </div>
             )}
           </div>
@@ -178,7 +186,7 @@ export default function TablesPage() {
               onChange={(e) => setRecallCtx(e.target.value)}
               rows={6}
               placeholder="输入当前章节上下文…"
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono"
+              className="input-glass w-full rounded-xl px-3 py-2 text-xs font-mono"
             />
             <button onClick={runRecall} disabled={busy} className="btn-ghost text-xs py-2 px-4 rounded-xl mt-2 disabled:opacity-50">预览召回</button>
             {recallItems.length > 0 && (
@@ -197,11 +205,16 @@ export default function TablesPage() {
         <section>
           <h2 className="font-semibold mb-3">项目表格（{tables.length}）</h2>
           {loading ? (
-            <div className="text-zinc-500 text-sm py-10 text-center">加载中…</div>
-          ) : tables.length === 0 ? (
-            <div className="text-zinc-500 text-sm py-10 text-center">
-              还没有表格。可从「创意工坊」套用表格模板预设，或点右上角「新建表格」。
+            <div className="surface-elevated rounded-2xl py-12">
+              <Loading label="正在加载项目表格…" />
             </div>
+          ) : tables.length === 0 ? (
+            <EmptyState
+              icon="grid"
+              title="还没有结构化表格"
+              description="宝宝流数据库可把正文事实沉淀为结构化表格。可从「创意工坊」套用表格模板预设，或点右上角「新建表格」。"
+              className="surface-elevated border-solid border-white/[0.06]"
+            />
           ) : (
             <div className="space-y-4">
               {tables.map((t) => (
@@ -215,7 +228,7 @@ export default function TablesPage() {
                       <button onClick={() => setExpanded(expanded === t.id ? null : t.id)} className="btn-ghost text-xs px-3 py-1.5 rounded-xl">
                         {expanded === t.id ? "收起" : "查看/编辑"}
                       </button>
-                      <button onClick={() => deleteTable(t)} className="btn-ghost text-xs px-3 py-1.5 rounded-xl text-rose-300">删除</button>
+                      <button onClick={() => deleteTable(t)} disabled={busy} className="btn-ghost text-xs px-3 py-1.5 rounded-xl text-[var(--nv-danger)] disabled:cursor-not-allowed disabled:opacity-50">删除</button>
                     </div>
                   </div>
 
@@ -240,7 +253,7 @@ export default function TablesPage() {
                                     <input
                                       value={r[c.key] ?? ""}
                                       onChange={(e) => updateCell(t, Number(r.row_id), c.key, e.target.value)}
-                                      className="w-32 bg-zinc-900 border border-white/10 rounded px-2 py-1"
+                                      className="input-glass w-32 rounded px-2 py-1"
                                     />
                                   </td>
                                 ))}
@@ -267,10 +280,10 @@ export default function TablesPage() {
           <div className="surface-floating rounded-2xl w-full max-w-md p-6 animate-spring">
             <h2 className="text-lg font-semibold mb-4">新建结构化表格</h2>
             <div className="space-y-3">
-              <input value={create.name} onChange={(e) => setCreate({ ...create, name: e.target.value })} placeholder="表名，如 妃嫔居住建筑表" className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm" />
-              <input value={create.key} onChange={(e) => setCreate({ ...create, key: e.target.value })} placeholder="英文 key，如 woman_live" className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm" />
-              <input value={create.note} onChange={(e) => setCreate({ ...create, note: e.target.value })} placeholder="表格说明（每列含义）" className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm" />
-              <input value={create.columnsText} onChange={(e) => setCreate({ ...create, columnsText: e.target.value })} placeholder="列：key:标签,key:标签" className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono" />
+              <input value={create.name} onChange={(e) => setCreate({ ...create, name: e.target.value })} placeholder="表名，如 妃嫔居住建筑表" className="input-glass w-full rounded-xl px-3 py-2 text-sm" />
+              <input value={create.key} onChange={(e) => setCreate({ ...create, key: e.target.value })} placeholder="英文 key，如 woman_live" className="input-glass w-full rounded-xl px-3 py-2 text-sm" />
+              <input value={create.note} onChange={(e) => setCreate({ ...create, note: e.target.value })} placeholder="表格说明（每列含义）" className="input-glass w-full rounded-xl px-3 py-2 text-sm" />
+              <input value={create.columnsText} onChange={(e) => setCreate({ ...create, columnsText: e.target.value })} placeholder="列：key:标签,key:标签" className="input-glass w-full rounded-xl px-3 py-2 text-xs font-mono" />
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowCreate(false)} className="flex-1 btn-ghost rounded-xl py-2.5 text-sm">取消</button>

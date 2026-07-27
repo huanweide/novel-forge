@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { StatusDot } from "@/components/ui/icons";
+import { StatusDot, Icon } from "@/components/ui/icons";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -106,7 +106,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   };
 
   if (loading) {
-    return <div className="p-4 text-xs text-zinc-500">加载伏笔数据...</div>;
+    return <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">加载伏笔数据...</div>;
   }
 
   if (error) {
@@ -115,9 +115,9 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
 
   if (!data || data.total === 0) {
     return (
-      <div className="p-4 text-xs text-zinc-600">
+      <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">
         <p>暂无伏笔记录</p>
-        <p className="mt-1 text-zinc-700">写完章节后 AI 会自动检测伏笔</p>
+        <p className="mt-1 text-[var(--nv-text-tertiary)]">写完章节后 AI 会自动检测伏笔</p>
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   return (
     <div className="flex flex-col h-full">
       {/* 顶部统计 */}
-      <div className="px-3 py-2 border-b border-white/[0.06] text-[10px] text-zinc-500">
+      <div className="px-3 py-2 border-b border-[var(--nv-border-2)] text-[10px] text-[var(--nv-text-tertiary)]">
         共 {data.total} 条伏笔 · {data.groups.pending?.count || 0} 待回收
       </div>
 
@@ -140,15 +140,15 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
           const isCollapsed = collapsed.has(key);
 
           return (
-            <div key={key} className="border-b border-white/[0.06]/50">
+            <div key={key} className="border-b border-[var(--nv-border-2)]/50">
               {/* 分组标题 */}
               <button
                 onClick={() => toggleGroup(key)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-zinc-800/30 transition-colors sticky top-0 bg-zinc-900/80 backdrop-blur"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-[var(--nv-surface-2)] transition-colors sticky top-0 bg-[var(--nv-surface-2)] backdrop-blur"
               >
-                <span className="text-[10px]">{isCollapsed ? "▶" : "▼"}</span>
-                <span className="text-zinc-400">{group.label}</span>
-                <span className="text-zinc-600 ml-auto text-[10px]">{group.count}</span>
+                <Icon name={isCollapsed ? "arrowRight" : "arrowDown" as any} size={10} className="text-[var(--nv-text-tertiary)]" />
+                <span className="text-[var(--nv-text-secondary)]">{group.label}</span>
+                <span className="text-[var(--nv-text-tertiary)] ml-auto text-[10px]">{group.count}</span>
               </button>
 
               {/* 分组内容 */}
@@ -159,26 +159,26 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
                     const isExpanded = expandedItem === item.id;
 
                     return (
-                      <div key={item.id} className="px-3 py-1 hover:bg-zinc-800/20 transition-colors">
+                      <div key={item.id} className="px-3 py-1 hover:bg-[var(--nv-surface-2)] transition-colors">
                         <button
                           onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                           className="w-full text-left"
                         >
                           <div className="flex items-start gap-1.5">
                             <span className="text-[10px] mt-0.5 shrink-0">{style.dot}</span>
-                            <span className="text-xs text-zinc-300 leading-relaxed line-clamp-2">
+                            <span className="text-xs text-[var(--nv-text-secondary)] leading-relaxed line-clamp-2">
                               {item.description}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 ml-4">
-                            <span className="text-[10px] text-zinc-600">
+                            <span className="text-[10px] text-[var(--nv-text-tertiary)]">
                               {PRIORITY_LABEL[item.priority] || item.priority}
                             </span>
-                            <span className="text-[10px] text-zinc-700">
+                            <span className="text-[10px] text-[var(--nv-text-tertiary)]">
                               {SOURCE_LABEL[item.source] || item.source}
                             </span>
                             {item.fulfillmentRatio > 0 && (
-                              <span className="text-[10px] text-zinc-600">
+                              <span className="text-[10px] text-[var(--nv-text-tertiary)]">
                                 {Math.round(item.fulfillmentRatio * 100)}%
                               </span>
                             )}
@@ -187,7 +187,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
 
                         {/* 展开详情 */}
                         {isExpanded && (
-                          <div className="mt-1 ml-4 p-2 rounded bg-zinc-800/40 text-[10px] text-zinc-500 space-y-0.5">
+                          <div className="mt-1 ml-4 p-2 rounded bg-[var(--nv-surface-2)] text-[10px] text-[var(--nv-text-tertiary)] space-y-0.5">
                             {item.expiryChapter && (
                               <p>预计回收章：第 {item.expiryChapter} 章</p>
                             )}

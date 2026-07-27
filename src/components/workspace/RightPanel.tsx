@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { ContextPreview } from "@/components/editor/ContextPreview";
 import { ChapterEntitiesPanel } from "./ChapterEntitiesPanel";
 import { ForeshadowingPanel } from "./ForeshadowingPanel";
@@ -24,10 +25,10 @@ interface RightPanelProps {
   selectedText?: string;
 }
 
-const TOP_TABS: Array<{ key: TopTab; icon: string; label: string }> = [
-  { key: "ai", icon: "🤖", label: "AI助手" },
-  { key: "query", icon: "🔍", label: "查询实体" },
-  { key: "monitor", icon: "📊", label: "监测" },
+const TOP_TABS: Array<{ key: TopTab; icon: IconName; label: string }> = [
+  { key: "ai", icon: "bot", label: "AI助手" },
+  { key: "query", icon: "search", label: "查询实体" },
+  { key: "monitor", icon: "chart", label: "监测" },
 ];
 
 export function RightPanel(props: RightPanelProps) {
@@ -41,41 +42,41 @@ export function RightPanel(props: RightPanelProps) {
   // ── 最小化状态 ──
   if (minimized) {
     return (
-      <aside className="w-10 border-l border-white/[0.06] bg-white/[0.02] backdrop-blur-sm flex flex-col items-center py-3 gap-3 shrink-0">
-        <button onClick={() => setMinimized(false)} className="text-zinc-500 hover:text-zinc-300 text-xs" title="展开面板">◀</button>
-        <div className="flex-1 flex flex-col items-center gap-3 text-[10px] text-zinc-600">
+      <aside className="flex w-10 shrink-0 flex-col items-center gap-3 border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-3 backdrop-blur-sm">
+        <button onClick={() => setMinimized(false)} className="text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]" title="展开面板" aria-label="展开面板"><Icon name="arrowLeft" size={16} /></button>
+        <div className="flex flex-1 flex-col items-center gap-3 text-[10px] text-[var(--nv-text-tertiary)]">
           {TOP_TABS.map((t) => (
             <button key={t.key} onClick={() => { setMinimized(false); setTopTab(t.key); }}
-              className={`writing-mode-vertical hover:text-zinc-400 ${topTab === t.key ? "text-zinc-300" : ""}`}
+              className={`writing-mode-vertical hover:text-[var(--nv-text-primary)] ${topTab === t.key ? "text-[var(--nv-primary)]" : ""}`}
               style={{ writingMode: "vertical-rl" }} title={t.label}
             >{t.label}</button>
           ))}
         </div>
-        <button onClick={onClose} className="text-zinc-700 hover:text-zinc-400 text-[10px]" title="完全关闭">✕</button>
+        <button onClick={onClose} className="text-[var(--nv-text-muted)] transition-colors hover:text-[var(--nv-danger)]" title="完全关闭" aria-label="关闭面板"><Icon name="x" size={14} /></button>
       </aside>
     );
   }
 
   // ── 展开状态 ──
   return (
-    <aside className="w-80 border-l border-white/[0.06] bg-white/[0.02] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden max-h-full">
+    <aside className="flex w-80 max-h-full shrink-0 flex-col overflow-hidden border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] backdrop-blur-sm">
       {/* 顶部三tab */}
-      <div className="flex border-b border-white/[0.06] shrink-0">
+      <div className="flex shrink-0 border-b border-[var(--nv-border-2)]">
         {TOP_TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTopTab(t.key)}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               topTab === t.key
-                ? "text-zinc-200 border-b-2 border-indigo-500 bg-zinc-800/20"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/10"
+                ? "border-b-2 border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
+                : "border-b-2 border-transparent text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] hover:bg-white/[0.04]"
             }`}
           >
-            {t.icon} {t.label}
+            <Icon name={t.icon} size={13} /> {t.label}
           </button>
         ))}
-        <button onClick={() => setMinimized(true)} className="px-2 text-zinc-600 hover:text-zinc-400 text-xs shrink-0" title="最小化">▶</button>
-        <button onClick={onClose} className="px-2 text-zinc-600 hover:text-zinc-400 text-xs shrink-0" title="完全关闭">✕</button>
+        <button onClick={() => setMinimized(true)} className="shrink-0 px-2 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]" title="最小化" aria-label="最小化"><Icon name="arrowRight" size={14} /></button>
+        <button onClick={onClose} className="shrink-0 px-2 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-danger)]" title="完全关闭" aria-label="关闭面板"><Icon name="x" size={14} /></button>
       </div>
 
       {/* Tab 内容 */}

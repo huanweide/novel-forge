@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/ui/icons";
 import type { StoryNodeData } from "./types";
 
 export function NodeTreeItem({
@@ -22,36 +23,36 @@ export function NodeTreeItem({
   const isImported = node.content?.includes("📥") || false;
   const isChapter = node.type === "chapter" || node.type === "section";
   const isChecked = selectedChapterIds?.has(node.id) || false;
-  const typeIcon = node.type === "volume" ? "📂" : node.type === "chapter" ? "📖" : node.type === "section" ? "§" : "○";
-  const statusIcon = node.status === "completed" ? "●" : node.status === "drafting" ? "◐" : node.status === "reviewing" ? "⚠" : "○";
-  const statusColor = node.status === "completed" ? "text-green-400" : node.status === "reviewing" ? "text-yellow-400" : "text-zinc-600";
+  const typeIcon = node.type === "volume" ? "bookmarked" : node.type === "chapter" ? "book" : node.type === "section" ? "file" : "circle";
+  const statusIcon = node.status === "completed" ? "check" : node.status === "drafting" ? "pencil" : node.status === "reviewing" ? "alert" : "circle";
+  const statusColor = node.status === "completed" ? "text-[var(--nv-success)]" : node.status === "reviewing" ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)]";
 
   return (
     <div>
       <div onClick={() => onSelectNode(node)}
         className={`flex items-center gap-1.5 py-1 px-1.5 rounded cursor-pointer text-xs group ${
-          isSelected ? "bg-indigo-500/20 text-indigo-300" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+          isSelected ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
         }`}
         style={{ paddingLeft: `${depth * 12 + 6}px` }}>
         {batchMode && isChapter && (
           <input type="checkbox" checked={isChecked}
             onChange={(e) => { e.stopPropagation(); onToggleChapterSelect?.(node.id); }}
-            className="w-3 h-3 rounded shrink-0 accent-amber-500" onClick={(e) => e.stopPropagation()} />
+            className="w-3 h-3 rounded shrink-0 accent-[var(--nv-accent)]" onClick={(e) => e.stopPropagation()} />
         )}
-        <span className="text-[10px]">{typeIcon}</span>
-        <span className={`${statusColor} text-[10px]`}>{statusIcon}</span>
+        <Icon name={typeIcon} size={11} className="shrink-0" />
+        <Icon name={statusIcon as any} size={11} className={`${statusColor} shrink-0`} />
         <span className="flex-1 truncate">{node.title}</span>
-        {isImported && <span className="text-purple-400/70 text-[10px]" title="从导入文本创建">📥</span>}
+        {isImported && <span className="text-[var(--nv-creative)]/70 text-[10px]" title="从导入文本创建"><Icon name="download" size={11} /></span>}
         {onDeleteNode && (node.type === "chapter" || node.type === "section") && (
           <button onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
             disabled={deletingId === node.id}
-            className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity disabled:opacity-40" title="删除此章节">✕</button>
+            className="opacity-0 group-hover:opacity-100 text-[var(--nv-danger)]/60 hover:text-[var(--nv-danger)] text-[12px] px-0.5 transition-opacity disabled:opacity-40" title="删除此章节"><Icon name="x" size={12} /></button>
         )}
         {isChapter && (
           <button onClick={(e) => { e.stopPropagation(); router.push(`/workspace/${projectId}/game/${node.id}`); }}
-            className="opacity-0 group-hover:opacity-100 text-violet-400/70 hover:text-violet-300 text-[12px] px-0.5 transition-opacity" title="🎮 游戏模式创作本章">🎮</button>
+            className="opacity-0 group-hover:opacity-100 text-[var(--nv-creative)]/70 hover:text-[var(--nv-creative)] text-[12px] px-0.5 transition-opacity" title="游戏模式创作本章"><Icon name="gamepad" size={12} /></button>
         )}
-        <span className="text-zinc-600 text-[10px]">{node.wordCount > 0 ? `${node.wordCount}字` : ""}</span>
+        <span className="text-[var(--nv-text-tertiary)] text-[10px]">{node.wordCount > 0 ? `${node.wordCount}字` : ""}</span>
       </div>
       {children.map((child) => (
         <NodeTreeItem key={child.id} node={child} allNodes={allNodes} selectedNode={selectedNode}
@@ -82,14 +83,15 @@ export function VolumeGroup({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer text-xs bg-amber-950/20 border border-amber-900/20 hover:border-amber-900/40 transition-colors"
+      <div className="flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer text-xs bg-[var(--nv-accent-soft)] border border-[var(--nv-accent)]/20 hover:border-[var(--nv-accent)]/40 transition-colors"
         onClick={() => setCollapsed(!collapsed)}>
-        <span className="text-[10px]">{collapsed ? "▶" : "▼"}</span>
-        <span className="text-amber-400/80 font-medium flex-1">📂 {volume.title}</span>
-        <span className="text-zinc-600 text-[10px]">{children.length}章 · {totalWords}字</span>
+        <Icon name={collapsed ? "arrowRight" : "arrowDown" as any} size={11} className="text-[var(--nv-accent)]" />
+        <Icon name="bookmarked" size={12} className="text-[var(--nv-accent)]" />
+        <span className="text-[var(--nv-accent)] font-medium flex-1">{volume.title}</span>
+        <span className="text-[var(--nv-text-tertiary)] text-[10px]">{children.length}章 · {totalWords}字</span>
       </div>
       {!collapsed && (
-        <div className="ml-2 border-l border-amber-900/20 pl-2">
+        <div className="ml-2 border-l border-[var(--nv-accent)]/20 pl-2">
           {children.map((ch) => (
             <NodeTreeItem key={ch.id} node={ch} allNodes={allNodes} selectedNode={selectedNode}
               onSelectNode={onSelectNode} onAddSection={onAddSection} depth={1}
@@ -141,7 +143,7 @@ export function OutlineTree({
             projectId={projectId} />
         ))}
         <button onClick={() => onAddSection(null)}
-          className="w-full text-left text-xs text-zinc-600 hover:text-zinc-400 py-1 px-2 mt-2">+ 添加章节/分卷</button>
+          className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节/分卷</button>
       </div>
     );
   }
@@ -152,9 +154,9 @@ export function OutlineTree({
 
   if (roots.length === 0) {
     return (
-      <div className="text-center text-zinc-600 text-xs py-8">
+      <div className="text-center text-[var(--nv-text-tertiary)] text-xs py-8">
         还没有章节大纲<br />
-        <button onClick={() => onAddSection(null)} className="text-indigo-400 hover:text-indigo-300 mt-2 block mx-auto">+ 手动添加章节</button>
+        <button onClick={() => onAddSection(null)} className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70 mt-2 block mx-auto">+ 手动添加章节</button>
       </div>
     );
   }
@@ -169,7 +171,7 @@ export function OutlineTree({
           projectId={projectId} />
       ))}
       <button onClick={() => onAddSection(null)}
-        className="w-full text-left text-xs text-zinc-600 hover:text-zinc-400 py-1 px-2 mt-2">+ 添加章节</button>
+        className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节</button>
     </div>
   );
 }

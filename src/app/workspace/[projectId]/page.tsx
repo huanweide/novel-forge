@@ -690,8 +690,8 @@ export default function WorkspacePage() {
                 if (data.outline) {
                   setChapterOutlineStatus("done"); setTimeout(() => setChapterOutlineStatus(""), 4000);
                   setSelectedNode({ ...selectedNode, outline: data.outline });
-                  const selectedInfo = data.selectedCharacters?.length ? `\n📋 AI 选角（${data.selectedCharacters.length}/${data.totalCharacters}人）：${data.selectedCharacters.map((c: any) => c.name).join("、")}${data.selectionReason ? `\n💬 ${data.selectionReason}` : ""}` : "";
-                  setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `✅ 章纲已生成（${data.modelUsed || "v4-flash"}）${selectedInfo}。点击大纲文字可编辑。` }] });
+                  const selectedInfo = data.selectedCharacters?.length ? `\nAI 选角（${data.selectedCharacters.length}/${data.totalCharacters}人）：${data.selectedCharacters.map((c: any) => c.name).join("、")}${data.selectionReason ? `\n选角理由：${data.selectionReason}` : ""}` : "";
+                  setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `章纲已生成（${data.modelUsed || "v4-flash"}）${selectedInfo}。点击大纲文字可编辑。` }] });
                   await loadProject();
                 } else { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError("API 返回空内容，请重试"); }
               } catch (err) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }

@@ -139,7 +139,7 @@ export function ChapterEntitiesPanel({
   // ── 空状态 ──
   if (!chapterContent || chapterContent.trim().length === 0) {
     return (
-      <div className="p-4 text-xs text-zinc-500 text-center">
+      <div className="p-4 text-xs text-[var(--nv-text-tertiary)] text-center">
         <p className="mb-1">暂无正文</p>
         <p>选择左侧大纲节点查看实体</p>
       </div>
@@ -158,7 +158,7 @@ export function ChapterEntitiesPanel({
   // ── 无匹配 ──
   if (groups.length === 0) {
     return (
-      <div className="p-4 text-xs text-zinc-500 text-center">
+      <div className="p-4 text-xs text-[var(--nv-text-tertiary)] text-center">
         <p className="mb-1 flex items-center justify-center gap-1.5"><Icon name="inbox" size={14} className="text-zinc-600" /> 本章未匹配到已注册实体</p>
         <p>在左侧面板注册角色或词条后，正文中的名字会自动上色并出现在这里</p>
       </div>
@@ -169,26 +169,26 @@ export function ChapterEntitiesPanel({
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="flex items-center justify-between px-1">
-        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5"><Icon name="chart" size={12} /> 本章实体</h3>
-        <span className="text-[10px] text-zinc-600">{matches.length} 次匹配</span>
+        <h3 className="text-xs font-semibold text-[var(--nv-text-secondary)] uppercase tracking-wider flex items-center gap-1.5"><Icon name="chart" size={12} /> 本章实体</h3>
+        <span className="text-[10px] text-[var(--nv-text-tertiary)]">{matches.length} 次匹配</span>
       </div>
 
       {groups.map((group) => (
-        <div key={group.key} className="rounded-lg bg-white/[0.02] backdrop-blur-sm border border-white/[0.06]/60 overflow-hidden">
+        <div key={group.key} className="rounded-lg bg-[var(--nv-surface-1)] backdrop-blur-sm border border-[var(--nv-border-2)] overflow-hidden">
           {/* 分组头 */}
           <button
             onClick={() => toggleGroup(group.key)}
-            className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-zinc-800/30 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-[var(--nv-surface-2)] transition-colors"
           >
-            <span className="text-[10px] text-zinc-600 w-3">{collapsed.has(group.key) ? "▶" : "▼"}</span>
+            <Icon name={collapsed.has(group.key) ? "arrowRight" : "arrowDown" as any} size={11} className="text-[var(--nv-text-tertiary)] w-3" />
             <span className="text-sm">{group.icon}</span>
-            <span className="text-xs font-medium text-zinc-300">{group.label}</span>
+            <span className="text-xs font-medium text-[var(--nv-text-secondary)]">{group.label}</span>
             <span className="text-[10px] text-zinc-600 ml-auto">{group.entities.length}</span>
           </button>
 
           {/* 实体列表 */}
           {!collapsed.has(group.key) && (
-          <div className="divide-y divide-zinc-800/30 border-t border-white/[0.06]/40">
+          <div className="divide-y divide-[var(--nv-border-1)] border-t border-[var(--nv-border-2)]">
             {group.entities.map((entity) => {
               const charId = entity.type === "character" ? findCharId(entity.name) : undefined;
               const loreId = entity.type === "lorebook" ? findLoreId(entity.name) : undefined;
@@ -196,7 +196,7 @@ export function ChapterEntitiesPanel({
               return (
                 <div
                   key={`${entity.name}-${entity.type}`}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-800/40 transition-colors cursor-pointer group"
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--nv-surface-2)] transition-colors cursor-pointer group"
                   onClick={() => {
                     if (charId && onEditCharacter) onEditCharacter(charId);
                     else if (loreId && onEditLore) onEditLore(loreId);
@@ -209,15 +209,15 @@ export function ChapterEntitiesPanel({
                     style={{ backgroundColor: entity.color }}
                   />
                   {/* 实体名 */}
-                  <span className="text-xs text-zinc-300 group-hover:text-zinc-100 truncate">
+                  <span className="text-xs text-[var(--nv-text-secondary)] group-hover:text-[var(--nv-text-primary)] truncate">
                     {entity.name}
                   </span>
                   {/* 无 ID 标记 */}
                   {!charId && !loreId && (
-                    <span className="text-[10px] text-zinc-600 ml-auto shrink-0">未注册</span>
+                    <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-auto shrink-0">未注册</span>
                   )}
                   {charId && (
-                    <span className="text-[10px] text-zinc-600 ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
+                    <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="pencil" size={11} /></span>
                   )}
                 </div>
               );
@@ -228,7 +228,7 @@ export function ChapterEntitiesPanel({
       ))}
 
       {/* 底部统计 */}
-      <div className="text-[10px] text-zinc-600 px-1 pt-1">
+      <div className="text-[10px] text-[var(--nv-text-tertiary)] px-1 pt-1">
         已注册实体 {entityMap.size} 个 · 本章出现 {matches.length} 次
       </div>
     </div>

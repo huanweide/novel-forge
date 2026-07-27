@@ -46,15 +46,15 @@ export function CenterPanel({
   const displayContent = streamContent || selectedNode?.content || "";
 
   return (
-    <main className="flex-1 flex flex-col overflow-hidden bg-zinc-950">
+    <main className="flex-1 flex flex-col overflow-hidden bg-[var(--nv-void)]">
       {selectedNode ? (
         <>
           {/* 控制栏 */}
-          <div className="border-b border-white/[0.06] px-4 py-3 shrink-0">
+          <div className="border-b border-[var(--nv-border-2)] px-4 py-3 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
-              <span className="text-xs text-zinc-600">
-                {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-emerald-400" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-amber-400" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
+              <span className="text-xs text-[var(--nv-text-tertiary)]">
+                {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-[var(--nv-success)]" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-[var(--nv-accent)]" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
                 · {selectedNode.wordCount || 0} 字
               </span>
             </div>
@@ -62,37 +62,37 @@ export function CenterPanel({
             <div className="mb-2">
               {editingOutline ? (
                 <div className="flex gap-2">
-                  <textarea className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs resize-none" rows={2}
+                  <textarea className="input-glass flex-1 rounded px-2 py-1 text-xs resize-none" rows={2}
                     value={outlineDraft} onChange={(e) => setOutlineDraft(e.target.value)} placeholder="输入本节点大纲..." />
                   <div className="flex flex-col gap-1">
-                    <button onClick={() => { onEditOutline(outlineDraft); setEditingOutline(false); }} className="text-xs text-green-400 hover:text-green-300">保存</button>
-                    <button onClick={() => setEditingOutline(false)} className="text-xs text-zinc-500 hover:text-zinc-400">取消</button>
+                    <button onClick={() => { onEditOutline(outlineDraft); setEditingOutline(false); }} className="text-xs text-[var(--nv-success)] hover:text-[var(--nv-success)]/70">保存</button>
+                    <button onClick={() => setEditingOutline(false)} className="text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)]">取消</button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <div onClick={() => { setOutlineDraft(selectedNode.outline || ""); setEditingOutline(true); }}
-                    className="flex-1 text-xs text-zinc-500 hover:text-zinc-400 cursor-pointer italic">
+                    className="flex-1 text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] cursor-pointer italic">
                     {selectedNode.outline || "点击设置本节点大纲..."}
                   </div>
                   {!isGenerating && (
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       {chapterOutlineStatus === "generating" ? (
-                        <span className="text-[10px] text-indigo-400 animate-pulse px-1">⏳ 章纲生成中...</span>
+                        <span className="text-[10px] text-[var(--nv-primary)] animate-pulse px-1 flex items-center gap-0.5"><Icon name="loader" size={10} className="animate-spin" /> 章纲生成中...</span>
                       ) : chapterOutlineStatus === "done" ? (
-                        <span className="text-[10px] text-emerald-400 font-medium px-1 flex items-center gap-0.5"><Icon name="check" size={10} /> 章纲完成</span>
+                        <span className="text-[10px] text-[var(--nv-success)] font-medium px-1 flex items-center gap-0.5"><Icon name="check" size={10} /> 章纲完成</span>
                       ) : chapterOutlineStatus === "error" ? (
-                        <span className="text-[10px] text-red-400 px-1">❌ 章纲失败</span>
+                        <span className="text-[10px] text-[var(--nv-danger)] px-1 flex items-center gap-0.5"><Icon name="x" size={10} /> 章纲失败</span>
                       ) : (
                         <>
                           <input value={chapterOutlinePrompt} onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
                             placeholder="Flash提示词（留空自动生成）"
-                            className="w-32 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] placeholder:text-zinc-600 focus:outline-none focus:border-cyan-700" />
+                            className="input-glass w-32 rounded px-1.5 py-0.5 text-[10px] focus:border-[var(--nv-primary)]" />
                           <button onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
-                            className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-800 text-cyan-400 hover:bg-cyan-950/30 transition-colors"
-                            title="用 V4 Flash 为本章生成章纲">⚡生成</button>
+                            className="btn-primary text-[10px] px-1.5 py-0.5 rounded transition-colors"
+                            title="用 V4 Flash 为本章生成章纲"><Icon name="sparkles" size={10} /> 生成</button>
                           <button onClick={onDrawChapterOutline}
-                            className="text-[10px] px-1.5 py-0.5 rounded border border-purple-800 text-purple-400 hover:bg-purple-950/30 transition-colors"
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--nv-creative)]/40 text-[var(--nv-creative)] hover:bg-[var(--nv-creative-soft)] transition-colors"
                             title="抽卡模式——并行生成3-5条不同路线"><Icon name="grid" size={13} className="mr-1" />抽卡</button>
                         </>
                       )}
@@ -105,23 +105,23 @@ export function CenterPanel({
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 {isGenerating ? (
-                  <Button size="sm" onClick={onStop} className="bg-red-600 hover:bg-red-500 h-7 text-xs">⏹ 停止生成</Button>
+                  <Button size="sm" onClick={onStop} className="btn-danger h-7 text-xs"><Icon name="stop" size={11} /> 停止生成</Button>
                 ) : (
                   <>
                     {!refineMode && (
-                      <Button size="sm" onClick={onWrite} className="bg-indigo-600 hover:bg-indigo-500 h-7 text-xs">▶ 生成/重写</Button>
+                      <Button size="sm" onClick={onWrite} className="btn-primary h-7 text-xs"><Icon name="pencil" size={11} /> 生成/重写</Button>
                     )}
                     {refineMode && (
-                      <Button size="sm" onClick={onRefine} className="bg-amber-600 hover:bg-amber-500 h-7 text-xs flex items-center gap-1"><Icon name="wrench" size={11} /> 微调</Button>
+                      <Button size="sm" onClick={onRefine} className="btn-ghost h-7 text-xs flex items-center gap-1 text-[var(--nv-accent)] border-[var(--nv-accent)]/40"><Icon name="wrench" size={11} /> 微调</Button>
                     )}
                     <button onClick={onToggleRefineMode}
-                      className={`text-xs px-2 py-1 h-7 rounded border transition-colors ${refineMode ? "border-amber-700 text-amber-400 bg-amber-950/20 hover:bg-amber-950/40" : "border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"}`}
+                      className={`text-xs px-2 py-1 h-7 rounded border transition-colors ${refineMode ? "border-[var(--nv-accent)]/50 text-[var(--nv-accent)] bg-[var(--nv-accent-soft)] hover:bg-[var(--nv-accent)]/20" : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)]"}`}
                       title={refineMode ? "切换到生成模式" : "切换到微调模式"}>
                       {refineMode ? <span className="flex items-center gap-1"><Icon name="wrench" size={11} /> 微调中</span> : <span className="flex items-center gap-1"><Icon name="wrench" size={11} /> 微调</span>}
                     </button>
                     {!isGenerating && (
                       <button onClick={onOpenGame}
-                        className="text-xs px-2 py-1 h-7 rounded border border-violet-700 text-violet-400 bg-violet-950/20 hover:bg-violet-950/40 hover:border-violet-600 transition-colors"
+                        className="text-xs px-2 py-1 h-7 rounded border border-[var(--nv-creative)]/40 text-[var(--nv-creative)] bg-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative)]/20 hover:border-[var(--nv-creative)] transition-colors"
                         title="互动游戏模式——像文字RPG一样创作本章">
                         <Icon name="gamepad" size={14} />
                       </button>
@@ -129,15 +129,15 @@ export function CenterPanel({
                   </>
                 )}
                 <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 800)}
-                  className="w-16 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-center" title="目标字数" />
-                <span className="text-xs text-zinc-600">字</span>
+                  className="input-glass w-16 rounded px-2 py-1 text-xs text-center" title="目标字数" />
+                <span className="text-xs text-[var(--nv-text-tertiary)]">字</span>
                 <input placeholder={refineMode ? "微调指令（改对话/加描写/续写500字）..." : "作者指令（高优先级）..."}
                   value={refineMode ? refineInstruction : authorNote}
                   onChange={(e) => refineMode ? onRefineInstructionChange(e.target.value) : onAuthorNoteChange(e.target.value)}
-                  className="flex-1 min-w-0 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs placeholder:text-zinc-600" />
+                  className="input-glass flex-1 min-w-0 rounded px-2 py-1 text-xs" />
               </div>
               {refineMode && !isGenerating && (
-                <p className="text-[10px] text-amber-600/70">微调模式：不重写正文，按指令修改现有内容或续写补长。字数不够会自动补，中途打断可续写。</p>
+                <p className="text-[10px] text-[var(--nv-accent)]/70">微调模式：不重写正文，按指令修改现有内容或续写补长。字数不够会自动补，中途打断可续写。</p>
               )}
             </div>
           </div>
@@ -147,21 +147,21 @@ export function CenterPanel({
               <div className="max-w-[700px] mx-auto">
                 {/* 章节标题 */}
                 {selectedNode?.title && (
-                  <h1 className="text-xl font-bold text-zinc-200 text-center mb-6 mt-2 tracking-wide">
+                  <h1 className="text-xl font-bold text-[var(--nv-text-primary)] text-center mb-6 mt-2 tracking-wide">
                     {selectedNode.title}
                   </h1>
                 )}
                 <MarkdownViewer content={displayContent} projectId={projectId} isStreaming={isGenerating} />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
+              <div className="flex items-center justify-center h-full text-[var(--nv-text-tertiary)] text-sm">
                 {(isGenerating || genStep) ? (
                   <div className="text-center space-y-3">
                     {genStep && (
                       <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${
-                        genStep === "error" ? "bg-red-950/40 text-red-400 border border-red-900/50"
-                        : genStep === "done" ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/50"
-                        : "bg-indigo-950/40 text-indigo-400 border border-indigo-900/50"
+                        genStep === "error" ? "bg-[var(--nv-danger-soft)] text-[var(--nv-danger)] border border-[var(--nv-danger)]/50"
+                        : genStep === "done" ? "bg-[var(--nv-success-soft)] text-[var(--nv-success)] border border-[var(--nv-success)]/50"
+                        : "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] border border-[var(--nv-primary)]/50"
                       }`}>
                         <span className="text-lg">{genStepLabels[genStep]?.icon}</span>
                         <span className={genStep === "generating" ? "animate-pulse" : ""}>{genStepLabels[genStep]?.label || "处理中..."}</span>
@@ -173,8 +173,8 @@ export function CenterPanel({
                           const stepIdx = ["loading-cards", "confirming", "generating", "reviewing", "summarizing"].indexOf(genStep);
                           return (
                             <div key={s} className="flex items-center gap-1">
-                              <div className={`w-2 h-2 rounded-full transition-colors ${i <= stepIdx ? "bg-indigo-500" : "bg-zinc-700"}`} />
-                              {i < 4 && <div className={`w-3 h-0.5 ${i < stepIdx ? "bg-indigo-500" : "bg-zinc-700"}`} />}
+                              <div className={`w-2 h-2 rounded-full transition-colors ${i <= stepIdx ? "bg-[var(--nv-primary)]" : "bg-[var(--nv-border-3)]"}`} />
+                              {i < 4 && <div className={`w-3 h-0.5 ${i < stepIdx ? "bg-[var(--nv-primary)]" : "bg-[var(--nv-border-3)]"}`} />}
                             </div>
                           );
                         })}
@@ -193,7 +193,7 @@ export function CenterPanel({
           </div>
         </>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-zinc-600">
+        <div className="flex-1 flex items-center justify-center text-[var(--nv-text-tertiary)]">
           <div className="text-center">
             <p className="text-lg mb-2">欢迎使用 Novel Forge</p>
             <p className="text-sm">从左侧大纲树选择节点开始写作，或先生成大纲</p>

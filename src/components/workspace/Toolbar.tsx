@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 import { StyleSelector } from "@/components/editor/StyleSelector";
 import type { StyleTemplate } from "@/core/templates";
 import type { ProjectData } from "./types";
@@ -29,50 +30,52 @@ export function Toolbar({
   };
 
   return (
-    <header className="h-12 border-b border-white/[0.06] bg-zinc-900 flex items-center justify-between px-4 shrink-0 relative">
-      <div className="flex items-center gap-3 min-w-0">
-        <button onClick={onBack} className="text-zinc-500 hover:text-zinc-300 text-sm shrink-0">← 返回</button>
-        <span className="text-zinc-700 shrink-0">|</span>
-        <span className="font-medium text-sm truncate">{projectName}</span>
+    <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)] px-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <button onClick={onBack} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]" aria-label="返回">
+          <Icon name="arrowLeft" size={16} />
+        </button>
+        <span className="shrink-0 text-[var(--nv-border-3)]">|</span>
+        <span className="truncate text-sm font-medium">{projectName}</span>
       </div>
       <div className="flex items-center gap-1.5">
         {styleCard?.styleDescription && (
           <button onClick={onEditStyle} disabled={isGenerating}
-            className="flex items-center gap-1.5 text-xs border border-amber-700/50 rounded px-2 py-1 bg-amber-950/20 hover:bg-amber-950/40 transition-colors shrink-0"
+            className="flex shrink-0 items-center gap-1.5 rounded border border-[var(--nv-accent)]/40 bg-[var(--nv-accent-soft)] px-2 py-1 text-xs text-[var(--nv-accent)] transition-colors hover:bg-[var(--nv-accent-soft)] disabled:opacity-50"
             title={`${styleCard.styleDescription}\n${povLabel(styleCard.povType)} · 对话${((styleCard.dialogueRatio||0)*100).toFixed(0)}% · 描写${((styleCard.descriptionRatio||0)*100).toFixed(0)}%`}>
-            <span>🎨</span>
-            <span className="text-amber-300 max-w-[80px] truncate">{styleCard.styleDescription}</span>
-            <span className="text-zinc-500">·</span>
-            <span className="text-zinc-400 whitespace-nowrap">{povLabel(styleCard.povType)}</span>
+            <Icon name="palette" size={13} />
+            <span className="max-w-[80px] truncate">{styleCard.styleDescription}</span>
+            <span className="text-[var(--nv-text-tertiary)]">·</span>
+            <span className="whitespace-nowrap text-[var(--nv-text-secondary)]">{povLabel(styleCard.povType)}</span>
           </button>
         )}
         {!styleCard?.styleDescription && (
           <Button size="sm" variant="outline" onClick={onEditStyle} disabled={isGenerating}
-            className="text-xs border-white/[0.08] h-7" title="文风卡（未设定）">🎨 文风</Button>
+            className="flex h-7 items-center gap-1 text-xs" title="文风卡（未设定）"><Icon name="palette" size={13} /> 文风</Button>
         )}
-        <span className="text-zinc-800 mx-0.5">|</span>
+        <span className="mx-0.5 text-[var(--nv-border-3)]">|</span>
         <StyleSelector projectId={projectId} currentStyleId={styleTemplateId} onSelect={onStyleSelect} />
         <button onClick={onGenerateOutline} disabled={isGenerating || outlineGenerating}
-          className="text-xs border border-white/[0.08] rounded px-2.5 h-7 text-zinc-300 hover:bg-zinc-700/80 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          {outlineGenerating ? "⏳" : "🤖"} 大纲
+          className="flex h-7 items-center gap-1 rounded border border-[var(--nv-border-2)] px-2.5 text-xs text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-border-3)] hover:bg-white/[0.04] hover:text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-50">
+          {outlineGenerating ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="bot" size={12} />} 大纲
         </button>
         <Button size="sm" variant="outline" onClick={onSummarize} disabled={isGenerating || summarizing}
-          className="text-xs border-white/[0.08] h-7">{summarizing ? "⏳" : "📦"} 摘要</Button>
+          className="flex h-7 items-center gap-1 text-xs">{summarizing ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="package" size={12} />} 摘要</Button>
         <Button size="sm" variant="outline" onClick={onImportSettings} disabled={isGenerating}
-          className="text-xs border-indigo-700 text-indigo-400 hover:text-indigo-300 h-7">📋 设定</Button>
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-primary)]"><Icon name="clipboard" size={12} /> 设定</Button>
         <Button size="sm" variant="outline" onClick={onImportChapters} disabled={isGenerating}
-          className="text-xs border-purple-700 text-purple-400 hover:text-purple-300 h-7">📥 导入</Button>
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]"><Icon name="download" size={12} /> 导入</Button>
         <div className="relative">
           <Button size="sm" variant="outline" onClick={() => setShowExport(!showExport)}
-            disabled={isGenerating} className="text-xs border-white/[0.08] h-7">📤 导出</Button>
+            disabled={isGenerating} className="flex h-7 items-center gap-1 text-xs"><Icon name="upload" size={12} /> 导出</Button>
           {showExport && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
-              <div className="absolute right-0 top-full mt-1 z-50 bg-zinc-900 border border-white/[0.08] rounded-lg shadow-xl overflow-hidden w-36">
+              <div className="absolute right-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-abyss)] shadow-xl">
                 <button onClick={() => { onExport("markdown"); setShowExport(false); }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-white/[0.04] transition-colors">📝 Markdown (.md)</button>
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-white/[0.04]"><Icon name="file" size={12} className="mr-1 inline" />Markdown (.md)</button>
                 <button onClick={() => { onExport("txt"); setShowExport(false); }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-white/[0.04] transition-colors">📄 纯文本 (.txt)</button>
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-white/[0.04]"><Icon name="file" size={12} className="mr-1 inline" />纯文本 (.txt)</button>
               </div>
             </>
           )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 
 // ─── P0 格式行类型着色 ───────────────────────────────────
 
@@ -121,8 +122,8 @@ export function DrawCards({
   };
 
   const roleLabel: Record<string, string> = {
-    protagonist: "★主角", antagonist: "◆反派", mentor: "◈导师",
-    love_interest: "♡恋爱", supporting: "●配角", background: "○背景",
+    protagonist: "主角", antagonist: "反派", mentor: "导师",
+    love_interest: "恋爱", supporting: "配角", background: "背景",
   };
 
   const moodColors: Record<string, string> = {
@@ -136,48 +137,50 @@ export function DrawCards({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="surface-floating rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* 头部 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>
-            <h2 className="text-lg font-semibold">🎴 抽卡模式——「{nodeTitle}」</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
+              <Icon name="gamepad" size={18} className="text-[var(--nv-creative)]" /> 抽卡模式——「{nodeTitle}」
+            </h2>
+            <p className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">
               {cards.length} 张路线 · 从 {totalChars} 个角色中选角 · 点击卡片选中，再点「采用」
             </p>
           </div>
           <div className="flex items-center gap-2">
             <select value={drawCount} onChange={e => setDrawCount(parseInt(e.target.value))}
-              className="bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs">
+              className="input-glass rounded px-2 py-1 text-xs">
               <option value={3}>3张</option><option value={4}>4张</option><option value={5}>5张</option>
             </select>
             <button onClick={() => doDraw(drawCount)} disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50">
-              {loading ? "⏳" : "🔄"} 重抽
+              className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50">
+              {loading ? <><Icon name="loader" size={12} className="animate-spin" /> 重抽</> : <><Icon name="refresh" size={12} /> 重抽</>}
             </button>
-            <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+            <button onClick={onClose} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] text-lg transition-colors"><Icon name="x" size={18} /></button>
           </div>
         </div>
 
         {/* 内容 */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 space-y-3">
-              <div className="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-zinc-400">AI 正在抽取 {drawCount} 条不同路线...</p>
-              <p className="text-xs text-zinc-600">每条路线用不同 temperature 生成，方向各异</p>
+              <div className="w-10 h-10 border-2 border-[var(--nv-primary)] border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-[var(--nv-text-secondary)]">AI 正在抽取 {drawCount} 条不同路线...</p>
+              <p className="text-xs text-[var(--nv-text-tertiary)]">每条路线用不同 temperature 生成，方向各异</p>
             </div>
           )}
 
           {error && (
-            <div className="p-6 rounded-xl bg-red-950/30 border border-red-900/50 text-center">
-              <p className="text-sm text-red-400">❌ {error}</p>
-              <button onClick={() => doDraw(drawCount)} className="mt-3 text-xs text-red-400 hover:text-red-300 underline">🔄 重试</button>
+            <div className="p-6 rounded-xl bg-[var(--nv-danger-soft)] border border-[var(--nv-danger)]/50 text-center">
+              <p className="flex items-center justify-center gap-1.5 text-sm text-[var(--nv-danger)]"><Icon name="x" size={15} /> {error}</p>
+              <button onClick={() => doDraw(drawCount)} className="mt-3 text-xs text-[var(--nv-danger)] hover:text-[var(--nv-danger)]/70 underline flex items-center gap-1 justify-center"><Icon name="refresh" size={12} /> 重试</button>
             </div>
           )}
 
           {!loading && !error && cards.length === 0 && (
-            <div className="text-center py-16 text-zinc-500 text-sm">
-              暂无卡片，点击「🔄 重抽」试试
+            <div className="text-center py-16 text-[var(--nv-text-tertiary)] text-sm">
+              暂无卡片，点击「重抽」试试
             </div>
           )}
 
@@ -192,29 +195,29 @@ export function DrawCards({
                     onClick={() => setSelectedIndex(i)}
                     className={`rounded-xl border-2 p-4 cursor-pointer transition-all hover:scale-[1.02] ${
                       isSelected
-                        ? "border-indigo-500 bg-indigo-950/30 shadow-lg shadow-indigo-900/20"
-                        : `border-white/[0.06] bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.08] ${moodColor}`
+                        ? "border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] shadow-lg shadow-[var(--nv-primary)]/10"
+                        : `border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] backdrop-blur-sm hover:border-[var(--nv-border-3)] ${moodColor}`
                     } ${card.error ? "opacity-50" : ""}`}>
                     {/* 卡片标签 */}
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        isSelected ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-300"
+                        isSelected ? "bg-[var(--nv-primary)] text-white" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)]"
                       }`}>
                         {card.cardLabel || `路线${i + 1}`}
                       </span>
-                      <span className="text-[10px] text-zinc-600">🌡 {(card.temperature * 100).toFixed(0)}% 随机度</span>
+                      <span className="flex items-center gap-0.5 text-[10px] text-[var(--nv-text-tertiary)]"><Icon name="hourglass" size={10} /> {(card.temperature * 100).toFixed(0)}% 随机度</span>
                     </div>
 
                     {/* 核心冲突 */}
                     {card.coreConflict && (
-                      <p className="text-xs text-amber-400 font-medium mb-2 leading-relaxed">
-                        ⚡ {card.coreConflict}
+                      <p className="flex items-start gap-1 text-xs text-[var(--nv-accent)] font-medium mb-2 leading-relaxed">
+                        <Icon name="zap" size={12} className="mt-0.5 shrink-0" /> {card.coreConflict}
                       </p>
                     )}
 
                     {/* 章纲正文——P0格式高亮 */}
                     {card.outline && (
-                      <div className="text-xs leading-relaxed mb-3 max-h-64 overflow-y-auto scrollbar-thin">
+                      <div className="text-xs leading-relaxed mb-3 max-h-64 overflow-y-auto scrollbar-thin custom-scrollbar">
                         <P0HighlightedPreview text={card.outline} />
                       </div>
                     )}
@@ -222,25 +225,25 @@ export function DrawCards({
                     {/* 情绪基调 */}
                     {card.mood && (
                       <div className="flex items-center gap-1 mb-2">
-                        <span className="text-[10px] text-zinc-500">🎭</span>
-                        <span className="text-[10px] text-zinc-400">{card.mood}</span>
+                        <span className="text-[10px] text-[var(--nv-text-tertiary)]"><Icon name="palette" size={11} /></span>
+                        <span className="text-[10px] text-[var(--nv-text-secondary)]">{card.mood}</span>
                       </div>
                     )}
 
                     {/* 伏笔 */}
                     {card.foreshadowing && (
                       <div className="flex items-start gap-1 mb-2">
-                        <span className="text-[10px] text-zinc-500 shrink-0">🔮</span>
-                        <span className="text-[10px] text-zinc-500">{card.foreshadowing}</span>
+                        <span className="text-[10px] text-[var(--nv-text-tertiary)] shrink-0"><Icon name="zap" size={11} /></span>
+                        <span className="text-[10px] text-[var(--nv-text-tertiary)]">{card.foreshadowing}</span>
                       </div>
                     )}
 
                     {/* 出场角色 */}
                     {card.characters.length > 0 && (
-                      <div className="flex gap-1 flex-wrap mt-auto pt-2 border-t border-white/[0.06]">
+                      <div className="flex gap-1 flex-wrap mt-auto pt-2 border-t border-[var(--nv-border-2)]">
                         {card.characters.map(name => { const detail = charDetails.find(c => c.name === name);
                           return (
-                            <span key={name} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400">
+                            <span key={name} className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)]">
                               {roleLabel[detail?.role || ""] ? `${roleLabel[detail?.role || ""]} ` : ""}{name}
                             </span>
                           );
@@ -248,7 +251,7 @@ export function DrawCards({
                       </div>
                     )}
 
-                    {card.error && <p className="text-[10px] text-red-400 mt-2">{card.error}</p>}
+                    {card.error && <p className="text-[10px] text-[var(--nv-danger)] mt-2">{card.error}</p>}
                   </div>
                 );
               })}
@@ -258,17 +261,17 @@ export function DrawCards({
 
         {/* 底部 */}
         {!loading && !error && cards.length > 0 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.06] shrink-0 bg-zinc-900">
-            <p className="text-xs text-zinc-500">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-[var(--nv-border-2)] shrink-0 bg-[var(--nv-surface-2)]">
+            <p className="text-xs text-[var(--nv-text-tertiary)]">
               {selectedIndex !== null
                 ? `已选中「${cards[selectedIndex]?.cardLabel}」——点击采用写入章纲`
                 : "点击一张卡片选中，然后点「采用」"}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
+              <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>
               <Button onClick={handleSelect} disabled={selectedIndex === null}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50">
-                ✅ 采用此路线
+                className="btn-primary disabled:opacity-50">
+                <Icon name="check" size={13} /> 采用此路线
               </Button>
             </div>
           </div>

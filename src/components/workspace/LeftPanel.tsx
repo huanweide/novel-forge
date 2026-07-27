@@ -37,12 +37,12 @@ export function LeftPanel({
   ] as const;
 
   return (
-    <aside className="w-64 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
-      <div className="flex border-b border-white/[0.06]">
+    <aside className="w-64 border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
+      <div className="flex border-b border-[var(--nv-border-2)]">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => onTabChange(t.key)}
             className={`flex-1 text-xs py-2 text-center transition-colors ${
-              activeTab === t.key ? "text-indigo-400 border-b border-indigo-400 bg-indigo-400/5" : "text-zinc-500 hover:text-zinc-300"
+              activeTab === t.key ? "text-[var(--nv-primary)] border-b border-[var(--nv-primary)] bg-[var(--nv-primary-soft)]" : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
             }`}>{t.label}</button>
         ))}
       </div>
@@ -50,25 +50,25 @@ export function LeftPanel({
         {activeTab === "outline" && (
           <>
             <div className="flex items-center justify-between px-1 mb-1 flex-wrap gap-1">
-              <span className="text-[10px] text-zinc-600">{volumeView ? "分卷视图" : "平铺视图"}</span>
+              <span className="text-[10px] text-[var(--nv-text-tertiary)]">{volumeView ? "分卷视图" : "平铺视图"}</span>
               <div className="flex items-center gap-1">
                 <button onClick={onToggleVolumeView}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${volumeView ? "bg-indigo-900/40 text-indigo-400" : "bg-white/[0.04] text-zinc-500"}`}>
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${volumeView ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}>
                   {volumeView ? <span className="flex items-center gap-1"><Icon name="package" size={10} /> 分卷</span> : <span className="flex items-center gap-1"><Icon name="file" size={10} /> 平铺</span>}
                 </button>
                 <button onClick={onToggleBatchMode} disabled={batchGenerating}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${batchMode ? "bg-amber-900/40 text-amber-400" : "bg-white/[0.04] text-zinc-500"}`}>
-                  ☑ 批量
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${batchMode ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}>
+                  批量
                 </button>
               </div>
             </div>
             {batchMode && (
               <div className="flex items-center gap-1 mb-1 px-1 flex-wrap">
-                <button onClick={onSelectAll} className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-white/[0.04] px-1.5 py-0.5 rounded">全选</button>
-                <button onClick={onClearSelection} className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-white/[0.04] px-1.5 py-0.5 rounded">清除</button>
-                <span className="text-[10px] text-zinc-600 ml-1">{selectedChapterIds.size} 章</span>
+                <button onClick={onSelectAll} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] bg-[var(--nv-surface-3)] px-1.5 py-0.5 rounded">全选</button>
+                <button onClick={onClearSelection} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] bg-[var(--nv-surface-3)] px-1.5 py-0.5 rounded">清除</button>
+                <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-1">{selectedChapterIds.size} 章</span>
                 {selectedChapterIds.size > 0 && !batchGenerating && (
-                  <button onClick={onBatchGenerate} className="text-[10px] bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded font-medium ml-auto">▶ 批量生成</button>
+                  <button onClick={onBatchGenerate} className="btn-ghost text-[10px] px-2 py-0.5 rounded font-medium ml-auto text-[var(--nv-accent)] border border-[var(--nv-accent)]/40 hover:bg-[var(--nv-accent-soft)]">批量生成</button>
                 )}
               </div>
             )}

@@ -2,24 +2,25 @@
 
 import { useState, useEffect } from "react";
 import type { LorebookData } from "./types";
-import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { Icon, type IconName } from "@/components/ui/icons";
+import { confirmDialog, toastError, toastSuccess, toastInfo, toastAdded } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 // ─── 板块定义：每个板块独立的词汇、图标、描述 ──────────────
 
 const WORLD_MODULES = [
-  { key: "geography",   label: "地理地图", icon: "🗺️", desc: "大陆、国家、城市、宗门、秘境" },
-  { key: "faction",     label: "势力阵营", icon: "⚔️", desc: "宗门、家族、帝国、帮派、圣地" },
-  { key: "item",        label: "物品列表", icon: "💎", desc: "法宝、丹药、材料、法器、装备" },
-  { key: "magic_system",label: "力量体系", icon: "⚡", desc: "修炼等级、能量规则、境界划分" },
-  { key: "technique",   label: "功法体系", icon: "📜", desc: "攻击/防御/辅助/身法/阵法" },
-  { key: "creature",    label: "生物种族", icon: "🐉", desc: "妖兽、神兽、异族、灵物" },
-  { key: "culture",     label: "文化风俗", icon: "🎭", desc: "传统、习俗、节日、礼仪" },
-  { key: "history",     label: "历史背景", icon: "📚", desc: "重大事件、纪元更迭、传说" },
-  { key: "law",         label: "规则法则", icon: "⚖️", desc: "天道规则、世界法则、禁忌" },
-  { key: "currency",    label: "货币体系", icon: "💰", desc: "灵石、金币、兑换比例" },
-  { key: "custom",      label: "特殊设定", icon: "🔮", desc: "金手指、系统、血脉、漏洞" },
-  { key: "character_relationship", label: "角色关系", icon: "🕸️", desc: "角色间的互动关系——从正文自动提取，生成时必定读取" },
+  { key: "geography",   label: "地理地图", icon: "globe" as IconName, desc: "大陆、国家、城市、宗门、秘境" },
+  { key: "faction",     label: "势力阵营", icon: "sword" as IconName, desc: "宗门、家族、帝国、帮派、圣地" },
+  { key: "item",        label: "物品列表", icon: "gem" as IconName, desc: "法宝、丹药、材料、法器、装备" },
+  { key: "magic_system",label: "力量体系", icon: "sparkles" as IconName, desc: "修炼等级、能量规则、境界划分" },
+  { key: "technique",   label: "功法体系", icon: "scroll" as IconName, desc: "攻击/防御/辅助/身法/阵法" },
+  { key: "creature",    label: "生物种族", icon: "skull" as IconName, desc: "妖兽、神兽、异族、灵物" },
+  { key: "culture",     label: "文化风俗", icon: "palette" as IconName, desc: "传统、习俗、节日、礼仪" },
+  { key: "history",     label: "历史背景", icon: "book" as IconName, desc: "重大事件、纪元更迭、传说" },
+  { key: "law",         label: "规则法则", icon: "shield" as IconName, desc: "天道规则、世界法则、禁忌" },
+  { key: "currency",    label: "货币体系", icon: "gem" as IconName, desc: "灵石、金币、兑换比例" },
+  { key: "custom",      label: "特殊设定", icon: "sparkles" as IconName, desc: "金手指、系统、血脉、漏洞" },
+  { key: "character_relationship", label: "角色关系", icon: "users" as IconName, desc: "角色间的互动关系——从正文自动提取，生成时必定读取" },
 ] as const;
 
 type ModuleKey = (typeof WORLD_MODULES)[number]["key"];
@@ -180,7 +181,7 @@ export function WorldPanel({
           insertionOrder: 50,
         }),
       });
-      if (res.ok) { setShowCreate(false); setCreateForm({}); onRefresh(); }
+      if (res.ok) { setShowCreate(false); setCreateForm({}); toastAdded(title, "世界书"); onRefresh(); }
       else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("条目创建失败：" + (d.error || `HTTP ${res.status}`)); }
     } catch (err) { toastError("条目创建失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
@@ -204,7 +205,7 @@ export function WorldPanel({
   return (
     <div className="flex flex-col h-full">
       {/* 板块选择器 */}
-      <div className="flex-shrink-0 p-2 space-y-0.5 max-h-[40%] overflow-y-auto border-b border-white/[0.06]">
+      <div className="max-h-[40%] flex-shrink-0 space-y-0.5 overflow-y-auto border-b border-[var(--nv-border-2)] p-2">
         {WORLD_MODULES.map((mod) => {
           const count = getCount(mod.key);
           const active = activeModule === mod.key;
@@ -212,17 +213,17 @@ export function WorldPanel({
             <button
               key={mod.key}
               onClick={() => { setActiveModule(mod.key); setShowCreate(false); }}
-              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+              className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
                 active
-                  ? "bg-indigo-900/40 text-indigo-300 border border-indigo-700/50"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                  ? "border border-[var(--nv-primary)]/40 bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
+                  : "border border-transparent text-[var(--nv-text-tertiary)] hover:bg-white/[0.04] hover:text-[var(--nv-text-primary)]"
               }`}
             >
               <span className="flex items-center gap-2">
-                <span className="text-sm">{mod.icon}</span>
+                <Icon name={mod.icon} size={14} />
                 <span>{mod.label}</span>
               </span>
-              <span className={`text-[10px] ${count > 0 ? "text-zinc-500" : "text-zinc-700"}`}>
+              <span className={`text-[10px] ${count > 0 ? "text-[var(--nv-text-tertiary)]" : "text-[var(--nv-text-muted)]"}`}>
                 {count}
               </span>
             </button>
@@ -231,16 +232,19 @@ export function WorldPanel({
       </div>
 
       {/* 当前板块内容 */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06]/50 shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--nv-border-2)] px-3 py-2">
           <div>
-            <span className="text-sm font-medium text-zinc-200">{moduleInfo?.icon} {moduleInfo?.label}</span>
-            <p className="text-[10px] text-zinc-600">{moduleInfo?.desc}</p>
+            <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--nv-text-primary)]">
+              {moduleInfo?.icon && <Icon name={moduleInfo.icon} size={15} className="text-[var(--nv-primary)]" />}
+              {moduleInfo?.label}
+            </span>
+            <p className="text-[10px] text-[var(--nv-text-tertiary)]">{moduleInfo?.desc}</p>
           </div>
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="text-[10px] px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
+            className="btn-primary shrink-0 rounded px-2 py-1 text-[10px] font-medium"
           >
             + 新建
           </button>
@@ -248,13 +252,13 @@ export function WorldPanel({
 
         {/* 新建表单 */}
         {showCreate && (
-          <div className="p-3 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-sm shrink-0">
+          <div className="shrink-0 border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 backdrop-blur-sm">
             {activeModule !== "character_relationship" && (
               <input
                 value={createForm["title"] || ""}
                 onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder={`${moduleInfo?.label}名称`}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs mb-2 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
+                className="input-glass mb-2 w-full rounded px-2 py-1 text-xs placeholder:text-[var(--nv-text-muted)]"
               />
             )}
             {currentFields.map((f) =>
@@ -265,7 +269,7 @@ export function WorldPanel({
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
                   rows={2}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs mb-1.5 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600 resize-none"
+                  className="input-glass mb-1.5 w-full resize-none rounded px-2 py-1 text-xs placeholder:text-[var(--nv-text-muted)]"
                 />
               ) : (
                 <input
@@ -273,17 +277,18 @@ export function WorldPanel({
                   value={createForm[f.key] || ""}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs mb-1.5 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-600"
+                  className="input-glass mb-1.5 w-full rounded px-2 py-1 text-xs placeholder:text-[var(--nv-text-muted)]"
                 />
               )
             )}
-            <div className="flex gap-2 mt-1">
+            <div className="mt-1 flex gap-2">
               <button onClick={handleCreate} disabled={saving}
-                className="text-[10px] px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
-                {saving ? "创建中..." : "💾 保存"}
+                className="btn-primary rounded px-2 py-1 text-[10px] font-medium disabled:opacity-50">
+                {saving ? <span className="flex items-center gap-1"><Icon name="loader" size={11} className="animate-spin" /> 创建中...</span> : <span className="flex items-center gap-1"><Icon name="save" size={11} /> 保存</span>}
               </button>
               <button onClick={() => setShowCreate(false)}
-                className="text-[10px] px-2 py-1 rounded border border-white/[0.08] text-zinc-400 hover:text-zinc-200">
+                className="btn-ghost rounded border border-[var(--nv-border-2)] px-2 py-1 text-[10px]"
+              >
                 取消
               </button>
             </div>
@@ -291,37 +296,38 @@ export function WorldPanel({
         )}
 
         {/* 条目列表 */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 space-y-1 overflow-y-auto p-2">
           {moduleEntries.length === 0 && (
-            <p className="text-xs text-zinc-600 text-center py-8">
+            <p className="py-8 text-center text-xs text-[var(--nv-text-tertiary)]">
               暂无{moduleInfo?.label}设定<br />
               <span className="text-[10px]">点击"+ 新建"或写完章节后自动提取</span>
             </p>
           )}
           {moduleEntries.map((entry) => (
             <div key={entry.id}
-              className="p-2 rounded-lg border border-white/[0.06]/50 bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.08]/50 transition-colors group"
+              className="group rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]"
             >
               <div className="flex items-start justify-between">
-                <span className="text-xs text-zinc-300 font-medium leading-tight">{entry.title}</span>
+                <span className="text-xs font-medium leading-tight text-[var(--nv-text-primary)]">{entry.title}</span>
                 <button
                   onClick={() => deleteEntry(entry.id)}
                   disabled={deletingId === entry.id}
-                  className="text-[10px] text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-1 disabled:opacity-40"
+                  className="ml-1 shrink-0 text-[var(--nv-text-muted)] opacity-0 transition-all hover:text-[var(--nv-danger)] group-hover:opacity-100 disabled:opacity-40"
+                  aria-label="删除条目"
                 >
-                  ✕
+                  <Icon name="x" size={12} />
                 </button>
               </div>
               {entry.content && (
-                <p className="text-[10px] text-zinc-500 mt-0.5 line-clamp-3 leading-relaxed">
+                <p className="mt-0.5 line-clamp-3 text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">
                   {entry.content}
                 </p>
               )}
               {/* 触发关键词 */}
               {entry.keys && entry.keys.length > 0 && (
-                <div className="flex gap-1 mt-1 flex-wrap">
+                <div className="mt-1 flex flex-wrap gap-1">
                   {entry.keys.slice(0, 4).map((k, i) => (
-                    <span key={i} className="text-[8px] px-1 py-0.5 rounded bg-white/[0.04] text-zinc-600">{k}</span>
+                    <span key={i} className="rounded bg-[var(--nv-surface-2)] px-1 py-0.5 text-[8px] text-[var(--nv-text-tertiary)]">{k}</span>
                   ))}
                 </div>
               )}

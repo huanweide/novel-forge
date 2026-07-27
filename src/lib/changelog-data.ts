@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.31.0";
+export const LATEST_VERSION = "v0.32.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📚 内置预设大幅扩充：把参考资料里的所有预设概念实体化为 12 个系统内置预设（表格模板 / 剧情推进 / 文风 / 世界观 / 角色卡）",
-  "🔗 创意工坊预设贴合进入写作上下文：pg 直连证明 apply 后 StyleCard / CharacterCard / LoreTable 真实落库，写章节时经 globalPrompt 与召回块注入正文",
-  "🖱️ 每个内置按钮实测可交互：Tab 过滤 / 搜索 / 应用到项目 / 复刻 / 上传预设 / 目标项目下拉 全部真实点击验证通过",
-  "✅ 生产模式（next build + start）全新渲染验证：创意工坊 12 卡片完整渲染，无死按钮",
+  "🎨 全模块上线「虚空玻璃」暗色设计体系：surface/border/主色令牌统一，按钮 hover / 点击 / 禁用态差异化，告别平行色板",
+  "🧹 全站 UI 装饰 emoji 清零，统一收编为 Icon 组件（业务数据标签 📥📝 保留语义）",
+  "🔔 所有「创建 / 添加」操作接入统一响应弹窗：新建角色 / 世界书 / 规则 / 故事线 / 项目 均弹「XX「名称」已创建 / 已添加」（绿色辉光 + 勾选动画）",
+  "✅ 修复 3 处阻塞构建的类型错误，tsc 类型检查 + 生产 next build 全通过（69 路由全量生成）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.32.0",
+    date: "2026-07-27",
+    title: "🎨 全模块视觉美化 + 创建/添加统一响应弹窗（虚空玻璃设计体系）",
+    sections: [
+      {
+        label: "视觉美化体系落地（虚空玻璃 Void Glass）",
+        items: [
+          "全部小说相关子界面统一为暗色「虚空玻璃」设计：surface/border/primary/creative/accent/success/danger 令牌全量替换旧的 indigo/zinc/emerald/amber 平行色，配色风格一致",
+          "按钮变体（btn-primary/btn-success/btn-danger/btn-creative/btn-ghost）+ .input-glass/.surface-floating 统一质感，每个按钮具备 hover / 点击 / 禁用态的视觉差异",
+          "全站 UI 装饰 emoji 清零，改为统一 Icon 组件（Lucide 映射）：角色前缀 ★◆◈、状态 ✓✕⚠️⏳ 等收编为 check/x/alert/loader 等 Icon；业务数据标签 📥📝 保留其过滤语义",
+        ],
+      },
+      {
+        label: "创建/添加操作统一响应弹窗",
+        items: [
+          "新增命名式 toast：toastAdded / toastCreated（绿色辉光 + 勾选动画 + 固定标题「已添加 / 已创建」），字体与动效美化",
+          "覆盖全部「创建 / 添加小说」入口：新建角色、新建世界书、新建规则、AI 生成故事线、探讨模式创建项目（含大纲落库建项目）——均弹出「XX「名称」已创建 / 已添加」",
+        ],
+      },
+      {
+        label: "构建与类型修复",
+        items: [
+          "修复 3 处阻塞构建的类型错误：workshop 页补 toastCreated 导入、游戏页 QUICK_ACTIONS 的 icon 收窄为 IconName、PostGenPanel 补 cloud 图标到注册表",
+          "tsc --noEmit 与生产 next build 均通过（69 路由全量生成），可直接部署",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.31.0",
     date: "2026-07-27",

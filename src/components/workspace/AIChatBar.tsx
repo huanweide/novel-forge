@@ -211,7 +211,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
       if (controller.signal.aborted) return;
 
       const reply = data.error
-        ? `❌ ${data.error}`
+        ? `${data.error}`
         : data.reply || "（无回复）";
 
       // 构建思考步骤列表
@@ -288,7 +288,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 if (staleCount > 0) summary += `，发现 ${staleCount} 条角色卡过时关系`;
                 setMessages((prev) => [...prev, {
                   role: "agent",
-                  text: summary + `\n\n${relData.summary || ""}\n\n💡 切换到「查询实体 → 关系图」查看可视化`,
+                  text: summary + `\n\n${relData.summary || ""}\n\n切换到「查询实体 → 关系图」查看可视化`,
                   trace: [{ tool: "analyze_relationships", args: { scope: action.payload?.scope || "all" }, summary: `关系分析 → ${relCount} 对互动` }],
                   ts: Date.now(),
                 }]);
@@ -322,7 +322,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 if (created === 0 && updated === 0) msg += "：未发现新关系";
                 setMessages((prev) => [...prev, {
                   role: "agent",
-                  text: msg + `\n\n${syncData.summary || ""}\n\n💡 这些关系条目将在后续生成时自动注入到上下文中`,
+                  text: msg + `\n\n${syncData.summary || ""}\n\n这些关系条目将在后续生成时自动注入到上下文中`,
                   trace: [{ tool: "relation_sync", args: { nodeId: action.payload.chapterContent?.slice(0, 20) || "" }, summary: `同步关系 → 新建${created} 更新${updated}` }],
                   ts: Date.now(),
                 }]);
@@ -358,16 +358,16 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
   return (
     <div className={`flex flex-col min-h-0 flex-1 ${className}`}>
       {/* ═══ Agent 标识头 ═══ */}
-      <div className="shrink-0 px-3 py-2 border-b border-white/[0.06] bg-gradient-to-r from-indigo-950/50 via-zinc-900 to-zinc-900">
+      <div className="shrink-0 px-3 py-2 border-b border-[var(--nv-border-1)] bg-[var(--nv-surface-2)]">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <div className={`w-2 h-2 rounded-full ${loading ? "bg-amber-400" : "bg-emerald-400"}`} />
-            <div className={`absolute inset-0 w-2 h-2 rounded-full opacity-40 ${loading ? "bg-amber-400 animate-ping" : "bg-emerald-400 animate-ping"}`} />
+            <div className={`w-2 h-2 rounded-full ${loading ? "bg-[var(--nv-accent)]" : "bg-[var(--nv-success)]"}`} />
+            <div className={`absolute inset-0 w-2 h-2 rounded-full opacity-40 ${loading ? "bg-[var(--nv-accent)] animate-ping" : "bg-[var(--nv-success)] animate-ping"}`} />
           </div>
-          <span className="text-xs font-medium text-zinc-200">AI 写作助手</span>
-          <span className="text-[10px] text-zinc-600 ml-auto">Agent v2</span>
+          <span className="text-xs font-medium text-[var(--nv-text-primary)]">AI 写作助手</span>
+          <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-auto">Agent v2</span>
         </div>
-        <div className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+        <div className="text-[10px] text-[var(--nv-text-secondary)] mt-1 leading-relaxed">
           角色卡·世界书·大纲·伏笔·故事线·规则·风格
         </div>
       </div>
@@ -377,9 +377,9 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
         {/* 空状态 */}
         {!hasHistory && !loading && (
           <div className="flex flex-col items-center justify-center h-full px-4 text-center">
-            <div className="mb-3"><Icon name="bot" size={32} className="text-zinc-600" /></div>
-            <div className="text-xs text-zinc-400 font-medium mb-1">AI 写作助手就绪</div>
-            <div className="text-[10px] text-zinc-600 leading-relaxed max-w-[220px]">
+            <div className="mb-3"><Icon name="bot" size={32} className="text-[var(--nv-text-tertiary)]" /></div>
+            <div className="text-xs text-[var(--nv-text-secondary)] font-medium mb-1">AI 写作助手就绪</div>
+            <div className="text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed max-w-[220px]">
               我能直接查角色卡、世界书、大纲来回答你——不猜正文，只看数据
             </div>
           </div>
@@ -387,16 +387,16 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
         {/* 消息列表 */}
         {messages.map((msg, i) => (
-          <div key={i} className={`px-3 py-2.5 border-b border-white/[0.06]/30 ${msg.role === "user" ? "bg-white/[0.02] backdrop-blur-sm" : "bg-zinc-900/20"}`}>
+          <div key={i} className={`px-3 py-2.5 border-b border-[var(--nv-border-1)] ${msg.role === "user" ? "bg-[var(--nv-surface-1)] backdrop-blur-sm" : "bg-[var(--nv-surface-1)]"}`}>
             <div className="flex items-start gap-2">
               <span className="shrink-0 mt-0.5">{msg.role === "user" ? <Icon name="user" size={13} /> : <Icon name="bot" size={13} />}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-medium text-zinc-500">
+                  <span className="text-[10px] font-medium text-[var(--nv-text-secondary)]">
                     {msg.role === "user" ? "你" : "AI 助手"}
                   </span>
                   {msg.trace && msg.trace.length > 0 && (
-                    <span className="text-[10px] text-zinc-600">
+                    <span className="text-[10px] text-[var(--nv-text-tertiary)]">
                       (调了 {msg.trace.length} 次工具)
                     </span>
                   )}
@@ -404,13 +404,13 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 {/* 思考步骤折叠 */}
                 {msg.trace && msg.trace.length > 0 && (
                   <details className="mb-1">
-                    <summary className="text-[10px] text-zinc-500 cursor-pointer hover:text-zinc-400">
+                    <summary className="text-[10px] text-[var(--nv-text-secondary)] cursor-pointer hover:text-[var(--nv-text-secondary)]">
                       查看思考过程
                     </summary>
-                    <div className="mt-1 space-y-0.5 pl-2 border-l border-white/[0.08]/50">
+                    <div className="mt-1 space-y-0.5 pl-2 border-l border-[var(--nv-border-2)]">
                       {msg.trace.map((t, j) => (
-                        <div key={j} className="text-[10px] text-zinc-500 flex items-center gap-1">
-                          <span className="text-zinc-600">└</span>
+                        <div key={j} className="text-[10px] text-[var(--nv-text-secondary)] flex items-center gap-1">
+                          <span className="text-[var(--nv-text-tertiary)]">└</span>
                           {t.summary}
                         </div>
                       ))}
@@ -420,24 +420,24 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 {/* 写后分析结果 */}
                 {msg.analysis && msg.analysis.differences && msg.analysis.differences.length > 0 && (
                   <details className="mb-1" open>
-                    <summary className="text-[10px] text-amber-400 cursor-pointer hover:text-amber-300 font-medium">
+                    <summary className="text-[10px] text-[var(--nv-accent)] cursor-pointer hover:text-[var(--nv-accent)] font-medium">
                       <span className="flex items-center gap-1"><Icon name="clipboard" size={13} /> 角色卡更新建议（{msg.analysis.differences.length} 项）</span>
                     </summary>
-                    <div className="mt-1.5 space-y-1.5 pl-2 border-l border-amber-700/30">
+                    <div className="mt-1.5 space-y-1.5 pl-2 border-l border-[var(--nv-accent-soft)]">
                       {msg.analysis.differences.map((d, j) => (
-                        <div key={j} className="text-[10px] bg-zinc-800/40 rounded p-1.5">
+                        <div key={j} className="text-[10px] bg-[var(--nv-surface-2)] rounded p-1.5">
                           <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-zinc-200 font-medium">{d.characterName}</span>
-                            <span className="text-zinc-500">·</span>
-                            <span className="text-amber-400">{fieldLabel(d.field)}</span>
-                            <span className="ml-auto text-zinc-600">{Math.round(d.confidence * 100)}%</span>
+                            <span className="text-[var(--nv-text-primary)] font-medium">{d.characterName}</span>
+                            <span className="text-[var(--nv-text-secondary)]">·</span>
+                            <span className="text-[var(--nv-accent)]">{fieldLabel(d.field)}</span>
+                            <span className="ml-auto text-[var(--nv-text-tertiary)]">{Math.round(d.confidence * 100)}%</span>
                           </div>
                           {d.evidence && (
-                            <div className="text-zinc-500 mb-0.5 leading-relaxed">
+                            <div className="text-[var(--nv-text-secondary)] mb-0.5 leading-relaxed">
                               <span className="flex items-center gap-1"><Icon name="bookmarked" size={12} /> 「{d.evidence.slice(0, 80)}{d.evidence.length > 80 ? "…" : ""}」</span>
                             </div>
                           )}
-                          <div className="text-zinc-400 mb-1 flex items-start gap-1">
+                          <div className="text-[var(--nv-text-secondary)] mb-1 flex items-start gap-1">
                             <Icon name="lightbulb" size={12} className="shrink-0 mt-0.5" /> 建议：{d.suggested}
                           </div>
                           <button
@@ -445,11 +445,11 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                             disabled={d.confidence < 0}
                             className={`text-[9px] px-2 py-0.5 rounded transition-colors ${
                               d.confidence < 0
-                                ? "bg-zinc-800/50 text-zinc-600 cursor-default"
-                                : "bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50"
+                                ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] cursor-default"
+                                : "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] hover:bg-[var(--nv-primary-soft)]"
                             }`}
                           >
-                            {d.confidence < 0 ? "已采纳 ✓" : "采纳"}
+                            {d.confidence < 0 ? "已采纳" : "采纳"}
                           </button>
                         </div>
                       ))}
@@ -457,9 +457,9 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                   </details>
                 )}
                 {msg.analysis && msg.analysis.differences && msg.analysis.differences.length === 0 && (
-                  <div className="text-[10px] text-zinc-500 mb-1">{msg.analysis.summary}</div>
+                  <div className="text-[10px] text-[var(--nv-text-secondary)] mb-1">{msg.analysis.summary}</div>
                 )}
-                <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed">
+                <pre className="text-xs text-[var(--nv-text-primary)] whitespace-pre-wrap font-sans leading-relaxed">
                   {msg.text}
                 </pre>
               </div>
@@ -469,16 +469,16 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
         {/* 思考动画——实时展示工具调用 */}
         {loading && pendingSteps.length > 0 && (
-          <div className="px-3 py-3 border-b border-white/[0.06]/30 bg-indigo-950/10">
+          <div className="px-3 py-3 border-b border-[var(--nv-border-1)] bg-[var(--nv-primary-soft)]">
             <div className="flex items-center gap-3 mb-2">
               <div className="relative w-5 h-5 shrink-0">
-                <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
-                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-400 animate-spin" />
+                <div className="absolute inset-0 rounded-full border-2 border-[var(--nv-primary-soft)]" />
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--nv-primary)] animate-spin" />
               </div>
-              <span className="text-xs text-indigo-300 font-medium">正在思考</span>
+              <span className="text-xs text-[var(--nv-primary)] font-medium">正在思考</span>
               <button
                 onClick={handleCancel}
-                className="ml-auto text-[10px] px-2 py-0.5 rounded border border-red-800/50 text-red-400 hover:bg-red-950/30 transition-colors"
+                className="ml-auto text-[10px] px-2 py-0.5 rounded border border-[var(--nv-danger-soft)] text-[var(--nv-danger)] hover:bg-[var(--nv-danger-soft)] transition-colors"
               >
                 取消
               </button>
@@ -489,11 +489,11 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 <div
                   key={i}
                   className={`text-[10px] flex items-center gap-1.5 transition-opacity duration-300 ${
-                    i === stepIdx && pendingSteps.length > 1 ? "text-indigo-300 font-medium" : "text-zinc-500"
+                    i === stepIdx && pendingSteps.length > 1 ? "text-[var(--nv-primary)] font-medium" : "text-[var(--nv-text-secondary)]"
                   }`}
                 >
-                  <span className={step.done ? "text-emerald-500" : (i === stepIdx ? "text-indigo-400 animate-pulse" : "text-zinc-700")}>
-                    {step.done ? "✓" : "⟳"}
+                  <span className={step.done ? "text-[var(--nv-success)]" : (i === stepIdx ? "text-[var(--nv-primary)] animate-pulse" : "text-[var(--nv-border-3)]")}>
+                    {step.done ? <Icon name="check" size={11} /> : <Icon name="refresh" size={11} className="animate-spin" />}
                   </span>
                   {step.text}
                 </div>
@@ -504,16 +504,16 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
         {/* 加载中但还没步骤 */}
         {loading && pendingSteps.length === 0 && (
-          <div className="px-3 py-3 border-b border-white/[0.06]/30 bg-indigo-950/10">
+          <div className="px-3 py-3 border-b border-[var(--nv-border-1)] bg-[var(--nv-primary-soft)]">
             <div className="flex items-center gap-3">
               <div className="relative w-5 h-5 shrink-0">
-                <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
-                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-400 animate-spin" />
+                <div className="absolute inset-0 rounded-full border-2 border-[var(--nv-primary-soft)]" />
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--nv-primary)] animate-spin" />
               </div>
-              <span className="text-xs text-indigo-300">正在思考…</span>
+              <span className="text-xs text-[var(--nv-primary)]">正在思考…</span>
               <button
                 onClick={handleCancel}
-                className="ml-auto text-[10px] px-2 py-0.5 rounded border border-red-800/50 text-red-400 hover:bg-red-950/30 transition-colors"
+                className="ml-auto text-[10px] px-2 py-0.5 rounded border border-[var(--nv-danger-soft)] text-[var(--nv-danger)] hover:bg-[var(--nv-danger-soft)] transition-colors"
               >
                 取消
               </button>
@@ -524,21 +524,21 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
       {/* ═══ 错误提示 ═══ */}
       {error && (
-        <div className="px-3 py-1.5 text-[10px] text-red-400 bg-red-950/20 border-t border-red-900/30 shrink-0">
-          ⚠️ {error}
-          <button onClick={() => setError("")} className="ml-2 text-zinc-500 hover:text-zinc-300">✕</button>
+        <div className="px-3 py-1.5 text-[10px] text-[var(--nv-danger)] bg-[var(--nv-danger-soft)] border-t border-[var(--nv-danger-soft)] shrink-0">
+          <Icon name="alert" size={11} className="inline mr-1 align-middle" /> {error}
+          <button onClick={() => setError("")} className="ml-2 text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"><Icon name="x" size={12} className="align-middle" /></button>
         </div>
       )}
 
       {/* ═══ 建议区 ═══ */}
       {!hasHistory && !loading && (
-        <div className="flex gap-1.5 px-3 py-2 overflow-x-auto text-[10px] text-zinc-500 border-t border-white/[0.06]/30 shrink-0">
-          <span className="text-zinc-600 shrink-0">试试：</span>
+        <div className="flex gap-1.5 px-3 py-2 overflow-x-auto text-[10px] text-[var(--nv-text-secondary)] border-t border-[var(--nv-border-1)] shrink-0">
+          <span className="text-[var(--nv-text-tertiary)] shrink-0">试试：</span>
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
               onClick={() => handleSuggestion(s)}
-              className="shrink-0 px-2 py-0.5 rounded-full border border-white/[0.06] hover:border-indigo-700 hover:text-indigo-300 transition-colors"
+              className="shrink-0 px-2 py-0.5 rounded-full border border-[var(--nv-border-1)] hover:border-[var(--nv-primary)] hover:text-[var(--nv-primary)] transition-colors"
             >
               {s}
             </button>
@@ -547,11 +547,11 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
       )}
 
       {/* ═══ 输入区 ═══ */}
-      <div className="shrink-0 border-t border-white/[0.06] bg-zinc-950/80">
+      <div className="shrink-0 border-t border-[var(--nv-border-1)] bg-[var(--nv-abyss)]">
         <div className="flex items-center gap-2 px-3 py-2.5">
           {selectedText && (
-            <span className="text-[10px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded shrink-0 max-w-[140px] truncate" title={selectedText}>
-              ✂️ {selectedText.slice(0, 25)}…
+            <span className="text-[10px] text-[var(--nv-primary)] bg-[var(--nv-primary-soft)] px-2 py-0.5 rounded shrink-0 max-w-[140px] truncate" title={selectedText}>
+              {selectedText.slice(0, 25)}…
             </span>
           )}
           <input
@@ -561,13 +561,13 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="说说你想做什么…"
-            className="flex-1 bg-transparent text-xs text-zinc-200 placeholder:text-zinc-600 outline-none"
+            className="flex-1 bg-transparent text-xs text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] outline-none"
             disabled={loading}
           />
           {loading ? (
             <button
               onClick={handleCancel}
-              className="shrink-0 px-2 py-1 rounded text-[10px] font-medium border border-red-800/50 text-red-400 hover:bg-red-950/30 transition-colors"
+              className="shrink-0 px-2 py-1 rounded text-[10px] font-medium border border-[var(--nv-danger-soft)] text-[var(--nv-danger)] hover:bg-[var(--nv-danger-soft)] transition-colors"
             >
               停止
             </button>
@@ -575,7 +575,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
             <button
               onClick={handleSend}
               disabled={!message.trim()}
-              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 disabled:bg-white/[0.04] disabled:text-zinc-600 text-white transition-all"
+              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/80 disabled:bg-[var(--nv-surface-1)] disabled:text-[var(--nv-text-tertiary)] text-white transition-all"
               title="发送"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

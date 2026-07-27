@@ -10,6 +10,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Icon } from "@/components/ui/icons";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -262,8 +263,8 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
   if (characters.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <div className="text-2xl mb-2">🕸️</div>
-        <div className="text-[10px] text-zinc-500">还没有角色</div>
+        <div className="text-2xl mb-2 text-[var(--nv-creative)]"><Icon name="share" size={26} /></div>
+        <div className="text-[10px] text-[var(--nv-text-tertiary)]">还没有角色</div>
       </div>
     );
   }
@@ -271,8 +272,8 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* 控制栏 */}
-      <div className="shrink-0 px-3 py-1.5 flex items-center gap-2 text-[9px] border-b border-white/[0.06]/50 flex-wrap">
-        <span className="text-zinc-500">图例：</span>
+      <div className="shrink-0 px-3 py-1.5 flex items-center gap-2 text-[9px] border-b border-[var(--nv-border-2)]/50 flex-wrap">
+        <span className="text-[var(--nv-text-tertiary)]">图例：</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />亲缘</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />敌对</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400" />爱情</span>
@@ -281,22 +282,22 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
         {analysis && analysis.staleRelations.length > 0 && (
           <button
             onClick={() => setShowStale(!showStale)}
-            className={`ml-auto px-1.5 py-0.5 rounded text-[8px] ${showStale ? "bg-amber-900/30 text-amber-400" : "text-zinc-500 hover:text-zinc-400"}`}
+            className={`ml-auto flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] ${showStale ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)]"}`}
           >
-            ⚠️ {analysis.staleRelations.length} 条过时
+            <Icon name="alert" size={9} /> {analysis.staleRelations.length} 条过时
           </button>
         )}
 
         <button
           onClick={runAnalysis}
           disabled={loading}
-          className="px-1.5 py-0.5 rounded text-[8px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 disabled:opacity-50"
+          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] disabled:opacity-50"
         >
-          {loading ? "分析中…" : "🔄 刷新"}
+          {loading ? "分析中…" : <><Icon name="refresh" size={9} /> 刷新</>}
         </button>
 
         {analysis && (
-          <span className="text-zinc-600 text-[8px] w-full">
+          <span className="text-[var(--nv-text-tertiary)] text-[8px] w-full">
             {analysis.summary}
           </span>
         )}
@@ -304,14 +305,14 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
 
       {/* 过时关系警告 */}
       {showStale && analysis && analysis.staleRelations.length > 0 && (
-        <div className="shrink-0 px-3 py-1.5 bg-amber-950/10 border-b border-amber-900/20">
-          <div className="text-[9px] text-amber-400 font-medium mb-1">角色卡记录但正文未体现：</div>
+        <div className="shrink-0 px-3 py-1.5 bg-[var(--nv-accent-soft)] border-b border-[var(--nv-accent)]/20">
+          <div className="text-[9px] text-[var(--nv-accent)] font-medium mb-1">角色卡记录但正文未体现：</div>
           {analysis.staleRelations.map((sr, i) => (
-            <div key={i} className="text-[8px] text-zinc-500 flex items-center gap-1">
-              <span className="text-zinc-400">{sr.from}</span>
-              <span className="text-amber-500">{sr.relation}</span>
-              <span className="text-zinc-400">{sr.to}</span>
-              <span className="text-zinc-600">— {sr.note}</span>
+            <div key={i} className="text-[8px] text-[var(--nv-text-tertiary)] flex items-center gap-1">
+              <span className="text-[var(--nv-text-secondary)]">{sr.from}</span>
+              <span className="text-[var(--nv-accent)]">{sr.relation}</span>
+              <span className="text-[var(--nv-text-secondary)]">{sr.to}</span>
+              <span className="text-[var(--nv-text-tertiary)]">— {sr.note}</span>
             </div>
           ))}
         </div>
@@ -320,20 +321,20 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
       {/* SVG 图 */}
       <div className="flex-1 overflow-hidden relative">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--nv-void)]/60 z-10">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-indigo-500/20 border-t-indigo-400 animate-spin" />
-              <span className="text-[10px] text-zinc-400">Agent 正在分析正文关系…</span>
+              <div className="w-4 h-4 rounded-full border-2 border-[var(--nv-primary)]/20 border-t-[var(--nv-primary)] animate-spin" />
+              <span className="text-[10px] text-[var(--nv-text-secondary)]">Agent 正在分析正文关系…</span>
             </div>
           </div>
         )}
 
         {error && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-[10px] text-red-400 text-center">
-              <div className="mb-1">⚠️</div>
+            <div className="text-[10px] text-[var(--nv-danger)] text-center">
+              <div className="mb-1"><Icon name="alert" size={14} /></div>
               {error}
-              <button onClick={runAnalysis} className="block mx-auto mt-1 text-indigo-400 hover:text-indigo-300">重试</button>
+              <button onClick={runAnalysis} className="block mx-auto mt-1 text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70">重试</button>
             </div>
           </div>
         )}
@@ -401,8 +402,8 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
 
         {!loading && !error && nodes.length === 0 && analysis && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-[10px] text-zinc-500 text-center">
-              <div className="mb-1">📭</div>
+            <div className="text-[10px] text-[var(--nv-text-tertiary)] text-center">
+              <div className="mb-1"><Icon name="inbox" size={14} /></div>
               {analysis.summary || "正文中暂未发现角色互动"}
             </div>
           </div>
@@ -411,11 +412,11 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
 
       {/* 焦点角色详情 */}
       {focusNode && (
-        <div className="shrink-0 border-t border-white/[0.06] px-3 py-2 bg-white/[0.02] backdrop-blur-sm max-h-[140px] overflow-y-auto">
+        <div className="shrink-0 border-t border-[var(--nv-border-2)] px-3 py-2 bg-[var(--nv-surface-1)] backdrop-blur-sm max-h-[140px] overflow-y-auto custom-scrollbar">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2 h-2 rounded-full" style={{ background: roleColor(focusNode.role) }} />
-            <span className="text-xs font-medium text-zinc-200">{focusNode.name}</span>
-            <span className="text-[9px] text-zinc-500">{focusNode.role}</span>
+            <span className="text-xs font-medium text-[var(--nv-text-primary)]">{focusNode.name}</span>
+            <span className="text-[9px] text-[var(--nv-text-tertiary)]">{focusNode.role}</span>
           </div>
           {focusNode.edges.length > 0 ? (
             <div className="space-y-1">
@@ -423,23 +424,23 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
                 <div key={i} className="text-[9px]">
                   <div className="flex items-center gap-1.5">
                     <span className="shrink-0" style={{ color: relationStroke(edge.relation) }}>{edge.relation}</span>
-                    <span className="text-zinc-500">→</span>
-                    <span className="text-zinc-300">{edge.targetName}</span>
-                    {edge.dynamic && <span className="text-zinc-600 truncate">· {edge.dynamic}</span>}
+                    <span className="text-[var(--nv-text-tertiary)]">→</span>
+                    <span className="text-[var(--nv-text-secondary)]">{edge.targetName}</span>
+                    {edge.dynamic && <span className="text-[var(--nv-text-tertiary)] truncate">· {edge.dynamic}</span>}
                   </div>
                   {edge.evidence && (
-                    <div className="text-[8px] text-zinc-600 mt-0.5 pl-1 border-l border-white/[0.06]">
-                      📖 {edge.evidence.slice(0, 60)}{edge.evidence.length > 60 ? "…" : ""}
-                      {edge.chapterTitle && <span className="text-zinc-700 ml-1">— {edge.chapterTitle}</span>}
+                    <div className="text-[8px] text-[var(--nv-text-tertiary)] mt-0.5 pl-1 border-l border-[var(--nv-border-2)]">
+                      <Icon name="book" size={9} className="inline mr-0.5" />{edge.evidence.slice(0, 60)}{edge.evidence.length > 60 ? "…" : ""}
+                      {edge.chapterTitle && <span className="text-[var(--nv-text-tertiary)] ml-1">— {edge.chapterTitle}</span>}
                     </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-[9px] text-zinc-600">暂无关系</div>
+            <div className="text-[9px] text-[var(--nv-text-tertiary)]">暂无关系</div>
           )}
-          <button onClick={() => onEditCharacter?.(focusNode.id)} className="mt-2 text-[9px] text-indigo-400 hover:text-indigo-300">
+          <button onClick={() => onEditCharacter?.(focusNode.id)} className="mt-2 text-[9px] text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70">
             编辑角色卡 →
           </button>
         </div>

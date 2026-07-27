@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
+import { EmptyState, Loading } from "@/components/ui/States";
 
 interface TaskBrief {
   id: string;
@@ -76,101 +77,104 @@ export default function DissectPage() {
   const statusBadge = (task: TaskBrief) => {
     if (task.status === "completed")
       return (
-        <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">
+        <span className="rounded-full bg-[var(--nv-success-soft)] px-2 py-0.5 text-xs text-[var(--nv-success)]">
           完成
         </span>
       );
     if (task.status === "failed")
       return (
-        <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400">
+        <span className="rounded-full bg-[var(--nv-danger-soft)] px-2 py-0.5 text-xs text-[var(--nv-danger)]">
           失败
         </span>
       );
     return (
-      <span className="px-2 py-0.5 rounded text-xs bg-indigo-500/20 text-indigo-400">
+      <span className="rounded-full bg-[var(--nv-primary-soft)] px-2 py-0.5 text-xs text-[var(--nv-primary)]">
         进行中 {Math.round(task.progress)}%
       </span>
     );
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {/* 顶栏 */}
-      <header className="border-b border-zinc-800 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-4 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-zinc-500 hover:text-zinc-300 transition-colors">
-              ← 返回
+            <Link href="/" className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]" aria-label="返回">
+              <Icon name="arrowLeft" size={18} />
             </Link>
-            <h1 className="text-lg font-bold">📚 拆书导航</h1>
+            <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--nv-text-primary)]">
+              <Icon name="book" size={18} className="text-[var(--nv-creative)]" />
+              拆书导航
+            </h1>
           </div>
           <Link
             href="/dissect/new"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-500 transition-colors"
+            className="btn-primary flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium"
           >
-            + 新建拆书
+            <Icon name="plus" size={14} /> 新建拆书
           </Link>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="mx-auto max-w-6xl px-6 py-8">
         {loadError ? (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-5">
-              <Icon name="alert" size={28} className="text-amber-400" />
+          <div className="surface-elevated rounded-2xl py-16 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--nv-danger-soft)] border border-[var(--nv-danger)]/20">
+              <Icon name="alert" size={28} className="text-[var(--nv-danger)]" />
             </div>
-            <h2 className="text-xl font-semibold text-zinc-300 mb-2">拆书任务加载失败</h2>
-            <p className="text-zinc-500 text-sm mb-2">{loadError}</p>
-            {loadHint && <p className="text-zinc-600 text-xs mb-6 max-w-md mx-auto">{loadHint}</p>}
+            <h2 className="mb-2 text-xl font-semibold text-[var(--nv-text-primary)]">拆书任务加载失败</h2>
+            <p className="mb-2 text-sm text-[var(--nv-text-secondary)]">{loadError}</p>
+            {loadHint && <p className="mx-auto mb-6 max-w-md text-xs text-[var(--nv-text-tertiary)]">{loadHint}</p>}
             <button
               onClick={() => {
                 setLoadError(null);
                 setLoadHint(null);
                 loadTasks();
               }}
-              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
+              className="btn-primary inline-flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold"
             >
-              重试
+              <Icon name="loader" size={14} className="animate-spin" /> 重试
             </button>
           </div>
         ) : loading ? (
-          <div className="text-center py-20 text-zinc-500">
-            <div className="animate-spin text-4xl mb-4">⏳</div>
-            <p>加载中...</p>
+          <div className="surface-elevated rounded-2xl py-16">
+            <Loading label="正在加载拆书任务…" />
           </div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">📚</div>
-            <h2 className="text-xl font-bold text-zinc-300 mb-2">还没有拆书任务</h2>
-            <p className="text-zinc-500 mb-6">
-              上传一本小说原文，AI 将自动拆解为世界观、角色、情节脉络等维度
-            </p>
-            <Link
-              href="/dissect/new"
-              className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition-colors inline-block"
-            >
-              开始第一次拆书
-            </Link>
-          </div>
+          <EmptyState
+            icon="book"
+            title="还没有拆书任务"
+            description="上传一本小说原文，AI 将自动拆解为世界观、角色、情节脉络等维度"
+            action={
+              <Link
+                href="/dissect/new"
+                className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-6 py-3 text-sm font-medium"
+              >
+                <Icon name="plus" size={16} /> 开始第一次拆书
+              </Link>
+            }
+            className="surface-elevated border-solid border-white/[0.06]"
+          />
         ) : (
           <div className="grid gap-3">
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                className="surface-elevated rounded-xl p-4 transition-colors hover:border-[var(--nv-border-3)]"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
                       <Link
                         href={`/dissect/${task.id}`}
-                        className="text-base font-semibold text-zinc-200 hover:text-indigo-400 transition-colors truncate"
+                        className="truncate text-base font-semibold text-[var(--nv-text-primary)] transition-colors hover:text-[var(--nv-primary)]"
                       >
                         {task.bookName}
                       </Link>
                       {statusBadge(task)}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--nv-text-tertiary)]">
                       <span>任务：{task.taskName}</span>
                       {task.bookAuthor && <span>作者：{task.bookAuthor}</span>}
                       <span>深度：{depthLabel[task.depth] || task.depth}</span>
@@ -178,22 +182,22 @@ export default function DissectPage() {
                       {task.convertedToProjectId && (
                         <a
                           href={`/workspace/${task.convertedToProjectId}`}
-                          className="text-indigo-400 hover:text-indigo-300"
+                          className="text-[var(--nv-primary)] transition-colors hover:text-[var(--nv-creative)]"
                         >
                           查看项目 →
                         </a>
                       )}
                     </div>
                     {task.error && (
-                      <p className="text-xs text-red-400 mt-1 truncate">{task.error}</p>
+                      <p className="mt-1 truncate text-xs text-[var(--nv-danger)]">{task.error}</p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="ml-4 flex items-center gap-2">
                     {task.status === "completed" && (
                       <Link
                         href={`/dissect/${task.id}`}
-                        className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
+                        className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
                       >
                         查看结果
                       </Link>
@@ -201,18 +205,18 @@ export default function DissectPage() {
                     <button
                       onClick={() => deleteTask(task.id)}
                       disabled={deletingId === task.id}
-                      className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      className="btn-ghost rounded-lg px-3 py-1.5 text-xs text-[var(--nv-danger)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {deletingId === task.id ? "..." : "删除"}
+                      {deletingId === task.id ? "删除中…" : "删除"}
                     </button>
                   </div>
                 </div>
 
                 {/* 进度条（进行中的任务） */}
                 {task.status !== "completed" && task.status !== "failed" && (
-                  <div className="mt-3 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
                     <div
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                      className="h-full rounded-full bg-[var(--nv-primary)] transition-all duration-1000"
                       style={{ width: `${Math.min(100, Math.max(0, task.progress))}%` }}
                     />
                   </div>

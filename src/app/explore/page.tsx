@@ -16,7 +16,7 @@ import type {
   AdoptCard,
 } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS } from "@/core/explore/types";
-import { toastError, toastSuccess } from "@/components/ui/toast";
+import { toastError, toastCreated, toastWarning } from "@/components/ui/toast";
 
 export default function ExplorePage() {
   const [config, setConfig] = useState<BuildConfig>(DEFAULT_BUILD_CONFIG);
@@ -196,7 +196,7 @@ export default function ExplorePage() {
         if (res.ok) {
           setAdoptStatus((prev) => ({
             ...prev,
-            [card.id]: data.entityType === "character" ? "✅角色" : "✅词条",
+            [card.id]: data.entityType === "character" ? "已采纳·角色" : "已采纳·词条",
           }));
           if (data.projectId && !createdProjectId) {
             setCreatedProjectId(data.projectId);
@@ -206,10 +206,10 @@ export default function ExplorePage() {
             setCurrentStep(EXPLORE_STEPS[currentIdx + 1]);
           }
         } else {
-          setAdoptStatus((prev) => ({ ...prev, [card.id]: "❌失败" }));
+          setAdoptStatus((prev) => ({ ...prev, [card.id]: "采纳失败" }));
         }
       } catch {
-        setAdoptStatus((prev) => ({ ...prev, [card.id]: "❌失败" }));
+        setAdoptStatus((prev) => ({ ...prev, [card.id]: "采纳失败" }));
       }
     },
     [adopted, config, createdProjectId, currentStep],
@@ -415,15 +415,12 @@ export default function ExplorePage() {
           errors.push(`词条[${lores[i].title}]: ${(r as any).value.error}`);
       });
 
-      const msgParts: string[] = ["✅ 项目已创建！"];
-      if (charOk > 0) msgParts.push(`${charOk}个角色`);
-      if (loreOk > 0) msgParts.push(`${loreOk}条世界设定`);
-      msgParts.push("已写入");
+      toastCreated(config.novelName || "小说项目", "项目");
       if (charFail + loreFail > 0) {
-        msgParts.push(`\n⚠️ ${charFail + loreFail}条写入失败`);
-        if (errors.length > 0) msgParts.push(`\n${errors.slice(0, 3).join("\n")}`);
+        toastWarning(
+          `${charFail + loreFail} 条内容写入失败${errors.length ? `：${errors.slice(0, 3).join("；")}` : ""}`,
+        );
       }
-      toastSuccess(msgParts.join(""));
     } catch (err: any) {
       toastError(err?.message || "创建失败");
     } finally {
@@ -482,6 +479,7 @@ export default function ExplorePage() {
         const data = await res.json();
         if (res.ok) {
           setCreatedProjectId(data.projectId);
+          toastCreated(config.novelName || "小说项目", "项目");
         } else {
           toastError(data.error || "创建失败");
         }
@@ -510,27 +508,28 @@ export default function ExplorePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {/* ── 顶栏 ── */}
-      <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-full mx-auto flex items-center justify-between px-5 py-3">
+      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-md">
+        <div className="max-w-full mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]"
+              aria-label="返回"
             >
-              ← 返回
+              <Icon name="arrowLeft" size={18} />
             </Link>
             <div className="flex items-center gap-2.5">
-              <Icon name="target" size={20} className="text-indigo-400" />
-              <h1 className="text-base font-bold text-zinc-100">探讨模式</h1>
+              <Icon name="target" size={20} className="text-[var(--nv-primary)]" />
+              <h1 className="text-base font-bold text-[var(--nv-text-primary)]">探讨模式</h1>
             </div>
-            <span className="text-[10px] text-zinc-600 hidden sm:inline">
+            <span className="hidden text-[10px] text-[var(--nv-text-tertiary)] sm:inline">
               对话式构建小说世界
             </span>
           </div>
           {/* 全局模式切换 */}
-          <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06] mr-2">
+          <div className="mr-2 flex items-center gap-0.5 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-0.5">
             {(["chat", "cards", "outline"] as const).map((m) => {
               const active = mode === m;
               const labels: Record<string, React.ReactNode> = { chat: <span className="flex items-center gap-1"><Icon name="message" size={12} /> 对话</span>, cards: <span className="flex items-center gap-1"><Icon name="grid" size={12} /> 抽卡</span>, outline: <span className="flex items-center gap-1"><Icon name="clipboard" size={12} /> 大纲</span> };
@@ -538,11 +537,11 @@ export default function ExplorePage() {
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 ${
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-200 active:scale-95 ${
                     active
-                      ? "bg-white/[0.08] text-zinc-200 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-400"
-                  } active:scale-95`}
+                      ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-sm"
+                      : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+                  }`}
                 >
                   {labels[m]}
                 </button>
@@ -553,20 +552,20 @@ export default function ExplorePage() {
             <button
               onClick={handleGenerateAll}
               disabled={generatingAll}
-              className={`text-xs px-3.5 py-1.5 rounded-xl font-medium transition-all duration-200 active:scale-95 border ${
+              className={`rounded-xl border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
                 generatingAll
-                  ? "bg-white/[0.02] text-zinc-600 border-white/[0.05] cursor-not-allowed"
-                  : "bg-purple-500/15 text-purple-300 border-purple-400/20 hover:bg-purple-500/20 hover:border-purple-400/30 shadow-[0_0_12px_rgba(168,85,247,0.08)]"
+                  ? "cursor-not-allowed border-[var(--nv-border-1)] bg-[var(--nv-surface-1)] text-[var(--nv-text-muted)]"
+                  : "border-[var(--nv-creative)]/30 bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] hover:border-[var(--nv-creative)]/50 hover:bg-[var(--nv-creative-soft)]"
               }`}
             >
               {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 生成中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> 一键AI构建所有设定</span>}
             </button>
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className={`text-xs px-3.5 py-1.5 rounded-xl font-medium transition-all duration-200 active:scale-95 border ${
+              className={`rounded-xl border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
                 showConfig
-                  ? "bg-indigo-500/15 text-indigo-300 border-indigo-400/20"
-                  : "bg-white/[0.02] text-zinc-500 border-white/[0.06] hover:border-white/[0.12] hover:text-zinc-300"
+                  ? "border-[var(--nv-primary)]/20 bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
+                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)]"
               }`}
             >
               {showConfig ? "隐藏配置" : "构建配置"}
@@ -584,7 +583,7 @@ export default function ExplorePage() {
                 lastSavedRef.current = "";
                 localStorage.removeItem("explore_state");
               }}
-              className="text-xs px-3 py-1.5 rounded-xl bg-white/[0.02] text-zinc-500 border border-white/[0.06] hover:text-zinc-300 hover:border-white/[0.12] transition-all duration-200 active:scale-95"
+              className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all duration-200 hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
             >
               重开
             </button>
@@ -596,7 +595,7 @@ export default function ExplorePage() {
       <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
         {/* 左栏：构建配置 */}
         {showConfig && (
-          <aside className="w-80 border-r border-white/[0.06] overflow-y-auto shrink-0 bg-zinc-950/50 backdrop-blur-sm">
+          <aside className="w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm">
             <BuildConfigPanel config={config} onChange={setConfig} />
           </aside>
         )}
@@ -643,7 +642,7 @@ export default function ExplorePage() {
         </main>
 
         {/* 右栏：已采纳 */}
-        <aside className="w-72 border-l border-white/[0.06] overflow-y-auto shrink-0 bg-zinc-950/50 backdrop-blur-sm">
+        <aside className="w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm">
           <AdoptedContentPanel
             adopted={adopted}
             onRemove={(id) =>

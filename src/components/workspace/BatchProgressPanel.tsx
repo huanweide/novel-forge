@@ -16,30 +16,33 @@ export function BatchProgressPanel({
   const total = entries.length;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-72 bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-zinc-900">
+    <div className="fixed bottom-4 right-4 z-50 w-72 bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-2xl shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-2)]">
         <div>
-          <span className="text-sm font-medium flex items-center gap-1.5"><Icon name="pencil" size={14} /> 批量生成</span>
-          <span className="text-xs text-zinc-500 ml-2">{done + failed}/{total}</span>
+          <span className="text-sm font-medium flex items-center gap-1.5 text-[var(--nv-text-primary)]"><Icon name="pencil" size={14} className="text-[var(--nv-primary)]" /> 批量生成</span>
+          <span className="text-xs text-[var(--nv-text-tertiary)] ml-2">{done + failed}/{total}</span>
         </div>
-        <button onClick={onAbort} className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded border border-red-800 hover:border-red-700">停止</button>
+        <button onClick={onAbort} className="btn-danger text-xs px-2 py-0.5 rounded border">停止</button>
       </div>
-      <div className="max-h-64 overflow-y-auto px-3 py-2 space-y-1">
+      <div className="max-h-64 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
         {entries.map(([id, state]) => {
           const node = nodes.find((n) => n.id === id);
-          const icon = state.status === "done" ? "✅" : state.status === "failed" ? "❌" : state.status === "generating" ? "⏳" : "○";
+          const iconName = state.status === "done" ? "check" : state.status === "failed" ? "x" : state.status === "generating" ? "loader" : "circle";
+          const iconColor = state.status === "generating" ? "text-[var(--nv-accent)]" : state.status === "failed" ? "text-[var(--nv-danger)]" : "text-[var(--nv-success)]";
           return (
-            <div key={id} className={`flex items-center gap-2 text-xs py-0.5 ${state.status === "generating" ? "text-amber-300" : state.status === "failed" ? "text-red-400" : "text-zinc-400"}`}>
-              <span className="shrink-0">{icon}</span>
+            <div key={id} className={`flex items-center gap-2 text-xs py-0.5 ${state.status === "generating" ? "text-[var(--nv-accent)]" : state.status === "failed" ? "text-[var(--nv-danger)]" : "text-[var(--nv-text-secondary)]"}`}>
+              <span className={`shrink-0 ${iconColor} ${state.status === "generating" ? "animate-spin" : ""}`}><Icon name={iconName as any} size={12} /></span>
               <span className="truncate flex-1">{node?.title || id.slice(0, 8)}</span>
-              {state.error && <span className="text-red-500 text-[10px] truncate max-w-[100px]" title={state.error}>{state.error.slice(0, 30)}</span>}
+              {state.error && <span className="text-[var(--nv-danger)] text-[10px] truncate max-w-[100px]" title={state.error}>{state.error.slice(0, 30)}</span>}
             </div>
           );
         })}
       </div>
-      <div className="border-t border-white/[0.06] px-4 py-2 flex items-center gap-3 text-xs text-zinc-500">
-        <span>✅ {done}</span><span>❌ {failed}</span><span>○ {total - done - failed}</span>
-        {generating && <span className="text-amber-400 ml-auto animate-pulse">{nodes.find((n) => n.id === generating[0])?.title?.slice(0, 15)}...</span>}
+      <div className="border-t border-[var(--nv-border-2)] px-4 py-2 flex items-center gap-3 text-xs text-[var(--nv-text-tertiary)]">
+        <span className="flex items-center gap-1 text-[var(--nv-success)]"><Icon name="check" size={12} /> {done}</span>
+        <span className="flex items-center gap-1 text-[var(--nv-danger)]"><Icon name="x" size={12} /> {failed}</span>
+        <span className="flex items-center gap-1"><Icon name="circle" size={12} /> {total - done - failed}</span>
+        {generating && <span className="text-[var(--nv-accent)] ml-auto animate-pulse">{nodes.find((n) => n.id === generating[0])?.title?.slice(0, 15)}...</span>}
       </div>
     </div>
   );

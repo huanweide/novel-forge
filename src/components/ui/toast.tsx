@@ -74,6 +74,30 @@ export function toastInfo(description: string, title?: string): void {
   toast({ type: "info", description, title });
 }
 
+/**
+ * 命名式"已添加"成功弹窗 —— 对应需求「添加世界观A 时弹出『世界观A 已添加』」。
+ * 用 success 类型 + 固定标题「已添加」，description 为「{name} 已添加」，
+ * 视觉上强化为带强调标题的美化弹窗（绿色辉光 + 勾选动画）。
+ */
+export function toastAdded(name: string, kind?: string): void {
+  toast({
+    type: "success",
+    title: "已添加",
+    description: kind ? `${kind}「${name}」已添加` : `「${name}」已添加`,
+    duration: 3200,
+  });
+}
+
+/** 命名式"已创建"成功弹窗（用于新建项目/章节/表格等） */
+export function toastCreated(name: string, kind?: string): void {
+  toast({
+    type: "success",
+    title: "已创建",
+    description: kind ? `${kind}「${name}」已创建` : `「${name}」已创建`,
+    duration: 3200,
+  });
+}
+
 export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
   if (emitConfirm) return emitConfirm(opts);
   if (typeof window !== "undefined") return Promise.resolve(window.confirm(opts.description ?? opts.title));
@@ -87,11 +111,11 @@ export function promptDialog(opts: PromptOptions): Promise<string | null> {
 }
 
 // ─── 类型视觉映射 ────────────────────────────────────────────
-const TYPE_STYLES: Record<ToastType, { icon: IconName; accent: string; text: string }> = {
-  success: { icon: "check", accent: "border-l-emerald-400", text: "text-emerald-300" },
-  error: { icon: "alert", accent: "border-l-rose-400", text: "text-rose-300" },
-  warning: { icon: "alert", accent: "border-l-amber-400", text: "text-amber-300" },
-  info: { icon: "sparkles", accent: "border-l-indigo-400", text: "text-indigo-300" },
+const TYPE_STYLES: Record<ToastType, { icon: IconName; accent: string; text: string; soft: string }> = {
+  success: { icon: "check", accent: "border-l-emerald-400", text: "text-emerald-300", soft: "bg-emerald-500/10" },
+  error: { icon: "alert", accent: "border-l-rose-400", text: "text-rose-300", soft: "bg-rose-500/10" },
+  warning: { icon: "alert", accent: "border-l-amber-400", text: "text-amber-300", soft: "bg-amber-500/10" },
+  info: { icon: "sparkles", accent: "border-l-indigo-400", text: "text-indigo-300", soft: "bg-indigo-500/10" },
 };
 
 // ─── Provider ───────────────────────────────────────────────
@@ -146,17 +170,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={t.id}
               role={t.type === "error" ? "alert" : "status"}
-              className={`surface-floating pointer-events-auto animate-in rounded-xl border-l-2 ${s.accent} px-4 py-3 shadow-lg`}
+              className={`surface-floating pointer-events-auto animate-spring rounded-xl border-l-2 ${s.accent} px-4 py-3 shadow-lg`}
             >
               <div className="flex items-start gap-3">
-                <Icon name={s.icon} size={18} className={`${s.text} mt-0.5 shrink-0`} />
+                <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.soft} ${s.text}`}>
+                  <Icon name={s.icon} size={16} />
+                </div>
                 <div className="min-w-0 flex-1">
-                  {t.title ? <p className="text-sm font-semibold text-zinc-100">{t.title}</p> : null}
-                  <p className="break-words text-sm leading-relaxed text-zinc-300">{t.description}</p>
+                  {t.title ? (
+                    <p className="text-sm font-semibold tracking-wide text-[var(--nv-text-primary)]">{t.title}</p>
+                  ) : null}
+                  <p className="break-words text-sm leading-relaxed text-[var(--nv-text-secondary)]">{t.description}</p>
                 </div>
                 <button
                   onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
-                  className="shrink-0 text-zinc-500 transition-colors hover:text-zinc-200"
+                  className="shrink-0 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]"
                   aria-label="关闭"
                 >
                   <Icon name="x" size={14} />

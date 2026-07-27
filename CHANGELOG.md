@@ -2,6 +2,25 @@
 
 ---
 
+## v0.32.0 — 2026-07-27
+
+### 🎨 全模块视觉美化 + 创建/添加统一响应弹窗（虚空玻璃设计体系）
+
+**视觉美化体系落地（虚空玻璃 Void Glass）**
+- 全部小说相关子界面统一为暗色「虚空玻璃」设计：surface/border/primary/creative/accent/success/danger 令牌全量替换旧的 indigo/zinc/emerald/amber 平行色，配色风格一致
+- 按钮变体（btn-primary/btn-success/btn-danger/btn-creative/btn-ghost）+ .input-glass/.surface-floating 统一质感，每个按钮具备 hover / 点击 / 禁用态的视觉差异
+- 全站 UI 装饰 emoji 清零，改为统一 Icon 组件（Lucide 映射）：角色前缀 ★◆◈、状态 ✓✕⚠️⏳ 等收编为 check/x/alert/loader 等 Icon；业务数据标签 📥📝 保留其过滤语义
+
+**创建/添加操作统一响应弹窗**
+- 新增命名式 toast：toastAdded / toastCreated（绿色辉光 + 勾选动画 + 固定标题「已添加 / 已创建」），字体与动效美化
+- 覆盖全部「创建 / 添加小说」入口：新建角色、新建世界书、新建规则、AI 生成故事线、探讨模式创建项目（含大纲落库建项目）——均弹出「XX「名称」已创建 / 已添加」
+
+**构建与类型修复**
+- 修复 3 处阻塞构建的类型错误：workshop 页补 toastCreated 导入、游戏页 QUICK_ACTIONS 的 icon 收窄为 IconName、PostGenPanel 补 cloud 图标到注册表
+- tsc --noEmit 与生产 next build 均通过（69 路由全量生成），可直接部署
+
+---
+
 ## v0.31.0 — 2026-07-27
 
 ### 📚 内置文档预设概念 + 创意工坊进入写作上下文 + 按钮全交互实测

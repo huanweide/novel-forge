@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
-import { toastError } from "@/components/ui/toast";
+import { toastError, toastCreated } from "@/components/ui/toast";
 
 export function CharacterCreateDialog({
   projectId,
@@ -43,6 +43,7 @@ export function CharacterCreateDialog({
         return;
       }
       onSave();
+      toastCreated(form.name, "角色");
       onClose();
     } catch (err) {
       toastError("角色创建失败：" + (err instanceof Error ? err.message : "网络错误"));
@@ -57,7 +58,7 @@ export function CharacterCreateDialog({
           <DialogInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} autoFocus />
         </DialogField>
         <DialogField label="角色定位">
-          <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+          <select className="w-full bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] rounded px-3 py-2 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
             <option value="protagonist">主角</option>
             <option value="antagonist">反派</option>
             <option value="supporting">配角</option>
@@ -68,12 +69,12 @@ export function CharacterCreateDialog({
           </select>
         </DialogField>
         <DialogField label="性格特征（逗号分隔）">
-          <textarea className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm min-h-[80px] resize-y" value={form.personality} onChange={(e) => setForm({ ...form, personality: e.target.value })} placeholder={`主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠`} />
+          <textarea className="w-full bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] rounded px-3 py-2 text-sm min-h-[80px] resize-y" value={form.personality} onChange={(e) => setForm({ ...form, personality: e.target.value })} placeholder={`主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠`} />
         </DialogField>
       </div>
       <div className="flex justify-end gap-2 mt-5">
-        <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
-        <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500" disabled={!form.name.trim()}>创建</Button>
+        <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>
+        <Button onClick={handleSave} className="bg-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/80" disabled={!form.name.trim()}>创建</Button>
       </div>
     </DialogOverlay>
   );

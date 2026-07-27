@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
-import { toastSuccess, toastError, toastInfo } from "@/components/ui/toast";
+import { toastSuccess, toastError, toastInfo, confirmDialog, toastAdded, toastCreated } from "@/components/ui/toast";
+import { EmptyState, Loading } from "@/components/ui/States";
 
 interface Preset {
   id: string;
@@ -78,7 +79,13 @@ export default function Workshop() {
 
   const apply = async (p: Preset) => {
     if (!targetProject) { toastError("请先在右上角选择目标项目"); return; }
-    if (!confirm(`将「${p.title}」应用到项目？`)) return;
+    const ok = await confirmDialog({
+      title: "应用预设",
+      description: `确定将「${p.title}」应用到当前选择的项目吗？该操作将向项目写入对应的 ${TYPE_LABEL[p.type] ?? "预设"} 内容。`,
+      confirmText: "应用",
+      cancelText: "取消",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/presets/${p.id}/apply`, {
@@ -101,7 +108,7 @@ export default function Workshop() {
         body: JSON.stringify({ author: "我" }),
       });
       const d = await res.json();
-      if (res.ok) { toastSuccess("已复刻到你的名下"); load(); }
+      if (res.ok) { toastAdded(p.title, "预设副本"); load(); }
       else toastError(d.error || "复刻失败");
     } finally { setBusy(false); }
   };
@@ -126,7 +133,7 @@ export default function Workshop() {
       });
       const d = await res.json();
       if (res.ok) {
-        toastSuccess("已发布到创意工坊");
+        toastCreated(upload.title.trim(), "创意工坊预设");
         setShowUpload(false);
         setUpload({ type: "style", title: "", description: "", tags: "", content: PLACEHOLDER.style });
         load();
@@ -148,7 +155,7 @@ export default function Workshop() {
             <select
               value={targetProject}
               onChange={(e) => setTargetProject(e.target.value)}
-              className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs"
+              className="input-glass rounded-xl px-3 py-1.5 text-xs"
             >
               {projects.length === 0 && <option value="">（无项目）</option>}
               {projects.map((p) => (
@@ -177,7 +184,7 @@ export default function Workshop() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`text-xs px-3 py-1.5 rounded-xl transition-colors ${
-                tab === t.key ? "bg-indigo-500/20 text-indigo-300" : "bg-white/[0.04] text-zinc-400 hover:text-zinc-200"
+                tab === t.key ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
               }`}
             >
               {t.label}
@@ -187,14 +194,21 @@ export default function Workshop() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="搜索标题/描述…"
-            className="ml-auto bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs w-48"
+            className="input-glass ml-auto rounded-xl px-3 py-1.5 text-xs w-48"
           />
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-zinc-500 text-sm">加载中…</div>
+          <div className="surface-elevated rounded-2xl py-16">
+            <Loading label="正在加载创意工坊预设…" />
+          </div>
         ) : presets.length === 0 ? (
-          <div className="text-center py-20 text-zinc-500 text-sm">还没有预设，点右上角「上传预设」发布第一个吧。</div>
+          <EmptyState
+            icon="package"
+            title="还没有预设"
+            description="把参考资料里的「预设」变成可共享资产，点右上角「上传预设」发布第一个吧。"
+            className="surface-elevated border-solid border-white/[0.06]"
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {presets.map((p) => (
@@ -203,7 +217,7 @@ export default function Workshop() {
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">
                     {TYPE_LABEL[p.type] || p.type}
                   </span>
-                  {p.isBuiltin && <span className="text-[11px] text-amber-400">★ 内置</span>}
+                  {p.isBuiltin && <span className="text-[11px] text-[var(--nv-accent)]">内置</span>}
                 </div>
                 <h3 className="font-semibold text-zinc-100">{p.title}</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed flex-1">{p.description || "—"}</p>
@@ -214,7 +228,7 @@ export default function Workshop() {
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
                   <span>by {p.author}</span>
-                  <span>⬇ {p.downloads}</span>
+                  <span className="flex items-center gap-1"><Icon name="download" size={11} /> {p.downloads}</span>
                 </div>
                 <div className="flex gap-2 mt-1">
                   <button
@@ -248,7 +262,7 @@ export default function Workshop() {
                 <select
                   value={upload.type}
                   onChange={(e) => setUpload({ ...upload, type: e.target.value, content: PLACEHOLDER[e.target.value] })}
-                  className="w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"
                 >
                   {Object.keys(TYPE_LABEL).map((k) => (
                     <option key={k} value={k}>{TYPE_LABEL[k]}</option>
@@ -256,37 +270,37 @@ export default function Workshop() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-zinc-400">标题</label>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">标题</label>
                 <input
                   value={upload.title}
                   onChange={(e) => setUpload({ ...upload, title: e.target.value })}
-                  className="w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"
                   placeholder="如：古风·缠绵文笔"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-400">描述</label>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">描述</label>
                 <input
                   value={upload.description}
                   onChange={(e) => setUpload({ ...upload, description: e.target.value })}
-                  className="w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-400">标签（逗号分隔，如：古风,仙侠）</label>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">标签（逗号分隔，如：古风,仙侠）</label>
                 <input
                   value={upload.tags}
                   onChange={(e) => setUpload({ ...upload, tags: e.target.value })}
-                  className="w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-400">内容（JSON，参考占位）</label>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">内容（JSON，参考占位）</label>
                 <textarea
                   value={upload.content}
                   onChange={(e) => setUpload({ ...upload, content: e.target.value })}
                   rows={10}
-                  className="w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono"
+                  className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-xs font-mono"
                 />
               </div>
             </div>
