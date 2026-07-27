@@ -163,6 +163,8 @@ ${chapterText.slice(0, 12000)}
           "Content-Type": "application/json",
           Authorization: `Bearer ${settings.apiKey}`,
         },
+        // 防御性超时：DeepSeek 慢响应时最多等 120s，超时即失败并走重试/降级
+        signal: AbortSignal.timeout(120000),
         body: JSON.stringify({
           model: settings.model,
           messages: [

@@ -424,6 +424,18 @@ export default function WorkspacePage() {
                 summary: event.content || "",
               });
             }
+            // ── 宝宝流自动填表（写作闭环回收） ──
+            else if (event.type === "babylore_fill") {
+              if (event.ok) {
+                toastSuccess(`宝宝流自动填表完成：本回抽取 ${event.operations ?? 0} 条操作，已写入 ${event.applied ?? 0} 行结构化表格。`);
+              } else if (event.error) {
+                toastInfo(`宝宝流自动填表跳过：${event.error}`);
+              }
+            }
+            else if (event.type === "babylore_recall") {
+              const n = Array.isArray(event.items) ? event.items.length : 0;
+              if (n > 0) toastInfo(`宝宝流记忆召回 ${n} 条（世界书/结构化表格），已注入本轮写作上下文。`);
+            }
             else if (event.type === "done") {
               setGenStep("done"); setTimeout(() => setGenStep(""), 5000);
               // 把本地蒸馏累计数据写入 state（触发 UI 通知）

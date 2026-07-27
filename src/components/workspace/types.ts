@@ -115,6 +115,13 @@ export interface SSEEvent {
   byCategory?: Record<string, number>;
   // 逻辑自查
   summary?: string;
+  // 宝宝流自动填表
+  ok?: boolean;
+  operations?: number;
+  applied?: number;
+  error?: string;
+  // 宝宝流记忆召回列表
+  items?: Array<{ source: string; title: string; content: string }>;
 }
 
 export function categoryLabel(cat: string): string {
