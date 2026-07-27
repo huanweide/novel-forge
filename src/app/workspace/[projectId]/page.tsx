@@ -30,6 +30,8 @@ export default function WorkspacePage() {
 
   // ── 生成步骤状态 ──────────────────────────
   const [genStep, setGenStep] = useState<"" | "loading-cards" | "confirming" | "generating" | "reviewing" | "summarizing" | "done" | "error">("");
+  // 宝宝流记忆召回面板：写章节/微调/续写时实时展示已注入写作的记忆（含当前生效人设阶段）
+  const [recallMemories, setRecallMemories] = useState<any[]>([]);
   const genStepLabels: Record<string, { icon: React.ReactNode; label: string }> = {
     "loading-cards": { icon: <Icon name="search" size={14} className="animate-pulse" />, label: "AI 正在分析角色调度..." },
     "confirming": { icon: <Icon name="clipboard" size={14} />, label: "等待确认角色选择" },
@@ -361,6 +363,7 @@ export default function WorkspacePage() {
     let accumulated = "";
     // 重置蒸馏累计
     distillAccum.current = { entityCount: 0, stateChangeCount: 0, foreshadowCount: 0, consistencyIssueCount: 0, elapsedMs: 0, foreshadowCreated: 0, foreshadowUpdated: 0, entitiesAutoCreated: 0, entitiesSkipped: 0 };
+    setRecallMemories([]); // 新一轮生成重置宝宝流记忆面板
     try {
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: controller.signal });
       const reader = res.body?.getReader();
@@ -433,7 +436,9 @@ export default function WorkspacePage() {
               }
             }
             else if (event.type === "babylore_recall") {
-              const n = Array.isArray(event.items) ? event.items.length : 0;
+              const items = Array.isArray(event.items) ? event.items : [];
+              const n = items.length;
+              setRecallMemories(items);
               if (n > 0) toastInfo(`宝宝流记忆召回 ${n} 条（世界书/结构化表格），已注入本轮写作上下文。`);
             }
             else if (event.type === "done") {
@@ -700,6 +705,26 @@ export default function WorkspacePage() {
               }
             }}
           />
+
+          {/* 宝宝流记忆召回面板（写作闭环透明度：本轮已自动呼应的设定/人设阶段） */}
+          {recallMemories.length > 0 && selectedNode && (
+            <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
+              <div className="surface-elevated rounded-2xl p-4 border border-indigo-400/20">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="w-1.5 h-5 rounded-full bg-indigo-400/60" />
+                  <h3 className="text-sm font-semibold text-zinc-200">🧠 宝宝流记忆召回（已注入本轮写作）</h3>
+                </div>
+                <ul className="space-y-2.5">
+                  {recallMemories.map((m, i) => (
+                    <li key={i} className="text-xs">
+                      <span className="text-indigo-300 font-medium">{m.source === "lorebook" ? "世界书" : "结构化表格"}｜{m.title}</span>
+                      <p className="text-zinc-400 mt-1 whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {/* 统一分析面板（替代旧版浮动横幅+弹窗+按钮） */}
           {(extractionData || distillSummary || forbiddenScanResult || logicCheckResult || reviewResult) && selectedNode && (
