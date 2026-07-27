@@ -120,24 +120,26 @@ export default function WorkspacePage() {
 
   // ── 微调状态 ──────────────────────────────
   const [refineMode, setRefineMode] = useState(false);
-  const [refineInstruction, setRefineInstruction] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return localStorage.getItem(`novel-forge-refine-${projectId}`) || "";
-  });
+  const [refineInstruction, setRefineInstruction] = useState("");
   const handleRefineInstructionChange = (v: string) => {
     setRefineInstruction(v);
     if (typeof window !== "undefined") localStorage.setItem(`novel-forge-refine-${projectId}`, v);
   };
 
   // ── Flash 章纲提示词 ──────────────────────
-  const [chapterOutlinePrompt, setChapterOutlinePrompt] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return localStorage.getItem(`novel-forge-flash-prompt-${projectId}`) || "";
-  });
+  const [chapterOutlinePrompt, setChapterOutlinePrompt] = useState("");
   const handleChapterOutlinePromptChange = (v: string) => {
     setChapterOutlinePrompt(v);
     if (typeof window !== "undefined") localStorage.setItem(`novel-forge-flash-prompt-${projectId}`, v);
   };
+
+  // ── 恢复本地持久化提示词（避免 SSR/CSR initial state 不一致导致 hydration 失败）
+  useEffect(() => {
+    if (typeof window !== "undefined" && projectId) {
+      setRefineInstruction(localStorage.getItem(`novel-forge-refine-${projectId}`) || "");
+      setChapterOutlinePrompt(localStorage.getItem(`novel-forge-flash-prompt-${projectId}`) || "");
+    }
+  }, [projectId]);
 
   // ── 章节更新系统 ──────────────────────────
   const [lastChapterContent, setLastChapterContent] = useState("");
