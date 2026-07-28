@@ -277,28 +277,40 @@ function buildShortTermSection(
   const nodes = window.shortTerm;
   if (nodes.length === 0) return "";
 
-  // 短期记忆按时间顺序（旧→新），截断到预算
-  const texts = nodes.map(
-    (n) => `### ${n.title}\n${n.content || n.outline || ""}`
-  );
+  // 保留标题与正文，便于折叠时标注边界
+  const items = nodes.map((n) => ({
+    title: n.title,
+    body: `### ${n.title}\n${n.content || n.outline || ""}`,
+  }));
 
-  // 从最新往旧拼接，保证最新的内容不会被截断
+  // 从最新往旧拼接，保证最新的内容不会被截断。
+  // 较远楼层（放不下的旧节点）做「折叠标记」而非静默丢弃——对应酒馆「记忆清除 / 上下文溢出治理」：
+  // 明确告知模型哪些内容被压缩，避免其把截断片段误读为完整情节而产生剧情断裂幻觉。
   let result = "";
-  for (let i = texts.length - 1; i >= 0; i--) {
-    const candidate = texts[i] + (result ? "\n\n---\n\n" + result : "");
+  let folded = 0;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const candidate = items[i].body + (result ? "\n\n---\n\n" + result : "");
     if (countTokens(candidate) > maxTokens) {
-      // 当前这段太长了，尝试截断它
       const remaining = maxTokens - countTokens("\n\n---\n\n" + result);
-      if (remaining > 0) {
-        const truncated = truncateByTokens(texts[i], remaining, true); // 保留末尾
-        result = truncated + "\n\n---\n\n" + result;
+      if (remaining > 60) {
+        // 保留末尾（与后续节点的衔接点），开头被折叠，显式标注边界
+        const tail = truncateByTokens(items[i].body, remaining, true);
+        result = `[…较远楼层「${items[i].title}」开头已折叠，以下为结尾衔接]\n${tail}\n\n---\n\n${result}`;
+      } else {
+        // 预算极小：整段折叠为一行提示，绝不静默丢弃
+        result = `[⚠️ 远楼层「${items[i].title}」已折叠·非完整原文]\n\n---\n\n${result}`;
       }
+      folded++;
       break;
     }
     result = candidate;
   }
 
-  return result ? `【前文回顾——最近发生的事】\n${result}` : "";
+  const foldNote =
+    folded > 0
+      ? `（注：含 ${folded} 个较远楼层已按上下文预算折叠，标记为"非完整原文"，请勿当作完整情节）`
+      : "";
+  return result ? `【前文回顾——最近发生的事】${foldNote}\n${result}` : "";
 }
 
 function buildMediumTermSection(
@@ -354,13 +366,18 @@ function buildMediumTermSection(
   });
 
   let result = "";
+  let used = 0;
   for (let i = texts.length - 1; i >= 0; i--) {
     const candidate = texts[i] + (result ? "\n\n" + result : "");
     if (countTokens(candidate) > maxTokens) break;
     result = candidate;
+    used++;
   }
 
-  return result ? `【本章之前的故事摘要】\n${result}` : "";
+  // 记忆清除治理：因预算被省略的较早/低相关章节摘要，显式标注而非静默丢弃
+  const omitted = texts.length - used;
+  const foldNote = omitted > 0 ? `（注：另有 ${omitted} 个较早/低相关章节摘要因预算省略）` : "";
+  return result ? `【本章之前的故事摘要】${foldNote}\n${result}` : "";
 }
 
 function buildForeshadowingSection(
