@@ -17,6 +17,7 @@ import { CharacterCreateDialog } from "@/components/workspace/CharacterCreateDia
 import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
 import { BatchProgressPanel } from "@/components/workspace/BatchProgressPanel";
 import { OutlineDialog } from "@/components/workspace/OutlineDialog";
+import { AutomationSettingsDialog } from "@/components/workspace/AutomationSettingsDialog";
 import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
 import { DrawCards } from "@/components/workspace/DrawCards";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
@@ -106,6 +107,7 @@ export default function WorkspacePage() {
   const [showSettingsImport, setShowSettingsImport] = useState(false);
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
+  const [showAutomationSettings, setShowAutomationSettings] = useState(false);
   const [extractionData, setExtractionData] = useState<any>(null);
   const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -627,6 +629,7 @@ export default function WorkspacePage() {
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}
         onStyleSelect={(t: StyleTemplate) => setStyleTemplateId(t.id)} styleCard={project.styleCard}
+        onOpenAutomation={() => setShowAutomationSettings(true)}
       />
 
       <div className="px-4 py-2 border-b border-white/[0.06] flex items-center gap-2">
@@ -795,6 +798,9 @@ export default function WorkspacePage() {
           appendMode={outlineAppendMode} onAppendModeChange={setOutlineAppendMode}
           hasExistingChapters={existingChapterCount > 0}
           onClose={() => { setShowOutlineDialog(false); setOutlinePreviewChapters([]); setOutlineError(""); setOutlineRaw(""); }} />
+      )}
+      {showAutomationSettings && project && (
+        <AutomationSettingsDialog projectId={project.id} projectName={project.name} onClose={() => setShowAutomationSettings(false)} />
       )}
 
       {/* 抽卡模式——章纲路线选择 */}

@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.32.3";
+export const LATEST_VERSION = "v0.33.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🌑 暗色可读性提升：--nv-text-tertiary 提亮至对比度 ≥4.5:1、--nv-text-muted 适度提亮，占位 / 禁用文字在暗色下重新可读",
-  "🔧 新增标准错误响应 helper jsonError：统一 {error} 结构 + HTTP 状态，全站 API 错误处理一致化的起点",
-  "🔗 两个预设路由接入 jsonError：/api/presets/[id] 与 /api/seed/presets 的错误返回已统一格式",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.32.3",
+  "🤖 生成前剧情预设：点击生成一章之前，LLM 基于活跃剧情线 + 记忆召回规划本章推进，并动态回写剧情线（不阻断生成）",
+  "🗂 自动化填表闭环：每章写完后自动用 DeepSeek 以 JSON 行操作协议（insert/update/delete）回填结构化表格，并持续注入永久上下文",
+  "⚙️ 频率 / 跳过最近章 / 上下文楼层 可在「自动化」弹窗配置：默认每 3 章填一次、默认跳过最近章（防 re-roll 污染）",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.33.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.33.0",
+    date: "2026-07-28",
+    title: "自动化填表闭环 + 生成前剧情预设 + 可配上下文",
+    sections: [
+      {
+        label: "自动化填表（正文→填表→召回→正文）",
+        items: [
+          "新增 safeFillAfterWriting：每章写完后自动用 DeepSeek 抽取结构化事实，以 JSON 行操作协议（insert/update/delete）回填创意工坊结构化表格，失败不影响正文交付",
+          "回填表格经 buildRecallBlock 持续注入永久上下文，形成「写章节→填表→下一章召回」闭环；update 按唯一列匹配已有行，动态修正不矛盾、不重复插入",
+          "填表频率可配置（默认每 3 章填一次）、默认跳过最近一章（用户常对最新章 re-roll 改写，跳过避免污染表格），二者均可在弹窗关闭",
+        ],
+      },
+      {
+        label: "生成前剧情预设（回忆召回式推进剧情线）",
+        items: [
+          "新增 plan-chapter.ts：点击生成一章之前，LLM 基于活跃剧情线 + 大纲 + 作者指令 + 记忆召回块规划本章剧情推进（焦点/推进/障碍/转折/执行提示）",
+          "规划结果注入写作指令，并把本章绑定追加写回活跃剧情线（保留最近 50 章，不丢历史、持续修正）；规划失败静默降级，不阻断正文生成",
+        ],
+      },
+      {
+        label: "配置与 UI",
+        items: [
+          "顶部工具栏新增「自动化」入口，弹窗集中配置：自动填表总开关 / 填表频率 / 跳过最近章 / 上下文楼层（前文窗口，复用 contextKeepChapters）",
+          "新增 /api/projects/[id]/config（GET/PUT）读写上述配置，已接入 jsonError 统一错误格式",
+          "数据层：Project 模型新增 autoFillEnabled / fillFrequency / skipLatestChapter 字段",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.32.3",
     date: "2026-07-28",

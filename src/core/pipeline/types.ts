@@ -21,6 +21,7 @@ export interface GenerationData {
   styleCard: Record<string, unknown> | null;
   pendingCommitments?: any[];
   pendingItems?: any[];
+  storylines?: any[];
 }
 
 // ─── 预处理 ───────────────────────────────────────────────

@@ -13,6 +13,7 @@ import {
   runPostGenerationPipeline,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
+import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 
 /**
  * POST /api/generate/write
@@ -61,10 +62,13 @@ export async function POST(request: Request) {
 
     // ── 5. 上下文窗口 ──
     const currentNodeIndex = data.allNodes.findIndex((n: any) => n.id === nodeId);
+    const keepChapters = ((data.project as any).contextKeepChapters as number) ?? 4;
     const previousNodes = data.allNodes.slice(
-      Math.max(0, currentNodeIndex - 4),
+      Math.max(0, currentNodeIndex - keepChapters),
       currentNodeIndex,
     );
+    // 当前节点是否为最新章节（用于"跳过最近一章"的自动填表判断）
+    const isLatestChapter = currentNodeIndex === data.allNodes.length - 1;
 
     // ── 6. 构建 Prompt 上下文 ──
     const promptContext = buildGenerationContext({
@@ -99,6 +103,27 @@ export async function POST(request: Request) {
     });
     if (recallBlock) writingInstruction += recallBlock;
 
+    // ── 6.6 生成前剧情预设规划（回忆召回式推进剧情线，用户逻辑 1b）──
+    // 在点击生成一章之前，先用 LLM 基于活跃剧情线 + 记忆召回规划本章如何推进剧情线。
+    let chapterPlan: { planText: string; plan?: any } | null = null;
+    try {
+      chapterPlan = await planChapterStoryline({
+        projectId,
+        chapterOrder: (data.currentNode as any).order,
+        outline: data.currentNode.outline || "",
+        authorNote: cleanAuthorNote,
+        recallBlock,
+        storylines: (data.storylines as any[]) || [],
+      });
+      if (chapterPlan?.planText) writingInstruction += "\n\n" + chapterPlan.planText;
+      // 动态回写剧情线（持续修正、不矛盾、不丢历史）
+      if (chapterPlan?.plan) {
+        await applyChapterPlanToStorylines(projectId, chapterPlan.plan, (data.currentNode as any).order);
+      }
+    } catch (_) {
+      // 规划失败不阻断正文生成（规划是锦上添花，非交付前置）
+    }
+
     // ── 8. 调度器 ──
     const orchestrator = await AgentOrchestrator.fromSettings({
       defaultTemperature: effectiveTemperature,
@@ -116,6 +141,10 @@ export async function POST(request: Request) {
         // 推送本轮召回的记忆列表（供前端透明展示「剧情推进=记忆召回」）
         if (recallItems.length > 0) {
           send({ type: "babylore_recall", items: recallItems });
+        }
+        // 推送生成前剧情预设规划（透明展示"回忆召回式推进剧情线"）
+        if (chapterPlan?.plan) {
+          send({ type: "chapter_plan", plan: chapterPlan.plan });
         }
 
         try {
@@ -250,7 +279,13 @@ export async function POST(request: Request) {
 
           // ── 宝宝流自动填表（正文 → 填表，闭合「正文→填表→召回→正文」写作闭环） ──
           // 每章写完后自动用 DeepSeek 抽取结构化事实回填表格；失败不影响正文交付。
-          const babylore = await safeFillAfterWriting({ projectId, content: fullContent, send });
+          const babylore = await safeFillAfterWriting({
+            projectId,
+            content: fullContent,
+            send,
+            nodeOrder: (data.currentNode as any).order,
+            isLatestChapter,
+          });
 
           // Token 用量
           send({

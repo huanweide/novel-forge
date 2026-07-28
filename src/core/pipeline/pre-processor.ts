@@ -175,6 +175,7 @@ export function buildGenerationContext(params: {
     chapterSummaries: data.summaries as any,
     storyBeats: data.storyBeats as any,
     styleCard: data.styleCard as any,
+    storylines: data.storylines as any,
     authorNote,
     pendingCommitments,
     pendingItems,

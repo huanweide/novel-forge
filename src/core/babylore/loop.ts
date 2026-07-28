@@ -82,6 +82,10 @@ export interface FillAfterWritingInput {
   content: string;
   /** 可选的 SSE 发送函数；提供则推送 babylore_fill 事件 */
   send?: (o: object) => void;
+  /** 当前章序号（0-based）；用于频率判断。未传则按"必填"处理。 */
+  nodeOrder?: number;
+  /** 当前节点是否为最新节点（最后一章）；用于"跳过最近一章"判断。 */
+  isLatestChapter?: boolean;
 }
 
 /**
@@ -89,7 +93,39 @@ export interface FillAfterWritingInput {
  * 失败不影响正文交付；返回 FillResult，并（若提供 send）推送事件。
  */
 export async function safeFillAfterWriting(input: FillAfterWritingInput): Promise<FillResult> {
-  const { projectId, content, send } = input;
+  const { projectId, content, send, nodeOrder, isLatestChapter } = input;
+
+  // ── 频率 / 跳过配置（用户逻辑 2c：填表频率可配 + 默认跳过最近章）──
+  let cfg: { autoFillEnabled?: boolean; fillFrequency?: number; skipLatestChapter?: boolean } | null = null;
+  try {
+    cfg = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { autoFillEnabled: true, fillFrequency: true, skipLatestChapter: true },
+    });
+  } catch {
+    /* 配置读取失败则用默认（开启 + 每3章 + 跳过最近章） */
+  }
+  const autoFill = cfg?.autoFillEnabled ?? true;
+  if (!autoFill) {
+    if (send) send({ type: "babylore_fill", skipped: true, reason: "disabled" });
+    return { ok: false, operations: 0, applied: 0, error: "自动填表已关闭" };
+  }
+  const freq = typeof cfg?.fillFrequency === "number" && cfg.fillFrequency > 0 ? cfg.fillFrequency : 3;
+  const skipLatest = cfg?.skipLatestChapter ?? true;
+  // 默认跳过最近一章：用户可能重 roll（重新生成）后改写，避免把临时稿写进表格。
+  if (skipLatest && isLatestChapter) {
+    if (send) send({ type: "babylore_fill", skipped: true, reason: "skipLatestChapter" });
+    return { ok: false, operations: 0, applied: 0, error: "跳过最近一章（用户可能重 roll）" };
+  }
+  // 频率：每 freq 章填一次（基于 1-based 章序号，整除才填）。未传 nodeOrder 则按必填处理。
+  if (typeof nodeOrder === "number" && freq > 0) {
+    const chapterNum = nodeOrder + 1;
+    if (chapterNum % freq !== 0) {
+      const nextAt = freq - (chapterNum % freq);
+      if (send) send({ type: "babylore_fill", skipped: true, reason: "frequency", frequency: freq, nextChapter: nextAt });
+      return { ok: false, operations: 0, applied: 0, error: `每 ${freq} 章填一次，本张不填` };
+    }
+  }
 
   let babylore: FillResult = { ok: false, operations: 0, applied: 0, error: "" };
   try {

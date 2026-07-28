@@ -10,7 +10,7 @@ import type { ProjectData } from "./types";
 export function Toolbar({
   projectName, onBack, onGenerateOutline, onSummarize, onImportSettings, onImportChapters,
   onEditStyle, onExport, isGenerating, outlineGenerating, summarizing,
-  projectId, styleTemplateId, onStyleSelect, styleCard,
+  projectId, styleTemplateId, onStyleSelect, styleCard, onOpenAutomation,
 }: {
   projectName: string; onBack: () => void; onGenerateOutline: () => void;
   onSummarize: () => void; onImportSettings: () => void; onImportChapters: () => void;
@@ -18,6 +18,7 @@ export function Toolbar({
   isGenerating: boolean; outlineGenerating?: boolean; summarizing: boolean;
   projectId: string; styleTemplateId?: string; onStyleSelect: (t: StyleTemplate) => void;
   styleCard?: ProjectData["styleCard"];
+  onOpenAutomation: () => void;
 }) {
   const [showExport, setShowExport] = useState(false);
 
@@ -65,6 +66,8 @@ export function Toolbar({
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-primary)]"><Icon name="clipboard" size={12} /> 设定</Button>
         <Button size="sm" variant="outline" onClick={onImportChapters} disabled={isGenerating}
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]"><Icon name="download" size={12} /> 导入</Button>
+        <Button size="sm" variant="outline" onClick={onOpenAutomation} disabled={isGenerating}
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-primary)]"><Icon name="bot" size={12} /> 自动化</Button>
         <div className="relative">
           <Button size="sm" variant="outline" onClick={() => setShowExport(!showExport)}
             disabled={isGenerating} className="flex h-7 items-center gap-1 text-xs"><Icon name="upload" size={12} /> 导出</Button>

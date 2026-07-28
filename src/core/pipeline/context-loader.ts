@@ -27,7 +27,7 @@ export async function loadGenerationContext(
   summaryTake = 3,
 ): Promise<GenerationData> {
 
-  const [project, currentNode, allNodes, characters, loreEntries, summariesRaw, storyBeatsRaw, styleCard, pendingCommitmentsRaw, pendingItemsRaw] =
+  const [project, currentNode, allNodes, characters, loreEntries, summariesRaw, storyBeatsRaw, styleCard, pendingCommitmentsRaw, pendingItemsRaw, storylinesRaw] =
     await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
@@ -64,6 +64,11 @@ export async function loadGenerationContext(
         where: { projectId, status: "pending" },
         orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
         take: 30,
+      }),
+      // 活跃剧情线：参与每章生成上下文（v0.33.0 接通）
+      prisma.storyline.findMany({
+        where: { projectId, status: "active" },
+        orderBy: { type: "asc" },
       }),
     ]);
 
@@ -112,5 +117,6 @@ export async function loadGenerationContext(
     styleCard: styleCard as any,
     pendingCommitments: pendingCommitments as any,
     pendingItems: pendingItemsRaw as any,
+    storylines: storylinesRaw as any,
   };
 }
