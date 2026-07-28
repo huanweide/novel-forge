@@ -15,6 +15,7 @@ export async function POST(request: Request) {
         keys: body.keys || [],
         content: body.content,
         insertionOrder: body.insertionOrder || 50,
+        depth: body.depth ?? 3,
         enabled: body.enabled ?? true,
         parentId: body.parentId || null,
         relatedEntryIds: body.relatedEntryIds || [],

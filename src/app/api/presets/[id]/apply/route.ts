@@ -80,6 +80,7 @@ export async function POST(
             category: cat,
             content: e.content || "",
             keys: e.keys || [],
+            depth: e.depth ?? 3,
             enabled: true,
           } as any,
         });
@@ -135,6 +136,7 @@ export async function POST(
             category: "lorebook",
             content: e.content || "",
             keys: e.keys || [],
+            depth: e.depth ?? 3,
             enabled: true,
           } as any,
         });

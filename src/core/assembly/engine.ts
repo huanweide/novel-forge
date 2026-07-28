@@ -26,6 +26,7 @@ import type {
   CharacterCard,
   Storyline,
   EventImportances,
+  LorebookEntry,
 } from "@/core/types";
 import { countTokens, truncateByTokens } from "./tokenizer";
 import { safeJoin } from "@/lib/utils";
@@ -100,10 +101,25 @@ export function assemblePrompt(
     ? buildAuthorSection(context.authorNote, budget.allocations.authorNote)
     : "";
 
+  // ── 世界书深度注入（酒馆 worldbook depth 0-4 迁移）──
+  // depth 0=正文前强效(用户指令下方) | 1=用户指令上方 | 2=系统上下文 | 3/4=背景设定(关键词触发，已在 loreSection)
+  const forced = context.forcedLore || [];
+  const forcedByDepth: Record<number, LorebookEntry[]> = { 0: [], 1: [], 2: [] };
+  for (const e of forced) {
+    const d = e.depth ?? 3;
+    if (d <= 2) forcedByDepth[d].push(e);
+  }
+  // depth 2 → 系统上下文区（紧跟全局记忆之后，作为基础设定常驻）
+  const forcedDepth2Section = buildForcedLoreSection(forcedByDepth[2], "系统上下文（强制常驻·始终生效）");
+  // depth 1 → 撰写指令上方；depth 0 → 撰写指令下方（正文前·最强效）
+  const forcedDepth1Block = buildForcedLoreSection(forcedByDepth[1], "强制世界书（撰写指令上方）");
+  const forcedDepth0Block = buildForcedLoreSection(forcedByDepth[0], "强制世界书（正文前·强效）");
+
   // 拼装全文
   const sections = [
     systemSection,
     globalSection,
+    forcedDepth2Section,
     loreSection,
     arcSection,
     storylineSection,
@@ -116,12 +132,17 @@ export function assemblePrompt(
 
   const assembledContext = sections.join("\n\n---\n\n");
 
+  // 撰写指令区：depth1 在指令上方、depth0 在指令下方（正文前）
+  const instructionBlock = [forcedDepth1Block, writingInstruction, forcedDepth0Block]
+    .filter(Boolean)
+    .join("\n\n");
+
   // 最终 Prompt
   const prompt = `${assembledContext}
 
 ---
 【接下来请按照以下指令撰写正文】
-${writingInstruction}`;
+${instructionBlock}`;
 
   // 计算实际 Token 用量
   const actualUsed = countTokens(prompt);
@@ -187,9 +208,14 @@ function buildLoreSection(
 ): string {
   if (triggeredLore.length === 0) return "";
 
+  // 按深度升序（depth 3 在前、depth 4 在后）：越深越弱、越接近背景，渲染顺序靠后
+  const sorted = [...triggeredLore].sort(
+    (a, b) => (a.entry.depth ?? 3) - (b.entry.depth ?? 3)
+  );
+
   // 按板块分组注入，每板块独立小标题——格式宽松，纯自然语言
-  const grouped = new Map<string, TriggeredLore[]>();
-  for (const t of triggeredLore) {
+  const grouped = new Map<string, typeof sorted>();
+  for (const t of sorted) {
     const cat = (t.entry as any).category || "custom";
     const key = CATEGORY_SECTIONS[cat] ? cat : "custom";
     if (!grouped.has(key)) grouped.set(key, []);
@@ -209,6 +235,39 @@ function buildLoreSection(
 
   let result = sections.join("\n\n");
   return truncateByTokens(result, maxTokens);
+}
+
+/**
+ * 共享渲染：把一组世界书词条按板块分组渲染成「- 标题：内容」文本。
+ * 同时服务于关键词触发的 loreSection 与强制注入的 forced 区块。
+ */
+function renderLoreEntries(entries: { title: string; content: string; category?: string }[]): string {
+  if (entries.length === 0) return "";
+  const grouped = new Map<string, typeof entries>();
+  for (const e of entries) {
+    const cat = (e.category as any) || "custom";
+    const key = CATEGORY_SECTIONS[cat] ? cat : "custom";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(e);
+  }
+  const sections: string[] = [];
+  for (const [cat, items] of grouped) {
+    const sec = CATEGORY_SECTIONS[cat] || CATEGORY_SECTIONS.custom;
+    const lines = items.map((e) => `- ${e.title}：${(e.content || "").replace(/\n/g, "；")}`);
+    sections.push(`【${sec.emoji} ${sec.label}】\n${lines.join("\n")}`);
+  }
+  return sections.join("\n\n");
+}
+
+/**
+ * 强制世界书区块（depth<=2，不依赖关键词，始终注入）。
+ * 用 🌟 标记以区别于关键词触发的世界书，便于排查。
+ */
+function buildForcedLoreSection(entries: LorebookEntry[], label: string): string {
+  if (!entries || entries.length === 0) return "";
+  const rendered = renderLoreEntries(entries as any);
+  if (!rendered) return "";
+  return `【🌟 ${label}】\n${rendered}`;
 }
 
 function buildShortTermSection(

@@ -54,6 +54,7 @@ export interface LorebookData {
   keys: string[];
   content: string;
   enabled: boolean;
+  depth: number;   // 注入深度 0-4（酒馆 depth 迁移）
 }
 
 export interface StoryNodeData {

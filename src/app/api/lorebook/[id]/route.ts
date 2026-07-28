@@ -19,6 +19,7 @@ export async function PUT(
         keys: body.keys,
         content: body.content,
         insertionOrder: body.insertionOrder,
+        depth: body.depth,
         enabled: body.enabled,
         parentId: body.parentId,
         relatedEntryIds: body.relatedEntryIds,

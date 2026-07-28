@@ -20,7 +20,7 @@
 | 酒馆能力 | Novel Forge 现状 | 迁移方案 | 优先级 |
 |---|---|---|---|
 | XML+YAML+JSON 混合提示词 | 当前 mostly 纯文本/JSON | 升级 `buildPromptContext` / `assemblePrompt`：用 XML 标签包裹块（`<Writing_style>`、`<Lore>`、`<Storyline>`），中文说明用 YAML 子格式 | 高 |
-| 世界书 depth 注入 | LoreTable/WorldBook 统一注入，无深度分层 | 给 LoreTable/规则/角色卡加 `depth` 字段：0=强效注入正文前，1=用户指令上方，2=系统上下文，3=背景设定 | 高 |
+| 世界书 depth 注入 | LoreTable/WorldBook 统一注入，无深度分层 | 给 LorebookEntry 加 `depth` 字段：0=强效注入正文前，1=用户指令上方，2=系统上下文，3=背景设定(默认) | 高（已完成 v0.38.0） |
 | 正则后处理管线 | 生成后直接输出，无后处理 | 新增 `post-processing` 管线：可配置 regex 列表（删除思维链、折叠远楼层、美化输出），在 `write/route.ts` 生成后调用 | 中 |
 | 角色卡结构化模板 | CharacterCard 自由文本 | 给角色卡加结构化字段（特点/外貌/穿着/性格/背景/关系/发言参考），按模板注入提示词 | 中 |
 | 远楼层摘要压缩 | `contextKeepChapters` 直接截断 | 超过窗口的老楼层自动摘要成 `<summary>` 块，替代原始正文注入 | 中 |
@@ -58,4 +58,20 @@
 
 ## 六、状态
 
-【进行中】学习已完成，方案已梳理；下一步执行：Preset 类型扩展（v0.37.0）。
+【成功】Preset 类型扩展已实现并推送 v0.37.0（commit c7193ee）：
+- schema 新增 Project.postProcessingRules；Preset.type 支持 regex / lorebook / api_config
+- /api/presets/[id]/apply 新增三类应用逻辑
+- 创意工坊 UI 新增三类 TAB/标签/上传占位
+- write 路由接入 src/core/post-process/regex.ts 正则后处理管线
+- 内置示范预设：通用·删除思维链、示范·世界书条目、示范·创意奔放 API 参数
+- tsc + next build 全通过
+
+后续候选（由 04-待迭代项承接）：XML+YAML+JSON 提示词格式升级、远楼层摘要压缩、角色卡结构化模板。
+
+【成功】世界书 depth 注入已实现并推送 v0.38.0：
+- schema 新增 LorebookEntry.depth（默认3）；类型层 LorebookEntry/PromptContext.forcedLore/LorebookData 同步
+- 编排层 buildPromptContext 拆分 forced(depth≤2)/triggerable(depth≥3)，关键词匹配仅作用于 triggerable
+- 组装引擎 assemblePrompt：depth2→系统上下文区、depth1→指令上方、depth0→正文前(指令下方)；loreSection 按 depth 升序
+- 宝宝流 recall 排除 depth≤2；lorebook 新建/编辑 API 与 preset apply 写入 depth；世界书 UI 新增深度选择器+徽标
+- 创意工坊示范预设「核心设定」改 depth=2 演示强制常驻注入
+- tsc + 生产 next build 全通过

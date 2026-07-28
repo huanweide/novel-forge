@@ -25,6 +25,7 @@ export function LorebookEditDialog({
     content: entry.content,
     enabled: entry.enabled,
     insertionOrder: 50,
+    depth: entry.depth ?? 3,
   });
 
   const [autofilling, setAutofilling] = useState(false);
@@ -47,6 +48,7 @@ export function LorebookEditDialog({
           content: updated.content || form.content,
           enabled: updated.enabled ?? form.enabled,
           insertionOrder: form.insertionOrder,
+          depth: form.depth,
         });
       }
       setAutofillMsg(`补全完成：${data.message || ""}`);
@@ -62,7 +64,7 @@ export function LorebookEditDialog({
       const res = await fetch(`/api/lorebook/${entry.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, keys: form.keys.split(/[,，、]/).map((s) => s.trim()).filter(Boolean) }),
+        body: JSON.stringify({ ...form, depth: Number(form.depth) || 3, keys: form.keys.split(/[,，、]/).map((s) => s.trim()).filter(Boolean) }),
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
@@ -113,6 +115,15 @@ export function LorebookEditDialog({
             <option value="creature">生物/种族</option>
             <option value="item">关键物品</option>
             <option value="custom">自定义</option>
+          </select>
+        </DialogField>
+        <DialogField label="注入深度（酒馆 worldbook depth 0-4 迁移）">
+          <select className="input-glass w-full rounded px-3 py-2 text-sm" value={String(form.depth)} onChange={(e) => setForm({ ...form, depth: Number(e.target.value) })}>
+            <option value="0">0 · 强效注入正文前（用户指令下方，最强效）</option>
+            <option value="1">1 · 用户指令上方</option>
+            <option value="2">2 · 系统上下文（强制常驻，不依赖关键词）</option>
+            <option value="3">3 · 背景设定·关键词触发（默认）</option>
+            <option value="4">4 · 深层背景</option>
           </select>
         </DialogField>
         <DialogField label="触发关键词（逗号分隔）">

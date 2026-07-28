@@ -34,8 +34,11 @@ export async function buildRecallBlock(input: RecallBuildInput): Promise<RecallB
   const loreTablesRaw = await prisma.loreTable.findMany({ where: { projectId } });
 
   // 过滤"自动发现"占位世界书：内容含 [自动发现] 仅为待补充设定，召回会污染 prompt
+  // 同时排除 depth<=2 的强制层（已由 assemblePrompt 的 forcedLore 常驻注入，避免重复注入）
   const cleanLore = (loreEntries || []).filter(
-    (e: any) => !((e.content || "") as string).includes("[自动发现]"),
+    (e: any) =>
+      !((e.content || "") as string).includes("[自动发现]") &&
+      (typeof e.depth === "number" ? e.depth > 2 : true),
   );
 
   // 表格形态（供召回匹配 + <if cell> 分阶段人设求值共用）

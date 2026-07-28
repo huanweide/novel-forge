@@ -579,7 +579,13 @@ export function buildPromptContext(params: {
     .map((n) => n.content || n.outline || "")
     .join(" ") + (currentNode.outline || "");
 
-  const triggeredLore = matchLoreEntries(recentText, loreEntries, 8).map((t) => ({
+  // 世界书深度分层（酒馆 worldbook depth 0-4 迁移）：
+  // depth<=2 强制常驻注入（不依赖关键词），depth>=3 走关键词触发路径。
+  const activeLore = (loreEntries || []).filter((e) => e.enabled);
+  const forcedLore = activeLore.filter((e) => (e.depth ?? 3) <= 2);
+  const triggerableLore = activeLore.filter((e) => (e.depth ?? 3) >= 3);
+
+  const triggeredLore = matchLoreEntries(recentText, triggerableLore, 8).map((t) => ({
     entry: t.entry,
     triggerKeyword: t.triggerKeyword,
     matchScore: t.matchScore,
@@ -1484,6 +1490,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
       scheduledCards,
     },
     triggeredLore,
+    forcedLore,
     slidingWindow: {
       shortTerm: previousNodes.slice(-4), // 最近4个小节
       mediumTerm: chapterSummaries.slice(-3), // 最近3章摘要

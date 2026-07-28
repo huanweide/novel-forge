@@ -26,6 +26,16 @@ const WORLD_MODULES = [
 
 type ModuleKey = (typeof WORLD_MODULES)[number]["key"];
 
+// ─── 世界书注入深度标签（酒馆 worldbook depth 0-4 迁移）───
+
+const DEPTH_LABEL: Record<number, string> = {
+  0: "D0·正文前强效",
+  1: "D1·指令上方",
+  2: "D2·系统上下文",
+  3: "D3·关键词触发",
+  4: "D4·深层背景",
+};
+
 // ─── category 中文 → DB key 映射 ────────────────────────
 
 const CATEGORY_TO_MODULE: Record<string, ModuleKey> = {
@@ -180,6 +190,7 @@ export function WorldPanel({
           keys,
           content,
           insertionOrder: 50,
+          depth: Number(createForm["depth"] ?? 3) || 3,
         }),
       });
       if (res.ok) { setShowCreate(false); setCreateForm({}); toastAdded(title, "世界书"); onRefresh(); }
@@ -282,6 +293,20 @@ export function WorldPanel({
                 />
               )
             )}
+            <div className="mb-2 mt-1">
+              <label className="mb-0.5 block text-[10px] text-[var(--nv-text-muted)]">注入深度（酒馆 depth 迁移）</label>
+              <select
+                value={createForm["depth"] || "3"}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, depth: e.target.value }))}
+                className="input-glass w-full rounded px-2 py-1 text-xs"
+              >
+                <option value="0">0 · 强效注入正文前（用户指令下方）</option>
+                <option value="1">1 · 用户指令上方</option>
+                <option value="2">2 · 系统上下文（常驻）</option>
+                <option value="3">3 · 背景设定·关键词触发（默认）</option>
+                <option value="4">4 · 深层背景</option>
+              </select>
+            </div>
             <div className="mt-1 flex gap-2">
               <button onClick={handleCreate} disabled={saving}
                 className="btn-primary rounded px-2 py-1 text-[10px] font-medium disabled:opacity-50">
@@ -331,6 +356,14 @@ export function WorldPanel({
                   {entry.keys.slice(0, 4).map((k, i) => (
                     <span key={i} className="rounded bg-[var(--nv-surface-2)] px-1 py-0.5 text-[8px] text-[var(--nv-text-tertiary)]">{k}</span>
                   ))}
+                </div>
+              )}
+              {/* 注入深度徽标 */}
+              {typeof entry.depth === "number" && (
+                <div className="mt-1">
+                  <span className={`rounded px-1 py-0.5 text-[8px] ${entry.depth <= 2 ? "bg-[var(--nv-accent)]/20 text-[var(--nv-accent)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]"}`}>
+                    {DEPTH_LABEL[entry.depth] || `深度${entry.depth}`}
+                  </span>
                 </div>
               )}
             </div>

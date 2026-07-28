@@ -82,6 +82,8 @@ export interface LorebookEntry {
   keys: string[];                 // 触发关键词数组
   content: string;                // 设定内容（≤200 Token）
   insertionOrder: number;         // 插入优先级（越大越靠前，0-100）
+  // 注入深度（酒馆 worldbook depth 0-4 迁移）：0=正文前强效 / 1=用户指令上方 / 2=系统上下文 / 3=背景设定·关键词触发(默认) / 4=深层背景
+  depth: number;
   enabled: boolean;               // 是否启用
   parentId?: string;              // 父词条ID（形成层级）
   relatedEntryIds: string[];      // 关联词条ID
@@ -207,7 +209,8 @@ export type ReviewIssueType =
 export interface PromptContext {
   systemPrompt: string;           // 系统指令区
   globalMemory: GlobalMemory;     // 全局静态记忆
-  triggeredLore: TriggeredLore[]; // 动态触发的世界书词条
+  triggeredLore: TriggeredLore[]; // 动态触发的世界书词条（depth>=3，关键词触发）
+  forcedLore?: LorebookEntry[];   // 强制常驻注入的世界书词条（depth<=2，不依赖关键词）
   slidingWindow: SlidingWindow;   // 滑动窗口记忆
   authorNote: string | null;      // 作者强制介入指令
   characters?: CharacterCard[];   // 角色列表（用于角色重叠检索和弧光追踪）

@@ -25,18 +25,43 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.37.0";
+export const LATEST_VERSION = "v0.38.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🍺 创意工坊 Preset 类型扩展（酒馆迁移）：新增 regex / lorebook / api_config 三类预设，可上传并应用到项目",
-  "🧹 正则后处理管线落地：生成一章后自动按项目级 postProcessingRules 清洗输出（如删除 <think>/<thinking>/<analysis>）",
-  "⚙️ API 参数预设可覆盖项目 llmConfig：应用 api_config 预设后直接改变生成温度/topP/模型参数",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.37.0",
+  "📚 世界书 depth 注入（酒馆迁移）：LorebookEntry 新增 depth 字段（0-4），把酒馆世界书分层注入机制搬进 Novel Forge",
+  "🌟 depth≤2 强制常驻：0=正文前强效 / 1=用户指令上方 / 2=系统上下文，不依赖关键词，始终注入；depth≥3 走关键词触发（默认3）",
+  "🧩 创意工坊示范预设「核心设定」改为 depth=2 系统上下文常驻；世界书编辑/新建 UI 新增深度选择器与徽标",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.38.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.38.0",
+    date: "2026-07-28",
+    title: "世界书 depth 注入（酒馆 worldbook depth 0-4 迁移）",
+    sections: [
+      {
+        label: "世界书注入深度（depth 0-4）",
+        items: [
+          "Prisma LorebookEntry 新增 `depth Int @default(3)`；类型层 LorebookEntry/PromptContext.forcedLore/LorebookData 同步",
+          "depth 语义对齐酒馆：0=强效注入正文前(用户指令下方) / 1=用户指令上方 / 2=系统上下文(强制常驻) / 3=背景设定·关键词触发(默认) / 4=深层背景",
+          "编排层 buildPromptContext 拆分 loreEntries 为 forced(depth≤2) 与 triggerable(depth≥3)，关键词匹配仅作用于 triggerable；forcedLore 经 PromptContext 透传",
+          "组装引擎 assemblePrompt：depth2 注入系统上下文区、depth1 置于撰写指令上方、depth0 置于撰写指令下方（正文前·最强效）；关键词触发的 loreSection 按 depth 升序（3 在前、4 在后）",
+        ],
+      },
+      {
+        label: "去重与 API/UI",
+        items: [
+          "宝宝流 recall 路径（buildRecallBlock）排除 depth≤2 条目，避免与 forcedLore 常驻注入重复",
+          "lorebook 新建/编辑 API、preset apply（worldview/story_progression/lorebook 分支）均写入 depth（默认3）",
+          "世界书编辑弹窗与 WorldPanel 新建表单新增深度选择器（0-4 中文标签）；列表卡片显示深度徽标（depth≤2 高亮为常驻）",
+          "创意工坊示范预设「示范·世界书条目」核心设定条目设为 depth=2（系统上下文常驻，演示强制注入）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.37.0",
     date: "2026-07-28",
