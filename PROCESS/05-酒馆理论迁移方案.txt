@@ -22,7 +22,7 @@
 | XML+YAML+JSON 混合提示词 | 当前 mostly 纯文本/JSON | 升级 `assemblePrompt`：用 XML 标签包裹块（根 `<novel_forge_context>` + `<writing_task>`，子标签 system_instruction/global_setting/world_lore 等），中文说明保持自然语言 | 高（已完成 v0.40.0） |
 | 世界书 depth 注入 | LoreTable/WorldBook 统一注入，无深度分层 | 给 LorebookEntry 加 `depth` 字段：0=强效注入正文前，1=用户指令上方，2=系统上下文，3=背景设定(默认) | 高（已完成 v0.38.0） |
 | 正则后处理管线 | 生成后直接输出，无后处理 | 新增 `post-processing` 管线：可配置 regex 列表（删除思维链、折叠远楼层、美化输出），在 `write/route.ts` 生成后调用 | 中（已并 v0.37.0 完成） |
-| 角色卡结构化模板 | CharacterCard 已有 appearance/personality/background/speechPatterns | 补 `relationships`(关系网) + `speechReference`(发言参考) 字段，注入时按酒馆模板呈现（称呼+特点+外貌+穿着+性格+背景+关系+发言参考） | 低（基础已具备，仅补 2 字段+渲染） |
+| 角色卡结构化模板 | CharacterCard 已有 appearance/personality/background/speechPatterns/relationships 齐全 | 侦察确认 relationships(四路齐全) 与 speechPatterns(dialogueStyle 内置) 早已落地，无需补字段；仅修注入渲染：称呼补别名+外貌补穿着+关系读 dynamic | 低（已完成 v0.41.0） |
 | 远楼层摘要压缩 | `contextKeepChapters` 截断 + 单章多小节直接 truncate 尾部 | 单章内超出 token 窗口的老小节（远楼层）自动 LLM 摘要成 `<summary>` 块替代原文注入，而非硬截断丢失信息 | 中（v0.39.0 已实现"标记式折叠"·LLM 摘要列为可选增强） |
 | 记忆清除/上下文溢出治理（**知识库补遗项**） | 仅 slidingWindow 截断，无"隐藏/折叠远楼层"显式机制 | 在 assemblePrompt 中区分"常驻/召回/折叠"三层：depth≤2 常驻、关键词召回、远楼层折叠标记；显式标记防止模型误读丢失 | 高（已 v0.39.0 完成） |
 | 预设类型扩展 | Preset type 仅 {table-template, story-progression, style, worldview, character} | 新增 `regex`、`lorebook`、`api-config` 类型，支持用户上传酒馆正则/世界书/API参数预设 | 高（已完成 v0.37.0） |
@@ -34,7 +34,7 @@
 
 **新排定推进序（按 ROI 与依赖关系）**：
 
-1. **【低·下一主推】角色卡结构化模板收尾**：补 `relationships` + `speechReference` 两字段，UI 编辑 + 注入按酒馆模板呈现（称呼+特点+外貌+穿着+性格+背景+关系+发言参考）；基础字段已具备，工作量最小。
+1. **【已完成 v0.41.0】角色卡结构化模板收尾**：侦察确认 relationships 与 speechPatterns 早已齐全（无需补字段），仅修注入渲染三处——称呼补别名、外貌补穿着、关系读 dynamic（原误读空 notes）；tsc + next build 全通过。
 2. **【可选·增强】远楼层 LLM 摘要（非阻塞）**：v0.39.0 已实现"标记式折叠"（明确边界、消除静默丢弃与误读隐患），酒馆式"LLM 摘要替代原文"需额外 LLM 调用、增加延迟与复杂度，列为可选增强，不阻塞主线。
 
 **原则**：凡涉及 assemblePrompt 结构的（格式升级）集中处理，避免重复返工；regex 后处理（已落地）随 v0.40.0 格式升级已回归确认——作用于模型输出，与 prompt 格式无关，无需改动。
@@ -73,3 +73,12 @@
 - 对齐现状：7 迁移项已完成 2（Preset 类型扩展 v0.37.0 / 世界书 depth 注入 v0.38.0）；正则后处理已并入 v0.37.0；角色卡结构化基础字段（appearance/personality/background/speechPatterns）已具备，仅需补 relationships+speechReference，降为低优先级。
 - **新增第 5 迁移项「记忆清除/上下文溢出治理（高）」**：知识库第七章"记忆机制"此前未单列，现补入，作为 depth 注入后的自然延伸主推项（v0.39.0）。
 - 重排推进序：v0.39.0 记忆清除/上下文溢出治理(+远楼层摘要压缩) → v0.40.0 XML+YAML+JSON 提示词格式升级 → 角色卡结构化收尾(低)。
+
+【成功】角色卡结构化模板收尾已实现并推送 v0.41.0：
+- 侦察结论：relationships 字段（schema/types/UI/注入四路齐全）与 speechPatterns（dialogueStyle 内置子字段）此前已落地，本次零新增字段、零 schema 变更
+- 注入渲染修复三处（orchestrator.ts 调度卡构建）：
+  - 称呼完整化：卡头追加别名（aliases）
+  - 穿着注入：外貌块补 attire（穿着）——UI 字段早已存在却一直未注入的遗漏修复
+  - 关系备注修复：注入读 UI 实际保存的 r.dynamic（原误读恒为空的 r.notes，关系动态永远丢失）
+- 未触碰表单重建点，静态自检 + 生产 next build 零回归
+- 待迭代：可选·远楼层 LLM 摘要增强仍为非阻塞候选（见 04）

@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.40.0";
+export const LATEST_VERSION = "v0.41.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧩 提示词结构升级（酒馆格式论迁移）：assemblePrompt 从“--- 分隔 +【xxx】标题”改为 XML 标签分层包裹，块边界对 LLM 无歧义",
-  "🎯 根标签 <novel_forge_context> 与 <writing_task> 明确区分“上下文”与“撰写任务”两层，消除模型把指令误当正文、正文误当指令的混淆",
-  "📦 11 个上下文区块各自用 XML 子标签包裹（系统/全局/强制常驻/世界书/弧光/故事线/伏笔/转折/章节摘要/近期/作者指令），内部自然语言不变",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.40.0",
+  "👤 角色卡结构化模板收尾（酒馆模板呈现）：调度卡注入补全「称呼别名 + 穿着 + 关系备注」三项，此前已在 UI 收集但未进 prompt",
+  "🧥 穿着注入：外貌块补 attire（穿着）——UI 字段一直存在却被遗漏进注入的修复，角色形象完整性对齐酒馆模板",
+  "🔗 关系备注修复：注入读取 UI 实际保存的 r.dynamic 字段（原误读恒为空的 r.notes），关系动态不再丢失",
+  "✅ 未加字段、零 schema 变更，tsc + 生产 next build 全通过，更新面板双文件同步至 v0.41.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.41.0",
+    date: "2026-07-28",
+    title: "角色卡结构化模板收尾（酒馆模板呈现）",
+    sections: [
+      {
+        label: "注入补全与一致性修复（不做字段扩张）",
+        items: [
+          "称呼完整化：调度卡头部追加别名（aliases），「称呼」维度对齐酒馆模板的称呼+特点+外貌+穿着+性格+背景+关系+发言参考",
+          "穿着注入：外貌块补 attire（穿着）——UI 字段（appearanceAttire）早已存在却一直未注入 prompt 的遗漏修复",
+          "关系备注修复：注入从 r.dynamic 读取值（UI 实际保存字段），原代码误读恒为空的 r.notes 导致关系动态永远丢失",
+        ],
+      },
+      {
+        label: "收尾说明（基础已具备）",
+        items: [
+          "侦察确认 relationships 字段（schema/types/UI/注入四路齐全）与 speechPatterns（dialogueStyle 内置子字段）此前已落地，故本次无新增字段",
+          "改动仅修正注入渲染逻辑，未触碰 schema / 类型 / 表单重建点，静态自检 + 生产构建零回归",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.40.0",
     date: "2026-07-28",

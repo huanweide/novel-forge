@@ -1366,7 +1366,8 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
     if (!scheduledNames.has(c.name)) continue;
 
     const card: string[] = [];
-    card.push(`════ ${c.name} ════`);
+    const aliases = (Array.isArray((c as any).aliases) && (c as any).aliases.length > 0) ? (c as any).aliases.join("、") : "";
+    card.push(`════ ${c.name}${aliases ? `（${aliases}）` : ""} ════`);
 
     // 角色定位
     const roleMap: Record<string, string> = { protagonist: "主角", antagonist: "主要对手", mentor: "导师", love_interest: "恋爱对象", catalyst: "剧情催化剂", supporting: "配角", background: "背景角色" };
@@ -1403,6 +1404,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
       if (app.eyes) appParts.push(`眼：${app.eyes}`);
       if (app.build) appParts.push(`体型：${app.build}`);
       if (app.features) appParts.push(`特征：${app.features}`);
+      if (app.attire) appParts.push(`穿着：${app.attire}`);
       if (appParts.length > 0) card.push(`外貌：${appParts.join(" | ")}`);
     }
 
@@ -1415,7 +1417,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
     // 关系网（完整）
     const rels = (Array.isArray((c as any).relationships) ? (c as any).relationships : []) as any[];
     if (rels.length > 0) {
-      const relLines = rels.map((r: any) => `  ${r.targetName || "?"} → ${r.relation || ""}${r.notes ? ` (${r.notes.slice(0, 40)})` : ""}`);
+      const relLines = rels.map((r: any) => `  ${r.targetName || "?"} → ${r.relation || ""}${(r.dynamic || r.notes) ? ` (${(r.dynamic || r.notes).slice(0, 40)})` : ""}`);
       card.push(`关系：\n${relLines.join("\n")}`);
     }
 

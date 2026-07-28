@@ -2,6 +2,13 @@
 
 ---
 
+## v0.41.0 — 2026-07-28
+**角色卡结构化模板收尾（酒馆模板呈现）**
+- 👤 调度卡注入补全「称呼别名 + 穿着 + 关系备注」三项，此前 UI 已收集却未进 prompt：称呼头部追加别名（aliases），外貌块补 attire（穿着）
+- 🔗 关系备注修复：注入改读 UI 实际保存的 `r.dynamic` 字段（原误读恒为空的 `r.notes`），关系动态不再丢失
+- 🧱 侦察确认 `relationships` 字段（schema/types/UI/注入四路齐全）与 `speechPatterns`（dialogueStyle 内置子字段）此前已落地，本次零新增字段、零 schema 变更
+- ✅ tsc + 生产 next build 全通过
+
 ## v0.40.0 — 2026-07-28
 **提示词结构升级：XML 标签分层包裹（酒馆格式论迁移）**
 - 🧩 assemblePrompt 拼接层从「--- 分隔 +【xxx】标题」改为逐块 XML 标签包裹，块边界对 LLM 无歧义
