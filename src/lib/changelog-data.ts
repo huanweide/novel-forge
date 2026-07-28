@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.32.2";
+export const LATEST_VERSION = "v0.32.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧩 统一空态卡片 EmptyState：角色 / 世界书 / 故事线 / 规则四类列表无数据时显示带图标的虚空玻璃空态卡，视觉完整度对齐",
-  "🔗 项目详情接口补全资产：GET /api/projects/[id] 现返回 styleCards 与 loreTables，workspace 可展示「已应用预设」徽标（闭环）",
-  "🐛 监测面板静默失败修复：MonitorPanel 的 fetch 异常从静默忽略改为 console.warn，开发期可排查",
-  "🟢 SSE 流关闭逐文件复核：17 个流式路由的 controller.close() 均在 try 末尾 / catch 内 / 提前 return 前兜底，异常路径不悬挂，保留现状",
+  "🌑 暗色可读性提升：--nv-text-tertiary 提亮至对比度 ≥4.5:1、--nv-text-muted 适度提亮，占位 / 禁用文字在暗色下重新可读",
+  "🔧 新增标准错误响应 helper jsonError：统一 {error} 结构 + HTTP 状态，全站 API 错误处理一致化的起点",
+  "🔗 两个预设路由接入 jsonError：/api/presets/[id] 与 /api/seed/presets 的错误返回已统一格式",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.32.3",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.32.3",
+    date: "2026-07-28",
+    title: "暗色可读性提升 + API 错误格式统一",
+    sections: [
+      {
+        label: "可读性（A11y）",
+        items: [
+          "--nv-text-tertiary 提亮至对比度 ≥4.5:1（原约 3.5:1），暗色下弱文字达 WCAG AA 普通文本标准",
+          "--nv-text-muted 适度提亮，占位符 / 禁用文字在暗色背景下恢复可读性",
+        ],
+      },
+      {
+        label: "API 错误响应统一",
+        items: [
+          "新增标准 helper jsonError(message, status?)，统一返回 { error } 结构与 HTTP 状态，消除各路由 {ok:true}/{error} 不一致",
+          "/api/presets/[id]（GET/PUT/DELETE）与 /api/seed/presets（POST）已接入 jsonError，作为全站错误格式统一化起点",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.32.2",
     date: "2026-07-28",

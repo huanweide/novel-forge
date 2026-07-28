@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api";
 
 // GET /api/presets/[id]
 export async function GET(
@@ -9,11 +10,11 @@ export async function GET(
   try {
     const { id } = await params;
     const preset = await prisma.preset.findUnique({ where: { id } });
-    if (!preset) return NextResponse.json({ error: "预设不存在" }, { status: 404 });
+    if (!preset) return jsonError("预设不存在", 404);
     return NextResponse.json(preset);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: `读取预设失败：${msg}` }, { status: 500 });
+    return jsonError(`读取预设失败：${msg}`);
   }
 }
 
@@ -29,7 +30,7 @@ export async function PUT(
     return NextResponse.json(preset);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: `更新预设失败：${msg}` }, { status: 500 });
+    return jsonError(`更新预设失败：${msg}`);
   }
 }
 
@@ -44,6 +45,6 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: `删除预设失败：${msg}` }, { status: 500 });
+    return jsonError(`删除预设失败：${msg}`);
   }
 }

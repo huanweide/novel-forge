@@ -97,8 +97,8 @@
   /* ── 文字层级（4级明度 + 功能色） ── */
   --nv-text-primary:   #EEECE6;   /* L1 主文字——暖白，对比度 16:1 */
   --nv-text-secondary: #9E9C94;   /* L2 辅文字——暖灰，对比度 6:1 */
-  --nv-text-tertiary:  #6B6962;   /* L3 弱文字——中灰，对比度 3.5:1 */
-  --nv-text-muted:     #484640;   /* L4 禁用文字——暗灰 */
+  --nv-text-tertiary:  #7A786F;   /* L3 弱文字——中灰，对比度 4.6:1（达 WCAG AA） */
+  --nv-text-muted:     #5C5A53;   /* L4 禁用/占位文字——暗灰，对比度 3.0:1（占位可读） */
 
   /* ── 字体栈（Next.js Google Fonts CSS变量 → 中文系统字体 fallback） ── */
   --font-sans:       var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;

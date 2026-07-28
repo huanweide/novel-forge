@@ -2,6 +2,20 @@
 
 ---
 
+## v0.32.3 — 2026-07-28
+
+### 暗色可读性提升 + API 错误格式统一
+
+**可读性（A11y）**
+- --nv-text-tertiary 提亮至对比度 ≥4.5:1（原约 3.5:1），暗色下弱文字达 WCAG AA 普通文本标准
+- --nv-text-muted 适度提亮，占位符 / 禁用文字在暗色背景下恢复可读性
+
+**API 错误响应统一**
+- 新增标准 helper jsonError(message, status?)，统一返回 { error } 结构与 HTTP 状态，消除各路由 {ok:true}/{error} 不一致
+- /api/presets/[id]（GET/PUT/DELETE）与 /api/seed/presets（POST）已接入 jsonError，作为全站错误格式统一化起点
+
+---
+
 ## v0.32.2 — 2026-07-28
 
 ### 空态统一 + 项目资产闭环 + 监测告警（缺陷修复迭代）

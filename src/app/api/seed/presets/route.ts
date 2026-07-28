@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api";
 
 // POST /api/seed/presets —— 写入内置示范预设（首次部署或重置时用）
 // 把"参考资料本身就是个预设库"实体化为可一键套用的示范资产。
@@ -353,6 +354,6 @@ export async function POST() {
     return NextResponse.json({ ok: true, created, total: BUILTINS.length });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: `播种预设失败：${msg}` }, { status: 500 });
+    return jsonError(`播种预设失败：${msg}`);
   }
 }
