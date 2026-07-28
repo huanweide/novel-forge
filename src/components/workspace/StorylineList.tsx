@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
@@ -159,13 +160,16 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         </div>
       )}
       {storylines.length === 0 && !loading && !loadError && (
-        <div className="py-6 text-center text-xs text-[var(--nv-text-tertiary)]">
-          <p className="mb-2">还没有故事线</p>
-          <button onClick={handleGenerate} disabled={generating}
-            className="text-[10px] text-[var(--nv-primary)] hover:text-[var(--nv-creative)]">
-            {generating ? "AI 生成中..." : "点击 AI 自动生成"}
-          </button>
-        </div>
+        <EmptyState
+          icon="bookmarked"
+          title="还没有故事线"
+          action={
+            <button onClick={handleGenerate} disabled={generating}
+              className="btn-ghost text-[11px]">
+              {generating ? "AI 生成中..." : "点击 AI 自动生成"}
+            </button>
+          }
+        />
       )}
 
       {/* 编辑弹窗 */}

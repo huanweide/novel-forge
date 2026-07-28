@@ -17,6 +17,8 @@ export async function GET(
         storyNodes: { orderBy: { order: "asc" } },
         storyBranches: true,
         storylines: { orderBy: [{ type: "asc" }, { order: "asc" }] },
+        styleCards: true,
+        loreTables: true,
       },
     });
     if (!project) {

@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.32.1";
+export const LATEST_VERSION = "v0.32.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "API 路由健壮性加固：修复预设详情 / 删除 / 更新与内置预设播种两处路由缺失的异常捕获",
-  "预设路由异常不再暴露无信息 500：统一返回 {error} 结构，前端可稳定识别并提示",
-  "按诊断规范完成六维度自检：TypeScript 编译 / Prisma 校验 / 服务健康 / 反模式扫描全部通过",
-  "优化建议清单已整理：SSE 统一 finally 关闭、巨型组件拆分、大列表虚拟化、空态与对比度/A11y 列入后续迭代",
+  "🧩 统一空态卡片 EmptyState：角色 / 世界书 / 故事线 / 规则四类列表无数据时显示带图标的虚空玻璃空态卡，视觉完整度对齐",
+  "🔗 项目详情接口补全资产：GET /api/projects/[id] 现返回 styleCards 与 loreTables，workspace 可展示「已应用预设」徽标（闭环）",
+  "🐛 监测面板静默失败修复：MonitorPanel 的 fetch 异常从静默忽略改为 console.warn，开发期可排查",
+  "🟢 SSE 流关闭逐文件复核：17 个流式路由的 controller.close() 均在 try 末尾 / catch 内 / 提前 return 前兜底，异常路径不悬挂，保留现状",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.32.2",
+    date: "2026-07-28",
+    title: "空态统一 + 项目资产闭环 + 监测告警（缺陷修复迭代）",
+    sections: [
+      {
+        label: "空态统一（视觉完整度）",
+        items: [
+          "新增共享空态组件 EmptyState（虚空玻璃风格：虚线边框 + 居中 Icon + 主文案 + 可选引导/操作区）",
+          "角色 / 世界书 / 故事线 / 规则四类列表的无数据占位统一为 EmptyState 卡片；规则面板原漏网的旧色板 text-zinc-600 一并收编为 nv 令牌",
+        ],
+      },
+      {
+        label: "项目资产闭环",
+        items: [
+          "GET /api/projects/[id] 的 include 补全 styleCards 与 loreTables，前端可在 workspace 直接读取创意工坊已应用预设，减少端点分裂",
+        ],
+      },
+      {
+        label: "健壮性",
+        items: [
+          "MonitorPanel 的 fetch 异常从静默忽略（/* ignore */）改为 console.warn，保留非关键降级但开发期可排查",
+          "SSE 流关闭逐文件复核：17 个流式路由的 controller.close() 均已覆盖所有异常路径（try 末尾 / catch 内 / 提前 return 前），无悬挂风险，保持现状以控制改动风险",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.32.1",
     date: "2026-07-28",

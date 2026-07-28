@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
 import { RangeSelector } from "./RangeSelector";
 import { Icon, StatusDot } from "@/components/ui/icons";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
@@ -862,7 +863,11 @@ export function CharacterList({
       })}
 
       {filtered.length === 0 && (
-        <p className="text-xs text-[var(--nv-text-tertiary)] px-2 py-2">无匹配角色</p>
+        <EmptyState
+          icon="user"
+          title="无匹配角色"
+          hint='点击「+ 添加角色」新建，或调整筛选条件'
+        />
       )}
 
       <button onClick={onNew} className="w-full text-left text-xs text-[var(--nv-primary)] hover:text-[var(--nv-primary)] py-1 px-2">

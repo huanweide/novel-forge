@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastAdded } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Loading } from "@/components/ui/States";
@@ -121,9 +122,11 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
       {/* 列表 */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
         {rules.length === 0 && (
-          <p className="text-center text-xs text-zinc-600 py-8">
-            暂无规则。点击「+ 新建」创建第一条。
-          </p>
+          <EmptyState
+            icon="clipboard"
+            title="暂无规则"
+            hint='点击「+ 新建」创建第一条'
+          />
         )}
 
         {enabledRules.map(r => (

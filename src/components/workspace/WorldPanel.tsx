@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { LorebookData } from "./types";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastAdded } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
@@ -298,10 +299,11 @@ export function WorldPanel({
         {/* 条目列表 */}
         <div className="flex-1 space-y-1 overflow-y-auto p-2">
           {moduleEntries.length === 0 && (
-            <p className="py-8 text-center text-xs text-[var(--nv-text-tertiary)]">
-              暂无{moduleInfo?.label}设定<br />
-              <span className="text-[10px]">点击"+ 新建"或写完章节后自动提取</span>
-            </p>
+            <EmptyState
+              icon="book"
+              title={`暂无${moduleInfo?.label}设定`}
+              hint='点击"+ 新建"或写完章节后自动提取'
+            />
           )}
           {moduleEntries.map((entry) => (
             <div key={entry.id}

@@ -33,7 +33,7 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
         if (nodeId) params.set("nodeId", nodeId);
         const res = await fetch(`/api/stats/monitor?${params}`);
         if (res.ok && !cancelled) setData(await res.json());
-      } catch { /* ignore */ }
+      } catch (e) { console.warn("[MonitorPanel] 监测数据加载失败（非关键，已忽略）", e); }
       if (!cancelled) setLoading(false);
     }
     load();
