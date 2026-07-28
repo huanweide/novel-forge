@@ -166,6 +166,7 @@ export async function applyChapterPlanToStorylines(
         data: { chapterBindings: trimmed },
       });
     }
+    console.log(`[plan-chapter] 剧情预设回写 project=${projectId} 条数=${active.length} 章序=${chapterOrder + 1}`);
   } catch (e) {
     // 剧情线回写失败静默降级——不影响正文与填表交付
     console.warn("[plan-chapter] 剧情线回写失败:", e instanceof Error ? e.message : String(e));

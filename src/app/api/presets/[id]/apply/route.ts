@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 60;
 
@@ -95,6 +96,12 @@ export async function POST(
       });
       created.push({ kind: "character", id: cc.id, name: cc.name });
     }
+
+    // 应用预设后刷新全局提示词，使文风/世界观/角色等立即对生成生效
+    // （对齐工具栏切文风的行为；之前漏调导致创意工坊套用文风不生效）
+    syncGlobalPrompt(projectId).catch((e) =>
+      console.error("[apply] globalPrompt 刷新失败:", e instanceof Error ? e.message : String(e)),
+    );
 
     await prisma.preset.update({ where: { id }, data: { downloads: { increment: 1 } } });
     return NextResponse.json({ ok: true, created });

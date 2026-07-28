@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.33.0";
+export const LATEST_VERSION = "v0.34.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🤖 生成前剧情预设：点击生成一章之前，LLM 基于活跃剧情线 + 记忆召回规划本章推进，并动态回写剧情线（不阻断生成）",
-  "🗂 自动化填表闭环：每章写完后自动用 DeepSeek 以 JSON 行操作协议（insert/update/delete）回填结构化表格，并持续注入永久上下文",
-  "⚙️ 频率 / 跳过最近章 / 上下文楼层 可在「自动化」弹窗配置：默认每 3 章填一次、默认跳过最近章（防 re-roll 污染）",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.33.0",
+  "🪄 修复文风预设失效：创意工坊「应用」预设后补全全局提示词同步（style/worldview/story-progression 统一刷新 globalPrompt），套用文风即生效",
+  "🎭 系统角色条件化：修仙类题材沿用原版「玄幻修仙作家」提示词（零改动），其他题材改用通用作家角色并以文风卡为最高权威，不再被硬编码修仙风压制",
+  "📡 后端监测报告：召回 / 生成前剧情规划 / 自动填表 三处关键节点打印结构化日志 [recall]/[plan-chapter]/[babylore]，便于核对流程",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.34.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.34.0",
+    date: "2026-07-28",
+    title: "文风预设生效修复 + 系统角色条件化 + 后端监测报告",
+    sections: [
+      {
+        label: "文风预设修复（与预期对齐的核心矛盾）",
+        items: [
+          "修复 apply 路由缺陷：创意工坊「应用」预设后未调用 syncGlobalPrompt，导致 globalPrompt 始终为空、文风预设（如古风·严谨文笔）完全不生效；现对所有预设类型（style/worldview/story-progression）统一刷新全局提示词",
+          "文风卡经 syncGlobalPrompt 编入 globalPrompt，生成时 assemblePrompt 读取，套用文风后立即带该文风——E2E 实测 globalPrompt 长度 0 → 385 且含「文风设定/古风」",
+        ],
+      },
+      {
+        label: "系统角色条件化（消除体裁冲突）",
+        items: [
+          "orchestrator 系统提示词原硬编码「白金级玄幻修仙网文作家 + 修仙模拟引擎 + 都市重生流」，与项目 genre 解耦，压制一切非修仙文风预设",
+          "改为条件化：题材含修仙/玄幻/仙侠/武侠/洪荒/奇幻/末世时沿用原版（零风险）；其他题材走通用作家角色，文风以文风卡为最高权威，不再被强制修仙化",
+        ],
+      },
+      {
+        label: "后端监测报告（满足核对流程需求）",
+        items: [
+          "召回节点打印 [recall] 命中条数与来源；生成前剧情规划打印 [plan-chapter] 回写章序；自动填表打印 [babylore] ops/applied/skipped",
+          "E2E 实测后端日志清晰呈现「召回 1→3 条 → 剧情回写章序 1→2→3 → 填表 chapter1 ops=2 / 后续动态修正」的完整链路",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.33.0",
     date: "2026-07-28",

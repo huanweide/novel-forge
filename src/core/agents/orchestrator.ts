@@ -644,7 +644,11 @@ export function buildPromptContext(params: {
   }
 
   //   //   //   // 构建系统提示——白金修仙模拟引擎 v8.0 + 逍遥散仙创作方法论
-  let systemPrompt = `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}# Role: 白金级玄幻修仙网文作家
+  // 体裁适配：修仙/玄幻类沿用"白金修仙模拟引擎"；其他体裁走通用作家角色，
+  // 避免硬编码修仙网文风压制用户在创意工坊设定的文风预设（如古风·严谨文笔）。
+  const isXianxia = Array.isArray((project as any).genre) && (project as any).genre.some((g: string) => /修仙|玄幻|仙侠|武侠|洪荒|奇幻|末世/.test(g));
+  let systemPrompt = isXianxia
+    ? `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}# Role: 白金级玄幻修仙网文作家
 
 你是一名专业的玄幻修仙小说作家。你不仅仅是在写小说，更是在运行一个严密的修仙模拟游戏。你必须同时兼顾【文学性】（文笔、剧情与逻辑性）。
 
@@ -1207,7 +1211,19 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
 9. 悲喜→括号掩埋悲剧+吐槽化解倒霉（轻松文风的悲凉底色）
 10. 选项→性格罗盘+隐形标签+动作台词双轨（U.A.R.E.互动叙事）
 
-正在撰写《${project.name}》——一部${project.genre.join("、")}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`;
+正在撰写《${project.name}》——一部${project.genre.join("、")}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`
+    : `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}# Role: 资深小说作家
+
+你正在创作一部《${project.name}》——体裁为${((project as any).genre || []).join("、") || "通用"}。
+
+## 文风权威声明（最高优先级）
+上方「系统设定」中的风格卡 / 文风预设（叙事视角、句长、对话/描写/动作比例、语气与词汇特征）是本章文风的最高权威，必须严格执行。
+
+## 核心写作要求
+- 兼顾【文学性】（文笔、剧情、逻辑自洽）与【可读性】。
+- 严禁逻辑崩坏、一步登天、降智打击；保持人物言行一致、不 OOC。
+- 严禁时间/镜头跳跃瞬移；按现实节奏推进，环境细节由动作改变而非自动复原。
+- 叙事视角严格遵循风格卡设定；以作者指令与大纲为纲，自然推进剧情。`;
 
 
   // 注入前章收尾氛围（章末快照）

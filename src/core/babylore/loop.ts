@@ -53,6 +53,7 @@ export async function buildRecallBlock(input: RecallBuildInput): Promise<RecallB
     ...recallRaw.filter((i) => i.source === "lorebook"),
   ].slice(0, 12);
 
+  console.log(`[recall] project=${projectId} 召回命中 ${recallItems.length} 条 (table/lorebook)`);
   if (recallItems.length === 0) return { block: "", items: [] };
 
   // 世界书条目若含 <if cell> 分阶段人设语法，则按当前表格数值求值，
@@ -145,6 +146,7 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
     };
   }
 
+  console.log(`[babylore] 填表 project=${projectId} chapter=${(nodeOrder ?? 0) + 1} ok=${babylore.ok} ops=${babylore.operations} applied=${babylore.applied}${babylore.error ? " err=" + babylore.error : ""}`);
   if (send) send({ type: "babylore_fill", ...babylore });
   return babylore;
 }
