@@ -25,18 +25,32 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.34.0";
+export const LATEST_VERSION = "v0.35.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🪄 修复文风预设失效：创意工坊「应用」预设后补全全局提示词同步（style/worldview/story-progression 统一刷新 globalPrompt），套用文风即生效",
-  "🎭 系统角色条件化：修仙类题材沿用原版「玄幻修仙作家」提示词（零改动），其他题材改用通用作家角色并以文风卡为最高权威，不再被硬编码修仙风压制",
-  "📡 后端监测报告：召回 / 生成前剧情规划 / 自动填表 三处关键节点打印结构化日志 [recall]/[plan-chapter]/[babylore]，便于核对流程",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.34.0",
+  "🪄 无表自动建表：项目无结构化表格且自动化开启时，safeFillAfterWriting 自动创建默认「章节事实表」，保证「生成一章即自动填表」零配置闭环成立",
+  "🧪 E2E 验证：新建项目故意不应用表格模板，第1章自动建表并填 4 行、第2章动态修正至 7 行，后端打印 [babylore] 自动建表日志",
+  "🔗 与 v0.34.0 的文风生效修复、系统角色条件化、后端监测报告共同构成完整创作闭环",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.35.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.35.0",
+    date: "2026-07-28",
+    title: "无表自动建表——保证「生成一章即自动填表」零配置闭环",
+    sections: [
+      {
+        label: "自动化填表零配置（修复体验矛盾）",
+        items: [
+          "safeFillAfterWriting 在真正填表前检查项目是否已有结构化表格；若无且自动化开启，自动创建默认「章节事实表」（key=auto_facts，列：名称/状态/说明），使「生成一章即自动填表」在零表格配置下也能成立",
+          "E2E 验证：新建项目故意不应用任何表格模板，第1章生成后自动建表并填 4 行、第2章动态修正至 7 行；后端打印 [babylore] 自动建表日志",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.34.0",
     date: "2026-07-28",

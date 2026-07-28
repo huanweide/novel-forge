@@ -128,6 +128,27 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
     }
   }
 
+  // ── 无结构化表格时自动建默认表，保证"生成一章即自动填表"闭环成立 ──
+  const tableCount = await prisma.loreTable.count({ where: { projectId } });
+  if (tableCount === 0) {
+    await prisma.loreTable.create({
+      data: {
+        projectId,
+        key: "auto_facts",
+        name: "章节事实表",
+        note: "自动填表默认表：记录角色属性 / 关系 / 资产等结构化事实。可在创意工坊删除或细化。",
+        category: "auto",
+        columns: [
+          { key: "name", label: "名称", type: "text", unique: true },
+          { key: "status", label: "状态", type: "text" },
+          { key: "note", label: "说明", type: "text" },
+        ],
+        rows: [],
+      },
+    });
+    console.log(`[babylore] 项目无结构化表格，已自动创建默认「章节事实表」project=${projectId}`);
+  }
+
   let babylore: FillResult = { ok: false, operations: 0, applied: 0, error: "" };
   try {
     const fillRes = await babyloreFill(projectId, content);
