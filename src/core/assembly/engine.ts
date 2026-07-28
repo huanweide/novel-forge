@@ -115,40 +115,47 @@ export function assemblePrompt(
   const forcedDepth1Block = buildForcedLoreSection(forcedByDepth[1], "强制世界书（撰写指令上方）");
   const forcedDepth0Block = buildForcedLoreSection(forcedByDepth[0], "强制世界书（正文前·强效）");
 
-  // 拼装全文
-  const sections = [
-    systemSection,
-    globalSection,
-    forcedDepth2Section,
-    loreSection,
-    arcSection,
-    storylineSection,
-    foreshadowingSection,
-    longSection,
-    mediumSection,
-    shortSection,
-    authorSection,
+  // 拼装全文：用 XML 标签明确包裹每个区块的边界（酒馆 / Agent 编排分层惯例）。
+  // 相比此前的「---」分隔符 +【xxx】标题，XML 开闭标签让 LLM 无歧义地识别块角色，
+  // 并区分「上下文」与「撰写任务」两层，消除模型把指令误当正文、正文误当指令的混淆。
+  const contextBlocks = [
+    wrapBlock("system_instruction", systemSection),
+    wrapBlock("global_setting", globalSection),
+    wrapBlock("forced_context", forcedDepth2Section),
+    wrapBlock("world_lore", loreSection),
+    wrapBlock("character_arcs", arcSection),
+    wrapBlock("storylines", storylineSection),
+    wrapBlock("pending_commitments", foreshadowingSection),
+    wrapBlock("key_turning_points", longSection),
+    wrapBlock("chapter_summaries", mediumSection),
+    wrapBlock("recent_history", shortSection),
+    wrapBlock("author_directive", authorSection),
   ].filter(Boolean);
 
-  const assembledContext = sections.join("\n\n---\n\n");
+  const assembledContext = contextBlocks.join("\n");
 
-  // 撰写指令区：depth1 在指令上方、depth0 在指令下方（正文前）
-  const instructionBlock = [forcedDepth1Block, writingInstruction, forcedDepth0Block]
+  // 撰写任务区：depth1 在指令上方、depth0 在指令下方（正文前·最强效），统一包进 <writing_task>
+  const instructionInner = [forcedDepth1Block, writingInstruction, forcedDepth0Block]
     .filter(Boolean)
     .join("\n\n");
 
-  // 最终 Prompt
-  const prompt = `${assembledContext}
-
----
-【接下来请按照以下指令撰写正文】
-${instructionBlock}`;
+  // 最终 Prompt：根标签区分上下文与撰写任务
+  const prompt = `<novel_forge_context>\n${assembledContext}\n</novel_forge_context>\n\n<writing_task>\n${instructionInner}\n</writing_task>`;
 
   // 计算实际 Token 用量
   const actualUsed = countTokens(prompt);
   budget.used = actualUsed;
 
   return { prompt, budget };
+}
+
+/**
+ * 用 XML 标签包裹一个上下文区块，提供无歧义的开闭边界。
+ * content 为空时返回空串（调用方 .filter(Boolean) 即可跳过空块）。
+ */
+function wrapBlock(tag: string, content: string): string {
+  if (!content || !content.trim()) return "";
+  return `<${tag}>\n${content}\n</${tag}>`;
 }
 
 // ─── 各区块构建函数 ─────────────────────────────────────────

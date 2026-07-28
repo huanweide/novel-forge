@@ -19,7 +19,7 @@
 
 | 酒馆能力 | Novel Forge 现状 | 迁移方案 | 优先级 |
 |---|---|---|---|
-| XML+YAML+JSON 混合提示词 | 当前 mostly 纯文本/JSON | 升级 `buildPromptContext` / `assemblePrompt`：用 XML 标签包裹块（`<Writing_style>`、`<Lore>`、`<Storyline>`），中文说明用 YAML 子格式 | 高 |
+| XML+YAML+JSON 混合提示词 | 当前 mostly 纯文本/JSON | 升级 `assemblePrompt`：用 XML 标签包裹块（根 `<novel_forge_context>` + `<writing_task>`，子标签 system_instruction/global_setting/world_lore 等），中文说明保持自然语言 | 高（已完成 v0.40.0） |
 | 世界书 depth 注入 | LoreTable/WorldBook 统一注入，无深度分层 | 给 LorebookEntry 加 `depth` 字段：0=强效注入正文前，1=用户指令上方，2=系统上下文，3=背景设定(默认) | 高（已完成 v0.38.0） |
 | 正则后处理管线 | 生成后直接输出，无后处理 | 新增 `post-processing` 管线：可配置 regex 列表（删除思维链、折叠远楼层、美化输出），在 `write/route.ts` 生成后调用 | 中（已并 v0.37.0 完成） |
 | 角色卡结构化模板 | CharacterCard 已有 appearance/personality/background/speechPatterns | 补 `relationships`(关系网) + `speechReference`(发言参考) 字段，注入时按酒馆模板呈现（称呼+特点+外貌+穿着+性格+背景+关系+发言参考） | 低（基础已具备，仅补 2 字段+渲染） |
@@ -30,17 +30,14 @@
 
 ## 四、下一步执行计划（结合 IMA 知识库复核后重排）
 
-**已完成**：v0.37.0 Preset 类型扩展、v0.38.0 世界书 depth 注入、v0.39.0 记忆清除/上下文溢出治理（标记式折叠）。
+**已完成**：v0.37.0 Preset 类型扩展、v0.38.0 世界书 depth 注入、v0.39.0 记忆清除/上下文溢出治理（标记式折叠）、v0.40.0 XML 标签分层包裹提示词结构升级。
 
 **新排定推进序（按 ROI 与依赖关系）**：
 
-1. **【高·结构重构】XML+YAML+JSON 混合提示词格式升级（v0.40.0）**
-   - 升级 `assemblePrompt`：用 XML 标签包裹块（`<Writing_style>`/`<Lore>`/`<Storyline>`/`<Character>`），中文说明走 YAML 子格式，结构边界更稳、可控性更强。
-   - 改动面大，独立成版，需保证 regex 后处理与新格式兼容。
-2. **【低】角色卡结构化模板收尾**：补 `relationships` + `speechReference` 两字段，UI 编辑 + 注入按酒馆模板呈现；基础字段已具备，工作量最小。
-3. **【可选·增强】远楼层 LLM 摘要（非阻塞）**：v0.39.0 已实现"标记式折叠"（明确边界、消除静默丢弃与误读隐患），但酒馆式"LLM 摘要替代原文"未做——需额外 LLM 调用、增加延迟与复杂度；因标记式折叠已解决主要隐患，列为可选增强，不阻塞主线。
+1. **【低·下一主推】角色卡结构化模板收尾**：补 `relationships` + `speechReference` 两字段，UI 编辑 + 注入按酒馆模板呈现（称呼+特点+外貌+穿着+性格+背景+关系+发言参考）；基础字段已具备，工作量最小。
+2. **【可选·增强】远楼层 LLM 摘要（非阻塞）**：v0.39.0 已实现"标记式折叠"（明确边界、消除静默丢弃与误读隐患），酒馆式"LLM 摘要替代原文"需额外 LLM 调用、增加延迟与复杂度，列为可选增强，不阻塞主线。
 
-**原则**：凡涉及 assemblePrompt 结构的（格式升级）集中处理，避免重复返工；regex 后处理（已落地）需随格式升级回归验证。
+**原则**：凡涉及 assemblePrompt 结构的（格式升级）集中处理，避免重复返工；regex 后处理（已落地）随 v0.40.0 格式升级已回归确认——作用于模型输出，与 prompt 格式无关，无需改动。
 
 ## 五、关联项
 
