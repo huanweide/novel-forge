@@ -1,0 +1,27 @@
+# 04 待迭代项清单（非阻塞）
+
+## 一、目标
+列出 novel-forge 已知非阻塞待迭代项，作为后续优化 backlog；本次实际推进其中低风险一项。
+
+## 二、待迭代项清单
+1. **巨型组件拆分**：workspace/[projectId]/page.tsx 为巨型组件（已抽 Toolbar/OutlineDialog/AutomationSettingsDialog）。
+   后续可继续拆：大纲面板、关系图面板、MonitorPanel、章节列表区为独立组件。
+2. **大列表虚拟化**：StorylineList、LoreTable 行较多时需虚拟化（react-window / @tanstack/virtual）。
+   当前为普通 map 渲染，超长列表有性能风险。
+3. **dialog focus-trap**：弹窗（OutlineDialog/AutomationSettingsDialog）缺焦点陷阱，无障碍与误触风险。
+4. **adopt 失败重试**：创意工坊「采纳」预设失败无重试。
+5. **dev hydration 根治**：偶发 hydration 警告。
+6. **自动化填表端到端生成实测**：需 LLM 配置就绪后多章节实测（v0.35.0 已做 E2E 脚本验证通过）。
+
+## 三、本次实际推进
+- 聚焦 **03（色子抽卡结果与剧情线持久化关联）** 作为主推进项（见 03 文档，已实现）。
+- 04 其余项留作 backlog，未在本轮深做，避免巨型重构风险。
+- 下一步候选：大列表虚拟化（StorylineList 接入）→ 见下方关联项。
+
+## 四、关联项
+- 待迭代项与 01 架构各模块对应：拆分对应 workspace 页；虚拟化对应 StorylineList/LoreTable 组件。
+- 推进任一项时，先读对应源码、tsc+build 验证、更新本清单状态。
+
+## 五、状态
+【成功】清单已建立（2026-07-28）；主推进项落在 03，04 本身作为追踪文档。
+（注：大列表虚拟化本轮未实做，列为后续候选，状态不标成功以免误导。）

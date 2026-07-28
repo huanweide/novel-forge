@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.35.0";
+export const LATEST_VERSION = "v0.36.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🪄 无表自动建表：项目无结构化表格且自动化开启时，safeFillAfterWriting 自动创建默认「章节事实表」，保证「生成一章即自动填表」零配置闭环成立",
-  "🧪 E2E 验证：新建项目故意不应用表格模板，第1章自动建表并填 4 行、第2章动态修正至 7 行，后端打印 [babylore] 自动建表日志",
-  "🔗 与 v0.34.0 的文风生效修复、系统角色条件化、后端监测报告共同构成完整创作闭环",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.35.0",
+  "🎴 色子（抽卡）剧情预设持久化：采用某路线后自动写入活跃剧情线的 chapterBindings（标记 preset），生成前剧情规划可读到「用户用色子选定的走向」",
+  "🔁 同章纲节点重采用色子时自动去重（按 chapterId+preset），不堆叠重复条目",
+  "📁 建立 PROCESS 流程文档机制：novel-forge/PROCESS/ 下目录清单 + 三段式落档（目标/流程/关联项），供后续自查与对齐架构",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.36.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.36.0",
+    date: "2026-07-28",
+    title: "色子抽卡与剧情线持久化关联 + 流程文档机制",
+    sections: [
+      {
+        label: "色子（抽卡）剧情预设 → 剧情线（用户核心诉求）",
+        items: [
+          "DrawCards 抽卡「采用此路线」后，除写入章纲外，额外把走向持久化写入活跃剧情线 Storyline.chapterBindings（element:\"preset\"、含 cardLabel/coreConflict/mood）",
+          "复用已有 PUT /api/storylines/[id]，不新增端点、不改 Prisma schema；生成前规划 plan-chapter 读 storylines 时即可读到「用户用色子选定的走向」作为剧情预设",
+          "同章纲节点重采用时按 chapterId+preset 去重，避免堆叠；项目无活跃剧情线时优雅跳过",
+        ],
+      },
+      {
+        label: "流程文档机制（开发自参考）",
+        items: [
+          "新增 novel-forge/PROCESS/ 目录：00-目录清单.txt（主索引+三段式落档规范）+ 01架构逻辑/02自动化填表流程/03色子关联/04待迭代项",
+          "每次执行更新前先写清「目标/执行流程/关联项」，完成后标【成功】，变更或失败同步更新，兼作产出记录与预期值追踪",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.35.0",
     date: "2026-07-28",

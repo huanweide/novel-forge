@@ -195,7 +195,7 @@ export default function WorkspacePage() {
     setShowDrawCards(true);
   };
 
-  const handleDrawSelect = async (card: { outline: string; characters: string[]; coreConflict: string; mood: string; cardLabel?: string }) => {
+  const handleDrawSelect = async (card: { outline: string; characters: string[]; coreConflict: string; mood: string; cardLabel?: string }, storylineId?: string) => {
     if (!selectedNode) return;
     setShowDrawCards(false);
     try {
@@ -210,6 +210,24 @@ export default function WorkspacePage() {
         return;
       }
       setSelectedNode({ ...selectedNode, outline: card.outline });
+      // 色子（抽卡）采用结果持久化关联到活跃剧情线：写入 chapterBindings（标记 preset），
+      // 使生成前剧情规划(plan-chapter)能读到「用户用色子选定的走向」作为剧情预设。
+      if (storylineId) {
+        const sl = project?.storylines?.find((s: any) => s.id === storylineId);
+        const existing: any[] = ((sl as any)?.chapterBindings as any[]) || [];
+        const entry = {
+          element: "preset",
+          chapterId: selectedNode.id,
+          note: `🎴${card.cardLabel || "抽卡路线"}｜${card.coreConflict || ""}｜🎭${card.mood || ""}`,
+        };
+        // 同 node 重采用时更新而非堆叠：先移除旧 preset，再追加
+        const next = [...existing.filter((e) => !(e?.element === "preset" && e?.chapterId === selectedNode.id)), entry];
+        fetch(`/api/storylines/${storylineId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chapterBindings: next }),
+        }).catch(() => {});
+      }
       setReviewResult({
         passed: true,
         issues: [{
@@ -808,6 +826,7 @@ export default function WorkspacePage() {
         <DrawCards projectId={project.id} nodeId={selectedNode.id}
           authorNote={authorNote} chapterOutlinePrompt={chapterOutlinePrompt}
           nodeTitle={selectedNode.title}
+          storylineId={project.storylines?.find((s: any) => s.status === "active" || s.type === "main")?.id}
           onSelect={handleDrawSelect} onClose={() => setShowDrawCards(false)} />
       )}
 

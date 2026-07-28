@@ -57,11 +57,12 @@ interface CharacterDetail {
 
 export function DrawCards({
   projectId, nodeId, authorNote, chapterOutlinePrompt, nodeTitle,
-  onSelect, onClose,
+  storylineId, onSelect, onClose,
 }: {
   projectId: string; nodeId: string; authorNote: string;
   chapterOutlinePrompt: string; nodeTitle: string;
-  onSelect: (card: DrawCard) => void; onClose: () => void;
+  storylineId?: string;
+  onSelect: (card: DrawCard, storylineId?: string) => void; onClose: () => void;
 }) {
   const [cards, setCards] = useState<DrawCard[]>([]);
   const [charDetails, setCharDetails] = useState<CharacterDetail[]>([]);
@@ -118,7 +119,7 @@ export function DrawCards({
 
   const handleSelect = () => {
     if (selectedIndex === null || !cards[selectedIndex]) return;
-    onSelect(cards[selectedIndex]);
+    onSelect(cards[selectedIndex], storylineId);
   };
 
   const roleLabel: Record<string, string> = {

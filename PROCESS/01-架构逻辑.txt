@@ -1,0 +1,72 @@
+# 01 架构逻辑 —— novel-forge 系统整体架构与数据流
+
+## 一、目标
+把当前 novel-forge（v0.35.0）端到端架构写清楚，让后续任何一次对话都能快速对齐系统逻辑，
+避免凭记忆臆测模块关系。本文是「全局地图」，细节见 02/03/04。
+
+## 二、执行流程（按创作生命周期五段叙述）
+
+### 1. 技术栈
+- Next.js 16（App Router）+ React 19 + Tailwind v4
+- Prisma 7 + PostgreSQL 17（127.0.0.1:5432，Windows 服务版）
+- LLM：DeepSeek（配置在 .env，写作/填表/规划均走它）
+- 沙箱铁律见 MEMORY.md（PRISMA_DISABLE_SAFE_DELETE、NODE_OPTIONS、CODEBUDDY_SESSION_ID、localhost 勿用 127.0.0.1 等）
+
+### 2. 核心数据模型（prisma/schema.prisma）
+- Project：项目本体，含 genre[]、globalPrompt、styleCardId、autoFillEnabled / fillFrequency / skipLatestChapter / contextKeepChapters（写作自动化配置）
+- Storyline（剧情线）：projectId、status("active"等)、chapterBindings(JSON 数组，记录每章回写内容)、title
+- StoryNode（章纲节点）：由大纲生成写入，含 node 内容，生成时作为本章规划依据
+- LoreTable（结构化表格）：projectId、key、name，行 LoreRow 含 name/status/note 等（JSON 填表落点）
+- StyleCard / CharacterCard / WorldBook：文风/角色/世界书
+- Preset（创意工坊预设）：type ∈ {style, worldview, story-progression, table-template, character}，content(JSON)、appliedTo 计数
+
+### 3. 生成前 —— 剧情预设（src/core/pipeline/plan-chapter.ts）
+触发：每次点击「生成一章」在真正调用 LLM 写正文**之前**。
+输入：context-loader 加载的活跃剧情线(storylines) + 当前章纲节点 + 文风卡 + 记忆召回块(recall)
+动作：LLM 基于以上规划本章如何推进剧情线（焦点/推进/障碍/转折/执行提示）
+回写：把本章绑定追加写入对应 storyline.chapterBindings（动态修正、不丢历史、不矛盾）
+注意：失败仅 console.warn 不阻断生成（保证主流程可用）。
+
+### 4. 生成中 —— LLM 写正文（src/core/agents/orchestrator.ts）
+- systemPrompt = 文风块(styleBlock) + 角色/世界书上下文 + 记忆块 + 系统角色
+- 系统角色已**条件化**（v0.34.0）：genre 含修仙类 → 原版「玄幻修仙作家」提示词；否则 → 通用作家角色，**文风卡为最高权威**
+- buildPromptContext / assemblePrompt：拼入 recall 召回内容、角色卡、世界书、当前章纲
+- 文风生效前提：创意工坊「应用」预设后必须调 syncGlobalPrompt 刷新 globalPrompt（v0.34.0 修复漏调）
+
+### 5. 生成后 —— 自动化填表（src/core/babylore/loop.ts → fill.ts）
+触发：写正文完成后，按配置决定是否填表
+- 频率：fillFrequency（默认 3，每 N 章填一次）
+- 跳过：skipLatestChapter（默认 true，跳过最近一章防 re-roll 污染）
+- 无表自动建：若无 LoreTable 且自动化开启，自动建默认「章节事实表」（v0.35.0）
+- 填表协议：DeepSeek 输出 JSON 行操作 {insert/update/delete}，fill.ts 执行；update 按唯一列匹配已有行 → 动态修正不矛盾
+- 注入永久上下文：回填的 LoreTable 经 recall 模块持续注入后续章节（数据隔离标记 [ACU-{项目ID}]）
+- 后端监测：loop.ts/plan-chapter.ts 在关键节点打印 [recall]/[plan-chapter]/[babylore] 结构化日志
+
+### 6. 上下文注入链路（src/core/pipeline/）
+- context-loader.ts：Promise.all 加载剧情线(storylines)、角色、世界书、风格卡等
+- pre-processor.ts：组装 GenerationData（含 storylines 字段）
+- types.ts：PipelineContext / GenerationData 含 storylines:any[]
+- recall 模块：按 [ACU-项目ID] 召回 LoreTable/记忆，注入 prompt
+
+### 7. 创意工坊预设（src/app/api/presets/[id]/apply/route.ts）
+- 应用预设 → 写对应卡/表 → 统一调 syncGlobalPrompt 刷新 globalPrompt
+- 五类：style(文风文笔) / worldview(世界观) / story-progression(剧情推进) / table-template(表格模板) / character(角色)
+- 用户点名三大运用：① 文风文笔 ② 剧情预设（含色子）③ JSON 填表
+
+### 8. 色子（抽卡剧情预设）—— src/components/workspace/DrawCards.tsx
+- 调 /api/generate/chapter-outline/draw 以不同 temperature 抽多条剧情路线
+- 用户「采用」某路线 → 写入章纲(StoryNode) → 生成时作为本章规划依据
+- 即用户所说「色子也算剧情预设」，详见 03
+
+### 9. 配置端点（src/app/api/projects/[id]/config/route.ts）
+- GET/PUT 读写 autoFillEnabled / fillFrequency / skipLatestChapter / contextKeepChapters
+- 前端入口：workspace 顶部工具栏「自动化」按钮 → AutomationSettingsDialog
+
+## 三、关联项（模块调用关系）
+- 生成主链路：workspace 页 → POST /api/generate/write → plan-chapter(生成前) → orchestrator(写正文) → safeFillAfterWriting(生成后) → babyloreFill → LoreTable → recall
+- 配置关联：config 端点 → Project 字段 → safeFillAfterWriting 读取频率/跳过 → context-loader 读取 contextKeepChapters
+- 预设关联：presets apply → StyleCard/Storyline 等 → syncGlobalPrompt → globalPrompt → orchestrator systemPrompt
+- 色子关联：DrawCards → chapter-outline draw → StoryNode(章纲) → plan-chapter 读取 → 生成
+
+## 四、状态
+【成功】架构已于 2026-07-28 写清，对应代码现状 v0.35.0。
