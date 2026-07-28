@@ -115,7 +115,7 @@ const TYPE_STYLES: Record<ToastType, { icon: IconName; accent: string; text: str
   success: { icon: "check", accent: "border-l-emerald-400", text: "text-emerald-300", soft: "bg-emerald-500/10" },
   error: { icon: "alert", accent: "border-l-rose-400", text: "text-rose-300", soft: "bg-rose-500/10" },
   warning: { icon: "alert", accent: "border-l-amber-400", text: "text-amber-300", soft: "bg-amber-500/10" },
-  info: { icon: "sparkles", accent: "border-l-indigo-400", text: "text-indigo-300", soft: "bg-indigo-500/10" },
+  info: { icon: "sparkles", accent: "border-l-[var(--nv-primary)]", text: "text-[var(--nv-primary)]", soft: "bg-[var(--nv-primary)]/10" },
 };
 
 // ─── Provider ───────────────────────────────────────────────
@@ -191,9 +191,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 </button>
               </div>
               {/* 自动消失进度条 */}
-              <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
                 <div
-                  className="h-full bg-white/30"
+                  className="h-full bg-[var(--nv-text-tertiary)]"
                   style={{ animation: `toastProgress ${t.duration}ms linear forwards` }}
                 />
               </div>
@@ -213,9 +213,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 className={`mt-0.5 shrink-0 ${confirmState.opts.danger ? "text-rose-400" : "text-amber-400"}`}
               />
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-zinc-100">{confirmState.opts.title}</h3>
+                <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">{confirmState.opts.title}</h3>
                 {confirmState.opts.description ? (
-                  <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{confirmState.opts.description}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--nv-text-tertiary)]">{confirmState.opts.description}</p>
                 ) : null}
               </div>
             </div>
@@ -236,7 +236,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   setConfirmState(null);
                   r(true);
                 }}
-                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white ${
+                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-[var(--nv-text-primary)] ${
                   confirmState.opts.danger ? "btn-danger" : "btn-primary"
                 }`}
               >
@@ -252,11 +252,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="surface-floating w-full max-w-sm animate-spring rounded-2xl p-6">
             <div className="flex items-start gap-3">
-              <Icon name="sparkles" size={20} className="mt-0.5 shrink-0 text-indigo-400" />
+              <Icon name="sparkles" size={20} className="mt-0.5 shrink-0 text-[var(--nv-primary)]" />
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-zinc-100">{promptState.opts.title}</h3>
+                <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">{promptState.opts.title}</h3>
                 {promptState.opts.description ? (
-                  <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{promptState.opts.description}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--nv-text-tertiary)]">{promptState.opts.description}</p>
                 ) : null}
               </div>
             </div>
@@ -272,7 +272,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 }
               }}
               placeholder={promptState.opts.placeholder}
-              className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors focus:border-indigo-500"
+              className="mt-4 w-full rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-3 py-2.5 text-sm text-[var(--nv-text-primary)] outline-none transition-colors focus:border-[var(--nv-primary)]"
             />
             <div className="mt-6 flex gap-3">
               <button
@@ -291,7 +291,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   setPromptState(null);
                   r(promptValue.trim() || null);
                 }}
-                className="btn-primary flex-1 rounded-xl py-2.5 text-sm font-semibold text-white"
+                className="btn-primary flex-1 rounded-xl py-2.5 text-sm font-semibold text-[var(--nv-text-primary)]"
               >
                 {promptState.opts.confirmText ?? "确定"}
               </button>

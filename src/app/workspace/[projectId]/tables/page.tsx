@@ -142,8 +142,8 @@ export default function TablesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)]">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href={`/workspace/${projectId}`} className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1">
@@ -162,7 +162,7 @@ export default function TablesPage() {
         <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="surface-elevated rounded-2xl p-5">
             <h2 className="font-semibold mb-2 flex items-center gap-2"><Icon name="sparkles" size={15} /> 自动填表（LLM 填充）</h2>
-            <p className="text-xs text-zinc-500 mb-3">粘贴一章正文，DeepSeek 按表格模板自动抽取结构化事实写入（宝宝流国模填表：关COT+严格JSON+失败重试3次）。</p>
+            <p className="text-xs text-[var(--nv-text-muted)] mb-3">粘贴一章正文，DeepSeek 按表格模板自动抽取结构化事实写入（宝宝流国模填表：关COT+严格JSON+失败重试3次）。</p>
             <textarea
               value={chapterText}
               onChange={(e) => setChapterText(e.target.value)}
@@ -180,7 +180,7 @@ export default function TablesPage() {
 
           <div className="surface-elevated rounded-2xl p-5">
             <h2 className="font-semibold mb-2">剧情推进 · 记忆召回预览</h2>
-            <p className="text-xs text-zinc-500 mb-3">输入当前上下文（章节草稿），按世界书绿灯关键词与表格行匹配，预览将注入正文 AI 的记忆片段。</p>
+            <p className="text-xs text-[var(--nv-text-muted)] mb-3">输入当前上下文（章节草稿），按世界书绿灯关键词与表格行匹配，预览将注入正文 AI 的记忆片段。</p>
             <textarea
               value={recallCtx}
               onChange={(e) => setRecallCtx(e.target.value)}
@@ -192,8 +192,8 @@ export default function TablesPage() {
             {recallItems.length > 0 && (
               <div className="mt-3 space-y-2">
                 {recallItems.map((it, i) => (
-                  <div key={i} className="text-xs bg-white/[0.04] rounded-lg p-2">
-                    <span className="text-indigo-300">[{it.source}] {it.title}</span>：{it.content}
+                  <div key={i} className="text-xs bg-[var(--nv-surface-2)] rounded-lg p-2">
+                    <span className="text-[var(--nv-primary)]">[{it.source}] {it.title}</span>：{it.content}
                   </div>
                 ))}
               </div>
@@ -213,7 +213,7 @@ export default function TablesPage() {
               icon="grid"
               title="还没有结构化表格"
               description="宝宝流数据库可把正文事实沉淀为结构化表格。可从「创意工坊」套用表格模板预设，或点右上角「新建表格」。"
-              className="surface-elevated border-solid border-white/[0.06]"
+              className="surface-elevated border-solid border-[var(--nv-border-2)]"
             />
           ) : (
             <div className="space-y-4">
@@ -221,8 +221,8 @@ export default function TablesPage() {
                 <div key={t.id} className="surface-elevated rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h3 className="font-semibold">{t.name} <span className="text-xs text-zinc-500">（{t.key} · {t.category}）</span></h3>
-                      <p className="text-xs text-zinc-500">{t.note || "—"} · {t.rows.length} 行</p>
+                      <h3 className="font-semibold">{t.name} <span className="text-xs text-[var(--nv-text-muted)]">（{t.key} · {t.category}）</span></h3>
+                      <p className="text-xs text-[var(--nv-text-muted)]">{t.note || "—"} · {t.rows.length} 行</p>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => setExpanded(expanded === t.id ? null : t.id)} className="btn-ghost text-xs px-3 py-1.5 rounded-xl">
@@ -237,7 +237,7 @@ export default function TablesPage() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="text-zinc-500">
+                            <tr className="text-[var(--nv-text-muted)]">
                               <th className="text-left p-1">row_id</th>
                               {(t.columns || []).map((c) => (
                                 <th key={c.key} className="text-left p-1">{c.label}</th>
@@ -246,8 +246,8 @@ export default function TablesPage() {
                           </thead>
                           <tbody>
                             {t.rows.map((r) => (
-                              <tr key={r.row_id} className="border-t border-white/5">
-                                <td className="p-1 text-zinc-500">{r.row_id}</td>
+                              <tr key={r.row_id} className="border-t border-[var(--nv-border-2)]">
+                                <td className="p-1 text-[var(--nv-text-muted)]">{r.row_id}</td>
                                 {(t.columns || []).map((c) => (
                                   <td key={c.key} className="p-1">
                                     <input

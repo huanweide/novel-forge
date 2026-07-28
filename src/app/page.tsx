@@ -80,16 +80,16 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-transparent text-foreground">
       {/* 顶栏 */}
-      <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-xl font-bold tracking-tight">Novel Forge</h1>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--nv-text-tertiary)]">
                 AI 小说工坊 ·{" "}
-                <a href="/changelog" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                <a href="/changelog" className="text-primary hover:text-primary transition-colors">
                   更新面板
                 </a>
               </p>
@@ -113,22 +113,28 @@ export default function Dashboard() {
       </header>
 
       {/* Hero 欢迎区 */}
-      <section className="border-b border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent">
-        <div className="max-w-7xl mx-auto px-6 py-12 md:py-16">
+      <section className="relative overflow-hidden border-b border-[var(--nv-border-2)] bg-gradient-to-b from-[var(--nv-surface-1)] to-transparent">
+        {/* 光晕装饰 */}
+        <div className="hero-glow" style={{ width: '480px', height: '480px', background: 'var(--nv-primary)', top: '-180px', left: '50%', transform: 'translateX(-50%)' }} />
+        <div className="hero-glow" style={{ width: '340px', height: '340px', background: 'var(--nv-creative)', top: '30px', right: '6%' }} />
+        <div className="relative max-w-7xl mx-auto px-6 py-14 md:py-20">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-100">
-                构建你的<span className="text-indigo-400">小说宇宙</span>
+              <div className="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-accent)] glow-dot" /> AI 驱动的小说创作引擎
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
+                构建你的<span className="text-gradient">小说宇宙</span>
               </h2>
-              <p className="mt-3 text-zinc-500 leading-relaxed">
+              <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed max-w-xl">
                 用 AI 探讨灵感、拆解好书、管理角色与世界观——从一句话构思到完整成稿，一站式完成。
               </p>
             </div>
             <div className="flex shrink-0 gap-3">
-              <Link href="/explore" className="btn-primary text-sm px-5 py-2.5 rounded-xl inline-flex items-center gap-1.5 font-medium">
+              <Link href="/explore" className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
                 <Icon name="sparkles" size={15} /> 开始创作
               </Link>
-              <Link href="/dissect" className="btn-ghost text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5">
+              <Link href="/dissect" className="btn-ghost text-sm px-5 py-3 rounded-xl inline-flex items-center gap-1.5">
                 <Icon name="book" size={14} /> 拆书分析
               </Link>
             </div>
@@ -140,20 +146,20 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-6 py-10">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <span className="inline-flex items-center gap-2 text-zinc-500">
-              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-150" />
-              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-300" />
+            <span className="inline-flex items-center gap-2 text-[var(--nv-text-tertiary)]">
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse delay-150" />
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse delay-300" />
             </span>
           </div>
         ) : loadError && projects.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 rounded-2xl surface-elevated flex items-center justify-center mx-auto mb-5">
-              <Icon name="alert" size={28} className="text-amber-400" />
+              <Icon name="alert" size={28} className="text-[var(--nv-warning)]" />
             </div>
-            <h2 className="text-xl font-semibold text-zinc-300 mb-2">加载失败</h2>
-            <p className="text-zinc-500 text-sm mb-2">{loadError}</p>
-            <p className="text-zinc-600 text-xs mb-6">多数情况是数据库未连接或 AI 未配置——看页面顶部黄色提示，按指引修复即可。</p>
+            <h2 className="text-xl font-semibold text-[var(--nv-text-secondary)] mb-2">加载失败</h2>
+            <p className="text-[var(--nv-text-tertiary)] text-sm mb-2">{loadError}</p>
+            <p className="text-[var(--nv-text-muted)] text-xs mb-6">多数情况是数据库未连接或 AI 未配置——看页面顶部黄色提示，按指引修复即可。</p>
             <button
               onClick={() => loadProjects()}
               className="btn-primary inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold"
@@ -163,7 +169,7 @@ export default function Dashboard() {
           </div>
         ) : projects.length === 0 ? (
           <div className="py-10">
-            <p className="text-center text-zinc-500 text-sm mb-8">还没有小说项目，从下面任选一种方式开始：</p>
+            <p className="text-center text-[var(--nv-text-tertiary)] text-sm mb-8">还没有小说项目，从下面任选一种方式开始：</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FeatureCard icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲" href="/explore" cta="开始探讨" />
               <FeatureCard icon="book" title="拆书分析" desc="上传文本，逆向学习结构与文风" href="/dissect" cta="去拆书" />
@@ -184,13 +190,13 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="surface-floating rounded-2xl w-full max-w-md p-6 animate-spring">
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-1.5 h-5 rounded-full bg-indigo-400/60" />
-              <h2 className="text-lg font-semibold text-zinc-100">更新公告 · {LATEST_VERSION}</h2>
+              <span className="w-1.5 h-5 rounded-full bg-primary/60" />
+              <h2 className="text-lg font-semibold text-foreground">更新公告 · {LATEST_VERSION}</h2>
             </div>
             <ul className="space-y-2.5 mb-5">
               {CHANGELOG_BRIEF.map((item, i) => (
-                <li key={i} className="text-sm text-zinc-400 flex items-start gap-2.5">
-                  <span className="w-1 h-1 rounded-full bg-indigo-400/60 mt-2 shrink-0" />
+                <li key={i} className="text-sm text-[var(--nv-text-secondary)] flex items-start gap-2.5">
+                  <span className="w-1 h-1 rounded-full bg-primary/60 mt-2 shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -227,45 +233,45 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
   return (
     <div className="group surface-elevated card-lift rounded-2xl p-5 flex flex-col">
       <div className="flex items-start justify-between mb-3">
-        <h3 className="font-semibold text-base truncate flex-1 mr-2 text-zinc-200">
+        <h3 className="font-semibold text-base truncate flex-1 mr-2 text-foreground">
           {project.name}
         </h3>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
           disabled={deletingId === project.id}
-          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all shrink-0 disabled:opacity-40"
+          className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-muted)] hover:text-destructive transition-all shrink-0 disabled:opacity-40"
           title="删除项目"
         >
           <Icon name="x" size={14} />
         </button>
       </div>
 
-      <p className="text-sm text-zinc-500 mb-3 line-clamp-2 flex-1 leading-relaxed">
+      <p className="text-sm text-[var(--nv-text-tertiary)] mb-3 line-clamp-2 flex-1 leading-relaxed">
         {project.description || "暂无描述"}
       </p>
 
       {project.genre.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {project.genre.map((g) => (
-            <span key={g} className="text-[10px] px-2 py-0.5 rounded-lg bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+            <span key={g} className="text-[10px] px-2 py-0.5 rounded-lg bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] border border-[var(--nv-border-2)]">
               {g}
             </span>
           ))}
         </div>
       )}
 
-      <div className="flex items-center gap-4 text-[10px] text-zinc-600 mb-3">
+      <div className="flex items-center gap-4 text-[10px] text-[var(--nv-text-muted)] mb-3">
         <span className="flex items-center gap-1"><Icon name="user" size={11} /> {project._count.characters} 角色</span>
         <span className="flex items-center gap-1"><Icon name="book" size={11} /> {project._count.lorebookEntries} 词条</span>
         <span className="flex items-center gap-1"><Icon name="file" size={11} /> {project._count.storyNodes} 节点</span>
         <span className="flex items-center gap-1"><Icon name="target" size={11} /> {formatWordCount(project.targetWordCount)}</span>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
-        <span className="text-[10px] text-zinc-600">{timeAgo}</span>
+      <div className="flex items-center justify-between pt-3 border-t border-[var(--nv-border-2)]">
+        <span className="text-[10px] text-[var(--nv-text-muted)]">{timeAgo}</span>
         <Link
           href={`/workspace/${project.id}`}
-          className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          className="text-xs text-primary hover:text-primary font-medium transition-colors"
         >
           进入工作台 →
         </Link>
@@ -292,14 +298,14 @@ function FeatureCard({
   return (
     <Link
       href={href}
-      className="group surface-elevated rounded-2xl p-5 flex flex-col hover:border-indigo-400/30 transition-all"
+      className="group surface-elevated rounded-2xl p-5 flex flex-col hover:border-primary/30 transition-all"
     >
-      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-300 flex items-center justify-center mb-3">
+      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
         <Icon name={icon} size={20} />
       </div>
-      <h3 className="font-semibold text-zinc-200 mb-1">{title}</h3>
-      <p className="text-sm text-zinc-500 leading-relaxed flex-1 mb-3">{desc}</p>
-      <span className="text-xs text-indigo-400 group-hover:text-indigo-300 font-medium inline-flex items-center gap-1">
+      <h3 className="font-semibold text-foreground mb-1">{title}</h3>
+      <p className="text-sm text-[var(--nv-text-tertiary)] leading-relaxed flex-1 mb-3">{desc}</p>
+      <span className="text-xs text-primary group-hover:text-primary font-medium inline-flex items-center gap-1">
         {cta} <Icon name="arrowRight" size={12} />
       </span>
     </Link>

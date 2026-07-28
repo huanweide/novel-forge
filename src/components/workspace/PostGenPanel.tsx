@@ -235,7 +235,7 @@ export function PostGenPanel({
       </div>
 
       {/* Tab 栏 */}
-      <div className="flex border-b border-white/[0.06]">
+      <div className="flex border-b border-[var(--nv-border-2)]">
         {TABS.map((t) => {
           const hasContent =
             (t.key === "extraction" && extractionData) ||
@@ -250,7 +250,7 @@ export function PostGenPanel({
           return (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2 text-xs font-medium transition-colors
-                ${tab === t.key ? "border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "border-transparent text-[var(--nv-text-tertiary)] hover:bg-white/[0.04] hover:text-[var(--nv-text-primary)]"}
+                ${tab === t.key ? "border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "border-transparent text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"}
                 ${!hasContent ? "opacity-40" : ""}`}>
               <Icon name={t.icon} size={13} /> {t.label}
               {hasIssues && <span className="h-1.5 w-1.5 rounded-full bg-[var(--nv-danger)]" />}
@@ -280,7 +280,7 @@ export function PostGenPanel({
                       <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 text-xs group/item ${isPasserby ? "opacity-50" : ""} ${isAdopted ? "bg-[var(--nv-success-soft)] border border-[var(--nv-success)]/30" : "bg-[var(--nv-surface-1)]"}`}>
                         <button onClick={() => toggleAdopt(setAdoptedChars, String(i))}
                           className={`mt-0.5 shrink-0 w-4 h-4 rounded border text-[10px] flex items-center justify-center transition-colors
-                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-white" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
+                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-[var(--nv-text-primary)]" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
                           {isAdopted ? <Icon name="check" size={11} /> : null}
                         </button>
                         <div className="flex-1 min-w-0">
@@ -313,7 +313,7 @@ export function PostGenPanel({
                       <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 text-xs ${l.suggestion === "ignore" ? "opacity-50" : ""} ${isAdopted ? "bg-[var(--nv-success-soft)] border border-[var(--nv-success)]/30" : "bg-[var(--nv-surface-1)]"}`}>
                         <button onClick={() => toggleAdopt(setAdoptedLocations, String(i))}
                           className={`mt-0.5 shrink-0 w-4 h-4 rounded border text-[10px] flex items-center justify-center transition-colors
-                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-white" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
+                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-[var(--nv-text-primary)]" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
                           {isAdopted ? <Icon name="check" size={11} /> : null}
                         </button>
                         <div className="flex-1 min-w-0">
@@ -344,7 +344,7 @@ export function PostGenPanel({
                       <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 text-xs ${isAdopted ? "bg-[var(--nv-success-soft)] border border-[var(--nv-success)]/30" : "bg-[var(--nv-surface-1)]"}`}>
                         <button onClick={() => toggleAdopt(setAdoptedFactions, String(i))}
                           className={`mt-0.5 shrink-0 w-4 h-4 rounded border text-[10px] flex items-center justify-center transition-colors
-                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-white" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
+                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-[var(--nv-text-primary)]" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
                           {isAdopted ? <Icon name="check" size={11} /> : null}
                         </button>
                         <div className="flex-1 min-w-0">
@@ -372,7 +372,7 @@ export function PostGenPanel({
                       <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 text-xs ${isAdopted ? "bg-[var(--nv-success-soft)] border border-[var(--nv-success)]/30" : "bg-[var(--nv-surface-1)]"}`}>
                         <button onClick={() => toggleAdopt(setAdoptedItems, String(i))}
                           className={`mt-0.5 shrink-0 w-4 h-4 rounded border text-[10px] flex items-center justify-center transition-colors
-                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-white" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
+                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-[var(--nv-text-primary)]" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
                           {isAdopted ? <Icon name="check" size={11} /> : null}
                         </button>
                         <div className="flex-1 min-w-0">
@@ -401,7 +401,7 @@ export function PostGenPanel({
                       <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 text-xs ${isAdopted ? "bg-[var(--nv-success-soft)] border border-[var(--nv-success)]/30" : "bg-[var(--nv-surface-1)]"}`}>
                         <button onClick={() => toggleAdopt(setAdoptedForeshadowings, String(i))}
                           className={`mt-0.5 shrink-0 w-4 h-4 rounded border text-[10px] flex items-center justify-center transition-colors
-                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-white" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
+                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-[var(--nv-text-primary)]" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
                           {isAdopted ? <Icon name="check" size={11} /> : null}
                         </button>
                         <div className="flex-1 min-w-0">
@@ -432,7 +432,7 @@ export function PostGenPanel({
                       <div key={i} className={`flex items-start gap-2 rounded px-2 py-1.5 text-xs ${isAdopted ? "bg-[var(--nv-success-soft)] border border-[var(--nv-success)]/30" : "bg-[var(--nv-surface-1)]"}`}>
                         <button onClick={() => toggleAdopt(setAdoptedRelationships, String(i))}
                           className={`mt-0.5 shrink-0 w-4 h-4 rounded border text-[10px] flex items-center justify-center transition-colors
-                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-white" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
+                            ${isAdopted ? "bg-[var(--nv-success)] border-[var(--nv-success)] text-[var(--nv-text-primary)]" : "border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-text-secondary)]"}`}>
                           {isAdopted ? <Icon name="check" size={11} /> : null}
                         </button>
                         <div className="flex-1 min-w-0">

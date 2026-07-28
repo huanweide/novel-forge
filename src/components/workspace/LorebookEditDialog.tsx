@@ -130,16 +130,16 @@ export function LorebookEditDialog({
           <DialogInput value={form.keys} onChange={(v) => setForm({ ...form, keys: v })} placeholder="魔法, 魔力, 法师" />
         </DialogField>
         <DialogField label="设定内容（≤200 Token）">
-          <textarea className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2 text-sm resize-none" rows={4} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+          <textarea className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-2 text-sm resize-none" rows={4} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
         </DialogField>
-        <label className="flex items-center gap-2 text-sm text-zinc-400">
+        <label className="flex items-center gap-2 text-sm text-[var(--nv-text-tertiary)]">
           <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="rounded" />
           启用此词条
         </label>
       </div>
       <div className="flex justify-end gap-2 mt-5">
-        <Button variant="outline" onClick={onClose} className="border-white/[0.08]">取消</Button>
-        <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500">保存</Button>
+        <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>
+        <Button onClick={handleSave} className="bg-[var(--nv-primary)] hover:brightness-110">保存</Button>
       </div>
     </DialogOverlay>
   );

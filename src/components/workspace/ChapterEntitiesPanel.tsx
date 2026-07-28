@@ -32,7 +32,7 @@ function buildGroups(matches: EntityMatch[]): EntityGroup[] {
     { key: "geography", label: "地点", icon: <Icon name="map" size={14} />, color: "#C55A11", match: (m) => m.category === "geography" },
     { key: "magic",     label: "世界观", icon: <Icon name="globe" size={14} />, color: "#9B59B6", match: (m) => m.category === "magic_system" },
     { key: "technique", label: "功法", icon: <Icon name="sparkles" size={14} />, color: "#D64545", match: (m) => m.category === "technique" },
-    { key: "creature",  label: "生物", icon: <Icon name="sparkles" size={14} className="text-violet-400" />, color: "#C77D9F", match: (m) => m.category === "creature" },
+    { key: "creature",  label: "生物", icon: <Icon name="sparkles" size={14} className="text-[var(--nv-creative)]" />, color: "#C77D9F", match: (m) => m.category === "creature" },
     { key: "culture",   label: "文化", icon: <Icon name="palette" size={14} />, color: "#5DA89B", match: (m) => m.category === "culture" },
     { key: "history",   label: "历史", icon: <Icon name="scroll" size={14} />, color: "#7B8CC4", match: (m) => m.category === "history" },
     { key: "other",     label: "其他", icon: <Icon name="package" size={14} />, color: "#8B8B8B", match: () => true },
@@ -149,7 +149,7 @@ export function ChapterEntitiesPanel({
   // ── 加载中 ──
   if (loading) {
     return (
-      <div className="p-4 text-xs text-zinc-500 text-center animate-pulse">
+      <div className="p-4 text-xs text-[var(--nv-text-muted)] text-center animate-pulse">
         加载实体数据...
       </div>
     );
@@ -159,7 +159,7 @@ export function ChapterEntitiesPanel({
   if (groups.length === 0) {
     return (
       <div className="p-4 text-xs text-[var(--nv-text-tertiary)] text-center">
-        <p className="mb-1 flex items-center justify-center gap-1.5"><Icon name="inbox" size={14} className="text-zinc-600" /> 本章未匹配到已注册实体</p>
+        <p className="mb-1 flex items-center justify-center gap-1.5"><Icon name="inbox" size={14} className="text-[var(--nv-text-muted)]" /> 本章未匹配到已注册实体</p>
         <p>在左侧面板注册角色或词条后，正文中的名字会自动上色并出现在这里</p>
       </div>
     );
@@ -183,7 +183,7 @@ export function ChapterEntitiesPanel({
             <Icon name={collapsed.has(group.key) ? "arrowRight" : "arrowDown" as any} size={11} className="text-[var(--nv-text-tertiary)] w-3" />
             <span className="text-sm">{group.icon}</span>
             <span className="text-xs font-medium text-[var(--nv-text-secondary)]">{group.label}</span>
-            <span className="text-[10px] text-zinc-600 ml-auto">{group.entities.length}</span>
+            <span className="text-[10px] text-[var(--nv-text-muted)] ml-auto">{group.entities.length}</span>
           </button>
 
           {/* 实体列表 */}

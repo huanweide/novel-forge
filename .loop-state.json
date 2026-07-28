@@ -1,0 +1,19 @@
+{
+  "goal": "将 huanweide/novel-forge 整合为可部署、可运行、所有交互功能经模拟验证的完整数站，并持续自我迭代优化。参考资料核心思想：正文→填表→召回→正文 + 剧情推进=人设进化（<if cell> 条件人设）。",
+  "type": "web",
+  "started_at": "2026-07-25",
+  "current_version": "v0.30.0",
+  "current_commit": "d13fb46",
+  "cycle": 4,
+  "loop_engine": "infinite-refine-loop (Overlord System)",
+  "last_checkpoint": "v0.30.0 分阶段人设求值生效：新增 src/core/babylore/ifcell.ts 求值器 + 集成进 loop.ts/buildRecallBlock；单元+端到端双层验证通过，写章节 recall 注入已求值人设（苏苏好感度=5→阶段一：陌生人），无 <if cell> 标签泄漏",
+  "self_question": {
+    "还能做什么": "分阶段人设已在 write/refine/continue 三路径自动生效（共用 loop）。下一步：让规则中心与文风也支持随属性变量动态切换；把「自动填表写入的变量」直接绑定到 <if cell> 引用的列，形成真·闭环（填表→人设进化→下一章生成）。",
+    "能加什么": "① 结构化表格页增加「自动填表历史」可视化（每次 applied 的行/列/值）；② 写作侧栏实时显示「当前生效的人设阶段」卡片；③ 创意工坊新增「分阶段人设」分类预设（多角色、势力好感矩阵）；④ 更多内置示范预设。",
+    "提升什么思维": "条件渲染的人设/状态系统是「剧情推进=记忆召回+人设进化」的关键引擎——把数值驱动的状态机注入叙事生成，让角色随剧情进度真实成长，而非静态设定。这是本工具区别于普通'填表小说生成器'的核心壁垒。",
+    "能学什么集成": "参考酒馆/SillyTavern 的 <if>/<else> 条件世界书语法（本项目已实现兼容求值器）；可进一步借鉴其「变量绑定」机制，让 LoreTable 列直接映射人设属性变量，实现填表即改人设。"
+  },
+  "next_plan": "持续优化（不封顶）：前端透明度（表格页填表历史 / 写作侧栏人设阶段卡）+ 更多内置预设 + 规则中心/文风随变量切换；待用户侧解决 Neon 额度后协同部署验证。每轮遵循 测试→优化→更新，并模拟终端用户触发验证前后端联动。",
+  "verified_routes": ["/", "/workshop", "/changelog", "/workspace/[projectId]", "/workspace/[projectId]/tables", "/api/projects", "write/refine/continue 三路由闭环+eval"],
+  "known_issues": ["/projects 手动 URL 404（站内无死链，首页即项目仪表盘；可加优雅重定向作为打磨项）"]
+}

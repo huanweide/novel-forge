@@ -436,7 +436,7 @@ export function CharacterList({
             key={o.key}
             onClick={() => { setRoleFilter(roleFilter === o.key ? "all" : o.key); setTagFilter("all"); }}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              roleFilter === o.key ? "bg-[var(--nv-primary)] text-white" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+              roleFilter === o.key ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
@@ -478,7 +478,7 @@ export function CharacterList({
             onClick={() => setTagFilter(tagFilter === o.key ? "all" : o.key)}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
               tagFilter === o.key
-                ? "bg-[var(--nv-accent)] text-white"
+                ? "bg-[var(--nv-accent)] text-[var(--nv-text-primary)]"
                 : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
@@ -492,7 +492,7 @@ export function CharacterList({
             onClick={() => setTagFilter(tagFilter === t ? "all" : t)}
             className={`text-[9px] px-1 py-0 rounded transition-colors ${
               tagFilter === t
-                ? "bg-[var(--nv-creative)] text-white"
+                ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]"
                 : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
@@ -674,7 +674,7 @@ export function CharacterList({
                 disabled={selectedTagCount === 0 || applying}
                 className={`text-[10px] px-3 py-0.5 rounded font-medium transition-colors ${
                   selectedTagCount > 0 && !applying
-                    ? "bg-[var(--nv-creative)] text-white hover:bg-[var(--nv-creative)]"
+                    ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-creative)]"
                     : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] cursor-not-allowed"
                 }`}
               >
@@ -800,7 +800,7 @@ export function CharacterList({
             <div className="px-5 py-3 border-t border-[var(--nv-border-1)] flex gap-2 justify-end">
               <button
                 onClick={() => setExpandResult(null)}
-                className="px-4 py-1.5 text-sm rounded-lg bg-[var(--nv-accent)] hover:bg-[var(--nv-accent)]/80 text-white font-medium"
+                className="px-4 py-1.5 text-sm rounded-lg bg-[var(--nv-accent)] hover:bg-[var(--nv-accent)]/80 text-[var(--nv-text-primary)] font-medium"
               >
                 知道了
               </button>
@@ -840,7 +840,7 @@ export function CharacterList({
                             key={t}
                             onClick={e => { e.stopPropagation(); setTagFilter(t); }}
                             className={`text-[9px] px-1 py-0 rounded transition-colors ${
-                              tagFilter === t ? "bg-[var(--nv-creative)] text-white" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+                              tagFilter === t ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
                             }`}
                           >{t}</button>
                         ))}

@@ -612,18 +612,18 @@ export default function WorkspacePage() {
   // ═══════════════════════════════════════════
 
   if (loading) return (
-    <div className="h-screen bg-zinc-950 flex items-center justify-center">
-      <span className="inline-flex items-center gap-2 text-zinc-500">
-        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-150" />
-        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-300" />
+    <div className="h-screen bg-[var(--nv-void)] flex items-center justify-center">
+      <span className="inline-flex items-center gap-2 text-[var(--nv-text-muted)]">
+        <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse" />
+        <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-150" />
+        <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-300" />
       </span>
     </div>
   );
   if (loadError) return (
-    <div className="h-screen bg-zinc-950 flex flex-col items-center justify-center text-zinc-300 gap-4">
+    <div className="h-screen bg-[var(--nv-void)] flex flex-col items-center justify-center text-[var(--nv-text-secondary)] gap-4">
       <div className="text-rose-400 text-lg font-semibold">⚠ 项目加载失败</div>
-      <div className="text-zinc-500 text-sm max-w-md text-center px-6">{loadError}</div>
+      <div className="text-[var(--nv-text-muted)] text-sm max-w-md text-center px-6">{loadError}</div>
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => { setLoadError(null); loadProject(); }}>重试</Button>
         <Button variant="outline" onClick={() => router.push("/")}>返回首页</Button>
@@ -631,14 +631,14 @@ export default function WorkspacePage() {
     </div>
   );
   if (!project) return (
-    <div className="h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">
+    <div className="h-screen bg-[var(--nv-void)] flex items-center justify-center text-[var(--nv-text-muted)]">
       项目不存在
       <Button variant="outline" onClick={() => router.push("/")} className="ml-4">返回首页</Button>
     </div>
   );
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+    <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
@@ -650,12 +650,12 @@ export default function WorkspacePage() {
         onOpenAutomation={() => setShowAutomationSettings(true)}
       />
 
-      <div className="px-4 py-2 border-b border-white/[0.06] flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2">
         <button onClick={() => router.push(`/workspace/${project.id}/tables`)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
-          🗂 结构化表格（宝宝流数据库）
+          结构化表格（宝宝流数据库）
         </button>
         <button onClick={() => router.push("/workshop")} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
-          ✨ 创意工坊
+          创意工坊
         </button>
       </div>
 
@@ -732,16 +732,16 @@ export default function WorkspacePage() {
           {/* 宝宝流记忆召回面板（写作闭环透明度：本轮已自动呼应的设定/人设阶段） */}
           {recallMemories.length > 0 && selectedNode && (
             <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
-              <div className="surface-elevated rounded-2xl p-4 border border-indigo-400/20">
+              <div className="surface-elevated rounded-2xl p-4 border border-[var(--nv-primary)]/20">
                 <div className="flex items-center gap-2 mb-2.5">
-                  <span className="w-1.5 h-5 rounded-full bg-indigo-400/60" />
-                  <h3 className="text-sm font-semibold text-zinc-200">🧠 宝宝流记忆召回（已注入本轮写作）</h3>
+                  <span className="w-1.5 h-5 rounded-full bg-[var(--nv-primary)]/60" />
+                  <h3 className="text-sm font-semibold text-[var(--nv-text-secondary)]">宝宝流记忆召回（已注入本轮写作）</h3>
                 </div>
                 <ul className="space-y-2.5">
                   {recallMemories.map((m, i) => (
                     <li key={i} className="text-xs">
-                      <span className="text-indigo-300 font-medium">{m.source === "lorebook" ? "世界书" : "结构化表格"}｜{m.title}</span>
-                      <p className="text-zinc-400 mt-1 whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                      <span className="text-[var(--nv-primary)] font-medium">{m.source === "lorebook" ? "世界书" : "结构化表格"}｜{m.title}</span>
+                      <p className="text-[var(--nv-text-tertiary)] mt-1 whitespace-pre-wrap leading-relaxed">{m.content}</p>
                     </li>
                   ))}
                 </ul>

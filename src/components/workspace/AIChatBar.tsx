@@ -575,7 +575,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
             <button
               onClick={handleSend}
               disabled={!message.trim()}
-              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/80 disabled:bg-[var(--nv-surface-1)] disabled:text-[var(--nv-text-tertiary)] text-white transition-all"
+              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/80 disabled:bg-[var(--nv-surface-1)] disabled:text-[var(--nv-text-tertiary)] text-[var(--nv-text-primary)] transition-all"
               title="发送"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

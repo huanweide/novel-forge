@@ -179,11 +179,11 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
     <div className="space-y-5">
       {/* 数据源选择 */}
       <div>
-        <label className="block text-sm text-zinc-400 mb-1.5">数据源</label>
+        <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">数据源</label>
         <select
           value={selectedTaskId}
           onChange={(e) => handleTaskSelect(e.target.value)}
-          className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]"
         >
           <option value="">请选择拆书记录...</option>
           {tasks.map((t) => (
@@ -203,7 +203,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
 
       {/* 仿写模式 */}
       <div>
-        <label className="block text-sm text-zinc-400 mb-2">仿写模式</label>
+        <label className="block text-sm text-[var(--nv-text-tertiary)] mb-2">仿写模式</label>
         <div className="grid grid-cols-3 gap-2">
           {[
             { id: "full" as const, label: "完全仿写", desc: "高度还原原作结构与设定" },
@@ -215,12 +215,12 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
               onClick={() => setMode(opt.id)}
               className={`p-2.5 rounded-lg border text-left transition-colors ${
                 mode === opt.id
-                  ? "border-indigo-500 bg-indigo-500/10"
-                  : "border-white/[0.08] bg-white/[0.03] backdrop-blur-sm hover:border-zinc-600"
+                  ? "border-[var(--nv-primary)] bg-[var(--nv-primary)]/10"
+                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm hover:border-[var(--nv-border-3)]"
               }`}
             >
-              <div className="text-xs font-medium text-zinc-200">{opt.label}</div>
-              <div className="text-xs text-zinc-500 mt-0.5">{opt.desc}</div>
+              <div className="text-xs font-medium text-[var(--nv-text-secondary)]">{opt.label}</div>
+              <div className="text-xs text-[var(--nv-text-muted)] mt-0.5">{opt.desc}</div>
             </button>
           ))}
         </div>
@@ -229,8 +229,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
       {/* 相似度滑块 */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-sm text-zinc-400">相似度</label>
-          <span className="text-sm font-medium text-indigo-400">{similarity}%</span>
+          <label className="text-sm text-[var(--nv-text-tertiary)]">相似度</label>
+          <span className="text-sm font-medium text-[var(--nv-primary)]">{similarity}%</span>
         </div>
         <input
           type="range"
@@ -238,16 +238,16 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           max={100}
           value={similarity}
           onChange={(e) => setSimilarity(Number(e.target.value))}
-          className="w-full accent-indigo-500"
+          className="w-full accent-[var(--nv-primary)]"
         />
-        <div className="flex justify-between text-xs text-zinc-600">
+        <div className="flex justify-between text-xs text-[var(--nv-text-muted)]">
           <span>0%</span>
           <span>25%</span>
           <span>50%</span>
           <span>75%</span>
           <span>100%</span>
         </div>
-        <p className="text-xs text-zinc-500 mt-1">
+        <p className="text-xs text-[var(--nv-text-muted)] mt-1">
           {similarity >= 80
             ? "高度相似，主要在细节上进行调整"
             : similarity >= 50
@@ -260,10 +260,10 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
       {availableDimensions.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-zinc-400">选择仿写维度</label>
+            <label className="text-sm text-[var(--nv-text-tertiary)]">选择仿写维度</label>
             <button
               onClick={toggleAllDimensions}
-              className="text-xs text-indigo-400 hover:text-indigo-300"
+              className="text-xs text-[var(--nv-primary)] hover:text-[var(--nv-primary)]"
             >
               {selectedDimensions.length === availableDimensions.length ? "取消全选" : "全选"}
             </button>
@@ -274,8 +274,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
                 key={dim.key}
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs cursor-pointer transition-colors ${
                   selectedDimensions.includes(dim.key as DimensionKey)
-                    ? "bg-indigo-500/15 text-indigo-300"
-                    : "bg-white/[0.04] text-zinc-500 hover:text-zinc-400"
+                    ? "bg-[var(--nv-primary)]/15 text-[var(--nv-primary)]"
+                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               >
                 <input
@@ -295,7 +295,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
       {/* 字数/章数 */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm text-zinc-400 mb-1.5">目标字数</label>
+          <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">目标字数</label>
           <input
             type="number"
             value={targetWordCount}
@@ -303,18 +303,18 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
             min={500}
             max={50000}
             step={500}
-            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]"
           />
         </div>
         <div>
-          <label className="block text-sm text-zinc-400 mb-1.5">章节数</label>
+          <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">章节数</label>
           <input
             type="number"
             value={chapterCount}
             onChange={(e) => setChapterCount(Math.max(1, Math.min(20, Number(e.target.value))))}
             min={1}
             max={20}
-            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]"
           />
         </div>
       </div>
@@ -322,15 +322,15 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
       {/* 自定义要求 */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-sm text-zinc-400">自定义要求（可选）</label>
-          <span className="text-xs text-zinc-600">提示词库</span>
+          <label className="text-sm text-[var(--nv-text-tertiary)]">自定义要求（可选）</label>
+          <span className="text-xs text-[var(--nv-text-muted)]">提示词库</span>
         </div>
         <textarea
           value={customRequirement}
           onChange={(e) => setCustomRequirement(e.target.value)}
           placeholder="可填写额外的仿写要求，如：主角改为女性、背景设定在现代都市..."
           rows={3}
-          className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 resize-y"
+          className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)] resize-y"
         />
       </div>
 
@@ -340,8 +340,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
         disabled={!selectedTaskId || selectedDimensions.length === 0 || generating}
         className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
           selectedTaskId && selectedDimensions.length > 0 && !generating
-            ? "bg-indigo-600 text-white hover:bg-indigo-500"
-            : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"
+            ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
+            : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >
         {generating ? "⏳ 仿写生成中..." : "开始仿写"}
@@ -358,18 +358,18 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
       {output && (
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-zinc-400">生成结果</label>
+            <label className="text-sm text-[var(--nv-text-tertiary)]">生成结果</label>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(output);
               }}
-              className="text-xs text-zinc-500 hover:text-zinc-300"
+              className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"
             >
               📋 复制
             </button>
           </div>
-          <div className="p-4 bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-lg max-h-96 overflow-y-auto">
-            <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed">
+          <div className="p-4 bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg max-h-96 overflow-y-auto">
+            <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-sm text-[var(--nv-text-secondary)] leading-relaxed">
               {output}
             </div>
           </div>

@@ -37,8 +37,8 @@ export function BuildConfigPanel({ config, onChange }: Props) {
       {/* 头部 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="w-1 h-3.5 rounded-full bg-indigo-400/60" />
-          <h3 className="text-xs font-semibold text-zinc-300 tracking-wider uppercase">
+          <span className="w-1 h-3.5 rounded-full bg-[var(--nv-primary)]/60" />
+          <h3 className="text-xs font-semibold text-[var(--nv-text-secondary)] tracking-wider uppercase">
             构建配置
           </h3>
         </div>
@@ -60,7 +60,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
               coreConflict: "",
             })
           }
-          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors active:scale-95"
+          className="text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)] transition-colors active:scale-95"
         >
           重置
         </button>
@@ -91,7 +91,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
           onChange={(e) => update({ direction: e.target.value })}
           placeholder="简要描述你想写的故事方向或核心创意..."
           rows={2}
-          className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 resize-none transition-all duration-200"
+          className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 resize-none transition-all duration-200"
         />
       </Field>
 
@@ -117,7 +117,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
                 className={`text-[9px] px-2 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
                   active
                     ? "bg-purple-500/20 text-purple-300 border-purple-400/30 shadow-[0_0_8px_rgba(168,85,247,0.1)]"
-                    : "bg-white/[0.02] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-400"
+                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               >
                 {active ? "✓ " : ""}
@@ -127,7 +127,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
           })}
         </div>
         {config.styleTags.length > 0 && (
-          <p className="text-[9px] text-zinc-600 mt-1.5">
+          <p className="text-[9px] text-[var(--nv-text-muted)] mt-1.5">
             已选 {config.styleTags.length} 个: {config.styleTags.join("、")}
           </p>
         )}
@@ -155,7 +155,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
                 className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
                   active
                     ? "bg-amber-500/20 text-amber-300 border-amber-400/30 shadow-[0_0_8px_rgba(245,158,11,0.1)]"
-                    : "bg-white/[0.02] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-400"
+                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               >
                 {key}
@@ -164,14 +164,14 @@ export function BuildConfigPanel({ config, onChange }: Props) {
           })}
         </div>
         {config.wordCount && (
-          <p className="text-[9px] text-zinc-600 mt-1">{config.wordCount}</p>
+          <p className="text-[9px] text-[var(--nv-text-muted)] mt-1">{config.wordCount}</p>
         )}
       </Field>
 
       {/* 更多选项 */}
       <button
         onClick={() => setShowMore(!showMore)}
-        className="w-full text-[10px] text-zinc-500 hover:text-zinc-300 py-1.5 rounded-lg hover:bg-white/[0.03] transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-1.5"
+        className="w-full text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] py-1.5 rounded-lg hover:bg-[var(--nv-surface-2)] transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-1.5"
       >
         <span
           className={`transition-transform duration-200 ${showMore ? "rotate-180" : ""}`}
@@ -194,14 +194,14 @@ export function BuildConfigPanel({ config, onChange }: Props) {
                     onClick={() => update({ plotStructure: ps.id })}
                     className={`w-full text-left p-2.5 rounded-xl border transition-all duration-200 active:scale-[0.98] ${
                       active
-                        ? "bg-indigo-500/[0.08] border-indigo-400/25 shadow-[0_0_12px_rgba(99,102,241,0.08)]"
-                        : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                        ? "bg-[var(--nv-primary)]/[0.08] border-[var(--nv-primary)]/25 shadow-[0_0_12px_rgba(99,102,241,0.08)]"
+                        : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:bg-[var(--nv-surface-2)] hover:border-[var(--nv-border-2)]"
                     }`}
                   >
-                    <div className="text-[11px] font-medium text-zinc-300">
+                    <div className="text-[11px] font-medium text-[var(--nv-text-secondary)]">
                       {ps.name}
                     </div>
-                    <div className="text-[9px] text-zinc-600 mt-0.5">
+                    <div className="text-[9px] text-[var(--nv-text-muted)] mt-0.5">
                       {ps.desc}
                     </div>
                   </button>
@@ -224,7 +224,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
                     className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
                       active
                         ? "bg-pink-500/20 text-pink-300 border-pink-400/30 shadow-[0_0_8px_rgba(236,72,153,0.1)]"
-                        : "bg-white/[0.02] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-400"
+                        : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
                     }`}
                   >
                     {s}
@@ -261,7 +261,7 @@ export function BuildConfigPanel({ config, onChange }: Props) {
               onChange={(e) => update({ coreConflict: e.target.value })}
               placeholder="描述小说的核心矛盾冲突..."
               rows={2}
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 resize-none transition-all duration-200"
+              className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 resize-none transition-all duration-200"
             />
           </Field>
 
@@ -295,7 +295,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-medium text-zinc-500 tracking-wide">
+      <label className="text-[10px] font-medium text-[var(--nv-text-muted)] tracking-wide">
         {label}
       </label>
       {children}
@@ -318,7 +318,7 @@ function Input({
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+      className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 transition-all duration-200"
     />
   );
 }
@@ -339,9 +339,9 @@ function ChipGroup({
     { bg: string; text: string; border: string; shadow: string }
   > = {
     indigo: {
-      bg: "bg-indigo-500/20",
-      text: "text-indigo-300",
-      border: "border-indigo-400/30",
+      bg: "bg-[var(--nv-primary)]/20",
+      text: "text-[var(--nv-primary)]",
+      border: "border-[var(--nv-primary)]/30",
       shadow: "shadow-[0_0_8px_rgba(99,102,241,0.1)]",
     },
     emerald: {
@@ -382,7 +382,7 @@ function ChipGroup({
             className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
               active
                 ? `${c.bg} ${c.text} ${c.border} ${c.shadow}`
-                : "bg-white/[0.02] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-400"
+                : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
             }`}
           >
             {item}
@@ -408,7 +408,7 @@ function Select({
     <select
       value={value}
       onChange={onChange}
-      className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 transition-all duration-200"
+      className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 transition-all duration-200"
     >
       <option value="">{placeholder}</option>
       {options.map((opt) => (
@@ -443,13 +443,13 @@ function Checkbox({
         <div
           className={`w-4 h-4 rounded-md border transition-all duration-200 flex items-center justify-center ${
             checked
-              ? "bg-indigo-500 border-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.3)]"
-              : "bg-white/[0.04] border-white/[0.12] group-hover:border-white/[0.2]"
+              ? "bg-[var(--nv-primary)] border-[var(--nv-primary)] shadow-[0_0_8px_rgba(99,102,241,0.3)]"
+              : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] group-hover:border-[var(--nv-border-2)]"
           }`}
         >
           {checked && (
             <svg
-              className="w-3 h-3 text-white"
+              className="w-3 h-3 text-[var(--nv-text-primary)]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -465,8 +465,8 @@ function Checkbox({
         </div>
       </div>
       <div>
-        <div className="text-xs text-zinc-400 font-medium">{label}</div>
-        <div className="text-[9px] text-zinc-600 mt-0.5">{hint}</div>
+        <div className="text-xs text-[var(--nv-text-tertiary)] font-medium">{label}</div>
+        <div className="text-[9px] text-[var(--nv-text-muted)] mt-0.5">{hint}</div>
       </div>
     </label>
   );

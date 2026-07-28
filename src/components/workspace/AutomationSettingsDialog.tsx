@@ -95,7 +95,7 @@ export function AutomationSettingsDialog({
           {!loading && !loadError && (
             <>
               {/* 总开关 */}
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--nv-border-2)] bg-white/[0.02] px-4 py-3">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-[var(--nv-text-primary)]">生成后自动填表</div>
                   <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">每章写完后自动抽取事实，回填结构化表格（创意工坊数据库），并持续注入永久上下文</div>

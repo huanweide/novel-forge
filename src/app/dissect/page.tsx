@@ -100,7 +100,7 @@ export default function DissectPage() {
       <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]" aria-label="返回">
+            <Link href="/" className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]" aria-label="返回">
               <Icon name="arrowLeft" size={18} />
             </Link>
             <h1 className="flex items-center gap-2 text-lg font-bold text-[var(--nv-text-primary)]">
@@ -154,7 +154,7 @@ export default function DissectPage() {
                 <Icon name="plus" size={16} /> 开始第一次拆书
               </Link>
             }
-            className="surface-elevated border-solid border-white/[0.06]"
+            className="surface-elevated border-solid border-[var(--nv-border-2)]"
           />
         ) : (
           <div className="grid gap-3">

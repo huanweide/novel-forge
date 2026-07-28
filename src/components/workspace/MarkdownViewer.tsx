@@ -30,47 +30,47 @@ interface MarkdownViewerProps {
 
 const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
   h1: ({ children, ...props }: any) => (
-    <h1 className="text-2xl font-bold text-zinc-100 mt-8 mb-4 pb-2 text-center tracking-wide" {...props}>
+    <h1 className="text-2xl font-bold text-foreground mt-8 mb-4 pb-2 text-center tracking-wide" {...props}>
       {children}
     </h1>
   ),
   h2: ({ children, ...props }: any) => (
-    <h2 className="text-xl font-bold text-zinc-100 mt-6 mb-3" {...props}>
+    <h2 className="text-xl font-bold text-foreground mt-6 mb-3" {...props}>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }: any) => (
-    <h3 className="text-lg font-semibold text-zinc-200 mt-5 mb-2" {...props}>
+    <h3 className="text-lg font-semibold text-[var(--nv-text-secondary)] mt-5 mb-2" {...props}>
       {children}
     </h3>
   ),
   p: ({ children, ...props }: any) => (
-    <p className="my-3 text-[17px] leading-[1.85] text-zinc-200 tracking-[0.02em]" {...props}>
+    <p className="my-3 text-[17px] leading-[1.85] text-[var(--nv-text-secondary)] tracking-[0.02em]" {...props}>
       {children}
     </p>
   ),
   strong: ({ children, ...props }: any) => (
-    <strong className="font-bold text-zinc-100" {...props}>
+    <strong className="font-bold text-foreground" {...props}>
       {children}
     </strong>
   ),
   em: ({ children, ...props }: any) => (
-    <em className="italic text-zinc-300" {...props}>
+    <em className="italic text-[var(--nv-text-secondary)]" {...props}>
       {children}
     </em>
   ),
   blockquote: ({ children, ...props }: any) => (
-    <blockquote className="border-l-[3px] border-zinc-600 pl-5 my-4 text-zinc-400 italic text-[16px] leading-[1.75]" {...props}>
+    <blockquote className="border-l-[3px] border-[var(--nv-border-2)] pl-5 my-4 text-[var(--nv-text-tertiary)] italic text-[16px] leading-[1.75]" {...props}>
       {children}
     </blockquote>
   ),
   ul: ({ children, ...props }: any) => (
-    <ul className="list-disc list-outside ml-5 my-3 space-y-1.5 text-[16px] leading-[1.8] text-zinc-200" {...props}>
+    <ul className="list-disc list-outside ml-5 my-3 space-y-1.5 text-[16px] leading-[1.8] text-[var(--nv-text-secondary)]" {...props}>
       {children}
     </ul>
   ),
   ol: ({ children, ...props }: any) => (
-    <ol className="list-decimal list-outside ml-5 my-3 space-y-1.5 text-[16px] leading-[1.8] text-zinc-200" {...props}>
+    <ol className="list-decimal list-outside ml-5 my-3 space-y-1.5 text-[16px] leading-[1.8] text-[var(--nv-text-secondary)]" {...props}>
       {children}
     </ol>
   ),
@@ -83,23 +83,23 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="bg-white/[0.04] text-amber-300 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
+        <code className="bg-[var(--nv-surface-2)] text-amber-300 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
           {children}
         </code>
       );
     }
     return (
-      <code className={`block bg-zinc-900 text-zinc-300 p-4 rounded-lg my-3 text-[14px] font-mono overflow-x-auto leading-relaxed ${className || ""}`} {...props}>
+      <code className={`block bg-[var(--nv-abyss)] text-[var(--nv-text-secondary)] p-4 rounded-lg my-3 text-[14px] font-mono overflow-x-auto leading-relaxed ${className || ""}`} {...props}>
         {children}
       </code>
     );
   },
   pre: ({ children, ...props }: any) => (
-    <pre className="bg-zinc-900 rounded-lg my-3 overflow-x-auto" {...props}>
+    <pre className="bg-[var(--nv-abyss)] rounded-lg my-3 overflow-x-auto" {...props}>
       {children}
     </pre>
   ),
-  hr: (props: any) => <hr className="border-white/[0.06] my-8" {...props} />,
+  hr: (props: any) => <hr className="border-[var(--nv-border-2)] my-8" {...props} />,
   table: ({ children, ...props }: any) => (
     <div className="overflow-x-auto my-4">
       <table className="min-w-full border-collapse text-[15px]" {...props}>
@@ -108,27 +108,27 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
     </div>
   ),
   thead: ({ children, ...props }: any) => (
-    <thead className="border-b border-white/[0.08]" {...props}>
+    <thead className="border-b border-[var(--nv-border-2)]" {...props}>
       {children}
     </thead>
   ),
   th: ({ children, ...props }: any) => (
-    <th className="text-left px-3 py-2 text-zinc-200 font-semibold" {...props}>
+    <th className="text-left px-3 py-2 text-[var(--nv-text-secondary)] font-semibold" {...props}>
       {children}
     </th>
   ),
   td: ({ children, ...props }: any) => (
-    <td className="px-3 py-2 text-zinc-300 border-t border-white/[0.06]" {...props}>
+    <td className="px-3 py-2 text-[var(--nv-text-secondary)] border-t border-[var(--nv-border-2)]" {...props}>
       {children}
     </td>
   ),
   a: ({ children, href, ...props }: any) => (
-    <a className="text-indigo-400 hover:text-indigo-300 underline decoration-zinc-600 underline-offset-2" href={href} target="_blank" rel="noopener" {...props}>
+    <a className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)] underline decoration-[var(--nv-border-2)] underline-offset-2" href={href} target="_blank" rel="noopener" {...props}>
       {children}
     </a>
   ),
   del: ({ children, ...props }: any) => (
-    <del className="line-through text-zinc-500" {...props}>
+    <del className="line-through text-[var(--nv-text-muted)]" {...props}>
       {children}
     </del>
   ),
@@ -168,7 +168,7 @@ export function MarkdownViewer({ content, projectId, isStreaming = false }: Mark
   // 空内容
   if (!content || content.trim().length === 0) {
     return (
-      <div className="text-zinc-500 text-sm text-center py-12 select-none">
+      <div className="text-[var(--nv-text-muted)] text-sm text-center py-12 select-none">
         暂无正文 — 点击「续写」或「生成」开始创作
       </div>
     );
@@ -186,7 +186,7 @@ export function MarkdownViewer({ content, projectId, isStreaming = false }: Mark
 
       {/* 流式光标 */}
       {isStreaming && (
-        <span className="inline-block w-2 h-4 bg-indigo-400 ml-0.5 animate-pulse align-middle" />
+        <span className="inline-block w-2 h-4 bg-[var(--nv-primary)] ml-0.5 animate-pulse align-middle" />
       )}
 
       {/* 实体图例（只在有实体且有高亮时显示） */}
@@ -230,8 +230,8 @@ function EntityLegend({ entityMap }: { entityMap: Map<string, EntityHighlight> }
   if (active.length === 0) return null;
 
   return (
-    <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
-      <span className="text-zinc-600">图例：</span>
+    <div className="mt-6 pt-4 border-t border-[var(--nv-border-2)] flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--nv-text-muted)]">
+      <span className="text-[var(--nv-text-muted)]">图例：</span>
       {active.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1">
           <span
@@ -239,7 +239,7 @@ function EntityLegend({ entityMap }: { entityMap: Map<string, EntityHighlight> }
             style={{ backgroundColor: item.color }}
           />
           {item.label}
-          <span className="text-zinc-600">({counts[item.label] || 0})</span>
+          <span className="text-[var(--nv-text-muted)]">({counts[item.label] || 0})</span>
         </span>
       ))}
     </div>

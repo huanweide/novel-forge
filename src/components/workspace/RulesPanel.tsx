@@ -134,7 +134,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         ))}
         {disabledRules.length > 0 && (
           <>
-            <div className="text-[10px] text-zinc-600 pt-2 pb-1 px-1">已禁用</div>
+            <div className="text-[10px] text-[var(--nv-text-muted)] pt-2 pb-1 px-1">已禁用</div>
             {disabledRules.map(r => (
               <RuleRow key={r.id} rule={r} onToggle={handleToggle} onEdit={openEdit} onDelete={deleteRule} deletingId={deletingId} />
             ))}

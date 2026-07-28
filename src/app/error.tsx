@@ -21,7 +21,7 @@ export default function Error({
     <div className="min-h-[60vh] flex items-center justify-center p-6">
       <div className="w-full max-w-lg rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 backdrop-blur">
         <h2 className="text-lg font-semibold text-rose-200">页面出错了</h2>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-[var(--nv-text-tertiary)]">
           渲染时发生异常。可先点「重试」；若持续出现，多半是数据库未连接或 AI 配置缺失——
           顶部状态条会给出具体修复命令。
         </p>
@@ -31,13 +31,13 @@ export default function Error({
         <div className="mt-4 flex gap-3">
           <button
             onClick={reset}
-            className="rounded-lg bg-indigo-500/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-400"
+            className="rounded-lg bg-[var(--nv-primary)]/80 px-4 py-2 text-sm font-medium text-[var(--nv-text-primary)] transition hover:bg-[var(--nv-primary)]"
           >
             重试
           </button>
           <a
             href="/"
-            className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300 transition hover:bg-white/5"
+            className="rounded-lg border border-[var(--nv-border-2)] px-4 py-2 text-sm text-[var(--nv-text-secondary)] transition hover:bg-[var(--nv-surface-2)]"
           >
             返回首页
           </a>

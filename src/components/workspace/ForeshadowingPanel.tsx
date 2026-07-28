@@ -47,7 +47,7 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; dot: React.ReactN
   detected: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: <StatusDot color="yellow" size={7} /> },
   partially_fulfilled: { bg: "bg-blue-500/10", text: "text-blue-400", dot: <StatusDot color="blue" size={7} /> },
   fulfilled: { bg: "bg-green-500/10", text: "text-green-400", dot: <StatusDot color="green" size={7} /> },
-  voided: { bg: "bg-zinc-500/10", text: "text-zinc-500", dot: <StatusDot color="gray" size={7} /> },
+  voided: { bg: "bg-[var(--nv-text-muted)]/10", text: "text-[var(--nv-text-muted)]", dot: <StatusDot color="gray" size={7} /> },
 };
 
 const PRIORITY_LABEL: Record<string, React.ReactNode> = {

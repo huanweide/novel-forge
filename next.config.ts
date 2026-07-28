@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // 允许通过 127.0.0.1 访问 dev 资源（HMR/webpack-hmr）。
+  // Next.js 16 默认仅允许 localhost，用 IP 访问会被 CORS 拦截导致客户端无法 hydrate。
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
 };
 
 export default nextConfig;

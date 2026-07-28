@@ -14,7 +14,7 @@ const P0_LINE_COLORS: Record<string, string> = {
   "R|": "text-green-400",
   "L|": "text-teal-400",
   "G|": "text-yellow-400",
-  "P|": "text-gray-400",
+  "P|": "text-[var(--nv-text-tertiary)]",
   "CF|": "text-purple-400",
   "M|": "text-rose-400",
   "K|": "text-amber-300",
@@ -22,14 +22,14 @@ const P0_LINE_COLORS: Record<string, string> = {
   "T|": "text-cyan-300",
   "【章首衔接】": "text-blue-400",
   "【章尾悬念】": "text-blue-400",
-  "⟨✍": "text-violet-400/60 italic",
+  "⟨✍": "text-[var(--nv-creative)]/60 italic",
 };
 
 function getP0LineColor(line: string): string {
   for (const [prefix, color] of Object.entries(P0_LINE_COLORS)) {
     if (line.trimStart().startsWith(prefix)) return color;
   }
-  return "text-gray-500";
+  return "text-[var(--nv-text-muted)]";
 }
 
 function P0HighlightedPreview({ text }: { text: string }) {
@@ -202,7 +202,7 @@ export function DrawCards({
                     {/* 卡片标签 */}
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        isSelected ? "bg-[var(--nv-primary)] text-white" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)]"
+                        isSelected ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)]"
                       }`}>
                         {card.cardLabel || `路线${i + 1}`}
                       </span>

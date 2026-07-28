@@ -100,7 +100,7 @@ export function VolumeGroup({
               projectId={projectId} />
           ))}
           <button onClick={(e) => { e.stopPropagation(); onAddSection(volume.id); }}
-            className="w-full text-left text-xs text-zinc-600 hover:text-zinc-400 py-0.5 px-1.5" style={{ paddingLeft: "18px" }}>
+            className="w-full text-left text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)] py-0.5 px-1.5" style={{ paddingLeft: "18px" }}>
             + 添加章节到此卷
           </button>
         </div>

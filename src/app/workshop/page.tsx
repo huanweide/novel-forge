@@ -151,8 +151,8 @@ export default function Workshop() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)]">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <Link href="/" className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1">
@@ -182,7 +182,7 @@ export default function Workshop() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <p className="text-zinc-500 text-sm mb-6">
+        <p className="text-[var(--nv-text-muted)] text-sm mb-6">
           把参考资料里的「预设」变成可共享资产：表格模板预设、剧情推进预设、文风、世界观、角色卡。
           免费、非商业——你上传、他人套用、可一键复刻二创。
         </p>
@@ -216,26 +216,26 @@ export default function Workshop() {
             icon="package"
             title="还没有预设"
             description="把参考资料里的「预设」变成可共享资产，点右上角「上传预设」发布第一个吧。"
-            className="surface-elevated border-solid border-white/[0.06]"
+            className="surface-elevated border-solid border-[var(--nv-border-2)]"
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {presets.map((p) => (
               <div key={p.id} className="surface-elevated rounded-2xl p-5 flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--nv-primary)]/15 text-[var(--nv-primary)]">
                     {TYPE_LABEL[p.type] || p.type}
                   </span>
                   {p.isBuiltin && <span className="text-[11px] text-[var(--nv-accent)]">内置</span>}
                 </div>
-                <h3 className="font-semibold text-zinc-100">{p.title}</h3>
-                <p className="text-xs text-zinc-400 leading-relaxed flex-1">{p.description || "—"}</p>
+                <h3 className="font-semibold text-[var(--nv-text-primary)]">{p.title}</h3>
+                <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed flex-1">{p.description || "—"}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {p.tags.map((t) => (
-                    <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-400">{t}</span>
+                    <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">{t}</span>
                   ))}
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="flex items-center justify-between text-[11px] text-[var(--nv-text-muted)]">
                   <span>by {p.author}</span>
                   <span className="flex items-center gap-1"><Icon name="download" size={11} /> {p.downloads}</span>
                 </div>
@@ -267,7 +267,7 @@ export default function Workshop() {
             <h2 className="text-lg font-semibold mb-4">上传预设</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-400">类型</label>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">类型</label>
                 <select
                   value={upload.type}
                   onChange={(e) => setUpload({ ...upload, type: e.target.value, content: PLACEHOLDER[e.target.value] })}

@@ -45,7 +45,7 @@ export function ChatPanel({
   return (
     <>
       {/* ── 步骤导航 ── */}
-      <nav className="border-b border-white/[0.06] px-3 py-2 flex items-center gap-1 overflow-x-auto shrink-0 bg-zinc-950/80 backdrop-blur-sm">
+      <nav className="border-b border-[var(--nv-border-2)] px-3 py-2 flex items-center gap-1 overflow-x-auto shrink-0 bg-[var(--nv-void)]/80 backdrop-blur-sm">
         {EXPLORE_STEPS.map((step) => {
           const active = currentStep === step;
           return (
@@ -54,8 +54,8 @@ export function ChatPanel({
               onClick={() => onStepChange(step)}
               className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap font-medium transition-all duration-200 ${
                 active
-                  ? "bg-indigo-500/20 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)] border border-indigo-400/30"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border border-transparent"
+                  ? "bg-[var(--nv-primary)]/20 text-[var(--nv-primary)] shadow-[0_0_12px_rgba(99,102,241,0.15)] border border-[var(--nv-primary)]/30"
+                  : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] border border-transparent"
               } active:scale-95`}
             >
               {STEP_ICONS[step]} {STEP_LABELS[step]}
@@ -74,8 +74,8 @@ export function ChatPanel({
             <div
               className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed transition-all duration-200 ${
                 msg.role === "user"
-                  ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-md shadow-lg shadow-indigo-500/10"
-                  : "bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] text-zinc-300 rounded-bl-md hover:border-white/[0.1]"
+                  ? "bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-br-md shadow-lg shadow-[var(--nv-primary)]/10"
+                  : "bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] rounded-bl-md hover:border-[var(--nv-border-2)]"
               }`}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -83,7 +83,7 @@ export function ChatPanel({
               {/* 候选卡片 */}
               {msg.cards && msg.cards.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  <div className="text-[10px] text-zinc-500 mb-1 flex items-center gap-1.5">
+                  <div className="text-[10px] text-[var(--nv-text-muted)] mb-1 flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-purple-400/60" />
                     点击卡片即可采纳
                   </div>
@@ -98,11 +98,11 @@ export function ChatPanel({
                         className={`w-full text-left p-3 rounded-xl border transition-all duration-200 group ${
                           adopted
                             ? "bg-emerald-500/[0.06] border-emerald-500/20 opacity-60"
-                            : "bg-white/[0.03] border-white/[0.08] hover:border-indigo-400/30 hover:bg-white/[0.05] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
+                            : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-[var(--nv-primary)]/30 hover:bg-[var(--nv-surface-2)] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-xs font-semibold text-zinc-200">
+                          <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">
                             {card.title}
                           </span>
                           {status === "writing" && (
@@ -126,7 +126,7 @@ export function ChatPanel({
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-zinc-400 leading-relaxed">
+                        <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
                           {card.content}
                         </p>
                       </button>
@@ -139,11 +139,11 @@ export function ChatPanel({
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] text-zinc-500 px-4 py-3 rounded-2xl rounded-bl-md text-sm">
+            <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-muted)] px-4 py-3 rounded-2xl rounded-bl-md text-sm">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-150" />
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse delay-300" />
+                <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse" />
+                <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-150" />
+                <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-300" />
               </span>
             </div>
           </div>
@@ -152,10 +152,10 @@ export function ChatPanel({
       </div>
 
       {/* ── 输入区 ── */}
-      <div className="border-t border-white/[0.06] px-4 py-3 shrink-0 bg-zinc-950/80 backdrop-blur-sm">
+      <div className="border-t border-[var(--nv-border-2)] px-4 py-3 shrink-0 bg-[var(--nv-void)]/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           {/* 模式切换 */}
-          <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.06]">
+          <div className="flex items-center gap-0.5 bg-[var(--nv-surface-2)] rounded-xl p-0.5 border border-[var(--nv-border-2)]">
             {(["chat", "cards", "outline"] as const).map((m) => {
               const active = mode === m;
               const labels: Record<string, React.ReactNode> = { chat: <Icon name="message" size={13} />, cards: <Icon name="grid" size={13} />, outline: <Icon name="clipboard" size={13} /> };
@@ -167,8 +167,8 @@ export function ChatPanel({
                   title={titles[m]}
                   className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all duration-200 ${
                     active
-                      ? "bg-white/[0.08] text-zinc-200 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-400"
+                      ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] shadow-sm"
+                      : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                   } active:scale-95`}
                 >
                   {labels[m]}
@@ -191,12 +191,12 @@ export function ChatPanel({
                 : `说说你的想法（当前：${STEP_LABELS[currentStep]}）...`
             }
             disabled={loading}
-            className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:ring-2 focus:ring-indigo-500/10 disabled:opacity-40 transition-all duration-200"
+            className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 disabled:opacity-40 transition-all duration-200"
           />
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-5 py-2.5 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-xl text-sm font-medium hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-40 transition-all duration-200 active:scale-95 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
+            className="px-5 py-2.5 bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-xl text-sm font-medium hover:from-[var(--nv-primary)] hover:to-[var(--nv-primary)] disabled:opacity-40 transition-all duration-200 active:scale-95 shadow-lg shadow-[var(--nv-primary)]/20 hover:shadow-[var(--nv-primary)]/30"
           >
             发送
           </button>

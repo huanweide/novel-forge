@@ -49,7 +49,7 @@ export function OutlineDialog({
             <div className="flex gap-2 flex-wrap">
               {chapterOptions.map((opt) => (
                 <button key={opt.value} onClick={() => onChapterCountChange(opt.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${chapterCount === opt.value ? "bg-[var(--nv-primary)] text-white" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"}`}>
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${chapterCount === opt.value ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"}`}>
                   {opt.label}
                 </button>
               ))}
@@ -90,7 +90,7 @@ export function OutlineDialog({
           {error && <div className="bg-[var(--nv-danger-soft)] border border-[var(--nv-danger)]/60 rounded-lg p-3 text-sm text-[var(--nv-danger)]">{error}</div>}
           {/* 生成按钮 */}
           <div className="flex items-center gap-3">
-            <Button onClick={onGenerate} disabled={isGenerating || (chapterCount === -1 && !customChapterCount)} className="btn-primary text-white">
+            <Button onClick={onGenerate} disabled={isGenerating || (chapterCount === -1 && !customChapterCount)} className="btn-primary text-[var(--nv-text-primary)]">
               {isGenerating ? <><Icon name="loader" size={14} className="animate-spin" /> 生成中...</> : <><Icon name="sparkles" size={14} /> 生成大纲预览</>}
             </Button>
             {modelUsed && <span className="text-xs text-[var(--nv-text-tertiary)]">模型：<span className={modelUsed === "v4-pro" ? "text-[var(--nv-creative)]" : "text-[var(--nv-info)]"}>{modelUsed}</span></span>}
@@ -142,7 +142,7 @@ export function OutlineDialog({
             <p className="text-xs text-[var(--nv-text-tertiary)]">可点击章节编辑标题和梗概，确认后写入大纲树</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => { onClose(); }} className="border-[var(--nv-border-2)] text-sm">取消</Button>
-              <Button onClick={onConfirm} disabled={isGenerating} className="btn-primary text-white text-sm"><Icon name="check" size={14} /> 确认写入 ({previewChapters.length} 章)</Button>
+              <Button onClick={onConfirm} disabled={isGenerating} className="btn-primary text-[var(--nv-text-primary)] text-sm"><Icon name="check" size={14} /> 确认写入 ({previewChapters.length} 章)</Button>
             </div>
           </div>
         )}

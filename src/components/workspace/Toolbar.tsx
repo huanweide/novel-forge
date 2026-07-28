@@ -33,7 +33,7 @@ export function Toolbar({
   return (
     <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)] px-4">
       <div className="flex min-w-0 items-center gap-3">
-        <button onClick={onBack} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]" aria-label="返回">
+        <button onClick={onBack} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]" aria-label="返回">
           <Icon name="arrowLeft" size={16} />
         </button>
         <span className="shrink-0 text-[var(--nv-border-3)]">|</span>
@@ -57,7 +57,7 @@ export function Toolbar({
         <span className="mx-0.5 text-[var(--nv-border-3)]">|</span>
         <StyleSelector projectId={projectId} currentStyleId={styleTemplateId} onSelect={onStyleSelect} />
         <button onClick={onGenerateOutline} disabled={isGenerating || outlineGenerating}
-          className="flex h-7 items-center gap-1 rounded border border-[var(--nv-border-2)] px-2.5 text-xs text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-border-3)] hover:bg-white/[0.04] hover:text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-50">
+          className="flex h-7 items-center gap-1 rounded border border-[var(--nv-border-2)] px-2.5 text-xs text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-50">
           {outlineGenerating ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="bot" size={12} />} 大纲
         </button>
         <Button size="sm" variant="outline" onClick={onSummarize} disabled={isGenerating || summarizing}
@@ -76,9 +76,9 @@ export function Toolbar({
               <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
               <div className="absolute right-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-abyss)] shadow-xl">
                 <button onClick={() => { onExport("markdown"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-white/[0.04]"><Icon name="file" size={12} className="mr-1 inline" />Markdown (.md)</button>
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />Markdown (.md)</button>
                 <button onClick={() => { onExport("txt"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-white/[0.04]"><Icon name="file" size={12} className="mr-1 inline" />纯文本 (.txt)</button>
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />纯文本 (.txt)</button>
               </div>
             </>
           )}

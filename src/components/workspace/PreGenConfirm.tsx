@@ -172,7 +172,7 @@ export function PreGenConfirm({
             <span className="text-xs text-[var(--nv-text-tertiary)]">确认后将带着 {selected.size} 张卡{newChars.length > 0 ? ` + ${newChars.length}个新角色` : ""} 开始生成</span>
             <div className="flex gap-2">
               <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]">取消</button>
-              <button onClick={handleConfirm} className="btn-primary px-4 py-1.5 text-xs rounded-lg text-white font-medium"><Icon name="check" size={13} /> 确认生成</button>
+              <button onClick={handleConfirm} className="btn-primary px-4 py-1.5 text-xs rounded-lg text-[var(--nv-text-primary)] font-medium"><Icon name="check" size={13} /> 确认生成</button>
             </div>
           </div>
         )}

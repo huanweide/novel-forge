@@ -86,7 +86,7 @@ export function DissectDimensions({
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-12 text-zinc-500">
+      <div className="text-center py-12 text-[var(--nv-text-muted)]">
         <div className="text-4xl mb-3">📭</div>
         <p>尚无维度数据</p>
       </div>
@@ -112,49 +112,49 @@ export function DissectDimensions({
       {/* ── 导入预设总览卡片 ── */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {/* 角色卡片——迷你角色卡格式，匹配工作区CharacterList */}
-        <div className={`p-4 rounded-xl border ${charPreview.length > 0 ? "bg-indigo-500/5 border-indigo-500/30" : "bg-white/[0.02] backdrop-blur-sm border-white/[0.06]"}`}>
+        <div className={`p-4 rounded-xl border ${charPreview.length > 0 ? "bg-[var(--nv-primary)]/5 border-[var(--nv-primary)]/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">👥</span>
-            <span className="text-sm font-semibold text-zinc-200">角色</span>
+            <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">角色</span>
             {charPreview.length > 0 && (
-              <span className="text-xs bg-indigo-600/30 text-indigo-400 px-1.5 py-0.5 rounded-full">{charPreview.length}个</span>
+              <span className="text-xs bg-[var(--nv-primary)]/30 text-[var(--nv-primary)] px-1.5 py-0.5 rounded-full">{charPreview.length}个</span>
             )}
           </div>
           {charPreview.length > 0 ? (
             <div className="space-y-1 max-h-36 overflow-y-auto">
               {charPreview.slice(0, 8).map((c, i) => (
-                <div key={i} className="flex items-center gap-2 py-0.5 px-1.5 rounded text-[11px] bg-zinc-800/50 hover:bg-white/[0.04]">
-                  <span className="w-4 h-4 rounded-full bg-indigo-700/50 flex items-center justify-center text-[9px] shrink-0">
+                <div key={i} className="flex items-center gap-2 py-0.5 px-1.5 rounded text-[11px] bg-[var(--nv-surface-3)]/50 hover:bg-[var(--nv-surface-2)]">
+                  <span className="w-4 h-4 rounded-full bg-[var(--nv-primary)]/50 flex items-center justify-center text-[9px] shrink-0">
                     {c.name[0]}
                   </span>
-                  <span className="font-medium text-zinc-300 truncate">{c.name}</span>
+                  <span className="font-medium text-[var(--nv-text-secondary)] truncate">{c.name}</span>
                   <span className={`text-[9px] px-1 py-0 rounded-full shrink-0 ${
                     c.role === "protagonist" ? "bg-amber-600/30 text-amber-400" :
                     c.role === "antagonist" ? "bg-red-600/30 text-red-400" :
                     c.role === "mentor" ? "bg-blue-600/30 text-blue-400" :
-                    "bg-zinc-700 text-zinc-500"
+                    "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)]"
                   }`}>
                     {c.role === "protagonist" ? "★主角" : c.role === "antagonist" ? "◆反派" : c.role === "mentor" ? "◈导师" : "●配角"}
                   </span>
                   {c.description && (
-                    <span className="text-[9px] text-zinc-500 truncate hidden md:inline">{c.description.slice(0, 30)}</span>
+                    <span className="text-[9px] text-[var(--nv-text-muted)] truncate hidden md:inline">{c.description.slice(0, 30)}</span>
                   )}
                 </div>
               ))}
               {charPreview.length > 8 && (
-                <p className="text-[10px] text-zinc-600 px-1.5">+{charPreview.length - 8}个角色...</p>
+                <p className="text-[10px] text-[var(--nv-text-muted)] px-1.5">+{charPreview.length - 8}个角色...</p>
               )}
             </div>
           ) : (
-            <p className="text-xs text-zinc-600">未能提取到角色，将从其他维度兜底扫描</p>
+            <p className="text-xs text-[var(--nv-text-muted)]">未能提取到角色，将从其他维度兜底扫描</p>
           )}
         </div>
 
         {/* 世界书卡片 */}
-        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-emerald-500/5 border-emerald-500/30" : "bg-white/[0.02] backdrop-blur-sm border-white/[0.06]"}`}>
+        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-emerald-500/5 border-emerald-500/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">📚</span>
-            <span className="text-sm font-semibold text-zinc-200">世界书词条</span>
+            <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">世界书词条</span>
             {loreCount > 0 && (
               <span className="text-xs bg-emerald-600/30 text-emerald-400 px-1.5 py-0.5 rounded-full">{loreCount}条</span>
             )}
@@ -180,31 +180,31 @@ export function DissectDimensions({
                   return content && content.length >= 15;
                 })
                 .map((d) => (
-                  <span key={d.key} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400">
+                  <span key={d.key} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">
                     {d.label}
                   </span>
                 ))}
             </div>
           ) : (
-            <p className="text-xs text-zinc-600">无足够维度数据</p>
+            <p className="text-xs text-[var(--nv-text-muted)]">无足够维度数据</p>
           )}
         </div>
 
         {/* 文风卡片 */}
-        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-amber-500/5 border-amber-500/30" : "bg-white/[0.02] backdrop-blur-sm border-white/[0.06]"}`}>
+        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-amber-500/5 border-amber-500/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">✍️</span>
-            <span className="text-sm font-semibold text-zinc-200">文笔风格</span>
+            <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">文笔风格</span>
             {hasStyle && (
               <span className="text-xs bg-amber-600/30 text-amber-400 px-1.5 py-0.5 rounded-full">已提取</span>
             )}
           </div>
           {hasStyle ? (
-            <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-3">
+            <p className="text-[10px] text-[var(--nv-text-muted)] leading-relaxed line-clamp-3">
               {dimensions.style_analysis?.content?.slice(0, 200)}
             </p>
           ) : (
-            <p className="text-xs text-zinc-600">未提取到风格数据</p>
+            <p className="text-xs text-[var(--nv-text-muted)]">未提取到风格数据</p>
           )}
         </div>
       </div>
@@ -219,17 +219,17 @@ export function DissectDimensions({
         return (
           <div
             key={group.id}
-            className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden"
+            className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl overflow-hidden"
           >
             {/* 组标题 */}
             <button
               onClick={() => toggleGroup(group.id)}
-              className="w-full flex items-center gap-2 px-4 py-3 hover:bg-zinc-800/50 transition-colors text-left"
+              className="w-full flex items-center gap-2 px-4 py-3 hover:bg-[var(--nv-surface-3)]/50 transition-colors text-left"
             >
               <span className="text-lg">{group.icon}</span>
-              <span className="text-sm font-semibold text-zinc-200">{group.label}</span>
-              <span className="text-xs text-zinc-600 ml-2">{groupDims.length}项</span>
-              <span className="ml-auto text-zinc-600 text-xs">
+              <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">{group.label}</span>
+              <span className="text-xs text-[var(--nv-text-muted)] ml-2">{groupDims.length}项</span>
+              <span className="ml-auto text-[var(--nv-text-muted)] text-xs">
                 {isExpanded ? "收起 ▲" : "展开 ▼"}
               </span>
             </button>
@@ -246,27 +246,27 @@ export function DissectDimensions({
                   return (
                     <div
                       key={key}
-                      className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06]/50 rounded-lg overflow-hidden"
+                      className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)]/50 rounded-lg overflow-hidden"
                     >
                       {/* 维度标题行 */}
                       <button
                         onClick={() => toggleDim(key)}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-zinc-800/30 transition-colors text-left"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[var(--nv-surface-3)]/30 transition-colors text-left"
                       >
                         <span className="text-sm shrink-0">
                           {DIMENSION_ICONS[key as keyof typeof DIMENSION_ICONS]}
                         </span>
-                        <span className="text-sm font-medium text-zinc-300">
+                        <span className="text-sm font-medium text-[var(--nv-text-secondary)]">
                           {DIMENSION_LABELS[key as keyof typeof DIMENSION_LABELS]}
                         </span>
-                        <span className="text-xs text-zinc-600 ml-auto">
+                        <span className="text-xs text-[var(--nv-text-muted)] ml-auto">
                           {dim.content ? `${dim.content.length}字` : "空"}
                         </span>
                       </button>
 
                       {/* 内容——始终显示前300字预览，展开后全量 */}
                       <div className="px-4 pb-3">
-                        <div className="prose prose-invert prose-sm max-w-none text-zinc-400 leading-relaxed">
+                        <div className="prose prose-invert prose-sm max-w-none text-[var(--nv-text-tertiary)] leading-relaxed">
                           {dim.content ? (
                             isDimExpanded ? (
                               <ReactMarkdown>{dim.content}</ReactMarkdown>
@@ -276,7 +276,7 @@ export function DissectDimensions({
                                 {dim.content.length > 300 && (
                                   <button
                                     onClick={() => toggleDim(key)}
-                                    className="text-indigo-400 text-xs hover:text-indigo-300 mt-1"
+                                    className="text-[var(--nv-primary)] text-xs hover:text-[var(--nv-primary)] mt-1"
                                   >
                                     展开全部（{dim.content.length}字）→
                                   </button>
@@ -284,7 +284,7 @@ export function DissectDimensions({
                               </>
                             )
                           ) : (
-                            <span className="text-zinc-600 italic">暂无内容</span>
+                            <span className="text-[var(--nv-text-muted)] italic">暂无内容</span>
                           )}
                         </div>
                       </div>
@@ -299,15 +299,15 @@ export function DissectDimensions({
 
       {/* 章节列表（如果有摘要） */}
       {chapterList && chapterList.length > 0 && chapterList.some((c) => c.summary) && (
-        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl overflow-hidden">
           <button
             onClick={() => toggleGroup("chapters")}
-            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-zinc-800/50 transition-colors text-left"
+            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-[var(--nv-surface-3)]/50 transition-colors text-left"
           >
             <span className="text-lg">📑</span>
-            <span className="text-sm font-semibold text-zinc-200">章节摘要</span>
-            <span className="text-xs text-zinc-600 ml-2">{chapterList.filter((c) => c.summary).length}/{chapterList.length}章</span>
-            <span className="ml-auto text-zinc-600 text-xs">
+            <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">章节摘要</span>
+            <span className="text-xs text-[var(--nv-text-muted)] ml-2">{chapterList.filter((c) => c.summary).length}/{chapterList.length}章</span>
+            <span className="ml-auto text-[var(--nv-text-muted)] text-xs">
               {expandedGroups.chapters !== false ? "收起 ▲" : "展开 ▼"}
             </span>
           </button>
@@ -318,15 +318,15 @@ export function DissectDimensions({
                 .map((ch: any) => (
                   <div
                     key={ch.index}
-                    className="p-3 bg-white/[0.03] backdrop-blur-sm border border-white/[0.06]/50 rounded-lg"
+                    className="p-3 bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)]/50 rounded-lg"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-zinc-600 font-mono">#{ch.index}</span>
-                      <span className="text-sm font-medium text-zinc-300 truncate">
+                      <span className="text-xs text-[var(--nv-text-muted)] font-mono">#{ch.index}</span>
+                      <span className="text-sm font-medium text-[var(--nv-text-secondary)] truncate">
                         {ch.title}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
+                    <p className="text-xs text-[var(--nv-text-muted)] leading-relaxed">
                       {ch.summary}
                     </p>
                   </div>
@@ -342,7 +342,7 @@ export function DissectDimensions({
           {convertedToProjectId ? (
             <a
               href={`/workspace/${convertedToProjectId}`}
-              className="block w-full py-3 rounded-lg bg-green-600 text-white text-sm font-medium text-center hover:bg-green-500 transition-colors"
+              className="block w-full py-3 rounded-lg bg-green-600 text-[var(--nv-text-primary)] text-sm font-medium text-center hover:bg-green-500 transition-colors"
             >
               ✅ 项目已创建，点击进入工作区 →
             </a>
@@ -353,8 +353,8 @@ export function DissectDimensions({
                 disabled={converting}
                 className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
                   converting
-                    ? "bg-white/[0.04] text-zinc-500 cursor-not-allowed"
-                    : "bg-indigo-600 text-white hover:bg-indigo-500"
+                    ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
+                    : "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
                 }`}
               >
                 {converting ? "⏳ 转换中..." : "📦 原样转为项目（100%还原）"}

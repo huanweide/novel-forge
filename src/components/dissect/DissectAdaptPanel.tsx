@@ -105,8 +105,8 @@ export function DissectAdaptPanel({
             <div
               className={`max-w-[80%] px-4 py-2.5 rounded-xl text-sm leading-relaxed ${
                 msg.role === "user"
-                  ? "bg-indigo-600 text-white rounded-br-sm"
-                  : "bg-white/[0.04] text-zinc-300 rounded-bl-sm"
+                  ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-br-sm"
+                  : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] rounded-bl-sm"
               }`}
             >
               {msg.role === "agent" ? (
@@ -121,7 +121,7 @@ export function DissectAdaptPanel({
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white/[0.04] text-zinc-500 px-4 py-2.5 rounded-xl rounded-bl-sm text-sm">
+            <div className="bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] px-4 py-2.5 rounded-xl rounded-bl-sm text-sm">
               <span className="animate-pulse">思考中...</span>
             </div>
           </div>
@@ -138,12 +138,12 @@ export function DissectAdaptPanel({
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="说说你想怎么改..."
           disabled={loading}
-          className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+          className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)] disabled:opacity-50"
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || loading}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-500 disabled:opacity-40 transition-colors"
+          className="px-4 py-2 bg-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-lg text-sm font-medium hover:bg-[var(--nv-primary)] disabled:opacity-40 transition-colors"
         >
           发送
         </button>
@@ -155,10 +155,10 @@ export function DissectAdaptPanel({
         disabled={creating || messages.length <= 1}
         className={`mt-4 w-full py-3 rounded-lg text-sm font-medium transition-colors ${
           creating
-            ? "bg-white/[0.04] text-zinc-500 cursor-not-allowed"
+            ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
             : messages.length > 1
-              ? "bg-green-600 text-white hover:bg-green-500"
-              : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"
+              ? "bg-green-600 text-[var(--nv-text-primary)] hover:bg-green-500"
+              : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >
         {creating

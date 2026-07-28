@@ -30,7 +30,7 @@ export function EmptyState({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] px-6 py-10 text-center ${className}`}
+      className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-6 py-10 text-center ${className}`}
     >
       <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--nv-creative-soft)] text-[var(--nv-creative)]">
         <Icon name={icon} size={26} />

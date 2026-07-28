@@ -29,9 +29,9 @@ export function DissectProgress({
   };
 
   const statusColor: Record<string, string> = {
-    pending: "text-zinc-500",
+    pending: "text-[var(--nv-text-muted)]",
     chunking: "text-blue-400",
-    extracting: "text-indigo-400",
+    extracting: "text-[var(--nv-primary)]",
     completed: "text-green-400",
     failed: "text-red-400",
   };
@@ -50,17 +50,17 @@ export function DissectProgress({
     <div className="space-y-4">
       {/* 状态标签 */}
       <div className="flex items-center justify-between">
-        <span className={`text-sm font-medium ${statusColor[status] || "text-zinc-400"}`}>
+        <span className={`text-sm font-medium ${statusColor[status] || "text-[var(--nv-text-tertiary)]"}`}>
           {status === "extracting" && (
             <span className="inline-block animate-spin mr-1">⏳</span>
           )}
           {statusLabel[status] || status}
         </span>
-        <span className="text-sm text-zinc-500 tabular-nums">{Math.round(pct)}%</span>
+        <span className="text-sm text-[var(--nv-text-muted)] tabular-nums">{Math.round(pct)}%</span>
       </div>
 
       {/* 进度条——用 transform:scaleX 代替 width，GPU 合成不走 reflow */}
-      <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
+      <div className="h-2 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full"
           style={{
@@ -77,7 +77,7 @@ export function DissectProgress({
       {/* 章节进度——固定高度防跳动 */}
       <div style={{ minHeight: 20 }}>
         {totalChapters > 0 && (
-          <div className="text-xs text-zinc-500 tabular-nums">
+          <div className="text-xs text-[var(--nv-text-muted)] tabular-nums">
             章节：{completedChapters}/{totalChapters}
           </div>
         )}
@@ -103,8 +103,8 @@ export function DissectProgress({
                   : dim.status === "failed"
                     ? "bg-red-500/10 text-red-400"
                     : dim.status === "extracting"
-                      ? "bg-indigo-500/10 text-indigo-400"
-                      : "bg-white/[0.04] text-zinc-600";
+                      ? "bg-[var(--nv-primary)]/10 text-[var(--nv-primary)]"
+                      : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)]";
               return (
                 <div
                   key={key}

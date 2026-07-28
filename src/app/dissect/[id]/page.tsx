@@ -136,7 +136,7 @@ export default function DissectDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--nv-void)] flex items-center justify-center">
         <div className="animate-spin text-4xl">⏳</div>
       </div>
     );
@@ -144,11 +144,11 @@ export default function DissectDetailPage() {
 
   if (!task) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--nv-void)] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">📭</div>
-          <p className="text-zinc-400 mb-4">任务不存在</p>
-          <Link href="/dissect" className="text-indigo-400 hover:text-indigo-300">
+          <p className="text-[var(--nv-text-tertiary)] mb-4">任务不存在</p>
+          <Link href="/dissect" className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)]">
             返回拆书导航
           </Link>
         </div>
@@ -160,7 +160,7 @@ export default function DissectDetailPage() {
   const isRunning = task.status !== "completed" && task.status !== "failed";
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {pollError ? (
         <div className="border-b border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm text-rose-200">
           ⚠️ {pollError}
@@ -169,22 +169,22 @@ export default function DissectDetailPage() {
               setPollError(null);
               fetchTask();
             }}
-            className="ml-3 underline underline-offset-2 hover:text-white"
+            className="ml-3 underline underline-offset-2 hover:text-[var(--nv-text-primary)]"
           >
             重试
           </button>
         </div>
       ) : null}
       {/* 顶栏 */}
-      <header className="border-b border-zinc-800 px-6 py-4">
+      <header className="border-b border-[var(--nv-border-2)] px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/dissect" className="text-zinc-500 hover:text-zinc-300 shrink-0">
+            <Link href="/dissect" className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] shrink-0">
               ← 返回
             </Link>
             <div className="min-w-0">
               <h1 className="text-lg font-bold truncate">{task.bookName}</h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-[var(--nv-text-muted)] mt-0.5">
                 {task.bookAuthor && <span>作者：{task.bookAuthor} · </span>}
                 深度：{depthLabel[task.depth]} · {task.totalChapters}章
               </p>
@@ -197,7 +197,7 @@ export default function DissectDetailPage() {
         {/* 进度条 */}
         <div style={{ minHeight: isRunning ? 100 : 0 }}>
           {isRunning && (
-            <div className="mb-6 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+            <div className="mb-6 p-4 bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl">
               <DissectProgress
                 status={task.status}
                 progress={task.progress}
@@ -226,7 +226,7 @@ export default function DissectDetailPage() {
             </div>
             <a
               href={`/workspace/${convertSuccess}`}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-500 transition-colors"
+              className="px-4 py-2 bg-green-600 text-[var(--nv-text-primary)] rounded-lg text-sm font-medium hover:bg-green-500 transition-colors"
             >
               进入工作区 →
             </a>
@@ -237,8 +237,8 @@ export default function DissectDetailPage() {
         {task.status === "completed" && !convertSuccess && (
           <>
             {/* 两个选择——顶部醒目 */}
-            <div className="mb-6 p-5 bg-zinc-900 border border-zinc-800 rounded-xl">
-              <h2 className="text-sm font-semibold text-zinc-300 mb-3">
+            <div className="mb-6 p-5 bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl">
+              <h2 className="text-sm font-semibold text-[var(--nv-text-secondary)] mb-3">
                 拆解完成——选择创建方式
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -246,16 +246,16 @@ export default function DissectDetailPage() {
                 <button
                   onClick={handleDirectConvert}
                   disabled={converting}
-                  className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-500/60 transition-all text-left group"
+                  className="p-4 rounded-xl border border-[var(--nv-primary)]/30 bg-[var(--nv-primary)]/5 hover:bg-[var(--nv-primary)]/10 hover:border-[var(--nv-primary)]/60 transition-all text-left group"
                 >
                   <div className="text-2xl mb-2">📦</div>
-                  <div className="text-sm font-semibold text-zinc-200 group-hover:text-indigo-300">
+                  <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-[var(--nv-primary)]">
                     原样转为项目
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">
+                  <div className="text-xs text-[var(--nv-text-muted)] mt-1">
                     100% 忠实还原原著设定，不做任何修改。角色、世界观、情节全部照搬。
                   </div>
-                  <div className="text-xs text-indigo-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="text-xs text-[var(--nv-primary)] mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     一键创建，即刻可用 →
                   </div>
                 </button>
@@ -267,10 +267,10 @@ export default function DissectDetailPage() {
                   className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all text-left group"
                 >
                   <div className="text-2xl mb-2">🎨</div>
-                  <div className="text-sm font-semibold text-zinc-200 group-hover:text-amber-300">
+                  <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-amber-300">
                     改编后转项目
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">
+                  <div className="text-xs text-[var(--nv-text-muted)] mt-1">
                     跟 Agent 讨论修改方案——换性别、改设定、调整世界观。改到你满意再创建。
                   </div>
                   <div className="text-xs text-amber-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -282,12 +282,12 @@ export default function DissectDetailPage() {
 
             {/* 改编面板（替代结果展示） */}
             {mode === "adapt" ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold">🎨 讨论改编方案</h3>
                   <button
                     onClick={() => setMode("view")}
-                    className="text-xs text-zinc-500 hover:text-zinc-300"
+                    className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"
                   >
                     返回查看结果
                   </button>
@@ -301,7 +301,7 @@ export default function DissectDetailPage() {
               </div>
             ) : (
               /* 美化结果展示 */
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl p-4">
                 <DissectDimensions
                   dimensions={task.dimensions || {}}
                   chapterList={task.chapterList}
@@ -313,8 +313,8 @@ export default function DissectDetailPage() {
 
         {/* 等待中 */}
         {isRunning && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: "40vh" }}>
-            <div className="text-center text-zinc-500">
+          <div className="bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl p-4 flex items-center justify-center" style={{ minHeight: "40vh" }}>
+            <div className="text-center text-[var(--nv-text-muted)]">
               <div className="animate-spin text-4xl mb-3">⏳</div>
               <p>拆解进行中...</p>
               <p className="text-xs mt-2">进度自动刷新，完成后可选择创建方式</p>
@@ -324,7 +324,7 @@ export default function DissectDetailPage() {
 
         {/* 已有项目时显示原结果 */}
         {task.convertedToProjectId && !convertSuccess && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl p-4">
             <DissectDimensions
               dimensions={task.dimensions || {}}
               chapterList={task.chapterList}

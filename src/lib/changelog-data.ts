@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.41.0";
+export const LATEST_VERSION = "v0.42.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "👤 角色卡结构化模板收尾（酒馆模板呈现）：调度卡注入补全「称呼别名 + 穿着 + 关系备注」三项，此前已在 UI 收集但未进 prompt",
-  "🧥 穿着注入：外貌块补 attire（穿着）——UI 字段一直存在却被遗漏进注入的修复，角色形象完整性对齐酒馆模板",
-  "🔗 关系备注修复：注入读取 UI 实际保存的 r.dynamic 字段（原误读恒为空的 r.notes），关系动态不再丢失",
-  "✅ 未加字段、零 schema 变更，tsc + 生产 next build 全通过，更新面板双文件同步至 v0.41.0",
+  "🎨 全局配色翻新：Tailwind 默认 zinc/indigo/white/gray 老土色统一映射到虚空玻璃设计令牌（--nv-void/abyss/surface/border/text/primary/creative），覆盖 40+ 组件与全部页面路由",
+  "🌌 首页/工作区/设置/创意工坊统一深空玻璃质感：背景光晕 + 霓虹渐变标题，视觉语言一致",
+  "🔘 交互语义保留：按钮 focus 环、开关滑块、进度条改用主色/表面令牌，对比度达标且不丢失状态反馈",
+  "✅ 正则级批量替换零手工误改，tsc + 生产 next build 全通过，更新面板双文件同步至 v0.42.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.42.0",
+    date: "2026-07-28",
+    title: "虚空玻璃 UI 全面翻新（老土配色清零）",
+    sections: [
+      {
+        label: "配色体系统一（设计令牌化）",
+        items: [
+          "全局扫描 src 下所有 .tsx/.ts，将 Tailwind 默认 zinc-*/indigo-*/gray-*/border-white/bg-white 等老土色按前缀+色阶映射至虚空玻璃 CSS 变量（--nv-void 最深底、--nv-abyss 容器、--nv-surface-1..3 抬升面、--nv-border-1..3 边线、--nv-text-primary/secondary/tertiary/muted 文字、--nv-primary 主操作、--nv-creative 紫罗兰）",
+          "覆盖 40+ 组件与全部页面路由（首页/工作区/设置/创意工坊/探索/拆解/编辑器/游戏），DOM 实测 zinc/indigo/gray 残留归零、React hydrate 正常",
+        ],
+      },
+      {
+        label: "视觉与交互收尾",
+        items: [
+          "首页新增背景三处径向光晕 + Hero 霓虹渐变标题 + 玻璃徽章；工作区主容器/加载/错误态统一深空底",
+          "交互组件保留语义：按钮 focus 环改 ring-[var(--nv-primary)]、开关滑块保留白色、进度条改表面令牌；历史调试遗留的装饰 emoji 清零",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.41.0",
     date: "2026-07-28",

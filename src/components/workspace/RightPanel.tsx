@@ -69,7 +69,7 @@ export function RightPanel(props: RightPanelProps) {
             className={`flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               topTab === t.key
                 ? "border-b-2 border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
-                : "border-b-2 border-transparent text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] hover:bg-white/[0.04]"
+                : "border-b-2 border-transparent text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-2)]"
             }`}
           >
             <Icon name={t.icon} size={13} /> {t.label}
@@ -97,23 +97,23 @@ export function RightPanel(props: RightPanelProps) {
         {topTab === "query" && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* 子tab */}
-            <div className="flex border-b border-white/[0.06] shrink-0">
+            <div className="flex border-b border-[var(--nv-border-2)] shrink-0">
               <button
                 onClick={() => setQuerySubTab("entities")}
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
-                  querySubTab === "entities" ? "text-zinc-300 bg-zinc-800/30" : "text-zinc-500 hover:text-zinc-400"
+                  querySubTab === "entities" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               >📊 实体追踪</button>
               <button
                 onClick={() => setQuerySubTab("foreshadowing")}
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
-                  querySubTab === "foreshadowing" ? "text-zinc-300 bg-zinc-800/30" : "text-zinc-500 hover:text-zinc-400"
+                  querySubTab === "foreshadowing" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               >🔮 伏笔</button>
               <button
                 onClick={() => setQuerySubTab("relationships")}
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
-                  querySubTab === "relationships" ? "text-zinc-300 bg-zinc-800/30" : "text-zinc-500 hover:text-zinc-400"
+                  querySubTab === "relationships" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               >🕸️ 关系图</button>
             </div>
@@ -151,7 +151,7 @@ export function RightPanel(props: RightPanelProps) {
       </div>
 
       {/* 底部：折叠的统计 + 上下文 */}
-      <div className="border-t border-white/[0.06] shrink-0">
+      <div className="border-t border-[var(--nv-border-2)] shrink-0">
         <div className="px-4 py-2 space-y-1">
           <StatRow label="总字数" value={String(project.storyNodes.reduce((sum, n) => sum + (n.wordCount || 0), 0))} />
           <StatRow label="角色" value={String(project.characters.length)} />
@@ -160,7 +160,7 @@ export function RightPanel(props: RightPanelProps) {
         </div>
         <button
           onClick={() => setShowContext(!showContext)}
-          className="w-full flex items-center justify-between px-4 py-1.5 text-[10px] text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/30 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-1.5 text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-3)]/30 transition-colors"
         >
           <span>🔍 上下文监控</span>
           <span>{showContext ? "▲" : "▼"}</span>

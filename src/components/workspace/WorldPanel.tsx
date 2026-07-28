@@ -228,7 +228,7 @@ export function WorldPanel({
               className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
                 active
                   ? "border border-[var(--nv-primary)]/40 bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
-                  : "border border-transparent text-[var(--nv-text-tertiary)] hover:bg-white/[0.04] hover:text-[var(--nv-text-primary)]"
+                  : "border border-transparent text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
               }`}
             >
               <span className="flex items-center gap-2">

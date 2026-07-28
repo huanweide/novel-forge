@@ -282,7 +282,7 @@ export function CharacterEditDialog({
           <div className="border-b border-[var(--nv-border-2)] pb-3">
             <h4 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider"><Icon name="calendar" size={13} /> 经历时间线（防OOC·每行：X岁：事件（时间参照））</h4>
             {field("时间线", form.timeline, v => setForm({ ...form, timeline: v }), { textarea: true, rows: 5, placeholder: "0岁：出生于青云镇铁匠铺（故事开始前18年）\n12岁：拜入青云宗外门（故事开始前6年）\n16岁：觉醒剑灵血脉（故事开始前2年）\n18岁：故事起点——宗门大比夺冠（第一卷）" })}
-            <p className="text-xs text-zinc-500 mt-1">设定角色人生关键时间点，防止AI把前期角色写成后期状态。age 填该事件时角色的年龄。</p>
+            <p className="text-xs text-[var(--nv-text-muted)] mt-1">设定角色人生关键时间点，防止AI把前期角色写成后期状态。age 填该事件时角色的年龄。</p>
           </div>
           {/* 关系 */}
           <div className="border-b border-[var(--nv-border-2)] pb-3">

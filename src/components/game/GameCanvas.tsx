@@ -53,7 +53,7 @@ export default function GameCanvas({
       {turns.map((turn) => (
         <div key={turn.round} className="space-y-2">
           {/* 叙事正文 */}
-          <div className="text-gray-200 leading-relaxed whitespace-pre-wrap text-[15px]">
+          <div className="text-[var(--nv-text-secondary)] leading-relaxed whitespace-pre-wrap text-[15px]">
             {turn.narrative}
           </div>
         </div>
@@ -61,9 +61,9 @@ export default function GameCanvas({
 
       {/* 流式生成中的文本（最后未完成轮次） */}
       {isStreaming && lastNarrative && (
-        <div className="text-gray-200 leading-relaxed whitespace-pre-wrap text-[15px]">
+        <div className="text-[var(--nv-text-secondary)] leading-relaxed whitespace-pre-wrap text-[15px]">
           {lastNarrative}
-          <span className="inline-block w-2 h-4 bg-violet-400 ml-0.5 animate-pulse align-middle" />
+          <span className="inline-block w-2 h-4 bg-[var(--nv-creative)] ml-0.5 animate-pulse align-middle" />
         </div>
       )}
 
@@ -73,7 +73,7 @@ export default function GameCanvas({
           className={`transition-all duration-700 rounded-lg p-3 border ${
             newEntityFlash
               ? "border-amber-600/60 bg-amber-900/10"
-              : "border-violet-900/20 bg-violet-900/5"
+              : "border-[var(--nv-creative)]/20 bg-[var(--nv-creative)]/5"
           }`}
         >
           <p className="text-xs text-amber-400/80 mb-2 font-medium">
@@ -81,17 +81,17 @@ export default function GameCanvas({
           </p>
           <div className="space-y-1">
             {entities.slice(-5).map((e, i) => (
-              <div key={i} className="text-xs text-gray-400 flex gap-2">
+              <div key={i} className="text-xs text-[var(--nv-text-tertiary)] flex gap-2">
                 <span className="text-amber-500/70 font-mono shrink-0">
                   NE|
                 </span>
-                <span className="text-gray-300">{e.name}</span>
-                <span className="text-gray-600">|</span>
-                <span className="text-violet-400/60">{e.type}</span>
+                <span className="text-[var(--nv-text-secondary)]">{e.name}</span>
+                <span className="text-[var(--nv-text-muted)]">|</span>
+                <span className="text-[var(--nv-creative)]/60">{e.type}</span>
                 {e.description && (
                   <>
-                    <span className="text-gray-600">|</span>
-                    <span className="text-gray-500">{e.description}</span>
+                    <span className="text-[var(--nv-text-muted)]">|</span>
+                    <span className="text-[var(--nv-text-muted)]">{e.description}</span>
                   </>
                 )}
               </div>
@@ -108,16 +108,16 @@ export default function GameCanvas({
           </p>
           <div className="space-y-1">
             {items.map((item, i) => (
-              <div key={i} className="text-xs text-gray-400">
+              <div key={i} className="text-xs text-[var(--nv-text-tertiary)]">
                 <span className="text-emerald-500/70 font-mono">
                   {item.quantity > 0 ? "获得" : "消耗"}
                 </span>
-                <span className="text-gray-500 mx-2">×</span>
-                <span className="text-gray-300">
+                <span className="text-[var(--nv-text-muted)] mx-2">×</span>
+                <span className="text-[var(--nv-text-secondary)]">
                   {item.quantity > 0 ? item.quantity : -item.quantity}
                 </span>
-                <span className="text-gray-600 mx-1">—</span>
-                <span className="text-gray-300">{item.name}</span>
+                <span className="text-[var(--nv-text-muted)] mx-1">—</span>
+                <span className="text-[var(--nv-text-secondary)]">{item.name}</span>
               </div>
             ))}
           </div>

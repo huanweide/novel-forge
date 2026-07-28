@@ -222,8 +222,8 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-        <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
-          <p className="text-zinc-400">加载中…</p>
+        <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <p className="text-[var(--nv-text-tertiary)]">加载中…</p>
         </div>
       </div>
     );
@@ -232,7 +232,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   if (loadError) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-        <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
           <p className="text-rose-400 mb-3">⚠ {loadError}</p>
           <Button onClick={onClose}>关闭</Button>
         </div>
@@ -244,22 +244,22 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* 头部 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <h2 className="text-lg font-semibold">🎨 文风与质量控制</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+          <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-lg">✕</button>
         </div>
 
         {/* Tab 切换 */}
-        <div className="flex border-b border-white/[0.06] shrink-0">
+        <div className="flex border-b border-[var(--nv-border-2)] shrink-0">
           {([
             { key: "style" as const, icon: "🎨", label: "文风维度" },
             { key: "forbidden" as const, icon: "🚫", label: "废词检测" },
             { key: "params" as const, icon: "⚙️", label: "LLM参数" },
           ]).map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex-1 py-2 text-xs font-medium transition-colors ${tab === t.key ? "text-zinc-200 border-b-2 border-indigo-500 bg-zinc-800/20" : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/10"}`}>
+              className={`flex-1 py-2 text-xs font-medium transition-colors ${tab === t.key ? "text-[var(--nv-text-secondary)] border-b-2 border-[var(--nv-primary)] bg-[var(--nv-surface-3)]/20" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)]/10"}`}>
               {t.icon} {t.label}
             </button>
           ))}
@@ -273,7 +273,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             <>
               {/* 预设风格库 */}
               <div>
-                <label className="text-sm text-zinc-400 mb-2 block">📦 预设风格库（一键切换）</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">📦 预设风格库（一键切换）</label>
                 <div className="grid grid-cols-5 gap-1.5">
                   {(function() {
                     // 给 STYLE_TEMPLATES 加一个古风仙侠和极简留白
@@ -284,7 +284,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     ];
                     return extended.map((t) => (
                       <button key={t.id} onClick={() => handleSelectTemplate(t.id)}
-                        className={`text-[10px] py-1.5 px-1 rounded-lg text-center transition-colors leading-tight ${config.styleTemplateId === t.id ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700"}`}
+                        className={`text-[10px] py-1.5 px-1 rounded-lg text-center transition-colors leading-tight ${config.styleTemplateId === t.id ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)]"}`}
                         title={t.description}>
                         <div className="text-sm">{t.icon}</div>
                         <div className="mt-0.5">{t.name}</div>
@@ -296,22 +296,22 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 12 维度滑块 */}
               <div>
-                <label className="text-sm text-zinc-400 mb-3 block">🎚️ 12 维度微调</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-3 block">🎚️ 12 维度微调</label>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                   {DIMENSIONS.map((dim) => (
                     <div key={dim.key} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-zinc-400">{dim.icon} {dim.label}</span>
-                        <span className="text-xs text-zinc-500 font-mono">{config.dimensions[dim.key]?.toFixed(1) || "5.0"}</span>
+                        <span className="text-xs text-[var(--nv-text-tertiary)]">{dim.icon} {dim.label}</span>
+                        <span className="text-xs text-[var(--nv-text-muted)] font-mono">{config.dimensions[dim.key]?.toFixed(1) || "5.0"}</span>
                       </div>
                       <input
                         type="range"
                         min={dim.min} max={dim.max} step={dim.step}
                         value={config.dimensions[dim.key] || 5}
                         onChange={(e) => setDimension(dim.key, parseFloat(e.target.value))}
-                        className="w-full h-1.5 bg-white/[0.04] rounded-full appearance-none cursor-pointer
+                        className="w-full h-1.5 bg-[var(--nv-surface-2)] rounded-full appearance-none cursor-pointer
                           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:cursor-pointer"
+                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--nv-primary)] [&::-webkit-slider-thumb]:cursor-pointer"
                         title={dim.description}
                       />
                     </div>
@@ -321,9 +321,9 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 自定义风格笔记 */}
               <div>
-                <label className="text-sm text-zinc-400 mb-2 block">📝 风格笔记（追加到 System Prompt）</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">📝 风格笔记（追加到 System Prompt）</label>
                 <textarea
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--nv-primary)]"
                   rows={3}
                   value={config.customStyleNotes}
                   onChange={(e) => setConfig({ ...config, customStyleNotes: e.target.value })}
@@ -341,19 +341,19 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               {/* 内置规则概览 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-zinc-400">🛡️ 内置检测规则（{builtinCounts.total} 条）</label>
+                  <label className="text-sm text-[var(--nv-text-tertiary)]">🛡️ 内置检测规则（{builtinCounts.total} 条）</label>
                   <button onClick={() => setShowBuiltinRules(!showBuiltinRules)}
-                    className="text-[10px] text-zinc-500 hover:text-zinc-300">
+                    className="text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">
                     {showBuiltinRules ? "收起" : "展开"}
                   </button>
                 </div>
                 {showBuiltinRules && (
                   <div className="grid grid-cols-1 gap-1.5 mb-3">
                     {FORBIDDEN_CATEGORIES.map((cat) => (
-                      <div key={cat.key} className="flex items-center gap-2 text-[10px] bg-zinc-800/50 rounded px-2 py-1">
+                      <div key={cat.key} className="flex items-center gap-2 text-[10px] bg-[var(--nv-surface-3)]/50 rounded px-2 py-1">
                         <span>{cat.icon}</span>
-                        <span className="text-zinc-300 font-medium w-20 shrink-0">{cat.label}</span>
-                        <span className="text-zinc-600">{cat.description}</span>
+                        <span className="text-[var(--nv-text-secondary)] font-medium w-20 shrink-0">{cat.label}</span>
+                        <span className="text-[var(--nv-text-muted)]">{cat.description}</span>
                       </div>
                     ))}
                   </div>
@@ -362,10 +362,10 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 自定义禁用词 */}
               <div>
-                <label className="text-sm text-zinc-400 mb-2 block">➕ 自定义禁用词/句式</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">➕ 自定义禁用词/句式</label>
                 <div className="flex gap-2 mb-2">
                   <input
-                    className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-red-500"
+                    className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-red-500"
                     value={newForbidden}
                     onChange={(e) => setNewForbidden(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addForbidden()}
@@ -383,24 +383,24 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-zinc-600">暂无自定义禁用词。支持纯文本和 /正则表达式/ 格式。</p>
+                  <p className="text-xs text-[var(--nv-text-muted)]">暂无自定义禁用词。支持纯文本和 /正则表达式/ 格式。</p>
                 )}
               </div>
 
               {/* 扫描按钮 */}
-              <div className="border-t border-white/[0.06] pt-4">
+              <div className="border-t border-[var(--nv-border-2)] pt-4">
                 <div className="flex items-center gap-3">
                   <Button onClick={runScan} disabled={scanning || !chapterContent}
-                    className={`text-xs h-8 ${scanning ? "bg-zinc-700" : "bg-indigo-600 hover:bg-indigo-500"}`}>
+                    className={`text-xs h-8 ${scanning ? "bg-[var(--nv-surface-2)]" : "bg-[var(--nv-primary)] hover:brightness-110"}`}>
                     {scanning ? "⏳ 扫描中…" : "🔍 扫描当前章节"}
                   </Button>
                   {!chapterContent && (
-                    <span className="text-[10px] text-zinc-600">请在 workspace 中选中一个章节</span>
+                    <span className="text-[10px] text-[var(--nv-text-muted)]">请在 workspace 中选中一个章节</span>
                   )}
                   {scanResult && (
                     <span className={`text-xs font-medium ${scanResult.passed ? "text-emerald-400" : "text-red-400"}`}>
                       {scanResult.passed ? "✅ 全部通过" : `❌ ${scanResult.bySeverity.error}处必须修改`}
-                      <span className="text-zinc-600 ml-2">质量分 {scanResult.qualityScore}/100</span>
+                      <span className="text-[var(--nv-text-muted)] ml-2">质量分 {scanResult.qualityScore}/100</span>
                     </span>
                   )}
                 </div>
@@ -418,13 +418,13 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                       return (
                         <button key={cat.key}
                           onClick={() => setActiveScanCategory(activeScanCategory === cat.key ? null : cat.key)}
-                          className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${activeScanCategory === cat.key ? "bg-indigo-600 text-white" : "bg-white/[0.04] text-zinc-400 hover:bg-zinc-700"}`}>
+                          className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${activeScanCategory === cat.key ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)]"}`}>
                           {cat.icon} {cat.label} ×{count}
                         </button>
                       );
                     })}
                     {scanResult.fuzzyDensity > 0 && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-red-950/50 text-red-400" : "bg-white/[0.04] text-zinc-400"}`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-red-950/50 text-red-400" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]"}`}>
                         🌫️ 模糊词密度 {scanResult.fuzzyDensity.toFixed(1)}/500字
                       </span>
                     )}
@@ -435,16 +435,16 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     {scanResult.matches
                       .filter((m) => !activeScanCategory || m.category === activeScanCategory)
                       .map((m, i) => (
-                        <div key={i} className={`text-[10px] rounded px-2 py-1.5 ${m.severity === "error" ? "bg-red-950/30 border border-red-900/30" : m.severity === "warning" ? "bg-amber-950/20 border border-amber-900/20" : "bg-zinc-800/50"}`}>
+                        <div key={i} className={`text-[10px] rounded px-2 py-1.5 ${m.severity === "error" ? "bg-red-950/30 border border-red-900/30" : m.severity === "warning" ? "bg-amber-950/20 border border-amber-900/20" : "bg-[var(--nv-surface-3)]/50"}`}>
                           <div className="flex items-center gap-1.5">
-                            <span className={`font-medium ${m.severity === "error" ? "text-red-400" : m.severity === "warning" ? "text-amber-400" : "text-zinc-400"}`}>
+                            <span className={`font-medium ${m.severity === "error" ? "text-red-400" : m.severity === "warning" ? "text-amber-400" : "text-[var(--nv-text-tertiary)]"}`}>
                               {m.severity === "error" ? "❌" : m.severity === "warning" ? "⚠️" : "ℹ️"}
                             </span>
-                            <span className="text-zinc-300 font-mono">{m.pattern.length > 40 ? m.pattern.slice(0, 40) + "…" : m.pattern}</span>
-                            {m.index >= 0 && <span className="text-zinc-600 ml-auto shrink-0">位置 {m.index}</span>}
+                            <span className="text-[var(--nv-text-secondary)] font-mono">{m.pattern.length > 40 ? m.pattern.slice(0, 40) + "…" : m.pattern}</span>
+                            {m.index >= 0 && <span className="text-[var(--nv-text-muted)] ml-auto shrink-0">位置 {m.index}</span>}
                           </div>
                           {m.context && m.index >= 0 && (
-                            <p className="text-zinc-500 mt-0.5 ml-4 truncate">{m.context}</p>
+                            <p className="text-[var(--nv-text-muted)] mt-0.5 ml-4 truncate">{m.context}</p>
                           )}
                           {m.suggestion && (
                             <p className="text-emerald-500/80 mt-0.5 ml-4">💡 {m.suggestion}</p>
@@ -468,31 +468,31 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             <>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs text-zinc-500 mb-1 block">Temperature</label>
+                  <label className="text-xs text-[var(--nv-text-muted)] mb-1 block">Temperature</label>
                   <input type="number" step="0.05" min="0" max="2"
                     value={config.temperature}
                     onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) || 0.85 })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
-                  <div className="text-[10px] text-zinc-600 mt-0.5 text-center">越高越奔放</div>
+                    className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-[var(--nv-primary)]" />
+                  <div className="text-[10px] text-[var(--nv-text-muted)] mt-0.5 text-center">越高越奔放</div>
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500 mb-1 block">Top-P</label>
+                  <label className="text-xs text-[var(--nv-text-muted)] mb-1 block">Top-P</label>
                   <input type="number" step="0.05" min="0" max="1"
                     value={config.topP}
                     onChange={(e) => setConfig({ ...config, topP: parseFloat(e.target.value) || 0.95 })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
+                    className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-[var(--nv-primary)]" />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500 mb-1 block">每节字数</label>
+                  <label className="text-xs text-[var(--nv-text-muted)] mb-1 block">每节字数</label>
                   <input type="number" step="100" min="200" max="5000"
                     value={config.targetWordsPerSection}
                     onChange={(e) => setConfig({ ...config, targetWordsPerSection: parseInt(e.target.value) || 1000 })}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-indigo-500" />
+                    className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-[var(--nv-primary)]" />
                 </div>
               </div>
 
-              <div className="border-t border-white/[0.06] pt-4">
-                <p className="text-xs text-zinc-500 leading-relaxed">
+              <div className="border-t border-[var(--nv-border-2)] pt-4">
+                <p className="text-xs text-[var(--nv-text-muted)] leading-relaxed">
                   Temperature 控制随机性：越低越稳定保守，越高越有创意但可能跑偏。<br />
                   Top-P 控制词汇选择范围：越低越集中，越高越多样。<br />
                   日常写作建议 Temperature 0.8-0.9，需要严格逻辑时降到 0.6-0.7。
@@ -503,15 +503,15 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         </div>
 
         {/* 底部按钮 */}
-        <div className="flex justify-between items-center px-5 py-3 border-t border-white/[0.06] shrink-0">
-          <div className="text-[10px] text-zinc-600">
+        <div className="flex justify-between items-center px-5 py-3 border-t border-[var(--nv-border-2)] shrink-0">
+          <div className="text-[10px] text-[var(--nv-text-muted)]">
             {config.styleTemplateId !== "custom" && (
               <span>📦 预设：{STYLE_TEMPLATES.find(t => t.id === config.styleTemplateId)?.name || config.styleTemplateId}</span>
             )}
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} className="border-white/[0.08] text-xs">取消</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-500 text-xs">
+            <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)] text-xs">取消</Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-[var(--nv-primary)] hover:brightness-110 text-xs">
               {saving ? "保存中…" : "保存文风"}
             </Button>
           </div>

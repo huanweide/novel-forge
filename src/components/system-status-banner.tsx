@@ -106,7 +106,7 @@ export function SystemStatusBanner() {
                     </code>
                     <button
                       onClick={copyCmd}
-                      className="text-amber-200 hover:text-white underline underline-offset-2"
+                      className="text-amber-200 hover:text-[var(--nv-text-primary)] underline underline-offset-2"
                     >
                       {copied ? "已复制" : "复制命令"}
                     </button>
@@ -114,7 +114,7 @@ export function SystemStatusBanner() {
                 ) : (
                   <Link
                     href="/settings"
-                    className="text-amber-200 hover:text-white underline underline-offset-2"
+                    className="text-amber-200 hover:text-[var(--nv-text-primary)] underline underline-offset-2"
                   >
                     去设置页填 Key →
                   </Link>

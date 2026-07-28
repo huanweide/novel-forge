@@ -24,15 +24,15 @@ export function CardBrowser({
   const totalCards = Object.values(allCards).flat().length;
 
   return (
-    <div className="border-t border-white/[0.06] bg-zinc-950/80 backdrop-blur-sm">
+    <div className="border-t border-[var(--nv-border-2)] bg-[var(--nv-void)]/80 backdrop-blur-sm">
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="w-1 h-3.5 rounded-full bg-purple-400/60" />
-          <span className="text-xs font-semibold text-zinc-300">
+          <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">
             {totalCards} 张设定卡片
           </span>
-          <span className="text-[10px] text-zinc-600">点击采纳写入项目</span>
+          <span className="text-[10px] text-[var(--nv-text-muted)]">点击采纳写入项目</span>
         </div>
         <button
           onClick={onAdoptAll}
@@ -49,10 +49,10 @@ export function CardBrowser({
           if (!cards || cards.length === 0) return null;
           return (
             <div key={step}>
-              <div className="text-[10px] text-zinc-500 font-medium mb-1.5 flex items-center gap-1.5">
+              <div className="text-[10px] text-[var(--nv-text-muted)] font-medium mb-1.5 flex items-center gap-1.5">
                 <span>{STEP_ICONS[step]}</span>
                 <span>{STEP_LABELS[step]}</span>
-                <span className="text-zinc-700">({cards.length})</span>
+                <span className="text-[var(--nv-text-primary)]">({cards.length})</span>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 {cards.map((card) => {
@@ -71,11 +71,11 @@ export function CardBrowser({
                             ? "bg-red-500/[0.04] border-red-500/15"
                             : status === "writing"
                               ? "bg-amber-500/[0.04] border-amber-500/15 animate-pulse"
-                              : "bg-white/[0.02] border-white/[0.06] hover:border-purple-400/25 hover:bg-white/[0.04] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
+                              : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-purple-400/25 hover:bg-[var(--nv-surface-2)] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-zinc-300 truncate">
+                        <span className="text-[11px] font-medium text-[var(--nv-text-secondary)] truncate">
                           {card.title}
                         </span>
                         {status === "writing" && (
@@ -89,7 +89,7 @@ export function CardBrowser({
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-[10px] text-[var(--nv-text-muted)] mt-1 line-clamp-2 leading-relaxed">
                         {card.content}
                       </p>
                     </button>

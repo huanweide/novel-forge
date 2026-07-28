@@ -113,15 +113,15 @@ export default function SettingsPage() {
   const selectedProvider = PROVIDERS.find(p => p.key === provider);
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-200">
+    <main className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {/* 顶栏 */}
-      <header className="border-b border-white/[0.06] bg-zinc-950/90 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">← 返回</Link>
+            <Link href="/" className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-sm transition-colors">← 返回</Link>
             <div className="flex items-center gap-2.5">
-              <Icon name="settings" size={20} className="text-zinc-300" />
-              <h1 className="text-base font-bold text-zinc-100">设置</h1>
+              <Icon name="settings" size={20} className="text-[var(--nv-text-secondary)]" />
+              <h1 className="text-base font-bold text-[var(--nv-text-primary)]">设置</h1>
             </div>
           </div>
         </div>
@@ -130,16 +130,16 @@ export default function SettingsPage() {
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
         {/* 说明 */}
         <div className="p-4 rounded-2xl surface-elevated">
-          <p className="text-sm text-zinc-400 leading-relaxed">
+          <p className="text-sm text-[var(--nv-text-tertiary)] leading-relaxed">
             Novel Forge 不自带任何 API Key。填入你自己的 Key，选择模型，所有 AI 写作功能即可使用。
             <br />
-            <span className="text-zinc-600 text-xs">Key 保存在本地数据库，不会上传到任何第三方。</span>
+            <span className="text-[var(--nv-text-muted)] text-xs">Key 保存在本地数据库，不会上传到任何第三方。</span>
           </p>
         </div>
 
         {/* 提供商选择 */}
         <section>
-          <label className="text-sm font-semibold text-zinc-300 block mb-3">
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
             1. 选择 LLM 提供商
           </label>
           <div className="space-y-2">
@@ -151,19 +151,19 @@ export default function SettingsPage() {
                   onClick={() => handleProviderChange(p.key)}
                   className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-200 active:scale-[0.98] ${
                     active
-                      ? "bg-indigo-500/[0.08] border-indigo-400/30 shadow-[0_0_16px_rgba(99,102,241,0.1)]"
-                      : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"
+                      ? "bg-[var(--nv-primary)]/[0.08] border-[var(--nv-primary)]/30 shadow-[0_0_16px_rgba(99,102,241,0.1)]"
+                      : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:bg-[var(--nv-surface-2)]"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     {active && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-primary)] shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
                     )}
-                    <span className={`font-medium text-sm ${active ? "text-zinc-100" : "text-zinc-400"}`}>
+                    <span className={`font-medium text-sm ${active ? "text-[var(--nv-text-primary)]" : "text-[var(--nv-text-tertiary)]"}`}>
                       {p.name}
                     </span>
                   </div>
-                  <div className="text-xs text-zinc-600 mt-1 ml-3.5">{p.desc}</div>
+                  <div className="text-xs text-[var(--nv-text-muted)] mt-1 ml-3.5">{p.desc}</div>
                 </button>
               );
             })}
@@ -172,10 +172,10 @@ export default function SettingsPage() {
 
         {/* API Key */}
         <section>
-          <label className="text-sm font-semibold text-zinc-300 block mb-3">
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
             2. API Key
             {hasExistingKey && (
-              <span className="text-xs text-zinc-600 ml-2 font-normal">（已有配置，留空则不修改）</span>
+              <span className="text-xs text-[var(--nv-text-muted)] ml-2 font-normal">（已有配置，留空则不修改）</span>
             )}
           </label>
           <div className="flex gap-2">
@@ -189,7 +189,7 @@ export default function SettingsPage() {
               />
               <button
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)] transition-colors"
               >
                 <Icon name={showKey ? "eyeOff" : "eye"} size={15} />
               </button>
@@ -215,7 +215,7 @@ export default function SettingsPage() {
 
         {/* Model */}
         <section>
-          <label className="text-sm font-semibold text-zinc-300 block mb-3">3. 模型名称</label>
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">3. 模型名称</label>
           <input
             type="text"
             className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono"
@@ -223,7 +223,7 @@ export default function SettingsPage() {
             value={model}
             onChange={e => setModel(e.target.value)}
           />
-          <p className="text-xs text-zinc-600 mt-2">
+          <p className="text-xs text-[var(--nv-text-muted)] mt-2">
             切换提供商会自动填入推荐模型。你也可以手动改。
           </p>
         </section>
@@ -231,7 +231,7 @@ export default function SettingsPage() {
         {/* 自定义 Base URL */}
         {provider === "custom" && (
           <section>
-            <label className="text-sm font-semibold text-zinc-300 block mb-3">API Base URL</label>
+            <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">API Base URL</label>
             <input
               type="text"
               className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono"
@@ -239,14 +239,14 @@ export default function SettingsPage() {
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
             />
-            <p className="text-xs text-zinc-600 mt-2">
+            <p className="text-xs text-[var(--nv-text-muted)] mt-2">
               只需填到 /v1 即可，会自动拼接 /chat/completions
             </p>
           </section>
         )}
 
         {/* 保存 */}
-        <div className="flex items-center gap-4 pt-6 border-t border-white/[0.06]">
+        <div className="flex items-center gap-4 pt-6 border-t border-[var(--nv-border-2)]">
           <button
             onClick={handleSave}
             disabled={saving}

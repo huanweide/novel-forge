@@ -3,7 +3,7 @@
 /**
  * 统一模态框基础组件 —— 虚空玻璃设计体系
  *
- * 收编此前散落在各业务页的两套 overlay 风格（surface-floating 玻璃弹窗 vs bg-zinc-900 旧弹窗），
+ * 收编此前散落在各业务页的两套 overlay 风格（surface-floating 玻璃弹窗 vs bg-[var(--nv-abyss)] 旧弹窗），
  * 统一为：fixed inset-0 遮罩 + surface-floating 玻璃面板 + animate-spring 弹性入场。
  * 自动处理：点击遮罩关闭、ESC 关闭、body 滚动锁定、focus 管理。
  *
@@ -90,7 +90,7 @@ export function Modal({
           <button
             onClick={onClose}
             aria-label="关闭"
-            className="shrink-0 rounded-lg p-1.5 text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]"
+            className="shrink-0 rounded-lg p-1.5 text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
           >
             <Icon name="x" size={16} />
           </button>

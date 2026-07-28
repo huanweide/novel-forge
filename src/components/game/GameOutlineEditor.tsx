@@ -32,7 +32,7 @@ const LINE_COLORS: Record<string, string> = {
   "R|": "text-green-400",
   "L|": "text-teal-400",
   "G|": "text-yellow-400",
-  "P|": "text-gray-400",
+  "P|": "text-[var(--nv-text-tertiary)]",
   "CF|": "text-purple-400",
   "M|": "text-rose-400",
   "K|": "text-amber-300",
@@ -40,14 +40,14 @@ const LINE_COLORS: Record<string, string> = {
   "T|": "text-cyan-300",
   "【章首衔接】": "text-blue-400",
   "【章尾悬念】": "text-blue-400",
-  "⟨✍": "text-violet-400/60 italic",
+  "⟨✍": "text-[var(--nv-creative)]/60 italic",
 };
 
 function getLineColor(line: string): string {
   for (const [prefix, color] of Object.entries(LINE_COLORS)) {
     if (line.trimStart().startsWith(prefix)) return color;
   }
-  return "text-gray-500";
+  return "text-[var(--nv-text-muted)]";
 }
 
 // ─── 高亮渲染 ─────────────────────────────────────────────────
@@ -226,26 +226,26 @@ export default function GameOutlineEditor({
   // ── Tab切换 ─────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a1f]/95 border border-violet-900/30 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-[#0a0a1f]/95 border border-[var(--nv-creative)]/30 rounded-lg overflow-hidden">
       {/* 顶栏 */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-violet-900/20 bg-[#0d0d2a]">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--nv-creative)]/20 bg-[#0d0d2a]">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-violet-300">
+          <span className="text-sm font-medium text-[var(--nv-creative)]">
             📋 章纲编辑器
           </span>
-          <span className="text-xs text-gray-500">— {chapterTitle}</span>
+          <span className="text-xs text-[var(--nv-text-muted)]">— {chapterTitle}</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Tab切换 */}
-          <div className="flex rounded-md overflow-hidden border border-violet-900/30">
+          <div className="flex rounded-md overflow-hidden border border-[var(--nv-creative)]/30">
             {(["edit", "preview", "chat"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 className={`px-3 py-1 text-xs transition-colors ${
                   mode === m
-                    ? "bg-violet-700/40 text-violet-200"
-                    : "bg-transparent text-gray-500 hover:text-gray-300"
+                    ? "bg-[var(--nv-creative)]/40 text-[var(--nv-creative)]"
+                    : "bg-transparent text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"
                 }`}
               >
                 {{ edit: "✏️ 编辑", preview: "👁 预览", chat: "💬 对话" }[m]}
@@ -267,7 +267,7 @@ export default function GameOutlineEditor({
           </button>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-300 text-lg leading-none"
+            className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-lg leading-none"
           >
             ×
           </button>
@@ -282,7 +282,7 @@ export default function GameOutlineEditor({
               ? "text-emerald-400 bg-emerald-900/10"
               : statusMsg.startsWith("❌")
                 ? "text-red-400 bg-red-900/10"
-                : "text-violet-400 bg-violet-900/10"
+                : "text-[var(--nv-creative)] bg-[var(--nv-creative)]/10"
           }`}
         >
           {statusMsg}
@@ -298,7 +298,7 @@ export default function GameOutlineEditor({
               value={direction}
               onChange={(e) => setDirection(e.target.value)}
               placeholder="创作方向（可选，如：方向A-身份炸弹型钩子 / 更宏大的叙事 / 聚焦角色内心）"
-              className="flex-1 bg-gray-900/50 border border-violet-800/30 rounded px-3 py-1.5 text-xs text-gray-300 placeholder-gray-600 outline-none focus:border-violet-500/50"
+              className="flex-1 bg-[var(--nv-abyss)]/50 border border-[var(--nv-creative)]/30 rounded px-3 py-1.5 text-xs text-[var(--nv-text-secondary)] text-[var(--nv-text-muted)] outline-none focus:border-[var(--nv-creative)]/50"
             />
           </div>
           <textarea
@@ -306,7 +306,7 @@ export default function GameOutlineEditor({
             value={outlineText}
             onChange={(e) => setOutlineText(e.target.value)}
             placeholder={`在此编写结构化章纲...\n\nC| ${chapterTitle ? chapterTitle.match(/\d+章/) : "?"} | ${chapterTitle} | 时间地点 | 主角\n\n- 【章首衔接】：...\n\nR| [角色名] [动作] [对象] [结果]\n⟨✍ 写作指令⟩\nL| [地点名] [场景氛围]\n\n- 【章尾悬念】：...\n\nCF| [伏笔名] | 埋设 | [操作细节]\nM| [情绪] | 7 | [实现手段]\nT| [下一章标题] | [目标]`}
-            className="flex-1 bg-gray-900/30 border border-violet-900/20 rounded-lg p-4 text-sm font-mono text-gray-300 resize-none outline-none focus:border-violet-500/40 placeholder:text-gray-700"
+            className="flex-1 bg-[var(--nv-abyss)]/30 border border-[var(--nv-creative)]/20 rounded-lg p-4 text-sm font-mono text-[var(--nv-text-secondary)] resize-none outline-none focus:border-[var(--nv-creative)]/40 placeholder:text-[var(--nv-text-muted)]"
             spellCheck={false}
           />
         </div>
@@ -318,7 +318,7 @@ export default function GameOutlineEditor({
           {outlineText ? (
             <HighlightedOutline text={outlineText} />
           ) : (
-            <p className="text-gray-600 text-sm italic">
+            <p className="text-[var(--nv-text-muted)] text-sm italic">
               暂无章纲。切换到"编辑"模式编写，或点击"AI生成"。
             </p>
           )}
@@ -330,7 +330,7 @@ export default function GameOutlineEditor({
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {chatHistory.length === 0 && (
-              <div className="text-center text-gray-600 text-sm py-8">
+              <div className="text-center text-[var(--nv-text-muted)] text-sm py-8">
                 <p className="mb-2">💬 章纲对话确认模式</p>
                 <p className="text-xs">
                   输入你的反馈或修改方向，AI 会针对性修改章纲。
@@ -342,15 +342,15 @@ export default function GameOutlineEditor({
             {chatHistory.map((turn, i) => (
               <div key={i} className="space-y-2">
                 {turn.role === "user" && (
-                  <div className="bg-violet-900/20 border border-violet-800/30 rounded-lg p-3 max-w-[85%] ml-auto">
-                    <p className="text-xs text-violet-300 font-medium mb-1">
+                  <div className="bg-[var(--nv-creative)]/20 border border-[var(--nv-creative)]/30 rounded-lg p-3 max-w-[85%] ml-auto">
+                    <p className="text-xs text-[var(--nv-creative)] font-medium mb-1">
                       👤 你的反馈
                     </p>
-                    <p className="text-sm text-gray-300">{turn.message}</p>
+                    <p className="text-sm text-[var(--nv-text-secondary)]">{turn.message}</p>
                   </div>
                 )}
                 {turn.role === "assistant" && turn.response && (
-                  <div className="bg-gray-900/40 border border-gray-700/30 rounded-lg p-3">
+                  <div className="bg-[var(--nv-abyss)]/40 border border-[var(--nv-border-2)]/30 rounded-lg p-3">
                     <p className="text-xs text-cyan-400 font-medium mb-2">
                       🤖 AI 修改后的章纲
                     </p>
@@ -360,7 +360,7 @@ export default function GameOutlineEditor({
               </div>
             ))}
             {chatStreaming && (
-              <div className="bg-gray-900/40 border border-cyan-800/30 rounded-lg p-3 animate-pulse">
+              <div className="bg-[var(--nv-abyss)]/40 border border-cyan-800/30 rounded-lg p-3 animate-pulse">
                 <p className="text-xs text-cyan-400 font-medium mb-2">
                   🤖 AI 正在修改...
                 </p>
@@ -369,7 +369,7 @@ export default function GameOutlineEditor({
             )}
           </div>
           {/* 对话输入 */}
-          <div className="p-3 border-t border-violet-900/20 flex gap-2">
+          <div className="p-3 border-t border-[var(--nv-creative)]/20 flex gap-2">
             <input
               type="text"
               value={chatInput}
@@ -378,12 +378,12 @@ export default function GameOutlineEditor({
                 if (e.key === "Enter" && chatInput.trim()) handleChatSend();
               }}
               placeholder="输入对章纲的反馈或修改方向..."
-              className="flex-1 bg-gray-900/50 border border-violet-800/30 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-violet-500/50"
+              className="flex-1 bg-[var(--nv-abyss)]/50 border border-[var(--nv-creative)]/30 rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] text-[var(--nv-text-muted)] outline-none focus:border-[var(--nv-creative)]/50"
             />
             <button
               onClick={handleChatSend}
               disabled={!chatInput.trim() || !outlineText}
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm transition-all disabled:opacity-40"
+              className="px-4 py-2 bg-[var(--nv-creative)] hover:bg-[var(--nv-creative)] text-[var(--nv-text-primary)] rounded-lg text-sm transition-all disabled:opacity-40"
             >
               发送
             </button>
@@ -392,7 +392,7 @@ export default function GameOutlineEditor({
       )}
 
       {/* 底部提示 */}
-      <div className="px-4 py-1.5 border-t border-violet-900/20 text-[10px] text-gray-600 flex gap-3">
+      <div className="px-4 py-1.5 border-t border-[var(--nv-creative)]/20 text-[10px] text-[var(--nv-text-muted)] flex gap-3">
         <span>C|章节 R|角色 L|场景 G|金手指 P|剧情 CF|伏笔 M|情绪 K|台词 EL|弧线 T|过渡</span>
       </div>
     </div>

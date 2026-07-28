@@ -372,7 +372,7 @@ export default function GamePage() {
             onClick={handleBack}
             title="返回工作区"
             aria-label="返回工作区"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--nv-text-primary)]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
           >
             <Icon name="arrowLeft" size={18} />
           </button>
@@ -402,7 +402,7 @@ export default function GamePage() {
           {state.status === "playing" && (
             <button
               onClick={handleEnd}
-              className="btn-creative rounded-lg px-4 py-1.5 text-sm font-medium text-white"
+              className="btn-creative rounded-lg px-4 py-1.5 text-sm font-medium text-[var(--nv-text-primary)]"
             >
               结束并导出
             </button>
@@ -545,7 +545,7 @@ export default function GamePage() {
                 </p>
                 <button
                   onClick={handleStart}
-                  className="btn-creative rounded-xl px-10 py-3 text-lg font-medium text-white shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
+                  className="btn-creative rounded-xl px-10 py-3 text-lg font-medium text-[var(--nv-text-primary)] shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
                 >
                   开始游戏
                 </button>
@@ -807,7 +807,7 @@ export default function GamePage() {
               <button
                 onClick={handleEnd}
                 disabled={state.status !== "playing"}
-                className="btn-creative w-full rounded-lg py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="btn-creative w-full rounded-lg py-2.5 text-sm font-medium text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 结束并导出
               </button>
@@ -873,14 +873,14 @@ export default function GamePage() {
                 if (customInput.trim()) handleAction("custom", customInput.trim());
               }}
               disabled={state.status !== "playing" || !customInput.trim()}
-              className="btn-creative rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              className="btn-creative rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--nv-text-primary)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             >
               发送
             </button>
             {(state.status as string) === "generating" && (
               <button
                 onClick={handleStop}
-                className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-danger-soft)] px-4 py-2.5 text-sm font-medium text-[var(--nv-danger)] transition-all hover:bg-[var(--nv-danger)] hover:text-white active:scale-95"
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-danger-soft)] px-4 py-2.5 text-sm font-medium text-[var(--nv-danger)] transition-all hover:bg-[var(--nv-danger)] hover:text-[var(--nv-text-primary)] active:scale-95"
               >
                 <Icon name="stop" size={14} /> 停止
               </button>
@@ -897,7 +897,7 @@ export default function GamePage() {
           </p>
           <button
             onClick={handleBack}
-            className="btn-primary rounded-lg px-8 py-2.5 text-sm font-medium text-white"
+            className="btn-primary rounded-lg px-8 py-2.5 text-sm font-medium text-[var(--nv-text-primary)]"
           >
             返回工作区
           </button>

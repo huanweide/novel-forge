@@ -77,7 +77,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
       {/* 元数据 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm text-zinc-400 mb-1.5">
+          <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">
             任务名称 <span className="text-red-500">*</span>
           </label>
           <input
@@ -85,39 +85,39 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
             placeholder="为本次拆书取个名字..."
-            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]"
           />
         </div>
         <div>
-          <label className="block text-sm text-zinc-400 mb-1.5">原书名称</label>
+          <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">原书名称</label>
           <input
             type="text"
             value={bookName}
             onChange={(e) => setBookName(e.target.value)}
             placeholder="原著书名"
-            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]"
           />
         </div>
         <div>
-          <label className="block text-sm text-zinc-400 mb-1.5">原书作者</label>
+          <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">原书作者</label>
           <input
             type="text"
             value={bookAuthor}
             onChange={(e) => setBookAuthor(e.target.value)}
             placeholder="原著作者"
-            className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]"
           />
         </div>
       </div>
 
       {/* 输入模式切换 */}
-      <div className="flex gap-1 bg-white/[0.03] backdrop-blur-sm rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-lg p-1 w-fit">
         <button
           onClick={() => setInputMode("file")}
           className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
             inputMode === "file"
-              ? "bg-indigo-600 text-white"
-              : "text-zinc-400 hover:text-zinc-300"
+              ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]"
+              : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)]"
           }`}
         >
           文件上传
@@ -126,8 +126,8 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
           onClick={() => setInputMode("paste")}
           className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
             inputMode === "paste"
-              ? "bg-indigo-600 text-white"
-              : "text-zinc-400 hover:text-zinc-300"
+              ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]"
+              : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)]"
           }`}
         >
           粘贴文本
@@ -138,7 +138,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
       {inputMode === "file" ? (
         <div
           onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-white/[0.08] rounded-xl p-12 text-center cursor-pointer hover:border-indigo-500/50 transition-colors"
+          className="border-2 border-dashed border-[var(--nv-border-2)] rounded-xl p-12 text-center cursor-pointer hover:border-[var(--nv-primary)]/50 transition-colors"
         >
           <input
             ref={fileRef}
@@ -148,10 +148,10 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             className="hidden"
           />
           <div className="text-4xl mb-3">📄</div>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-[var(--nv-text-tertiary)] text-sm">
             拖拽 .txt 文件到此处，或点击选择文件
           </p>
-          <p className="text-zinc-600 text-xs mt-2">
+          <p className="text-[var(--nv-text-muted)] text-xs mt-2">
             支持 UTF-8 编码的纯文本文件
           </p>
           {text && (
@@ -166,13 +166,13 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
           onChange={handlePaste}
           placeholder="在此粘贴小说全文..."
           rows={12}
-          className="w-full bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 resize-y"
+          className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl px-4 py-3 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)] resize-y"
         />
       )}
 
       {/* 拆解深度 */}
       <div>
-        <label className="block text-sm text-zinc-400 mb-2">拆解深度</label>
+        <label className="block text-sm text-[var(--nv-text-tertiary)] mb-2">拆解深度</label>
         <div className="grid grid-cols-3 gap-3">
           {[
             {
@@ -196,14 +196,14 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
               onClick={() => setDepth(opt.id)}
               className={`p-3 rounded-lg border text-left transition-colors ${
                 depth === opt.id
-                  ? "border-indigo-500 bg-indigo-500/10"
-                  : "border-white/[0.08] bg-white/[0.03] backdrop-blur-sm hover:border-zinc-600"
+                  ? "border-[var(--nv-primary)] bg-[var(--nv-primary)]/10"
+                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm hover:border-[var(--nv-border-3)]"
               }`}
             >
-              <div className="text-sm font-medium text-zinc-200">
+              <div className="text-sm font-medium text-[var(--nv-text-secondary)]">
                 {opt.label}
               </div>
-              <div className="text-xs text-zinc-500 mt-0.5">{opt.desc}</div>
+              <div className="text-xs text-[var(--nv-text-muted)] mt-0.5">{opt.desc}</div>
             </button>
           ))}
         </div>
@@ -215,11 +215,11 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
           type="checkbox"
           checked={extractSummaries}
           onChange={(e) => setExtractSummaries(e.target.checked)}
-          className="w-4 h-4 rounded border-white/[0.08] bg-white/[0.03] backdrop-blur-sm accent-indigo-500"
+          className="w-4 h-4 rounded border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm accent-[var(--nv-primary)]"
         />
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-[var(--nv-text-tertiary)]">
           提取章节摘要
-          <span className="text-zinc-600 ml-1">
+          <span className="text-[var(--nv-text-muted)] ml-1">
             （为每一章独立提取一条大纲摘要，默认关闭）
           </span>
         </span>
@@ -231,8 +231,8 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
         disabled={!canStart}
         className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
           canStart
-            ? "bg-indigo-600 text-white hover:bg-indigo-500"
-            : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"
+            ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
+            : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >
         {loading ? (
