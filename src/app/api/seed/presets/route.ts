@@ -337,6 +337,43 @@ const BUILTINS: any[] = [
       tags: ["小师妹", "恋爱", "分步人设"],
     },
   },
+
+  // —— 新增：酒馆迁移 preset 类型示范 ——
+  {
+    type: "regex",
+    title: "通用·删除思维链",
+    description: "清洗模型输出中的 <think>/<thinking>/<analysis> 等内部思维块，让正文更干净。",
+    tags: ["正则", "后处理", "清洗", "示范"],
+    content: {
+      rules: [
+        { name: "删除<think>", pattern: "<think>[\\\\s\\\\S]*?</think>", flags: "gi", replace: "" },
+        { name: "删除<thinking>", pattern: "<thinking>[\\\\s\\\\S]*?</thinking>", flags: "gi", replace: "" },
+        { name: "删除<analysis>", pattern: "<analysis>[\\\\s\\\\S]*?</analysis>", flags: "gi", replace: "" },
+      ],
+    },
+  },
+  {
+    type: "lorebook",
+    title: "示范·世界书条目",
+    description: "酒馆式世界书预设：一组可关键词召回的设定条目，应用后写入项目世界书。",
+    tags: ["世界书", "示范", "设定"],
+    content: {
+      entries: [
+        {
+          title: "核心设定",
+          content: "这是一个魔法与科技并存的末世，魔法被称作「源质」，科技被称为「旧律」。",
+          keys: ["源质", "旧律", "末世"],
+        },
+      ],
+    },
+  },
+  {
+    type: "api_config",
+    title: "示范·创意奔放 API 参数",
+    description: "适合抽卡/脑洞章节的高温度 API 参数预设：temperature 1.2、topP 0.9。",
+    tags: ["API参数", "示范", "创意"],
+    content: { temperature: 1.2, topP: 0.9, maxTokens: 4000 },
+  },
 ];
 
 export async function POST() {

@@ -25,6 +25,9 @@ const TABS = [
   { key: "style", label: "文风" },
   { key: "worldview", label: "世界观" },
   { key: "character", label: "角色卡" },
+  { key: "regex", label: "正则" },
+  { key: "lorebook", label: "世界书" },
+  { key: "api_config", label: "API参数" },
 ];
 
 const TYPE_LABEL: Record<string, string> = {
@@ -33,6 +36,9 @@ const TYPE_LABEL: Record<string, string> = {
   style: "文风",
   worldview: "世界观",
   character: "角色卡",
+  regex: "正则",
+  lorebook: "世界书",
+  api_config: "API参数",
 };
 
 const PLACEHOLDER: Record<string, string> = {
@@ -41,6 +47,9 @@ const PLACEHOLDER: Record<string, string> = {
   worldview: `{\n  "entries": [ { "title": "条目名", "content": "设定内容", "keys": ["触发词"] } ]\n}`,
   story_progression: `{\n  "entries": [ { "title": "推进模板", "content": "<if cell=\\"属性表/角色/好感度 <= 10\\">阶段一...<else>...</if>", "keys": ["好感度"] } ]\n}`,
   character: `{\n  "name": "角色名", "role": "supporting", "background": "背景", "tags": ["标签"]\n}`,
+  regex: `{\n  "rules": [\n    { "name": "删除思维链", "pattern": "<think(?:ing)?>[\\\\s\\\\S]*?</think(?:ing)?>", "flags": "gi", "replace": "" }\n  ]\n}`,
+  lorebook: `{\n  "entries": [ { "title": "世界书条目", "content": "设定细节", "keys": ["触发词"] } ]\n}`,
+  api_config: `{\n  "temperature": 0.85, "topP": 0.95, "maxTokens": 4000\n}`,
 };
 
 export default function Workshop() {

@@ -5,8 +5,12 @@ import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 export const maxDuration = 60;
 
 // POST /api/presets/[id]/apply  { projectId }
-// 把预设内容落到项目：表格模板→建 LoreTable；文风→建/改 StyleCard；
-// 世界观/剧情推进→建 LorebookEntry；角色卡→建 CharacterCard。并累加下载数。
+// 把预设内容落到项目：
+//   表格模板 → 建 LoreTable；文风 → 建/改 StyleCard；
+//   世界观/剧情推进/世界书 → 建 LorebookEntry；角色卡 → 建 CharacterCard；
+//   正则(regex) → 写入 Project.postProcessingRules；
+//   API参数(api_config) → 合并到 Project.llmConfig；
+// 并累加下载数。
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -95,6 +99,57 @@ export async function POST(
         } as any,
       });
       created.push({ kind: "character", id: cc.id, name: cc.name });
+    } else if (preset.type === "regex") {
+      // 正则后处理预设：合并 rules 到项目级 postProcessingRules，按 name 去重
+      const incoming: any[] = Array.isArray(content.rules) ? content.rules : [];
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      const existing: any[] = Array.isArray((project as any)?.postProcessingRules)
+        ? ((project as any).postProcessingRules as any[])
+        : [];
+      const existingNames = new Set(existing.map((r) => r.name));
+      const merged = [...existing];
+      for (const r of incoming) {
+        if (!r.name || !r.pattern) continue;
+        if (existingNames.has(r.name)) {
+          // 同名更新
+          const idx = merged.findIndex((x) => x.name === r.name);
+          if (idx >= 0) merged[idx] = r;
+        } else {
+          merged.push(r);
+          existingNames.add(r.name);
+        }
+      }
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { postProcessingRules: merged as any },
+      });
+      created.push({ kind: "regex", name: `正则规则×${incoming.filter((r) => r.name && r.pattern).length}` });
+    } else if (preset.type === "lorebook") {
+      // 世界书预设：与 worldview/story_progression 共用 LorebookEntry，category=lorebook
+      const entries: any[] = content.entries || [];
+      for (const e of entries) {
+        const le = await prisma.lorebookEntry.create({
+          data: {
+            projectId,
+            title: e.title,
+            category: "lorebook",
+            content: e.content || "",
+            keys: e.keys || [],
+            enabled: true,
+          } as any,
+        });
+        created.push({ kind: "lorebook", id: le.id, name: e.title });
+      }
+    } else if (preset.type === "api_config") {
+      // API 参数预设：合并到项目 llmConfig（覆盖温度/topP/模型模板等）
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      const current = ((project as any)?.llmConfig || {}) as Record<string, unknown>;
+      const merged = { ...current, ...content };
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { llmConfig: merged as any },
+      });
+      created.push({ kind: "api_config", name: `API参数:${(content.model || content.temperature) ?? "覆盖"}` });
     }
 
     // 应用预设后刷新全局提示词，使文风/世界观/角色等立即对生成生效

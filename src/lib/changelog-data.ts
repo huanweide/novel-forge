@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.36.0";
+export const LATEST_VERSION = "v0.37.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎴 色子（抽卡）剧情预设持久化：采用某路线后自动写入活跃剧情线的 chapterBindings（标记 preset），生成前剧情规划可读到「用户用色子选定的走向」",
-  "🔁 同章纲节点重采用色子时自动去重（按 chapterId+preset），不堆叠重复条目",
-  "📁 建立 PROCESS 流程文档机制：novel-forge/PROCESS/ 下目录清单 + 三段式落档（目标/流程/关联项），供后续自查与对齐架构",
-  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.36.0",
+  "🍺 创意工坊 Preset 类型扩展（酒馆迁移）：新增 regex / lorebook / api_config 三类预设，可上传并应用到项目",
+  "🧹 正则后处理管线落地：生成一章后自动按项目级 postProcessingRules 清洗输出（如删除 <think>/<thinking>/<analysis>）",
+  "⚙️ API 参数预设可覆盖项目 llmConfig：应用 api_config 预设后直接改变生成温度/topP/模型参数",
+  "✅ tsc + 生产 next build 全通过，更新面板双文件同步至 v0.37.0",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.37.0",
+    date: "2026-07-28",
+    title: "酒馆理论迁移：创意工坊 Preset 类型扩展 + 正则后处理管线",
+    sections: [
+      {
+        label: "创意工坊 Preset 类型扩展（regex / lorebook / api_config）",
+        items: [
+          "Prisma Preset.type 扩展支持 regex、lorebook、api_config；Project 新增 postProcessingRules JSON 字段",
+          "/api/presets/[id]/apply 新增三类应用逻辑：regex → 合并到项目 postProcessingRules（按 name 去重/更新）；lorebook → 写入 LorebookEntry（category=lorebook）；api_config → 合并到 Project.llmConfig",
+          "创意工坊 /workshop 页新增「正则 / 世界书 / API参数」三个 TAB、类型标签、上传占位 JSON 与默认选项",
+          "内置示范预设：通用·删除思维链（regex）、示范·世界书条目（lorebook）、示范·创意奔放 API 参数（api_config）",
+        ],
+      },
+      {
+        label: "正则后处理管线",
+        items: [
+          "新建 src/core/post-process/regex.ts：按项目级规则列表对生成文本做 RegExp 替换，单条规则编译失败不影响其他规则",
+          "write 路由在流式生成组装 fullContent 后、进入审校/摘要管线前调用 applyRegexRules，并通过 SSE 事件 postprocess_regex 报告已应用规则数",
+        ],
+      },
+      {
+        label: "流程文档",
+        items: [
+          "新增 PROCESS/05-酒馆理论迁移方案.txt，记录酒馆运行原理、可迁移方法论、下一步计划",
+          "更新 PROCESS/00-目录清单.txt 纳入 05 并标注状态",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.36.0",
     date: "2026-07-28",

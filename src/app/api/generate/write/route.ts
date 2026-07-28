@@ -14,6 +14,7 @@ import {
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
+import { applyRegexRules } from "@/core/post-process/regex";
 
 /**
  * POST /api/generate/write
@@ -234,9 +235,19 @@ export async function POST(request: Request) {
             }
           }
 
-          const fullContent = partialDraft + newContent;
+          let fullContent = partialDraft + newContent;
           if (partialDraft) {
             send({ type: "resume", content: `从草稿续写 (已有${partialDraft.length}字)` });
+          }
+
+          // ── 正则后处理（来自酒馆 regex 预设）──
+          const projectRules = (data.project as any)?.postProcessingRules;
+          if (Array.isArray(projectRules) && projectRules.length > 0) {
+            const cleaned = applyRegexRules(fullContent, projectRules);
+            if (cleaned !== fullContent) {
+              send({ type: "postprocess_regex", content: `正则后处理已应用 ${projectRules.length} 条规则` });
+              fullContent = cleaned;
+            }
           }
 
           // Phase 2-4: 后处理管线（扫描 → 审校 → 摘要）

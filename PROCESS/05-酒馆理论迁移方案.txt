@@ -1,0 +1,61 @@
+# 05 酒馆（SillyTavern）理论迁移方案
+
+## 一、目标
+
+全面学习用户提供的酒馆预设/正则/世界书/日志样本与理论说明，把其中对 Novel Forge 有用的方法论抽出来，形成可执行的产品改造项；并明确下一步先推进哪一项。
+
+## 二、酒馆运行原理（学习结论）
+
+1. **核心数据流**：`正文 → 填表总结 → 召回 → 正文`。写完一轮后由 LLM 把事实抽成结构化表格（SQL/JSON 行操作），下次生成时按关键词（绿灯）把相关表格行注入上下文。
+2. **信息熵与格式**：酒馆实践认为 XML 标签适合做结构边界、YAML 适合中文说明、JSON 适合复杂结构化数据；最优是"提示词 + XML 标签 + YAML 内容"的自定义混合格式。
+3. **上下文深度（Depth）**：世界书条目可配置插入深度（0-4）。0 级=用户指令下方（强效拦截），1 级=user 上方，2 级=更靠前，3 级=背景设定。越深越弱，但持久。
+4. **正则后处理**：用正则清洗模型输出——删除思维链（`<thinking>`/`<think>`/`<analysis>`）、折叠远楼层消息、美化 HTML 展示。
+5. **角色卡模板**：`<角色称呼>` + 特点/外貌/穿着/性格/背景/关系/发言参考，短设定触发长设定。
+6. **表格七要素**：表格名称 / Note / Init / Insert / Update / Delete / DDL。
+7. **记忆清除/注意力**：远楼层隐藏（不发送）、按关键词召回、摘要压缩老楼层。
+8. **预设体系**：表格模板预设、剧情推进预设（召回规则）、API 参数预设、正则预设、世界书预设。
+
+## 三、可迁移到 Novel Forge 的方法论
+
+| 酒馆能力 | Novel Forge 现状 | 迁移方案 | 优先级 |
+|---|---|---|---|
+| XML+YAML+JSON 混合提示词 | 当前 mostly 纯文本/JSON | 升级 `buildPromptContext` / `assemblePrompt`：用 XML 标签包裹块（`<Writing_style>`、`<Lore>`、`<Storyline>`），中文说明用 YAML 子格式 | 高 |
+| 世界书 depth 注入 | LoreTable/WorldBook 统一注入，无深度分层 | 给 LoreTable/规则/角色卡加 `depth` 字段：0=强效注入正文前，1=用户指令上方，2=系统上下文，3=背景设定 | 高 |
+| 正则后处理管线 | 生成后直接输出，无后处理 | 新增 `post-processing` 管线：可配置 regex 列表（删除思维链、折叠远楼层、美化输出），在 `write/route.ts` 生成后调用 | 中 |
+| 角色卡结构化模板 | CharacterCard 自由文本 | 给角色卡加结构化字段（特点/外貌/穿着/性格/背景/关系/发言参考），按模板注入提示词 | 中 |
+| 远楼层摘要压缩 | `contextKeepChapters` 直接截断 | 超过窗口的老楼层自动摘要成 `<summary>` 块，替代原始正文注入 | 中 |
+| 预设类型扩展 | Preset type 仅 {table-template, story-progression, style, worldview, character} | 新增 `regex`、`lorebook`、`api-config` 类型，支持用户上传酒馆正则/世界书/API参数预设 | 高（先做） |
+| 数据隔离标记 | 多项目通过 DB 隔离，上下文无显式标记 | 可选：在全局提示词中加 `[ACU-{projectId}]` 标记，强化项目边界 | 低 |
+
+## 四、下一步执行计划
+
+**选定推进项**：创意工坊 Preset 类型扩展（新增 `regex`、`lorebook`、`api-config`）。
+
+原因：
+- 直接对应刚读的酒馆资料（正则/世界书/API 参数）。
+- 可复用现有 Preset 模型与 API，改动小、风险低。
+- 为后续"正则后处理管线"和"世界书 depth 注入"提供数据入口。
+
+执行步骤：
+1. 改 `prisma/schema.prisma`：Preset.type 枚举追加 `regex`、`lorebook`、`api-config`。
+2. 改 `src/lib/preset-types.ts`（或等效类型文件）：同步枚举与中文标签。
+3. 改创意工坊列表/上传/筛选 UI：支持新类型的标签、图标、上传验证。
+4. 给 `/api/presets/[id]/apply` 增加对应类型的应用逻辑：
+   - `regex` → 写入项目级 `postProcessingRules` JSON（新建表/字段）。
+   - `lorebook` → 解析条目写入 LoreTable/WorldBook。
+   - `api-config` → 写入 AppSettings 或项目级 API 覆盖配置。
+5. tsc + build + 种子数据验证，提交 v0.37.0。
+
+## 五、关联项
+
+- **上游**：用户上传的酒馆 JSON（正则/世界书/API 参数）。
+- **中游**：Preset 模型、创意工坊 UI、`/api/presets` 路由。
+- **下游**：
+  - `regex` 类型 → 新建 `postProcessingRules`（项目级）→ `write/route.ts` 生成后调用正则管线。
+  - `lorebook` 类型 → LoreTable/WorldBook → `context-loader.ts` 召回注入。
+  - `api-config` 类型 → AppSettings / 项目级覆盖 → 生成路由读取模型参数。
+- **并行相关**：05 方法论中"正则后处理管线"和"世界书 depth 注入"可独立做，但建议等 preset 类型扩展落地后再做，避免数据入口缺失。
+
+## 六、状态
+
+【进行中】学习已完成，方案已梳理；下一步执行：Preset 类型扩展（v0.37.0）。

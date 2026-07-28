@@ -2,6 +2,14 @@
 
 ---
 
+## v0.37.0 — 2026-07-28
+**酒馆理论迁移：创意工坊 Preset 类型扩展 + 正则后处理管线**
+- 🍺 创意工坊 Preset 类型扩展（酒馆迁移）：新增 `regex` / `lorebook` / `api_config` 三类预设，可上传并应用到项目
+- 🧹 正则后处理管线落地：生成一章后自动按项目级 `postProcessingRules` 清洗输出（如删除 `<think>` / `<thinking>` / `<analysis>`）
+- ⚙️ API 参数预设可覆盖项目 `llmConfig`：应用 `api_config` 预设后直接改变生成温度/topP/模型参数
+- 📁 新增 `PROCESS/05-酒馆理论迁移方案.txt`：记录酒馆运行原理、可迁移方法论、下一步计划，并更新目录清单
+- ✅ tsc + 生产 next build 全通过
+
 ## v0.36.0 — 2026-07-28
 **色子抽卡与剧情线持久化关联 + 流程文档机制**
 - 🎴 色子（抽卡）剧情预设持久化：采用某路线后自动写入活跃剧情线 `Storyline.chapterBindings`（element:"preset"，含 cardLabel/coreConflict/mood），生成前剧情规划可读到「用户用色子选定的走向」
