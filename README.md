@@ -455,7 +455,7 @@ npm run dev
 ### Q: 怎么更新到最新版？
 A:
 ```bash
-git pull origin master
+git pull origin main
 npm install          # 可能有新依赖
 npx prisma db push   # 同步数据库结构（不丢数据）
 ```
