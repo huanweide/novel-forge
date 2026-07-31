@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/ui/icons";
 import type { BuildConfig } from "@/core/explore/types";
 import {
   GENRE_OPTIONS,
@@ -20,6 +21,7 @@ interface Props {
 
 export function BuildConfigPanel({ config, onChange }: Props) {
   const [showMore, setShowMore] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
 
   const update = (partial: Partial<BuildConfig>) => {
     onChange({ ...config, ...partial });
@@ -31,6 +33,8 @@ export function BuildConfigPanel({ config, onChange }: Props) {
       : [...config.styleTags, tag];
     update({ styleTags: next });
   };
+
+  const filteredTags = STYLE_TAGS.filter((t) => t.includes(tagSearch.trim()));
 
   return (
     <div className="p-4 space-y-5 text-sm h-full overflow-y-auto">
@@ -66,218 +70,210 @@ export function BuildConfigPanel({ config, onChange }: Props) {
         </button>
       </div>
 
-      {/* 小说名称 */}
-      <Field label="小说名称">
-        <Input
-          value={config.novelName}
-          onChange={(e) => update({ novelName: e.target.value })}
-          placeholder="留空则AI自动取名"
-        />
-      </Field>
+      {/* 实时预览卡 */}
+      <PreviewCard config={config} />
 
-      {/* 主角名称 */}
-      <Field label="主角名称">
-        <Input
-          value={config.protagonistName}
-          onChange={(e) => update({ protagonistName: e.target.value })}
-          placeholder="留空则AI自动生成"
-        />
-      </Field>
+      {/* ① 基础信息 */}
+      <StepGroup title="基础信息" hint="决定这本书的骨架">
+        <Field label="小说名称">
+          <Input
+            value={config.novelName}
+            onChange={(e) => update({ novelName: e.target.value })}
+            placeholder="留空则AI自动取名"
+          />
+        </Field>
+        <Field label="主角名称">
+          <Input
+            value={config.protagonistName}
+            onChange={(e) => update({ protagonistName: e.target.value })}
+            placeholder="留空则AI自动生成"
+          />
+        </Field>
+        <Field label="创作方向（选填）">
+          <textarea
+            value={config.direction}
+            onChange={(e) => update({ direction: e.target.value })}
+            placeholder="简要描述你想写的故事方向或核心创意..."
+            rows={2}
+            className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 resize-none transition-all duration-200"
+          />
+        </Field>
+      </StepGroup>
 
-      {/* 创作方向 */}
-      <Field label="创作方向（选填）">
-        <textarea
-          value={config.direction}
-          onChange={(e) => update({ direction: e.target.value })}
-          placeholder="简要描述你想写的故事方向或核心创意..."
-          rows={2}
-          className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 resize-none transition-all duration-200"
-        />
-      </Field>
+      {/* ② 类型与受众 */}
+      <StepGroup title="类型与受众">
+        <Field label="小说类型">
+          <ChipGroup
+            items={GENRE_OPTIONS as unknown as string[]}
+            selected={[config.genre]}
+            onSelect={(g) => update({ genre: g })}
+            color="indigo"
+          />
+        </Field>
+        <Field label="受众定位">
+          <ChipGroup
+            items={AUDIENCE_OPTIONS as unknown as string[]}
+            selected={[config.audience]}
+            onSelect={(a) => update({ audience: a })}
+            color="emerald"
+          />
+        </Field>
+        <Field label="篇幅字数">
+          <div className="flex flex-wrap gap-1">
+            {Object.entries(WORD_COUNT_PRESETS).map(([key, val]) => {
+              const active = config.wordCount === val;
+              return (
+                <button
+                  key={key}
+                  onClick={() => update({ wordCount: val })}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
+                    active
+                      ? "bg-[var(--nv-warning)]/20 text-[var(--nv-warning)] border-[var(--nv-warning)]/30 shadow-[0_0_8px_rgba(245,158,11,0.1)]"
+                      : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
+                  }`}
+                >
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+          {config.wordCount && (
+            <p className="text-[9px] text-[var(--nv-text-muted)] mt-1">{config.wordCount}</p>
+          )}
+        </Field>
+      </StepGroup>
 
-      {/* 小说类型 */}
-      <Field label="小说类型">
-        <ChipGroup
-          items={GENRE_OPTIONS as unknown as string[]}
-          selected={[config.genre]}
-          onSelect={(g) => update({ genre: g })}
-          color="indigo"
-        />
-      </Field>
-
-      {/* 流派标签 */}
-      <Field label="核心设定 / 流派">
-        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-          {STYLE_TAGS.map((tag) => {
-            const active = config.styleTags.includes(tag);
-            return (
-              <button
-                key={tag}
-                onClick={() => toggleStyleTag(tag)}
-                className={`text-[9px] px-2 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
-                  active
-                    ? "bg-purple-500/20 text-purple-300 border-purple-400/30 shadow-[0_0_8px_rgba(168,85,247,0.1)]"
-                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
-                }`}
-              >
-                {active ? "✓ " : ""}
-                {tag}
-              </button>
-            );
-          })}
-        </div>
-        {config.styleTags.length > 0 && (
-          <p className="text-[9px] text-[var(--nv-text-muted)] mt-1.5">
-            已选 {config.styleTags.length} 个: {config.styleTags.join("、")}
-          </p>
-        )}
-      </Field>
-
-      {/* 受众定位 */}
-      <Field label="受众定位">
-        <ChipGroup
-          items={AUDIENCE_OPTIONS as unknown as string[]}
-          selected={[config.audience]}
-          onSelect={(a) => update({ audience: a })}
-          color="emerald"
-        />
-      </Field>
-
-      {/* 篇幅字数 */}
-      <Field label="篇幅字数">
-        <div className="flex flex-wrap gap-1">
-          {Object.entries(WORD_COUNT_PRESETS).map(([key, val]) => {
-            const active = config.wordCount === val;
-            return (
-              <button
-                key={key}
-                onClick={() => update({ wordCount: val })}
-                className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
-                  active
-                    ? "bg-amber-500/20 text-amber-300 border-amber-400/30 shadow-[0_0_8px_rgba(245,158,11,0.1)]"
-                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
-                }`}
-              >
-                {key}
-              </button>
-            );
-          })}
-        </div>
-        {config.wordCount && (
-          <p className="text-[9px] text-[var(--nv-text-muted)] mt-1">{config.wordCount}</p>
-        )}
-      </Field>
+      {/* ③ 风格参数 */}
+      <StepGroup title="风格参数" hint="流派=世界观元素，风格偏好=文风基调">
+        <Field label="核心设定 / 流派（可多选）">
+          <input
+            value={tagSearch}
+            onChange={(e) => setTagSearch(e.target.value)}
+            placeholder="搜索流派标签..."
+            className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-1.5 text-[10px] text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-creative)]/40 focus:ring-2 focus:ring-[var(--nv-creative)]/10 transition-all duration-200 mb-2"
+          />
+          <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto">
+            {filteredTags.map((tag) => {
+              const active = config.styleTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleStyleTag(tag)}
+                  className={`text-[9px] px-2 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
+                    active
+                      ? "bg-[var(--nv-creative)]/20 text-[var(--nv-creative)] border-[var(--nv-creative)]/30 shadow-[0_0_8px_rgba(168,85,247,0.12)]"
+                      : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
+                  }`}
+                >
+                  {active ? "✓ " : ""}
+                  {tag}
+                </button>
+              );
+            })}
+            {filteredTags.length === 0 && (
+              <span className="text-[9px] text-[var(--nv-text-muted)]">无匹配标签</span>
+            )}
+          </div>
+          {config.styleTags.length > 0 && (
+            <p className="text-[9px] text-[var(--nv-text-muted)] mt-1.5">
+              已选 {config.styleTags.length} 个: {config.styleTags.join("、")}
+            </p>
+          )}
+        </Field>
+        <Field label="文风偏好（单选）">
+          <div className="flex flex-wrap gap-1">
+            {STYLE_PREFERENCES.map((s) => {
+              const active = config.stylePreference === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => update({ stylePreference: active ? "" : s })}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
+                    active
+                      ? "bg-[var(--nv-primary)]/20 text-[var(--nv-primary)] border-[var(--nv-primary)]/30 shadow-[0_0_8px_rgba(99,102,241,0.12)]"
+                      : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+      </StepGroup>
 
       {/* 更多选项 */}
       <button
         onClick={() => setShowMore(!showMore)}
         className="w-full text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] py-1.5 rounded-lg hover:bg-[var(--nv-surface-2)] transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-1.5"
       >
-        <span
-          className={`transition-transform duration-200 ${showMore ? "rotate-180" : ""}`}
-        >
-          ▼
-        </span>
+        <span className={`transition-transform duration-200 ${showMore ? "rotate-180" : ""}`}>▼</span>
         {showMore ? "收起高级设定" : "更多设定"}
       </button>
 
       {showMore && (
         <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* 情节结构 */}
-          <Field label="情节结构模式">
-            <div className="space-y-1">
-              {PLOT_STRUCTURES.map((ps) => {
-                const active = config.plotStructure === ps.id;
-                return (
-                  <button
-                    key={ps.id}
-                    onClick={() => update({ plotStructure: ps.id })}
-                    className={`w-full text-left p-2.5 rounded-xl border transition-all duration-200 active:scale-[0.98] ${
-                      active
-                        ? "bg-[var(--nv-primary)]/[0.08] border-[var(--nv-primary)]/25 shadow-[0_0_12px_rgba(99,102,241,0.08)]"
-                        : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:bg-[var(--nv-surface-2)] hover:border-[var(--nv-border-2)]"
-                    }`}
-                  >
-                    <div className="text-[11px] font-medium text-[var(--nv-text-secondary)]">
-                      {ps.name}
-                    </div>
-                    <div className="text-[9px] text-[var(--nv-text-muted)] mt-0.5">
-                      {ps.desc}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-
-          {/* 风格偏好 */}
-          <Field label="风格偏好">
-            <div className="flex flex-wrap gap-1">
-              {STYLE_PREFERENCES.map((s) => {
-                const active = config.stylePreference === s;
-                return (
-                  <button
-                    key={s}
-                    onClick={() =>
-                      update({ stylePreference: active ? "" : s })
-                    }
-                    className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
-                      active
-                        ? "bg-pink-500/20 text-pink-300 border-pink-400/30 shadow-[0_0_8px_rgba(236,72,153,0.1)]"
-                        : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-
-          {/* 力量体系 */}
-          <Field label="力量体系">
-            <Select
-              value={config.powerSystem}
-              onChange={(e) => update({ powerSystem: e.target.value })}
-              options={POWER_SYSTEMS as unknown as string[]}
-              placeholder="不选择"
+          {/* ④ 高级设定 */}
+          <StepGroup title="高级设定">
+            <Field label="情节结构模式">
+              <div className="space-y-1">
+                {PLOT_STRUCTURES.map((ps) => {
+                  const active = config.plotStructure === ps.id;
+                  return (
+                    <button
+                      key={ps.id}
+                      onClick={() => update({ plotStructure: ps.id })}
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all duration-200 active:scale-[0.98] ${
+                        active
+                          ? "bg-[var(--nv-primary)]/[0.08] border-[var(--nv-primary)]/25 shadow-[0_0_12px_rgba(99,102,241,0.08)]"
+                          : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)]"
+                      }`}
+                    >
+                      <div className="text-[11px] font-medium text-[var(--nv-text-secondary)]">{ps.name}</div>
+                      <div className="text-[9px] text-[var(--nv-text-muted)] mt-0.5">{ps.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+            <Field label="力量体系">
+              <Select
+                value={config.powerSystem}
+                onChange={(e) => update({ powerSystem: e.target.value })}
+                options={POWER_SYSTEMS as unknown as string[]}
+                placeholder="不选择"
+              />
+            </Field>
+            <Field label="金手指类型">
+              <Select
+                value={config.goldenFinger}
+                onChange={(e) => update({ goldenFinger: e.target.value })}
+                options={GOLDEN_FINGERS as unknown as string[]}
+                placeholder="不选择"
+              />
+            </Field>
+            <Field label="核心冲突">
+              <textarea
+                value={config.coreConflict}
+                onChange={(e) => update({ coreConflict: e.target.value })}
+                placeholder="描述小说的核心矛盾冲突..."
+                rows={2}
+                className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 resize-none transition-all duration-200"
+              />
+            </Field>
+            <Checkbox
+              checked={config.forceOriginalNames}
+              onChange={(v) => update({ forceOriginalNames: v })}
+              label="强制原创命名"
+              hint="AI将严禁使用已有小说中的知名名称"
             />
-          </Field>
-
-          {/* 金手指 */}
-          <Field label="金手指类型">
-            <Select
-              value={config.goldenFinger}
-              onChange={(e) => update({ goldenFinger: e.target.value })}
-              options={GOLDEN_FINGERS as unknown as string[]}
-              placeholder="不选择"
+            <Checkbox
+              checked={config.autoGenerateStoryline}
+              onChange={(v) => update({ autoGenerateStoryline: v })}
+              label="自动生成故事线"
+              hint="关闭后需手动生成故事线事件"
             />
-          </Field>
-
-          {/* 主要冲突 */}
-          <Field label="核心冲突">
-            <textarea
-              value={config.coreConflict}
-              onChange={(e) => update({ coreConflict: e.target.value })}
-              placeholder="描述小说的核心矛盾冲突..."
-              rows={2}
-              className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3 py-2 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 resize-none transition-all duration-200"
-            />
-          </Field>
-
-          {/* 复选框 */}
-          <Checkbox
-            checked={config.forceOriginalNames}
-            onChange={(v) => update({ forceOriginalNames: v })}
-            label="强制原创命名"
-            hint="AI将严禁使用已有小说中的知名名称"
-          />
-          <Checkbox
-            checked={config.autoGenerateStoryline}
-            onChange={(v) => update({ autoGenerateStoryline: v })}
-            label="自动生成故事线"
-            hint="关闭后需手动生成故事线事件"
-          />
+          </StepGroup>
         </div>
       )}
     </div>
@@ -286,18 +282,62 @@ export function BuildConfigPanel({ config, onChange }: Props) {
 
 // ─── 内部子组件 ────────────────────────────────────────
 
-function Field({
-  label,
+function StepGroup({
+  title,
+  hint,
   children,
 }: {
-  label: string;
+  title: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
+    <div className="space-y-3 pt-1">
+      <div className="flex items-center gap-2">
+        <span className="w-1 h-3.5 rounded-full bg-[var(--nv-primary)]/70" />
+        <h4 className="text-[10px] font-semibold text-[var(--nv-text-secondary)] tracking-wider uppercase">
+          {title}
+        </h4>
+        {hint && <span className="text-[9px] text-[var(--nv-text-muted)]">· {hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PreviewCard({ config }: { config: BuildConfig }) {
+  return (
+    <div className="rounded-2xl border border-[var(--nv-border-2)] bg-gradient-to-br from-[var(--nv-surface-2)] to-[var(--nv-surface-1)] p-3 space-y-2 shadow-[0_0_20px_rgba(0,0,0,0.2)]">
+      <div className="flex items-center gap-1.5 text-[10px] text-[var(--nv-text-muted)]">
+        <Icon name="eye" size={11} /> 实时预览
+      </div>
+      <div className="text-sm font-semibold text-[var(--nv-text-primary)] truncate">
+        {config.novelName || "未命名小说"}
+      </div>
+      <div className="flex flex-wrap gap-1 text-[9px]">
+        <span className="px-1.5 py-0.5 rounded-full bg-[var(--nv-primary)]/10 text-[var(--nv-primary)]">{config.genre}</span>
+        <span className="px-1.5 py-0.5 rounded-full bg-[var(--nv-success)]/10 text-[var(--nv-success)]">{config.audience}</span>
+        {config.wordCount && (
+          <span className="px-1.5 py-0.5 rounded-full bg-[var(--nv-warning)]/10 text-[var(--nv-warning)]">{config.wordCount}</span>
+        )}
+      </div>
+      {config.styleTags.length > 0 && (
+        <div className="text-[9px] text-[var(--nv-text-tertiary)] leading-relaxed">
+          流派：{config.styleTags.slice(0, 8).join("、")}
+          {config.styleTags.length > 8 ? ` 等${config.styleTags.length}项` : ""}
+        </div>
+      )}
+      {config.stylePreference && (
+        <div className="text-[9px] text-[var(--nv-text-tertiary)]">文风：{config.stylePreference}</div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-medium text-[var(--nv-text-muted)] tracking-wide">
-        {label}
-      </label>
+      <label className="text-[10px] font-medium text-[var(--nv-text-muted)] tracking-wide">{label}</label>
       {children}
     </div>
   );
@@ -334,43 +374,14 @@ function ChipGroup({
   onSelect: (item: string) => void;
   color: "indigo" | "emerald" | "amber" | "purple" | "pink";
 }) {
-  const colorMap: Record<
-    string,
-    { bg: string; text: string; border: string; shadow: string }
-  > = {
-    indigo: {
-      bg: "bg-[var(--nv-primary)]/20",
-      text: "text-[var(--nv-primary)]",
-      border: "border-[var(--nv-primary)]/30",
-      shadow: "shadow-[0_0_8px_rgba(99,102,241,0.1)]",
-    },
-    emerald: {
-      bg: "bg-emerald-500/20",
-      text: "text-emerald-300",
-      border: "border-emerald-400/30",
-      shadow: "shadow-[0_0_8px_rgba(16,185,129,0.1)]",
-    },
-    amber: {
-      bg: "bg-amber-500/20",
-      text: "text-amber-300",
-      border: "border-amber-400/30",
-      shadow: "shadow-[0_0_8px_rgba(245,158,11,0.1)]",
-    },
-    purple: {
-      bg: "bg-purple-500/20",
-      text: "text-purple-300",
-      border: "border-purple-400/30",
-      shadow: "shadow-[0_0_8px_rgba(168,85,247,0.1)]",
-    },
-    pink: {
-      bg: "bg-pink-500/20",
-      text: "text-pink-300",
-      border: "border-pink-400/30",
-      shadow: "shadow-[0_0_8px_rgba(236,72,153,0.1)]",
-    },
+  const colorMap: Record<string, { bg: string; text: string; border: string; shadow: string }> = {
+    indigo: { bg: "bg-[var(--nv-primary)]/20", text: "text-[var(--nv-primary)]", border: "border-[var(--nv-primary)]/30", shadow: "shadow-[0_0_8px_rgba(99,102,241,0.1)]" },
+    emerald: { bg: "bg-[var(--nv-success)]/20", text: "text-[var(--nv-success)]", border: "border-[var(--nv-success)]/30", shadow: "shadow-[0_0_8px_rgba(16,185,129,0.1)]" },
+    amber: { bg: "bg-[var(--nv-warning)]/20", text: "text-[var(--nv-warning)]", border: "border-[var(--nv-warning)]/30", shadow: "shadow-[0_0_8px_rgba(245,158,11,0.1)]" },
+    purple: { bg: "bg-[var(--nv-creative)]/20", text: "text-[var(--nv-creative)]", border: "border-[var(--nv-creative)]/30", shadow: "shadow-[0_0_8px_rgba(168,85,247,0.1)]" },
+    pink: { bg: "bg-pink-500/20", text: "text-pink-300", border: "border-pink-400/30", shadow: "shadow-[0_0_8px_rgba(236,72,153,0.1)]" },
   };
   const c = colorMap[color];
-
   return (
     <div className="flex flex-wrap gap-1">
       {items.map((item) => {
@@ -380,9 +391,7 @@ function ChipGroup({
             key={item}
             onClick={() => onSelect(item)}
             className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-all duration-200 active:scale-95 border ${
-              active
-                ? `${c.bg} ${c.text} ${c.border} ${c.shadow}`
-                : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
+              active ? `${c.bg} ${c.text} ${c.border} ${c.shadow}` : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] hover:text-[var(--nv-text-tertiary)]"
             }`}
           >
             {item}
@@ -434,32 +443,15 @@ function Checkbox({
   return (
     <label className="flex items-start gap-2.5 cursor-pointer group">
       <div className="relative mt-0.5">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="sr-only"
-        />
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
         <div
           className={`w-4 h-4 rounded-md border transition-all duration-200 flex items-center justify-center ${
-            checked
-              ? "bg-[var(--nv-primary)] border-[var(--nv-primary)] shadow-[0_0_8px_rgba(99,102,241,0.3)]"
-              : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] group-hover:border-[var(--nv-border-2)]"
+            checked ? "bg-[var(--nv-primary)] border-[var(--nv-primary)] shadow-[0_0_8px_rgba(99,102,241,0.3)]" : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] group-hover:border-[var(--nv-border-2)]"
           }`}
         >
           {checked && (
-            <svg
-              className="w-3 h-3 text-[var(--nv-text-primary)]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M5 13l4 4L19 7"
-              />
+            <svg className="w-3 h-3 text-[var(--nv-text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
           )}
         </div>

@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 
 // ─── 提供商默认 Base URL ────────────────────────────────
 
-const PROVIDER_BASE_URLS: Record<string, string> = {
+export const PROVIDER_BASE_URLS: Record<string, string> = {
   openai: "https://api.openai.com/v1",
   siliconflow: "https://api.siliconflow.cn/v1",
   deepseek: "https://api.deepseek.com",

@@ -7,6 +7,7 @@ import { AdoptedContentPanel } from "@/components/explore/AdoptedContentPanel";
 import { ChatPanel } from "@/components/explore/ChatPanel";
 import { OutlinePanel } from "@/components/explore/OutlinePanel";
 import { CardBrowser } from "@/components/explore/CardBrowser";
+import { StepProgress } from "@/components/explore/StepProgress";
 import { Icon } from "@/components/ui/icons";
 import type {
   BuildConfig,
@@ -590,6 +591,9 @@ export default function ExplorePage() {
           </div>
         </div>
       </header>
+
+      {/* ── 11 步探讨进度条 ── */}
+      <StepProgress currentStep={currentStep} onStepChange={handleStepChange} />
 
       {/* ── 三栏布局 ── */}
       <div className="flex" style={{ height: "calc(100vh - 57px)" }}>

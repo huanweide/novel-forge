@@ -43,7 +43,7 @@ export function ChatPanel({
   };
 
   return (
-    <>
+    <div className="flex flex-col min-h-0 flex-1">
       {/* ── 步骤导航 ── */}
       <nav className="border-b border-[var(--nv-border-2)] px-3 py-2 flex items-center gap-1 overflow-x-auto shrink-0 bg-[var(--nv-void)]/80 backdrop-blur-sm">
         {EXPLORE_STEPS.map((step) => {
@@ -64,86 +64,126 @@ export function ChatPanel({
         })}
       </nav>
 
+      {/* ── 探讨服务状态条 ── */}
+      <div className="px-4 py-2.5 flex items-center gap-2.5 border-b border-[var(--nv-border-2)] bg-gradient-to-r from-[var(--nv-creative-soft)]/40 via-transparent to-transparent">
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--nv-creative)] opacity-60 animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--nv-creative)]" />
+        </span>
+        <span className="text-xs text-[var(--nv-text-secondary)] font-medium">
+          AI 创作顾问正在协助你构建小说世界
+        </span>
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--nv-creative)]/15 text-[var(--nv-creative)] border border-[var(--nv-creative)]/25">
+          当前 · {STEP_LABELS[currentStep]}
+        </span>
+      </div>
+
       {/* ── 对话列表 ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+        {messages.map((msg, i) => {
+          const isUser = msg.role === "user";
+          return (
             <div
-              className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed transition-all duration-200 ${
-                msg.role === "user"
-                  ? "bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-br-md shadow-lg shadow-[var(--nv-primary)]/10"
-                  : "bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] rounded-bl-md hover:border-[var(--nv-border-2)]"
-              }`}
+              key={i}
+              className={`flex items-end gap-2 ${isUser ? "justify-end" : "justify-start"}`}
+              style={{ animation: "nf-bubble-in 0.3s var(--ease-spring) both" }}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              {/* 头像 */}
+              {!isUser && (
+                <div className="w-7 h-7 rounded-full bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30 flex items-center justify-center shrink-0 mb-1">
+                  <Icon name="bot" size={14} className="text-[var(--nv-creative)]" />
+                </div>
+              )}
+              <div className="flex flex-col max-w-[72%]">
+                <span className={`text-[9px] mb-1 ${isUser ? "text-right text-[var(--nv-text-muted)]" : "text-[var(--nv-text-muted)]"}`}>
+                  {isUser ? "你" : "AI 创作顾问"}
+                </span>
+                <div
+                  className={`px-4 py-3 rounded-2xl text-sm leading-relaxed transition-all duration-200 ${
+                    isUser
+                      ? "bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-br-md shadow-lg shadow-[var(--nv-primary)]/10"
+                      : "bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] rounded-bl-md"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
 
-              {/* 候选卡片 */}
-              {msg.cards && msg.cards.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <div className="text-[10px] text-[var(--nv-text-muted)] mb-1 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-purple-400/60" />
-                    点击卡片即可采纳
-                  </div>
-                  {msg.cards.map((card) => {
-                    const status = adoptStatus[card.id];
-                    const adopted = card.adopted || status?.startsWith("✅");
-                    return (
-                      <button
-                        key={card.id}
-                        onClick={() => !adopted && onAdoptCard(card)}
-                        disabled={adopted}
-                        className={`w-full text-left p-3 rounded-xl border transition-all duration-200 group ${
-                          adopted
-                            ? "bg-emerald-500/[0.06] border-emerald-500/20 opacity-60"
-                            : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-[var(--nv-primary)]/30 hover:bg-[var(--nv-surface-2)] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">
-                            {card.title}
-                          </span>
-                          {status === "writing" && (
-                            <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full animate-pulse">
-                              写入中
-                            </span>
-                          )}
-                          {status?.startsWith("✅") && (
-                            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
-                              {status}
-                            </span>
-                          )}
-                          {status === "❌失败" && (
-                            <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">
-                              失败
-                            </span>
-                          )}
-                          {adopted && !status && (
-                            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
-                              已采纳
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
-                          {card.content}
-                        </p>
-                      </button>
-                    );
-                  })}
+                  {/* 候选卡片 */}
+                  {msg.cards && msg.cards.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="text-[10px] text-[var(--nv-text-muted)] mb-1 flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-[var(--nv-creative)]/60" />
+                        点击卡片即可采纳
+                      </div>
+                      {msg.cards.map((card) => {
+                        const status = adoptStatus[card.id];
+                        const adopted = card.adopted || status?.startsWith("✅");
+                        return (
+                          <button
+                            key={card.id}
+                            onClick={() => !adopted && onAdoptCard(card)}
+                            disabled={adopted}
+                            className={`w-full text-left p-3 rounded-xl border transition-all duration-200 group ${
+                              adopted
+                                ? "bg-[var(--nv-success)]/[0.08] border-[var(--nv-success)]/30 animate-[nf-adopt-flash_0.6s_ease-out]"
+                                : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-[var(--nv-creative)]/30 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">
+                                {card.title}
+                              </span>
+                              {status === "writing" && (
+                                <span className="text-[9px] bg-[var(--nv-warning)]/20 text-[var(--nv-warning)] px-1.5 py-0.5 rounded-full animate-pulse">
+                                  写入中
+                                </span>
+                              )}
+                              {status?.startsWith("✅") && (
+                                <span className="text-[9px] bg-[var(--nv-success)]/20 text-[var(--nv-success)] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                  <Icon name="check" size={9} /> 已采纳
+                                </span>
+                              )}
+                              {status === "❌失败" && (
+                                <span className="text-[9px] bg-[var(--nv-danger)]/20 text-[var(--nv-danger)] px-1.5 py-0.5 rounded-full">
+                                  失败
+                                </span>
+                              )}
+                              {adopted && !status && (
+                                <span className="text-[9px] bg-[var(--nv-success)]/20 text-[var(--nv-success)] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                  <Icon name="check" size={9} /> 已采纳
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
+                              {card.content}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {isUser && (
+                <div className="w-7 h-7 rounded-full bg-[var(--nv-primary)]/15 border border-[var(--nv-primary)]/30 flex items-center justify-center shrink-0 mb-1">
+                  <Icon name="user" size={14} className="text-[var(--nv-primary)]" />
                 </div>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         {loading && (
-          <div className="flex justify-start">
+          <div className="flex items-end gap-2 justify-start">
+            <div className="w-7 h-7 rounded-full bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30 flex items-center justify-center shrink-0 mb-1">
+              <Icon name="bot" size={14} className="text-[var(--nv-creative)]" />
+            </div>
             <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-muted)] px-4 py-3 rounded-2xl rounded-bl-md text-sm">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse" />
-                <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-150" />
-                <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-300" />
+              <span className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-[var(--nv-creative)] rounded-full animate-pulse" />
+                  <span className="w-1.5 h-1.5 bg-[var(--nv-creative)] rounded-full animate-pulse delay-150" />
+                  <span className="w-1.5 h-1.5 bg-[var(--nv-creative)] rounded-full animate-pulse delay-300" />
+                </span>
+                <span className="text-[11px]">AI 正在思考「{STEP_LABELS[currentStep]}」…</span>
               </span>
             </div>
           </div>
@@ -167,7 +207,7 @@ export function ChatPanel({
                   title={titles[m]}
                   className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all duration-200 ${
                     active
-                      ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] shadow-sm"
+                      ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-secondary)] shadow-sm"
                       : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                   } active:scale-95`}
                 >
@@ -202,6 +242,6 @@ export function ChatPanel({
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

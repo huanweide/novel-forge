@@ -64,9 +64,9 @@ export function CardBrowser({
                       key={card.id}
                       onClick={() => active && onAdoptCard(card)}
                       disabled={!active}
-                      className={`text-left p-2.5 rounded-xl border transition-all duration-200 ${
+                      className={`text-left p-2.5 rounded-xl border transition-all duration-200 animate-[nf-card-in_0.4s_ease-out_both] ${
                         status?.startsWith("✅")
-                          ? "bg-emerald-500/[0.04] border-emerald-500/15"
+                          ? "bg-emerald-500/[0.04] border-emerald-500/15 animate-[nf-adopt-flash_0.6s_ease-out]"
                           : status === "❌失败"
                             ? "bg-red-500/[0.04] border-red-500/15"
                             : status === "writing"

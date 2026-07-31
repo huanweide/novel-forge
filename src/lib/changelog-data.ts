@@ -25,18 +25,59 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.42.0";
+export const LATEST_VERSION = "v0.43.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎨 全局配色翻新：Tailwind 默认 zinc/indigo/white/gray 老土色统一映射到虚空玻璃设计令牌（--nv-void/abyss/surface/border/text/primary/creative），覆盖 40+ 组件与全部页面路由",
-  "🌌 首页/工作区/设置/创意工坊统一深空玻璃质感：背景光晕 + 霓虹渐变标题，视觉语言一致",
-  "🔘 交互语义保留：按钮 focus 环、开关滑块、进度条改用主色/表面令牌，对比度达标且不丢失状态反馈",
-  "✅ 正则级批量替换零手工误改，tsc + 生产 next build 全通过，更新面板双文件同步至 v0.42.0",
+  "🔑 API 配置体验重做：新增 /api/settings/models 自动检索模型，设置页模型框改为可下拉选择，保存 API 后自动 test 连接（DeepSeek V4 flash 实测通过）",
+  "💬 探讨模式 UI 升级：顶部 11 步进度条 + 「AI 创作顾问正在协助你构建小说世界」状态条 + bot/user 头像 + 气泡/卡片/采纳入场动画，确认感明确",
+  "🎛️ 布置区域 UI 升级：实时预览卡 + 四分区 StepGroup（基础信息/类型与受众/风格参数/高级设定）+ 流派标签搜索过滤 + 颜色收敛到虚空玻璃令牌",
+  "✅ tsc 零错误；修复 globals.css 误加的 :root 提前闭合括号，解决 Turbopack CSS 解析 500；浏览器真实走查 + DeepSeek 真实对话回复通过",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.43.0",
+    date: "2026-07-29",
+    title: "API 配置体验重做 + 探讨/布置双区域 UI 升级",
+    sections: [
+      {
+        label: "API 保存与模型检索",
+        items: [
+          "新增 POST /api/settings/models：按当前 provider 自动检索 OpenAI 兼容 /models 端点，deepseek 默认 base 特殊拼接 /v1/models，返回模型 id 列表供前端下拉选择",
+          "设置页模型输入框改为 input+datalist 可检索下拉，切换 provider 或加载已保存配置时自动触发模型检索",
+          "保存 API 配置后自动调用 /api/settings/test 做连接验证并刷新模型列表，消除「保存不住 / 不会自动连接」的体验断裂",
+          "修复 settings page 中 lllBaseUrl 笔误为 llmBaseUrl，保证 Base URL 正确保存",
+        ],
+      },
+      {
+        label: "探讨模式 UI 升级（确认感）",
+        items: [
+          "新增 StepProgress 组件：11 步进度条接入 explore 顶栏，当前步骤高亮、已完成步骤带成功色、步骤间连线清晰",
+          "重写 ChatPanel：顶部常驻「AI 创作顾问正在协助你构建小说世界」状态条 + 当前步徽章；bot/user 头像；气泡/采纳卡片加 nf-bubble-in / nf-adopt-flash 入场光效；loading 状态显示当前思考步骤",
+          "CardBrowser 卡片加 nf-card-in 翻入动画，已采纳卡片有 nf-adopt-flash 光效",
+          "globals.css 新增 nf-bubble-in / nf-card-in / nf-adopt-flash / nf-glow-pulse / nf-step-pop 关键帧",
+        ],
+      },
+      {
+        label: "布置区域 UI 升级（风格配置）",
+        items: [
+          "BuildConfigPanel 重构：新增实时预览卡 PreviewCard（小说名/类型/受众/字数/流派/文风一目了然）",
+          "新增 StepGroup 四分区：基础信息 / 类型与受众 / 风格参数 / 高级设定，明确区分「核心设定/流派（可多选）」与「文风偏好（单选）」",
+          "流派标签支持 tagSearch 搜索过滤，大量标签时可快速定位",
+          "颜色统一收敛到 --nv-* 设计令牌，移除硬编码 emerald/purple/pink/amber，保持虚空玻璃视觉一致",
+        ],
+      },
+      {
+        label: "稳定性修复与验证",
+        items: [
+          "修复 globals.css 中误加的 :root 提前闭合括号，解决 Turbopack CSS 解析 500，dev server 正常热更新",
+          "tsc --noEmit 零错误；浏览器真实走查确认 11 步进度条、状态条、分区、标签搜索、DeepSeek 真实对话回复均正常",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.42.0",
     date: "2026-07-28",

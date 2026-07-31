@@ -2,6 +2,14 @@
 
 ---
 
+## v0.43.0 — 2026-07-29
+**API 配置体验重做 + 探讨/布置双区域 UI 升级**
+- 🔑 新增 `/api/settings/models` 自动检索模型，deepseek 默认 base 特殊拼接 `/v1/models`；设置页模型框改为可下拉选择
+- 🔌 保存 API 后自动调用 `/api/settings/test` 连接验证，DeepSeek V4 flash 实测通过；修复 `lllBaseUrl` 笔误
+- 💬 探讨模式 UI 升级：11 步进度条 + 「AI 创作顾问」状态条 + bot/user 头像 + 气泡/卡片/采纳入场动画
+- 🎛️ 布置区域 UI 升级：实时预览卡 + 四分区 StepGroup + 流派标签搜索过滤 + 颜色收敛到虚空玻璃令牌
+- ✅ 修复 `globals.css` 误加的 `:root` 提前闭合括号导致的 500；tsc 零错误 + 浏览器真实走查通过
+
 ## v0.42.0 — 2026-07-28
 **虚空玻璃 UI 全面翻新（老土配色清零）**
 - 🎨 全局 Tailwind 默认色（zinc/indigo/gray/white）映射到虚空玻璃设计令牌，覆盖 40+ 组件与全部页面路由
