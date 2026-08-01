@@ -20,15 +20,16 @@ export async function GET(request: Request) {
     const [characters, loreEntries] = await Promise.all([
       prisma.characterCard.findMany({
         where: { projectId },
-        select: { name: true, aliases: true, role: true },
+        select: { id: true, name: true, aliases: true, role: true },
       }),
       prisma.lorebookEntry.findMany({
         where: { projectId, enabled: true },
-        select: { title: true, category: true, keys: true },
+        select: { id: true, title: true, category: true, keys: true },
       }),
     ]);
 
     const entities: Array<{
+      id: string;
       name: string;
       type: "character" | "lorebook";
       color: string;
@@ -43,11 +44,11 @@ export async function GET(request: Request) {
       currency: "#8CAD45", custom: "#8B8B8B",
     };
 
-    // 角色
+    // 角色（含别名，指向同一 id，便于章节内实体徽章跳转详情）
     for (const c of characters) {
-      entities.push({ name: c.name, type: "character", color: CHARACTER_COLOR });
+      entities.push({ id: c.id, name: c.name, type: "character", color: CHARACTER_COLOR });
       for (const alias of c.aliases || []) {
-        if (alias) entities.push({ name: alias, type: "character", color: CHARACTER_COLOR });
+        if (alias) entities.push({ id: c.id, name: alias, type: "character", color: CHARACTER_COLOR });
       }
     }
 
@@ -57,12 +58,12 @@ export async function GET(request: Request) {
       const color = LORE_COLORS[e.category] || "#6b7280";
       if (!seenLore.has(e.title)) {
         seenLore.add(e.title);
-        entities.push({ name: e.title, type: "lorebook", color, category: e.category });
+        entities.push({ id: e.id, name: e.title, type: "lorebook", color, category: e.category });
       }
       for (const key of e.keys || []) {
         if (key && !seenLore.has(key)) {
           seenLore.add(key);
-          entities.push({ name: key, type: "lorebook", color, category: e.category });
+          entities.push({ id: e.id, name: key, type: "lorebook", color, category: e.category });
         }
       }
     }

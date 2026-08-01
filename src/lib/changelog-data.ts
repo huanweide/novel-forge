@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.1";
+export const LATEST_VERSION = "v0.45.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📊 编辑器（CenterPanel）底部新增状态栏：实时显示 行数 / 字数 / 目标进度 / UTF-8 编码，写作掌控感对齐竞品",
-  "🔢 字数沿用项目约定（content.length 字符数），随正文生成实时更新；与目标字数对比给出进度百分比，达标变绿",
-  "🎯 目标字数仍由顶部控制栏数字输入设定（原功能不变），状态栏只读展示，不做破坏性改动",
-  "🧩 纯展示组件：无 schema 变更、无新依赖，tsc 零错误；PROCESS/06 P0-2 完成",
+  "🏷️ 章节正文标题下新增「实体彩色徽章」：自动扫描本章出现的角色 / 世界书词条，一眼看到 AI 识别了哪些实体",
+  "🎨 徽章沿用实体高亮配色（角色蓝 / 世界书按类别着色），与正文高亮一致；同一实体按 id 去重",
+  "🔗 点击徽章直接跳转对应角色 / 世界书条的查看编辑弹窗（复用既有 dialog），无需去侧栏翻找",
+  "🔌 配套：/api/entities/highlight 返回增加 id 字段（别名 / 关键词指向同一实体），供徽章精确跳转；无 schema 变更，tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.2",
+    date: "2026-08-01",
+    title: "章节实体彩色徽章（一眼看到 AI 识别了什么）",
+    sections: [
+      {
+        label: "功能 / 编辑器 UX",
+        items: [
+          "CenterPanel 章节正文标题下新增「实体彩色徽章」：扫描本章出现的角色 / 世界书词条（复用 /api/entities/highlight 的实体名→颜色映射），一眼看到本章涉及哪些 AI 识别实体（PROCESS/06 P0-3）",
+          "徽章沿用实体高亮配色（角色统一蓝、世界书按 category 着色），与正文内实体高亮视觉一致；同一实体按 id 去重（别名 / 关键词命中仍指向主实体）",
+          "点击徽章直接打开对应「角色查看编辑」或「世界书条查看编辑」弹窗（复用 page.tsx 既有 onEditCharacter / onEditLore id 跳转），无需再去侧栏翻找",
+          "配套：/api/entities/highlight 返回的实体增加 id 字段（别名 / 关键词条目指向同一实体 id），供徽章精确跳转；仅 select 增加 id、无 schema 变更，tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.1",
     date: "2026-08-01",

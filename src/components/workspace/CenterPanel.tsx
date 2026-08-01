@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { Icon } from "@/components/ui/icons";
@@ -15,6 +15,7 @@ export function CenterPanel({
   chapterOutlinePrompt, onChapterOutlinePromptChange,
   genStep, genStepLabels, chapterOutlineStatus,
   onOpenGame,
+  onEditCharacter, onEditLore,
 }: {
   selectedNode: StoryNodeData | null; streamContent: string; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
@@ -32,6 +33,8 @@ export function CenterPanel({
   onOpenGame: () => void;
   genStep: string; genStepLabels: Record<string, { icon: React.ReactNode; label: string }>;
   chapterOutlineStatus: string;
+  onEditCharacter?: (id: string) => void;
+  onEditLore?: (id: string) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -50,6 +53,29 @@ export function CenterPanel({
   const lineCount = displayContent ? displayContent.split("\n").length : 0;
   const targetReached = targetWordCount > 0 && currentWords >= targetWordCount;
   const progressPct = targetWordCount > 0 ? Math.min(100, Math.round((currentWords / targetWordCount) * 100)) : 0;
+
+  // 章节实体彩色徽章：拉取项目实体（名→颜色→id），扫描本章正文匹配，点击跳详情
+  const [projectEntities, setProjectEntities] = useState<Array<{
+    id: string; name: string; type: "character" | "lorebook"; color: string; category?: string;
+  }>>([]);
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    fetch(`/api/entities/highlight?projectId=${encodeURIComponent(projectId)}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled && d?.entities) setProjectEntities(d.entities); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [projectId]);
+
+  const chapterEntities = useMemo(() => {
+    if (!displayContent || projectEntities.length === 0) return [];
+    const found = new Map<string, { id: string; name: string; type: "character" | "lorebook"; color: string; category?: string }>();
+    for (const e of projectEntities) {
+      if (e.name && displayContent.includes(e.name) && !found.has(e.id)) found.set(e.id, e);
+    }
+    return Array.from(found.values());
+  }, [displayContent, projectEntities]);
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-[var(--nv-void)]">
@@ -156,6 +182,22 @@ export function CenterPanel({
                   <h1 className="text-xl font-bold text-[var(--nv-text-primary)] text-center mb-6 mt-2 tracking-wide">
                     {selectedNode.title}
                   </h1>
+                )}
+                {/* 章节实体彩色徽章：一眼看到本章涉及哪些角色 / 世界书 */}
+                {chapterEntities.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
+                    {chapterEntities.map((e) => (
+                      <button
+                        key={e.id + "|" + e.name}
+                        onClick={() => (e.type === "character" ? onEditCharacter?.(e.id) : onEditLore?.(e.id))}
+                        className="text-[11px] px-2 py-0.5 rounded-full border transition-colors hover:brightness-125"
+                        style={{ color: e.color, borderColor: e.color + "59", backgroundColor: e.color + "1a" }}
+                        title={e.type === "character" ? "角色 · 点击查看 / 编辑" : "世界书 · 点击查看 / 编辑"}
+                      >
+                        {e.name}
+                      </button>
+                    ))}
+                  </div>
                 )}
                 <MarkdownViewer content={displayContent} projectId={projectId} isStreaming={isGenerating} />
               </div>
