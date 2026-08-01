@@ -25,6 +25,8 @@ export interface ProjectData {
     lexicalFeatures?: Record<string, number>;
     avgSentenceLength?: number;
   } | null;
+  /** 探讨模式布置配置（结构化保存，含 plotStructure/forceOriginalNames/autoGenerateStoryline 等） */
+  buildConfig?: Record<string, unknown> | null;
 }
 
 export interface CharacterData {

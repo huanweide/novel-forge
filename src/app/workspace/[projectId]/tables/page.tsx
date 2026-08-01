@@ -113,6 +113,7 @@ export default function TablesPage() {
         body: JSON.stringify({ projectId, chapterText }),
       });
       const d = await res.json();
+      d.at = new Date().toLocaleTimeString("zh-CN");
       setFillResult(d);
       if (res.ok && d.ok) { toastSuccess(`自动填表完成：应用 ${d.applied} 条`); load(); }
       else toastError(d.error || "填表失败");
@@ -172,8 +173,14 @@ export default function TablesPage() {
             />
             <button onClick={runFill} disabled={busy} className="btn-primary text-xs py-2 px-4 rounded-xl mt-2 disabled:cursor-not-allowed disabled:opacity-50">{busy ? "运行中…" : "运行自动填表"}</button>
             {fillResult && (
-              <div className={`mt-3 text-xs ${fillResult.ok ? "text-[var(--nv-success)]" : "text-[var(--nv-warning)]"}`}>
-                {fillResult.ok ? `操作 ${fillResult.operations} 条，应用 ${fillResult.applied} 条` : `⚠️ ${fillResult.error}`}
+              <div className={`mt-3 text-xs rounded-xl px-3 py-2 border ${fillResult.ok ? "border-[var(--nv-success)]/30 bg-[var(--nv-success)]/10 text-[var(--nv-success)]" : "border-[var(--nv-danger)]/40 bg-[var(--nv-danger)]/10 text-[var(--nv-danger)]"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{fillResult.ok ? `✓ 操作 ${fillResult.operations} 条，应用 ${fillResult.applied} 条` : `✗ 失败：${fillResult.error ?? "未知错误"}`}</span>
+                  {!fillResult.ok && (
+                    <button onClick={runFill} disabled={busy} className="shrink-0 rounded-lg bg-[var(--nv-danger)]/20 px-2.5 py-1 font-medium hover:bg-[var(--nv-danger)]/30 transition disabled:opacity-50">重试</button>
+                  )}
+                </div>
+                <div className="mt-1 opacity-70">执行时间：{fillResult.at}</div>
               </div>
             )}
           </div>
@@ -222,6 +229,9 @@ export default function TablesPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <h3 className="font-semibold">{t.name} <span className="text-xs text-[var(--nv-text-muted)]">（{t.key} · {t.category}）</span></h3>
+                      {t.key === "auto_facts" && (
+                        <span className="ml-2 rounded-md bg-[var(--nv-primary)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--nv-primary)] align-middle">🤖 写作自动维护</span>
+                      )}
                       <p className="text-xs text-[var(--nv-text-muted)]">{t.note || "—"} · {t.rows.length} 行</p>
                     </div>
                     <div className="flex gap-2">

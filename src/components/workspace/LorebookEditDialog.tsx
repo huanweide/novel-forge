@@ -117,13 +117,13 @@ export function LorebookEditDialog({
             <option value="custom">自定义</option>
           </select>
         </DialogField>
-        <DialogField label="注入深度（酒馆 worldbook depth 0-4 迁移）">
+        <DialogField label="记忆注入方式（常驻=始终在场 · 触发=关键词命中才出现）">
           <select className="input-glass w-full rounded px-3 py-2 text-sm" value={String(form.depth)} onChange={(e) => setForm({ ...form, depth: Number(e.target.value) })}>
-            <option value="0">0 · 强效注入正文前（用户指令下方，最强效）</option>
-            <option value="1">1 · 用户指令上方</option>
-            <option value="2">2 · 系统上下文（强制常驻，不依赖关键词）</option>
-            <option value="3">3 · 背景设定·关键词触发（默认）</option>
-            <option value="4">4 · 深层背景</option>
+            <option value="0">0 · 常驻·强效（正文前，优先级最高）</option>
+            <option value="1">1 · 常驻·指令上方</option>
+            <option value="2">2 · 常驻·系统上下文（始终在场）</option>
+            <option value="3">3 · 触发·背景设定（关键词命中才出现，默认）</option>
+            <option value="4">4 · 触发·深层背景</option>
           </select>
         </DialogField>
         <DialogField label="触发关键词（逗号分隔）">

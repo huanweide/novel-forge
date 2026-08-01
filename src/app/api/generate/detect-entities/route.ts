@@ -1,3 +1,4 @@
+// @deprecated: 实体检测已由 /api/entities/highlight 承接，前端无调用
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { createLLMClientFromSettings } from "@/core/llm/client";

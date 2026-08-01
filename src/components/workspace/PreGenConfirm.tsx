@@ -10,9 +10,10 @@ export interface ScheduledCard {
 }
 
 export function PreGenConfirm({
-  projectId, nodeId, authorNote, title, onAuthorNoteChange, onConfirm, onCancel,
+  projectId, nodeId, authorNote, title, onAuthorNoteChange, onConfirm, onCancel, presetCharacterIds,
 }: {
   projectId: string; nodeId?: string; authorNote: string; title?: string;
+  presetCharacterIds?: string[];
   onAuthorNoteChange: (v: string) => void;
   onConfirm: (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => void;
   onCancel: () => void;
@@ -45,7 +46,9 @@ export function PreGenConfirm({
       if (data.error) throw new Error(data.error);
       setCards(data.scheduledCards || []);
       setStoryInfo(data);
-      setSelected(new Set((data.scheduledCards || []).map((c: ScheduledCard) => c.id)));
+      const scheduledIds = (data.scheduledCards || []).map((c: ScheduledCard) => c.id);
+      const preset = (presetCharacterIds || []).filter((id) => scheduledIds.includes(id));
+      setSelected(new Set([...scheduledIds, ...preset]));
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : "加载失败");

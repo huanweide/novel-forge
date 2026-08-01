@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.43.0";
+export const LATEST_VERSION = "v0.44.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔑 API 配置体验重做：新增 /api/settings/models 自动检索模型，设置页模型框改为可下拉选择，保存 API 后自动 test 连接（DeepSeek V4 flash 实测通过）",
-  "💬 探讨模式 UI 升级：顶部 11 步进度条 + 「AI 创作顾问正在协助你构建小说世界」状态条 + bot/user 头像 + 气泡/卡片/采纳入场动画，确认感明确",
-  "🎛️ 布置区域 UI 升级：实时预览卡 + 四分区 StepGroup（基础信息/类型与受众/风格参数/高级设定）+ 流派标签搜索过滤 + 颜色收敛到虚空玻璃令牌",
-  "✅ tsc 零错误；修复 globals.css 误加的 :root 提前闭合括号，解决 Turbopack CSS 解析 500；浏览器真实走查 + DeepSeek 真实对话回复通过",
+  "🎯 六大新功能落地：创意工坊一键载入示范预设 / 布置结构化保存与重编辑 / 记忆衰减手动触发 / 抽卡角色生成前确认打通 / 项目配置中心 / 自动填表可视化与重试",
+  "🔁 regex 预设三处统一应用（write/refine/continue 一致）+ lorebook 预设重复应用去重（按名称更新而非叠加）",
+  "🧭 章节大纲双入口明确区分：Flash 章纲（轻量预览）与抽卡分镜（正式 Outline·带角色）+ 世界书注入深度文案改为「常驻记忆/触发记忆」",
+  "🛡️ 角色卡 adopt 字段映射加固（补全对话风格/隐藏动机/人物关系，复杂设定不丢字段）+ 10 个孤儿 API 路由标注 @deprecated（不删）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.0",
+    date: "2026-07-31",
+    title: "六大功能补齐 + 六项体验优化（本地化闭环）",
+    sections: [
+      {
+        label: "六大新功能（F1-F6）",
+        items: [
+          "F1 创意工坊首启 seed + 载入示范预设按钮：一键拉取内置 regex/lorebook/api_config/style 示范预设（curl 实测 POST 返回 created:3 total:15）",
+          "F2 布置结构化保存 + workspace 重编辑：14 个 BuildConfig 字段入库，项目设定面板可查看/修改并回写 globalPrompt",
+          "F3 记忆衰减手动触发：preview→执行，旧楼层记忆按遗忘曲线衰减，透明可控",
+          "F4 抽卡角色生成前确认打通：抽卡角色锁进章节 activeCharacters + 剧情线预设，确认页自动预选不重复选",
+          "F5 项目配置中心：已应用预设追踪/移除、正则后处理可视编辑、分项目 LLM 覆盖（全局留空即继承）",
+          "F6 自动填表可视化与重试：tables 页填表结果绿/红状态 + 重试按钮 + auto_facts 徽标，写作 SSE 失败前端提示",
+        ],
+      },
+      {
+        label: "六项体验优化（U1-U6）",
+        items: [
+          "U1 regex 预设三处统一：write/refine/continue 一致消费 postProcessingRules",
+          "U2 lorebook 预设重复应用去重：按 projectId+category+title 查重，重复套用更新而非叠加（curl 实测第二次返回 updated:true）",
+          "U3 章节大纲双入口区分：Flash 章纲（轻量预览 ghost）vs 抽卡分镜（正式 outline primary·带角色）",
+          "U4 世界书注入深度文案友好化：0-2 常驻记忆 / 3-4 触发记忆（去除酒馆迁移黑话）",
+          "U5 孤儿 API 处置：10 个无前端调用的死路由标注 @deprecated（不删代码）",
+          "U6 角色卡 adopt 字段加固：补全 dialogueStyle/hiddenMotives/relationships，复杂设定不丢字段；词条按 worldview→常驻/其他→触发区分",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.43.0",
     date: "2026-07-29",

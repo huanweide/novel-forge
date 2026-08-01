@@ -300,6 +300,31 @@ export async function getEffectiveConfig(overrides?: Partial<LLMConfig>): Promis
 }
 
 /**
+ * 把项目级 llmConfig（Json，可能含 model/baseUrl/apiKey/temperature/topP）
+ * 映射成 LLMConfig 覆盖项。仅当字段非空才覆盖，确保"项目级留空=继承全局"。
+ *
+ * 用于 F5 项目配置中心的「per-project LLM 覆盖」：用户在配置面板为某项目指定
+ * 不同模型/密钥后，该项目的生成（写/润/续/总结）即优先使用项目级配置。
+ */
+export function buildProjectOverrides(
+  projectLlmConfig?: Record<string, unknown> | null,
+): Partial<LLMConfig> {
+  if (!projectLlmConfig || typeof projectLlmConfig !== "object") return {};
+  const o: Partial<LLMConfig> = {};
+  const model = projectLlmConfig.model;
+  if (typeof model === "string" && model.trim()) {
+    o.architectModel = o.writerModel = o.reviewerModel = o.summarizeModel = o.extractorModel = model.trim();
+  }
+  const baseURL = projectLlmConfig.baseUrl;
+  if (typeof baseURL === "string" && baseURL.trim()) o.baseURL = baseURL.trim();
+  const apiKey = projectLlmConfig.apiKey;
+  if (typeof apiKey === "string" && apiKey.trim()) o.apiKey = apiKey.trim();
+  if (typeof projectLlmConfig.temperature === "number") o.defaultTemperature = projectLlmConfig.temperature;
+  if (typeof projectLlmConfig.topP === "number") o.defaultTopP = projectLlmConfig.topP;
+  return o;
+}
+
+/**
  * 从数据库设置创建 LLM 客户端（非流式调用用）
  */
 export async function createLLMClientFromSettings(overrides?: Partial<LLMConfig>): Promise<LLMClient> {

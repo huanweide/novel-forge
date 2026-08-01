@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
+import { applyRegexRules } from "@/core/post-process/regex";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { collectForbiddenPatterns } from "@/lib/forbidden-checker";
 import { getTemplate } from "@/core/templates";
@@ -145,11 +146,14 @@ ${lastParagraphs}
     });
     if (contRecallBlock) writingInstruction += contRecallBlock;
 
-    // ── 调度器 ──
-    const orchestrator = await AgentOrchestrator.fromSettings({
-      defaultTemperature: temperature,
-      defaultTopP: topP,
-    });
+    // ── 调度器（支持项目级 LLM 覆盖）──
+    const projRec = await prisma.project.findUnique({ where: { id: projectId }, select: { llmConfig: true, postProcessingRules: true } });
+    const projLlm = projRec?.llmConfig;
+    const projectRules = projRec?.postProcessingRules;
+    const orchestrator = await AgentOrchestrator.fromSettings(
+      { defaultTemperature: temperature, defaultTopP: topP },
+      projLlm as Record<string, unknown> | null,
+    );
 
     // ── SSE 流 ──
     const encoder = new TextEncoder();
@@ -192,6 +196,15 @@ ${lastParagraphs}
               send({ type: "error", content: chunk.content });
               controller.close();
               return;
+            }
+          }
+
+          // ── 正则后处理（U1：与 write 统一消费 postProcessingRules）──
+          if (Array.isArray(projectRules) && projectRules.length > 0) {
+            const cleaned = applyRegexRules(fullContent, projectRules);
+            if (cleaned !== fullContent) {
+              send({ type: "postprocess_regex", content: `正则后处理已应用 ${projectRules.length} 条规则` });
+              fullContent = cleaned;
             }
           }
 

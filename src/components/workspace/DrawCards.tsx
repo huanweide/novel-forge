@@ -62,7 +62,7 @@ export function DrawCards({
   projectId: string; nodeId: string; authorNote: string;
   chapterOutlinePrompt: string; nodeTitle: string;
   storylineId?: string;
-  onSelect: (card: DrawCard, storylineId?: string) => void; onClose: () => void;
+  onSelect: (card: DrawCard, storylineId?: string, characterIds?: string[]) => void; onClose: () => void;
 }) {
   const [cards, setCards] = useState<DrawCard[]>([]);
   const [charDetails, setCharDetails] = useState<CharacterDetail[]>([]);
@@ -119,7 +119,11 @@ export function DrawCards({
 
   const handleSelect = () => {
     if (selectedIndex === null || !cards[selectedIndex]) return;
-    onSelect(cards[selectedIndex], storylineId);
+    const card = cards[selectedIndex];
+    const characterIds = card.characters
+      .map((n) => charDetails.find((c) => c.name === n)?.id)
+      .filter((id): id is string => Boolean(id));
+    onSelect(card, storylineId, characterIds);
   };
 
   const roleLabel: Record<string, string> = {

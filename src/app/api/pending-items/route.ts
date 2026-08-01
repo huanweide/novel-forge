@@ -1,3 +1,4 @@
+// @deprecated: PendingItem 模型仍被写库，但此 HTTP 端点前端无调用
 /**
  * GET/POST /api/pending-items
  *

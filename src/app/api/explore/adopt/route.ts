@@ -96,6 +96,16 @@ export async function POST(req: NextRequest) {
           aliases: Array.isArray(structured.aliases)
             ? structured.aliases
             : [],
+          dialogueStyle:
+            structured.dialogueStyle && typeof structured.dialogueStyle === "object"
+              ? structured.dialogueStyle
+              : {},
+          hiddenMotives: Array.isArray(structured.hiddenMotives)
+            ? structured.hiddenMotives
+            : [],
+          relationships: Array.isArray(structured.relationships)
+            ? structured.relationships
+            : [],
           tags: ["📥探讨采纳"],
           currentStatus: "alive",
         },
@@ -118,6 +128,8 @@ export async function POST(req: NextRequest) {
         structured = await aiParseToLore(client, model, card, config);
       }
 
+      const isWorldviewCat =
+        structured.category === "worldview" || stepToCategory(card.step) === "worldview";
       const entry = await prisma.lorebookEntry.create({
         data: {
           projectId: pid,
@@ -125,6 +137,8 @@ export async function POST(req: NextRequest) {
           category: structured.category || stepToCategory(card.step),
           keys: Array.isArray(structured.keys) ? structured.keys : [],
           content: structured.content || card.content.slice(0, 2500),
+          // worldview 类设定自动常驻注入（depth=2），其余世界书条目走关键词触发（depth=3）
+          depth: isWorldviewCat ? 2 : 3,
           insertionOrder: 50,
           enabled: true,
         },
@@ -176,7 +190,10 @@ async function aiParseToCharacter(
   "background": "2-4句话角色背景",
   "abilities": ["能力1", "能力2"],
   "personality": {"dominant": "主导性格", "drive": "驱动力"},
-  "appearance": {"hair": "", "eyes": "", "height": "", "build": ""}
+  "appearance": {"hair": "", "eyes": "", "height": "", "build": ""},
+  "dialogueStyle": "角色独有说话方式与口头禅",
+  "hiddenMotives": ["隐藏动机1", "隐藏动机2"],
+  "relationships": [{"name": "关联角色名", "type": "师徒/敌对/恋人", "desc": "关系描述"}]
 }
 只输出JSON。`;
 
@@ -214,7 +231,7 @@ ${config?.genre ? `小说类型：${config.genre}` : ""}
 【输出JSON格式】
 {
   "title": "优化后的词条标题（≤20字）",
-  "category": "worldview|faction|magic_system|geography|economy|plot|custom",
+  "category": "worldview|lorebook|faction|magic_system|geography|economy|plot|custom",
   "content": "整理后的设定内容（200-500字，保留所有关键信息）",
   "keys": ["触发词1", "触发词2", "触发词3", "触发词4", "触发词5"]
 }

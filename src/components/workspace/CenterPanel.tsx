@@ -86,14 +86,14 @@ export function CenterPanel({
                       ) : (
                         <>
                           <input value={chapterOutlinePrompt} onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
-                            placeholder="Flash提示词（留空自动生成）"
+                            placeholder="Flash 轻量预览提示词（留空自动生成）"
                             className="input-glass w-32 rounded px-1.5 py-0.5 text-[10px] focus:border-[var(--nv-primary)]" />
                           <button onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
-                            className="btn-primary text-[10px] px-1.5 py-0.5 rounded transition-colors"
-                            title="用 V4 Flash 为本章生成章纲"><Icon name="sparkles" size={10} /> 生成</button>
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors"
+                            title="Flash 轻量预览——用 V4 Flash 快速生成本章草稿章纲（不绑定角色，可随时重生成）"><Icon name="sparkles" size={10} /> Flash 章纲</button>
                           <button onClick={onDrawChapterOutline}
-                            className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--nv-creative)]/40 text-[var(--nv-creative)] hover:bg-[var(--nv-creative-soft)] transition-colors"
-                            title="抽卡模式——并行生成3-5条不同路线"><Icon name="grid" size={13} className="mr-1" />抽卡</button>
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--nv-primary)]/50 text-[var(--nv-primary)] hover:bg-[var(--nv-primary-soft)] transition-colors font-medium"
+                            title="正式 Outline——并行抽 3-5 条不同路线并自动选角，采用后写入带角色/剧情的正式章纲"><Icon name="grid" size={13} className="mr-1" />抽卡分镜</button>
                         </>
                       )}
                     </div>

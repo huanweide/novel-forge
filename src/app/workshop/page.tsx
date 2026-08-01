@@ -122,6 +122,18 @@ export default function Workshop() {
     } finally { setBusy(false); }
   };
 
+  const seedBuiltins = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/seed/presets`, { method: "POST" });
+      const d = await res.json();
+      if (res.ok) {
+        toastCreated(`示范预设 ${d.created} 条`, "创意工坊");
+        load();
+      } else toastError(d.error || "载入失败");
+    } finally { setBusy(false); }
+  };
+
   const uploadPreset = async () => {
     let content: any;
     try { content = JSON.parse(upload.content); } catch { toastError("content 必须是合法 JSON"); return; }
@@ -171,6 +183,13 @@ export default function Workshop() {
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            <button
+              onClick={seedBuiltins}
+              disabled={busy}
+              className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-medium"
+            >
+              <Icon name="download" size={14} /> 载入示范预设
+            </button>
             <button
               onClick={() => { setUpload((u) => ({ ...u, content: PLACEHOLDER[u.type] })); setShowUpload(true); }}
               className="btn-primary text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 font-medium"

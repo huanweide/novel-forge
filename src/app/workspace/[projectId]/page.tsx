@@ -20,6 +20,9 @@ import { OutlineDialog } from "@/components/workspace/OutlineDialog";
 import { AutomationSettingsDialog } from "@/components/workspace/AutomationSettingsDialog";
 import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
 import { DrawCards } from "@/components/workspace/DrawCards";
+import { BuildConfigDialog } from "@/components/workspace/BuildConfigDialog";
+import { MemoryDecayDialog } from "@/components/workspace/MemoryDecayDialog";
+import { ProjectConfigPanel } from "@/components/workspace/ProjectConfigPanel";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import type { StyleTemplate } from "@/core/templates";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
@@ -108,6 +111,9 @@ export default function WorkspacePage() {
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
   const [showAutomationSettings, setShowAutomationSettings] = useState(false);
+  const [showBuildConfig, setShowBuildConfig] = useState(false);
+  const [showMemoryDecay, setShowMemoryDecay] = useState(false);
+  const [showProjectConfig, setShowProjectConfig] = useState(false);
   const [extractionData, setExtractionData] = useState<any>(null);
   const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -195,21 +201,22 @@ export default function WorkspacePage() {
     setShowDrawCards(true);
   };
 
-  const handleDrawSelect = async (card: { outline: string; characters: string[]; coreConflict: string; mood: string; cardLabel?: string }, storylineId?: string) => {
+  const handleDrawSelect = async (card: { outline: string; characters: string[]; coreConflict: string; mood: string; cardLabel?: string }, storylineId?: string, characterIds?: string[]) => {
     if (!selectedNode) return;
     setShowDrawCards(false);
     try {
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ outline: card.outline }),
+        body: JSON.stringify({ outline: card.outline, activeCharacters: characterIds || [] }),
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
         toastError(d.error || "章纲保存失败，请重试");
         return;
       }
-      setSelectedNode({ ...selectedNode, outline: card.outline });
+      setSelectedNode({ ...selectedNode, outline: card.outline, activeCharacters: characterIds || [] } as any);
+      setDrawSelectedCharIds(characterIds || []);
       // 色子（抽卡）采用结果持久化关联到活跃剧情线：写入 chapterBindings（标记 preset），
       // 使生成前剧情规划(plan-chapter)能读到「用户用色子选定的走向」作为剧情预设。
       if (storylineId) {
@@ -219,6 +226,7 @@ export default function WorkspacePage() {
           element: "preset",
           chapterId: selectedNode.id,
           note: `🎴${card.cardLabel || "抽卡路线"}｜${card.coreConflict || ""}｜🎭${card.mood || ""}`,
+          characterIds: characterIds || [],
         };
         // 同 node 重采用时更新而非堆叠：先移除旧 preset，再追加
         const next = [...existing.filter((e) => !(e?.element === "preset" && e?.chapterId === selectedNode.id)), entry];
@@ -243,6 +251,7 @@ export default function WorkspacePage() {
   };
 
   // ── 生成前确认 ────────────────────────────
+  const [drawSelectedCharIds, setDrawSelectedCharIds] = useState<string[]>([]);
   const [preGenOpen, setPreGenOpen] = useState(false);
   const [preGenMode, setPreGenMode] = useState<"write" | "refine" | "continue" | "outline">("write");
   const [outlineGenConfig, setOutlineGenConfig] = useState<{ chapterCount: number; customPrompt: string; useFlash: boolean } | null>(null);
@@ -453,8 +462,10 @@ export default function WorkspacePage() {
             else if (event.type === "babylore_fill") {
               if (event.ok) {
                 toastSuccess(`宝宝流自动填表完成：本回抽取 ${event.operations ?? 0} 条操作，已写入 ${event.applied ?? 0} 行结构化表格。`);
+              } else if (event.skipped) {
+                // 主动跳过（频率未到 / 最近章）：避免刷屏，不弹提示
               } else if (event.error) {
-                toastInfo(`宝宝流自动填表跳过：${event.error}`);
+                toastError(`宝宝流自动填表失败：${event.error}。可前往「结构化表格」页手动重试。`);
               }
             }
             else if (event.type === "babylore_recall") {
@@ -657,6 +668,15 @@ export default function WorkspacePage() {
         <button onClick={() => router.push("/workshop")} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
           创意工坊
         </button>
+        <button onClick={() => setShowBuildConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+          <Icon name="settings" size={13} /> 项目设定
+        </button>
+        <button onClick={() => setShowMemoryDecay(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+          <Icon name="hourglass" size={13} /> 记忆衰减
+        </button>
+        <button onClick={() => setShowProjectConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+          <Icon name="settings" size={13} /> 项目配置
+        </button>
       </div>
 
       <div className="flex flex-1 overflow-hidden" onMouseUp={() => {
@@ -821,6 +841,28 @@ export default function WorkspacePage() {
         <AutomationSettingsDialog projectId={project.id} projectName={project.name} onClose={() => setShowAutomationSettings(false)} />
       )}
 
+      {showBuildConfig && project && (
+        <BuildConfigDialog
+          projectId={project.id}
+          buildConfig={project.buildConfig as any}
+          onSaved={(cfg) => setProject((p) => (p ? { ...p, buildConfig: cfg as any } : p))}
+          onClose={() => setShowBuildConfig(false)}
+        />
+      )}
+
+      {showMemoryDecay && project && (
+        <MemoryDecayDialog projectId={project.id} projectName={project.name} onClose={() => setShowMemoryDecay(false)} />
+      )}
+
+      {showProjectConfig && project && (
+        <ProjectConfigPanel
+          projectId={project.id}
+          project={project}
+          onSaved={(patch) => setProject((p) => (p ? { ...p, ...patch } : p))}
+          onClose={() => setShowProjectConfig(false)}
+        />
+      )}
+
       {/* 抽卡模式——章纲路线选择 */}
       {showDrawCards && selectedNode && (
         <DrawCards projectId={project.id} nodeId={selectedNode.id}
@@ -832,7 +874,7 @@ export default function WorkspacePage() {
 
       {/* 生成前角色确认弹窗 */}
       {preGenOpen && (
-        <PreGenConfirm projectId={project.id} nodeId={preGenMode === "outline" ? undefined : selectedNode?.id}
+        <PreGenConfirm projectId={project.id} nodeId={preGenMode === "outline" ? undefined : selectedNode?.id} presetCharacterIds={drawSelectedCharIds}
           authorNote={authorNote}
           title={preGenMode === "write" ? "生成前确认——角色调度" : preGenMode === "refine" ? "微调前确认——角色调度" : preGenMode === "continue" ? "续写前确认——角色调度" : "大纲生成前确认——角色调度"}
           onAuthorNoteChange={handleAuthorNoteChange}

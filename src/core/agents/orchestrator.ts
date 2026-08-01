@@ -30,7 +30,7 @@ import type {
 } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
 import type { LLMConfig } from "@/core/types";
-import { getDefaultClient, getDefaultLLMConfig, getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { getDefaultClient, getDefaultLLMConfig, getEffectiveConfig, createLLMClient, buildProjectOverrides } from "@/core/llm/client";
 import { assemblePrompt } from "@/core/assembly/engine";
 import { matchLoreEntries } from "@/core/assembly/trigger";
 import { safeJoin } from "@/lib/utils";
@@ -116,8 +116,13 @@ export class AgentOrchestrator {
    * 从全局设置创建调度器——模型名、API Key、Base URL 全部从 AppSettings 表读取。
    * 这是推荐的初始化方式，用户在设置页改了模型会即时生效。
    */
-  static async fromSettings(overrides?: Partial<LLMConfig>): Promise<AgentOrchestrator> {
-    const config = await getEffectiveConfig(overrides);
+  static async fromSettings(
+    overrides?: Partial<LLMConfig>,
+    /** F5 项目配置中心：项目级 llmConfig 覆盖（Json），非空字段覆盖全局设置 */
+    projectLlmConfig?: Record<string, unknown> | null,
+  ): Promise<AgentOrchestrator> {
+    const merged: Partial<LLMConfig> = { ...overrides, ...buildProjectOverrides(projectLlmConfig) };
+    const config = await getEffectiveConfig(merged);
     const client = createLLMClient(config);
     return new AgentOrchestrator(client, config);
   }

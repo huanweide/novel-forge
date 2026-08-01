@@ -1,3 +1,4 @@
+// @deprecated: 世界书摘要子功能无 UI 调用，前端无引用
 /**
  * POST /api/lorebook/summarize
  *

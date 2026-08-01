@@ -43,8 +43,9 @@ export async function POST(request: Request) {
         })
       : [];
 
-    // AI 摘要压缩
-    const orchestrator = await AgentOrchestrator.fromSettings();
+    // AI 摘要压缩（支持项目级 LLM 覆盖）
+    const projLlm = (await prisma.project.findUnique({ where: { id: projectId }, select: { llmConfig: true } }))?.llmConfig;
+    const orchestrator = await AgentOrchestrator.fromSettings(undefined, projLlm as Record<string, unknown> | null);
     const { summary, keyEvents, characterStates, closingSnapshot, characterImpulses, eventImportances } = await orchestrator.summarizeChapter(
       chapter.content,
       chapter.title,

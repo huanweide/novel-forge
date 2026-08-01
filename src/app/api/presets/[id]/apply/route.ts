@@ -70,21 +70,32 @@ export async function POST(
         created.push({ kind: "style", id: sc.id, name: "文风卡" });
       }
     } else if (preset.type === "worldview" || preset.type === "story_progression") {
+      // U2：按 projectId+category+title 去重，重复套用则更新覆盖内容而非叠加重复词条
       const entries: any[] = content.entries || [];
       const cat = preset.type === "worldview" ? "worldview" : "story_progression";
       for (const e of entries) {
-        const le = await prisma.lorebookEntry.create({
-          data: {
-            projectId,
-            title: e.title,
-            category: cat,
-            content: e.content || "",
-            keys: e.keys || [],
-            depth: e.depth ?? 3,
-            enabled: true,
-          } as any,
-        });
-        created.push({ kind: "lorebook", id: le.id, name: e.title });
+        const title = e.title || "未命名词条";
+        const existing = await prisma.lorebookEntry.findFirst({ where: { projectId, category: cat, title } });
+        if (existing) {
+          const le = await prisma.lorebookEntry.update({
+            where: { id: existing.id },
+            data: { content: e.content || "", keys: e.keys || [], depth: e.depth ?? 3, enabled: true } as any,
+          });
+          created.push({ kind: "lorebook", id: le.id, name: title, updated: true });
+        } else {
+          const le = await prisma.lorebookEntry.create({
+            data: {
+              projectId,
+              title,
+              category: cat,
+              content: e.content || "",
+              keys: e.keys || [],
+              depth: e.depth ?? 3,
+              enabled: true,
+            } as any,
+          });
+          created.push({ kind: "lorebook", id: le.id, name: title });
+        }
       }
     } else if (preset.type === "character") {
       const c = content;
@@ -127,20 +138,31 @@ export async function POST(
       created.push({ kind: "regex", name: `正则规则×${incoming.filter((r) => r.name && r.pattern).length}` });
     } else if (preset.type === "lorebook") {
       // 世界书预设：与 worldview/story_progression 共用 LorebookEntry，category=lorebook
+      // U2：按 projectId+category+title 去重，重复套用则更新覆盖内容而非叠加重复词条
       const entries: any[] = content.entries || [];
       for (const e of entries) {
-        const le = await prisma.lorebookEntry.create({
-          data: {
-            projectId,
-            title: e.title,
-            category: "lorebook",
-            content: e.content || "",
-            keys: e.keys || [],
-            depth: e.depth ?? 3,
-            enabled: true,
-          } as any,
-        });
-        created.push({ kind: "lorebook", id: le.id, name: e.title });
+        const title = e.title || "未命名词条";
+        const existing = await prisma.lorebookEntry.findFirst({ where: { projectId, category: "lorebook", title } });
+        if (existing) {
+          const le = await prisma.lorebookEntry.update({
+            where: { id: existing.id },
+            data: { content: e.content || "", keys: e.keys || [], depth: e.depth ?? 3, enabled: true } as any,
+          });
+          created.push({ kind: "lorebook", id: le.id, name: title, updated: true });
+        } else {
+          const le = await prisma.lorebookEntry.create({
+            data: {
+              projectId,
+              title,
+              category: "lorebook",
+              content: e.content || "",
+              keys: e.keys || [],
+              depth: e.depth ?? 3,
+              enabled: true,
+            } as any,
+          });
+          created.push({ kind: "lorebook", id: le.id, name: title });
+        }
       }
     } else if (preset.type === "api_config") {
       // API 参数预设：合并到项目 llmConfig（覆盖温度/topP/模型模板等）
@@ -152,6 +174,36 @@ export async function POST(
         data: { llmConfig: merged as any },
       });
       created.push({ kind: "api_config", name: `API参数:${(content.model || content.temperature) ?? "覆盖"}` });
+    }
+
+    // —— F5：记录已应用预设到 project.appliedPresets（配置中心追踪/移除用）——
+    try {
+      const projectRec = await prisma.project.findUnique({ where: { id: projectId } });
+      const list: any[] = Array.isArray((projectRec as any)?.appliedPresets)
+        ? ((projectRec as any).appliedPresets as any[])
+        : [];
+      const filtered = list.filter((p: any) => p.presetId !== id);
+      const rec: any = {
+        presetId: id,
+        type: preset.type,
+        title: preset.title,
+        appliedAt: new Date().toISOString(),
+      };
+      if (preset.type === "regex") {
+        rec.ruleNames = (Array.isArray(content.rules) ? content.rules : [])
+          .filter((r: any) => r.name && r.pattern)
+          .map((r: any) => r.name);
+      }
+      if (preset.type === "api_config") {
+        rec.configKeys = Object.keys(content || {});
+      }
+      filtered.push(rec);
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { appliedPresets: filtered as any },
+      });
+    } catch (e) {
+      console.error("[apply] 记录 appliedPresets 失败:", e instanceof Error ? e.message : String(e));
     }
 
     // 应用预设后刷新全局提示词，使文风/世界观/角色等立即对生成生效

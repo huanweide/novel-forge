@@ -125,11 +125,12 @@ export async function POST(request: Request) {
       // 规划失败不阻断正文生成（规划是锦上添花，非交付前置）
     }
 
-    // ── 8. 调度器 ──
-    const orchestrator = await AgentOrchestrator.fromSettings({
-      defaultTemperature: effectiveTemperature,
-      defaultTopP: effectiveTopP,
-    });
+    // ── 8. 调度器（支持项目级 LLM 覆盖）──
+    const projLlm = (await prisma.project.findUnique({ where: { id: projectId }, select: { llmConfig: true } }))?.llmConfig;
+    const orchestrator = await AgentOrchestrator.fromSettings(
+      { defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP },
+      projLlm as Record<string, unknown> | null,
+    );
 
     // ── 9. SSE 流 ──
     const encoder = new TextEncoder();

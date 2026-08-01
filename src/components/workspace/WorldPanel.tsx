@@ -26,14 +26,14 @@ const WORLD_MODULES = [
 
 type ModuleKey = (typeof WORLD_MODULES)[number]["key"];
 
-// ─── 世界书注入深度标签（酒馆 worldbook depth 0-4 迁移）───
+// ─── 世界书记忆注入方式标签（常驻记忆 / 触发记忆）───
 
 const DEPTH_LABEL: Record<number, string> = {
-  0: "D0·正文前强效",
-  1: "D1·指令上方",
-  2: "D2·系统上下文",
-  3: "D3·关键词触发",
-  4: "D4·深层背景",
+  0: "常驻·强效",
+  1: "常驻·指令上",
+  2: "常驻·系统",
+  3: "触发·默认",
+  4: "触发·深层",
 };
 
 // ─── category 中文 → DB key 映射 ────────────────────────
@@ -294,17 +294,17 @@ export function WorldPanel({
               )
             )}
             <div className="mb-2 mt-1">
-              <label className="mb-0.5 block text-[10px] text-[var(--nv-text-muted)]">注入深度（酒馆 depth 迁移）</label>
+              <label className="mb-0.5 block text-[10px] text-[var(--nv-text-muted)]">记忆注入方式（常驻=始终在场 · 触发=关键词命中才出现）</label>
               <select
                 value={createForm["depth"] || "3"}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, depth: e.target.value }))}
                 className="input-glass w-full rounded px-2 py-1 text-xs"
               >
-                <option value="0">0 · 强效注入正文前（用户指令下方）</option>
-                <option value="1">1 · 用户指令上方</option>
-                <option value="2">2 · 系统上下文（常驻）</option>
-                <option value="3">3 · 背景设定·关键词触发（默认）</option>
-                <option value="4">4 · 深层背景</option>
+                <option value="0">0 · 常驻·强效（正文前，优先级最高）</option>
+                <option value="1">1 · 常驻·指令上方</option>
+                <option value="2">2 · 常驻·系统上下文（始终在场）</option>
+                <option value="3">3 · 触发·背景设定（关键词命中才出现，默认）</option>
+                <option value="4">4 · 触发·深层背景</option>
               </select>
             </div>
             <div className="mt-1 flex gap-2">

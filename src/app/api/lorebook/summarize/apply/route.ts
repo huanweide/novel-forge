@@ -1,3 +1,4 @@
+// @deprecated: 配套 summarize 基类同为死代码，前端无引用
 /**
  * POST /api/lorebook/summarize/apply
  *

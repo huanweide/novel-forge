@@ -1,3 +1,4 @@
+// @deprecated: 导入已由 /api/import/* 承担，前端无调用
 /**
  * POST /api/lorebook/import
  *

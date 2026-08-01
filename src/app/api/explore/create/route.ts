@@ -14,9 +14,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
-import type { BuildConfig, AdoptedItem, ExploreStep } from "@/core/explore/types";
+import type { BuildConfig, AdoptedItem } from "@/core/explore/types";
 import { STEP_LABELS } from "@/core/explore/types";
 import { stepToCategory, extractKeysFromText } from "@/core/explore/utils";
+import { buildGlobalPromptFromExplore } from "@/core/explore/build-prompt";
 import { jsonError } from "@/lib/api-error";
 
 export const maxDuration = 120;
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
         synopsis: extractSynopsis(adopted),
         genre,
         globalPrompt,
+        buildConfig: config as any,
         authorNote: authorNote || `探讨模式创建\n${config.direction?.slice(0, 300) || ""}`,
         toneKeywords: config.stylePreference ? [config.stylePreference] : [],
       },
@@ -127,64 +129,6 @@ export async function POST(req: NextRequest) {
 }
 
 // ─── 辅助函数 ────────────────────────────────────────────
-
-function buildGlobalPromptFromExplore(
-  config: BuildConfig,
-  adopted: AdoptedItem[],
-): string {
-  const parts: string[] = [];
-
-  parts.push(`## 基本信息`);
-  if (config.novelName) parts.push(`- 书名：${config.novelName}`);
-  if (config.genre) parts.push(`- 类型：${config.genre}`);
-  if (config.audience) parts.push(`- 受众：${config.audience}`);
-  if (config.wordCount) parts.push(`- 字数：${config.wordCount}`);
-
-  if (config.styleTags && config.styleTags.length > 0) {
-    parts.push(`\n## 流派标签`);
-    parts.push(config.styleTags.join("、"));
-  }
-
-  if (config.coreConflict) {
-    parts.push(`\n## 核心冲突`);
-    parts.push(config.coreConflict);
-  }
-
-  if (config.powerSystem) {
-    parts.push(`\n## 力量体系`);
-    parts.push(config.powerSystem);
-  }
-
-  if (config.goldenFinger) {
-    parts.push(`\n## 金手指`);
-    parts.push(config.goldenFinger);
-  }
-
-  if (config.stylePreference) {
-    parts.push(`\n## 风格偏好`);
-    parts.push(config.stylePreference);
-  }
-
-  // 按步骤整理已采纳内容
-  const stepOrder: ExploreStep[] = [
-    "opening", "worldview", "protagonist", "golden_finger",
-    "core_conflict", "factions", "power_system", "currency",
-    "map", "plot_thread", "free_talk",
-  ];
-
-  for (const step of stepOrder) {
-    const stepItems = adopted.filter((a) => a.step === step);
-    if (stepItems.length === 0) continue;
-
-    parts.push(`\n## ${STEP_LABELS[step]}`);
-    for (const item of stepItems) {
-      parts.push(`### ${item.title}`);
-      parts.push(item.content.slice(0, 600));
-    }
-  }
-
-  return parts.join("\n");
-}
 
 function extractSynopsis(adopted: AdoptedItem[]): string {
   const opening = adopted.find((a) => a.step === "opening");

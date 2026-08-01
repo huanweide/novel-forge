@@ -1,3 +1,4 @@
+// @deprecated: 已被 /api/characters/expand 取代，前端无调用
 /**
  * POST /api/lorebook/expand
  *

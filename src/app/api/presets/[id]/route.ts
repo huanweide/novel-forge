@@ -1,3 +1,4 @@
+// @deprecated: 基项 GET/PUT/DELETE 当前无前端直接调用，保留以备脚本/SDK，集合与子动作在用
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";

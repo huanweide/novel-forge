@@ -50,6 +50,7 @@ export async function PATCH(
         authorNote: body.authorNote,
         globalPrompt: body.globalPrompt,
         llmConfig: body.llmConfig,
+        postProcessingRules: body.postProcessingRules,
       },
     });
     return NextResponse.json(updated);

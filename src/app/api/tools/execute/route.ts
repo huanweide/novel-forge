@@ -1,3 +1,4 @@
+// @deprecated: 无对应 UI 组件，前端无调用
 /**
  * POST /api/tools/execute
  *

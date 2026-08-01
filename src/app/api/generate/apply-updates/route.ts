@@ -1,3 +1,4 @@
+// @deprecated: 已被 /api/agent/apply-extraction 取代，前端无调用
 /**
  * POST /api/generate/apply-updates
  *

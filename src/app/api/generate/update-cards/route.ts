@@ -1,3 +1,4 @@
+// @deprecated: 未被接线，疑似被 /api/characters/expand 取代，前端无调用
 /**
  * POST /api/generate/update-cards
  * 章节更新系统 —— AI 比对新内容与现有卡面，生成差异更新建议。
