@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.3";
+export const LATEST_VERSION = "v0.44.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧱 巨型组件拆分启动：CharacterList 883→504 行，拆为 6 个内聚子组件（筛选/工具栏/分类面板/扩展弹窗/角色卡片/分组列表）",
-  "🔒 父组件保留全部状态/handler，仅以子组件调用替换内联 JSX，行为 100% 不变（tsc 零错误）",
-  "♿ 焦点陷阱随扩展结果弹窗移交 ExpandResultModal，键盘可达性不受影响",
+  "🧱 巨型组件拆分续：WorldPanel 375→137 行，拆为 4 子组件 + 1 数据模块（板块选择/编辑器/条目卡片/列表 + 常量外置）",
+  "🔒 父保留全部状态/handler（handleCreate/handleFieldChange/deleteEntry）与派生计算，行为 100% 不变（tsc 零错误）",
+  "📦 常量 WORLD_MODULES/DEPTH_LABEL 等外置 worldPanelData.ts，全局核查无别处依赖破坏",
   "🧹 纯重构：无 schema 变更、无新功能、无样式改动，可维护性提升",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.4",
+    date: "2026-08-01",
+    title: "巨型组件拆分续 —— WorldPanel 375→137 行",
+    sections: [
+      {
+        label: "重构 / 可维护性",
+        items: [
+          "WorldPanel（375 行）拆分为 4 个内聚子组件 + 1 个数据模块：WorldModuleSidebar（板块选择）、WorldEditor（标题栏+新建表单+深度选择）、WorldEntryCard（单条目卡片）、WorldEntryList（列表+空状态）、worldPanelData.ts（WORLD_MODULES/DEPTH_LABEL/CATEGORY_TO_MODULE/MODULE_FIELDS 常量与类型外置）",
+          "父组件保留全部 useState 与 handler（handleCreate/handleFieldChange/deleteEntry）及派生计算（moduleEntries/getCount/moduleInfo/currentFields），仅以子组件调用替换内联 JSX 区块；行为 100% 不变（tsc 零错误，逻辑逐字迁移）",
+          "主文件从 375 行降至 137 行；全局核查外置常量仅被 WorldPanel 相关文件引用，无别处依赖破坏",
+          "纯重构：无 schema 变更、无新功能、无样式改动；WorldPanel 内无裸 fixed 弹窗，焦点陷阱不受影响",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.3",
     date: "2026-08-01",

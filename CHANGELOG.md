@@ -2,6 +2,13 @@
 
 ---
 
+## v0.44.4 — 2026-08-01
+**巨型组件拆分续 —— WorldPanel 375→137 行**
+- 🧱 `WorldPanel`（375 行）拆分为 4 个内聚子组件 + 1 个数据模块：`WorldModuleSidebar`（板块选择）、`WorldEditor`（标题栏+新建表单+深度选择）、`WorldEntryCard`（单条目卡片）、`WorldEntryList`（列表+空状态）、`worldPanelData.ts`（WORLD_MODULES/DEPTH_LABEL/CATEGORY_TO_MODULE/MODULE_FIELDS 常量与类型外置）
+- 🔒 父组件保留全部状态/handler（handleCreate/handleFieldChange/deleteEntry）与派生计算，仅以子组件调用替换内联 JSX；行为 100% 不变（tsc 零错误）
+- 📦 常量外置 `worldPanelData.ts`，全局核查无别处依赖破坏
+- 🧹 纯重构：无 schema 变更、无新功能、无样式改动，可维护性提升
+
 ## v0.44.3 — 2026-08-01
 **巨型组件拆分启动 —— CharacterList 883→504 行**
 - 🧱 `CharacterList`（883 行）拆分为 6 个内聚子组件：`CharacterFilters`（搜索+角色/状态/标签筛选）、`CharacterToolbar`（工具栏+全选/扩展/分类）、`ClassifyPanel`（分类进度+面板+结果）、`ExpandResultModal`（扩展进度+结果弹窗并接管 focus-trap）、`CharacterRow`（单角色卡片）、`CharacterGroupList`（分组渲染）
