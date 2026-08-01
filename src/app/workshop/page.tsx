@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { toastSuccess, toastError, toastInfo, confirmDialog, toastAdded, toastCreated } from "@/components/ui/toast";
@@ -79,6 +79,7 @@ export default function Workshop() {
   const [aiDesc, setAiDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [busyAi, setBusyAi] = useState(false);
+  const autoSeedRef = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,7 +87,19 @@ export default function Workshop() {
     if (tab !== "all") params.set("type", tab);
     if (q) params.set("q", q);
     const res = await fetch(`/api/presets?${params.toString()}`);
-    if (res.ok) setPresets(await res.json());
+    if (res.ok) {
+      const data = (await res.json()) as Preset[];
+      setPresets(data);
+      // 自动播种内置示范预设：仅在「全部」页签、且库中尚无任何内置预设时触发一次。
+      // 这样全新本地安装（git clone 后首次打开创意工坊）也能立即看到系统预设，开箱即用。
+      // seed 接口按 {type,title,isBuiltin} 去重，重复调用安全；autoSeedRef 守卫避免切换页签反复触发。
+      if (tab === "all" && !autoSeedRef.current && !data.some((p) => p.isBuiltin)) {
+        autoSeedRef.current = true;
+        setLoading(false);
+        seedBuiltins();
+        return;
+      }
+    }
     setLoading(false);
   }, [tab, q]);
 
@@ -622,6 +635,9 @@ export default function Workshop() {
                 </div>
               )}
             </div>
+            <p className="text-[11px] text-[var(--nv-text-muted)] leading-relaxed">
+              你上传的预设仅保存在本机数据库，不会上传到任何服务器，也不与其他人共享——纯粹方便你自己随时套用。
+            </p>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowUpload(false)} className="flex-1 btn-ghost rounded-xl py-2.5 text-sm">取消</button>
               <button onClick={uploadPreset} disabled={busy} className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50">
