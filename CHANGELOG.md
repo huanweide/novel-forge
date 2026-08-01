@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.1 — 2026-08-01
+**创意工坊增强：舞台剧风格预设 + 分类型上传向导**
+- 🎭 新增「舞台剧风格」lorebook 预设：把酒馆（SillyTavern）世界书格式的舞台剧/话剧文风（角色性格恒定、克制情绪波动、对白密集、动作夸张）转成可一键套用预设，应用即注入话剧写作基调与文风开关
+- 🧰 上传预设从「裸 JSON textarea」改为「分类型向导」——style 给文风感觉自由写框 + 视角/节奏下拉、worldview/story_progression/lorebook 给可增删词条编辑器、character 给名/描述/定位、table_template 给表名+列，regex/api_config 保留高级 JSON 入口
+- 🪄 非技术用户无需懂 JSON 即可创造并分享 style / worldview / lorebook / character / table_template 五类预设，门槛从「会写 JSON」降到「会填表」，但保留技术类 JSON 通道不切断高手（用户要求：不要分太细、给一点创造力）
+- 🧹 清理工坊乱码与显示不全的残留预设，16 个内置预设干净完整；tsc 零错误
+
 ## v0.46.0 — 2026-08-01
 **结构化表格大列表虚拟滚动（LoreTable 虚拟化）**
 - 📊 新增零依赖轻量虚拟列表 hook `useVirtualRows`（固定行高 + 上下 overscan 预渲染 + 阈值开关）：把「整张表」拆成「视口内一小段 + 撑高占位」，滚到哪算到哪

@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.0";
+export const LATEST_VERSION = "v0.46.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📊 结构化表格（宝宝流数据库）展开后超 50 行自动启用「虚拟滚动」，万行大表也不卡（PROCESS/04 大列表虚拟化收官）",
-  "🪶 零依赖轻量虚拟列表 hook（固定行高 + 上下 overscan 预渲染），小表（≤50 行）走原 <table> 渲染、零开销",
-  "🔒 编辑 / 增行 / 保存体验完全不变；仅 LoreTable 行渲染接入，StorylineList 因卡片非等高 + 数据量小维持原样（如实取舍）",
-  "🧩 自研 hook 不引 react-window / @tanstack/virtual，避免为小数据量背负重依赖；tsc 零错误",
+  "🎭 创意工坊新增「舞台剧风格」lorebook 预设：一键注入话剧写作基调（角色性格恒定、对白密集、动作夸张）",
+  "🧰 上传预设从裸 JSON 改为分类型向导——文风填感觉+视角/节奏、世界书填词条、角色填名/描述，不用懂 JSON 也能创造",
+  "🪄 非技术用户可上传 style / worldview / lorebook / character / table_template 五类预设；regex/api_config 保留高级 JSON 入口",
+  "🧹 清理工坊乱码与显示不全的残留预设，16 个内置预设干净完整；tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.1",
+    date: "2026-08-01",
+    title: "创意工坊增强：舞台剧风格预设 + 分类型上传向导",
+    sections: [
+      {
+        label: "创意工坊 / 预设",
+        items: [
+          "新增「舞台剧风格」lorebook 预设：把酒馆（SillyTavern）世界书格式的舞台剧/话剧文风（角色性格恒定、克制情绪波动、对白密集、动作夸张）转成可一键套用预设，应用即注入话剧写作基调与文风开关",
+          "上传预设从「裸 JSON textarea」改为「分类型向导」——style 给文风感觉自由写框 + 视角/节奏下拉、worldview/story_progression/lorebook 给可增删词条编辑器、character 给名/描述/定位、table_template 给表名+列，regex/api_config 保留高级 JSON 入口给懂的人",
+          "非技术用户现在无需懂 JSON 即可创造并分享 style / worldview / lorebook / character / table_template 五类预设，门槛从「会写 JSON」降到「会填表」，但保留技术类 JSON 通道不切断高手（用户要求：不要分太细、给他们一点创造力）",
+          "清理工坊乱码与显示不全的残留预设，16 个内置预设干净完整；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.0",
     date: "2026-08-01",
