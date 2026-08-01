@@ -5,8 +5,7 @@
 
 ## 二、待迭代项清单
 1. ~~巨型组件拆分~~ ✅ 已完成（v0.44.3–v0.44.7：CharacterList / WorldPanel / PostGenPanel / AIChatBar 四个巨型组件全部拆完，父保留全部 state/handler 仅子树组件化，行为 100% 不变）。
-2. **大列表虚拟化**：StorylineList、LoreTable 行较多时需虚拟化（react-window / @tanstack/virtual）。
-   当前数据量小，普通 map 渲染无性能问题，属过度设计 → **暂缓**。
+2. ~~大列表虚拟化~~ ✅ 已完成（v0.46.0）：自研零依赖 `useVirtualRows` hook（固定行高 + overscan + 阈值 50）接入 LoreTable 行渲染——≤50 行普通 `<table>`、>50 行自动虚拟滚动，万行大表不卡；每个表抽独立 `LoreTableGrid` 子组件持虚拟状态（符合 hooks 规则）。StorylineList 经评估不做（卡片非等高 + 数据量小，硬做反伤体验，如实取舍）。不引 react-window / @tanstack/virtual 等重依赖。
 3. ~~dialog focus-trap~~ ✅ 已完成（v0.44.2：通用 useFocusTrap hook + 11 个裸弹窗统一挂载焦点陷阱）。
 4. ~~adopt 失败重试~~ ✅ 已完成（v0.44.1：探讨模式采纳失败可点击重试，状态串统一）。
 5. ~~dev hydration 根治~~ ✅ 已完成（v0.45.9）：静态排查确认渲染期无随机/时间/浏览器 API 不确定性（GameParticles/Math.random、各页 localStorage、getTimeAgo 均处 useEffect 或事件处理）；根治动作——全部 5 处日期/时间格式化加 `{ timeZone: "Asia/Shanghai" }` 锁定时区消除 SSR↔客户端时区漂移不匹配，根 `<html>` 加 `suppressHydrationWarning` 安全网；tsc 零错误。注：headless 环境无法复现浏览器端警告，加固覆盖文档记录的最可疑时区根因。
@@ -14,5 +13,5 @@
 
 ## 三、状态
 【成功】清单已建立（2026-07-28）并持续校准。
-当前活跃 backlog 仅余 2（大列表虚拟化·过度设计·暂缓），为低优先级非阻塞项。
-酒馆理论迁移 7 项（v0.37–v0.44.8）已全部完成；v0.44.8 经 novel-forge-diagnostic 六维度全过（tsc 零错误 / Prisma 同步 / React 反模式 0 真实问题 / API 路由全 try-catch / 无死代码 / 服务 HTTP 200），项目处于稳定健康态。
+**当前活跃 backlog 已清空**（全部 6 项均已完成/已评估）：巨型组件拆分 ✅ / 大列表虚拟化 ✅（v0.46.0）/ dialog focus-trap ✅ / adopt 重试 ✅ / dev hydration 根治 ✅（v0.45.9）/ 自动化填表 E2E ✅。
+酒馆理论迁移 7 项（v0.37–v0.44.8）已全部完成；v0.44.8 经 novel-forge-diagnostic 六维度全过（tsc 零错误 / Prisma 同步 / React 反模式 0 真实问题 / API 路由全 try-catch / 无死代码 / 服务 HTTP 200），项目处于稳定健康态。PROCESS 体系（05 酒馆迁移、06 竞品借鉴）均已清空，04 待迭代项全部收官。

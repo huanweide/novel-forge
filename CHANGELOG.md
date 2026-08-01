@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.0 — 2026-08-01
+**结构化表格大列表虚拟滚动（LoreTable 虚拟化）**
+- 📊 新增零依赖轻量虚拟列表 hook `useVirtualRows`（固定行高 + 上下 overscan 预渲染 + 阈值开关）：把「整张表」拆成「视口内一小段 + 撑高占位」，滚到哪算到哪
+- 🪶 LoreTable 展开后的表格行渲染接入虚拟化：行数 ≤ 50 走原 `<table>` 普通渲染（零开销），> 50 自动切换虚拟滚动（max-h 360px 滚动容器 + sticky 表头 + 绝对定位行），万行 `auto_facts` 大表也不卡
+- 🔒 每个表抽独立子组件 `LoreTableGrid` 持有自己的虚拟状态（符合 React hooks 规则）；编辑 / 增行 / 保存交互完全保留
+- 🧩 StorylineList 经评估不做虚拟化（卡片非等高 + 数据量小，硬做反伤体验）；不引入 react-window / @tanstack/virtual 等重依赖；tsc 零错误（PROCESS/04 待迭代项全部收官）
+
 ## v0.45.9 — 2026-08-01
 **dev hydration 警告根治（时区确定性加固）**
 - 🛡️ 根因：`toLocaleDateString("zh-CN")` / `toLocaleString("zh-CN")` 依赖运行时时区，服务器（UTC）与浏览器（本地）跨午夜算出的日期可能差一天，一旦日期显示进入 SSR 即触发 hydration 文本不匹配（文档记录的「偶发警告」最可疑根因）

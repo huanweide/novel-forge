@@ -25,18 +25,35 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.9";
+export const LATEST_VERSION = "v0.46.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛡️ 根治 dev 偶发 hydration 警告：所有日期/时间格式化强制锁定 Asia/Shanghai 时区，服务器（UTC）与浏览器（本地）永远算出同一串字（PROCESS/04）",
-  "🔒 受影响点：首页项目卡片「X 天前」超 30 天的绝对日期、伏笔面板创建时间、配置面板套用时间、导入向导日志时间、填表结果时间",
-  "🌐 根布局 <html> 加 suppressHydrationWarning 安全网（Next 官方推荐，兜底环境属性漂移）",
-  "🧩 纯防御性加固、零行为变更、零新依赖、tsc 零错误；静态排查确认渲染期无随机/时间/浏览器 API 不确定性",
+  "📊 结构化表格（宝宝流数据库）展开后超 50 行自动启用「虚拟滚动」，万行大表也不卡（PROCESS/04 大列表虚拟化收官）",
+  "🪶 零依赖轻量虚拟列表 hook（固定行高 + 上下 overscan 预渲染），小表（≤50 行）走原 <table> 渲染、零开销",
+  "🔒 编辑 / 增行 / 保存体验完全不变；仅 LoreTable 行渲染接入，StorylineList 因卡片非等高 + 数据量小维持原样（如实取舍）",
+  "🧩 自研 hook 不引 react-window / @tanstack/virtual，避免为小数据量背负重依赖；tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.0",
+    date: "2026-08-01",
+    title: "结构化表格大列表虚拟滚动（LoreTable 虚拟化）",
+    sections: [
+      {
+        label: "性能 / 大列表（PROCESS/04 待迭代项收官）",
+        items: [
+          "新增零依赖轻量虚拟列表 hook useVirtualRows（src/hooks/use-virtual-rows.ts）：固定行高 + 上下 overscan 预渲染 + 阈值开关，原理是把「整张表」拆成「视口内一小段 + 撑高占位」，滚到哪算到哪",
+          "LoreTable 展开后的表格行渲染接入虚拟化：行数 ≤ 50 走原 <table> 普通渲染（零开销），> 50 自动切换虚拟滚动（max-h 360px 滚动容器 + sticky 表头 + 绝对定位行），万行 auto_facts 大表也不卡",
+          "每个表抽独立子组件 LoreTableGrid 持有自己的虚拟状态（符合 React hooks 规则，不能在 map 内直接调 hook）；编辑 / 增行 / 保存按钮与交互完全保留",
+          "StorylineList 经评估不做虚拟化：故事线卡片高度不固定（展开/收起差异大），且数据量极小（几条到几十条），固定行高虚拟化会破坏展开交互且零收益——如实取舍，维持原样",
+          "不引入 react-window / @tanstack/virtual 等第三方库，避免为小数据量项目背负重依赖；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.9",
     date: "2026-08-01",

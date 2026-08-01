@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { toastSuccess, toastError, confirmDialog, toastCreated } from "@/components/ui/toast";
 import { EmptyState, Loading } from "@/components/ui/States";
+import { useVirtualRows } from "@/hooks/use-virtual-rows";
 
 interface LoreTableT {
   id: string;
@@ -243,40 +244,13 @@ export default function TablesPage() {
                   </div>
 
                   {expanded === t.id && (
-                    <div className="mt-3 space-y-3">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-[var(--nv-text-muted)]">
-                              <th className="text-left p-1">row_id</th>
-                              {(t.columns || []).map((c) => (
-                                <th key={c.key} className="text-left p-1">{c.label}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {t.rows.map((r) => (
-                              <tr key={r.row_id} className="border-t border-[var(--nv-border-2)]">
-                                <td className="p-1 text-[var(--nv-text-muted)]">{r.row_id}</td>
-                                {(t.columns || []).map((c) => (
-                                  <td key={c.key} className="p-1">
-                                    <input
-                                      value={r[c.key] ?? ""}
-                                      onChange={(e) => updateCell(t, Number(r.row_id), c.key, e.target.value)}
-                                      className="input-glass w-32 rounded px-2 py-1"
-                                    />
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => addRow(t)} className="btn-ghost text-xs px-3 py-1.5 rounded-xl">+ 行</button>
-                        <button onClick={() => saveTable(t)} disabled={busy} className="btn-primary text-xs px-3 py-1.5 rounded-xl disabled:opacity-50">保存</button>
-                      </div>
-                    </div>
+                    <LoreTableGrid
+                      table={t}
+                      busy={busy}
+                      onUpdateCell={updateCell}
+                      onAddRow={addRow}
+                      onSave={saveTable}
+                    />
                   )}
                 </div>
               ))}
@@ -302,6 +276,100 @@ export default function TablesPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 单个结构化表格的展开网格。
+ * 行数 ≤ 50：普通 <table> 渲染（零开销）；> 50：自动切换虚拟滚动（useVirtualRows），
+ * 万行大表也只渲染「视口内一小段 + 上下 overscan」，不卡。
+ */
+function LoreTableGrid({ table, busy, onUpdateCell, onAddRow, onSave }: {
+  table: LoreTableT;
+  busy: boolean;
+  onUpdateCell: (t: LoreTableT, rowId: number, col: string, val: string) => void;
+  onAddRow: (t: LoreTableT) => void;
+  onSave: (t: LoreTableT) => void;
+}) {
+  const ROW_H = 34;
+  const { scrollRef, onScroll, enabled, totalHeight, virtualItems } = useVirtualRows(table.rows, {
+    rowHeight: ROW_H,
+    threshold: 50,
+    overscan: 10,
+    viewportHeight: 360,
+  });
+  const cols = table.columns || [];
+  const dataColWidth = cols.length > 0 ? `calc((100% - 56px) / ${cols.length})` : "100%";
+
+  return (
+    <div className="mt-3 space-y-3">
+      {enabled ? (
+        <div ref={scrollRef} onScroll={onScroll} className="max-h-[360px] overflow-auto rounded-lg border border-[var(--nv-border-2)]">
+          <table className="w-full text-xs" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
+            <thead className="sticky top-0 z-10 bg-[var(--nv-surface-1)]">
+              <tr className="text-[var(--nv-text-muted)]">
+                <th className="text-left p-1" style={{ width: 56 }}>row_id</th>
+                {cols.map((c) => (
+                  <th key={c.key} className="text-left p-1">{c.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody style={{ display: "block", height: totalHeight, position: "relative" }}>
+              {virtualItems.map(({ item: r, offsetTop }) => (
+                <tr
+                  key={r.row_id}
+                  style={{ display: "block", position: "absolute", top: offsetTop, left: 0, width: "100%", borderTop: "1px solid var(--nv-border-2)" }}
+                >
+                  <td className="p-1 text-[var(--nv-text-muted)] align-middle" style={{ display: "inline-block", width: 56 }}>{r.row_id}</td>
+                  {cols.map((c) => (
+                    <td key={c.key} className="p-1 align-middle" style={{ display: "inline-block", width: dataColWidth }}>
+                      <input
+                        value={r[c.key] ?? ""}
+                        onChange={(e) => onUpdateCell(table, Number(r.row_id), c.key, e.target.value)}
+                        className="input-glass w-full rounded px-2 py-1"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-[var(--nv-border-2)]">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[var(--nv-text-muted)]">
+                <th className="text-left p-1">row_id</th>
+                {cols.map((c) => (
+                  <th key={c.key} className="text-left p-1">{c.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {table.rows.map((r) => (
+                <tr key={r.row_id} className="border-t border-[var(--nv-border-2)]">
+                  <td className="p-1 text-[var(--nv-text-muted)]">{r.row_id}</td>
+                  {cols.map((c) => (
+                    <td key={c.key} className="p-1">
+                      <input
+                        value={r[c.key] ?? ""}
+                        onChange={(e) => onUpdateCell(table, Number(r.row_id), c.key, e.target.value)}
+                        className="input-glass w-32 rounded px-2 py-1"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button onClick={() => onAddRow(table)} className="btn-ghost text-xs px-3 py-1.5 rounded-xl">+ 行</button>
+        <button onClick={() => onSave(table)} disabled={busy} className="btn-primary text-xs px-3 py-1.5 rounded-xl disabled:opacity-50">保存</button>
+      </div>
     </div>
   );
 }
