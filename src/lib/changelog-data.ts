@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.0";
+export const LATEST_VERSION = "v0.45.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📤 导出新增「网页 HTML」与「电子书 EPUB」两种格式（原仅 Markdown / 纯文本），满足排版美化、社交分发、电子书阅读三类诉求",
-  "🗂️ HTML 单文件：自带轻量散文→HTML 转换（段落 / 粗体 / 斜体 / 引用 / 分割线），带目录导航与衬线排版，可直接浏览器打开或被 Word / 公众号排版工具导入",
-  "📚 EPUB 零依赖：手写 stored ZIP + CRC32，mimetype 首条 stored，符合 EPUB3 规范，微信读书 / Apple Books / Calibre 可直接打开；无需 archiver / jszip",
-  "🔧 导出按钮弹层扩展为四选项（Markdown / TXT / HTML / EPUB），统一 onExport 类型；无 schema 变更，tsc 零错误，unzip -t 校验 EPUB 零错误",
+  "📊 编辑器（CenterPanel）底部新增状态栏：实时显示 行数 / 字数 / 目标进度 / UTF-8 编码，写作掌控感对齐竞品",
+  "🔢 字数沿用项目约定（content.length 字符数），随正文生成实时更新；与目标字数对比给出进度百分比，达标变绿",
+  "🎯 目标字数仍由顶部控制栏数字输入设定（原功能不变），状态栏只读展示，不做破坏性改动",
+  "🧩 纯展示组件：无 schema 变更、无新依赖，tsc 零错误；PROCESS/06 P0-2 完成",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.1",
+    date: "2026-08-01",
+    title: "编辑器底部状态栏（写作掌控感）",
+    sections: [
+      {
+        label: "功能 / 编辑器 UX",
+        items: [
+          "CenterPanel 底部新增状态栏：实时显示 行数 / 字数 / 目标进度 / UTF-8 编码，对齐竞品的作者掌控感（PROCESS/06 P0-2）",
+          "字数沿用项目约定 = 字符数（content.length），随正文生成 / 流式输出实时更新；与目标字数对比给出进度百分比，达标时进度文字变绿",
+          "目标字数仍由顶部控制栏的数字输入设定（既有功能不变），状态栏为只读展示，纯展示组件、零破坏性",
+          "无 schema 变更、无新依赖；tsc 零错误；因 CenterPanel 正文区为 MarkdownViewer 只读预览（章节正文由 AI 生成），状态栏不含光标行列跟踪，改为更有价值的 行数 / 字数 / 目标进度 / 编码",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.0",
     date: "2026-08-01",

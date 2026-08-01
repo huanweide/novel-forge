@@ -45,6 +45,12 @@ export function CenterPanel({
 
   const displayContent = streamContent || selectedNode?.content || "";
 
+  // 底部状态栏数据（字数沿用项目约定 = 字符数 content.length，随生成实时更新）
+  const currentWords = displayContent.length;
+  const lineCount = displayContent ? displayContent.split("\n").length : 0;
+  const targetReached = targetWordCount > 0 && currentWords >= targetWordCount;
+  const progressPct = targetWordCount > 0 ? Math.min(100, Math.round((currentWords / targetWordCount) * 100)) : 0;
+
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-[var(--nv-void)]">
       {selectedNode ? (
@@ -190,6 +196,17 @@ export function CenterPanel({
                 )}
               </div>
             )}
+          </div>
+          {/* 底部状态栏：行 / 字 / 目标进度 / 编码 */}
+          <div className="shrink-0 flex items-center justify-between border-t border-[var(--nv-border-2)] bg-[var(--nv-abyss)] px-4 py-1.5 text-[11px] text-[var(--nv-text-tertiary)]">
+            <div className="flex items-center gap-4">
+              <span>{lineCount} 行</span>
+              <span>{currentWords.toLocaleString()} 字</span>
+              <span className={targetReached ? "text-[var(--nv-success)]" : "text-[var(--nv-text-secondary)]"}>
+                目标 {targetWordCount} 字 · {progressPct}%
+              </span>
+            </div>
+            <span className="flex items-center gap-1"><Icon name="file" size={11} /> UTF-8</span>
           </div>
         </>
       ) : (
