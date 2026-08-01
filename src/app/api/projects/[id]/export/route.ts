@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { buildChapterList, buildHtmlDoc, buildEpub } from "@/core/epub";
+import { buildDocx } from "@/core/docx";
 
 /**
  * GET /api/projects/[id]/export?format=markdown|txt|html|epub&includeOutline=true|false
@@ -67,6 +68,19 @@ export async function GET(
       return new Response(epubBlob, {
         headers: {
           "Content-Type": "application/epub+zip",
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+        },
+      });
+    }
+
+    // DOCX（Word）导出：零依赖 OOXML ZIP，中文靠 styles.xml 的 eastAsia="宋体"
+    if (format === "docx") {
+      const chapters = buildChapterList(roots, allNodes, includeOutline);
+      const docxBuf = buildDocx(project.name, chapters, { includeOutline });
+      const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.docx`;
+      return new Response(new Uint8Array(docxBuf), {
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
         },
       });

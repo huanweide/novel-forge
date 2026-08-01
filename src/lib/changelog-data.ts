@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.4";
+export const LATEST_VERSION = "v0.46.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🏷 内置预设全部打上「trirui推荐」品牌标记：clone 即带的 16 个系统示范预设作者归为 trirui、标签加 trirui推荐，随仓库分发、人人可用，明确这是我们（樊斯瑞项目）设立的创意工坊体系",
-  "📦 创意工坊新增「导入/导出预设文件」：每张卡片可一键导出 .preset.json（含 schema 版本+完整内容），顶部「导入文件」支持从本机或 GitHub 下载的分享文件导入本地——酒馆式社区分发，无需部署服务器",
-  "🧭 产品方向纠偏：明确本项目是本地运行工具（类比 SillyTavern 酒馆），不是云端 SaaS；分发靠 git clone 仓库 + 导入/导出文件，不再把线上演示站当必经路径",
-  "🔒 导入预设与系统内置清晰隔离：导入落库为 isBuiltin=false、author=导入，只存本机不共享；用户上传/导入的预设永不影响系统内置；tsc 零错误",
+  "📖 一键示例项目：首页「看示例」一键载入示范仙侠小说《山海拾遗》——世界观铁律（严禁现代科技造物等 3 条硬规则）+ 剧情推进倾向 + 主角李尘角色卡 + 已写 2 章正文，规则自动进上下文，新人点开即见生成+填表+召回效果",
+  "🎯 题材开局模板库：8 个高频题材（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠）一键建好项目骨架——世界观铁律+剧情倾向+主角原型+卷纲（三段式大纲）+第一章开局钩子，纯静态数据离线可用",
+  "📄 导出补全 DOCX：零依赖 Word 导出（复用 epub 的 makeZip 手写 OOXML ZIP 包，中文靠 styles.xml 的 eastAsia=\"宋体\" 不乱码），连同既有 TXT + 可打印 PDF（HTML 导出改名「网页 HTML（可打印PDF）」引导打印），对齐云笔 6 格式",
+  "✅ B1/B2/C1 三项全部 tsc 零错误、端到端实测通过；延续本地优先、零新 npm 依赖铁律",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.5",
+    date: "2026-08-02",
+    title: "开箱即懂 + 投稿闭环：示例项目 / 题材开局 / DOCX 导出",
+    sections: [
+      {
+        label: "开箱即懂 / 投稿闭环",
+        items: [
+          "B1 一键示例项目：首页新增「看示例」按钮，一键后端播种示范小说《山海拾遗·仙侠》——世界观铁律（全文严禁出现任何现代科技造物 / 修真境界严格分级 / 因果报应必有回响 3 条硬规则）+ 剧情推进倾向 + 主角李尘角色卡（结构化 personality）+ 已写 2 章仙侠示范正文，并自动 syncGlobalPrompt 让规则真正进 globalPrompt 缓存（彻底闭环最初担心的「定义了没用」）；幂等安全，重复点不重复建",
+          "B2 题材开局模板库：新增 8 个高频题材骨架（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠），做成纯静态数据 src/core/templates/genres.ts 前后端共用单一数据源；选题材→后端一键建好项目（世界观铁律+剧情倾向+主角原型+卷纲含三段式大纲+第一章开局钩子）。选静态库而非改造 LLM 分支，避开运行时 API Key 依赖、保证离线可用、确定性最强",
+          "C1 导出补全 DOCX：新增零依赖 Word 导出（src/core/docx.ts 复用 epub.ts 的 makeZip 手写 OOXML ZIP 包，中文靠 word/styles.xml 的 w:eastAsia=\"宋体\" 解决乱码），连同既有的 TXT（路线表旧记过时，txt 早已实现）+ 可打印 PDF（HTML 导出项改名「网页 HTML（可打印PDF）」引导浏览器 window.print 成 PDF），现已对齐云笔 6 格式；PDF 走前端打印零额外依赖",
+          "三项全部 tsc 零错误、端到端实测通过：示例项目验证 worldview/story_progression 硬规则落库并进 globalPrompt；题材骨架验证世界观词条+卷纲三段式正确写入；DOCX 验证 HTTP 200 + ZIP 魔数 PK + document.xml/core.xml 存在。延续本地优先、零新 npm 依赖铁律",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.4",
     date: "2026-08-02",

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
+import { GENRE_TEMPLATES } from "@/core/templates/genres";
 import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
@@ -58,6 +60,50 @@ export default function Dashboard() {
     return () => ctrl.abort();
   }, [loadProjects]);
 
+  const router = useRouter();
+  const [loadingSample, setLoadingSample] = useState(false);
+  const loadSample = async () => {
+    setLoadingSample(true);
+    try {
+      const res = await fetch("/api/seed/sample-project", { method: "POST" });
+      const d = await res.json();
+      if (res.ok && d.id) {
+        toastSuccess("示例项目已载入");
+        router.push(`/workspace/${d.id}`);
+      } else {
+        toastError(d.error || "载入示例失败");
+      }
+    } catch {
+      toastError("载入示例失败");
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
+  const [showGenres, setShowGenres] = useState(false);
+  const [loadingGenre, setLoadingGenre] = useState<string | null>(null);
+  const loadGenre = async (genreId: string) => {
+    setLoadingGenre(genreId);
+    try {
+      const res = await fetch("/api/seed/genre-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ genreId }),
+      });
+      const d = await res.json();
+      if (res.ok && d.id) {
+        toastSuccess("题材骨架已创建");
+        router.push(`/workspace/${d.id}`);
+      } else {
+        toastError(d.error || "创建题材骨架失败");
+      }
+    } catch {
+      toastError("创建题材骨架失败");
+    } finally {
+      setLoadingGenre(null);
+    }
+  };
+
   useEffect(() => {
     try {
       const seen = localStorage.getItem("novel-forge-last-version");
@@ -108,6 +154,9 @@ export default function Dashboard() {
             <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="settings" size={13} /> <span className="hidden sm:inline">设置</span>
             </Link>
+            <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
+              <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">{loadingSample ? "载入中" : "示例"}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -174,6 +223,29 @@ export default function Dashboard() {
               <FeatureCard icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲" href="/explore" cta="开始探讨" />
               <FeatureCard icon="book" title="拆书分析" desc="上传文本，逆向学习结构与文风" href="/dissect" cta="去拆书" />
               <FeatureCard icon="settings" title="配置 AI" desc="先填好 LLM Key，功能才能跑通" href="/settings" cta="去设置" />
+            </div>
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <button onClick={loadSample} disabled={loadingSample}
+                className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
+                <Icon name="sparkles" size={15} /> {loadingSample ? "正在载入示例…" : "一键载入示例项目（仙侠）"}
+              </button>
+              <button onClick={() => setShowGenres((v) => !v)} disabled={loadingSample}
+                className="btn-ghost text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5">
+                <Icon name="book" size={13} /> {showGenres ? "收起题材库" : "按题材开局"}
+              </button>
+              {showGenres && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
+                  {GENRE_TEMPLATES.map((g) => (
+                    <button key={g.id} onClick={() => loadGenre(g.id)} disabled={loadingGenre !== null}
+                      className="surface-elevated rounded-xl p-3 text-left transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] disabled:opacity-60">
+                      <div className="text-lg mb-1">{g.icon}</div>
+                      <div className="text-sm font-medium text-[var(--nv-text-primary)]">{g.name}</div>
+                      <div className="text-[11px] text-[var(--nv-text-tertiary)] mt-0.5 leading-snug">{g.desc}</div>
+                      {loadingGenre === g.id && <div className="text-[10px] text-[var(--nv-accent)] mt-1">创建中…</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (

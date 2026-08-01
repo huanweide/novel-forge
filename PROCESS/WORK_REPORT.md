@@ -332,3 +332,53 @@ PROCESS/06 的 P0/P1 全部完成，P2 里 P2-1（性格三层）、P2-3（引�
 - 导入/导出：每张卡片可导出 .preset.json、顶部可导入分享文件 ✅（酒馆式分发）。
 - 方向：明确本地项目（类比酒馆），分发靠 clone + 文件导入，不再依赖线上站 ✅（写入 ROADMAP_TO_SHIP.md + MEMORY.md）。
 - 版本：v0.46.4，待提交推送（沙箱出网 TLS 故障未恢复，本地提交后补推）。
+
+---
+
+## 2026-08-02 · 开箱即懂 + 投稿闭环：示例项目 / 题材开局 / DOCX 导出（v0.46.5）
+
+### 这次干了啥
+按斯瑞「按你的计划去搞，把这些都做好」的授权，把 ROADMAP_TO_SHIP 里最能填补用户感知的两堵墙一次性落地——**开箱即懂（B 系列）** 和 **投稿闭环（C 系列）**：
+1. **B1 一键示例项目**：首页加「看示例」按钮，一键让后端播种示范仙侠小说《山海拾遗》——世界观铁律（严禁现代科技造物 / 修真境界分级 / 因果必有回响）+ 剧情推进倾向 + 主角李尘角色卡 + 已写 2 章正文，并自动 `syncGlobalPrompt` 让规则真正进上下文。
+2. **B2 题材开局模板库**：8 个高频题材（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠）做成纯静态数据，选题材→后端一键建好项目骨架（世界观铁律+剧情倾向+主角原型+卷纲三段式+第一章钩子）。
+3. **C1 导出补全 DOCX**：新增零依赖 Word 导出，连同既有的 TXT + 可打印 PDF，对齐云笔 6 格式。
+
+### 为什么这么做（第一性原理）
+- **B1 解决「新人第一钩子」**：斯瑞最初的担心是「定义了没用」——示例项目就是把这个闭环做成肉眼可见的示范。新人点开即见「生成+填表+召回」整条链路跑通，比干巴巴的文档管用。类比：卖咖啡机，与其发说明书，不如在展台放一台已经煮好咖啡的样机，客人一按就有——「看示例」就是那台样机。
+- **B2 解决「选题即开局」**：云笔有 2000+ 题材模板「选个仙侠废柴逆袭一键生成骨架」。我们做静态题材库而非改造 LLM 分支——因为 LLM 分支要运行时 API Key、离线不可用、输出不确定；而题材骨架是确定性的「填空题」，做成静态数据前后端共用单一数据源，离线、秒出、零依赖。
+- **C1 解决「投稿硬需求」**：目标用户是网文作者，要把书投给编辑/平台，Word 是硬通货。云笔吹 6 格式导出，我们此前只 3 种。DOCX 必须补；但**不引 mammoth/docxbuilder 之类的库**（PROJECT 铁律：零新 npm 依赖），而是复用已写好的 `epub.ts` 的 ZIP 打包函数，手写 OOXML 部件——本质就是「把几段固定格式的 XML 装进一个 ZIP 包」，自己拼最可控。
+
+### 怎么落地（用了什么、效果）
+**C1 DOCX（src/core/docx.ts，零依赖）**
+- 复用 `src/core/epub.ts` 已导出的 `makeZip`（stored 无压缩 ZIP + CRC32 计算）、`buildChapterList`（章节有序结构）、`escapXml` 思路。
+- 手写 OOXML 必备部件：`[Content_Types].xml`、`_rels/.rels`、`word/document.xml`、`word/styles.xml`、`word/_rels/document.xml.rels`、`docProps/core.xml`、`docProps/app.xml`。
+- 中文不乱码关键：`word/styles.xml` 的 `<w:rPr><w:rFonts w:eastAsia="宋体"/></w:rPr>` 给正文设东亚字体；文档标题/正文 `<w:p>` 递归 `para()` 拼装，段内换行用 `<w:br/>`。
+- 导出路由 `src/app/api/projects/[id]/export/route.ts` 加 `docx` 分支；Toolbar 下拉加「Word 文档 (.docx)」；HTML 项改名「网页 HTML（可打印PDF）」引导浏览器 `window.print` 成 PDF。
+
+**B1 示例项目（src/app/api/seed/sample-project/route.ts，POST 幂等）**
+- 按 `name:"示例 · 山海拾遗（仙侠）"` 查重，已存在则返现有 id（幂等）。
+- 建 Project（genre 仙侠/玄幻、synopsis、authorNote）→ LorebookEntry(worldview, depth:1，含 3 条硬规则) → LorebookEntry(story_progression, depth:1) → CharacterCard(李尘, protagonist, 结构化 personality) → volume + 2 章正文（含仙侠示范文）→ 末尾 `await syncGlobalPrompt(pid)` 让规则进 globalPrompt 缓存。
+
+**B2 题材库（src/core/templates/genres.ts + src/app/api/seed/genre-project/route.ts）**
+- `genres.ts` 导出 `GenreTemplate` 接口 + `GENRE_TEMPLATES`（8 题材，各含 worldview 铁律/剧情倾向/主角原型/开局钩子/三段式卷纲）+ `getGenreTemplate(id)`。前后端共用这一份数据，单一数据源。
+- `genre-project/route.ts`：POST `{genreId}` → 校验 → 建 Project(`${tpl.name} · 开局骨架`) → worldview 词条(depth:1) → story_progression 词条(depth:1) → CharacterCard(主角原型) → volume(含三段式 outline) → chapter(第一章·开局钩子, outline_only) → `syncGlobalPrompt(pid)`。
+- 前端 `src/app/page.tsx`：顶栏「示例」按钮 + 空状态区「一键载入示例项目」主按钮 + 「按题材开局」折叠 + 展开后 8 题材卡片网格，点击 `loadGenre`。
+
+### 试过的方案 / 为什么没选别的（诚实记录）
+- **C1 要不要引 docx 生成库（如 `docx` / `mammoth`）？** —— 坚决不引。PROJECT 铁律「零新 npm 依赖、零 schema 变更」；DOCX 本质就是「几个固定 XML 装进 ZIP」，已有 `makeZip` 可直接复用，自己拼部件反而最可控、能精准处理中文 eastAsia 字体。引库是杀鸡用牛刀 + 违反铁律。
+- **PDF 要不要单列导出格式？** —— 不。HTML 导出本就含完整样式，浏览器「打印→另存为 PDF」质量是业界标准做法，零依赖、中文完美。单列 PDF 按钮 = 重复造轮子，所以把 HTML 项改名提示「可打印PDF」即可。
+- **TXT 是不是漏做了？** —— 路线表旧记「缺 TXT」是过时状态。实测导出路由本就支持 `txt`（早已实现），本轮核实后直接算已具备，未重复造。
+- **B2 要不要做成「调 LLM 按题材生成骨架」？** —— 不。LLM 分支要 Key、离线不可用、输出不确定；题材骨架是确定性填空题，静态库秒出、零依赖、离线可用，确定性强得多。选静态库。
+- **B1/B2 要不要走前端拼装而非新建 seed 路由？** —— 不。建项目要写 Project/LorebookEntry/CharacterCard/StoryNode 多表，必须在有 Prisma 的后端做；复用 explore/create 的字段写法，落库即完整、规则即生效。
+
+### 关键取舍
+- 选「复用 makeZip 手写 OOXML」而非「引 docx 库」：零依赖、中文字体可控、代码量更小。
+- 选「HTML 打印当 PDF」而非「单独 PDF 引擎」：零依赖、质量高、不重复造。
+- 选「题材静态库」而非「LLM 生成骨架」：离线可用、确定性、零 Key 依赖。
+- 选「后端 seed 路由建项目」而非「前端直接建」：多表写入必须在有 DB 访问权的后端完成，规则落库即生效。
+
+### 这一步做完的状态
+- 导出：HTML / EPUB / Markdown / TXT / DOCX / 可打印PDF（6 种对齐云笔）✅。
+- 开箱即懂：首页「看示例」一键载入示范小说 ✅；8 题材开局骨架 ✅。
+- 自查：tsc 零错误 ✅；DOCX 端到端 HTTP 200 + ZIP 魔数 `PK` + document.xml/core.xml 存在 ✅；示例项目 worldview/story_progression 硬规则落库并进 globalPrompt ✅；题材骨架世界观词条 + 卷纲三段式落库正确 ✅。
+- 版本：v0.46.5，待提交并代理 push（与双 changelog、ROADMAP 同步同 commit）。
