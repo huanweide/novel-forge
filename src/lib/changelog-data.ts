@@ -3305,7 +3305,7 @@ export const VERSIONS: VersionEntry[] = [
           "添加章节自动编号——统计已有章节数，弹窗预填「第N章：」",
           "Flash 章纲提示词切换章节时清零——每章独立",
           "Flash 章纲按钮原位显示生成状态——⏳生成中 / ✅完成 / ❌失败",
-          "Deploy 改用 VERCEL_TOKEN 环境变量传参",
+          "Deploy 改用部署令牌环境变量传参",
           "人物卡编辑「背景」栏 textarea 从 4 行扩大到 16 行——导入的详细角色描述不再挤在小框里",
         ],
       },
@@ -3464,7 +3464,7 @@ export const VERSIONS: VersionEntry[] = [
       {
         label: "⚡ 性能修复",
         items: [
-          "maxDuration从60秒拉到300秒——Vercel不再提前掐断LLM分析",
+          "maxDuration从60秒拉到300秒——部署平台不再提前掐断LLM分析",
           "角色智能过滤：只送章节中出现的角色+主角反派导师（178→≤40个），LLM处理时间大幅下降",
           "章节内容截取从10000字降到8000字——再减20%prompt体积",
         ],
@@ -3543,7 +3543,7 @@ export const VERSIONS: VersionEntry[] = [
         label: "🔧 修复",
         items: [
           "Flash章纲按钮：加prompt输入框+错误alert+res.ok检查",
-          "GitHub Actions自动部署到Vercel——每次push master自动上线",
+          "支持通过 CI 自动部署到自有服务器",
         ],
       },
     ],
@@ -3601,7 +3601,7 @@ export const VERSIONS: VersionEntry[] = [
           "移除弹窗流程：不再需要选章数→预览→勾选，点「🤖 大纲」直接生成",
           "自动创建 StoryNode：生成后章节自动出现在左侧大纲树",
           "失败弹窗提示：不再静默失败，alert 显示具体错误",
-          "maxDuration=60s：防止 Vercel 超时掐断",
+          "maxDuration=60s：防止部署平台超时掐断",
         ],
       },
       {
@@ -3779,7 +3779,7 @@ export const VERSIONS: VersionEntry[] = [
       {
         label: "🔧 修复",
         items: [
-          "commit + expand 加 maxDuration=300，防止 Vercel 60s 掐断",
+          "commit + expand 加 maxDuration=300，防止部署平台 60s 超时掐断",
           "commit 完成消息角色数双倍计数修复",
         ],
       },
@@ -3831,8 +3831,7 @@ export const VERSIONS: VersionEntry[] = [
       {
         label: "📱 部署",
         items: [
-          "Vercel 生产环境",
-          "TWA Android APK + assetlinks 验证",
+          "生产环境部署",
           "PWA manifest + Service Worker",
         ],
       },

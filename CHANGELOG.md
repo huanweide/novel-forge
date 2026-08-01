@@ -2265,7 +2265,7 @@ responseReserve:23% ─ 不变
 - 前端实时显示已发现角色数和词条数
 
 ### 🔧 修复
-- commit + expand 加 `maxDuration=300`，防止 Vercel 60s 掐断
+- commit + expand 加 `maxDuration=300`，防止部署平台 60s 超时掐断
 - commit 完成消息角色数双倍计数修复
 - parse 注释更新为实际架构描述
 
@@ -2289,8 +2289,6 @@ responseReserve:23% ─ 不变
 - 批量导入确认：可选确认/移除/一键删除/分批提交
 
 ### 📱 部署
-- Vercel 生产部署：https://novel-forge-nu.vercel.app
-- TWA Android APK：assetlinks.json 验证
 - PWA manifest + Service Worker
 
 ### 🔧 后端

@@ -206,7 +206,7 @@
   - A 级（重要）：保留最近 30 章
   - B 级（一般）：保留最近 15 章，超期标记为 `archived`
   - C 级（背景）：保留最近 5 章，超期自动删除
-- [ ] `src/app/api/cron/decay-memory/route.ts` — **[新]** 触发端点（可被 Vercel Cron 或手动调用）
+- [ ] `src/app/api/cron/decay-memory/route.ts` — **[新]** 触发端点（可被定时任务或手动调用）
 
 **文件：** 新增 `memory-decay.ts` + cron 路由
 

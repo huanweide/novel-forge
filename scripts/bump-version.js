@@ -226,5 +226,5 @@ console.log(`\n📂 文件: ${CHANGELOG_PATH}`);
 console.log(`\n下一步:`);
 console.log(`   git add src/lib/changelog-data.ts`);
 console.log(`   git commit -m "chore: bump to ${newVersion}"`);
-console.log(`   npm run deploy    # 或 npx vercel deploy --prod`);
+console.log(`   npm run deploy    # 部署到自有服务器（npm run build && npm start）`);
 console.log();
