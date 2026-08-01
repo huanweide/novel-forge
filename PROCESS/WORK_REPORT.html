@@ -153,6 +153,22 @@
     <p class="note">用户三项确认闭环：① 文风(style) 早已注入✅；② 定义权·规则(worldview) 本轮修复后常驻✅「定义了就有用」；③ 剧情推进倾向(story_progression) 本轮修复后常驻✅，可融合进规则。创造流：分类型向导 + AI 丰满双通道。v0.46.2，commit 335064f，tsc 零错误，已代理 push。</p>
   </div>
 
+  <div class="card">
+    <span class="tag">2026-08-02 · v0.46.3</span>
+    <h2>创意工坊开箱即用 + 上传仅本机</h2>
+    <h3>这次干了啥</h3>
+    <p>把创意工坊从「手动点按钮才出现系统预设」改成<b>打开即自动播种 16 个内置示范预设</b>（开箱即用），并在上传弹窗加「仅本机保存、不共享」说明。落实斯瑞：系统预设人人随软件可用，用户自己上传的只存本人库、不外泄。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>系统预设 = 软件自带资产，必须零配置随装随用。类比：电饭煲的「煮饭功能」不该要你第一次用时先手动「载入功能」——它本就该开盖就有。之前内置预设只在手动点「载入示范预设」才进库，新用户 clone 后打开工坊是空的，等于「装了却看不到内容」的黑洞（即斯瑞说的「本地不能用创意工坊」）。用户上传天生不共享（单用户本地 PG、无远程同步），但用户会疑虑「会不会传到网上」，所以页面明示消除负担。</p>
+    <h3>怎么落地</h3>
+    <p>改动集中在 <span class="kbd">workshop/page.tsx</span>（约 +13 行，零新依赖零 schema）：① <span class="kbd">load()</span> 加 <span class="kbd">autoSeedRef</span> 守卫——仅「全部」页签 + 库内暂无 builtin + ref 未触发时调本地 <span class="kbd">seedBuiltins()</span> → <span class="kbd">POST /api/seed/presets</span>（按 {type,title,isBuiltin} 去重、幂等）；② 手动「载入示范预设」按钮保留兜底；③ 上传弹窗底部加一行「仅保存在本机数据库，不上传任何服务器，也不与他人共享」。</p>
+    <h3>自查纠偏（关键）</h3>
+    <p>第一轮端到端自查 <span class="kbd">curl GET /api/presets?type=all</span> 返回 <b>0 条</b>，差点误报 GET 路由 bug 把内置项过滤掉（路由确有 <span class="kbd">where:{isPublic:true}</span>）。实际是测试方法错了：workshop 在「全部」页签<b>根本不发 type 参数</b>（<span class="kbd">if(tab!=="all") params.set("type",tab)</span>），而 GET 路由收到字面量 "all" 会去匹配不存在的 type=all。重测真实形态：<span class="kbd">GET /api/presets</span>（无 type）→ 正确返回 16 条内置；<span class="kbd">?type=style</span> → 3 条。教训：自查要用「真实调用形态」，不能凭「我以为的接口形态」下结论。</p>
+    <h3>关键取舍</h3>
+    <p>选「前端打开即播种」而非「启动时全局播种」：零侵入、随用户行为触发、天然幂等。选「保留手动按钮 + 加自动守卫」而非「只留自动」：覆盖非默认页签进来的边缘情况。选「文案明示仅本机」而非「默认不说」：消除泄露疑虑，符合「上传只给自己方便」。</p>
+    <p class="note">状态：系统预设开箱即用✅；用户上传仅本机已明示✅；tsc 零错误✅；seed 幂等✅；GET 真实返回 16 内置✅；dev HTTP 200✅。v0.46.3，commit faa14f0（page.tsx + 双 changelog，3 files 46 ins 7 del），本地已提交，push 因沙箱出网 TLS 瞬时故障待补推。</p>
+  </div>
+
 </div>
 </body>
 </html>
