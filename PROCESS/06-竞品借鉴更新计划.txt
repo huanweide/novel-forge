@@ -16,7 +16,7 @@
 - [x] **P1-3** 叙事视角选择（StyleEditor 维度 Tab 加 POV 单选，写入 llmConfig.povType，syncGlobalPrompt 兜底注入）—— v0.45.5 已发布
 - [ ] P2-1 角色卡性格三层
 - [ ] P2-2 每日写作目标可视化
-- [ ] P2-3 新手引导弹窗
+- [x] P2-3 新手引导弹窗（首次进入 Modal，复用统一 Modal，localStorage 标记）—— v0.45.6 已发布
 
 ---
 

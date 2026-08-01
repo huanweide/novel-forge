@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.5";
+export const LATEST_VERSION = "v0.45.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎭 文风编辑器新增「叙事视角」单选：第一人称 / 第三人称限知 / 第三人称全知 / 第二人称 / 不指定",
-  "📝 视角选择写入项目 llmConfig，并在 syncGlobalPrompt 注入系统提示（中文可读映射），本次生成即生效",
-  "🔗 StyleEditor 维度 Tab 新增 POV 区块；style 路由 GET/PUT 同步持久化 povType",
-  "🧩 复用既有风格注入通道，零 schema 变更、零破坏性、tsc 零错误；PROCESS/06 P1-3 完成",
+  "👋 工作区首次进入新增「新手引导弹窗」：一眼看懂自动化填表 / 抽卡剧情 / 拆解大纲 / 游戏化 / 竞品借鉴（PROCESS/06 P2-3）",
+  "🔒 复用统一 Modal（自带焦点陷阱 / ESC / 遮罩关闭 / 滚动锁定），首次访问才弹出，关闭后写 localStorage 标记永不重复",
+  "🧱 纯前端、零 schema 变更、零新依赖；localStorage 不可用时静默忽略，不阻断正常使用",
+  "🧩 tsc 零错误；对齐竞品的「欢迎 + 功能引导」入场体验，PROCESS/06 P2 打磨项启动",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.6",
+    date: "2026-08-01",
+    title: "工作区新手引导弹窗",
+    sections: [
+      {
+        label: "功能 / 入场体验",
+        items: [
+          "工作区（workspace）首次进入新增「新手引导弹窗」：卡片式介绍 5 个核心功能——自动化填表 / 抽卡剧情 / 拆解大纲 / 游戏化激励 / 竞品借鉴打磨（PROCESS/06 P2-3）",
+          "复用统一 Modal 基础组件（自带焦点陷阱 / ESC 关闭 / 遮罩关闭 / body 滚动锁定），符合项目无障碍基线；首次访问（localStorage 无 nf_onboarded_v1 标记）才弹出，关闭即写入标记，永不重复打扰",
+          "纯前端实现，零 schema 变更、零新依赖；localStorage 不可用时 try/catch 静默忽略，不阻断正常使用",
+          "对齐竞品的「欢迎 + 功能引导」入场体验；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.5",
     date: "2026-08-01",

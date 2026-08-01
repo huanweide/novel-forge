@@ -23,6 +23,7 @@ import { DrawCards } from "@/components/workspace/DrawCards";
 import { BuildConfigDialog } from "@/components/workspace/BuildConfigDialog";
 import { MemoryDecayDialog } from "@/components/workspace/MemoryDecayDialog";
 import { ProjectConfigPanel } from "@/components/workspace/ProjectConfigPanel";
+import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import type { StyleTemplate } from "@/core/templates";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
@@ -650,6 +651,7 @@ export default function WorkspacePage() {
 
   return (
     <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
+      <OnboardingModal />
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
