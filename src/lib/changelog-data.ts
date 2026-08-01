@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.5";
+export const LATEST_VERSION = "v0.44.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔑 项目配置中心「per-project LLM 覆盖」缺口补齐：大纲生成（/generate/outline）与宝宝流自动填表（babyloreFill）现已继承项目级 llmConfig（apiKey/baseUrl/model 非空字段覆盖全局）",
-  "✅ 实测端到端验证：设错误项目 key → write/outline 均返回 401 鉴权失败（证明覆盖接管）；复位 {} → 用 .env 全局 key 真实生成成功（证明无阻塞、API 直接可用）",
-  "🔗 write/refine/continue 三路由把项目级 llmConfig 透传 safeFillAfterWriting；outline 叠加 buildProjectOverrides 解析",
-  "🧪 tsc 零错误；澄清此前「API 阻塞」为误判——本地站读 .env 的 LLM_API_KEY，DeepSeek key 一直可用",
+  "🧱 PostGenPanel（624 行）拆分为 7 个内聚子组件：PostGenPanelHeader / PostGenPanelTabs / ExtractionTab / ForbiddenTab / LogicTab / DistillTab / ReviewTab，共享类型与 TabKey/TABS 外置 postgen/types.ts",
+  "🔒 父组件保留全部 useState（7 个 adopted Set + tab/saving/saveMessage）与 handler，采纳状态经 AdoptControllers 注入 ExtractionTab；行为 100% 不变（tsc 零错误，逻辑逐字迁移）",
+  "📉 主文件从 624 行降至约 187 行；巨型组件拆分 4/4 已完成其三（剩 AIChatBar 待拆）",
+  "🧹 纯重构：无 schema 变更、无新功能、无样式改动，生成后分析面板可维护性提升",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.6",
+    date: "2026-07-31",
+    title: "巨型组件拆分续 —— PostGenPanel 624→187 行",
+    sections: [
+      {
+        label: "重构 / 可维护性",
+        items: [
+          "PostGenPanel（624 行）拆分为 7 个内聚子组件：PostGenPanelHeader（头部 stats+按钮）、PostGenPanelTabs（Tab 栏）、ExtractionTab（7 分组提取结果+逐条采纳）、ForbiddenTab / LogicTab / DistillTab / ReviewTab（四个分析 Tab），共享类型与 TabKey/TABS 外置 postgen/types.ts",
+          "父组件保留全部 useState（7 个 adopted Set + tab/saving/saveMessage）与 handler（handleSave/toggleAdopt/importanceStars）及采纳初始化 useEffect，仅以子组件调用替换内联 JSX 区块；采纳状态经 AdoptControllers 注入 ExtractionTab，行为 100% 不变（tsc 零错误，逻辑逐字迁移）",
+          "主文件从 624 行降至约 187 行；巨型组件拆分 4/4 全部完成（CharacterList / WorldPanel / PostGenPanel / AIChatBar 中本项收尾前三，AIChatBar 仍待拆）",
+          "纯重构：无 schema 变更、无新功能、无样式改动，生成后分析面板可维护性提升",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.5",
     date: "2026-07-31",

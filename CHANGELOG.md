@@ -2,6 +2,13 @@
 
 ---
 
+## v0.44.6 — 2026-07-31
+**巨型组件拆分续 —— PostGenPanel 624→187 行**
+- 🧱 `PostGenPanel`（624 行）拆分为 7 个内聚子组件：`PostGenPanelHeader`（头部 stats+按钮）、`PostGenPanelTabs`（Tab 栏）、`ExtractionTab`（7 分组提取+逐条采纳）、`ForbiddenTab` / `LogicTab` / `DistillTab` / `ReviewTab`（四个分析 Tab），共享类型与 `TabKey`/`TABS` 外置 `postgen/types.ts`
+- 🔒 父组件保留全部状态/handler（7 个 adopted Set + handleSave/toggleAdopt/importanceStars + 采纳初始化 useEffect），采纳状态经 `AdoptControllers` 注入 `ExtractionTab`；行为 100% 不变（tsc 零错误，逻辑逐字迁移）
+- 📉 主文件从 624 行降至约 187 行；巨型组件拆分 4/4 已完成其三（剩 `AIChatBar` 待拆）
+- 🧹 纯重构：无 schema 变更、无新功能、无样式改动，生成后分析面板可维护性提升
+
 ## v0.44.5 — 2026-07-31
 **项目级 LLM 覆盖端到端闭环（outline + 自动填表接入）**
 - 🔑 项目配置中心「per-project LLM 覆盖」缺口补齐：大纲生成（`/generate/outline`）与宝宝流自动填表（`babyloreFill`）现已继承项目级 llmConfig（apiKey/baseUrl/model 非空字段覆盖全局），与 write/refine/continue/summarize 统一
