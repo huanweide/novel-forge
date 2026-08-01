@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.2";
+export const LATEST_VERSION = "v0.45.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🏷️ 章节正文标题下新增「实体彩色徽章」：自动扫描本章出现的角色 / 世界书词条，一眼看到 AI 识别了哪些实体",
-  "🎨 徽章沿用实体高亮配色（角色蓝 / 世界书按类别着色），与正文高亮一致；同一实体按 id 去重",
-  "🔗 点击徽章直接跳转对应角色 / 世界书条的查看编辑弹窗（复用既有 dialog），无需去侧栏翻找",
-  "🔌 配套：/api/entities/highlight 返回增加 id 字段（别名 / 关键词指向同一实体），供徽章精确跳转；无 schema 变更，tsc 零错误",
+  "🧭 世界书面板新增「列表 / 网格」视图切换，网格用 2 列卡片，对齐竞品的卡片仪表板概览",
+  "🗂️ 网格视图复用现有 WorldEntryCard，窄侧栏下也能紧凑排布，条目数实时显示",
+  "🔘 切换为本地状态（不影响其它面板），默认仍是列表，零破坏性",
+  "🧩 纯 UI 增强：无 schema 变更、无新依赖，tsc 零错误；PROCESS/06 P1-1 完成",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.3",
+    date: "2026-08-01",
+    title: "世界模块网格视图（卡片仪表板）",
+    sections: [
+      {
+        label: "功能 / 世界书 UX",
+        items: [
+          "WorldPanel 的条目区新增「列表 / 网格」视图切换（WorldEntryList 顶部分段控件），网格用 2 列卡片排布，对齐竞品的卡片仪表板概览（PROCESS/06 P1-1）",
+          "网格视图复用现有 WorldEntryCard，窄侧栏下也能紧凑排布；左侧实时显示当前板块条目数",
+          "切换为组件本地状态（useState），默认仍是列表视图，不影响世界书其它交互；纯 UI 增强、零破坏性",
+          "无 schema 变更、无新依赖；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.2",
     date: "2026-08-01",
