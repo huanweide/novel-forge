@@ -147,6 +147,11 @@ export function ChatPanel({
                                   失败
                                 </span>
                               )}
+                              {status === "❌失败" && (
+                                <span className="text-[9px] text-[var(--nv-danger)]/70 ml-1">
+                                  点击卡片重试 ↻
+                                </span>
+                              )}
                               {adopted && !status && (
                                 <span className="text-[9px] bg-[var(--nv-success)]/20 text-[var(--nv-success)] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                                   <Icon name="check" size={9} /> 已采纳

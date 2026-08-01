@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.0";
+export const LATEST_VERSION = "v0.44.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎯 六大新功能落地：创意工坊一键载入示范预设 / 布置结构化保存与重编辑 / 记忆衰减手动触发 / 抽卡角色生成前确认打通 / 项目配置中心 / 自动填表可视化与重试",
-  "🔁 regex 预设三处统一应用（write/refine/continue 一致）+ lorebook 预设重复应用去重（按名称更新而非叠加）",
-  "🧭 章节大纲双入口明确区分：Flash 章纲（轻量预览）与抽卡分镜（正式 Outline·带角色）+ 世界书注入深度文案改为「常驻记忆/触发记忆」",
-  "🛡️ 角色卡 adopt 字段映射加固（补全对话风格/隐藏动机/人物关系，复杂设定不丢字段）+ 10 个孤儿 API 路由标注 @deprecated（不删）",
+  "🐛 修复探讨模式采纳失败无法重试：此前 fetch 前提前置 adopted 致失败卡片显示「已采纳」且按钮禁用，现已改为成功后才置 adopted",
+  "🔁 统一失败状态串为「❌失败」（修复 page 与 ChatPanel 字符串不一致导致失败徽标永不显示的隐藏 bug）",
+  "🔄 ChatPanel 失败卡片新增「点击卡片重试 ↻」提示，失败后整卡可点击重新采纳",
+  "🧪 批量采纳失败项同样可在对话卡片单卡重试；tsc 零错误，纯前端逻辑修复无 schema 变更",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.1",
+    date: "2026-08-01",
+    title: "修复探讨模式采纳失败无法重试（稳定性）",
+    sections: [
+      {
+        label: "Bug 修复（U6 后续）",
+        items: [
+          "修复 handleAdoptCard 在 fetch 之前就把卡片 adopted 置真：失败也会显示「已采纳」并禁用按钮，导致用户无法重试 —— 改为仅在成功响应后才置 adopted + 写入已采纳列表",
+          "统一失败状态串：page.tsx 原写 \"采纳失败\" 与 ChatPanel 检查的 \"❌失败\" 不一致，失败徽标永不显示；现统一为 \"❌失败\"",
+          "ChatPanel 失败卡片新增「点击卡片重试 ↻」提示，失败后整卡仍可点击触发 onAdoptCard 重新采纳（adopted 保持 false 不禁用）",
+          "批量采纳（大纲模式）失败项同样受益：因卡片 adopted 不再提前置真，用户可在对话卡片上单卡重试",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.0",
     date: "2026-07-31",

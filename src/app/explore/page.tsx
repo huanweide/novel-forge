@@ -172,16 +172,6 @@ export default function ExplorePage() {
         content: card.content,
         timestamp: Date.now(),
       };
-      setAdopted((prev) => [...prev, item]);
-
-      setMessages((prev) =>
-        prev.map((m) => ({
-          ...m,
-          cards: m.cards?.map((c) =>
-            c.id === card.id ? { ...c, adopted: true } : c,
-          ),
-        })),
-      );
 
       try {
         const res = await fetch("/api/explore/adopt", {
@@ -195,6 +185,16 @@ export default function ExplorePage() {
         });
         const data = await res.json();
         if (res.ok) {
+          // 成功后才置 adopted + 写入已采纳列表 + 卡片标记已采纳
+          setAdopted((prev) => [...prev, item]);
+          setMessages((prev) =>
+            prev.map((m) => ({
+              ...m,
+              cards: m.cards?.map((c) =>
+                c.id === card.id ? { ...c, adopted: true } : c,
+              ),
+            })),
+          );
           setAdoptStatus((prev) => ({
             ...prev,
             [card.id]: data.entityType === "character" ? "已采纳·角色" : "已采纳·词条",
@@ -207,10 +207,11 @@ export default function ExplorePage() {
             setCurrentStep(EXPLORE_STEPS[currentIdx + 1]);
           }
         } else {
-          setAdoptStatus((prev) => ({ ...prev, [card.id]: "采纳失败" }));
+          // 失败：保留卡片可重试，状态串与 ChatPanel 检查一致（"❌失败"），绝不提前置 adopted
+          setAdoptStatus((prev) => ({ ...prev, [card.id]: "❌失败" }));
         }
       } catch {
-        setAdoptStatus((prev) => ({ ...prev, [card.id]: "采纳失败" }));
+        setAdoptStatus((prev) => ({ ...prev, [card.id]: "❌失败" }));
       }
     },
     [adopted, config, createdProjectId, currentStep],
