@@ -2,6 +2,13 @@
 
 ---
 
+## v0.45.0 — 2026-08-01
+**导出格式扩充 —— 网页 HTML + 电子书 EPUB**
+- 📤 导出新增「网页 HTML (.html)」与「电子书 EPUB (.epub)」两种格式，原先仅有 Markdown / 纯文本；满足排版美观、社交分发、电子书阅读三类诉求（PROCESS/06 P0-1）
+- 🗂️ HTML 单文件导出（`buildHtmlDoc`）：自带轻量散文→HTML 转换——处理段落（空行分隔）、行内 **粗体** / *斜体*、> 引用、--- 分割线，带目录导航 `<nav>`、衬线字体排版与署名页脚；可直接浏览器打开，也可被 Word / 公众号排版工具导入
+- 📚 EPUB3 导出（`buildEpub`）：零新增 npm 依赖，手写 stored（不压缩）ZIP + CRC32 表，`mimetype` 置于首条且 stored（符合 EPUB 规范要求），依次打包 `META-INF/container.xml`、`OEBPS/content.opf`、`nav.xhtml`（目录）、各 `chN.xhtml` 章节、`colophon.xhtml`；微信读书 / Apple Books / Calibre 可直接打开
+- 🔧 导出按钮弹层由 2 项扩展为 4 项（Markdown / 纯文本 / 网页 HTML / 电子书 EPUB），`Toolbar.onExport` 与 `page.tsx handleExport` 类型统一为 `markdown | txt | html | epub`；复用现有章节树遍历与字数统计，导出路由按 format 分流；无 schema 变更，tsc 零错误，unzip -t 校验 EPUB 零错误
+
 ## v0.44.8 — 2026-07-31
 **远楼层 LLM 摘要 —— 酒馆记忆机制迁移收官**
 - 🧠 正文生成前，对短期记忆预算放不下的较早章节，用与正文相同的 LLM 客户端（含项目级覆盖）预生成 ≤240 字中文情节压缩摘要，注入前文回顾区替换原「⚠️ 远楼层…已折叠·非完整原文」标记，保留情节要义、消除剧情断裂幻觉

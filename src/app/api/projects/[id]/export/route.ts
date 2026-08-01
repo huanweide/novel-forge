@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { buildChapterList, buildHtmlDoc, buildEpub } from "@/core/epub";
 
 /**
- * GET /api/projects/[id]/export?format=markdown|txt&includeOutline=true|false
+ * GET /api/projects/[id]/export?format=markdown|txt|html|epub&includeOutline=true|false
  *
  * 导出整本小说 —— 按章节顺序拼接所有节点内容。
- * 支持 Markdown（推荐）和纯文本格式。
+ * 支持 Markdown（推荐）/ 纯文本 / 单文件网页 HTML / EPUB 电子书。
  */
 export async function GET(
   request: Request,
@@ -40,6 +41,37 @@ export async function GET(
     const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
     const roots = allNodes.filter((n) => !n.parentId);
 
+    // 统计（所有格式共用）
+    const totalWords = allNodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);
+    const completedNodes = allNodes.filter((n) => n.content).length;
+
+    // HTML 单文件导出：自带轻量散文→HTML 转换，可直接浏览器打开 / 被 Word 导入
+    if (format === "html") {
+      const chapters = buildChapterList(roots, allNodes, includeOutline);
+      const htmlDoc = buildHtmlDoc(project.name, chapters, totalWords, completedNodes);
+      const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.html`;
+      return new Response(htmlDoc, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+        },
+      });
+    }
+
+    // EPUB 电子书导出（零依赖 stored ZIP + CRC32）
+    if (format === "epub") {
+      const chapters = buildChapterList(roots, allNodes, includeOutline);
+      const epubBuf = buildEpub(project.name, chapters, totalWords, completedNodes);
+      const epubBlob = new Blob([new Uint8Array(epubBuf)], { type: "application/epub+zip" });
+      const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.epub`;
+      return new Response(epubBlob, {
+        headers: {
+          "Content-Type": "application/epub+zip",
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+        },
+      });
+    }
+
     let output = "";
 
     if (format === "markdown") {
@@ -72,10 +104,6 @@ export async function GET(
         output += buildTextNode(root, allNodes, includeOutline);
       }
     }
-
-    // 统计
-    const totalWords = allNodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);
-    const completedNodes = allNodes.filter((n) => n.content).length;
 
     output += `\n\n---\n\n`;
     output += `*共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字*\n`;

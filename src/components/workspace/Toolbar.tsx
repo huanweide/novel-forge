@@ -14,7 +14,7 @@ export function Toolbar({
 }: {
   projectName: string; onBack: () => void; onGenerateOutline: () => void;
   onSummarize: () => void; onImportSettings: () => void; onImportChapters: () => void;
-  onEditStyle: () => void; onExport: (format: "markdown" | "txt") => void;
+  onEditStyle: () => void; onExport: (format: "markdown" | "txt" | "html" | "epub") => void;
   isGenerating: boolean; outlineGenerating?: boolean; summarizing: boolean;
   projectId: string; styleTemplateId?: string; onStyleSelect: (t: StyleTemplate) => void;
   styleCard?: ProjectData["styleCard"];
@@ -74,11 +74,15 @@ export function Toolbar({
           {showExport && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
-              <div className="absolute right-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-abyss)] shadow-xl">
+              <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-abyss)] shadow-xl">
                 <button onClick={() => { onExport("markdown"); setShowExport(false); }}
                   className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />Markdown (.md)</button>
                 <button onClick={() => { onExport("txt"); setShowExport(false); }}
                   className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />纯文本 (.txt)</button>
+                <button onClick={() => { onExport("html"); setShowExport(false); }}
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />网页 HTML (.html)</button>
+                <button onClick={() => { onExport("epub"); setShowExport(false); }}
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />电子书 EPUB (.epub)</button>
               </div>
             </>
           )}

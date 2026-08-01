@@ -1,0 +1,95 @@
+# 06-竞品借鉴更新计划（云笔AI小说写作助手）
+
+日期：2026-08-01
+来源：competitor-research/ 截图 + frontend-design-notes.md
+原则：novel-forge 的 AI 原生架构（编排/记忆注入/世界书 depth/抽卡/拆解/游戏/自动化）已领先竞品；竞品价值仅在于「呈现层打磨」+ 少数 novel-forge 尚未补齐的便利功能。本次更新 = 选择性 UX 提升 + 补齐少量真实缺口，**绝不重构核心、不照搬**。
+
+---
+
+## 核心判断（先校准预期）
+
+竞品已有的、novel-forge 也已有（甚至更强）→ 不照搬、保持现有：
+- AI 对话：竞品是 6 个简单芯片；novel-forge 是 AIChatBar（对话 + 前端动作 + 探讨/布置 —— 更强大）
+- 记忆/分层回顾：竞品是简化开关；novel-forge 已完成酒馆迁移完整版（v0.44.8）
+- 拆解/抽卡/游戏/自动化：竞品完全没有，是 novel-forge 优势项
+- 统计：novel-forge 已有 MonitorPanel + /api/stats
+
+竞品做得更顺手、novel-forge 尚缺或较弱 → 这才是借鉴对象。
+
+---
+
+## P0 — 补齐真实缺口（竞品有、novel-forge 缺）
+
+### P0-1 导出格式扩充（读者刚需）
+- 现状：`Toolbar.tsx` 的导出弹层只支持 Markdown(.md) / 纯文本(.txt)，路由 `api/projects/[id]/export/route.ts`。
+- 计划：弹层增加 HTML / DOCX / PDF / EPUB 四个选项；路由按 format 分支：
+  - 先落地 HTML（组装现有章节 HTML 片段）+ EPUB（zip + mimetype + OEBPS，零重依赖，读者可直接导入阅读器）
+  - DOCX 用 `docx` 库、PDF 用 `jspdf`/puppeteer（第二阶段）
+- 复用：现有章节正文组装逻辑、project 元信息；目标 word count 等已有数据直接带入。
+- 风险：低（纯新增分支，不改现有 MD/TXT 行为）。
+
+### P0-2 编辑器底部状态栏（作者掌控感）
+- 现状：`CenterPanel.tsx` 仅显示 `selectedNode.wordCount` 字，无行号/列号/编码/本章目标。
+- 计划：在 CenterPanel 底部加一条状态栏（与竞品对齐）：行 / 列 / UTF-8 / 当前字数 / 本章目标字数（可编辑，存入 project 设置）。
+- 复用：`selectedNode.wordCount`；编辑器 textarea 的 selectionStart 派生行列；目标字数走现有 project config 端点。
+- 风险：低（纯展示组件）。
+
+### P0-3 章节实体彩色徽章（一眼看到 AI 识别了什么）
+- 现状：实体在 `ChapterEntitiesPanel`（侧栏独立面板），不在章节标题下。
+- 计划：在 CenterPanel 章节标题下加一行彩色徽章（角色/势力/场景/伏笔/物品），点开即跳到对应实体详情。
+- 复用：babylore 自动填表数据 + entities/highlight 已抽出的实体；颜色令牌用现有 --nv-*。
+- 风险：低。
+
+---
+
+## P1 — 呈现层借鉴（竞品更顺手，novel-forge 已有近似物）
+
+### P1-1 世界模块网格视图
+- 现状：`WorldPanel` + `WorldModuleSidebar` 是列表式导航。
+- 计划：给 WorldPanel 增加「列表/网格」切换，网格用 2 列卡片（对齐竞品 17 卡仪表板）。
+- 复用：`worldPanelData.ts` 的 WORLD_MODULES 常量（已外置）。
+- 风险：低。
+
+### P1-2 右侧 AI 快捷芯片条
+- 现状：AIChatBar 已强大，但缺少「一键触发常用动作」的入口。
+- 计划：在 AIChatBar 顶部加一排快捷芯片（续写/润色/对话/查漏/修正/展开），点击即调用 AIChatBar 已有 handler / 对应 preset，不新增 AI 逻辑。
+- 风险：低（只是入口聚合）。
+
+### P1-3 叙事视角选择（若项目配置中心尚无）
+- 计划：在 `BuildConfigDialog` / `ProjectConfigPanel` 补 5 视角单选（第三人称有限/全知、第一人称、POV 轮换、第二人称）+ 清除，注入 orchestrator system prompt，与现有风格卡机制对齐。
+- 复用：现有 globalPrompt 注入通道。
+- 风险：中（需确认 orchestrator 已消费该字段；若已有则跳过）。
+
+---
+
+## P2 — 打磨（可选、成本低）
+
+### P2-1 角色卡性格三层（表层/中层/内核）
+- 作为可选模板字段，复用现有 speechPatterns / relationships 结构；不强制。
+
+### P2-2 每日写作目标可视化
+- 竞品有「每日目标 + 本周趋势」；novel-forge 有 MonitorPanel + /api/stats，补一个「每日目标设定 + 进度环」即可。
+
+### P2-3 新手引导弹窗
+- 低优先，首次进入时欢迎 + 引导；复用现有 自动化/抽卡 等入口介绍。
+
+---
+
+## 明确不照搬（竞品有但 novel-forge 架构更优）
+
+- AI 对话芯片 → 保留 AIChatBar
+- 游戏/拆解/抽卡/自动化 → 保留（竞品无）
+- 记忆注入/分层故事回顾 → 保留酒馆迁移版
+
+---
+
+## 建议执行顺序
+
+P0-1（EPUB 导出，零架构风险、读者刚需）
+→ P0-2（状态栏）
+→ P0-3（实体徽章）
+→ P1-1 / P1-2（网格视图 / 芯片条，纯 UI）
+→ P1-3（视角，需先确认字段）
+→ P2 按需
+
+每个 P0/P1 小项独立提交、不改既有行为、配套 changelog 双文件同步。

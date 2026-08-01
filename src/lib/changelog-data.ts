@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.8";
+export const LATEST_VERSION = "v0.45.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧠 远楼层 LLM 摘要（酒馆记忆机制迁移最后一环）：正文生成前，对短期记忆预算放不下的较早章节，用同一 LLM 客户端预生成 ≤240 字中文压缩摘要，注入前文回顾区替换原「已折叠·非完整原文」标记，保留情节要义、消除剧情断裂幻觉",
-  "🔌 新增 core/assembly/distant-summary.ts（summarizeDistantFloor 非流式 client.chat 调用，失败静默回退折叠标记）与 engine.getDistantFloors 检测 helper（复用同一份预算+贪心循环，保证检测与折叠一致）",
-  "🪢 orchestrator.writeSection 串联：assemblePrompt 新增 opts.distantSummaries 第 4 参数，未传时（如预览上下文）自动回退原折叠标记，零破坏性",
-  "🛡️ 网络/超时/内容过滤异常全部捕获并回退，绝不阻断正文流式出文；preview-context 路由不触发额外 LLM 调用",
+  "📤 导出新增「网页 HTML」与「电子书 EPUB」两种格式（原仅 Markdown / 纯文本），满足排版美化、社交分发、电子书阅读三类诉求",
+  "🗂️ HTML 单文件：自带轻量散文→HTML 转换（段落 / 粗体 / 斜体 / 引用 / 分割线），带目录导航与衬线排版，可直接浏览器打开或被 Word / 公众号排版工具导入",
+  "📚 EPUB 零依赖：手写 stored ZIP + CRC32，mimetype 首条 stored，符合 EPUB3 规范，微信读书 / Apple Books / Calibre 可直接打开；无需 archiver / jszip",
+  "🔧 导出按钮弹层扩展为四选项（Markdown / TXT / HTML / EPUB），统一 onExport 类型；无 schema 变更，tsc 零错误，unzip -t 校验 EPUB 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.0",
+    date: "2026-08-01",
+    title: "导出格式扩充 —— 网页 HTML + 电子书 EPUB",
+    sections: [
+      {
+        label: "功能 / 导出",
+        items: [
+          "导出新增「网页 HTML (.html)」与「电子书 EPUB (.epub)」两种格式，原先仅有 Markdown / 纯文本；满足排版美观、社交分发、电子书阅读三类诉求（PROCESS/06 P0-1）",
+          "HTML 单文件导出（buildHtmlDoc）：自带轻量散文→HTML 转换——处理段落（空行分隔）、行内 **粗体** / *斜体*、> 引用、--- 分割线，带目录导航 <nav>、衬线字体排版与署名页脚；可直接浏览器打开，也可被 Word / 公众号排版工具导入",
+          "EPUB3 导出（buildEpub）：零新增 npm 依赖，手写 stored（不压缩）ZIP + CRC32 表，mimetype 置于首条且 stored（符合 EPUB 规范要求），依次打包 META-INF/container.xml、OEBPS/content.opf、nav.xhtml（目录）、各 chN.xhtml 章节、colophon.xhtml；微信读书 / Apple Books / Calibre 可直接打开",
+          "导出按钮弹层由 2 项扩展为 4 项（Markdown / 纯文本 / 网页 HTML / 电子书 EPUB），Toolbar.onExport 与 page.tsx handleExport 类型统一为 markdown | txt | html | epub；复用现有章节树遍历与字数统计，导出路由按 format 分流；无 schema 变更，tsc 零错误，unzip -t 校验 EPUB 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.8",
     date: "2026-07-31",

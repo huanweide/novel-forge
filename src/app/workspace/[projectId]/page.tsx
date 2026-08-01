@@ -616,7 +616,7 @@ export default function WorkspacePage() {
   // 导出
   // ═══════════════════════════════════════════
 
-  const handleExport = (format: "markdown" | "txt") => { window.open(`/api/projects/${projectId}/export?format=${format}`, "_blank"); };
+  const handleExport = (format: "markdown" | "txt" | "html" | "epub") => { window.open(`/api/projects/${projectId}/export?format=${format}`, "_blank"); };
 
   // ═══════════════════════════════════════════
   // 渲染
