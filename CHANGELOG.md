@@ -2,6 +2,13 @@
 
 ---
 
+## v0.44.8 — 2026-07-31
+**远楼层 LLM 摘要 —— 酒馆记忆机制迁移收官**
+- 🧠 正文生成前，对短期记忆预算放不下的较早章节，用与正文相同的 LLM 客户端（含项目级覆盖）预生成 ≤240 字中文情节压缩摘要，注入前文回顾区替换原「⚠️ 远楼层…已折叠·非完整原文」标记，保留情节要义、消除剧情断裂幻觉
+- 🔌 新增 `core/assembly/distant-summary.ts`（`summarizeDistantFloor` 非流式 `client.chat`，异常静默回退折叠标记）与 `engine.getDistantFloors` 检测 helper（复用同一份预算+贪心循环，保证检测与折叠一致）
+- 🪢 `orchestrator.writeSection` 串联：`assemblePrompt` 新增 `opts.distantSummaries` 第 4 参数；`preview-context` 等其它调用点不传 opts，自动回退原折叠标记，零破坏性
+- 🛡️ 网络/超时/内容过滤异常全部捕获并回退，绝不阻断正文流式出文；无 schema 变更，tsc 零错误
+
 ## v0.44.7 — 2026-07-31
 **巨型组件拆分收官 —— AIChatBar 593→155 行**
 - 🧱 `AIChatBar`（593 行）拆分为 6 个内聚子组件：`AIChatHeader` / `ChatMessageList` / `ChatThinking` / `ChatErrorBar` / `ChatSuggestions` / `ChatInput`，共享类型外置 `aichat/types.ts`

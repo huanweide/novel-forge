@@ -59,10 +59,25 @@ const BUDGET_RATIOS = {
  * @param writingInstruction Agent C 的撰写指令（要写什么）
  * @returns 组装好的 Prompt 字符串 + Token 预算报告
  */
+/** assemblePrompt 的可选配置 */
+export interface AssembleOpts {
+  /** 远楼层节点的 LLM 压缩摘要，key = StoryNode.id。提供则用摘要替换折叠标记，不提供则回退原折叠标记。 */
+  distantSummaries?: Record<string, string>;
+}
+
+/** 被预算折叠的远楼层节点（供编排层在其上生成 LLM 压缩摘要） */
+export interface DistantFloor {
+  id: string;
+  title: string;
+  content: string | null;
+  outline: string | null;
+}
+
 export function assemblePrompt(
   context: PromptContext,
   contextWindowSize: number,
-  writingInstruction: string
+  writingInstruction: string,
+  opts?: AssembleOpts
 ): { prompt: string; budget: TokenBudget } {
   const budget = calculateBudget(contextWindowSize);
 
@@ -94,7 +109,7 @@ export function assemblePrompt(
   const mediumSection = buildMediumTermSection(context.slidingWindow, budget.allocations.mediumTermMemory, currentCharacterNames);
 
   // 9. 短期记忆（近期正文）
-  const shortSection = buildShortTermSection(context.slidingWindow, budget.allocations.shortTermMemory);
+  const shortSection = buildShortTermSection(context.slidingWindow, budget.allocations.shortTermMemory, opts?.distantSummaries);
 
   // 10. 作者注释
   const authorSection = context.authorNote
@@ -279,27 +294,35 @@ function buildForcedLoreSection(entries: LorebookEntry[], label: string): string
 
 function buildShortTermSection(
   window: SlidingWindow,
-  maxTokens: number
+  maxTokens: number,
+  distantSummaries?: Record<string, string>
 ): string {
   const nodes = window.shortTerm;
   if (nodes.length === 0) return "";
 
   // 保留标题与正文，便于折叠时标注边界
   const items = nodes.map((n) => ({
+    id: n.id,
     title: n.title,
     body: `### ${n.title}\n${n.content || n.outline || ""}`,
   }));
 
   // 从最新往旧拼接，保证最新的内容不会被截断。
-  // 较远楼层（放不下的旧节点）做「折叠标记」而非静默丢弃——对应酒馆「记忆清除 / 上下文溢出治理」：
-  // 明确告知模型哪些内容被压缩，避免其把截断片段误读为完整情节而产生剧情断裂幻觉。
+  // 较远楼层（放不下的旧节点）：
+  //  - 若提供 LLM 压缩摘要（distantSummaries）——用摘要保留情节要义（酒馆记忆迁移最后一环）；
+  //  - 否则做「折叠标记」而非静默丢弃——对应酒馆「记忆清除 / 上下文溢出治理」，
+  //    明确告知模型哪些内容被压缩，避免其把截断片段误读为完整情节而产生剧情断裂幻觉。
   let result = "";
   let folded = 0;
   for (let i = items.length - 1; i >= 0; i--) {
     const candidate = items[i].body + (result ? "\n\n---\n\n" + result : "");
     if (countTokens(candidate) > maxTokens) {
       const remaining = maxTokens - countTokens("\n\n---\n\n" + result);
-      if (remaining > 60) {
+      const summary = distantSummaries?.[items[i].id];
+      if (summary && summary.trim()) {
+        // 远楼层 LLM 压缩摘要：保留情节要义而非静默丢弃
+        result = `【远楼层摘要·AI 压缩】「${items[i].title}」\n${summary.trim()}\n\n---\n\n${result}`;
+      } else if (remaining > 60) {
         // 保留末尾（与后续节点的衔接点），开头被折叠，显式标注边界
         const tail = truncateByTokens(items[i].body, remaining, true);
         result = `[…较远楼层「${items[i].title}」开头已折叠，以下为结尾衔接]\n${tail}\n\n---\n\n${result}`;
@@ -315,9 +338,46 @@ function buildShortTermSection(
 
   const foldNote =
     folded > 0
-      ? `（注：含 ${folded} 个较远楼层已按上下文预算折叠，标记为"非完整原文"，请勿当作完整情节）`
+      ? `（注：含 ${folded} 个较远楼层，已用 AI 压缩摘要保留情节要义，请勿当作完整原文）`
       : "";
   return result ? `【前文回顾——最近发生的事】${foldNote}\n${result}` : "";
+}
+
+/**
+ * 检测短期记忆中"放不进预算"的远楼层节点（即会被 buildShortTermSection 折叠的节点）。
+ *
+ * 供编排层在调用 assemblePrompt 之前，用 LLM 为这些节点生成压缩摘要，
+ * 再以 assemblePrompt 的 opts.distantSummaries 注入，替换折叠标记。
+ *
+ * 与 buildShortTermSection 内部使用同一份 calculateBudget + 同一贪心循环，
+ * 保证"检测到要折叠的"与"实际被折叠的"完全一致。
+ */
+export function getDistantFloors(
+  window: SlidingWindow,
+  contextWindowSize: number
+): DistantFloor[] {
+  const maxTokens = calculateBudget(contextWindowSize).allocations.shortTermMemory;
+  const nodes = window.shortTerm;
+  if (nodes.length === 0) return [];
+
+  const items = nodes.map((n) => ({
+    id: n.id,
+    title: n.title,
+    body: `### ${n.title}\n${n.content || n.outline || ""}`,
+  }));
+
+  const folded: DistantFloor[] = [];
+  let result = "";
+  for (let i = items.length - 1; i >= 0; i--) {
+    const candidate = items[i].body + (result ? "\n\n---\n\n" + result : "");
+    if (countTokens(candidate) > maxTokens) {
+      const node = nodes[i];
+      folded.push({ id: node.id, title: node.title, content: node.content, outline: node.outline });
+      break;
+    }
+    result = candidate;
+  }
+  return folded;
 }
 
 function buildMediumTermSection(

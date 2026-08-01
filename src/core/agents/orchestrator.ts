@@ -31,7 +31,8 @@ import type {
 import type { LLMClient } from "@/core/llm/client";
 import type { LLMConfig } from "@/core/types";
 import { getDefaultClient, getDefaultLLMConfig, getEffectiveConfig, createLLMClient, buildProjectOverrides } from "@/core/llm/client";
-import { assemblePrompt } from "@/core/assembly/engine";
+import { assemblePrompt, getDistantFloors } from "@/core/assembly/engine";
+import { summarizeDistantFloor } from "@/core/assembly/distant-summary";
 import { matchLoreEntries } from "@/core/assembly/trigger";
 import { safeJoin } from "@/lib/utils";
 import { countTokens } from "@/core/assembly/tokenizer";
@@ -194,15 +195,26 @@ ${loreBriefs}
     /** 覆盖默认 topP（来自项目文风设置） */
     topPOverride?: number,
   ): AsyncGenerator<{ type: "token" | "done" | "error"; content: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
-    const { prompt } = assemblePrompt(
-      context,
-      this.config.contextWindowSize,
-      `${writingInstruction}\n\n目标字数：约${targetWordCount}字。`
-    );
-
     const systemPrompt = context.systemPrompt;
     const client = clientOverride || this.client;
     const model = writerModelOverride || this.config.writerModel;
+
+    // 酒馆记忆迁移最后一环：远楼层 LLM 压缩摘要。
+    // 检测短期记忆中放不进预算的较早章节，用同一 client/model 预生成摘要，
+    // 注入前文回顾区替换"已折叠·非完整原文"标记，保留情节要义。
+    const distantSummaries: Record<string, string> = {};
+    const distantFloors = getDistantFloors(context.slidingWindow, this.config.contextWindowSize);
+    for (const floor of distantFloors) {
+      const summary = await summarizeDistantFloor(client, floor, model);
+      if (summary) distantSummaries[floor.id] = summary;
+    }
+
+    const { prompt } = assemblePrompt(
+      context,
+      this.config.contextWindowSize,
+      `${writingInstruction}\n\n目标字数：约${targetWordCount}字。`,
+      { distantSummaries }
+    );
 
     try {
       for await (const chunk of client.chatStream({

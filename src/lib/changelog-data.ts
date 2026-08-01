@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.7";
+export const LATEST_VERSION = "v0.44.8";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧱 AIChatBar（593 行）拆分为 6 个内聚子组件：AIChatHeader / ChatMessageList / ChatThinking / ChatErrorBar / ChatSuggestions / ChatInput，共享类型外置 aichat/types.ts",
-  "🔒 父组件保留全部 state/refs/handler（handleSend/handleAdoptSuggestion/handleCancel/handleSuggestion + 思考轮播/自动滚底 useEffect），输入框 Enter 发送逻辑内联进 ChatInput；行为 100% 不变（tsc 零错误）",
-  "📉 主文件从 593 行降至约 155 行；巨型组件拆分 4/4 全部完成（CharacterList / WorldPanel / PostGenPanel / AIChatBar）",
-  "🧹 纯重构：无 schema 变更、无新功能、无样式改动，Agent 对话面板可维护性提升",
+  "🧠 远楼层 LLM 摘要（酒馆记忆机制迁移最后一环）：正文生成前，对短期记忆预算放不下的较早章节，用同一 LLM 客户端预生成 ≤240 字中文压缩摘要，注入前文回顾区替换原「已折叠·非完整原文」标记，保留情节要义、消除剧情断裂幻觉",
+  "🔌 新增 core/assembly/distant-summary.ts（summarizeDistantFloor 非流式 client.chat 调用，失败静默回退折叠标记）与 engine.getDistantFloors 检测 helper（复用同一份预算+贪心循环，保证检测与折叠一致）",
+  "🪢 orchestrator.writeSection 串联：assemblePrompt 新增 opts.distantSummaries 第 4 参数，未传时（如预览上下文）自动回退原折叠标记，零破坏性",
+  "🛡️ 网络/超时/内容过滤异常全部捕获并回退，绝不阻断正文流式出文；preview-context 路由不触发额外 LLM 调用",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.8",
+    date: "2026-07-31",
+    title: "远楼层 LLM 摘要 —— 酒馆记忆机制迁移收官",
+    sections: [
+      {
+        label: "功能 / 上下文质量",
+        items: [
+          "远楼层 LLM 压缩摘要（酒馆 memory 迁移最后一环）：正文生成前，检测短期记忆预算放不下的较早章节，用与正文相同的 LLM 客户端（含项目级覆盖）预生成 ≤240 字中文情节压缩摘要，注入前文回顾区替换原「⚠️ 远楼层…已折叠·非完整原文」标记，保留情节推进/关键转折/角色变化/未回收伏笔，消除模型把截断片段误读为完整剧情而产生的断裂幻觉",
+          "新增 core/assembly/distant-summary.ts：summarizeDistantFloor 用非流式 client.chat 生成压缩摘要（temperature 0.3），任何异常（网络/超时/内容过滤空返回）均静默回退到折叠标记，绝不阻断流式出文",
+          "engine.ts 新增导出 getDistantFloors(window, contextWindowSize) 检测 helper，内部复用同一份 calculateBudget + 同一贪心循环，保证「被检测到要折叠的」与「实际被 buildShortTermSection 折叠的」完全一致；assemblePrompt 新增 opts.distantSummaries 第 4 参数",
+          "零破坏性：preview-context 等其它调用点不传 opts，自动回退原折叠标记；无 schema 变更，tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.7",
     date: "2026-07-31",
