@@ -193,7 +193,16 @@ ${project.authorNote}`);
     sParts.push(`\n# 文风设定`);
 
     if (s.styleDescription) sParts.push(`- 文风描述：${s.styleDescription}`);
-    if (s.povType) sParts.push(`- 叙事视角：${s.povType}`);
+    // 叙事视角：优先读 StyleCard，兜底读 llmConfig（StyleEditor 写入路径）
+    const POV_MAP: Record<string, string> = {
+      first_person: "第一人称（「我」的视角，代入感强）",
+      third_person_limited: "第三人称限知（单角色视角，仅展现其感知）",
+      third_person_omniscient: "第三人称全知（上帝视角，跨越多角色心理）",
+      second_person: "第二人称（「你」的视角，沉浸式互动）",
+    };
+    const rawPov = (s.povType as string) || (project.llmConfig as any)?.povType || "";
+    const pov = POV_MAP[rawPov] || rawPov;
+    if (pov) sParts.push(`- 叙事视角：${pov}`);
     if (s.narrativeDistance) sParts.push(`- 叙事距离：${s.narrativeDistance}`);
     if (s.avgSentenceLength) sParts.push(`- 平均句长：${s.avgSentenceLength}字`);
 

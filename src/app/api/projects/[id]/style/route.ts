@@ -33,6 +33,7 @@ export async function GET(
       customForbiddenPatterns: (config.customForbiddenPatterns as string[]) || [],
       customStyleNotes: (config.customStyleNotes as string) || "",
       dimensions: (config.dimensions as Record<string, number>) || {},
+      povType: (config.povType as string) || "",
       template: template || null,
     });
   } catch (err) {
@@ -96,6 +97,7 @@ export async function PUT(
       customForbiddenPatterns: body.customForbiddenPatterns ?? (currentConfig.customForbiddenPatterns as string[]) ?? [],
       customStyleNotes: body.customStyleNotes ?? (currentConfig.customStyleNotes as string) ?? "",
       dimensions: body.dimensions ?? (currentConfig.dimensions as Record<string, number>) ?? {},
+      povType: body.povType ?? (currentConfig.povType as string) ?? "",
     };
 
     await prisma.project.update({

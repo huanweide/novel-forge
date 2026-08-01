@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.4";
+export const LATEST_VERSION = "v0.45.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🚀 AIChatBar 顶部新增「快捷芯片条」：续写 / 润色 / 写对话 / 查漏 / 修正 / 展开 一键触发",
-  "💬 芯片本质是把常用意图预填为 prompt 直接发送，复用既有 /api/generate/chat，不新增 AI 逻辑",
-  "🔘 生成中芯片自动禁用，避免重复发送；纯入口聚合，零破坏性",
-  "🧩 无 schema 变更、无新依赖，tsc 零错误；PROCESS/06 P1-2 完成",
+  "🎭 文风编辑器新增「叙事视角」单选：第一人称 / 第三人称限知 / 第三人称全知 / 第二人称 / 不指定",
+  "📝 视角选择写入项目 llmConfig，并在 syncGlobalPrompt 注入系统提示（中文可读映射），本次生成即生效",
+  "🔗 StyleEditor 维度 Tab 新增 POV 区块；style 路由 GET/PUT 同步持久化 povType",
+  "🧩 复用既有风格注入通道，零 schema 变更、零破坏性、tsc 零错误；PROCESS/06 P1-3 完成",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.5",
+    date: "2026-08-01",
+    title: "文风编辑器叙事视角选择",
+    sections: [
+      {
+        label: "功能 / 文风编辑器 UX",
+        items: [
+          "StyleEditor「文风维度」Tab 新增「🎭 叙事视角」单选组：第一人称 / 第三人称限知 / 第三人称全知 / 第二人称 / 不指定（PROCESS/06 P1-3）",
+          "视角选择存入项目 llmConfig.povType；style 路由 GET/PUT 同步持久化该字段，切换后立即刷新 globalPrompt",
+          "syncGlobalPrompt 注入系统提示时新增叙事视角区块（中文可读映射，如「第三人称全知（上帝视角，跨越多角色心理）」），兜底读取 llmConfig.povType，下次生成即生效",
+          "复用既有风格注入通道，零 schema 变更、零新依赖、tsc 零错误；行为完全向后兼容（旧项目无该字段视为「不指定」）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.4",
     date: "2026-08-01",

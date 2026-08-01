@@ -59,6 +59,15 @@ const PRESET_DIMENSIONS: Record<string, Record<string, number>> = {
   custom: { vocabularyRichness: 5, sentenceLength: 5, descriptionDensity: 5, dialogueRatio: 5, rhetoricLevel: 5, pacingSpeed: 5, psychoDesc: 5, envDesc: 5, colloquialism: 5, humorLevel: 5, violenceLevel: 3, eroticLevel: 3 },
 };
 
+// 叙事视角选项
+const POV_OPTIONS: { key: string; label: string; desc: string }[] = [
+  { key: "", label: "不指定", desc: "跟随文风模板默认" },
+  { key: "first_person", label: "第一人称", desc: "「我」的视角，代入感强" },
+  { key: "third_person_limited", label: "第三人称限知", desc: "「他/她」，单角色视角" },
+  { key: "third_person_omniscient", label: "第三人称全知", desc: "上帝视角，跨越多角色" },
+  { key: "second_person", label: "第二人称", desc: "「你」，沉浸式互动" },
+];
+
 // ═══════════════════════════════════════════
 // 组件 Props
 // ═══════════════════════════════════════════
@@ -80,6 +89,7 @@ interface StyleConfig {
   customForbiddenPatterns: string[];
   customStyleNotes: string;
   dimensions: Record<string, number>;
+  povType: string;
 }
 
 // ═══════════════════════════════════════════
@@ -94,6 +104,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
     temperature: 0.85, topP: 0.95, targetWordsPerSection: 1000,
     customForbiddenPatterns: [], customStyleNotes: "",
     dimensions: { ...PRESET_DIMENSIONS.custom },
+    povType: "",
   });
   const [newForbidden, setNewForbidden] = useState("");
 
@@ -133,6 +144,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             customForbiddenPatterns: data.customForbiddenPatterns || [],
             customStyleNotes: data.customStyleNotes || "",
             dimensions: mergedDimensions,
+            povType: data.povType || "",
           });
         } else { setLoadError(data.error || "加载文风配置失败"); }
       } catch (err) {
@@ -291,6 +303,21 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                       </button>
                     ));
                   })()}
+                </div>
+              </div>
+
+              {/* 叙事视角 */}
+              <div>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">🎭 叙事视角</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {POV_OPTIONS.map((opt) => (
+                    <button key={opt.key} onClick={() => setConfig({ ...config, povType: opt.key })}
+                      className={`text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors border ${config.povType === opt.key ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] border-[var(--nv-primary)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] border-[var(--nv-border-2)] hover:bg-[var(--nv-surface-2)]"}`}
+                      title={opt.desc}>
+                      <div className="font-medium">{opt.label}</div>
+                      <div className="text-[10px] opacity-70 mt-0.5 leading-tight">{opt.desc}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
