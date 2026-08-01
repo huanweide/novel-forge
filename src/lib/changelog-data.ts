@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.7";
+export const LATEST_VERSION = "v0.45.8";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧬 角色卡「性格三层」创作字段：表层（对外展现）/ 中层（日常互动）/ 内核（本质驱动），由浅入深写出立体人物（PROCESS/06 P2-1）",
-  "📝 三层直接并入 personality Json，零 schema 变更；保存时展开运算保留既有主导/驱动/矛盾等字段",
-  "🤖 经 safeJoin 自动拼入写作提示词「性格：…」，AI 生成时即感知三层差异，无需改装配",
-  "🧩 AI 补全（autofill）不会覆盖你手填的三层；tsc 零错误",
+  "📋 导出弹层新增「复制全文 Markdown」一键按钮：作者无需下载文件即可把整本稿子贴到微信 / 文档 / 发给他人（PROCESS/06 延续）",
+  "⚡ 纯前端实现：fetch 现有导出接口拿文本 + 浏览器剪贴板 API 写入，零新依赖、零 schema 变更",
+  "💡 复制中 / 成功（已复制全文 Markdown ✓）/ 失败 三重状态提示，2 秒自动消失，不打扰创作",
+  "🧩 复用 v0.45.0 已建的导出组装逻辑，零破坏性、tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.8",
+    date: "2026-08-01",
+    title: "导出弹层一键复制全文 Markdown",
+    sections: [
+      {
+        label: "功能 / 导出便捷化",
+        items: [
+          "Toolbar 导出弹层新增「复制全文 Markdown」按钮：点击即把整本书的 Markdown 文本写入系统剪贴板，作者可直接粘贴到微信 / 文档 / 聊天，无需先下载文件再打开（PROCESS/06 导出增强延续）",
+          "纯前端实现——fetch 现有 /api/projects/[id]/export?format=markdown 取回已组装的全文文本，再调用 navigator.clipboard.writeText 写入剪贴板；零新依赖、零 schema 变更",
+          "三重状态反馈：复制中… / 已复制全文 Markdown ✓ / 复制失败请改用导出文件，提示 2.2 秒自动消失，不阻断创作节奏",
+          "复用 v0.45.0 已建的导出路由与章节组装逻辑，纯入口增量、零破坏性；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.7",
     date: "2026-08-01",

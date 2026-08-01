@@ -21,6 +21,8 @@ export function Toolbar({
   onOpenAutomation: () => void;
 }) {
   const [showExport, setShowExport] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copyTip, setCopyTip] = useState<string | null>(null);
 
   const povLabel = (p?: string) => {
     if (!p) return "";
@@ -28,6 +30,24 @@ export function Toolbar({
     if (p === "third_person_limited") return "第三人称限制";
     if (p === "third_person_omniscient") return "第三人称全知";
     return p;
+  };
+
+  const handleCopyMarkdown = async () => {
+    setShowExport(false);
+    setCopying(true);
+    setCopyTip(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export?format=markdown`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopyTip("已复制全文 Markdown ✓");
+    } catch {
+      setCopyTip("复制失败，请改用导出文件");
+    } finally {
+      setCopying(false);
+      setTimeout(() => setCopyTip(null), 2200);
+    }
   };
 
   return (
@@ -83,10 +103,14 @@ export function Toolbar({
                   className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />网页 HTML (.html)</button>
                 <button onClick={() => { onExport("epub"); setShowExport(false); }}
                   className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />电子书 EPUB (.epub)</button>
+                <div className="my-1 border-t border-[var(--nv-border-2)]" />
+                <button onClick={handleCopyMarkdown} disabled={copying}
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)] disabled:opacity-50"><Icon name="clipboard" size={12} className="mr-1 inline" />{copying ? "复制中…" : "复制全文 Markdown"}</button>
               </div>
             </>
           )}
         </div>
+        {copyTip && <span className="shrink-0 self-center text-xs text-[var(--nv-accent)]">{copyTip}</span>}
       </div>
     </header>
   );
