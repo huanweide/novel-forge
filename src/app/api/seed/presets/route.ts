@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
+import stagePlay from "./stage-play.json";
 
 // POST /api/seed/presets —— 写入内置示范预设（首次部署或重置时用）
 // 把"参考资料本身就是个预设库"实体化为可一键套用的示范资产。
@@ -374,6 +375,13 @@ const BUILTINS: any[] = [
     description: "适合抽卡/脑洞章节的高温度 API 参数预设：temperature 1.2、topP 0.9。",
     tags: ["API参数", "示范", "创意"],
     content: { temperature: 1.2, topP: 0.9, maxTokens: 4000 },
+  },
+  {
+    type: "lorebook",
+    title: "舞台剧风格",
+    description: "舞台剧/话剧文风世界书：角色性格恒定、克制情绪波动、对白密集、动作夸张。套用即注入话剧写作基调与文风开关。",
+    tags: ["舞台剧", "话剧", "文风", "世界书"],
+    content: stagePlay,
   },
 ];
 
