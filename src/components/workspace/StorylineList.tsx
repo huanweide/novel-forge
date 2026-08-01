@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -34,6 +35,9 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [generating, setGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<StorylineData>>({});
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, true, () => setEditingId(null));
 
   const load = async (signal?: AbortSignal) => {
     setLoading(true); setLoadError(null);
@@ -174,7 +178,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
 
       {/* 编辑弹窗 */}
       {editingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setEditingId(null)}>
+        <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setEditingId(null)}>
           <div className="surface-floating max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="mb-4 text-lg font-semibold text-[var(--nv-text-primary)]">编辑故事线</h3>
             <div className="space-y-3">

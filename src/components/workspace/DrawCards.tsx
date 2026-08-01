@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 
@@ -73,6 +74,9 @@ export function DrawCards({
   const [drawCount, setDrawCount] = useState(4);
   const abortRef = useRef<AbortController | null>(null);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, true, onClose);
+
   const doDraw = async (count: number) => {
     // 取消上一次进行中的请求（防竞态）
     if (abortRef.current) abortRef.current.abort();
@@ -141,7 +145,7 @@ export function DrawCards({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="surface-floating rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">

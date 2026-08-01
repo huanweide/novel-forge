@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { Icon } from "@/components/ui/icons";
 
 export interface ScheduledCard {
@@ -27,6 +28,9 @@ export function PreGenConfirm({
   const [storyInfo, setStoryInfo] = useState<{ storyPhase: string; sceneContext: string; chapterTitle: string; chapterOutline: string; totalCharacters: number; missingRoleSuggestions: string[] } | null>(null);
   const [error, setError] = useState("");
   const [localAuthorNote, setLocalAuthorNote] = useState(authorNote);
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, true, onCancel);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -76,7 +80,7 @@ export function PreGenConfirm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
       <div className="surface-floating rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <div>

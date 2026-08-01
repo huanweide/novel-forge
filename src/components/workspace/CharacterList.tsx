@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { CharacterData } from "./types";
 import { RangeSelector } from "./RangeSelector";
 import { Icon, StatusDot } from "@/components/ui/icons";
@@ -48,6 +49,9 @@ export function CharacterList({
   const [roleFilter, setRoleFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, true, () => setExpandResult(null));
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
@@ -735,7 +739,7 @@ export function CharacterList({
 
       {/* 扩展结果弹窗 */}
       {expandResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
+        <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
           <div className="bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* 头部 */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-1)]">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
@@ -97,6 +98,9 @@ export function CharacterEditDialog({
   const [autofilling, setAutofilling] = useState(false);
   const [autofillMsg, setAutofillMsg] = useState("");
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, true, onClose);
+
   const handleAutofill = async () => {
     setAutofilling(true);
     setAutofillMsg("AI正在补全...");
@@ -192,7 +196,7 @@ export function CharacterEditDialog({
     </DialogField>;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="surface-floating rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0 flex items-center justify-between">
           <h3 className="text-lg font-semibold">编辑角色：{character.name}</h3>

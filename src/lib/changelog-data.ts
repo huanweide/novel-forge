@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.1";
+export const LATEST_VERSION = "v0.44.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🐛 修复探讨模式采纳失败无法重试：此前 fetch 前提前置 adopted 致失败卡片显示「已采纳」且按钮禁用，现已改为成功后才置 adopted",
-  "🔁 统一失败状态串为「❌失败」（修复 page 与 ChatPanel 字符串不一致导致失败徽标永不显示的隐藏 bug）",
-  "🔄 ChatPanel 失败卡片新增「点击卡片重试 ↻」提示，失败后整卡可点击重新采纳",
-  "🧪 批量采纳失败项同样可在对话卡片单卡重试；tsc 零错误，纯前端逻辑修复无 schema 变更",
+  "♿ 新增通用 useFocusTrap hook：弹窗激活时焦点移入、Tab/Shift+Tab 循环不逃逸、Esc 关闭、关闭后焦点回移打开前元素",
+  "🔒 DialogOverlay / Modal 基础组件自带焦点陷阱，覆盖所有使用它们的弹窗（角色/世界书编辑、设置导入等）",
+  "🪟 11 个裸 fixed 弹窗统一挂焦点陷阱：大纲/布置/项目配置/生成前确认/抽卡/记忆衰减/自动化/规则/剧情线/角色编辑/扩展结果",
+  "⌨️ 键盘可达性基线达成：Tab 在弹窗内导航、Esc 关闭，焦点不再丢失到背后页面",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.2",
+    date: "2026-08-01",
+    title: "对话框焦点陷阱与键盘可达性（无障碍基线）",
+    sections: [
+      {
+        label: "无障碍 / 焦点管理",
+        items: [
+          "新增通用 useFocusTrap hook（src/hooks/use-focus-trap.ts）：弹窗激活时焦点移入首个可聚焦元素、Tab/Shift+Tab 在弹窗内循环不逃逸到背后页面、Esc 关闭、关闭后焦点交还打开前的元素",
+          "增强 DialogOverlay 与 Modal 基础组件自带焦点陷阱，覆盖所有使用它们的弹窗（角色编辑/创建、世界书编辑、设置导入、风格编辑等）",
+          "11 个裸 fixed 弹窗统一挂焦点陷阱：大纲生成、布置配置、项目配置、生成前角色确认、抽卡、记忆衰减、自动化设置、规则面板、剧情线编辑、角色编辑、角色列表扩展结果",
+          "键盘用户现可用 Tab 在弹窗内导航、Esc 关闭，焦点不会丢失到 <body>，符合无障碍基线（WAI-ARIA dialog 模式）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.1",
     date: "2026-08-01",

@@ -14,8 +14,9 @@
  *   </Modal>
  */
 
-import React, { useEffect, type ReactNode } from "react";
+import React, { useEffect, useRef, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type SizeKey = "sm" | "md" | "lg" | "xl";
 
@@ -47,6 +48,9 @@ export function Modal({
   footer?: ReactNode;
   closeOnOverlay?: boolean;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, open, onClose);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -69,6 +73,8 @@ export function Modal({
       onClick={() => closeOnOverlay && onClose()}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}

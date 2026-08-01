@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { Icon } from "@/components/ui/icons";
 
 type PresetRec = {
@@ -47,6 +48,9 @@ export function ProjectConfigPanel({
   const [busy, setBusy] = useState(false);
   const [rulesHint, setRulesHint] = useState("");
   const [llmHint, setLlmHint] = useState("");
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, true, onClose);
 
   const removePreset = async (presetId: string) => {
     setBusy(true);
@@ -114,7 +118,7 @@ export function ProjectConfigPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] shadow-2xl">
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-[var(--nv-border-2)] px-5 py-4">
