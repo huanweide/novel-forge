@@ -598,7 +598,10 @@ export function buildPromptContext(params: {
 
   // 世界书深度分层（酒馆 worldbook depth 0-4 迁移）：
   // depth<=2 强制常驻注入（不依赖关键词），depth>=3 走关键词触发路径。
-  const activeLore = (loreEntries || []).filter((e) => e.enabled);
+  // worldview（定义·规则）/ story_progression（剧情推进倾向）已作为"静态基础设定"常驻 globalPrompt 缓存，
+  // 这里从动态路径排除，避免同一词条既在 cardContext 又在 forced/triggered 区块重复注入。
+  const STATIC_LORE_CATS = new Set(["worldview", "story_progression"]);
+  const activeLore = (loreEntries || []).filter((e) => e.enabled && !STATIC_LORE_CATS.has(e.category));
   const forcedLore = activeLore.filter((e) => (e.depth ?? 3) <= 2);
   const triggerableLore = activeLore.filter((e) => (e.depth ?? 3) >= 3);
 

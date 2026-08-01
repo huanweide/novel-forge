@@ -76,7 +76,9 @@ export default function Workshop() {
     tableCols: "",
     content: "",
   });
+  const [aiDesc, setAiDesc] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyAi, setBusyAi] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -245,6 +247,30 @@ export default function Workshop() {
     } finally { setBusy(false); }
   };
 
+  // 「LLM 丰满预设」：用大白话描述 → 调后端 AI 扩展成结构化字段 → 合并进 upload 供审阅/修改后发布
+  const enrichPreset = async () => {
+    if (upload.type === "regex" || upload.type === "api_config") {
+      toastError("regex / API参数 请手动填 JSON，其他类型支持 AI 丰满");
+      return;
+    }
+    if (!aiDesc.trim()) { toastError("请先描述你想要的预设"); return; }
+    setBusyAi(true);
+    try {
+      const res = await fetch(`/api/presets/enrich`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: upload.type, description: aiDesc.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok && d.fields) {
+        setUpload((u) => ({ ...u, ...d.fields }));
+        toastSuccess("AI 已丰满预设，确认/修改后点「发布」即可");
+      } else toastError(d.error || "AI 丰满失败");
+    } catch {
+      toastError("网络异常，AI 丰满失败");
+    } finally { setBusyAi(false); }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)]">
       <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
@@ -366,8 +392,37 @@ export default function Workshop() {
       {showUpload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="surface-floating rounded-2xl w-full max-w-lg p-6 animate-spring max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">上传预设</h2>
-            <div className="space-y-3">
+          <h2 className="text-lg font-semibold mb-4">上传预设</h2>
+
+          {/* AI 丰满预设：选好类型 → 大白话描述 → AI 自动填满下面字段 → 审阅后发布 */}
+          <div className="rounded-xl border border-dashed border-[var(--nv-primary)]/40 bg-[var(--nv-primary)]/5 p-3 space-y-2 mb-4">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--nv-primary)]">
+              <Icon name="sparkles" size={13} /> AI 帮我丰满预设
+            </div>
+            <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
+              选好下方「类型」后，用大白话描述你想要的（如「舞台剧风格：对白密集、动作夸张、情绪克制」「全文禁止出现男性角色」），
+              AI 会把它丰满成完整预设并填到下面的字段，你确认/修改后点「发布」即可。无需懂 JSON。
+            </p>
+            <textarea
+              value={aiDesc}
+              onChange={(e) => setAiDesc(e.target.value)}
+              rows={3}
+              placeholder="描述你想要的预设…"
+              className="input-glass w-full rounded-xl px-3 py-2 text-sm"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[var(--nv-text-muted)]">当前类型：{TYPE_LABEL[upload.type]}</span>
+              <button
+                onClick={enrichPreset}
+                disabled={busyAi}
+                className="btn-primary text-xs px-3 py-1.5 rounded-xl disabled:opacity-50 flex items-center gap-1"
+              >
+                <Icon name="sparkles" size={12} /> {busyAi ? "丰满中…" : "AI 丰满"}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
               <div>
                 <label className="text-xs text-[var(--nv-text-tertiary)]">类型</label>
                 <select

@@ -163,8 +163,13 @@ ${project.authorNote}`);
   parts.push(`\n# 世界书（共${loreEntries.length}条）`);
 
   // 按category分组
-  const catOrder = ["geography", "faction", "magic_system", "history", "culture", "creature", "item", "custom"];
+  // ⚠️ 注意：worldview（创作定义·规则）与 story_progression（剧情推进倾向）是"定义级"内容，
+  // 必须像角色卡/风格卡一样常驻静态上下文——否则用户下了"不能出现男人"这类规则却只在关键词命中时才生效，
+  // 等于"定义了没用"。故将它们排在标准世界书分类之前，始终随 globalPrompt 注入。
+  // （lorebook 世界书仍走关键词动态触发路径，保持酒馆语义，不在此常驻。）
+  const catOrder = ["worldview", "story_progression", "geography", "faction", "magic_system", "history", "culture", "creature", "item", "custom"];
   const catLabel: Record<string, string> = {
+    worldview: "🌐 世界观（定义·规则）", story_progression: "🧭 剧情推进倾向",
     geography: "🗺 地理", faction: "🏛 势力", magic_system: "⚙️ 力量体系",
     history: "📜 历史", culture: "🎭 文化", creature: "🐉 生物",
     item: "💎 器物", custom: "📦 自定义",

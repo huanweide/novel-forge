@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.1";
+export const LATEST_VERSION = "v0.46.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎭 创意工坊新增「舞台剧风格」lorebook 预设：一键注入话剧写作基调（角色性格恒定、对白密集、动作夸张）",
-  "🧰 上传预设从裸 JSON 改为分类型向导——文风填感觉+视角/节奏、世界书填词条、角色填名/描述，不用懂 JSON 也能创造",
-  "🪄 非技术用户可上传 style / worldview / lorebook / character / table_template 五类预设；regex/api_config 保留高级 JSON 入口",
-  "🧹 清理工坊乱码与显示不全的残留预设，16 个内置预设干净完整；tsc 零错误",
+  "🔧 修复「定义了没用」：世界观（定义·规则）与剧情推进倾向现在作为静态基础设定常驻注入写作上下文，下达的硬规则（如「全文禁止出现男性角色」）真正对生成生效",
+  "🪄 创意工坊新增「LLM 丰满预设」：上传向导加 AI 面板，用大白话描述想要的风格/规则，AI 自动扩展成完整结构化预设填进表单，审阅后一键发布",
+  "✅ 确认工坊内容覆盖：文风(style) / 定义权·规则(worldview) / 剧情推进倾向(story_progression) 均真实进入写作上下文；六类创意预设全部支持 AI 丰满",
+  "🚫 世界书(lorebook) 保持关键词触发语义（舞台剧预设即此设计），与常驻的「定义·规则」分层清晰，互不干扰；tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.2",
+    date: "2026-08-01",
+    title: "创意工坊：注入修复 + LLM 丰满预设",
+    sections: [
+      {
+        label: "创意工坊 / 预设",
+        items: [
+          "修复「定义了没用」真 bug：此前 worldview（定义·规则）/ story_progression（剧情推进倾向）写入 LorebookEntry 后，syncGlobalPrompt 的「世界书」段落只渲染 8 个标准分类，这两类被漏掉；又因默认 depth 无触发词时动态路径不注入，导致用户下达的硬规则对生成完全不生效。现已让这两类作为「静态基础设定」常驻 globalPrompt 缓存（与角色卡/风格卡同级），并从动态触发路径排除避免重复注入——rules 真正落地",
+          "新增「LLM 丰满预设」：上传向导顶部加 AI 面板，用户选好类型后用大白话描述（如「舞台剧风格：对白密集、动作夸张、情绪克制」「全文禁止出现男性角色」），后端调已配置的 LLM（模型名/Key 从 AppSettings 读）把松散描述扩展成与向导同字段的结构化 JSON 直接填进表单，用户确认/修改后点「发布」即可；style/worldview/story_progression/lorebook/character/table_template 六类全部支持，非技术用户无需懂 JSON",
+          "确认创意工坊内容覆盖三项核心：① 自己的文风(style→StyleCard) ② 定义权·规则系(worldview，硬规则常驻) ③ 剧情推进倾向(story_progression，可融合进规则) 均真实进入写作上下文；世界书(lorebook) 保持关键词触发语义（舞台剧预设即此设计），与常驻规则分层清晰",
+          "enrich 端点做了 LLM 输出容错（清理尾部逗号 / 不可见字符），实测六类创意预设全部跑通；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.1",
     date: "2026-08-01",
