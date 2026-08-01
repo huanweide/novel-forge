@@ -113,7 +113,7 @@ export default function TablesPage() {
         body: JSON.stringify({ projectId, chapterText }),
       });
       const d = await res.json();
-      d.at = new Date().toLocaleTimeString("zh-CN");
+      d.at = new Date().toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai" });
       setFillResult(d);
       if (res.ok && d.ok) { toastSuccess(`自动填表完成：应用 ${d.applied} 条`); load(); }
       else toastError(d.error || "填表失败");

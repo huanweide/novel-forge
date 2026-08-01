@@ -23,6 +23,7 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       className={`h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <meta name="theme-color" content="#4f46e5" />

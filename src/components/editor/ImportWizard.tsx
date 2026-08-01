@@ -275,7 +275,7 @@ export function ImportWizard({
               setProgressSteps((prev) => [...prev, {
                 stage: event.stage || "",
                 message: event.message || "",
-                time: new Date().toLocaleTimeString("zh-CN"),
+                time: new Date().toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai" }),
               }]);
               setCurrentStage(event.stage || "");
               if (event.pct !== undefined) setParsePct(event.pct as number);
@@ -296,7 +296,7 @@ export function ImportWizard({
               setProgressSteps((prev) => [...prev, {
                 stage: "complete",
                 message: `✅ 完成！提取了${(event.extractedCharacters || []).length}个角色，${(event.extractedLoreEntries || []).length}个词条`,
-                time: new Date().toLocaleTimeString("zh-CN"),
+                time: new Date().toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai" }),
               }]);
               setTimeout(() => setStep("preview"), 500);
             } else if (event.type === "error") {

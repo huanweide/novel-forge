@@ -197,7 +197,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
                             {item.fulfilledChapterId && (
                               <p>已回收于：章节 {item.fulfilledChapterId.slice(0, 8)}...</p>
                             )}
-                            <p>创建时间：{new Date(item.createdAt).toLocaleDateString("zh-CN")}</p>
+                            <p>创建时间：{new Date(item.createdAt).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })}</p>
                           </div>
                         )}
                       </div>

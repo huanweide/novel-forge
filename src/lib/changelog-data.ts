@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.8";
+export const LATEST_VERSION = "v0.45.9";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📋 导出弹层新增「复制全文 Markdown」一键按钮：作者无需下载文件即可把整本稿子贴到微信 / 文档 / 发给他人（PROCESS/06 延续）",
-  "⚡ 纯前端实现：fetch 现有导出接口拿文本 + 浏览器剪贴板 API 写入，零新依赖、零 schema 变更",
-  "💡 复制中 / 成功（已复制全文 Markdown ✓）/ 失败 三重状态提示，2 秒自动消失，不打扰创作",
-  "🧩 复用 v0.45.0 已建的导出组装逻辑，零破坏性、tsc 零错误",
+  "🛡️ 根治 dev 偶发 hydration 警告：所有日期/时间格式化强制锁定 Asia/Shanghai 时区，服务器（UTC）与浏览器（本地）永远算出同一串字（PROCESS/04）",
+  "🔒 受影响点：首页项目卡片「X 天前」超 30 天的绝对日期、伏笔面板创建时间、配置面板套用时间、导入向导日志时间、填表结果时间",
+  "🌐 根布局 <html> 加 suppressHydrationWarning 安全网（Next 官方推荐，兜底环境属性漂移）",
+  "🧩 纯防御性加固、零行为变更、零新依赖、tsc 零错误；静态排查确认渲染期无随机/时间/浏览器 API 不确定性",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.9",
+    date: "2026-08-01",
+    title: "dev hydration 警告根治（时区确定性加固）",
+    sections: [
+      {
+        label: "质量 / 稳定性（PROCESS/04 待迭代项）",
+        items: [
+          "根因：toLocaleDateString(\"zh-CN\") / toLocaleString(\"zh-CN\") 依赖运行时时区——部署服务器多为 UTC，浏览器为本地时区，跨 UTC 午夜的日期会算出不同字符串，一旦日期显示进入 SSR 阶段即触发 hydration 不匹配（文档记录的「偶发警告」最可疑根因）",
+          "修复：给全部 5 处日期/时间格式化统一加 { timeZone: \"Asia/Shanghai\" }，服务器与客户端强制按北京时间计算，输出恒等，从根上消除时区驱动的文本不匹配",
+          "范围：首页项目卡片 getTimeAgo 超 30 天分支、ForeshadowingPanel 创建时间、ProjectConfigPanel 套用时间、ImportWizard 两条日志时间、tables 页填表结果时间",
+          "根布局 <html> 追加 suppressHydrationWarning（Next.js 官方对根节点环境属性漂移的推荐安全网）；静态排查确认 GameParticles/Math.random、各页 localStorage、getTimeAgo 均处 useEffect 或事件处理，渲染期无不确定性；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.8",
     date: "2026-08-01",

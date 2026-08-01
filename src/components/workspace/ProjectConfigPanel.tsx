@@ -160,7 +160,7 @@ export function ProjectConfigPanel({
                       </div>
                       {p.appliedAt && (
                         <span className="text-[10px] text-[var(--nv-text-muted)]">
-                          套用时间：{new Date(p.appliedAt).toLocaleString("zh-CN")}
+                          套用时间：{new Date(p.appliedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}
                         </span>
                       )}
                     </div>
