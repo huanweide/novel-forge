@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { CharacterData } from "./types";
-import { RangeSelector } from "./RangeSelector";
-import { Icon, StatusDot } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
+import { CharacterFilters } from "./CharacterFilters";
+import { CharacterToolbar } from "./CharacterToolbar";
+import { ClassifyPanel } from "./ClassifyPanel";
+import { ExpandResultModal } from "./ExpandResultModal";
+import { CharacterGroupList } from "./CharacterGroupList";
 
 export function CharacterList({
   characters = [],
@@ -50,9 +52,6 @@ export function CharacterList({
   const [tagFilter, setTagFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, () => setExpandResult(null));
-
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -73,8 +72,18 @@ export function CharacterList({
     setSelectedIds(ids);
   };
 
-  // 从所有角色标签中提取唯一值（过滤掉系统标签如 📥📝）
-  const allTags = [...new Set(characters.flatMap(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝"))))].sort();
+  // 全选/取消全选（仅对筛选后可见列表生效）
+  const handleToggleAll = () => {
+    if (allInViewSelected) {
+      const next = new Set(selectedIds);
+      filtered.forEach(c => next.delete(c.id));
+      setSelectedIds(next);
+    } else {
+      const next = new Set(selectedIds);
+      filtered.forEach(c => next.add(c.id));
+      setSelectedIds(next);
+    }
+  };
 
   const filtered = characters.filter(c => {
     if (roleFilter !== "all" && c.role !== roleFilter) return false;
@@ -87,11 +96,6 @@ export function CharacterList({
     if (search && !c.name.includes(search) && !(c.aliases || []).some((a: string) => a.includes(search))) return false;
     return true;
   });
-
-  const statRole = (r: string) => characters.filter(c => c.role === r).length;
-  const statHasTags = characters.filter(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0).length;
-  const statNoTags = characters.filter(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length === 0).length;
-  const statDead = characters.filter(c => ["dead","missing","presumed_dead"].includes(c.currentStatus)).length;
 
   const roleOrder = ["protagonist", "antagonist", "mentor", "love_interest", "supporting", "background"];
   const roleLabel: Record<string, string> = { protagonist: "主角", antagonist: "反派", mentor: "导师", love_interest: "恋爱", supporting: "配角", background: "背景" };
@@ -414,457 +418,75 @@ export function CharacterList({
 
   return (
     <div className="space-y-1">
-      {/* 搜索 */}
-      <div className="mb-1.5">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="搜索角色…"
-          className="w-full bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] rounded px-2 py-1 text-xs text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)]"
-        />
-      </div>
+      <CharacterFilters
+        characters={characters}
+        search={search}
+        onSearch={setSearch}
+        roleFilter={roleFilter}
+        statusFilter={statusFilter}
+        tagFilter={tagFilter}
+        onRole={setRoleFilter}
+        onStatus={setStatusFilter}
+        onTag={setTagFilter}
+      />
 
-      {/* 筛选栏：角色定位 + 状态 */}
-      <div className="flex gap-0.5 mb-1 flex-wrap items-center">
-        {[
-          { key: "all", label: "全部", count: characters.length },
-          { key: "protagonist", label: "主角", count: statRole("protagonist") },
-          { key: "antagonist", label: "反派", count: statRole("antagonist") },
-          { key: "mentor", label: "导师", count: statRole("mentor") },
-          { key: "love_interest", label: "恋爱", count: statRole("love_interest") },
-          { key: "supporting", label: "配角", count: statRole("supporting") },
-          { key: "background", label: "背景", count: statRole("background") },
-        ].filter(o => o.count > 0 || o.key === "all").map(o => (
-          <button
-            key={o.key}
-            onClick={() => { setRoleFilter(roleFilter === o.key ? "all" : o.key); setTagFilter("all"); }}
-            className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              roleFilter === o.key ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-            }`}
-          >
-            {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
-          </button>
-        ))}
-        <span className="text-[var(--nv-border-3)] mx-0.5">|</span>
-        {[
-          { key: "alive", label: <span className="flex items-center gap-1"><StatusDot color="green" size={6} /> 存活</span>, count: characters.length - statDead },
-          { key: "dead", label: <span className="flex items-center gap-1"><Icon name="skull" size={10} /> 离场</span>, count: statDead },
-        ].filter(o => o.count > 0).map(o => (
-          <button
-            key={o.key}
-            onClick={() => { setStatusFilter(statusFilter === o.key ? "all" : o.key); }}
-            className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              statusFilter === o.key ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-            }`}
-          >
-            {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
-          </button>
-        ))}
-        {(roleFilter !== "all" || tagFilter !== "all" || statusFilter !== "all") && (
-          <button
-            onClick={() => { setRoleFilter("all"); setTagFilter("all"); setStatusFilter("all"); }}
-            className="text-[10px] px-1.5 py-0.5 rounded-full text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-1)]"
-          >
-            <Icon name="x" size={11} />
-          </button>
-        )}
-      </div>
+      <CharacterToolbar
+        filtered={filtered}
+        selectedIds={selectedIds}
+        allInViewSelected={allInViewSelected}
+        expanding={expanding}
+        expandDone={expandDone}
+        expandTotal={expandTotal}
+        classifying={classifying}
+        classifyDone={classifyDone}
+        classifyTotal={classifyTotal}
+        onToggleAll={handleToggleAll}
+        onExpand={handleExpand}
+        onClassify={handleClassify}
+        onRange={handleRangeSelect}
+        onClear={() => setSelectedIds(new Set())}
+      />
 
-      {/* 标签筛选：已分类/未分类 + 具体标签 */}
-      <div className="flex gap-0.5 mb-1.5 flex-wrap items-center">
-        {[
-          { key: "has-tags", label: <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 已分类</span>, count: statHasTags },
-          { key: "no-tags", label: "未分类", count: statNoTags },
-        ].filter(o => o.count > 0).map(o => (
-          <button
-            key={o.key}
-            onClick={() => setTagFilter(tagFilter === o.key ? "all" : o.key)}
-            className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              tagFilter === o.key
-                ? "bg-[var(--nv-accent)] text-[var(--nv-text-primary)]"
-                : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-            }`}
-          >
-            {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
-          </button>
-        ))}
-        {allTags.length > 0 && <span className="text-[var(--nv-border-3)] mx-0.5">·</span>}
-        {allTags.slice(0, 12).map(t => (
-          <button
-            key={t}
-            onClick={() => setTagFilter(tagFilter === t ? "all" : t)}
-            className={`text-[9px] px-1 py-0 rounded transition-colors ${
-              tagFilter === t
-                ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]"
-                : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-        {allTags.length > 12 && (
-          <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{allTags.length - 12}</span>
-        )}
-      </div>
+      <ClassifyPanel
+        classifying={classifying}
+        groups={classifyGroups}
+        selections={groupSelections}
+        characters={characters}
+        applying={applying}
+        onToggleGroup={toggleGroup}
+        onToggleMember={toggleMember}
+        onApply={handleApplyTags}
+        onClose={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
+        msg={classifyMsg}
+        done={classifyDone}
+        total={classifyTotal}
+        result={classifyResult}
+        onResultClose={() => setClassifyResult(null)}
+        selectedTagCount={selectedTagCount}
+        selectedCharIds={selectedCharIds}
+      />
 
-      {/* 工具栏 */}
-      <div className="flex items-center gap-1 mb-2 px-1 flex-wrap">
-        <button
-          onClick={() => {
-            if (allInViewSelected) {
-              const next = new Set(selectedIds);
-              filtered.forEach(c => next.delete(c.id));
-              setSelectedIds(next);
-            } else {
-              const next = new Set(selectedIds);
-              filtered.forEach(c => next.add(c.id));
-              setSelectedIds(next);
-            }
-          }}
-          className="text-xs px-1.5 py-0.5 rounded text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] border border-[var(--nv-border-1)] hover:border-[var(--nv-border-2)]"
-        >
-          {allInViewSelected ? "取消全选" : `全选(${filtered.length})`}
-        </button>
-        <RangeSelector
-          total={filtered.length}
-          placeholder={`1-${filtered.length}`}
-          onSelect={handleRangeSelect}
-        />
-        <button
-          onClick={handleExpand}
-          disabled={selectedIds.size === 0 || expanding}
-          className={`text-xs px-2 py-0.5 rounded transition-colors ${
-            selectedIds.size > 0 && !expanding
-              ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)] hover:bg-[var(--nv-accent-soft)] border border-[var(--nv-accent-soft)]"
-              : "text-[var(--nv-text-tertiary)] border border-[var(--nv-border-1)] cursor-not-allowed"
-          }`}
-        >
-          {expanding ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />{expandDone}/{expandTotal}</span> : <span className="flex items-center gap-1"><Icon name="sparkles" size={10} className="text-[var(--nv-accent)]" />AI扩展 ({selectedIds.size})</span>}
-        </button>
-        <button
-          onClick={handleClassify}
-          disabled={classifying}
-          className={`text-xs px-2 py-0.5 rounded transition-colors ${
-            classifying
-              ? "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] border border-[var(--nv-creative-soft)]"
-              : "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] hover:bg-[var(--nv-creative-soft)] border border-[var(--nv-creative-soft)] hover:border-[var(--nv-creative-soft)]"
-          }`}
-        >
-          {classifying ? <span className="flex items-center gap-1"><Icon name="tag" size={10} /> {classifyDone}/{classifyTotal || "?"}</span> : <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 自动分类</span>}
-        </button>
-        {selectedIds.size > 0 && !expanding && (
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
-          >
-            清空
-          </button>
-        )}
-      </div>
+      <ExpandResultModal
+        result={expandResult}
+        onClose={() => setExpandResult(null)}
+        progress={expandProgress}
+        done={expandDone}
+        total={expandTotal}
+        expanding={expanding}
+      />
 
-      {/* 分类进度 */}
-      {classifying && (
-        <div className="mb-2 p-2 rounded bg-[var(--nv-creative-soft)] border border-[var(--nv-creative-soft)]">
-          <p className="text-xs text-[var(--nv-creative)]">{classifyMsg}</p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-[var(--nv-surface-1)] rounded-full overflow-hidden">
-              <div className="h-full bg-[var(--nv-creative)] rounded-full transition-all" style={{
-                width: `${classifyTotal > 0 ? Math.round((classifyDone / classifyTotal) * 100) : 5}%`
-              }} />
-            </div>
-            <span className="text-xs text-[var(--nv-text-secondary)] shrink-0">{classifyDone}%</span>
-          </div>
-        </div>
-      )}
-      {/* 分类面板：用户审查 & 勾选 */}
-      {!classifying && classifyGroups && classifyGroups.length > 0 && (
-        <div className="mb-2 rounded bg-[var(--nv-surface-1)] backdrop-blur-sm border border-[var(--nv-creative-soft)] overflow-hidden">
-          {/* 面板标题 */}
-          <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--nv-creative-soft)] border-b border-[var(--nv-creative-soft)]">
-            <span className="text-[10px] text-[var(--nv-creative)] font-medium">
-              <Icon name="tag" size={10} /> 分类建议 · {classifyGroups.length} 组 · {selectedCharIds.size} 人
-            </span>
-            <button
-              onClick={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
-              className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
-            ><Icon name="x" size={11} /> 关闭</button>
-          </div>
-          {/* 分类列表——按 category 分组 */}
-          <div className="max-h-80 overflow-y-auto p-1.5 space-y-2">
-            {(() => {
-              const catOrder = ["title", "school", "experience", "club"];
-              const catLabel: Record<string, React.ReactNode> = {
-                title: <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 称号/头衔</span>,
-                school: <span className="flex items-center gap-1"><Icon name="building" size={10} /> 学校/学园</span>,
-                experience: <span className="flex items-center gap-1"><Icon name="clipboard" size={10} /> 经历/履历</span>,
-                club: <span className="flex items-center gap-1"><Icon name="users" size={10} /> 俱乐部/队伍</span>,
-              };
-              const grouped = new Map<string, typeof classifyGroups>();
-              for (const g of classifyGroups) {
-                const cat = g.category || "club";
-                if (!grouped.has(cat)) grouped.set(cat, []);
-                grouped.get(cat)!.push(g);
-              }
-              return catOrder.filter(c => grouped.has(c)).map(cat => (
-                <div key={cat}>
-                  <div className="text-[10px] text-[var(--nv-text-secondary)] px-1 mb-0.5 font-medium">
-                    {catLabel[cat] || cat}
-                  </div>
-                  {grouped.get(cat)!.map(g => {
-                    const sel = groupSelections.get(g.label) || new Set<string>();
-                    const allSelected = g.memberIds.length > 0 && sel.size === g.memberIds.length;
-                    return (
-                      <div key={g.label} className="mb-1 rounded bg-[var(--nv-surface-2)] border border-[var(--nv-border-1)]">
-                        {/* 分类头：全选/取消 */}
-                        <button
-                          onClick={() => toggleGroup(g.label)}
-                          className="w-full flex items-center gap-1.5 px-2 py-1 text-left hover:bg-[var(--nv-surface-3)] transition-colors rounded-t"
-                        >
-                          <span className={`text-xs ${allSelected ? "text-[var(--nv-creative)]" : "text-[var(--nv-text-tertiary)]"}`}>
-                            {allSelected ? <Icon name="check" size={12} /> : <Icon name="circle" size={12} />}
-                          </span>
-                          <span className="text-[11px] text-[var(--nv-text-primary)] font-medium">{g.label}</span>
-                          {g.description && (
-                            <span className="text-[9px] text-[var(--nv-text-secondary)]">— {g.description}</span>
-                          )}
-                          <span className="text-[9px] text-[var(--nv-text-tertiary)] ml-auto">
-                            {sel.size}/{g.memberIds.length}
-                          </span>
-                        </button>
-                        {/* 成员列表 */}
-                        <div className="flex flex-wrap gap-0.5 px-2 pb-1.5">
-                          {g.members.map((name, i) => {
-                            const mid = g.memberIds[i];
-                            const checked = mid ? sel.has(mid) : false;
-                            // 名字 → 角色 brief
-                            const char = characters.find(c => c.id === mid);
-                            return (
-                              <button
-                                key={mid || name}
-                                onClick={() => mid && toggleMember(g.label, mid)}
-                                className={`text-[9px] px-1.5 py-0.5 rounded-full transition-colors ${
-                                  checked
-                                    ? "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] border border-[var(--nv-creative-soft)]"
-                                    : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] border border-transparent"
-                                }`}
-                              >
-                                {name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ));
-            })()}
-          </div>
-          {/* 底部操作栏 */}
-          <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--nv-surface-2)] border-t border-[var(--nv-border-1)]">
-            <span className="text-[9px] text-[var(--nv-text-tertiary)]">
-              {selectedTagCount} 个标签分配给 {selectedCharIds.size} 人
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
-                className="text-[10px] px-2 py-0.5 rounded text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleApplyTags}
-                disabled={selectedTagCount === 0 || applying}
-                className={`text-[10px] px-3 py-0.5 rounded font-medium transition-colors ${
-                  selectedTagCount > 0 && !applying
-                    ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-creative)]"
-                    : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] cursor-not-allowed"
-                }`}
-              >
-                {applying ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />应用中…</span> : <span className="flex items-center gap-1"><Icon name="check" size={10} />应用标签 ({selectedTagCount})</span>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* 分类错误/简单结果 */}
-      {!classifying && !classifyGroups && classifyResult && (
-        <div className={`mb-2 px-2 py-1 rounded text-[10px] ${
-          classifyResult.ok
-            ? "bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] border border-[var(--nv-creative-soft)]"
-            : "bg-[var(--nv-danger-soft)] text-[var(--nv-danger)] border border-[var(--nv-danger-soft)]"
-        }`}>
-          {classifyResult.message}
-          <button onClick={() => setClassifyResult(null)} className="ml-2 text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"><Icon name="x" size={12} className="align-middle" /></button>
-        </div>
-      )}
-
-      {/* 扩展进度 */}
-      {expanding && (
-        <div className="mb-2 p-2 rounded bg-[var(--nv-accent-soft)] border border-[var(--nv-accent-soft)] max-h-40 overflow-y-auto">
-          {expandProgress.length === 0 && (
-            <div className="flex items-center gap-2 text-xs text-[var(--nv-accent)]">
-              <div className="w-3 h-3 border-2 border-[var(--nv-accent)] border-t-transparent rounded-full animate-spin" />
-              加载全局上下文...
-            </div>
-          )}
-          {expandProgress.map((p, i) => {
-            const isInfo = p.status === "start" || p.status === "dedup";
-            const isOk = p.status === "ok" || p.status === "char-done";
-            const isFailed = p.status === "failed" || p.status === "char-failed";
-            if (isInfo) return (
-              <div key={i} className="text-xs text-[var(--nv-text-secondary)] py-0.5">{p.name}</div>
-            );
-            return (
-              <div key={i} className={`text-xs ${isOk ? "text-[var(--nv-success)]" : isFailed ? "text-[var(--nv-danger)]" : "text-[var(--nv-text-secondary)]"}`}>
-                <span className="inline-flex items-center gap-1">
-                  <span>{isOk ? <Icon name="check" size={12} /> : isFailed ? <Icon name="alert" size={12} /> : <Icon name="loader" size={12} className="animate-spin" />}</span>
-                  <span>{p.name}</span>
-                  {p.error && <span className="text-[var(--nv-danger)]/60 text-[10px] ml-1">— {p.error}</span>}
-                </span>
-              </div>
-            );
-          })}
-          <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-[var(--nv-surface-1)] rounded-full overflow-hidden">
-              <div className="h-full bg-[var(--nv-accent)] rounded-full transition-all" style={{
-                width: `${expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%`
-              }} />
-            </div>
-            <span className="text-xs text-[var(--nv-text-secondary)] shrink-0">{expandDone}/{expandTotal} · {expandTotal > 0 ? Math.round((expandDone / expandTotal) * 100) : 0}%</span>
-          </div>
-        </div>
-      )}
-
-      {/* 扩展结果弹窗 */}
-      {expandResult && (
-        <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpandResult(null)}>
-          <div className="bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-            {/* 头部 */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-1)]">
-              <h3 className="text-base font-bold text-[var(--nv-text-primary)]">
-                {expandResult.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-[var(--nv-success)]" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
-              </h3>
-              <button onClick={() => setExpandResult(null)} className="text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] text-lg leading-none"><Icon name="x" size={12} className="align-middle" /></button>
-            </div>
-
-            {/* 统计 */}
-            <div className="px-5 py-3 flex gap-4 text-sm border-b border-[var(--nv-border-1)]/50">
-              <div className="flex items-center gap-2">
-                <span className="text-[var(--nv-success)] font-bold text-lg">{expandResult.okList.length}</span>
-                <span className="text-[var(--nv-text-secondary)]">成功</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={expandResult.failList.length > 0 ? "text-[var(--nv-danger)] font-bold text-lg" : "text-[var(--nv-text-secondary)] font-bold text-lg"}>{expandResult.failList.length}</span>
-                <span className="text-[var(--nv-text-secondary)]">失败</span>
-              </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-[var(--nv-text-secondary)] text-xs">共 {expandResult.total} 个角色</span>
-              </div>
-            </div>
-
-            {/* 内容区 */}
-            <div className="overflow-y-auto px-5 py-3 flex-1 max-h-[50vh]">
-              {/* 成功列表 */}
-              {expandResult.okList.length > 0 && (
-                <div className="mb-3">
-                  <div className="text-xs text-[var(--nv-success)] font-medium mb-1.5 flex items-center gap-1"><Icon name="check" size={12} />成功 ({expandResult.okList.length})</div>
-                  <div className="flex flex-wrap gap-1">
-                    {expandResult.okList.map((name, i) => (
-                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[var(--nv-success-soft)] text-[var(--nv-success)] border border-[var(--nv-success-soft)]">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 失败列表 + 原因 */}
-              {expandResult.failList.length > 0 && (
-                <div>
-                  <div className="text-xs text-[var(--nv-danger)] font-medium mb-1.5 flex items-center gap-1"><Icon name="alert" size={12} />失败 ({expandResult.failList.length})</div>
-                  <div className="space-y-1.5">
-                    {expandResult.failList.map((f, i) => (
-                      <div key={i} className="p-2 rounded bg-[var(--nv-danger-soft)] border border-[var(--nv-danger-soft)]">
-                        <div className="text-xs text-[var(--nv-danger)] font-medium">{f.name}</div>
-                        <div className="text-[11px] text-[var(--nv-danger)]/70 mt-0.5">{f.reason}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {expandResult.okList.length === 0 && expandResult.failList.length === 0 && (
-                <div className="text-sm text-[var(--nv-text-secondary)] text-center py-8">无结果数据</div>
-              )}
-            </div>
-
-            {/* 底部按钮 */}
-            <div className="px-5 py-3 border-t border-[var(--nv-border-1)] flex gap-2 justify-end">
-              <button
-                onClick={() => setExpandResult(null)}
-                className="px-4 py-1.5 text-sm rounded-lg bg-[var(--nv-accent)] hover:bg-[var(--nv-accent)]/80 text-[var(--nv-text-primary)] font-medium"
-              >
-                知道了
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 角色列表——按 role 分组 */}
-      {roleOrder.map(role => {
-        const items = grouped[role];
-        if (!items || items.length === 0) return null;
-        return (
-          <div key={role} className="mb-2">
-            <div className="text-[10px] text-[var(--nv-text-tertiary)] px-2 mb-0.5 font-medium uppercase tracking-wider">
-              {roleLabel[role] || role} ({items.length})
-            </div>
-            {items.map(c => (
-              <div key={c.id} className="flex items-center gap-2 py-1 px-2 rounded text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] group">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(c.id)}
-                  onChange={() => toggleSelect(c.id)}
-                  onClick={e => e.stopPropagation()}
-                  className="rounded accent-[var(--nv-accent)] shrink-0"
-                />
-                <div onClick={() => onEdit(c)} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
-                  <span className="w-5 h-5 rounded-full bg-[var(--nv-surface-2)] flex items-center justify-center text-[10px] shrink-0">
-                    {c.name[0]}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <span className="truncate block hover:text-[var(--nv-text-primary)]">{c.name}</span>
-                    {(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0 && (
-                      <div className="flex gap-0.5 mt-0.5 flex-wrap">
-                        {(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).slice(0, 5).map((t: string) => (
-                          <button
-                            key={t}
-                            onClick={e => { e.stopPropagation(); setTagFilter(t); }}
-                            className={`text-[9px] px-1 py-0 rounded transition-colors ${
-                              tagFilter === t ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-                            }`}
-                          >{t}</button>
-                        ))}
-                        {(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 5 && (
-                          <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{(c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length - 5}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteCharacter(c.id, c.name); }}
-                  disabled={deletingId === c.id}
-                  className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] shrink-0 disabled:opacity-40"
-                ><Icon name="x" size={12} className="align-middle" /></button>
-              </div>
-            ))}
-          </div>
-        );
-      })}
+      <CharacterGroupList
+        grouped={grouped}
+        roleOrder={roleOrder}
+        roleLabel={roleLabel}
+        selectedIds={selectedIds}
+        deletingId={deletingId}
+        tagFilter={tagFilter}
+        onToggleSelect={toggleSelect}
+        onEdit={onEdit}
+        onDelete={(id, name) => deleteCharacter(id, name)}
+        onTagClick={(t) => setTagFilter(t)}
+      />
 
       {filtered.length === 0 && (
         <EmptyState

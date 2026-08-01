@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.2";
+export const LATEST_VERSION = "v0.44.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "♿ 新增通用 useFocusTrap hook：弹窗激活时焦点移入、Tab/Shift+Tab 循环不逃逸、Esc 关闭、关闭后焦点回移打开前元素",
-  "🔒 DialogOverlay / Modal 基础组件自带焦点陷阱，覆盖所有使用它们的弹窗（角色/世界书编辑、设置导入等）",
-  "🪟 11 个裸 fixed 弹窗统一挂焦点陷阱：大纲/布置/项目配置/生成前确认/抽卡/记忆衰减/自动化/规则/剧情线/角色编辑/扩展结果",
-  "⌨️ 键盘可达性基线达成：Tab 在弹窗内导航、Esc 关闭，焦点不再丢失到背后页面",
+  "🧱 巨型组件拆分启动：CharacterList 883→504 行，拆为 6 个内聚子组件（筛选/工具栏/分类面板/扩展弹窗/角色卡片/分组列表）",
+  "🔒 父组件保留全部状态/handler，仅以子组件调用替换内联 JSX，行为 100% 不变（tsc 零错误）",
+  "♿ 焦点陷阱随扩展结果弹窗移交 ExpandResultModal，键盘可达性不受影响",
+  "🧹 纯重构：无 schema 变更、无新功能、无样式改动，可维护性提升",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.3",
+    date: "2026-08-01",
+    title: "巨型组件拆分启动 —— CharacterList 883→504 行",
+    sections: [
+      {
+        label: "重构 / 可维护性",
+        items: [
+          "CharacterList（883 行）拆分为 6 个内聚子组件：CharacterFilters（搜索+角色/状态/标签筛选）、CharacterToolbar（工具栏+全选/扩展/分类）、ClassifyPanel（分类进度+面板+结果）、ExpandResultModal（扩展进度+结果弹窗并接管 focus-trap）、CharacterRow（单角色卡片）、CharacterGroupList（分组渲染）",
+          "父组件保留全部 useState/useRef/useEffect 与大 handler（handleExpand/handleClassify/handleApplyTags 等）及派生计算，仅以子组件调用替换内联 JSX 区块；行为 100% 不变（tsc 零错误，逻辑逐字迁移）",
+          "主文件从 883 行降至 504 行（大 handler 按行为不变硬约束留父），可读性/可维护性提升，后续改角色功能不再需在巨型文件里定位",
+          "纯重构：无 schema 变更、无新功能、无样式改动；焦点陷阱随扩展结果弹窗一并移交 ExpandResultModal",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.2",
     date: "2026-08-01",

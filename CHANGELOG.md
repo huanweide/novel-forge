@@ -2,6 +2,13 @@
 
 ---
 
+## v0.44.3 — 2026-08-01
+**巨型组件拆分启动 —— CharacterList 883→504 行**
+- 🧱 `CharacterList`（883 行）拆分为 6 个内聚子组件：`CharacterFilters`（搜索+角色/状态/标签筛选）、`CharacterToolbar`（工具栏+全选/扩展/分类）、`ClassifyPanel`（分类进度+面板+结果）、`ExpandResultModal`（扩展进度+结果弹窗并接管 focus-trap）、`CharacterRow`（单角色卡片）、`CharacterGroupList`（分组渲染）
+- 🔒 父组件保留全部状态/handler 与派生计算，仅以子组件调用替换内联 JSX 区块；行为 100% 不变（tsc 零错误，逻辑逐字迁移）
+- ♿ 焦点陷阱随扩展结果弹窗移交 `ExpandResultModal`，键盘可达性不受影响
+- 🧹 纯重构：无 schema 变更、无新功能、无样式改动，可维护性提升
+
 ## v0.44.2 — 2026-08-01
 **对话框焦点陷阱与键盘可达性（无障碍基线）**
 - ♿ 新增通用 `useFocusTrap` hook（`src/hooks/use-focus-trap.ts`）：弹窗激活时焦点移入首个可聚焦元素、Tab/Shift+Tab 在弹窗内循环不逃逸、Esc 关闭、关闭后焦点交还打开前的元素
