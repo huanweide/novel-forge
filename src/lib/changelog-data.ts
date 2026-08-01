@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.6";
+export const LATEST_VERSION = "v0.45.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "👋 工作区首次进入新增「新手引导弹窗」：一眼看懂自动化填表 / 抽卡剧情 / 拆解大纲 / 游戏化 / 竞品借鉴（PROCESS/06 P2-3）",
-  "🔒 复用统一 Modal（自带焦点陷阱 / ESC / 遮罩关闭 / 滚动锁定），首次访问才弹出，关闭后写 localStorage 标记永不重复",
-  "🧱 纯前端、零 schema 变更、零新依赖；localStorage 不可用时静默忽略，不阻断正常使用",
-  "🧩 tsc 零错误；对齐竞品的「欢迎 + 功能引导」入场体验，PROCESS/06 P2 打磨项启动",
+  "🧬 角色卡「性格三层」创作字段：表层（对外展现）/ 中层（日常互动）/ 内核（本质驱动），由浅入深写出立体人物（PROCESS/06 P2-1）",
+  "📝 三层直接并入 personality Json，零 schema 变更；保存时展开运算保留既有主导/驱动/矛盾等字段",
+  "🤖 经 safeJoin 自动拼入写作提示词「性格：…」，AI 生成时即感知三层差异，无需改装配",
+  "🧩 AI 补全（autofill）不会覆盖你手填的三层；tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.7",
+    date: "2026-08-01",
+    title: "角色卡性格三层创作字段",
+    sections: [
+      {
+        label: "功能 / 角色塑造",
+        items: [
+          "角色编辑弹窗（CharacterEditDialog）「性格详析」区块新增三层可选字段：表层 · 对外展现 / 中层 · 日常互动 / 内核 · 本质驱动（PROCESS/06 P2-1）",
+          "三层直接并入 personality Json（surface/middle/core），零 schema 变更、零迁移；保存用 {...fromText(...), surface, middle, core} 展开运算，绝不丢失既有主导/驱动/矛盾/习惯/面具字段",
+          "经 src/lib/utils.ts 的 safeJoin（对象值自动拼接）进入写作提示词「性格：…」区块——AI 生成时即感知三层差异，无需改动装配层",
+          "AI 补全（autofill）仅回填主导/驱动等已知维度，不触碰你手填的三层；快速创建弹窗保持极简不改；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.6",
     date: "2026-08-01",

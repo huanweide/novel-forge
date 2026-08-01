@@ -82,6 +82,9 @@ export function CharacterEditDialog({
     appearanceFeatures: String(app.features || ""),
     appearanceAttire: String(app.attire || ""),
     personality: toText(character.personality),
+    surface: String((character.personality as Record<string, unknown> | undefined)?.surface || ""),
+    middle: String((character.personality as Record<string, unknown> | undefined)?.middle || ""),
+    core: String((character.personality as Record<string, unknown> | undefined)?.core || ""),
     background: character.background || "",
     abilities: (character.abilities || []).join("、"),
     hiddenMotives: (character.hiddenMotives || []).join("、"),
@@ -127,6 +130,9 @@ export function CharacterEditDialog({
           appearanceFeatures: String(ua.features || form.appearanceFeatures),
           appearanceAttire: String(ua.attire || form.appearanceAttire),
           personality: toText(updated.personality) || form.personality,
+          surface: form.surface,
+          middle: form.middle,
+          core: form.core,
           background: updated.background || form.background,
           abilities: (updated.abilities || form.abilities.split(/[,，、\n]+/).filter(Boolean)).join("、"),
           hiddenMotives: (updated.hiddenMotives || form.hiddenMotives.split(/[,，、\n]+/).filter(Boolean)).join("、"),
@@ -165,7 +171,7 @@ export function CharacterEditDialog({
           age: form.age,
           gender: form.gender,
           appearance: { hair: form.appearanceHair, eyes: form.appearanceEyes, height: form.appearanceHeight, build: form.appearanceBuild, features: form.appearanceFeatures, attire: form.appearanceAttire },
-          personality: fromText(form.personality),
+          personality: { ...fromText(form.personality), surface: form.surface, middle: form.middle, core: form.core },
           background: form.background,
           abilities: form.abilities.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
           hiddenMotives: form.hiddenMotives.split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean),
@@ -270,6 +276,12 @@ export function CharacterEditDialog({
           <div className="border-b border-[var(--nv-border-2)] pb-3">
             <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">性格详析</h4>
             {field("性格特征", form.personality, v => setForm({ ...form, personality: v }), { textarea: true, rows: 5, placeholder: "主导：外冷内热\n驱动：复仇执念\n矛盾：渴望认可但自尊极强\n习惯：咬指甲、自言自语\n面具：对外冷漠，对熟人话多" })}
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-[var(--nv-text-muted)]">性格三层（可选 · 由浅入深帮 AI 写出立体人物，不与上文冲突，可只填其一）：</p>
+              {field("表层 · 对外展现", form.surface, v => setForm({ ...form, surface: v }), { textarea: true, rows: 2, placeholder: "旁人眼中他是怎样的人？例如：温和有礼、慢条斯理、不轻易表态" })}
+              {field("中层 · 日常互动", form.middle, v => setForm({ ...form, middle: v }), { textarea: true, rows: 2, placeholder: "熟悉后才显露的一面？例如：其实很要强、怕被看轻、对亲近者格外护短" })}
+              {field("内核 · 本质驱动", form.core, v => setForm({ ...form, core: v }), { textarea: true, rows: 2, placeholder: "最深处本性/创伤/欲望？例如：童年被弃导致极度缺乏安全感，所有强势都是伪装" })}
+            </div>
           </div>
           {/* 背景 */}
           <div className="border-b border-[var(--nv-border-2)] pb-3">
