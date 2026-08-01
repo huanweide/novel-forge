@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.4";
+export const LATEST_VERSION = "v0.44.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧱 巨型组件拆分续：WorldPanel 375→137 行，拆为 4 子组件 + 1 数据模块（板块选择/编辑器/条目卡片/列表 + 常量外置）",
-  "🔒 父保留全部状态/handler（handleCreate/handleFieldChange/deleteEntry）与派生计算，行为 100% 不变（tsc 零错误）",
-  "📦 常量 WORLD_MODULES/DEPTH_LABEL 等外置 worldPanelData.ts，全局核查无别处依赖破坏",
-  "🧹 纯重构：无 schema 变更、无新功能、无样式改动，可维护性提升",
+  "🔑 项目配置中心「per-project LLM 覆盖」缺口补齐：大纲生成（/generate/outline）与宝宝流自动填表（babyloreFill）现已继承项目级 llmConfig（apiKey/baseUrl/model 非空字段覆盖全局）",
+  "✅ 实测端到端验证：设错误项目 key → write/outline 均返回 401 鉴权失败（证明覆盖接管）；复位 {} → 用 .env 全局 key 真实生成成功（证明无阻塞、API 直接可用）",
+  "🔗 write/refine/continue 三路由把项目级 llmConfig 透传 safeFillAfterWriting；outline 叠加 buildProjectOverrides 解析",
+  "🧪 tsc 零错误；澄清此前「API 阻塞」为误判——本地站读 .env 的 LLM_API_KEY，DeepSeek key 一直可用",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.5",
+    date: "2026-07-31",
+    title: "项目级 LLM 覆盖端到端闭环（outline + 自动填表接入）",
+    sections: [
+      {
+        label: "功能补齐 / 一致性",
+        items: [
+          "项目配置中心「per-project LLM 覆盖」缺口补齐：此前仅 write/refine/continue/summarize 继承项目级 llmConfig，大纲生成（/generate/outline）与宝宝流自动填表（babyloreFill）只走全局设置——现已统一叠加 buildProjectOverrides（apiKey/baseUrl/model 非空字段覆盖全局），做到真正端到端",
+          "outline 路由：从 project.llmConfig 解析项目级 baseURL/apiKey/model，叠加在全局 getSettings() 之上；modelUsed 按有效模型名（含 flash）判定",
+          "babylore 自动填表：safeFillAfterWriting 新增 projectLlmConfig 入参，透传给 babyloreFill，使「生成一章→自动抽事实回填表格」也走项目 key；write/refine/continue 三路由均已透传已取出的 projLlm",
+          "实测验证（本地 dev server 301 端口）：给测试项目设错误 apiKey → write 与 outline 均返回 401（Authentication Fails, Your api key: ****xxxx is invalid，后缀即所设错误 key，证明覆盖接管）；复位 llmConfig={} → 用 .env 全局 LLM_API_KEY 真实流式生成成功（274 token + done / 2 章大纲），证明全局 key 直接可用、不存在外部阻塞",
+        ],
+      },
+      {
+        label: "澄清 / 维护性",
+        items: [
+          "修正此前 backlog 中「项目级 LLM 覆盖端到端（待 API 恢复）」的阻塞误判——本地站运行读取 .env 的 LLM_API_KEY（已配 DeepSeek），API 一直可达可用，取消阻塞判定",
+          "纯后端逻辑补齐，无 schema 变更、无前端改动；tsc 零错误；测试项目 llmConfig 已复位为空 {}，无残留",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.4",
     date: "2026-08-01",

@@ -239,7 +239,7 @@ ${lastParagraphs}
           }
 
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
-          const babylore = await safeFillAfterWriting({ projectId, content: fullContent, send });
+          const babylore = await safeFillAfterWriting({ projectId, content: fullContent, send, projectLlmConfig: projLlm as Record<string, unknown> | null });
 
           send({
             type: "done", content: "",

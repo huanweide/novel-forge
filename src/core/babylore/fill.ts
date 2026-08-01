@@ -12,6 +12,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/llm";
+import { buildProjectOverrides } from "@/core/llm/client";
 import type { LoreTableOp, TableDef } from "./types";
 
 export interface FillResult {
@@ -90,7 +91,7 @@ async function applyOps(tables: TableDef[], ops: LoreTableOp[]): Promise<number>
 export async function babyloreFill(
   projectId: string,
   chapterText: string,
-  options?: { tableKeys?: string[] },
+  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null },
 ): Promise<FillResult> {
   let settings;
   try {
@@ -98,6 +99,12 @@ export async function babyloreFill(
   } catch (e) {
     return { ok: false, operations: 0, applied: 0, error: e instanceof Error ? e.message : "LLM 未配置" };
   }
+  // 项目级 LLM 覆盖：非空字段覆盖全局设置（与正文生成 write/refine/continue 一致）
+  const projOverride = buildProjectOverrides(options?.projectLlmConfig || {});
+  const baseURL = projOverride.baseURL || settings.baseUrl;
+  const apiKey = projOverride.apiKey || settings.apiKey;
+  const rawProj = (options?.projectLlmConfig || {}) as Record<string, unknown>;
+  const model = typeof rawProj.model === "string" && rawProj.model.trim() ? rawProj.model : settings.model;
 
   const where: any = { projectId };
   if (options?.tableKeys?.length) where.key = { in: options.tableKeys };
@@ -150,9 +157,9 @@ ${chapterText.slice(0, 12000)}
 
 请提取本章事实，输出 operations 的严格 JSON。`;
 
-  const url = settings.baseUrl.endsWith("/v1")
-    ? `${settings.baseUrl}/chat/completions`
-    : `${settings.baseUrl}/v1/chat/completions`;
+  const url = baseURL.endsWith("/v1")
+    ? `${baseURL}/chat/completions`
+    : `${baseURL}/v1/chat/completions`;
 
   let lastErr = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -161,12 +168,12 @@ ${chapterText.slice(0, 12000)}
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         // 防御性超时：DeepSeek 慢响应时最多等 120s，超时即失败并走重试/降级
         signal: AbortSignal.timeout(120000),
         body: JSON.stringify({
-          model: settings.model,
+          model,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },

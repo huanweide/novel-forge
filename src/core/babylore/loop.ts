@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { recallContext, RecallItem } from "./recall";
 import { babyloreFill, FillResult } from "./fill";
 import { evaluateIfCell } from "./ifcell";
+import { buildProjectOverrides } from "@/core/llm/client";
 
 export interface RecallBuildInput {
   projectId: string;
@@ -90,6 +91,8 @@ export interface FillAfterWritingInput {
   nodeOrder?: number;
   /** 当前节点是否为最新节点（最后一章）；用于"跳过最近一章"判断。 */
   isLatestChapter?: boolean;
+  /** 项目级 LLM 覆盖（Json）；非空字段覆盖全局设置，使自动填表也走项目 key */
+  projectLlmConfig?: Record<string, unknown> | null;
 }
 
 /**
@@ -97,7 +100,7 @@ export interface FillAfterWritingInput {
  * 失败不影响正文交付；返回 FillResult，并（若提供 send）推送事件。
  */
 export async function safeFillAfterWriting(input: FillAfterWritingInput): Promise<FillResult> {
-  const { projectId, content, send, nodeOrder, isLatestChapter } = input;
+  const { projectId, content, send, nodeOrder, isLatestChapter, projectLlmConfig } = input;
 
   // ── 频率 / 跳过配置（用户逻辑 2c：填表频率可配 + 默认跳过最近章）──
   let cfg: { autoFillEnabled?: boolean; fillFrequency?: number; skipLatestChapter?: boolean } | null = null;
@@ -154,7 +157,7 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
 
   let babylore: FillResult = { ok: false, operations: 0, applied: 0, error: "" };
   try {
-    const fillRes = await babyloreFill(projectId, content);
+    const fillRes = await babyloreFill(projectId, content, { projectLlmConfig });
     babylore = {
       ok: fillRes.ok,
       operations: fillRes.operations,

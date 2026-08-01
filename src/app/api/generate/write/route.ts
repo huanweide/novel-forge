@@ -297,6 +297,7 @@ export async function POST(request: Request) {
             send,
             nodeOrder: (data.currentNode as any).order,
             isLatestChapter,
+            projectLlmConfig: projLlm as Record<string, unknown> | null,
           });
 
           // Token 用量

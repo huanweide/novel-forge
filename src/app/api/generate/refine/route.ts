@@ -190,7 +190,7 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
           }
 
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
-          const babylore = await safeFillAfterWriting({ projectId, content: newContent, send });
+          const babylore = await safeFillAfterWriting({ projectId, content: newContent, send, projectLlmConfig: projLlm as Record<string, unknown> | null });
 
           const tokenCount = countTokens(newContent);
           send({

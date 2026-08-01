@@ -2,6 +2,13 @@
 
 ---
 
+## v0.44.5 — 2026-07-31
+**项目级 LLM 覆盖端到端闭环（outline + 自动填表接入）**
+- 🔑 项目配置中心「per-project LLM 覆盖」缺口补齐：大纲生成（`/generate/outline`）与宝宝流自动填表（`babyloreFill`）现已继承项目级 llmConfig（apiKey/baseUrl/model 非空字段覆盖全局），与 write/refine/continue/summarize 统一
+- ✅ 实测端到端验证：设错误项目 key → write/outline 均返回 `401`（证明覆盖接管）；复位 `{}` → 用 `.env` 全局 key 真实生成成功（证明无阻塞、API 直接可用）
+- 🔗 write/refine/continue 三路由把 `projLlm` 透传 `safeFillAfterWriting`；outline 叠加 `buildProjectOverrides` 解析
+- 🧪 tsc 零错误；澄清此前「API 阻塞」为误判——本地站读 `.env` 的 `LLM_API_KEY`，DeepSeek key 一直可用
+
 ## v0.44.4 — 2026-08-01
 **巨型组件拆分续 —— WorldPanel 375→137 行**
 - 🧱 `WorldPanel`（375 行）拆分为 4 个内聚子组件 + 1 个数据模块：`WorldModuleSidebar`（板块选择）、`WorldEditor`（标题栏+新建表单+深度选择）、`WorldEntryCard`（单条目卡片）、`WorldEntryList`（列表+空状态）、`worldPanelData.ts`（WORLD_MODULES/DEPTH_LABEL/CATEGORY_TO_MODULE/MODULE_FIELDS 常量与类型外置）

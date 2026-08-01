@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { safeJoin } from "@/lib/utils";
 import { getActiveRules, injectRules } from "@/core/rules";
 import { getSettings } from "@/lib/llm";
+import { buildProjectOverrides } from "@/core/llm/client";
 
 export const maxDuration = 300;
 
@@ -119,13 +120,14 @@ export async function POST(request: Request) {
       styleText += "\n" + String(llmConfig.customStyleNotes).slice(0, 300);
     }
 
-    // ── 从全局设置读取 LLM 配置 ──
+    // ── 从全局设置读取 LLM 配置，并叠加项目级覆盖（非空字段覆盖全局）──
     const settings = await getSettings();
-    const baseURL = settings.baseUrl;
-    const apiKey = settings.apiKey;
-    const model = settings.model;
+    const projOverride = buildProjectOverrides(llmConfig);
+    const baseURL = projOverride.baseURL || settings.baseUrl;
+    const apiKey = projOverride.apiKey || settings.apiKey;
+    const model = typeof llmConfig.model === "string" && llmConfig.model.trim() ? llmConfig.model : settings.model;
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
-    const shouldUseFlash = useFlash || hasCustomPrompt;
+    const shouldUseFlash = useFlash || hasCustomPrompt || /flash/i.test(model);
 
     // ── 中文数字 ──
     const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
@@ -293,7 +295,7 @@ ${finalDirective}${charCountNote}
       chapters,
       rawOutline: rawOutline || structuredContent.slice(0, 500),
       totalGenerated: chapters.length,
-      modelUsed: shouldUseFlash ? "v4-flash" : "v4-pro",
+      modelUsed: /flash/i.test(model) ? "v4-flash" : "v4-pro",
     });
   } catch (err) {
     return NextResponse.json(
