@@ -169,6 +169,20 @@
     <p class="note">状态：系统预设开箱即用✅；用户上传仅本机已明示✅；tsc 零错误✅；seed 幂等✅；GET 真实返回 16 内置✅；dev HTTP 200✅。v0.46.3，commit faa14f0（page.tsx + 双 changelog，3 files 46 ins 7 del），本地已提交，push 因沙箱出网 TLS 瞬时故障待补推。</p>
   </div>
 
+  <div class="card">
+    <span class="tag">2026-08-02 · v0.46.4</span>
+    <h2>trirui推荐品牌化 + 导入/导出文件（本地分发）</h2>
+    <h3>这次干了啥</h3>
+    <p>按斯瑞纠正的方向收口：① 16 个内置示范预设全部打「trirui推荐」品牌标记（作者 trirui、标签 trirui推荐），作为固定项随仓库 clone 即带、人人可用；② 新增「导入/导出预设文件」（酒馆式），每张卡片可导出 .preset.json、顶部可导入本地/GitHub 下载的分享文件；③ 方向纠偏——这是本地运行工具（类比 SillyTavern 酒馆），不是 SaaS，分发靠 clone + 导入文件。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>斯瑞反复说「这就是本地项目，跟酒馆一样，你老想线上干嘛」——之前把「线上站救活」当成品必经墙是错的。本地项目分发范式：clone 即拥有全部内置资产（预设随代码走），社区扩展靠导出/导入文件而非中心化服务器。所以系统预设必须品牌化归属（trirui推荐 = 樊斯瑞项目设立的体系），且必须提供文件级导入导出让使用者从 GitHub 下载分享预设导入本地——正是酒馆的角色卡/世界书 import/export 模式。</p>
+    <h3>怎么落地</h3>
+    <p>品牌标记：<span class="kbd">seed/presets/route.ts</span> 播种循环统一 <span class="kbd">author:"trirui"</span> + <span class="kbd">tags</span> 追加 trirui推荐；已入库 16 条用一次性 UPDATE 补齐，新 clone 自动带。导入后端：新建 <span class="kbd">POST /api/presets/import</span>，创建 <span class="kbd">isBuiltin:false, author:"导入"</span> 本地预设，按 {type,title,isBuiltin:false} 去重，与系统内置清晰隔离。前端：每张卡片「导出」按钮（纯前端 Blob 下载 .preset.json，含 schema 版本+完整内容）+ 顶部「导入文件」按钮（隐藏 input 选文件即 POST）。</p>
+    <h3>关键取舍</h3>
+    <p>导出纯前端、导入走后端（复用 Preset 模型零新 schema）。导入的必须 isBuiltin:false，绝不污染系统内置。线上站救活不作为必经墙——本地项目不需要部署服务器，分发靠 clone + 文件导入。</p>
+    <p class="note">验证：tsc 零错误✅；导入端到端（创建→公开列表可见→清理）✅；16 条内置已打 trirui推荐✅；方向写入 ROADMAP_TO_SHIP.md + MEMORY.md✅。v0.46.4，待提交推送（沙箱出网 TLS 故障未恢复，本地提交后补推）。</p>
+  </div>
+
 </div>
 </body>
 </html>

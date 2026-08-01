@@ -80,6 +80,8 @@ export default function Workshop() {
   const [busy, setBusy] = useState(false);
   const [busyAi, setBusyAi] = useState(false);
   const autoSeedRef = useRef(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -150,6 +152,53 @@ export default function Workshop() {
       if (res.ok) { toastAdded(p.title, "预设副本"); load(); }
       else toastError(d.error || "复刻失败");
     } finally { setBusy(false); }
+  };
+
+  const exportPreset = (p: Preset) => {
+    const payload = {
+      schema: "novel-forge-preset",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      preset: { type: p.type, title: p.title, description: p.description, content: p.content, tags: p.tags },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${p.title}.preset.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toastInfo(`已导出「${p.title}」为 .preset.json 文件`);
+  };
+
+  const handleImportFile = async (file: File) => {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const preset = parsed.preset || parsed;
+      if (!preset.type || !preset.title) {
+        toastError("文件格式不对：缺少 type 或 title");
+        return;
+      }
+      const res = await fetch(`/api/presets/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: preset.type,
+          title: preset.title,
+          description: preset.description || "",
+          content: preset.content || {},
+          tags: preset.tags || [],
+          author: "导入",
+        }),
+      });
+      const d = await res.json();
+      if (res.ok) { toastAdded(preset.title, "导入预设"); load(); }
+      else toastError(d.error || "导入失败");
+    } catch {
+      toastError("解析失败：不是有效的预设 JSON 文件");
+    } finally { setImporting(false); }
   };
 
   const seedBuiltins = async () => {
@@ -318,6 +367,24 @@ export default function Workshop() {
             >
               <Icon name="sparkles" size={14} /> 上传预设
             </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-medium"
+            >
+              <Icon name="upload" size={14} /> {importing ? "导入中…" : "导入文件"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImportFile(f);
+                e.currentTarget.value = "";
+              }}
+            />
           </div>
         </div>
       </header>
@@ -394,6 +461,12 @@ export default function Workshop() {
                     className="btn-ghost text-xs px-3 py-2 rounded-xl disabled:opacity-50"
                   >
                     复刻
+                  </button>
+                  <button
+                    onClick={() => exportPreset(p)}
+                    className="btn-ghost text-xs px-3 py-2 rounded-xl"
+                  >
+                    <Icon name="download" size={12} /> 导出
                   </button>
                 </div>
               </div>

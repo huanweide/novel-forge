@@ -302,3 +302,33 @@ PROCESS/06 的 P0/P1 全部完成，P2 里 P2-1（性格三层）、P2-3（引�
 - 用户上传：仅本机、不共享，页面已明示 ✅。
 - 自查：tsc 零错误 ✅；seed 接口幂等（`created:0` 安全）✅；GET 列表真实返回 16 内置 ✅；dev 服务 HTTP 200 ✅。
 - 版本：v0.46.3，commit `faa14f0`（3 files changed, 46 insertions, 7 deletions：page.tsx + 双 changelog），已本地提交，代理 push 因沙箱出网 TLS 瞬时故障待补推。
+
+## 2026-08-02 · 创意工坊 trirui推荐品牌化 + 导入/导出文件（v0.46.4）
+
+### 这次干了啥
+按斯瑞纠正的方向收口创意工坊：① 把现有 16 个内置示范预设全部打上「trirui推荐」品牌标记（作者归 trirui、标签加 trirui推荐），作为固定项随仓库 clone 即带、人人可用；② 新增「导入/导出预设文件」能力（酒馆式），每张卡片可导出 .preset.json、顶部可导入本地/GitHub 下载的分享文件；③ 明确产品方向纠偏——这是本地运行工具（类比 SillyTavern 酒馆），不是 SaaS，分发靠 clone + 导入文件。
+
+### 为什么（第一性原理）
+斯瑞反复强调「这就是个本地项目，跟酒馆一样，你老想线上干嘛」——之前我把「线上站救活」当成品必经墙是错的。本地项目的分发范式是：仓库 clone 即拥有全部内置资产（预设随代码走），社区扩展靠「导出/导入文件」而非中心化服务器。所以系统预设必须品牌化归属（trirui推荐 = 樊斯瑞项目设立的体系），且必须提供文件级导入导出让使用者能从 GitHub 下载别人分享的预设导入本地——这正是酒馆的角色卡/世界书 import/export 模式。
+
+### 怎么落地
+- 品牌标记：`src/app/api/seed/presets/route.ts` 的播种循环里，新建内置项统一 `author:"trirui"` 且 `tags` 追加 `"trirui推荐"`（BUILTINS 不再逐个写 author）。已入库的 16 条用一次性 `UPDATE`（author→trirui、array_append tags）补齐，新 clone 自动带标记。
+- 导入后端：新建 `src/app/api/presets/import/route.ts`，接收 `{type,title,description,content,tags}` 创建 `isBuiltin:false, author:"导入"` 的本地预设，按 `{type,title,isBuiltin:false}` 去重防重复，与系统内置清晰隔离、永不影响。
+- 前端：`workshop/page.tsx` 每张卡片加「导出」按钮（纯前端 Blob 生成 .preset.json 下载，含 schema 版本+完整内容）；顶部加「导入文件」按钮 + 隐藏 `<input type=file>`，选文件即 POST import；加 `importing` state 与 `fileInputRef`。
+
+### 试过的方案 / 关键取舍
+- 导入文件放后端还是纯前端？—— 导出纯前端（无需服务端，浏览器直接生成下载）；导入走后端（要写库），复用现有 Preset 模型、零新 schema。
+- 要不要把导入的预设也标 builtin？—— 不。导入的必须 `isBuiltin:false`，否则污染系统内置、且重复 clone 时 seed 去重可能冲突。用户上传/导入只存本机、不共享。
+- 是否把线上站救活作为必经墙？—— 否，已纠偏。本地项目不需要部署服务器，分发靠 clone + 文件导入。
+
+### 自查与验证
+- tsc 零错误 ✅。
+- 端到端验证导入：POST /api/presets/import 创建成功（author=导入、isBuiltin=false）→ GET /api/presets 公开列表可见 → 清理成功。导出为前端 Blob 下载（类型已编译验证，浏览器实测即可）。
+- 品牌标记：16 条内置已 UPDATE author=trirui、tags 含 trirui推荐 ✅。
+- 注意：Windows Git Bash 的 curl 发中文 `-d` 参数会乱码，端到端测试改用英文标题规避——非代码 bug，是测试工具编码问题（与 v0.46.3 自查纠偏同理：要用真实/干净的调用形态）。
+
+### 这一步做完的状态
+- 内置预设：16 个全部 trirui推荐 品牌化，clone 即带 ✅。
+- 导入/导出：每张卡片可导出 .preset.json、顶部可导入分享文件 ✅（酒馆式分发）。
+- 方向：明确本地项目（类比酒馆），分发靠 clone + 文件导入，不再依赖线上站 ✅（写入 ROADMAP_TO_SHIP.md + MEMORY.md）。
+- 版本：v0.46.4，待提交推送（沙箱出网 TLS 故障未恢复，本地提交后补推）。

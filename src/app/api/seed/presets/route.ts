@@ -393,7 +393,10 @@ export async function POST() {
         where: { type: b.type, title: b.title, isBuiltin: true },
       });
       if (!exists) {
-        await prisma.preset.create({ data: { ...b, isBuiltin: true, isPublic: true } as any });
+        const tags = Array.from(new Set([...(b.tags || []), "trirui推荐"]));
+        await prisma.preset.create({
+          data: { ...b, author: "trirui", tags, isBuiltin: true, isPublic: true } as any,
+        });
         created++;
       }
     }
