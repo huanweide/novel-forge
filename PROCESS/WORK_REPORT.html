@@ -137,6 +137,22 @@
     <p class="note">预设：16 内置（含舞台剧）+ 0 乱码残留。非技术用户现可上传 style/worldview/lorebook/character/table_template 五类预设无需碰 JSON。待拍板：内置「regex·通用删除思维链」「api_config·创意奔放 API 参数」两条技术类预设，判为服务创意已保留，若要删点头即办。</p>
   </div>
 
+  <div class="card">
+    <span class="tag">2026-08-01 · v0.46.2</span>
+    <h2>创意工坊注入修复 + LLM 丰满预设</h2>
+    <h3>这次干了啥</h3>
+    <p>① 修一个真 bug：创意工坊的「定义·规则（worldview）」和「剧情推进倾向（story_progression）」套用后<b>根本没进写作上下文</b>，等于下了「全文禁止男性角色」铁律 AI 却看不到——现在让它们和角色卡/风格卡同级常驻；② 上传弹窗顶部加「AI 帮我丰满预设」面板：你用大白话描述想要的风格/规则，AI 扩写成结构化、可直接发布的预设草稿，你审一遍就能发。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>斯瑞担心「定义了没用」不是错觉：这两类写进世界书词条后，全局提示词预编译那段「世界书」只渲染 8 个标准分类，把这两个漏了；它们默认又没触发词、进不了关键词动态触发路——结果写进库了但生成时没人渲染。类比：你给工人发了《工地最高守则》，工头归档时只抄了后 8 页普通注意事项，<b>首页最高守则被漏印</b>，工人手里的手册根本没有这条。AI 丰满则是把创造门槛从「会填表」再降到「会说话」。</p>
+    <h3>怎么落地</h3>
+    <p>① 注入修复改两处：<span class="kbd">sync-global-prompt.ts</span> 把 <span class="kbd">catOrder</span> 前两位插入 worldview / story_progression（加中文标签），让它和角色卡同等级永远随全局提示词注入；<span class="kbd">orchestrator.ts</span> 加 <span class="kbd">STATIC_LORE_CATS</span> 从动态路径排除这两类，防同一词条重复注入。② LLM 丰满：新建后端 <span class="kbd">/api/presets/enrich</span>（POST 收 type+description → 读 AppSettings 模型/Key → 调 LLM 扩成 JSON → <span class="kbd">extractJSON</span> 容错抽 + <span class="kbd">sanitize</span> 按类型裁剪对齐向导字段）；前端 <span class="kbd">workshop/page.tsx</span> 上传弹窗顶部加描述框 +「AI 丰满」按钮，拿回 fields 直接合并进 upload 表单。</p>
+    <h3>试过的方案 / 为什么没选别的</h3>
+    <p>重写整条注入链？——不用，根因就是分类漏渲染，catOrder 前置两行即解，零架构风险（斯瑞「不要大改」）。剧情倾向独立成新模块？——斯瑞说「可融合进规则」，故并到同一条常驻路径。硬正则解析 LLM 输出？——改用 extractJSON（兼容 ```json、清尾逗号、清不可见字符）+ sanitize 双保险；首次 story_progression 稳定失败就是 SCHEMA_HINT 示例串多打一个半角引号误导模型，改正 + 加容错后全通。所有类型都做 AI 丰满？——regex/api_config 高阶 JSON 明确不支持、提示手填，其余六类全开。</p>
+    <h3>关键取舍</h3>
+    <p>选「分类常驻静态缓存」而非「塞进关键词触发」：定义级规则必须每句生成都生效，不能等命中。选「动态路径排除 STATIC 两类」而非「两路都注入」：避免重复浪费 token 且可能自相矛盾。选「LLM 产出 + 容错解析 + 类型裁剪」而非「手写正则硬绑」：兼容模型发挥又守住字段契约。</p>
+    <p class="note">用户三项确认闭环：① 文风(style) 早已注入✅；② 定义权·规则(worldview) 本轮修复后常驻✅「定义了就有用」；③ 剧情推进倾向(story_progression) 本轮修复后常驻✅，可融合进规则。创造流：分类型向导 + AI 丰满双通道。v0.46.2，commit 335064f，tsc 零错误，已代理 push。</p>
+  </div>
+
 </div>
 </body>
 </html>
