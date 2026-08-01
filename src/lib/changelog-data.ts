@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.44.6";
+export const LATEST_VERSION = "v0.44.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧱 PostGenPanel（624 行）拆分为 7 个内聚子组件：PostGenPanelHeader / PostGenPanelTabs / ExtractionTab / ForbiddenTab / LogicTab / DistillTab / ReviewTab，共享类型与 TabKey/TABS 外置 postgen/types.ts",
-  "🔒 父组件保留全部 useState（7 个 adopted Set + tab/saving/saveMessage）与 handler，采纳状态经 AdoptControllers 注入 ExtractionTab；行为 100% 不变（tsc 零错误，逻辑逐字迁移）",
-  "📉 主文件从 624 行降至约 187 行；巨型组件拆分 4/4 已完成其三（剩 AIChatBar 待拆）",
-  "🧹 纯重构：无 schema 变更、无新功能、无样式改动，生成后分析面板可维护性提升",
+  "🧱 AIChatBar（593 行）拆分为 6 个内聚子组件：AIChatHeader / ChatMessageList / ChatThinking / ChatErrorBar / ChatSuggestions / ChatInput，共享类型外置 aichat/types.ts",
+  "🔒 父组件保留全部 state/refs/handler（handleSend/handleAdoptSuggestion/handleCancel/handleSuggestion + 思考轮播/自动滚底 useEffect），输入框 Enter 发送逻辑内联进 ChatInput；行为 100% 不变（tsc 零错误）",
+  "📉 主文件从 593 行降至约 155 行；巨型组件拆分 4/4 全部完成（CharacterList / WorldPanel / PostGenPanel / AIChatBar）",
+  "🧹 纯重构：无 schema 变更、无新功能、无样式改动，Agent 对话面板可维护性提升",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.44.7",
+    date: "2026-07-31",
+    title: "巨型组件拆分收官 —— AIChatBar 593→155 行",
+    sections: [
+      {
+        label: "重构 / 可维护性",
+        items: [
+          "AIChatBar（593 行）拆分为 6 个内聚子组件：AIChatHeader（Agent 标识头）、ChatMessageList（空状态+消息列表+写后分析采纳+思考步骤折叠）、ChatThinking（实时工具调用思考动画·含无步骤态）、ChatErrorBar（错误条）、ChatSuggestions（建议胶囊）、ChatInput（输入框+选中片段+发送/停止），共享类型外置 aichat/types.ts",
+          "父组件保留全部 state/refs 与大 handler（handleSend 含 frontendActions 三类：analyze_chapter/analyze_relationships/relation_sync；handleAdoptSuggestion 角色卡字段更新；handleCancel/handleSuggestion）及思考轮播/自动滚底 useEffect；输入框 Enter 发送逻辑内联进 ChatInput，行为 100% 不变（tsc 零错误）",
+          "主文件从 593 行降至约 155 行；巨型组件拆分 4/4 全部完成（CharacterList 883 / WorldPanel 375 / PostGenPanel 624 / AIChatBar 593），项目巨型组件可维护性彻底改善",
+          "纯重构：无 schema 变更、无新功能、无样式改动",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.44.6",
     date: "2026-07-31",

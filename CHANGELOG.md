@@ -2,6 +2,13 @@
 
 ---
 
+## v0.44.7 — 2026-07-31
+**巨型组件拆分收官 —— AIChatBar 593→155 行**
+- 🧱 `AIChatBar`（593 行）拆分为 6 个内聚子组件：`AIChatHeader` / `ChatMessageList` / `ChatThinking` / `ChatErrorBar` / `ChatSuggestions` / `ChatInput`，共享类型外置 `aichat/types.ts`
+- 🔒 父组件保留全部 state/refs 与 handler（handleSend/handleAdoptSuggestion/handleCancel/handleSuggestion + 思考轮播/自动滚底 useEffect），输入框 Enter 发送逻辑内联进 `ChatInput`；行为 100% 不变（tsc 零错误）
+- 📉 主文件从 593 行降至约 155 行；巨型组件拆分 4/4 全部完成（CharacterList / WorldPanel / PostGenPanel / AIChatBar）
+- 🧹 纯重构：无 schema 变更、无新功能、无样式改动，Agent 对话面板可维护性提升
+
 ## v0.44.6 — 2026-07-31
 **巨型组件拆分续 —— PostGenPanel 624→187 行**
 - 🧱 `PostGenPanel`（624 行）拆分为 7 个内聚子组件：`PostGenPanelHeader`（头部 stats+按钮）、`PostGenPanelTabs`（Tab 栏）、`ExtractionTab`（7 分组提取+逐条采纳）、`ForbiddenTab` / `LogicTab` / `DistillTab` / `ReviewTab`（四个分析 Tab），共享类型与 `TabKey`/`TABS` 外置 `postgen/types.ts`
