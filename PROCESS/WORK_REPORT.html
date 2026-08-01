@@ -121,6 +121,22 @@
     <p class="note">至此 PROCESS/04 的 6 项全部 ✅，PROCESS 体系（05 酒馆迁移 / 06 竞品借鉴 / 04 待迭代）均已清空收尾，项目稳定健康。</p>
   </div>
 
+  <div class="card">
+    <span class="tag">2026-08-01 · 创意工坊三项改进</span>
+    <h2>创意工坊：加舞台剧预设 + 清理 + 分类型上传向导</h2>
+    <h3>这次干了啥</h3>
+    <p>① 把下载里一份「舞台剧/话剧文风」酒馆世界书 JSON 转成创意工坊一键套用预设；② 清掉工坊里乱码（如 <span class="kbd">APIֱ�⡤����ʫʫ</span>）与显示不全的条目；③ 把上传从「裸 JSON textarea」改成「分类型向导」——选文风给「文风感觉+视角/节奏」，选世界书给「可增删词条编辑器」，选角色填名/描述/定位，不用懂 JSON 也能创造。用户原话：不要分太细，给他们一点创造力。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>舞台剧素材散在下载文件夹、格式是酒馆的、普通人用不了，转成预设等于把孤本菜谱印成菜单谁都能点。裸 JSON 上传框等于要求每个想贡献菜谱的食客先学会写 XML，绝大多数人卡住；改成按类型给表单，像把「写菜谱」拆成「填菜名/选口味/写步骤」几张简单表。</p>
+    <h3>怎么落地</h3>
+    <p>① 舞台剧 JSON 是酒馆 lorebook 格式，0.3MB 超 Read 上限改用 Python <span class="kbd">json.load</span> 解析，过滤 disable 条目留 5 条，改写成 novel-forge 的 <span class="kbd">{entries:[{title,content,keys,depth}]}</span> 存 <span class="kbd">stage-play.json</span>；② 清 NUL 控制字符（条目「（不要关）」混进 48 个 ASCII 0 不可见垃圾，PostgreSQL JSONB 硬拒），写 <span class="kbd">clean()</span> 过滤后重 seed 成功；③ 临时脚本撞 Prisma 7 的 ESM/CJS 坑，干脆复用 3001 跑着的 dev API <span class="kbd">/api/seed/presets</span> POST 播种；④ 清理乱码走 dev 删除接口（DB 操作无代码提交）；⑤ 上传向导 commit <span class="kbd">d91910f</span>，1 文件改 248 增 13 删，tsc 零错误。</p>
+    <h3>试过的方案 / 为什么没选别的</h3>
+    <p>临时脚本直连 DB？——撞 Prisma ESM 解析坑，改打已跑的 dev API 更干净。NUL 字符保留？——JSONB 硬拒且 NUL 无意义，clean() 删掉语义无损。清理用正则猜乱码？——第一版漏 <span class="kbd">/</span> 字符误删合法内置「主角信息表」，立刻重 seed 恢复；教训：清理用「白名单思维」而非「黑名单正则」。每种类型都做精美表单？——按「不要分太细」保留 regex/api_config 的 JSON 高级框给懂的人。</p>
+    <h3>关键取舍</h3>
+    <p>选「dev API 播种」而非「临时脚本」（避 ESM 坑）；选「clean() 过滤」而非「保留原文」（JSONB 硬拒）；选「白名单恢复误删」（误伤内置必须立即回滚）；选「分类型向导」而非「裸 JSON」（门槛从会写 JSON 降到会填表，但留技术类 JSON 入口不切断高手）。</p>
+    <p class="note">预设：16 内置（含舞台剧）+ 0 乱码残留。非技术用户现可上传 style/worldview/lorebook/character/table_template 五类预设无需碰 JSON。待拍板：内置「regex·通用删除思维链」「api_config·创意奔放 API 参数」两条技术类预设，判为服务创意已保留，若要删点头即办。</p>
+  </div>
+
 </div>
 </body>
 </html>
