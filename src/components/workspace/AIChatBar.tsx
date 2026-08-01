@@ -130,8 +130,8 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
     }
   };
 
-  const handleSend = async () => {
-    const text = message.trim();
+  const handleSend = async (overrideText?: string) => {
+    const text = (overrideText ?? message).trim();
     if (!text || loading) return;
 
     const userMsg: MessageItem = { role: "user", text, ts: Date.now() };
@@ -296,11 +296,36 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
     inputRef.current?.focus();
   };
 
+  // 顶部快捷芯片：一键触发常用动作（仅预填 prompt，不新增 AI 逻辑）
+  const PRESETS: Array<{ key: string; label: string; prompt: string }> = [
+    { key: "continue", label: "续写", prompt: "根据当前章节内容，自然地继续往下写，保持文风与视角一致，不要重复已有内容。" },
+    { key: "polish", label: "润色", prompt: "请润色当前章节的文笔，提升描写质感与节奏，不改变剧情走向。" },
+    { key: "dialogue", label: "写对话", prompt: "帮我设计一段贴合角色性格、推进剧情的对话。" },
+    { key: "check", label: "查漏", prompt: "检查本章是否存在逻辑漏洞、前后矛盾或设定冲突，并列出要点。" },
+    { key: "fix", label: "修正", prompt: "指出本章可以修正的问题并给出具体修改建议。" },
+    { key: "expand", label: "展开", prompt: "挑选当前章节中值得细写的片段，展开描写，增加细节与画面感。" },
+  ];
+
+  const runPreset = (prompt: string) => {
+    if (loading) return;
+    handleSend(prompt);
+  };
+
   const hasHistory = messages.length > 0;
 
   return (
     <div className={`flex flex-col min-h-0 flex-1 ${className}`}>
       <AIChatHeader loading={loading} />
+
+      {/* ═══ 快捷芯片条（一键触发常用动作） ═══ */}
+      <div className="flex flex-wrap gap-1.5 border-b border-[var(--nv-border-2)] px-3 py-2">
+        {PRESETS.map((p) => (
+          <button key={p.key} disabled={loading} onClick={() => runPreset(p.prompt)}
+            className="rounded-full border border-[var(--nv-border-2)] px-2.5 py-1 text-[11px] text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-primary)] hover:text-[var(--nv-primary)] disabled:opacity-50">
+            {p.label}
+          </button>
+        ))}
+      </div>
 
       {/* ═══ 对话区 ═══ */}
       <div ref={listRef} className="flex-1 overflow-y-auto">

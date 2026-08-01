@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.45.3";
+export const LATEST_VERSION = "v0.45.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧭 世界书面板新增「列表 / 网格」视图切换，网格用 2 列卡片，对齐竞品的卡片仪表板概览",
-  "🗂️ 网格视图复用现有 WorldEntryCard，窄侧栏下也能紧凑排布，条目数实时显示",
-  "🔘 切换为本地状态（不影响其它面板），默认仍是列表，零破坏性",
-  "🧩 纯 UI 增强：无 schema 变更、无新依赖，tsc 零错误；PROCESS/06 P1-1 完成",
+  "🚀 AIChatBar 顶部新增「快捷芯片条」：续写 / 润色 / 写对话 / 查漏 / 修正 / 展开 一键触发",
+  "💬 芯片本质是把常用意图预填为 prompt 直接发送，复用既有 /api/generate/chat，不新增 AI 逻辑",
+  "🔘 生成中芯片自动禁用，避免重复发送；纯入口聚合，零破坏性",
+  "🧩 无 schema 变更、无新依赖，tsc 零错误；PROCESS/06 P1-2 完成",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.45.4",
+    date: "2026-08-01",
+    title: "右侧 AI 快捷芯片条（一键常用动作）",
+    sections: [
+      {
+        label: "功能 / AI 对话 UX",
+        items: [
+          "AIChatBar 顶部新增「快捷芯片条」：续写 / 润色 / 写对话 / 查漏 / 修正 / 展开 六个常用动作一键触发（PROCESS/06 P1-2）",
+          "芯片本质是把常见意图预填为标准 prompt 直接发送，复用既有 /api/generate/chat 与全部前端动作处理链路，不新增任何 AI 逻辑",
+          "生成进行中芯片自动 disabled，避免重复发送；纯入口聚合，零破坏性",
+          "无 schema 变更、无新依赖；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.45.3",
     date: "2026-08-01",
