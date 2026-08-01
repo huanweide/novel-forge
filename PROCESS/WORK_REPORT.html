@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>工作沉淀 · 费曼式说明书（novel-forge）</title>
+<style>
+  :root{
+    --nv-void:#07070b; --nv-abyss:#0c0c14; --nv-surface-1:#12121c; --nv-surface-2:#181826; --nv-surface-3:#1f1f30;
+    --nv-border-1:#2a2a3c; --nv-border-2:#353550; --nv-border-3:#44446a;
+    --nv-text-primary:#e8e8f0; --nv-text-secondary:#b0b0c8; --nv-text-tertiary:#808098;
+    --nv-primary:#7c5cff; --nv-accent:#4dd0e1; --nv-creative:#ff8a65;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,rgba(124,92,255,.12),transparent),radial-gradient(900px 500px at 90% 0%,rgba(77,208,225,.10),transparent),var(--nv-void);color:var(--nv-text-primary);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;padding:32px 18px 64px;}
+  .wrap{max-width:860px;margin:0 auto;}
+  .hero{background:linear-gradient(135deg,rgba(124,92,255,.18),rgba(77,208,225,.12));border:1px solid var(--nv-border-2);border-radius:18px;padding:26px 28px;margin-bottom:26px;}
+  .hero h1{margin:0 0 8px;font-size:26px;background:linear-gradient(90deg,#fff,#b9a8ff);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero p{margin:0;color:var(--nv-text-secondary);font-size:14px;}
+  .card{background:var(--nv-abyss);border:1px solid var(--nv-border-2);border-radius:16px;padding:22px 24px;margin-bottom:20px;box-shadow:0 8px 30px rgba(0,0,0,.35);}
+  .card h2{margin:0 0 14px;font-size:19px;color:#fff;border-left:4px solid var(--nv-primary);padding-left:12px;}
+  .card h3{margin:18px 0 6px;font-size:14px;color:var(--nv-accent);letter-spacing:.3px;}
+  .card p{margin:6px 0;color:var(--nv-text-secondary);font-size:14.5px;}
+  .tag{display:inline-block;font-size:12px;color:var(--nv-text-tertiary);border:1px solid var(--nv-border-1);border-radius:999px;padding:2px 10px;margin-bottom:10px;}
+  .kbd{background:var(--nv-surface-3);border:1px solid var(--nv-border-3);border-radius:6px;padding:1px 7px;font-size:13px;color:var(--nv-text-primary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .note{color:var(--nv-text-tertiary);font-size:13px;border-top:1px dashed var(--nv-border-1);margin-top:14px;padding-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>工作沉淀 · 费曼式说明书</h1>
+    <p>novel-forge 项目内固定施工日志 · 只追加不删 · 跨对话累计查阅。每次干完一个完整工作单元，就往下写一段人话说明书。</p>
+  </div>
+
+  <div class="card">
+    <span class="tag">2026-08-01</span>
+    <h2>给 AI 装一个「做完就写人话图纸」的开关</h2>
+    <h3>这次干了啥</h3>
+    <p>每做完一件完整的小事，就自动生成一份连不懂技术的人也看得懂的说明，永远留在右侧产出面板能翻到，越攒越多、绝不删旧的。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>AI 干完活通常只丢代码或一句「搞定了」，人看不懂，下次对话 AI 自己也忘了。类比：工人盖完房只留砖头不画图纸——既看不明白也没法照着再盖。所以做完那一刻，用大白话把「思维图纸」写下来，像厨师每道菜炒完在墙上贴便签。</p>
+    <h3>怎么落地</h3>
+    <p>① 把规则钉进跨对话长期记忆 <span class="kbd">MEMORY.md</span> 最前面，标「最高优先级」压过其他指令；② 建本笔记本（只追加不删）；③ 写完用「呈现」推到对话产出下方。</p>
+    <h3>关键取舍</h3>
+    <p>选「人话+类比」而非「堆术语」：术语像密码记不住，类比让人脑子里浮现画面。选「完成后才写」而非「做一半就写」：半截子结论可能错，会误导。</p>
+  </div>
+
+  <div class="card">
+    <span class="tag">v0.45.6 / P2-3</span>
+    <h2>给小说工坊加「首次进入引导弹窗」</h2>
+    <h3>这次干了啥</h3>
+    <p>工作区首次进入弹卡片，大白话介绍 5 个核心功能（自动化填表 / 抽卡剧情 / 拆解大纲 / 游戏化 / 竞品借鉴），看完关闭，以后不再弹。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>新用户面对满屏按钮容易懵。类比：进大餐厅有人递菜单还推荐招牌菜。「门口迎宾」比自己瞎翻舒服。</p>
+    <h3>怎么落地</h3>
+    <p>① 复用项目统一 <span class="kbd">Modal</span>（自带焦点陷阱/ESC/遮罩/滚动锁定），只填内容；② 用 <span class="kbd">localStorage</span>（浏览器本地「已打卡」小本子）记首访，关时写 <span class="kbd">nf_onboarded_v1</span> 标记；③ try/catch 包住，本地存储不可用也绝不崩页。</p>
+    <h3>关键取舍</h3>
+    <p>复用 Modal 而非自写（省事合规）；localStorage 标记而非后端记录（零成本）；首访才弹而非常驻（只打扰一次）。</p>
+  </div>
+
+  <div class="card">
+    <span class="tag">v0.45.7 / P2-1</span>
+    <h2>给角色卡加「性格三层」创作字段</h2>
+    <h3>这次干了啥</h3>
+    <p>角色编辑性格区新增三个由浅入深的框：<b>表层·对外展现</b> / <b>中层·日常互动</b> / <b>内核·本质驱动</b>。填了 AI 写角色就按三层塑造，更立体。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>好人物不能只有一句话标签。现实里人分层：外人面前一副、朋友面前另一副、最深处藏着不愿承认的。类比：给演员说戏不能只说「演个好人」，得说清表层/中层/内核——演员才知道怎么演层次。</p>
+    <h3>怎么落地</h3>
+    <p>① 三层直接塞进角色的 <span class="kbd">personality</span> Json「万能抽屉」（surface/middle/core），<b>零数据库迁移</b>；② 保存用展开运算 <span class="kbd">{...旧, surface, middle, core}</span> 不丢旧字段；③ <span class="kbd">safeJoin</span> 翻译官自动把抽屉里所有纸条拼进 AI 提示词，新三层免改装配即生效；④ AI 自动补全不碰你手填的三层。</p>
+    <h3>关键取舍</h3>
+    <p>并入 Json 抽屉而非加三列（零迁移、向后兼容）；展开运算保留旧字段而非覆盖；借 safeJoin 自动注入而非手写装配（改动最小最稳）。</p>
+  </div>
+
+  <div class="card">
+    <span class="tag">v0.45.8</span>
+    <h2>删 P2-2 + 导出弹层一键复制全文</h2>
+    <h3>这次干了啥</h3>
+    <p>① 按斯瑞指示，把 PROCESS/06 计划里的 <b>P2-2「每日写作目标可视化」</b>整项删除——不做；② 顺手给导出弹层加「复制全文 Markdown」按钮，点一下整本书稿子进剪贴板，可直接贴微信/Word/聊天框，不用先下载。</p>
+    <h3>为什么（第一性原理）</h3>
+    <p>删 P2-2：小说工坊早有数据看板（MonitorPanel）和统计接口（<span class="kbd">/api/stats</span>），再做个「每日目标+进度环」等于同墙挂两块重复钟，纯浪费。加复制按钮：作者最常动作是「发别人看/贴别处」，原路要下载→打开→复制绕三步，一键复制像复印机旁放了台随手印。</p>
+    <h3>怎么落地</h3>
+    <p>① 复制 = 复用 v0.45.0 的导出接口 <span class="kbd">/api/projects/[id]/export?format=markdown</span> + 浏览器原生 <span class="kbd">navigator.clipboard.writeText</span>，前端 fetch 取文本再写入，零新库零数据库；② 三重状态（复制中…/已复制✓/失败）2.2s 自动消失不挡创作；③ 砍 P2-2 在计划文件整段划掉并标「已移除」。</p>
+    <h3>关键取舍</h3>
+    <p>复用导出接口+原生剪贴板而非新接口/引库（零风险）；彻底删除 P2-2 而非标记暂缓（避免误读成待办）；状态提示自动消失而非常驻（不打断创作流）。</p>
+    <p class="note">至此 PROCESS/06 全部执行/清空（P0/P1/P2-1/P2-3 完成，P2-2 用户确认不做已移除），暂无下一编号计划项。</p>
+  </div>
+
+</div>
+</body>
+</html>
