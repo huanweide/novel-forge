@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       where: { id: projectId },
       include: {
         characters: {
-          select: { name: true, role: true, personality: true, background: true, currentStatus: true },
+          select: { id: true, name: true, aliases: true, role: true, personality: true, background: true, currentStatus: true },
           take: 12,
         },
         lorebookEntries: {
@@ -88,6 +88,17 @@ export async function POST(request: Request) {
 
     const contextText = ctxParts.join("\n\n");
 
+    // 角色名 → 真实角色 id 映射（含别名 lowercased），用于把 AI 输出的角色名
+    // 匹配成可跳转的角色卡，让冲突推演与角色卡两个功能互相点名。
+    const charIdMap = new Map<string, { id: string; name: string }>();
+    for (const c of project.characters || []) {
+      const keys = [c.name, ...((Array.isArray(c.aliases) ? c.aliases : []) as string[])]
+        .map((n) => String(n).trim().toLowerCase())
+        .filter(Boolean);
+      const display = { id: c.id, name: c.name };
+      for (const k of keys) charIdMap.set(k, display);
+    }
+
     const systemPrompt = `你是资深小说情节策划顾问。给定一部小说的世界观硬规则、主要角色与近期进展，
 你需要为作者推演出数个「冲突 / 转折」发展方向，帮助打破平淡、制造张力。
 
@@ -99,13 +110,14 @@ export async function POST(request: Request) {
   - tension: 它为何制造张力（撕裂了什么关系/打破了什么平衡/带来什么两难）
   - outcome: 可能走向的 1-2 种结果
   - caution: 风险提示或需埋设的伏笔
+  - characters: 这条冲突 / 转折主要涉及的角色名数组（必须从【主要角色】清单里挑选真实存在的名字；若不涉及具体角色则给空数组 []）
 - 所有方向都要**尊重世界观硬规则**（不得出现世界观明确禁止的设定）。
 - 只输出 JSON 数组，不要任何解释、前言、后记、markdown 围栏。
 
 示例格式：
 [
-  {"title":"xxx","trigger":"...","tension":"...","outcome":"...","caution":"..."},
-  {"title":"xxx","trigger":"...","tension":"...","outcome":"...","caution":"..."}
+  {"title":"xxx","trigger":"...","tension":"...","outcome":"...","caution":"...","characters":["角色名"]},
+  {"title":"xxx","trigger":"...","tension":"...","outcome":"...","caution":"...","characters":[]}
 ]`;
 
     const config = await getEffectiveConfig(buildProjectOverrides((project as any).llmConfig));
@@ -137,13 +149,24 @@ export async function POST(request: Request) {
     }
 
     // 规整字段，确保前端安全渲染
-    const safe = options.slice(0, 8).map((o: any, i: number) => ({
-      title: String(o.title || `方向 ${i + 1}`).slice(0, 30),
-      trigger: String(o.trigger || ""),
-      tension: String(o.tension || ""),
-      outcome: String(o.outcome || ""),
-      caution: String(o.caution || ""),
-    }));
+    const safe = options.slice(0, 8).map((o: any, i: number) => {
+      // 把 AI 输出的角色名匹配成真实角色卡（精确 name / 别名，大小写不敏感）
+      const rawChars: string[] = Array.isArray(o.characters)
+        ? o.characters.map((x: any) => String(x).trim()).filter(Boolean)
+        : [];
+      const matchedChars = rawChars
+        .map((n) => charIdMap.get(n.toLowerCase()))
+        .filter((v): v is { id: string; name: string } => !!v)
+        .filter((v, idx, arr) => arr.findIndex((a) => a.id === v.id) === idx);
+      return {
+        title: String(o.title || `方向 ${i + 1}`).slice(0, 30),
+        trigger: String(o.trigger || ""),
+        tension: String(o.tension || ""),
+        outcome: String(o.outcome || ""),
+        caution: String(o.caution || ""),
+        characters: matchedChars,
+      };
+    });
 
     return NextResponse.json({ options: safe, note: "以下由 AI 生成，仅供参考，最终情节决定权在作者。" });
   } catch (err) {

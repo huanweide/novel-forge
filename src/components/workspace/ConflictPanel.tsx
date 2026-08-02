@@ -11,16 +11,18 @@ interface ConflictOption {
   tension: string;
   outcome: string;
   caution: string;
+  characters?: { id: string; name: string }[];
 }
 
 export function ConflictPanel({
-  open, projectId, projectName, onClose, onApplied,
+  open, projectId, projectName, onClose, onApplied, onOpenCharacter,
 }: {
   open: boolean;
   projectId: string;
   projectName: string;
   onClose: () => void;
   onApplied?: () => void;
+  onOpenCharacter?: (id: string) => void;
 }) {
   const [situation, setSituation] = useState("");
   const [loading, setLoading] = useState(false);
@@ -182,6 +184,20 @@ export function ConflictPanel({
                     <p className="text-xs text-[var(--nv-text-secondary)] leading-relaxed mt-1">
                       <span className="text-[var(--nv-text-tertiary)]">风险 / 伏笔：</span>{o.caution}
                     </p>
+                  )}
+                  {o.characters && o.characters.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-[var(--nv-border-2)]">
+                      <span className="text-[11px] text-[var(--nv-text-tertiary)]">涉及角色：</span>
+                      {o.characters.map((ch) => (
+                        <button
+                          key={ch.id}
+                          onClick={() => onOpenCharacter?.(ch.id)}
+                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:border-[var(--nv-primary)] hover:text-[var(--nv-primary)] transition-colors"
+                        >
+                          <Icon name="user" size={11} /> {ch.name}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}

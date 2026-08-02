@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.8";
+export const LATEST_VERSION = "v0.46.9";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎯 每日目标长进编辑器状态栏（互操作①）：写作时底部状态栏新增「今日 X / 目标 Y · Z%」金色胶囊，与统计面板同源（localStorage dailyGoal + monitor 今日字数），保存后自动同步；达标瞬间胶囊变金 + 脉冲 + 每日一次轻提示「今日目标达成 ✨」",
-  "📅 统计面板周历打卡（互操作②）：每日目标区块下新增近 7 天节奏格，达标日显示金色 ✓、今日 ring 高亮，把单日进度环扩展为可回看的养成轨迹，与状态栏同一数据源",
-  "🔗 闭环定位：此前每日目标只活在统计面板，写作界面完全不可见；本次让「目标」在写作与统计两侧互通，作者无需切面板即可感受每日节奏",
-  "✅ 全量 tsc 零错误；零新 npm 依赖——状态栏复用既有 monitor 接口与 localStorage，周历复用既有 dailyWords 聚合",
+  "🎭 角色卡 ↔ 冲突推演互相照亮（互操作③）：冲突推演端点新增 characters 字段，AI 在每个冲突 / 转折选项里标注「涉及角色」（从【主要角色】清单挑选真实名字），后端按 name + 别名精确匹配成真实角色卡 id",
+  "🔗 卡片可直接跳角色卡：ConflictPanel 每个选项卡新增「涉及角色」标签（user 图标），点一下就在工作台内打开对应角色卡——让已做的「角色三层性格」与「冲突推演」两个功能互相点名",
+  "🧩 闭环逻辑：此前冲突推演只出冲突、不点名角色；本次让「谁会被这条冲突考验」看得见、可直达，作者从推演到角色设定形成回环，仍定位为纯建议、决定权在作者",
+  "✅ 全量 tsc 零错误；零新 npm 依赖——复用 CharacterCard 既有 name / aliases / id，匹配在后端一次完成，前端按 id 直接跳转",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.9",
+    date: "2026-08-02",
+    title: "互操作③：角色卡 ↔ 冲突推演互相照亮",
+    sections: [
+      {
+        label: "冲突推演 · 标注涉及角色",
+        items: [
+          "POST /api/generate/conflict 新增 characters 字段：systemPrompt 要求每个冲突 / 转折选项标注「涉及角色」（从【主要角色】清单挑选真实名字，不涉及则为空数组）",
+          "后端按 CharacterCard 的 name + aliases（大小写不敏感、去重）精确匹配成真实角色卡 id，返回每个选项 characters:[{id,name}]；别名也能匹配，匹配不到的角色名自动丢弃，避免不可点标签误导",
+        ],
+      },
+      {
+        label: "ConflictPanel · 一键跳角色卡",
+        items: [
+          "每个选项卡新增「涉及角色」标签（user 图标），点击即在工作台内打开对应角色卡——复用 workspace 既有 setEditingCharacter 机制，零新增状态",
+          "让已做的「角色三层性格（surface/middle/core）」与「冲突推演」两个功能互相点名：从推演一眼看到「谁会被这条冲突考验」，再直达设定深挖",
+        ],
+      },
+      {
+        label: "闭环定位与取舍",
+        items: [
+          "此前冲突推演只出冲突、不点名角色，作者需手动回记忆找角色；本次让「谁被考验」看得见、可直达，推演 ↔ 角色设定形成回环",
+          "仍定位为纯建议：冲突推演不写库、决定权在作者；仅补齐「推演 → 角色」的导航断点",
+          "全量 tsc 零错误；零新 npm 依赖——复用 CharacterCard 既有 name/aliases/id，匹配在后端一次完成",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.8",
     date: "2026-08-02",

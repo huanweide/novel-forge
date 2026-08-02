@@ -945,6 +945,7 @@ export default function WorkspacePage() {
           projectName={project.name}
           onClose={() => setShowConflict(false)}
           onApplied={loadProject}
+          onOpenCharacter={(id) => { const c = project.characters.find((x) => x.id === id); if (c) setEditingCharacter(c); }}
         />
       )}
 
