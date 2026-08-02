@@ -34,6 +34,8 @@ export default function ExplorePage() {
   const [creating, setCreating] = useState(false);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(true);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [adoptStatus, setAdoptStatus] = useState<Record<string, string>>({});
   const [allCards, setAllCards] = useState<Record<string, AdoptCard[]>>({});
   const [generatingAll, setGeneratingAll] = useState(false);
@@ -562,9 +564,25 @@ export default function ExplorePage() {
             >
               {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 生成中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> 一键AI构建所有设定</span>}
             </button>
+            {/* 窄屏：抽屉切换 */}
+            <button
+              onClick={() => setLeftDrawerOpen(o => !o)}
+              className="lg:hidden rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all duration-200 hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
+              title="切换构建配置（窄屏）"
+            >
+              <Icon name="sliders" size={13} />
+            </button>
+            <button
+              onClick={() => setRightDrawerOpen(o => !o)}
+              className="lg:hidden rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all duration-200 hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
+              title="切换已采纳（窄屏）"
+            >
+              <Icon name="check" size={13} />
+            </button>
+            {/* 桌面：内联配置开关 */}
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className={`rounded-xl border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
+              className={`hidden lg:inline-flex rounded-xl border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
                 showConfig
                   ? "border-[var(--nv-primary)]/20 bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
                   : "border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] text-[var(--nv-text-tertiary)] hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)]"
@@ -599,8 +617,8 @@ export default function ExplorePage() {
       {/* ── 三栏布局 ── */}
       <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
         {/* 左栏：构建配置 */}
-        {showConfig && (
-          <aside className="w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm">
+        {(showConfig || leftDrawerOpen) && (
+          <aside className={`w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}>
             <BuildConfigPanel config={config} onChange={setConfig} />
           </aside>
         )}
@@ -647,7 +665,7 @@ export default function ExplorePage() {
         </main>
 
         {/* 右栏：已采纳 */}
-        <aside className="w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm">
+        <aside className={`w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-72 lg:translate-x-0 lg:transition-none`}>
           <AdoptedContentPanel
             adopted={adopted}
             onRemove={(id) =>
@@ -658,6 +676,10 @@ export default function ExplorePage() {
             onCreateProject={handleCreateProject}
           />
         </aside>
+        {/* 窄屏抽屉遮罩 */}
+        {(leftDrawerOpen || rightDrawerOpen) && (
+          <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
+        )}
       </div>
     </div>
   );

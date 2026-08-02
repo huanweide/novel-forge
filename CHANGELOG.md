@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.18 — 2026-08-02
+**响应式补齐：explore 探讨页 / game 游戏页三栏抽屉化（窄屏不再挤压）**
+- 📱 响应式补齐（FE-6）：explore 探讨页三栏（构建配置 w-80 / 中栏 / 已采纳 w-72）与 game 游戏页三栏（左信息 w-52 / 中栏 / 右信息 w-64）参考 workspace 主页补 `lg:` 抽屉——左右栏在 `<lg` 变 `fixed inset-y-0 left/right-0 z-40 w-* max-w-[85vw] h-full transition-transform`，开 `translate-x-0`、关 `-translate-x-full`；`lg:static lg:z-auto lg:shrink-0 lg:w-* lg:translate-x-0 lg:transition-none` 复位，桌面三栏并排零回归
+- 🔘 窄屏顶部新增抽屉切换按钮（`lg:hidden`）：explore 用 `sliders`/`check` 图标分别开构建配置/已采纳抽屉，game 用 `sliders`/`grid` 图标开关左右栏；中栏始终 `flex-1 min-w-0` 全宽不被压扁
+- 🎭 半透明遮罩点击收起：`(leftDrawerOpen || rightDrawerOpen)` 时渲染 `fixed inset-0 z-30 bg-black/50 lg:hidden`，点遮罩即关两栏，单栏故障不影响互动
+- 🛡️ 诚实边界：dissect 拆书页经 grep 核查本就是单栏 `max-w-6xl` 表单（无多列 grid），窄屏天然不挤压，未做无意义改写；全量 tsc 零错误，零新 npm 依赖
+
 ## v0.46.17 — 2026-08-02
 **弹窗统一收口：22 个手写遮罩全部接入统一 Modal 基座（focus trap + ESC + 滚动锁）**
 - 🪟 弹窗统一收口（FE-3）：全项目 22 个业务弹窗（角色编辑/创建、世界书编辑、风格编辑、导入向导、设置导入、记忆衰减、项目配置、生成前确认、抽卡、扩展结果、工具箱、剧情线、规则面板、建表、首页公告、创意工坊上传、导出、大纲、自动化设置、构建配置等）的手写 `fixed inset-0 z-50 bg-black/60` 遮罩全部删除，统一替换为 `<Modal open onClose={...} bare panelClassName="...">`

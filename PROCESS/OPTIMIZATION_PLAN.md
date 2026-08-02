@@ -217,9 +217,9 @@
 - **价值**：图标语言统一，专业感立现；也避免某些系统渲染 emoji 颜色不一致导致的"花屏"。
 - **量级**：中（与 FE-1 同期做最高效）。
 
-### FE-3 弹窗统一收口到 Modal（消灭 24+ 重复遮罩）⭐
-- **现在**：全项目 27 文件、29 处 `fixed inset-0 z-50 bg-black/60` 各自重复实现遮罩；仅 `ConflictPanel`/`OnboardingModal`/`Modal` 用了统一 `Modal`。`StyleEditor`/`ImportWizard`/`ExportDialog`/`StorylineList`/`WorldPanel`/`tables`/`workshop` 上传/`CharacterCreateDialog`/`LorebookEditDialog` 等均未复用。
-- **做完**：所有遮罩类弹窗统一收口到 `Modal`（自带 focus trap + ESC + 滚动锁 + `role="dialog" aria-modal"`）；删掉散落的 `fixed inset-0` 实现。
+### FE-3 弹窗统一收口到 Modal（消灭 24+ 重复遮罩）⭐ ✅ 已完成 (v0.46.17)
+- **现在**（实施前）：全项目 27 文件、29 处 `fixed inset-0 z-50 bg-black/60` 各自重复实现遮罩；仅 `ConflictPanel`/`OnboardingModal`/`Modal` 用了统一 `Modal`。`StyleEditor`/`ImportWizard`/`ExportDialog`/`StorylineList`/`WorldPanel`/`tables`/`workshop` 上传/`CharacterCreateDialog`/`LorebookEditDialog` 等均未复用。
+- **做完**：22 个业务弹窗手写遮罩全部删除、统一接入 `Modal`（自带 focus trap + ESC + 滚动锁 + `role="dialog" aria-modal`）；新增 `bare` 模式（`panelClassName`/`header`/`showClose`）零破坏迁移；`DialogUI.DialogOverlay` 退役；grep 复核 `src` 无残留手写业务遮罩（Modal 自身/抽屉/下拉/toast/游戏画布/粒子特效合法保留）。tsc 零错误、零新依赖，已推 main（05bfc21）。
 - **价值**：弹窗行为一处定义、处处一致；将来改遮罩样式/动画只动一个组件；也顺手补了无障碍（见 FE-5）。
 - **量级**：中（逐个组件迁移，需回归测试）。
 

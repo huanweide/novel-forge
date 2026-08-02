@@ -100,6 +100,8 @@ export default function GamePage() {
   const [showOutlineEditor, setShowOutlineEditor] = useState(false);
   const [nodeOutline, setNodeOutline] = useState<string | null>(null);
   const [lorebook, setLorebook] = useState<any[]>([]);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const streamRef = useRef<AbortController | null>(null);
 
   // ── 初始化 ──────────────────────────────────────────────
@@ -407,13 +409,28 @@ export default function GamePage() {
               结束并导出
             </button>
           )}
+          {/* 窄屏：抽屉切换 */}
+          <button
+            onClick={() => setLeftDrawerOpen(o => !o)}
+            className="lg:hidden flex items-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
+            title="切换左栏（窄屏）"
+          >
+            <Icon name="sliders" size={13} />
+          </button>
+          <button
+            onClick={() => setRightDrawerOpen(o => !o)}
+            className="lg:hidden flex items-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
+            title="切换右栏（窄屏）"
+          >
+            <Icon name="grid" size={13} />
+          </button>
         </div>
       </header>
 
       {/* ═══ 主体三栏 ═══ */}
       <div className="relative z-10 flex flex-1 overflow-hidden">
         {/* 左侧栏 */}
-        <aside className="flex w-52 shrink-0 flex-col border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
+        <aside className={`flex w-52 shrink-0 flex-col border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-52 lg:translate-x-0 lg:transition-none`}>
           <div className="flex border-b border-[var(--nv-border-2)]">
             {LEFT_TABS.map(({ key, label, icon }) => (
               <button
@@ -603,7 +620,7 @@ export default function GamePage() {
         </main>
 
         {/* 右侧信息面板 */}
-        <aside className="flex w-64 shrink-0 flex-col border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
+        <aside className={`flex w-64 shrink-0 flex-col border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none`}>
           <div className="flex border-b border-[var(--nv-border-2)]">
             {RIGHT_TABS.map(({ key, label, icon }) => (
               <button
@@ -814,6 +831,10 @@ export default function GamePage() {
             )}
           </div>
         </aside>
+        {/* 窄屏抽屉遮罩 */}
+        {(leftDrawerOpen || rightDrawerOpen) && (
+          <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
+        )}
       </div>
 
       {/* ═══ 章纲编辑器浮层 ═══ */}

@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.17";
+export const LATEST_VERSION = "v0.46.18";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🪟 弹窗统一收口（FE-3）：全项目 22 个手写 `fixed inset-0 z-50` 业务遮罩全部收口到统一 `Modal` 基座（自带 focus trap + ESC + 滚动锁 + role=dialog aria-modal），消灭重复遮罩代码",
-  "🎛️ 引入 `bare` 模式：统一「遮罩层 + 关闭行为」外壳，内部内容结构原样保留——通过 `panelClassName` 透传宽度/布局类、`header` 自定义头部插槽、`showClose` 右上角关闭键，零破坏迁移",
-  "🔒 关闭语义诚实保留：原「点遮罩不关闭」的弹窗（构建配置/建表/上传/首页公告）用 `closeOnOverlay={false}` 保留；导入向导保留 `step` 条件关闭；其余统一点遮罩或 ESC 关闭",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；grep 复核 `src` 下已无残留手写业务弹窗遮罩（仅 Modal 自身 / 抽屉 / 下拉 / toast / 游戏画布 / 粒子特效合法保留）",
+  "📱 响应式补齐（FE-6）：explore 探讨页与 game 游戏页三栏参考 workspace 主页补 `lg:` 抽屉——窄屏左右栏变 fixed 抽屉（`lg:static` 复位），中栏 `flex-1 min-w-0` 全宽不被挤压",
+  "🔘 窄屏顶部新增抽屉切换按钮（`lg:hidden`）：explore 用 `sliders`/`check` 图标分别开构建配置/已采纳抽屉；game 用 `sliders`/`grid` 图标开关左右栏",
+  "🎭 半透明遮罩点击收起：`(leftDrawerOpen || rightDrawerOpen)` 时渲染 `fixed inset-0 z-30 bg-black/50 lg:hidden`，点遮罩即关两栏，单栏故障不影响互动",
+  "✅ 全量 tsc 零错误、零新依赖；dissect 拆书页经核查本就是单栏 `max-w-6xl` 表单（无多列 grid），窄屏天然不挤压，按诚实边界未做无意义改写",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.18",
+    date: "2026-08-02",
+    title: "响应式补齐：explore 探讨页 / game 游戏页三栏抽屉化（窄屏不再挤压）",
+    sections: [
+      {
+        label: "响应式补齐（FE-6）",
+        items: [
+          "explore 探讨页三栏（构建配置 w-80 / 中栏 / 已采纳 w-72）与 game 游戏页三栏（左信息 w-52 / 中栏 / 右信息 w-64）参考 workspace 主页补 `lg:` 抽屉：左右栏在 `<lg` 变 `fixed inset-y-0 left/right-0 z-40 w-* max-w-[85vw] h-full transition-transform`，开 `translate-x-0`、关 `-translate-x-full`；`lg:static lg:z-auto lg:shrink-0 lg:w-* lg:translate-x-0 lg:transition-none` 复位，桌面三栏并排零回归",
+          "窄屏顶部新增抽屉切换按钮（`lg:hidden`）：explore 用 `sliders`/`check` 图标分别开构建配置/已采纳抽屉，game 用 `sliders`/`grid` 图标开关左右栏；中栏始终 `flex-1 min-w-0` 全宽不被压扁",
+        ],
+      },
+      {
+        label: "遮罩与交互",
+        items: [
+          "三栏容器末尾新增 `lg:hidden` 半透明遮罩：`(leftDrawerOpen || rightDrawerOpen)` 时渲染 `fixed inset-0 z-30 bg-black/50`，点击即关两栏；桌面 `lg:hidden` 自动隐去、不拦截交互",
+          "explore 桌面「构建配置」内联开关改为 `hidden lg:inline-flex`（与窄屏抽屉切换分工清晰）；原 `showConfig` 状态保留控制桌面内联可见性",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "dissect 拆书页经 grep 核查本就是单栏 `max-w-6xl mx-auto` 表单（无 `grid-cols-*` / 多列并排），窄屏天然不挤压——未做无意义改写，避免 cargo cult 式硬凑「单栏堆叠」",
+          "game 页根布局 `flex h-screen flex-col overflow-hidden` + 三栏 `flex flex-1 overflow-hidden` 保持不变，抽屉 `fixed` 脱离文档流后中栏自然占满，零布局回归",
+          "全量 tsc 零错误、零新 npm 依赖；未在真机窄屏实跑手感，建议作者本地缩窗确认抽屉开合与遮罩点击收起",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.17",
     date: "2026-08-02",
