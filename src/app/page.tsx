@@ -158,6 +158,10 @@ export default function Dashboard() {
             <Link href="/recycle" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="trash" size={13} /> <span className="hidden sm:inline">回收站</span>
             </Link>
+            <button onClick={() => window.dispatchEvent(new Event("nf-open-command-palette"))} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1" title="全局命令面板（Cmd/Ctrl+K）">
+              <Icon name="search" size={13} /> <span className="hidden sm:inline">搜索</span>
+              <kbd className="ml-0.5 text-[10px] px-1 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">⌘K</kbd>
+            </button>
             <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">{loadingSample ? "载入中" : "示例"}</span>
             </button>

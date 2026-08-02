@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.22";
+export const LATEST_VERSION = "v0.46.23";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🗑️ 软删除 + 回收站（BE-2）：项目删除不再物理抹掉——`Project` 加 `deletedAt`，删除改「软删除」移入回收站，子表（章节/角色/世界书）随项目一起隐藏不丢",
-  "♻️ 回收站页面 `/recycle`：列出已删项目，一键「恢复」回到主页，或「彻底删除」才真正物理清除（级联清掉全部子表）；删除确认文案改为「移入回收站」",
-  "🛡️ 手滑删除不再世界末日：本地工具没有云端兜底，现在自己补了一个回收站；主页项目列表自动过滤已删项目，只显示活跃项目",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；字段经 `prisma db push` 同步；诚实边界：软删除仅隐藏、不自动过期清理（如需「保留 N 天」可后续加定时任务）",
+  "⌘ 全局命令面板 Cmd/Ctrl+K（FE-N1）：任意页面按 Cmd/Ctrl+K 唤起面板，输入即搜当前项目的章节标题 / 角色名 / 世界书词条 / 规则，回车直达；也支持「新建章节 / 打开设置 / 探讨 / 拆书 / 创意工坊 / 回收站 / 返回主页」等动作跳转",
+  "🔎 跳转即定位：搜到章节回车跳到该章并自动选中；角色 / 世界书词条回车直接打开编辑弹窗；不在项目页时面板自动聚焦全局操作（页面跳转）",
+  "💡 可发现性：仪表盘顶栏新增「搜索 ⌘K」按钮（移动端点按同样能开），面板内 ↑↓ 选择、Enter 跳转、Esc 关闭",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；检索走前端内存索引（打开时拉当前项目数据），不上 ES；workspace 加 `?node`/`?editCharacter`/`?editLore`/`?tab` 参数接收跳转",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.23",
+    date: "2026-08-02",
+    title: "全局命令面板 Cmd/Ctrl+K：项目一大，搜索即达，专业感拉满",
+    sections: [
+      {
+        label: "命令面板（FE-N1）",
+        items: [
+          "根 layout 挂载全局 `<CommandPalette />`：监听 Cmd/Ctrl+K 切换，也可由仪表盘顶栏「搜索 ⌘K」按钮派发 `nf-open-command-palette` 事件打开",
+          "从 `usePathname` 解析当前 `projectId`，打开时 `GET /api/projects/[id]` 拉取 nodes/characters/lore/rules 建内存索引（项目详情接口已补 `rules: true`）；输入即过滤标题/副标题，↑↓ 选择、Enter 跳转、Esc 关闭",
+        ],
+      },
+      {
+        label: "跳转即定位",
+        items: [
+          "章节结果 → `/workspace/[id]?node=节点ID`，workspace 页新增 `useSearchParams` 效果应 `?node` 自动 `handleSelectNode` 选中该章；`?editCharacter`/`?editLore` 直接打开对应编辑弹窗；`?tab` 切左栏页签",
+          "角色 / 世界书 / 规则结果分别回车打开编辑 / 跳规则页签；全局动作（新建章节 / 设置 / 探讨 / 拆书 / 创意工坊 / 回收站 / 主页）始终可用，不在项目页时面板自动聚焦这些动作",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "检索走前端内存索引（打开时拉一次当前项目数据），不上 ES / 全文库——符合计划「中」量级，项目内实时性足够；若需跨项目全局搜后续可加服务端接口",
+          "workspace 页加 `export const dynamic = 'force-dynamic'` 以安全使用 `useSearchParams`（避免静态预渲染的 Suspense 报错）；全量 tsc 零错误、零新 npm 依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.22",
     date: "2026-08-02",

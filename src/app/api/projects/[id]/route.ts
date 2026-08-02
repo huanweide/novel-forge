@@ -19,6 +19,7 @@ export async function GET(
         storylines: { orderBy: [{ type: "asc" }, { order: "asc" }] },
         styleCards: true,
         loreTables: true,
+        rules: true,
       },
     });
     if (!project) {

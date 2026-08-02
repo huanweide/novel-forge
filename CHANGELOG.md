@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.23 — 2026-08-02
+**全局命令面板 Cmd/Ctrl+K：项目一大，搜索即达，专业感拉满**
+- ⌘ 命令面板（FE-N1）：根 layout 挂全局 `<CommandPalette />`，Cmd/Ctrl+K 唤起；解析当前 projectId 拉 nodes/characters/lore/rules 建内存索引，输入即搜；↑↓ 选、Enter 跳转、Esc 关闭；仪表盘顶栏加「搜索 ⌘K」按钮
+- 🔎 跳转即定位：章节回车跳并自动选中（`?node`）；角色/世界书回车开编辑弹窗（`?editCharacter`/`?editLore`）；全局动作（新建章节/设置/探讨/拆书/创意工坊/回收站/主页）始终可用
+- 🧭 诚实边界：检索走前端内存索引不上 ES；workspace 加 `force-dynamic` 以用 `useSearchParams`；tsc 零错误，零新依赖
+
 ## v0.46.22 — 2026-08-02
 **软删除 + 回收站：删项目不再物理抹掉，手滑可救**
 - 🗑️ 软删除（BE-2）：Project 新增 `deletedAt`；`DELETE /api/projects/[id]` 改为软删除（设 `deletedAt`，子表 `onDelete: Cascade` 随项目一起隐藏不丢）；`GET /api/projects` 列表过滤 `deletedAt: null`，主页只显示活跃项目

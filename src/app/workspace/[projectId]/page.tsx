@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { SettingsImporter } from "@/components/dashboard/SettingsImporter";
@@ -67,6 +68,30 @@ export default function WorkspacePage() {
     }
     setSelectedNode(node);
   };
+
+  // 命令面板（Cmd/Ctrl+K）跳转参数：?node / ?editCharacter / ?editLore / ?tab
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (!project) return;
+    const nodeId = searchParams.get("node");
+    if (nodeId && (project as any).storyNodes) {
+      const n = (project as any).storyNodes.find((x: any) => x.id === nodeId);
+      if (n) handleSelectNode(n);
+    }
+    const ec = searchParams.get("editCharacter");
+    if (ec && (project as any).characters) {
+      const c = (project as any).characters.find((x: any) => x.id === ec);
+      if (c) setEditingCharacter(c);
+    }
+    const el = searchParams.get("editLore");
+    if (el && (project as any).lorebookEntries) {
+      const l = (project as any).lorebookEntries.find((x: any) => x.id === el);
+      if (l) setEditingLore(l);
+    }
+    const tab = searchParams.get("tab");
+    if (tab) setLeftPanel(tab as "characters" | "world" | "outline" | "storylines" | "rules");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, searchParams]);
 
   // ── 生成状态 ──────────────────────────────
   const [isGenerating, setIsGenerating] = useState(false);
