@@ -401,4 +401,35 @@
 
 ---
 
-*下个单元：所有 ⭐ 项已完成，优化冲刺收官。后续可选（非 ⭐）：ARCH-6 测试护栏、FE-7 冗余合并、BUG 清单长跑实测。*
+## v0.46.27 — 空态统一（FE-4/BUG-9）+ 导入向导批量删除二次确认（BUG-13）
+
+> 把"页面空了显示什么"这件事统一成一套；再给导入向导里"一键清空未确认"这种危险操作加一道确认闸。类比：公司所有空会议室门口都贴同一种"可预订"告示牌（统一空态），而不是有的贴 A4 有的贴手写条；同时给"一键清空会议室预订"按钮加个"确定吗？"弹窗。
+
+### ① 干了什么
+- 删除冗余的 `src/components/ui/EmptyState.tsx`（旧版用 `hint` 文案字段、无 `className`、视觉偏小），全站只保留 `States.tsx` 里的 `EmptyState`（用 `description` 字段 + 支持 `className`，视觉是带"创意色"圆角徽章的大卡片）。
+- 把 `CharacterList`/`StorylineList`/`RulesPanel`/`WorldEntryList` 4 处的 import 从 `EmptyState.tsx` 改到 `States.tsx`，并把传参 `hint=` 全部改成 `description=`（字段重命名，语义不变）。
+- `ImportWizard` 的"一键删除未确认"（`handleRemoveAllUnconfirmed`）在真正清空前先弹 `confirmDialog({ danger: true })`，用户确认才执行。
+
+### ② 为什么这么做
+- **"空状态"= 列表没数据时给用户的占位提示**：原本两套实现字段名不同（`hint` vs `description`）、大小不一，同一个 `RulesPanel` 还同时 import 了两个——属于典型的"复制粘贴漂移"，改一处另一处不跟着变。统一后新人首次进空白页看到的引导是一致的专业样式。
+- **"批量危险操作必须二次确认"**：导入向导"一键删除未确认"会丢掉全部尚未写入数据库的章节/角色/词条，且清空前无任何确认，误点即损失。补 `confirmDialog` 是和全站其他删除路径（`useConfirmDelete`）一致的最低成本防护。
+
+### ③ 怎么做的（方法 + 效果）
+1. `git rm src/components/ui/EmptyState.tsx` 删除旧组件；grep 确认全仓只剩 `States.tsx` 的导出 `EmptyState`。
+2. 4 处引用改 import + `hint`→`description`；`RulesPanel` 顺手把原来两行 import（`EmptyState` 来自旧文件、`Loading` 来自 States）合并成一行 `import { EmptyState, Loading } from "@/components/ui/States"`。
+3. `ImportWizard`：`import { confirmDialog } from "@/components/ui/toast"`，`handleRemoveAllUnconfirmed` 改为 `async`，先用 `await confirmDialog(...)` 拿到 `ok` 再清空；按钮 `onClick` 直接传函数即可（返回 Promise 不影响）。
+4. `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → `TSC_EXIT=0`，零错误。
+
+**效果数据**：tsc 零错误；双 changelog 同步（`src/lib/changelog-data.ts` + 根 `CHANGELOG.md`）；提交 `9f1fea4` 推上 main；`OPTIMIZATION_PLAN.md` 标记 FE-4/BUG-9/BUG-13 已完成。
+
+### ④ 关键取舍
+- **删文件而非保留兼容别名**：旧 `EmptyState.tsx` 仅 4 处引用、字段可零损转换，直接删除 + 改引用比"留壳转发"更干净，且无新依赖。
+- **只给"批量清空"加确认，不给每条"移除 x"加确认**：单条 x 只是从本地预览列表移除、未落库、可逆，逐条弹确认反而烦；批量清空是"全部丢失"才需闸。
+
+### 诚实边界
+- **BUG-1（角色删除无确认）经核查已自然解决**：`CharacterList` 在 FE-8 重构里已用 `useConfirmDelete` 包裹删除——`onDelete` 内联 fetch 只是被 hook 当 `deleteFn` 调用，确认弹窗 + loading 态由 hook 提供。故本单元不重复修，仅做现状确认，不伪造成"新修"。
+- 未在浏览器实跑空态视觉与确认弹窗交互（沙箱无 GUI）；验证为 tsc 零错误 + 引用全量 grep 复核 + 确认弹窗机制代码审查（与全站 `useConfirmDelete` 同源）。
+
+---
+
+*下个单元：继续非 ⭐ 剩余项（#210 后端健壮性 BE-6/7/8、#211 API 错误统一 ARCH-2、#212 幂等 seed ARCH-5 等）。*
