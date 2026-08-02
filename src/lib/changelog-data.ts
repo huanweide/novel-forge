@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.34";
+export const LATEST_VERSION = "v0.46.35";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛡️ 集中输入校验层（ARCH-3）：新增 `src/lib/validators.ts`（手写轻量类型守卫，零新依赖），给 characters/lorebook/story-nodes/rules 四个裸信任入参的写路由补 `readValidatedBody` 校验（必填/类型/长度），脏数据进 prisma 前拦下并返回 400；config 路由已有手工校验标注合规",
-  "🧪 测试护栏（ARCH-6）：新增 `vitest.config.ts` + `npm run test`；首个单测覆盖 `src/lib/utils.ts` 的 `safeJoin` 八分支（含 JSON 字符串数组解析），管线已跑通（8 passed）",
-  "🚫 诚实边界：ARCH-3 未引入 zod（本地工具求轻，手写守卫已达成「防 500/防脏库」目标）；ARCH-6 目前仅纯函数测试，API 路由 mock 测试留后续批次",
-  "📋 计划收口：#216 进行中——ARCH-3/ARCH-6 完成，ARCH-1/FE-N8/FE-N6 待续，ARCH-4 迁移历史标注暂缓（本地 db push 已够用，强行 migrate 有重建全表风险）",
+  "🧩 合并两套 LLM 抽象（ARCH-1·#216 批次2）：非流式调用统一收口到 `src/core/llm/client.ts` 的 `completeText(system, prompt, { temperature, maxTokens })` 门面；6 个 API 路由（characters/classify、storylines/generate、generate/chapter-outline[+draw]、lorebook/import、lorebook/summarize）的 `callLLM`/`callSiliconFlow` 调用全部迁到新门面，旧层不再承担非流式生成",
+  "🧹 删除旧层死代码：移除 `src/lib/llm.ts` 的 `callLLM` / `callSiliconFlow`（别名）/ `LLMCallOptions` 接口；旧层降级为纯工具库，仅保留仍被广泛引用的 `getSettings` / `mapLLMError` / `recordLlmCall` / `testLLMConnection` / `MODEL_PRICING` 价格表",
+  "📦 移除死依赖 `openai`：全源码无任何 `import \"openai\"`（统一门面与旧封装都用原生 fetch），已从 package.json + lock 删除，npm install 同步",
+  "🚫 诚实边界：未强删 `core/llm/client.ts` 内 9+ 个 `@deprecated` 导出（仍有引用方，强删会破坏构建）——「合并」务实落地为「非流式调用统一走新门面」，而非字面删除全部 deprecated 符号；tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.35",
+    date: "2026-08-03",
+    title: "合并 LLM 抽象（#216·批次2）：ARCH-1 非流式调用统一到 core/llm 门面",
+    sections: [
+      {
+        label: "合并两套 LLM 抽象（ARCH-1）",
+        items: [
+          "新增统一门面便捷函数 `completeText(system, prompt, { model?, temperature?, maxTokens?, role?, config? })` 于 `src/core/llm/client.ts`：内部走 `getEffectiveConfig()` + `createLLMClient(config).chat()`，复用已验证的指数退避重试 + 故障转移链，无需再手写 fetch",
+          "6 个 API 路由的非流式调用迁到 `completeText`：characters/classify、storylines/generate、generate/chapter-outline（selection + outline 两处）、generate/chapter-outline/draw（并行多温度各调一次）、lorebook/import、lorebook/summarize；原 temperature / maxTokens 参数逐一保持不变",
+          "删除旧层 `src/lib/llm.ts` 的 `callLLM` / `callSiliconFlow`（@deprecated 别名）/ `LLMCallOptions` 接口——旧层不再承担任何非流式生成，降级为纯工具库（保留 `getSettings` / `mapLLMError` / `recordLlmCall` / `testLLMConnection` / `MODEL_PRICING`，仍被大量路由引用，不可删）",
+        ],
+      },
+      {
+        label: "依赖与卫生",
+        items: [
+          "移除死依赖 `openai`：grep 全仓无任何 `import \"openai\"`，统一门面与旧封装均用原生 fetch，已从 package.json + package-lock.json 删除并通过 `npm install` 同步",
+          "修正 `lib/llm.ts` 顶部过时注释，指向新门面 `core/llm/client.ts` 作为非流式调用唯一入口",
+        ],
+      },
+      {
+        label: "诚实边界与计划",
+        items: [
+          "未强删 `core/llm/client.ts` 内 9+ 个 `@deprecated` 导出（如 getDefaultLLMConfig / getSiliconFlowClient）：仍有引用方，强删会破坏构建——「合并」务实落地为「非流式调用统一走新门面」，而非字面删除全部 deprecated 符号",
+          "ARCH-1 落地后 #216 仍剩 FE-N8（保存冲突乐观锁）/ FE-N6（时间线视图）待续；ARCH-4（迁移历史）维持暂缓（本地 db push 已够用）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.34",
     date: "2026-08-02",

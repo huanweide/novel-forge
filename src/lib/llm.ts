@@ -1,11 +1,12 @@
 /**
- * 多提供商 LLM 调用共享库
+ * LLM 配置 / 错误 / 成本工具库
  *
- * 所有 API 路由的非流式 LLM 调用统一走这里。
- * 支持 OpenAI / SiliconFlow / DeepSeek / Groq / 自定义 OpenAI 兼容 API。
+ * ⚠️ 非流式「发起 LLM 请求」已统一收敛到 core/llm/client.ts 的 completeText()，
+ * 本文件不再承载裸 fetch 调用封装。这里保留的是被核心门面与设置页依赖的
+ * 配置读取（getSettings）、错误翻译（mapLLMError）、成本记录（recordLlmCall）与连通性测试（testLLMConnection）。
  *
- * 配置优先级：数据库 AppSettings > 环境变量 LLM_API_KEY
- * 设置缓存 60 秒，避免每次调用查库。
+ * 提供商默认 Base URL / 默认模型：供 getSettings 在数据库未配置时兜底。
+ * 配置优先级：数据库 AppSettings > 环境变量 LLM_API_KEY；设置缓存 60 秒，避免每次调用查库。
  */
 import { prisma } from "@/lib/prisma";
 
@@ -116,105 +117,12 @@ export function clearLLMCache(): void {
   cacheTimestamp = 0;
 }
 
-// ─── 公共接口 ────────────────────────────────────────────
-
-export interface LLMCallOptions {
-  /** 模型 ID，不传则用全局设置 */
-  model?: string;
-  /** 系统提示 */
-  system: string;
-  /** 用户提示 */
-  prompt: string;
-  /** 温度，默认 0.3 */
-  temperature?: number;
-  /** 最大输出 token，默认 4096 */
-  maxTokens?: number;
-  /** 超时毫秒，默认 120s */
-  timeoutMs?: number;
-}
-
-/**
- * 调用 LLM Chat Completions（非流式）
- * 自动根据数据库设置选择提供商和 API Key
- */
-export async function callLLM(options: LLMCallOptions): Promise<string> {
-  const {
-    model: modelOverride,
-    system,
-    prompt,
-    temperature = 0.3,
-    maxTokens = 4096,
-    timeoutMs = 120_000,
-  } = options;
-
-  const settings = await getSettings();
-  const model = modelOverride || settings.model;
-  const baseUrl = settings.baseUrl;
-
-  if (!settings.apiKey || settings.apiKey.length < 10) {
-    throw new Error("LLM API Key 未配置——请在设置页面填入 Key");
-  }
-
-  // 指数退避重试：覆盖网络抖 / 429 限流 / 5xx 服务端异常；4xx 鉴权配置错直接抛不重试
-  const maxRetries = 3;
-  let lastErr: Error | null = null;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-    try {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: prompt },
-          ],
-          temperature,
-          max_tokens: maxTokens,
-          stream: false,
-        }),
-        signal: ctrl.signal,
-      });
-
-      if (!res.ok) {
-        const err = await res.text().catch(() => "");
-        // 4xx（除 429 限流）属配置/鉴权错误，直接抛出不重试
-        if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-          throw new Error(mapLLMError(res.status, err, model));
-        }
-        lastErr = new Error(mapLLMError(res.status, err, model));
-      } else {
-        const data = await res.json().catch(() => null);
-        const raw = data?.choices?.[0]?.message?.content?.trim() || "";
-        if (!raw || raw.length < 10) {
-          // 空响应当作临时故障，纳入重试
-          lastErr = new Error("LLM 返回空响应");
-        } else {
-          return raw;
-        }
-      }
-    } catch (e) {
-      // 配置类错误（Key 未配置等）直接向上传播，不重试
-      if (e instanceof Error && e.message.includes("未配置")) throw e;
-      lastErr = e instanceof Error ? e : new Error(String(e));
-    } finally {
-      clearTimeout(timer);
-    }
-
-    if (attempt < maxRetries) {
-      const delay = Math.min(8000, 600 * Math.pow(2, attempt - 1));
-      await new Promise((r) => setTimeout(r, delay));
-    }
-  }
-
-  throw lastErr ?? new Error("LLM 调用失败");
-}
+// ────────────────────────────────────────────────────────
+// ⚠️ 非流式生成调用已统一收敛到 core/llm/client.ts 的 completeText()
+//    本文件不再导出 callLLM / callSiliconFlow / LLMCallOptions。
+//    保留的工具函数（仍被核心门面与设置页依赖）：
+//      getSettings / clearLLMCache / mapLLMError / recordLlmCall / testLLMConnection / estimateCost
+// ────────────────────────────────────────────────────────
 
 /**
  * 测试连接——用于设置页面验证 Key 是否有效
@@ -269,11 +177,6 @@ export async function testLLMConnection(provider: string, apiKey: string, baseUr
     clearTimeout(timer);
   }
 }
-
-// ─── 向后兼容别名（旧代码引用 callSiliconFlow 不报错）───
-
-/** @deprecated 使用 callLLM 替代 */
-export const callSiliconFlow = callLLM;
 
 // ─── Token 价格表与成本估算（成本看板）─────────────────
 // 内置常见模型每百万 token 的美元单价（input/output）。供应商调价会失真，仅作估算参考。

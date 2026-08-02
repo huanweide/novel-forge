@@ -684,3 +684,37 @@
 - **ARCH-4 迁移历史暂缓**：经侦察 schema 与 3 个旧迁移已严重漂移，强行 `migrate dev` 有重建全表风险，且本地工具 `db push` 已够用——标注暂缓而非强行改动，符合用户"本地自用、不做复杂部署"定位。已在 OPTIMIZATION_PLAN 标注。
 - **未在浏览器/真实 DB 验证 4 路由校验**：逻辑对齐标准模式且 tsc 通过，但端到端（发一个缺 projectId 的 POST 看是否 400）未实跑。
 
+---
+
+## v0.46.35 — 合并两套 LLM 抽象（ARCH-1）
+
+### 一句话背景
+项目里有两个"让 AI 干活"的代码入口：老的一个（`src/lib/llm.ts` 的 `callLLM`）和新的一套（`src/core/llm/client.ts` 的统一门面）。两套并存就像公司里有两条都能报销的财务流程——新人永远不知道该走哪条，改了老的忘了新的就会出隐蔽 bug。这次把"非流式"（一次性提问、拿到完整回答）的调用全部统一到新门面，老的只剩"工具箱"功能（读设置、映射错误、记成本等）。
+
+### ① 干了什么
+- 在统一门面 `src/core/llm/client.ts` 新增便捷函数 `completeText(system, prompt, { temperature, maxTokens })`：一行让 AI 基于"系统设定 + 用户问题"返回完整文本，内部自动复用已有的"网络重试 + 换备用模型"能力。
+- 把 6 个 API 路由（角色自动分类、故事线生成、章节大纲生成[两处]、大纲抽卡多温度并行、世界书导入解析、世界书摘要）里旧的 `callLLM`/`callSiliconFlow` 调用，全部改成 `completeText`，温度/最大 token 参数原样保留。
+- 删掉老层 `callLLM`/`callSiliconFlow`/`LLMCallOptions`，老层降级为纯工具库（只留 `getSettings`/`mapLLMError`/`recordLlmCall`/`testLLMConnection`/`MODEL_PRICING`）；并删掉 `package.json` 里从没被用过的 `openai` 死依赖。
+
+### ② 为什么这么做
+- 原计划侦察发现两套 LLM 抽象并存，且新层还有 9+ 个 `@deprecated` 旧导出。两套并存 = 一半概率"改了 A 没改 B"的隐性 bug；未来维护者每次加功能都要纠结"该调哪个"。
+- `openai` 这个 npm 包在源码里没有任何 `import`（统一门面和老封装都直接用 Node 自带的 `fetch` 打 HTTP），留着是死依赖，会让 `npm ci` 多装一个永远用不到的包、也误导人以为项目依赖它。
+
+### ③ 怎么做的（方法 + 效果）
+1. **先侦察再动手**：用 Grep 全仓确认 `callLLM`/`callSiliconFlow`/`LLMCallOptions`/`openai` 的真实引用范围——只有 6 个路由用旧调用、无任何源码 import `openai`，避免误删致构建崩。
+2. **加统一入口 `completeText`**：在 `client.ts` 的 `createLLMClient`/`chat` 之上包一层，签名贴近旧 `callLLM`，让迁移变成"改函数名 + 参数平铺"，不动业务逻辑。
+3. **逐文件迁移**：6 个路由 import 改用 `completeText`，调用点改为 `completeText(system, prompt, { temperature, maxTokens })`；`generate/chapter-outline/draw` 的并行多温度 `Promise.all(temperatures.map(t => completeText(...)))` 保持并发语义。
+4. **删死代码 + 依赖**：`lib/llm.ts` 移除三个符号、顶部注释改指向新门面；`package.json` 删 `openai` 并 `npm install` 同步 lock。
+5. **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → **TSC_EXIT=0** 零类型错误。
+
+**效果数据**：少一套并行抽象；旧层从"另一个 LLM 调用方"变"纯工具库"；打包少一个死依赖；tsc 零错误。双 changelog（v0.46.35 头条 + LATEST_VERSION/CHANGELOG_BRIEF）+ OPTIMIZATION_PLAN ARCH-1 标 ✅ 已同步。
+
+### ④ 关键取舍
+- **不强行删新层 9+ 个 `@deprecated` 导出**：原计划写"删除全部 deprecated 导出"，但侦察发现它们仍有引用方，强删会直接破坏构建。务实落地为"非流式调用统一走新门面"——这才是 ARCH-1 真正价值（消除并行调用方），字面删 deprecated 符号是次要的。
+- **保留老层工具函数**：`getSettings`/`mapLLMError`/`recordLlmCall`/`testLLMConnection`/`MODEL_PRICING` 被大量路由引用，是"通用工具"不是"LLM 调用方"，删除会牵一发动全身——只在计划里标注其迁移路径，不机械删除。
+- **`completeText` 不复刻旧 `callLLM` 的"空响应重试"**：新门面 `chat()` 已自带 3 次网络层重试，空响应极罕见；叠加重试只会增加极端情况延迟，收益不抵成本。
+
+### 诚实边界
+- 未强删 `core/llm/client.ts` 内 9+ `@deprecated` 导出（仍有引用方，强删会破坏构建）——如实写入 changelog 与计划，未伪装成"全部删除"。
+- 迁移后未在浏览器实跑这 6 个路由的端到端（如角色分类是否仍正常返回）：逻辑对齐（签名/参数平铺一致）且 tsc 零错误，但真机调用未经实测；风险低（只换了调用入口，下游 `chat` 逻辑未动）。
+

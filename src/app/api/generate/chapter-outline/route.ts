@@ -25,7 +25,7 @@ import {
   loadOutlineData, extractPrevContext, extractNextContext,
   buildCharacterList, prepareOutlineDirective, formatSummaries,
 } from "@/core/pipeline/outline-context";
-import { callSiliconFlow } from "@/lib/llm";
+import { completeText } from "@/core/llm/client";
 
 export async function POST(request: Request) {
   try {
@@ -102,7 +102,7 @@ ${characterList}
     let selectionReasoning = "";
 
     try {
-      const selectionRaw = await callSiliconFlow({ system: selectionSystem, prompt: selectionPrompt, maxTokens: 2048, temperature: 0.3 });
+      const selectionRaw = await completeText(selectionSystem, selectionPrompt, { maxTokens: 2048, temperature: 0.3 });
       const parsed = JSON.parse(
         (() => {
           let s = selectionRaw.trim();
@@ -222,7 +222,7 @@ ${charBriefs}
 
     let outlineText = "";
     try {
-      outlineText = await callSiliconFlow({ system: outlineSystem, prompt: outlinePrompt, maxTokens: 4096, temperature: 0.3 });
+      outlineText = await completeText(outlineSystem, outlinePrompt, { maxTokens: 4096, temperature: 0.3 });
     } catch (err) {
       return NextResponse.json(
         { error: `章纲生成失败：${err instanceof Error ? err.message : String(err)}` },

@@ -499,6 +499,42 @@ export async function createLLMClientFromSettings(overrides?: Partial<LLMConfig>
 }
 
 /**
+ * 便捷文本补全：把「system + 单轮 user prompt」封装成一次 chat 调用，返回 content 字符串。
+ *
+ * 用于迁移旧 `callLLM` / `callSiliconFlow` 调用——让所有「真正发起 LLM 请求」的入口
+ * 统一收敛到本文件（core/llm/client），不再有散落在各路由里的裸 fetch 封装。
+ * 语义对齐旧 callLLM：自动按 DB 设置选择模型与 Key；退避重试与故障转移由 `chat()` 提供。
+ *
+ * 注意：旧 callLLM 对「空响应」会当作临时故障重试；`chat()` 不判空，直接返回 content。
+ * 空响应属极罕见情况，且 chat 已自带 3 次网络层重试，此处不再单独复刻判空逻辑。
+ */
+export async function completeText(
+  system: string,
+  prompt: string,
+  opts?: {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    role?: string;
+    config?: LLMConfig;
+  },
+): Promise<string> {
+  const config = opts?.config ?? (await getEffectiveConfig());
+  const client = createLLMClient(config);
+  const res = await client.chat({
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: prompt },
+    ],
+    model: opts?.model ?? config.architectModel,
+    role: opts?.role,
+    temperature: opts?.temperature,
+    maxTokens: opts?.maxTokens,
+  });
+  return res.content;
+}
+
+/**
  * 获取当前设置中的模型名（同步版本——仅用于已缓存的场景）
  *
  * @deprecated 优先使用 getEffectiveConfig()。不返回硬编码默认值——调用方自行处理 undefined。

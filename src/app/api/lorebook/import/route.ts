@@ -13,7 +13,7 @@ import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 60;
 
-import { callSiliconFlow } from "@/lib/llm";
+import { completeText } from "@/core/llm/client";
 
 // ─── 类型 ──────────────────────────────────────
 
@@ -27,7 +27,7 @@ interface ExtractedEntry {
 // ─── Flash 调用 ──────────────────────────────
 
 async function callFlash(system: string, prompt: string, maxTokens = 8000): Promise<string> {
-  return callSiliconFlow({ system, prompt, maxTokens, temperature: 0.1 });
+  return completeText(system, prompt, { maxTokens, temperature: 0.1 });
 }
 
 // ─── 解析 JSON ──────────────────────────────

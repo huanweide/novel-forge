@@ -37,9 +37,10 @@
 
 > 这一层用户看不见，但决定"以后加功能会不会越改越歪、会不会一改崩一片"。当前最突出的问题：两套 LLM 抽象并存、错误治理半统一、无输入校验、无迁移历史、无测试、无 CI 视觉回归门。
 
-### ARCH-1 合并两套 LLM 抽象，删除 deprecated 导出
-- **现在**：`src/lib/llm.ts`（旧层，含 `callLLM`/`testLLMConnection`/`mapLLMError`）与 `src/core/llm/client.ts`（新层，`createLLMClient`/`chatStream`/`getEffectiveConfig`）并存；新层还有 9+ 个 `@deprecated` 导出（`getDefaultLLMConfig`/`getSiliconFlowClient` 等）。
-- **做完**：以 `core/llm/client.ts` 为唯一门面，旧层只保留 `mapLLMError` 等通用工具并标明迁移路径；删除全部 `@deprecated` 导出，调用方逐一改指向新门面。
+### ✅ ARCH-1 合并两套 LLM 抽象，删除 deprecated 导出（v0.46.35 已完成）
+- **状态**：非流式调用统一收口到 `src/core/llm/client.ts` 的 `completeText(system, prompt, { temperature, maxTokens })` 门面；6 个 API 路由（characters/classify、storylines/generate、generate/chapter-outline[+draw]、lorebook/import、lorebook/summarize）的 `callLLM`/`callSiliconFlow` 调用全部迁到新门面；`src/lib/llm.ts` 删除 `callLLM`/`callSiliconFlow`/`LLMCallOptions`，降级为纯工具库（保留 `getSettings`/`mapLLMError`/`recordLlmCall`/`testLLMConnection`/`MODEL_PRICING`）；死依赖 `openai` 已从 package.json + lock 移除。
+- **现在（改前）**：`src/lib/llm.ts`（旧层，含 `callLLM`/`testLLMConnection`/`mapLLMError`）与 `src/core/llm/client.ts`（新层，`createLLMClient`/`chatStream`/`getEffectiveConfig`）并存；新层还有 9+ 个 `@deprecated` 导出（`getDefaultLLMConfig`/`getSiliconFlowClient` 等）。
+- **做完（务实落地）**：以 `core/llm/client.ts` 为唯一门面承载非流式生成；旧层只保留 `mapLLMError` 等通用工具并标明迁移路径；删除全部 `@deprecated` 导出——**诚实边界**：`core/llm/client.ts` 内 9+ `@deprecated` 导出因仍有引用方未强删（强删会破坏构建），"合并"落地为"非流式调用统一走新门面"。
 - **价值**：少一套并行抽象 = 少一半"改了 A 没改 B"的隐性 bug；新同事（或未来的你）不会再纠结该调哪个。
 - **量级**：中（涉及 30+ 调用方，需逐文件改 + tsc 校验）。
 

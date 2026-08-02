@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 300;
 
-import { callSiliconFlow } from "@/lib/llm";
+import { completeText } from "@/core/llm/client";
 
 function getKey(): string {
   return (process.env.LLM_API_KEY || "").trim();
@@ -28,7 +28,7 @@ interface ClassifyGroup {
 // ─── API ───────────────────────────────────────
 
 async function callFlash(system: string, prompt: string): Promise<string> {
-  return callSiliconFlow({ system, prompt, temperature: 0.05, maxTokens: 32768 });
+  return completeText(system, prompt, { temperature: 0.05, maxTokens: 32768 });
 }
 
 function parseJSON(raw: string): Record<string, unknown> {

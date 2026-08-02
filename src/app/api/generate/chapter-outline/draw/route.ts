@@ -18,7 +18,7 @@ import {
   loadOutlineData, extractPrevContext,
   buildCharacterList, prepareOutlineDirective, formatSummaries,
 } from "@/core/pipeline/outline-context";
-import { callSiliconFlow } from "@/lib/llm";
+import { completeText } from "@/core/llm/client";
 
 export async function POST(request: Request) {
   try {
@@ -125,7 +125,7 @@ ${characterList}
     const temperatures = [0.3, 0.5, 0.7, 0.9, 1.0].slice(0, drawCount);
 
     const results = await Promise.allSettled(
-      temperatures.map((temp) => callSiliconFlow({ system, prompt: userPrompt, temperature: temp, maxTokens: 4096 }))
+      temperatures.map((temp) => completeText(system, userPrompt, { temperature: temp, maxTokens: 4096 }))
     );
 
     // 解析结果

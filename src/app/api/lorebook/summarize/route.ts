@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 120;
 
-import { callSiliconFlow } from "@/lib/llm";
+import { completeText } from "@/core/llm/client";
 
 // ═══════════════════════════════════════════════
 // 服务端预览缓存（避免通过 SSE 传大量 JSON）
@@ -100,7 +100,7 @@ function checkCoverage(originalTexts: string[], outputText: string): { covered: 
 // ─── Flash 调用 ──────────────────────────────────
 
 async function callFlash(system: string, prompt: string, maxTokens = 16384): Promise<string> {
-  return callSiliconFlow({ system, prompt, maxTokens, temperature: 0.1 });
+  return completeText(system, prompt, { maxTokens, temperature: 0.1 });
 }
 
 // ─── 解析 JSON ──────────────────────────────────

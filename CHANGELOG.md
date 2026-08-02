@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.35 — 2026-08-03
+**合并 LLM 抽象（#216·批次2）：ARCH-1 非流式调用统一到 core/llm 门面**
+
+- 🧩 合并两套 LLM 抽象（ARCH-1）：新增统一门面便捷函数 `completeText(system, prompt, { model?, temperature?, maxTokens?, role?, config? })` 于 `src/core/llm/client.ts`，内部走 `getEffectiveConfig()` + `createLLMClient(config).chat()`，复用已验证的指数退避重试 + 故障转移链；6 个 API 路由（characters/classify、storylines/generate、generate/chapter-outline[+draw]、lorebook/import、lorebook/summarize）的非流式调用全部从旧 `callLLM`/`callSiliconFlow` 迁到 `completeText`，原 temperature/maxTokens 参数保持不变
+- 🧹 删除旧层死代码：`src/lib/llm.ts` 的 `callLLM`/`callSiliconFlow`(别名)/`LLMCallOptions` 接口已移除——旧层降级为纯工具库，仅保留仍被大量引用的 `getSettings`/`mapLLMError`/`recordLlmCall`/`testLLMConnection`/`MODEL_PRICING` 价格表
+- 📦 移除死依赖 `openai`：全源码无任何 `import "openai"`（统一门面与旧封装均用原生 fetch），已从 `package.json` + `package-lock.json` 删除并 `npm install` 同步
+- 🚫 诚实边界：未强删 `core/llm/client.ts` 内 9+ 个 `@deprecated` 导出（仍有引用方，强删会破坏构建）——「合并」务实落地为「非流式调用统一走新门面」，而非字面删除全部 deprecated 符号；tsc 零错误
+
 ## v0.46.34 — 2026-08-02
 **架构与测试收口（#216·批次1）：ARCH-3 输入校验层 + ARCH-6 测试护栏**
 
