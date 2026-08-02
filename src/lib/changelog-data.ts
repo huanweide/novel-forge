@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.37";
+export const LATEST_VERSION = "v0.46.38";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "时间线视图（FE-N6·#216 收口）：`StoryNode` 新增 `worldTime String?`（书中世界时间自由文本，如「天启三年春」），已 `prisma db push` 同步本地 PG17；左侧大纲根视图从「分卷/平铺」二态升级为「分卷/平铺/时间线」三态",
-  "时间线分支：过滤非卷节点、按 `worldTime` 字符串升序排序（未标记排末尾），每行渲染世界时间徽标 + 类型图标 + 标题 + 字数，点击即选中；`LeftPanel` 切换 UI 改为分卷/平铺/时间线三按钮（沙漏图标）",
-  "节点控制栏新增「世界时间」输入框（`CenterPanel`），失焦（或回车）经 `handleSaveWorldTime` 回写库；`PUT /api/story/nodes/[id]` 的 `data` 补 `worldTime`，复用 FE-N8 乐观锁与冲突面板；`StoryNodeData` 补 `worldTime` 字段",
-  "诚实边界：时间线排序用纯字符串序（不解析语义时间），作者想精确控序需填可比较文本；卷节点不参与时间线排序；#216 全部收口（ARCH-3/ARCH-6/ARCH-1/FE-N8/FE-N6 完成），ARCH-4 迁移历史维持暂缓",
+  "文风机制整合（UI审计 #217-1）：进入小说界面顶部栏原本并排两套文风控件——基于 `styleCard` 的错位标签（实际永远为空）与只读硬编码模板的 `StyleSelector` 下拉——现已统一为单一「文风」入口，点击打开 `StyleEditor` 统一风格中枢；按钮实时显示当前激活风格（从 `styleTemplateId` 解析，加载时已从库水合）",
+  "`StyleEditor` 新增「工坊文风」Tab：异步拉取创意工坊 `type=style` 公开预设，一键「套用」把预设的 `styleDescription` 并入本项目「风格笔记」（参与生成）、`povType` 与 `dialogueRatio`/`descriptionRatio` 按比例同步进 12 维度，并调 `apply` 路由同步更新文风卡——文风与创意工坊真正联动（此前工坊文风预设只写 `StyleCard` 分析模型、不驱动生成）",
+  "删除冗余的 `StyleSelector` 头部下拉组件（职责已由 `StyleEditor` 内置模板库 + 工坊预设覆盖）；`Toolbar`/`page.tsx` 清理 `styleCard`/`onStyleSelect`/`povLabel` 等错位引用；`page.tsx` 加载时补 `setStyleTemplateId(styleData.styleTemplateId)`，修复「激活风格加载后不显示」的隐性 bug",
+  "诚实边界：工坊文风「套用」为追加式（不覆盖用户原有风格笔记/维度）；`StyleCard` 三卡分析模型保持独立，仅作分析参考，生成仍以 `llmConfig` 文风配置为准；未做浏览器端到端实跑（tsc 零错误 + 复用已验证 PUT 链路）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.38",
+    date: "2026-08-03",
+    title: "UI 审计·文风机制整合（#217-1）：顶部栏文风控件统一 + 创意工坊文风联动",
+    sections: [
+      {
+        label: "文风控件统一（去重）",
+        items: [
+          "问题：进入小说界面顶部栏并排两套文风控件——基于 `styleCard` 的标签按钮（但 `/api/projects/[id]/style` GET 不返回 `styleDescription`，标签永远退化成「文风」空按钮）与只读硬编码 `STYLE_TEMPLATES` 的 `StyleSelector` 下拉，二者数据源错位且冗余",
+          "修复：统一为单一「文风」入口按钮，实时显示当前激活风格（经 `getTemplate(styleTemplateId)` 解析模板名/图标，未命中显示「✏️ 自定义文风」），点击打开 `StyleEditor` 统一风格中枢",
+          "删除冗余的 `StyleSelector` 头部下拉组件（`Toolbar`、`page.tsx` 同步清理 `styleCard`/`onStyleSelect`/`povLabel`/`ProjectData` 等未用引用）；修复 `page.tsx` 加载时未水合 `styleTemplateId` 的隐性 bug（`setStyleTemplateId(styleData.styleTemplateId)`），让按钮加载即显示真实风格",
+        ],
+      },
+      {
+        label: "创意工坊文风联动",
+        items: [
+          "`StyleEditor` 新增「工坊文风」Tab，异步 `GET /api/presets?type=style` 拉取公开文风预设并列表（标题/描述/作者/下载数）",
+          "「套用」映射：`content.styleDescription` 并入本项目「风格笔记」（参与生成 System Prompt）、`povType` 直接写入、`dialogueRatio`/`descriptionRatio`（0-1）按比例四舍五入进 12 维度 `dialogueRatio`/`descriptionDensity`（1-10）；并调 `POST /api/presets/[id]/apply` 同步更新 `StyleCard` 分析模型，实现双向联动",
+          "此前工坊 `type=style` 预设的 `apply` 只写 `StyleCard` 分析模型、不参与生成——本次让社区文风预设真正驱动本项目写作风格",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "工坊文风「套用」为追加式：不覆盖用户原有风格笔记与维度，仅当预设含对应字段才同步；不改动 `styleTemplateId`（保留用户基础模板脚手架）",
+          "`StyleCard` 三卡分析模型保持独立，工坊预设经 `apply` 写它仅作分析参考，生成仍以 `Project.llmConfig` 文风配置为准",
+          "未做浏览器端到端实跑；本次仅 tsc 零错误 + 复用已验证 PUT 链路（风险中低）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.37",
     date: "2026-08-03",

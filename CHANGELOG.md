@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.38 — 2026-08-03
+**UI 审计·文风机制整合（#217-1）：顶部栏文风控件统一 + 创意工坊文风联动**
+
+- 文风控件统一（去重）：进入小说界面顶部栏原并排两套文风控件——基于 `styleCard` 的标签按钮（`/api/projects/[id]/style` GET 不返回 `styleDescription`，永远退化成空按钮）与只读硬编码 `STYLE_TEMPLATES` 的 `StyleSelector` 下拉，数据源错位且冗余；统一为单一「文风」入口，实时显示当前激活风格（`getTemplate(styleTemplateId)` 解析，未命中显示「✏️ 自定义文风」），点击打开 `StyleEditor` 统一风格中枢
+- 删除冗余的 `StyleSelector` 头部下拉组件；`Toolbar`/`page.tsx` 清理 `styleCard`/`onStyleSelect`/`povLabel`/`ProjectData` 等未用引用；修复 `page.tsx` 加载时未水合 `styleTemplateId` 的隐性 bug（`setStyleTemplateId(styleData.styleTemplateId)`），按钮加载即显示真实风格
+- 创意工坊文风联动：`StyleEditor` 新增「工坊文风」Tab，异步 `GET /api/presets?type=style` 拉取公开文风预设；「套用」把 `content.styleDescription` 并入本项目「风格笔记」、`povType` 与 `dialogueRatio`/`descriptionRatio` 按比例同步进 12 维度，并调 `POST /api/presets/[id]/apply` 同步更新 `StyleCard` 分析模型——文风与创意工坊真正联动（此前工坊文风预设只写 `StyleCard`、不驱动生成）
+- 诚实边界：工坊文风「套用」为追加式（不覆盖用户原有风格笔记/维度）；`StyleCard` 三卡分析模型保持独立，仅作分析参考，生成仍以 `Project.llmConfig` 文风配置为准；未做浏览器端到端实跑（tsc 零错误 + 复用已验证 PUT 链路）
+
 ## v0.46.37 — 2026-08-03
 **时间线视图（#216 收口）：FE-N6 左侧大纲新增「时间线」视图 + 节点世界时间标记**
 

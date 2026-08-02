@@ -31,7 +31,6 @@ import { MemoryDecayDialog } from "@/components/workspace/MemoryDecayDialog";
 import { ProjectConfigPanel } from "@/components/workspace/ProjectConfigPanel";
 import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
-import type { StyleTemplate } from "@/core/templates";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
@@ -442,7 +441,10 @@ export default function WorkspacePage() {
         const data = await projRes.json();
         if (styleRes?.ok) {
           const styleData = await styleRes.json();
-          if (!styleData.error) data.styleCard = styleData;
+          if (!styleData.error) {
+            data.styleCard = styleData;
+            if (styleData.styleTemplateId) setStyleTemplateId(styleData.styleTemplateId);
+          }
         }
         useProjectStore.getState().setProjectData(data);
         refreshMonitorToday();
@@ -870,7 +872,6 @@ export default function WorkspacePage() {
         onEditStyle={() => setShowStyleEditor(true)}
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}
-        onStyleSelect={(t: StyleTemplate) => setStyleTemplateId(t.id)} styleCard={project.styleCard}
         onOpenAutomation={() => setShowAutomationSettings(true)}
         onOpenToolbox={() => setShowToolbox(true)}
         onOpenExport={() => setShowExportDialog(true)}

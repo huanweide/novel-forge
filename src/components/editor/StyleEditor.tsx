@@ -14,7 +14,7 @@ import {
   type ForbiddenCategory,
   type EnhancedScanOptions,
 } from "@/lib/forbidden-checker";
-import { toastError } from "@/components/ui/toast";
+import { toastError, toastSuccess } from "@/components/ui/toast";
 import { Modal } from "@/components/ui/Modal";
 
 // ═══════════════════════════════════════════
@@ -118,8 +118,13 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   const [showBuiltinRules, setShowBuiltinRules] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // ── 创意工坊文风预设 ──
+  const [workshopPresets, setWorkshopPresets] = useState<any[]>([]);
+  const [loadingPresets, setLoadingPresets] = useState(false);
+  const [savingWorkshop, setSavingWorkshop] = useState<string | null>(null);
+
   // ── 面板Tab ──
-  const [tab, setTab] = useState<"style" | "forbidden" | "params">("style");
+  const [tab, setTab] = useState<"style" | "forbidden" | "params" | "workshop">("style");
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -158,6 +163,74 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
     fetchData();
     return () => { controller.abort(); };
   }, [projectId]);
+
+  // 加载创意工坊文风预设（与文风联动）
+  useEffect(() => {
+    if (tab !== "workshop") return;
+    const loadPresets = async () => {
+      setLoadingPresets(true);
+      try {
+        const r = await fetch("/api/presets?type=style");
+        if (r.ok) {
+          const d = await r.json();
+          setWorkshopPresets(Array.isArray(d) ? d : []);
+        }
+      } catch {
+        /* 忽略：创意工坊不可达时仅隐藏该区 */
+      } finally {
+        setLoadingPresets(false);
+      }
+    };
+    loadPresets();
+  }, [tab]);
+
+  // 套用工坊文风预设 → 合并进本项目文风配置 + 同步文风卡（双向联动）
+  const applyWorkshopPreset = async (preset: any) => {
+    setSavingWorkshop(preset.id);
+    try {
+      const content: any = preset.content || {};
+      const baseNotes = config.customStyleNotes || "";
+      const added = `【创意工坊文风·${preset.title}】\n${content.styleDescription || preset.description || ""}`;
+      const mergedNotes = baseNotes ? `${baseNotes}\n\n${added}` : added;
+      const mergedDims = { ...config.dimensions };
+      if (typeof content.dialogueRatio === "number") {
+        mergedDims.dialogueRatio = Math.max(1, Math.min(10, Math.round(content.dialogueRatio * 10)));
+      }
+      if (typeof content.descriptionRatio === "number") {
+        mergedDims.descriptionDensity = Math.max(1, Math.min(10, Math.round(content.descriptionRatio * 10)));
+      }
+      const payload = {
+        ...config,
+        customStyleNotes: mergedNotes,
+        povType: content.povType || config.povType,
+        dimensions: mergedDims,
+      };
+      const r1 = await fetch(`/api/projects/${projectId}/style`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r1.ok) {
+        const d = await r1.json().catch(() => ({ error: "未知错误" }));
+        toastError("套用工坊文风失败：" + (d.error || `HTTP ${r1.status}`));
+        return;
+      }
+      // 同步更新文风卡分析模型（apply 路由写入 StyleCard，实现双向联动）
+      try {
+        await fetch(`/api/presets/${preset.id}/apply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId }),
+        });
+      } catch { /* 非致命：文风卡同步失败不影响主配置 */ }
+      setConfig((prev) => ({ ...prev, customStyleNotes: mergedNotes, povType: payload.povType, dimensions: mergedDims }));
+      toastSuccess(`已套用「${preset.title}」到本项目文风`);
+    } catch (err) {
+      toastError("套用工坊文风失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setSavingWorkshop(null);
+    }
+  };
 
   // 选模板
   const handleSelectTemplate = (id: string) => {
@@ -268,6 +341,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             { key: "style" as const, icon: "🎨", label: "文风维度" },
             { key: "forbidden" as const, icon: "🚫", label: "废词检测" },
             { key: "params" as const, icon: "⚙️", label: "LLM参数" },
+            { key: "workshop" as const, icon: "✨", label: "工坊文风" },
           ]).map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 py-2 text-xs font-medium transition-colors ${tab === t.key ? "text-[var(--nv-text-secondary)] border-b-2 border-[var(--nv-primary)] bg-[var(--nv-surface-3)]/20" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)]/10"}`}>
@@ -525,6 +599,42 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                 </p>
               </div>
             </>
+          )}
+
+          {/* ═══════════════════════════════════
+              Tab 4: 创意工坊文风（与文风联动）
+              ═══════════════════════════════════ */}
+          {tab === "workshop" && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-1 block"><Icon name="sparkles" size={15} className="inline-block align-text-bottom shrink-0" /> 创意工坊文风预设</label>
+                <p className="text-xs text-[var(--nv-text-muted)] mb-3 leading-relaxed">
+                  套用社区/他人分享的文风预设，自动合并进本项目文风配置：风格描述写入「风格笔记」（参与生成），
+                  视角与维度按比例同步，并同步更新文风卡。已套用的预设内容会追加而非覆盖你原有的设置。
+                </p>
+                {loadingPresets ? (
+                  <p className="text-xs text-[var(--nv-text-muted)]">加载中…</p>
+                ) : workshopPresets.length === 0 ? (
+                  <p className="text-xs text-[var(--nv-text-muted)]">创意工坊暂无公开文风预设。可前往「创意工坊」页发布你自己的文风卡。</p>
+                ) : (
+                  <div className="space-y-2">
+                    {workshopPresets.map((p) => (
+                      <div key={p.id} className="flex items-start gap-3 border border-[var(--nv-border-2)] rounded-lg p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{p.title}</div>
+                          {p.description && <div className="text-xs text-[var(--nv-text-muted)] mt-0.5 line-clamp-2">{p.description}</div>}
+                          <div className="text-[10px] text-[var(--nv-text-tertiary)] mt-1">作者 {p.author || "匿名"} · 下载 {p.downloads ?? 0}</div>
+                        </div>
+                        <Button size="sm" onClick={() => applyWorkshopPreset(p)} disabled={savingWorkshop === p.id}
+                          className="bg-[var(--nv-creative)] hover:brightness-110 text-xs shrink-0">
+                          {savingWorkshop === p.id ? "套用中…" : "套用"}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
 

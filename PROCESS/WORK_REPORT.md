@@ -783,3 +783,33 @@
 - 时间线"拖拽调整顺序"未做：原计划提了拖拽，但纯文本排序已满足主线需求，拖拽涉及重排交互复杂度，本期未实现；如需要可后续补。
 - 多时间线/非线性叙事的复杂轴未做：当前是单轴排序，回忆杀/双时间线交叉展示不在本期范围。
 
+---
+
+## v0.46.38 — 进入小说界面 UI 审计·文风机制整合（#239 / #217-1）
+
+### ① 干了什么
+把进入小说界面（workspace）顶部栏里"文风"相关的两套控件合并成一套，并让文风真正联动创意工坊。具体：删掉冗余的头部文风下拉 `StyleSelector`，顶部栏只留一个「文风」按钮（实时显示当前激活风格名，点击打开 `StyleEditor` 统一风格中枢）；在 `StyleEditor` 里新增「工坊文风」页签，能拉取创意工坊里别人分享的文风预设并一键套用。顺手修了一个"激活风格加载后不显示"的隐藏 bug。
+
+### ② 为什么这么做
+顶部栏原本并排两个文风控件：一个是按 `styleCard` 显示的标签按钮，但后端 `/api/projects/[id]/style` 根本不返回 `styleDescription`，所以这个标签永远是空的、退化成"文风"俩字；另一个是只读硬编码模板的 `StyleSelector` 下拉。两个数据源错位、互相重复，用户看了会困惑——到底哪个才是真正控制生成的？而且创意工坊里社区分享的文风预设，套用后只写进"风格卡"分析模型，并不参与实际生成，等于"联了个寂寞"。用户要求审计这些早期按钮：该删删、该整合整合、该联动联动。
+
+### ③ 怎么做的（方法 + 效果）
+1. **定位三套文风数据源**：`styleCard`（三卡"风格卡"分析模型，前端被错名当成配置）、`styleTemplateId`（硬编码 `STYLE_TEMPLATES`，真正控制生成的配置）、创意工坊 `Preset(type=style)`（DB，原本不联动）。确认 `Toolbar` 的错位标签来自 `project.styleCard`（实际是 style 配置对象，但 GET 不带 `styleDescription`）。
+2. **统一入口**：`Toolbar` 删 `StyleSelector` 下拉与 `styleCard` 标签，改为单个「文风」按钮，用 `getTemplate(styleTemplateId)` 解析出模板名/图标显示；点击打开 `StyleEditor`。删 `StyleSelector.tsx` 组件文件（职责已被 `StyleEditor` 内置模板库 + 工坊预设覆盖）。
+3. **修复水合 bug**：`page.tsx` 加载项目时原本没把库里的 `styleTemplateId` 写回 React 状态，导致按钮加载后显示不对；补 `setStyleTemplateId(styleData.styleTemplateId)`。
+4. **工坊联动**：`StyleEditor` 新增「工坊文风」Tab，异步 `GET /api/presets?type=style` 拉公开预设；「套用」把预设 `content.styleDescription` 追加进本项目"风格笔记"（进 System Prompt 参与生成）、`povType` 直接写入、`dialogueRatio`/`descriptionRatio`（0-1）按比例四舍五入进 12 维度 `dialogueRatio`/`descriptionDensity`（1-10），并调 `POST /api/presets/[id]/apply` 同步更新 `StyleCard` 分析模型——生成配置与风格卡双双更新。
+5. **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → **TSC_EXIT=0**；grep 复核 `src` 下已无 `StyleSelector` 残留引用；`page.tsx` 加载补丁与映射逻辑对齐已验证的 PUT `/api/projects/[id]/style` 链路。
+
+**效果数据**：顶部栏文风控件从 2 个→1 个，无错位；创意工坊文风预设可一键套用并真实参与生成；激活风格加载即显示；tsc 零错误；双 changelog + 计划标 ✅ 同步。
+
+### ④ 关键取舍
+- 删 `StyleSelector` 而非保留：它的模板列表与 `StyleEditor` 内置的"预设风格库"网格完全重复，留着只是多一个入口、多一套维护；删掉后所有文风操作收敛到 `StyleEditor` 一个中枢。
+- 工坊套用用"追加"而非"覆盖"：用户原有的风格笔记/维度不该被一个预设清掉，所以只追加 `【创意工坊文风·标题】` 段并仅在预设含对应字段时同步维度；`styleTemplateId` 也不动，保留用户的基础模板脚手架。
+- 选 `apply` 路由同步 `StyleCard`：让"套用工坊文风"既改生成配置、又更新分析卡，做到双向联动，而不是只动一边。
+- 不把工坊预设塞进 `styleTemplateId`：工坊预设不在 `STYLE_TEMPLATES` 硬编码表里，硬塞会破坏模板枚举；用"风格笔记 + 维度 + 视角"这种柔性映射更稳。
+
+### 诚实边界
+- 未在浏览器实跑"打开工坊文风 Tab→套用→看生成风格变化"端到端：逻辑对齐且 tsc 通过，映射字段与 `apply` 路由均已核实，但真机点击路径未经手动验证；风险中低（复用已验证的 PUT 链路）。
+- 工坊文风套用只映射了 `styleDescription`/`povType`/`dialogueRatio`/`descriptionRatio` 四个字段；预设里 `avgSentenceLength`/`actionRatio`/`innerThoughtRatio`/`tonalMarkers` 等未直接映射到 12 维度（维度键不匹配），如需更完整同步可后续扩。
+- 没动 `StyleCard` 三卡分析模型本身：它仍是独立的 AI 分析产物，工坊预设经 `apply` 写它仅作分析参考，生成仍以 `Project.llmConfig` 文风配置为准——这是刻意的设计边界，不是遗漏。
+
