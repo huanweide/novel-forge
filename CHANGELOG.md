@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.40 — 2026-08-03
+**清理 10 个 @deprecated API 端点（BE-8 收官）：死代码删除**
+
+- 删除 10 个标记 `@deprecated` 的 API 端点路由文件（约 130KB）：`tools/execute`、`generate/detect-entities`、`generate/update-cards`、`generate/apply-updates`、`lorebook/summarize`(+`apply`)、`lorebook/import`、`lorebook/expand`、`pending-items`、`presets/[id]` 的 GET/PUT/DELETE
+- 两轮交叉核验确认零 live 引用：全 src grep `@deprecated` 定位 10 个路由文件；再全 src（.ts/.tsx）搜路径串与无 `/api/` 前缀串，确认仅出现在 changelog 历史与路由自身注释——前端 `fetch` 与后端 route-to-route 调用均为 0；当初 BE-8 标注「与 U5 冲突保留」现证为过度谨慎
+- 保留 `presets/[id]/apply` 与 `presets/[id]/fork`（创意工坊套用/复刻，活跃调用）；保留 `PendingItem` Prisma 模型（删路由不影响模型，ORM 层移除需迁移、无害故留）
+- 诚实边界：文件式 API 路由删除不触发 tsc 报错，安全网靠全量 grep 零引用 + tsc 零错误兜底；未在浏览器逐个点击对应按钮验证（纯删除、无 UI 改动）；`core/llm/client.ts` 的 9+ `@deprecated` 导出仍被迁移期调用方引用，不在本次范围、保留
+
 ## v0.46.39 — 2026-08-03
 **UI 审计·按钮清理（#217-2/#217-3）：导入按钮厘清 + 次级行去重**
 

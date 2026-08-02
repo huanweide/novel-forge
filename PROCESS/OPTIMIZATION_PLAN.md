@@ -145,7 +145,9 @@
 - **价值**：大项目（几百角色 / 几万字）下 stats 与批量扩写从"卡几秒"变"毫秒级"，且少打数据库。
 - **量级**：小（定点优化）。
 
-### BE-8 清理 11 个 deprecated 端点 + 统一超时配置✅ 已完成 (v0.46.28，仅超时统一；删除端点与 U5 冲突故保留)
+### BE-8 清理 11 个 deprecated 端点 + 统一超时配置✅ 已完成 (超时统一 v0.46.28；端点删除 v0.46.40 收官)
+- 超时统一（v0.46.28）：三档超时抽到 `core/llm` 一处常量。
+- 端点删除（v0.46.40）：10 个 `@deprecated` 路由文件已删（`tools/execute`、`generate/detect-entities`、`generate/update-cards`、`generate/apply-updates`、`lorebook/summarize`+`apply`、`lorebook/import`、`lorebook/expand`、`pending-items`、`presets/[id]` 裸 GET/PUT/DELETE）；保留 `presets/[id]/apply`+`fork`、`PendingItem` 模型。两轮全量 grep 确认零 live 引用，当初「与 U5 冲突保留」证为过度谨慎。tsc 零错误。
 - **现在**：`generate/apply-updates`、`detect-entities`、`update-cards`、`lorebook/expand|import|summarize*`、`presets/[id]` 的 GET/PUT/DELETE、`pending-items`、`tools/execute` 共 11 个 `@deprecated` 仍随构建打包；超时三档不一致（120/180/300s）。
 - **做完**：确认前端无调用后删除；超时抽到 `core/llm` 一处常量。
 - **价值**：缩小攻击面与维护负担；超时语义一致，排查慢调用更简单。

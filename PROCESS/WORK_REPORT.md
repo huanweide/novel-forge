@@ -845,3 +845,31 @@
 - 「设定」「导入」概念层面的重叠仅靠"厘清标签 + tooltip"缓解，未做进一步的"统一导入中心"重构——若后续用户要求更激进的合并（单一入口内切换拆卡/建章节模式），需另立项，超出本次"清理"范围。
 - 次级行删掉的「结构化表格」「创意工坊」入口，在「工具箱」对话框（`onOpenToolbox` 类）内仍可通过对应项进入——这点已通过代码既有结构确认，但工具箱内具体条目未经逐一点击复核。
 
+---
+
+## v0.46.40 — 清理 10 个 @deprecated API 端点（BE-8 收官）：死代码删除
+
+### ① 干了什么
+把代码库里 10 个早已标记 `@deprecated` 的 API 端点路由文件整个删掉（连同空目录），约 130KB 死代码清零。具体清单：`tools/execute`、`generate/detect-entities`、`generate/update-cards`、`generate/apply-updates`、`lorebook/summarize`（含它的 `apply` 子路由）、`lorebook/import`、`lorebook/expand`、`pending-items`、`presets/[id]` 的 GET/PUT/DELETE。保留仍活跃的 `presets/[id]/apply` 和 `presets/[id]/fork`（创意工坊套用/复刻用），以及 `PendingItem` 数据库模型（删路由不影响模型，ORM 层移除要跑迁移、无害所以留着）。
+
+### ② 为什么这么做
+这是优化计划 BE-8 里**唯一留到最后的删除项**——原先标注"删除端点与 U5 冲突故保留"，所以一直没动。但用户要求"按计划删除、不问"。我重新核查：这些端点当初被标废弃，要么功能已被新实现取代（如 `lorebook/import`/`summarize`/`expand` 的 AI 能力已由 `babylore` 自动填表链路覆盖），要么是从未被前端接上的遗留接口（`tools/execute` 任意工具执行、`pending-items` 待办）。留着它们纯属负担：占构建体积、增加维护面、让人误以为还能用。
+
+### ③ 怎么做的（方法 + 效果）
+1. **定位**：全 src grep `@deprecated` → 锁定 10 个路由文件（另 `core/llm/client.ts` 的废弃导出是 ARCH-1 故意保留的，不在此列）。
+2. **交叉核验零引用（两轮）**：第一轮全 src 搜这些端点路径串；第二轮去掉 `/api/` 前缀再搜一遍（`summarize`/`import`/`expand`/`pending-items` 等），专门防组件用变量拼路径或 `import`。结果：这些路径只出现在 `changelog-data.ts` 的历史记录和路由文件自身的注释头里，**前端 `fetch` 与后端路由互调均为 0**。其中 `lorebook/summarize/apply/route.ts` 头注释自己写着"死代码，前端无引用"，坐实。
+3. **删除**：用 Windows 绝对路径 `rm -f` 逐一删 10 个 `route.ts`（safe-delete 对绝对路径放行），再 `rmdir` 清掉空目录（`presets/[id]` 因含活的 apply/fork 子目录保留）。
+4. **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → **TSC_EXIT=0**。关键说明：Next.js 的 API 路由是"文件即端点"，不被其他模块 `import`，所以删它们**不会**触发 tsc 报错——真正的安全网是前面那两轮"零引用 grep"。
+
+**效果数据**：删除 10 个废弃端点（≈130KB），构建攻击面与维护负担收紧；保留路由与模型零影响；tsc 零错误；双 changelog + OPTIMIZATION_PLAN BE-8 标收官 + WORK_REPORT 费曼段。
+
+### ④ 关键取舍
+- 选"先两轮 grep 核验再删"而非"信旧标注直接删"：旧标注"与 U5 冲突"已被证实过度谨慎，但删除 API 端点不像删普通函数有 tsc 兜底，必须用 grep 把引用面查干净才敢动手——这是"细心不做缩水"的具体体现。
+- 保留 `presets/[id]/apply`+`fork` 与 `PendingItem` 模型：前者是当前创意工坊活跃功能，误删会真让套用/复刻 500；后者是 ORM 模型，删它要改 schema + 跑迁移 + 动数据库，收益为零、风险非零，故留。
+- 不动 `core/llm/client.ts` 的 `@deprecated` 导出：ARCH-1 已核实它们仍被迁移期调用方引用，强删会直接破坏构建——"废弃"不等于"可删"，要分清楚。
+
+### 诚实边界
+- 未在浏览器逐个点击对应按钮验证（纯删除、无任何 UI 改动，且 grep 已证零调用），风险极低但未经真机点击复核。
+- `PendingItem` 模型随本次路由删除变成"无对应端点"的孤儿模型；它无害（Prisma 模型可独立存在），但若要彻底干净，后续可单列一项评估是否从 schema 移除（需迁移，超出本次"删端点"范围）。
+- 不排除极个别地方用字符串模板动态拼出这些路径（如 `\`/api/${x}\``）——第二轮 grep 已用无前缀关键词覆盖常见拼接，未发现；但若存在极隐蔽的间接调用，运行期才会暴露，已记入风险。
+

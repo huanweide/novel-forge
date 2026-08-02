@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.39";
+export const LATEST_VERSION = "v0.46.40";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "UI 按钮审计·清理（#217-2/#217-3）：顶部栏「设定」→「导入设定」、「导入」→「导入书稿」，并补 tooltip 厘清二者差异——前者粘贴设定文本拆三卡（不建章节），后者粘贴整本书稿自动分章+抽卡；二者主职责不同（建章节树 vs 不建），故厘清而非硬并",
-  "次级按钮行去重：移除与「工具箱」对话框完全重复的「结构化表格」「创意工坊」（同跳 `/tables`、`/workshop`），避免两个入口指向同一处；保留「项目设定/记忆衰减/项目配置」并补区分标题",
-  "厘清「项目设定」(`BuildConfigDialog`：小说骨架题材/受众/剧情结构/力量体系/金手指/风格标签) 与「项目配置」(`ProjectConfigPanel`：书名/模型/LLM 参数/作者注) 非重复，二者职责不同，仅补 tooltip 区分",
-  "诚实边界：经评估「设定」与「导入」在『从文本抽设定』上确有概念重叠，但主输出不同（前者不建章节、后者建章节树），强行合并会丢能力，故选择厘清标签；未做浏览器端到端实跑，tsc 零错误",
+  "清理 10 个 @deprecated API 端点（BE-8 收官）：tools/execute、generate/detect-entities、generate/update-cards、generate/apply-updates、lorebook/summarize(+apply)、lorebook/import、lorebook/expand、pending-items、presets/[id] 的 GET/PUT/DELETE——两轮全量 grep 确认前端与后端均无 live 引用（仅 changelog 历史与自身注释），当初『与 U5 冲突保留』为过度谨慎",
+  "删除约 130KB 死代码（10 个路由文件 + 空目录）；保留 presets/[id] 的 apply/fork 子路由与 PendingItem 模型（路由删、模型无害保留），避免无谓的结构迁移风险",
+  "收紧攻击面与维护负担：少 11 个仍随构建打包的废弃端点；超时配置此前已在 v0.46.28 统一抽到 core/llm 常量，本次纯删除死路径",
+  "诚实边界：API 路由为文件式端点（非 import），删除不触发 tsc 报错——已用全量 grep 交叉核验零引用 + tsc 零错误兜底；未在浏览器逐个点击验证（纯删除无 UI 改动），PendingItem 模型未顺手删（属 ORM 层、删需迁移）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.40",
+    date: "2026-08-03",
+    title: "清理 10 个 @deprecated API 端点（BE-8 收官）：死代码删除",
+    sections: [
+      {
+        label: "删除清单（确认零引用）",
+        items: [
+          "tools/execute、generate/detect-entities、generate/update-cards、generate/apply-updates",
+          "lorebook/summarize（含 apply 子路由，头注释自证『死代码，前端无引用』）、lorebook/import、lorebook/expand",
+          "pending-items、presets/[id] 的 GET/PUT/DELETE（裸 id 路由；apply/fork 子路由保留）",
+          "两轮交叉核验：① 全 src grep `@deprecated` 定位 10 个路由文件；② 全 src（.ts/.tsx）搜路径串 + 无 /api/ 前缀串，确认仅出现在 changelog-data.ts 历史与路由自身注释，前端 fetch 与后端 route-to-route 调用均为 0",
+        ],
+      },
+      {
+        label: "保留与边界",
+        items: [
+          "保留 presets/[id]/apply 与 presets/[id]/fork（创意工坊套用/复刻，活跃调用）；保留 PendingItem Prisma 模型（删路由不影响模型，ORM 层移除需迁移，超出本次范围且无害）",
+          "core/llm/client.ts 的 9+ @deprecated 导出不在本次范围——ARCH-1 已说明仍被迁移期调用方引用，强删会破坏构建，故保留",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "文件式 API 路由删除不会触发 tsc 报错（无 import 依赖），故安全网全靠『全量 grep 零引用』+ tsc 零错误；未在浏览器逐个点击对应按钮验证（纯删除、无 UI 改动，风险极低）",
+          "当初 BE-8 标注『删除端点与 U5 冲突故保留』现证为过度谨慎——U5 功能本身后续已被移除/重构，这些端点确无活引用",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.39",
     date: "2026-08-03",
