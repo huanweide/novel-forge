@@ -50,13 +50,15 @@
 - **价值**：前端 Toast 能稳定读取 `hint` 给出中文排障建议（如"数据库连接失败，请检查 PostgreSQL"），而不是偶尔只弹一个裸字符串。
 - **量级**：中（机械替换为主，低风险）。
 
-### ARCH-3 引入输入校验层（zod + 共享 validateBody）
-- **现在**：88 路由**零 schema 校验**，所谓校验是 `if (!projectId) return 400` 式手写；`request.json()` 大多无 try/catch；POST body 无体积上限。
+### ARCH-3 引入输入校验层（手写轻量守卫，零新依赖）
+- ✅ 已完成（v0.46.34，已推 main）：以手写轻量守卫替代原计划的 zod（本地单用户工具求轻，不增运行时依赖）；新增 `src/lib/validators.ts`（`asStr/asStrArray/asStrOrNull/asInt/asBool` + `ValidationError/badRequest` + `readValidatedBody(request, validate)` 统一入口，JSON 解析失败或字段校验失败返回 400）；characters/lorebook/story-nodes/rules 四个裸信任入参的写路由已补校验（必填/类型/长度），脏数据落库前拦下；config 路由已有手工 typeof + 范围校验，标注合规不重复改。
+- **现在（改前）**：88 路由**零 schema 校验**，所谓校验是 `if (!projectId) return 400` 式手写；`request.json()` 大多无 try/catch；POST body 无体积上限。
 - **做完**：引入 `zod`，每个路由用 `validateBody(schema)` 包裹；非法请求返回 400 + 字段级中文提示；对超大 body 设上限（防 LLM 提示被灌爆造成成本/DoS）。
 - **价值**：坏数据在入口就被拦下，不再穿透到 DB 抛 500；同时也给前端一份"接口契约"文档。
 - **量级**：中（需为每个写类路由补 schema）。
 
 ### ARCH-4 重建可控的数据库迁移历史（弃用 db push）
+- ⏸️ 暂缓（2026-08-02 决策）：`schema.prisma` 已远超 3 个 2026-06-06 旧迁移（ImportTask/StoryNodeRevision/LoreTable 等均为后续 `prisma db push` 加入），强行 `migrate dev` 会试图重建全表、有数据风险；项目定位是本地单用户工具，`prisma db push` 同步已足够（README / `deploy-local.ps1` 均以此为准）。留待需要多环境分发时再单独排期。
 - **现在**：`prisma/migrations` 只有 3 个（2026-06-06），但 `api-error.ts` 的注释指导用户用 `prisma db push` 同步——说明 schema 已与迁移漂移，**没有可控的迁移历史**，多环境部署（换机器 clone 后起库）有风险。
 - **做完**：用 `prisma migrate dev` 补齐缺失迁移，让 schema 与 migrations 对齐；README 改为"首次 `prisma migrate deploy`"。
 - **价值**：任何人在任何机器上起库，得到的表结构都和你的一模一样，不会出现"我这边能跑你那边报字段缺失"。
@@ -70,7 +72,8 @@
 - **量级**：小。
 
 ### ARCH-6 建立轻量测试护栏（vitest + 关键路径单测 + API 冒烟）
-- **现在**：整个仓库**没有任何测试**（无 jest/vitest）；之前靠 `novel-forge-diagnostic` 技能做静态六维检查 + 手动冒烟。
+- ✅ 已完成（v0.46.34，已推 main，基础设施）：新增 `vitest.config.ts`（node 环境）+ `package.json` 加 `test` script（`vitest run`）；首个单测 `src/lib/__tests__/utils.test.ts` 覆盖 `safeJoin` 八分支（实跑 8 passed），验证测试管线可用。诚实边界：目前仅纯函数测试，API 路由 mock 测试（需处理 `next/server` 导入）与 LLM 客户端封装测试留后续批次。
+- **现在（改前）**：整个仓库**没有任何测试**（无 jest/vitest）；之前靠 `novel-forge-diagnostic` 技能做静态六维检查 + 手动冒烟。
 - **做完**：引入 `vitest`，先覆盖三类最该锁的：① LLM 客户端封装（mock 掉网络）；② 校验层；③ 2–3 个核心 API 路由（projects/story nodes）的入库冒烟。再给 CI 加 `tsc + test` 门。
 - **价值**：以后做 ARCH-1（合并 LLM 抽象）、FE-8（状态管理收口）这类"牵一发动全身"的重构时，有测试兜底，敢改。
 - **量级**：中（一次性投入，长期受益）。

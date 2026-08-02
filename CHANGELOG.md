@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.34 — 2026-08-02
+**架构与测试收口（#216·批次1）：ARCH-3 输入校验层 + ARCH-6 测试护栏**
+
+- 🛡️ 集中输入校验层（ARCH-3）：新增 `src/lib/validators.ts`（手写轻量类型守卫，零新依赖）——`asStr/asStrOrNull/asStrArray/asInt/asBool` + `ValidationError/badRequest` + `readValidatedBody(request, validate)` 统一入口（JSON 解析失败或字段校验失败返回 400，绝不直接进 prisma）；给 `characters/lorebook/story-nodes/rules` 四个裸信任入参的写路由补校验（projectId/name 必填、字段类型与长度约束），脏数据在落库前被拦下；`config` 路由已有手工 typeof 守卫 + 范围校验，标注合规不重复改
+- 🧪 测试护栏（ARCH-6）：新增 `vitest.config.ts`（node 环境）+ `package.json` 加 `test` script（`vitest run`）；首个单测 `src/lib/__tests__/utils.test.ts` 覆盖 `safeJoin` 八分支（含 JSON 字符串数组解析、数字数组过滤），实跑 8 passed，验证管线可用
+- 🚫 诚实边界：ARCH-3 未引入 zod（本地工具求轻，手写守卫已达成「防 500/防脏库」目标）；ARCH-6 目前仅纯函数测试，API 路由 mock 测试留后续；#216 其余子项（ARCH-1/FE-N8/FE-N6）待续，ARCH-4 迁移历史标注暂缓（schema 与 3 旧迁移已漂移，本地 db push 够用，强行 migrate 有重建全表风险）
+- ✅ tsc 零错误；新增 devDep vitest；首个测试 8 passed
+
 ## v0.46.33 — 2026-08-02
 **前端新功能（#215）：FE-N5 全局快捷键系统 + FE-N7 网文合规违禁词预检**
 

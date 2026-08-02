@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.33";
+export const LATEST_VERSION = "v0.46.34";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "⌨️ 全局快捷键系统（FE-N5）：根布局挂 `ShortcutProvider`，各页面用 `useShortcut` 注册；支持 `mod+s` 保存、`[`/`]` 切换左右栏、`n` 新建章节；首次进入自动弹速查（可关）",
-  "🚫 网文合规违禁词预检（FE-N7）：新增 `src/lib/banned-words.ts` 词库；导出路由 `?check=1` 返回命中清单，ExportDialog 命中即弹确认（可坚持导出）",
-  "📋 设置页增补：新增「违禁词管理」（自定义追加/重置）+「快捷键速查」两个板块，从已注册快捷键实时渲染",
-  "🧱 安全护栏：非 mod 组合键在输入框/可编辑区自动忽略，不打断打字；带 mod 组合（如 mod+s）在输入框也照常触发",
+  "🛡️ 集中输入校验层（ARCH-3）：新增 `src/lib/validators.ts`（手写轻量类型守卫，零新依赖），给 characters/lorebook/story-nodes/rules 四个裸信任入参的写路由补 `readValidatedBody` 校验（必填/类型/长度），脏数据进 prisma 前拦下并返回 400；config 路由已有手工校验标注合规",
+  "🧪 测试护栏（ARCH-6）：新增 `vitest.config.ts` + `npm run test`；首个单测覆盖 `src/lib/utils.ts` 的 `safeJoin` 八分支（含 JSON 字符串数组解析），管线已跑通（8 passed）",
+  "🚫 诚实边界：ARCH-3 未引入 zod（本地工具求轻，手写守卫已达成「防 500/防脏库」目标）；ARCH-6 目前仅纯函数测试，API 路由 mock 测试留后续批次",
+  "📋 计划收口：#216 进行中——ARCH-3/ARCH-6 完成，ARCH-1/FE-N8/FE-N6 待续，ARCH-4 迁移历史标注暂缓（本地 db push 已够用，强行 migrate 有重建全表风险）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.34",
+    date: "2026-08-02",
+    title: "架构与测试收口（#216·批次1）：ARCH-3 输入校验层 + ARCH-6 测试护栏",
+    sections: [
+      {
+        label: "集中输入校验层（ARCH-3）",
+        items: [
+          "新增 src/lib/validators.ts（手写轻量守卫，零新依赖）：asStr/asStrOrNull/asStrArray/asInt/asBool + ValidationError/badRequest + readValidatedBody(request, validate) 统一入口（JSON 解析失败或字段校验失败返回 400，绝不直接进 prisma）",
+          "给 4 个完全裸信任入参的写路由补校验：characters(POST)/lorebook(POST)/story-nodes(POST)/rules(POST)——projectId/name 等必填、字段类型与长度约束，脏数据在落库前被拦下",
+          "config 路由（projects/[id]/config PUT）已有手工 typeof 守卫 + 范围校验，标注为已合规，不重复改造",
+        ],
+      },
+      {
+        label: "测试护栏（ARCH-6）",
+        items: [
+          "新增 vitest.config.ts（node 环境，include src/**/*.test.ts）+ package.json 加 test script（vitest run）",
+          "首个单测 src/lib/__tests__/utils.test.ts 覆盖 safeJoin 八分支（null/数组/对象/字符串/JSON 字符串数组/数字数组过滤/非 JSON 原样）；实跑 8 passed，验证测试管线可用",
+        ],
+      },
+      {
+        label: "诚实边界与计划",
+        items: [
+          "ARCH-3 未引入 zod：原计划建议 zod，但本地单用户工具求轻，手写守卫已达成「防 500/防脏库」目标且不增运行时依赖",
+          "ARCH-6 目前仅纯函数测试；API 路由（需 mock prisma/NextResponse from next/server 导入问题）留后续批次",
+          "#216 其余子项：ARCH-1（合并 LLM）/FE-N8（保存冲突）/FE-N6（时间线）待续；ARCH-4（迁移历史）标注暂缓——schema 与 3 旧迁移已漂移，本地 db push 已够用，强行 migrate 有重建全表风险",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.33",
     date: "2026-08-02",

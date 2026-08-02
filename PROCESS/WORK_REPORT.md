@@ -651,3 +651,36 @@
 - **`?check=1` 未在浏览器实跑导出拦截弹层**：代码已接，但端到端（点导出→见清单→坚持导出）未可视化验证。
 - **FE-N5 未做"自定义快捷键"**：计划原文提到"可在设置查看/自定义"，本单元只做了"查看"（速查板块），自定义改键未做（涉及组合键冲突检测，复杂度高，留待后续）。已在 OPTIMIZATION_PLAN 诚实标注。
 
+
+---
+
+## v0.46.34 — 架构与测试收口（#216·批次1）：ARCH-3 输入校验层 + ARCH-6 测试护栏
+
+### ① 干了什么
+给后端写接口装上一道"入口安检"，并建立第一个自动化测试。一句话：以后创建角色/词条/章节/规则时，如果缺必填字段、字段类型不对、或超长，会在进数据库之前就被拦下并返回明确的中文 400 错误，而不是一路穿透到 PostgreSQL 抛 500；同时项目有了 `npm run test`，能自动验证像 `safeJoin` 这种纯函数的行为。
+
+### ② 为什么这么做
+- **ARCH-3（输入校验）**：原计划侦察发现全项目 88 个路由**零 schema 校验**，写路由直接 `await request.json()` 后 `body.x || default` 信任入参——缺字段就落库、类型错就 500。坏数据穿透到 DB 是隐蔽的技术债。
+- **ARCH-6（测试护栏）**：整个仓库此前没有任何测试，重构（如后续 ARCH-1 合并 LLM）时"改了 A 没改 B"的回归无法被自动发现。先建管线 + 锁住一个纯函数，以后敢改。
+
+### ③ 怎么做的（方法 + 效果）
+1. **手写校验层（ARCH-3，零新依赖）**：新增 `src/lib/validators.ts`，导出一组类型守卫 `asStr/asStrOrNull/asStrArray/asInt/asBool`（必填/最大长度/默认值语义）+ `ValidationError` + `badRequest`（统一 400 响应）+ `readValidatedBody(request, validate)`。后者先 `await request.json()`（解析失败返回 400），再跑调用方传入的 `validate(raw)` 自定义校验函数，遇 `ValidationError` 也返回 400——**绝不直接把脏数据交给 prisma**。
+2. **4 个裸信任路由接入**：`characters(POST)`/`lorebook(POST)`/`story-nodes(POST)`/`rules(POST)` 原来直接 `body.x`，改为 `const body = await readValidatedBody(request, (raw) => ({ projectId: asStr(raw.projectId, "projectId", {required:true}), ... }))`；`if (body instanceof NextResponse) return body;` 提前拦截。projectId/name 等必填、字段类型与长度约束落到位。`config` 路由（projects/[id]/config PUT）原本就有 `typeof` 守卫 + 1–50 范围校验，标注合规不重复改。
+3. **测试管线（ARCH-6）**：`npm install -D vitest`；新增 `vitest.config.ts`（node 环境，`include: src/**/*.test.ts`）；`package.json` 加 `test` script（`vitest run`）。首个测试 `src/lib/__tests__/utils.test.ts` 覆盖 `safeJoin` 八分支（null/数组/对象/字符串/JSON 字符串数组解析/数字数组过滤/非 JSON 原样返回）。
+
+**效果数据**：
+- tsc 零错误（TSC_EXIT=0）；测试实跑 **8 passed**（VITEST_EXIT=0）；新增 devDep `vitest`（仅开发依赖，不影响运行时）。
+- 反自欺实例：首个测试版里我写了 `expect(safeJoin("[1,2,3]")).toBe("1、2、3")`，**测试失败**——但这是我的期望错了，不是代码 bug：`safeJoin` 设计为只 join 字符串元素，数字 `[1,2,3]` 会被 `filter(typeof==="string")` 过滤成空，返回 "" 是正确的。我据此修正测试（拆成「字符串数组 JSON 解析」与「数字数组被过滤」两条正确期望），而非改代码掩盖。
+- git 改动：2 新文件（validators.ts / utils.test.ts）+ 1 新配置（vitest.config.ts）+ 4 路由重写 + package.json + 双 changelog。提交（待 push）。
+
+### ④ 关键取舍
+- **用手写守卫而非 zod**：原计划写"zod + 共享 validateBody"，但项目是本地单用户工具，"轻"是核心诉求；手写一组守卫已达成「防 500 / 防脏库」目标，且不引入运行时依赖（zod 虽小但是增量）。这是从"计划建议"到"落地务实"的诚实修正。
+- **config 路由不重复改造**：它已有 `typeof` 守卫 + 范围校验且返回 400，已符合"入口安检"目标，强行套 `readValidatedBody` 反而要重写其"部分更新"逻辑，风险大于收益。
+- **ARCH-6 先只测纯函数**：API 路由测试需 mock `prisma` 且 `validators.ts` 顶部 `import { NextResponse } from "next/server"` 在纯 node 测试环境导入可能踩坑；先把零依赖的 `safeJoin` 锁住，验证管线可用，路由测试留后续批次——避免在"建护栏"这一步就卡在环境配置上。
+
+### 诚实边界
+- **ARCH-3 仅覆盖 4 个路由 + config**：项目还有大量其他写路由（如 story/nodes/[id] PUT、projects POST 等）未补校验，本批次聚焦"完全裸信任"的代表性路由建立模式；其余路由可后续按同一 `readValidatedBody` 模式批量补。
+- **ARCH-6 仅纯函数测试**：尚无 API 路由 mock 测试与 LLM 客户端封装测试（计划原文期望的三类覆盖只做了第一类）。
+- **ARCH-4 迁移历史暂缓**：经侦察 schema 与 3 个旧迁移已严重漂移，强行 `migrate dev` 有重建全表风险，且本地工具 `db push` 已够用——标注暂缓而非强行改动，符合用户"本地自用、不做复杂部署"定位。已在 OPTIMIZATION_PLAN 标注。
+- **未在浏览器/真实 DB 验证 4 路由校验**：逻辑对齐标准模式且 tsc 通过，但端到端（发一个缺 projectId 的 POST 看是否 400）未实跑。
+

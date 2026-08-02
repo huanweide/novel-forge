@@ -10,7 +10,8 @@
     "lint:colors": "node scripts/lint-colors.mjs",
     "doctor": "node scripts/doctor.mjs",
     "postinstall": "prisma generate",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=20"
@@ -52,6 +53,7 @@
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "tsx": "^4.23.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
