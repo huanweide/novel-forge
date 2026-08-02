@@ -103,10 +103,11 @@
 - **价值**：手滑删错项目不再是世界末日；本地工具没有"云端回收站"兜底，自己补一个更有必要。
 - **量级**：中。
 
-### BE-3 Token 用量与成本看板 ⭐ 高分功能
-- **现在**：LLM 返回的 `usage`（token 数）在 `stats/monitor` 里只是按字数**估算**（注释明说"精确值需启用 token 日志"），且用完即丢，从不落库。
-- **做完**：新增 `LlmCallLog` 表（记录时间/模型/角色/architect-writer-reviewer、输入 token、输出 token、估算成本）；设置页或统计面板加"本月调用次数 / token 总量 / 估算花费"卡片，可按模型筛选。
-- **价值**：作者第一次能看清"这个月 AI 帮我写了多少、花了多少钱"，也能发现某个模型特别烧 token；对成本控制是刚需。
+### ✅ BE-3 Token 用量与成本看板 ⭐（v0.46.20 已完成）
+- **现在（改前）**：LLM 返回的 `usage`（token 数）在 `stats/monitor` 里只是按字数**估算**（注释明说"精确值需启用 token 日志"），且用完即丢，从不落库。
+- **做完**：新增 `LlmCallLog` 表（时间/模型/角色/输入·输出·总 token/估算成本/BaseURL/是否故障转移）；在 `src/core/llm/client.ts` 的 `chat` 成功返回、`chatStream` 流末 `onUsage` 回调单点 fire-and-forget 落库（覆盖所有走 client 的生成/agent/game/explore/dissect）；`lib/llm.ts` 内置 `MODEL_PRICING` 价格表 + `estimateCost` 估算；`/api/stats/monitor` 加 `llmUsage` 本月聚合；MonitorPanel 加「AI 成本（全项目·本月）」看板。
+- **价值**：作者第一次能在统计面板看清"这个月 AI 帮我写了多少、花了多少钱"、按模型分布；对成本控制是刚需。
+- **诚实边界**：client 层不持有 project 上下文 → 看板做全局聚合标注「全项目」（不伪装 per-project）；仅记 v0.46.20 起调用、历史无数据、未知模型标单价未知、落库失败静默；表经 `prisma db push` 同步。
 - **量级**：中（落库 + 一个看板 UI）。
 
 ### ✅ BE-4 LLM 重试 + 故障转移（多模型兜底）⭐（v0.46.19 已完成）
