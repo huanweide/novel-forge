@@ -25,18 +25,44 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.27";
+export const LATEST_VERSION = "v0.46.28";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧹 合并重复 EmptyState（FE-4 / BUG-9）：删除 `components/ui/EmptyState.tsx`，全局统一走 `States.tsx` 的 `EmptyState`（保留 `description` 语义），4 处引用改 import + `hint`→`description`，空态视觉一致",
-  "🛡️ 导入向导批量动作二次确认（BUG-13）：「一键删除未确认」清空前弹 `confirmDialog` 危险确认，避免误清空全部未写入的章节/角色/词条",
-  "✅ 角色删除确认已具备（BUG-1）：核查 `CharacterList` 在 FE-8 重构中已用 `useConfirmDelete` 包裹删除（确认弹窗 + loading 态），`LeftPanel` 内联 fetch 仅作 `deleteFn` 被 hook 托管，症状已解决、本单元不重复修",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；空态统一后新人首次进空白页的引导更一致",
+  "🛡️ Prisma 连接池上限（BE-6）：`PrismaPg` 适配器显式设 `max`（默认 10，`PRISMA_POOL_MAX` 可调）+ `idleTimeoutMillis` 回收，高并发流式请求下避免连接耗尽 `P2024`",
+  "⏱️ LLM 请求超时统一常量（BE-8）：抽出 `LLM_REQUEST_TIMEOUT_MS = 300_000`，替换散落的 180s/300s 两处 `AbortSignal.timeout`，超时语义一致、排查慢调用更简单",
+  "📦 deprecated 端点保留（BE-8 取舍）：10 个 `@deprecated` 路由与 U5「不删代码、保留给脚本/SDK」决策一致，本单元不删除；`maxDuration` 按操作差异设置属合理，不强制统一",
+  "✅ BE-7 复核：读码确认 `expand` 无循环内 `findMany` N+1、`monitor` 已用 `select`+`Promise.all`+DB 聚合，无明确安全收益故未改；tsc 零错误、零新依赖",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.28",
+    date: "2026-08-02",
+    title: "后端健壮性：Prisma 连接池上限（BE-6）+ LLM 超时统一常量（BE-8）",
+    sections: [
+      {
+        label: "Prisma 连接池上限（BE-6）",
+        items: [
+          "`src/lib/prisma.ts` 的 `PrismaPg` 适配器显式传入 `pg.PoolConfig`：`max`（默认 10，可用 `PRISMA_POOL_MAX` 环境变量调大）+ `idleTimeoutMillis: 30000` + `allowExitOnIdle`，高并发流式请求下避免连接耗尽抛出 `P2024`",
+        ],
+      },
+      {
+        label: "LLM 超时统一常量（BE-8）",
+        items: [
+          "`src/core/llm/client.ts` 抽出 `export const LLM_REQUEST_TIMEOUT_MS = 300_000`，替换散落在 `chat`/`chatStream` 的两处 `AbortSignal.timeout(180_000)`/`(300_000)`；所有 LLM 请求共用同一超时，语义一致、排查慢调用更简单",
+        ],
+      },
+      {
+        label: "诚实边界（BE-7 / BE-8 删除）",
+        items: [
+          "BE-7 复核：读 `characters/expand` 与 `stats/monitor` 源码——`expand` 预处理是必要顺序写（拆卡/合并需逐行 update/delete），无循环内 `findMany` 的 DB N+1；`monitor` 已用 `select` 只取所需字段 + `Promise.all` 并行 + DB `aggregate/groupBy` 算 LLM 成本，剩余 JS 归约是对单次 `findMany` 结果的 O(n) 单遍、`dailyWords` 按天聚合本需逐行 `updatedAt`——改成一堆 `count`/`aggregate` 反而增加 DB 往返且无收益，故未改",
+          "BE-8「删除 11 个 deprecated 端点」与 U5 阶段已定「不删代码、保留给脚本/SDK」决策冲突，本单元不删除；`maxDuration` 按操作差异设置（单聊 60s / 整书导入 300s）属合理，不强制统一",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.27",
     date: "2026-08-02",

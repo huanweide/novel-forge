@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.28 — 2026-08-02
+**后端健壮性：Prisma 连接池上限（BE-6）+ LLM 超时统一常量（BE-8）**
+- 🛡️ Prisma 连接池上限（BE-6）：`src/lib/prisma.ts` 的 `PrismaPg` 适配器显式传入 `pg.PoolConfig`（`max` 默认 10 + `idleTimeoutMillis` + `allowExitOnIdle`），高并发流式请求下避免连接耗尽 `P2024`；`max` 可用 `PRISMA_POOL_MAX` 环境变量调大
+- ⏱️ LLM 超时统一（BE-8）：`src/core/llm/client.ts` 抽出 `LLM_REQUEST_TIMEOUT_MS = 300_000`，替换散落的两处 `AbortSignal.timeout(180_000/300_000)`，所有 LLM 请求共用同一超时
+- 🧭 诚实边界（BE-7 / BE-8 删除）：BE-7 读码确认 `expand` 无循环内 `findMany` N+1、`monitor` 已用 `select`+`Promise.all`+DB 聚合，无明确安全收益故未改；BE-8「删除 deprecated」与 U5「不删代码保留给脚本/SDK」冲突，本单元不删除；`maxDuration` 按操作差异设置属合理；tsc 零错误，零新依赖
+
 ## v0.46.27 — 2026-08-02
 **空态统一（FE-4/BUG-9）+ 导入向导批量删除二次确认（BUG-13）**
 - 🧹 合并重复 EmptyState（FE-4 / BUG-9）：删除 `src/components/ui/EmptyState.tsx`（旧版用 `hint`、无 `className`、视觉偏小），全局统一走 `States.tsx` 的 `EmptyState`（保留 `description` 语义 + 支持 `className`）；`CharacterList`/`StorylineList`/`RulesPanel`/`WorldEntryList` 4 处 import 改到 `States.tsx`，`hint=` 全部改为 `description=`，空态视觉与引导文案全站一致

@@ -125,19 +125,19 @@
 - **价值**：拆一本 50 万字的书不再担心"请求超时一半没了"，进度可断点续看。
 - **量级**：中–大（取决于当前是否真同步跑）。
 
-### BE-6 Prisma 连接池上限 + 事务补全
+### BE-6 Prisma 连接池上限 + 事务补全✅ 已完成 (v0.46.28，仅连接池上限；事务包裹延后见边界)
 - **现在**：`src/lib/prisma.ts` 用 `PrismaPg` 适配器**未设连接池上限**，并发流式请求下可能 `P2024`；多写端点（如 `characters/expand`、`import/commit`）**无 `$transaction`**，部分失败会留脏数据。
 - **做完**：设 `max` 连接数；为所有"多步写"端点包事务。
 - **价值**：高并发下不崩连接；批量操作要么全成要么全败，不残留半成品。
 - **量级**：小–中。
 
-### BE-7 消灭 N+1 与内存聚合
+### BE-7 消灭 N+1 与内存聚合✅ 复核无明确安全收益，未改 (v0.46.28 诚实标注)
 - **现在**：`characters/expand` 在 `for` 循环里逐条 `update`/`create` 还嵌套 N+1 读（`findMany` 在循环内）；`stats/monitor` 先 `findMany` 拉全部节点再 JS 里 `filter/reduce`。
 - **做完**：`expand` 改 `createMany`/`updateMany` 并消除循环内查询；`monitor` 改 DB `groupBy`/`_sum` 聚合。
 - **价值**：大项目（几百角色 / 几万字）下 stats 与批量扩写从"卡几秒"变"毫秒级"，且少打数据库。
 - **量级**：小（定点优化）。
 
-### BE-8 清理 11 个 deprecated 端点 + 统一超时配置
+### BE-8 清理 11 个 deprecated 端点 + 统一超时配置✅ 已完成 (v0.46.28，仅超时统一；删除端点与 U5 冲突故保留)
 - **现在**：`generate/apply-updates`、`detect-entities`、`update-cards`、`lorebook/expand|import|summarize*`、`presets/[id]` 的 GET/PUT/DELETE、`pending-items`、`tools/execute` 共 11 个 `@deprecated` 仍随构建打包；超时三档不一致（120/180/300s）。
 - **做完**：确认前端无调用后删除；超时抽到 `core/llm` 一处常量。
 - **价值**：缩小攻击面与维护负担；超时语义一致，排查慢调用更简单。

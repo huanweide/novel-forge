@@ -11,6 +11,10 @@
 import { getSettings, mapLLMError, recordLlmCall } from "@/lib/llm";
 import type { LLMConfig, FallbackModel } from "@/core/types";
 
+// ─── LLM 请求超时（BE-8：统一散落的三档为单常量）────────────
+/** 单次 LLM 请求最长等待时间（毫秒）。所有 chat / chatStream 共用此值，避免超时语义不一致、排查慢调用更简单。 */
+export const LLM_REQUEST_TIMEOUT_MS = 300_000;
+
 // ─── 类型定义 ───────────────────────────────────────────────
 
 export interface ChatMessage {
@@ -144,7 +148,7 @@ async function attemptChat(
         Authorization: `Bearer ${target.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS),
     });
   } catch (e) {
     if (e instanceof TypeError) {
@@ -241,7 +245,7 @@ async function establishStream(
         Authorization: `Bearer ${target.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(300_000),
+      signal: AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS),
     });
   } catch (e) {
     if (e instanceof TypeError) {
