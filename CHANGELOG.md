@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.32 — 2026-08-02
+**后端深化与导入（#214）：BE-5 导入任务异步化 + FE-N3 多格式导入**
+
+- 📥 多格式导入（FE-N3）：导入向导新增 `.epub`/`.docx` 支持，浏览器端用 jszip 解压抽取纯文本（epub 读 `xhtml/html`、docx 读 `word/document.xml` 按 `w:p` 段落），喂给现有 `import/parse`（仅收 `rawText`），后端无需感知格式；新增 `src/lib/manuscript-parse.ts` + `accept` 放宽到 `.txt,.md,.epub,.docx`
+- ⚙️ 导入任务异步化（BE-5）：Prisma 新增 `ImportTask` model（status/progress/result/error/importMode/projectId，对齐已验证的 DissectionTask 模式），本地 PG17 已 `prisma db push` 同步；`import/parse` 接入任务表——POST 建 `pending`、SSE 流内 fire-and-forget 更新 progress/done(completed 存 characters/lore/style)/error(failed)，三类事件均带 `taskId`
+- 🔌 断线恢复（BE-5）：新增 `GET /api/import/[taskId]` 轮询路由；前端 `ImportWizard` 用 `sessionStorage` 缓存 `taskId`，组件挂载时自动轮询恢复进预览（completed 取 result / failed 报错）
+- ✅ tsc 零错误、新增 1 个运行时依赖（jszip，前端解压用）
+
 ## v0.46.31 — 2026-08-02
 **前端打磨（#213）：FE-10 弹窗合并 + FE-7 错误态 + FE-5 无障碍 + ARCH-7 颜色守卫**
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { parseManuscriptToText } from "@/lib/manuscript-parse";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
@@ -113,8 +114,22 @@ export function ImportWizard({
   };
 
   const readFile = (file: File) => {
-    if (!file.name.endsWith(".txt") && !file.name.endsWith(".md")) {
-      setError("只支持 .txt 和 .md 文件");
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".txt") && !name.endsWith(".md") && !name.endsWith(".epub") && !name.endsWith(".docx")) {
+      setError("只支持 .txt / .md / .epub / .docx 文件");
+      return;
+    }
+    // epub / docx 在浏览器端用 jszip 解压提取纯文本，再喂给现有提取流程
+    if (name.endsWith(".epub") || name.endsWith(".docx")) {
+      setError("");
+      setMessage(`正在解析 ${name.endsWith(".epub") ? "EPUB" : "DOCX"} 文件…`);
+      parseManuscriptToText(file)
+        .then((text) => {
+          if (text.trim().length < 30) { setError("解析出的正文太短，可能不是有效的书稿文件"); setMessage(""); return; }
+          setRawText(text);
+          setMessage("");
+        })
+        .catch((e) => { setError(e instanceof Error ? e.message : "解析文件失败"); setMessage(""); });
       return;
     }
     const reader = new FileReader();
@@ -124,6 +139,62 @@ export function ImportWizard({
     };
     reader.readAsText(file);
   };
+
+  // ─── 断线恢复：挂载时若上次有未完成的导入任务，轮询恢复 ──────────
+  useEffect(() => {
+    const key = "nf-import-task-" + projectId;
+    const savedTaskId = sessionStorage.getItem(key);
+    if (!savedTaskId) return;
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/import/${savedTaskId}`);
+        if (!res.ok) { sessionStorage.removeItem(key); return; }
+        const task = await res.json();
+        if (stopped) return;
+        if (task.status === "parsing" || task.status === "pending") {
+          if (typeof task.progress === "number") setParsePct(task.progress);
+          setCurrentStage(task.status === "pending" ? "等待开始" : "恢复中…");
+          return;
+        }
+        if (task.status === "completed" && task.result) {
+          const r = task.result as { characters?: unknown[]; lore?: unknown[]; style?: Record<string, unknown> };
+          const chars = (r.characters || []) as ExtractedChar[];
+          const lore = (r.lore || []) as ExtractedLore[];
+          setResult({
+            detectedChapters: [],
+            extractedCharacters: chars,
+            extractedLoreEntries: lore,
+            extractedStyle: (r.style || {}) as ExtractedStyle,
+            meta: { chapterCount: 0, characterCount: chars.length, loreCount: lore.length, volumeMode: false },
+          });
+          setEditedChapters([]);
+          setEditedCharacters(chars);
+          setEditedLore(lore);
+          setSelectedChapters(new Set());
+          setSelectedChars(new Set(chars.map((_, i) => i)));
+          setSelectedLore(new Set(lore.map((_, i) => i)));
+          setProgressSteps((prev) => [...prev, { stage: "complete", message: `✅ 恢复完成！提取了${chars.length}个角色，${lore.length}个词条`, time: new Date().toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai" }) }]);
+          sessionStorage.removeItem(key);
+          setStep("preview");
+          return;
+        }
+        if (task.status === "failed") {
+          sessionStorage.removeItem(key);
+          setError(task.error || "导入任务失败");
+          setStep("input");
+        }
+      } catch {
+        // 网络错误，下一轮再试
+      }
+    };
+    setStep("parsing");
+    setParsePct(0);
+    setCurrentStage("恢复中…");
+    tick();
+    const timer = setInterval(tick, 2000);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [projectId]);
 
   // ─── 快速导入（SSE 流式进度）────────────────────────
 
@@ -275,6 +346,7 @@ export function ImportWizard({
             const event = JSON.parse(dataLine.trim().slice(6));
 
             if (event.type === "progress") {
+              if (event.taskId) sessionStorage.setItem("nf-import-task-" + projectId, event.taskId as string);
               setProgressSteps((prev) => [...prev, {
                 stage: event.stage || "",
                 message: event.message || "",
@@ -288,6 +360,8 @@ export function ImportWizard({
               if (event.stage === "char-found" && event.total !== undefined) setCharsFound(event.total as number);
               if (event.stage === "lore-found" && event.total !== undefined) setLoreFound(event.total as number);
             } else if (event.type === "done") {
+              if (event.taskId) sessionStorage.setItem("nf-import-task-" + projectId, event.taskId as string);
+              sessionStorage.removeItem("nf-import-task-" + projectId); // 已完成，无需恢复
               setParsePct(100); // 保证进度条到100%
               setResult(event);
               setEditedChapters(event.detectedChapters || []);
@@ -303,6 +377,7 @@ export function ImportWizard({
               }]);
               setTimeout(() => setStep("preview"), 500);
             } else if (event.type === "error") {
+              sessionStorage.removeItem("nf-import-task-" + projectId);
               setError(event.message || "分析失败");
               if (event.rawOutput) setError((prev) => prev + `\n\n原始输出预览：\n${event.rawOutput}`);
               setStep("input");
@@ -453,7 +528,7 @@ export function ImportWizard({
           {step === "input" && (
             <div className="space-y-4">
               <p className="text-sm text-[var(--nv-text-tertiary)]">
-                粘贴小说文本或拖入 .txt/.md 文件。系统会自动识别分卷/分章结构，并用 AI 抽取角色、世界观和文风。
+                粘贴小说文本或拖入 .txt/.md/.epub/.docx 文件。EPUB/DOCX 会自动解压提取正文，再用 AI 抽取角色、世界观和文风。
               </p>
 
               {/* 导入模式 */}
@@ -524,12 +599,12 @@ export function ImportWizard({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".txt,.md"
+                  accept=".txt,.md,.epub,.docx"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
                 <p className="text-xs text-[var(--nv-text-muted)] text-center">
-                  拖放文件到此处，或点击选择文件（.txt / .md）
+                  拖放文件到此处，或点击选择文件（.txt / .md / .epub / .docx）
                 </p>
               </div>
 

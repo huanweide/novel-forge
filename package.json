@@ -23,6 +23,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "gpt-tokenizer": "^3.4.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
     "openai": "^6.42.0",

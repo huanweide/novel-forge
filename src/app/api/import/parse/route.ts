@@ -188,14 +188,28 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let taskId: string | undefined;
       const send = (data: Record<string, unknown>) => {
+        if (taskId) data.taskId = taskId;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        // 进度同步到任务表（fire-and-forget，不阻塞 SSE 流）
+        if (taskId && typeof data.pct === "number") {
+          void prisma.importTask.update({ where: { id: taskId }, data: { progress: data.pct as number, status: data.type === "error" ? "failed" : "parsing" } }).catch(() => {});
+        }
       };
 
       try {
         if (!projectId || !rawText) { send({ type: "error", message: "缺少 projectId 或 rawText" }); controller.close(); return; }
         const text = (rawText as string).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
         if (text.length < 30) { send({ type: "error", message: "文本太短" }); controller.close(); return; }
+
+        // 建导入任务记录（异步化：断线后可凭 taskId 轮询恢复）
+        try {
+          const t = await prisma.importTask.create({
+            data: { projectId: projectId as string, importMode: (userMode as string) || "settings", status: "parsing", progress: 1, rawTextLen: text.length },
+          });
+          taskId = t.id;
+        } catch { /* 任务表写入失败不阻断主流程 */ }
 
         send({ type: "progress", stage: "init", message: "连接数据库...", pct: 1 });
         const project = await prisma.project.findUnique({ where: { id: projectId as string } });
@@ -375,9 +389,14 @@ ${loreText}
           extractedStyle: style,
           meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, chunked: needsChunking },
         });
+        if (taskId) {
+          void prisma.importTask.update({ where: { id: taskId }, data: { status: "completed", progress: 100, result: { characters: finalChars, lore: finalLore, style } as any } }).catch(() => {});
+        }
 
       } catch (err) {
-        send({ type: "error", message: err instanceof Error ? err.message : String(err) });
+        const msg = err instanceof Error ? err.message : String(err);
+        send({ type: "error", message: msg });
+        if (taskId) void prisma.importTask.update({ where: { id: taskId }, data: { status: "failed", error: msg } }).catch(() => {});
       } finally { controller.close(); }
     },
   });

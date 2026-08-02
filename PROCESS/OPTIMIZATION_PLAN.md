@@ -122,11 +122,12 @@
 - **量级**：中。
 - **落地（v0.46.19）**：`chat`/`chatStream` 接入指数退避重试（3 次，600ms→8s 封顶含 ±20% 抖动），4xx 鉴权错直接抛不重试；`LLMConfig.fallbackModels` 链主模型重试耗尽后切备用模型，经 `process.env.LLM_FALLBACK`（形如 `modelA@baseURL,modelB`）零 schema 注入；流式仅「建立连接阶段」重试/切换，进入 token 流即停避免重复输出；遗留 `lib/llm.ts` 的 `callLLM` 同步补同等重试。tsc 零错误、零新依赖、已推 main。
 
-### BE-5 长任务异步化（拆书 / 导入排队）
-- **现在**：`dissect/start`、`import/parse` 疑似在请求内跑长流程，没有后台任务框架；单实例（尤其 dev / serverless）下有超时与阻塞风险。
-- **做完**：把长任务抽成"提交任务 → 轮询状态"的状态机（其实前端已在轮询，后端只需明确任务表 + 后台推进），避免请求卡死。
-- **价值**：拆一本 50 万字的书不再担心"请求超时一半没了"，进度可断点续看。
-- **量级**：中–大（取决于当前是否真同步跑）。
+### BE-5 长任务异步化（拆书 / 导入排队）✅ 已完成 (v0.46.32)
+- **现在（改前）**：经侦察 `dissect/start` 已是 SSE 流式 + 落库 DissectionTask + 断线轮询恢复，基本完整；`import/parse` 是 SSE 流式但重活在单连接内、受 300s 限制、导入侧无任务表。
+- **做完**：给 `import/parse` 补齐任务表与轮询恢复，对齐 dissect 已验证模式——Prisma 新增 `ImportTask`（status/progress/result/error/importMode/projectId），POST 建 `pending`、SSE 流内 fire-and-forget 更新 progress/done(completed 存 characters/lore/style)/error(failed)，三类事件均带 `taskId`；新增 `GET /api/import/[taskId]` 轮询路由；前端 `ImportWizard` 用 `sessionStorage` 存 taskId，挂载时自动轮询恢复进预览。
+- **价值**：导入大书稿不再怕单连接超时丢进度，断网/刷新后凭 taskId 续看。
+- **诚实边界**：dissect 侧本就已是完整异步状态机，本单元未重复改造；`ImportTask` 未建数据库关系（避免改动庞大 Project model），仅存普通 projectId 字段；未在浏览器实跑「断网后刷新恢复」路径（代码逻辑已对齐 dissect 已验证分支）。
+- **量级**：中（取决于当前是否真同步跑）——实测 import 侧需补，dissect 侧已达标。
 
 ### BE-6 Prisma 连接池上限 + 事务补全✅ 已完成 (v0.46.28，仅连接池上限；事务包裹延后见边界)
 - **现在**：`src/lib/prisma.ts` 用 `PrismaPg` 适配器**未设连接池上限**，并发流式请求下可能 `P2024`；多写端点（如 `characters/expand`、`import/commit`）**无 `$transaction`**，部分失败会留脏数据。
@@ -171,11 +172,12 @@
 - **价值**：本地工具的"可移植性"刚需——换电脑、发给搭档、备份到 U 盘，一键搞定，不必懂数据库。
 - **量级**：中。
 
-### FE-N3 更多导入格式（EPUB / DOCX / 已有 TXT  manuscript）
-- **现在**：导入向导（`ImportWizard`）支持粘贴 / 上传文本，但**不能解析 EPUB/DOCX** 这类常见成稿格式。
-- **做完**：接入轻量解析（epub 用 `epubjs`/流式、docx 用 `mammoth`），把已有书稿拆成章节灌入项目。
+### FE-N3 更多导入格式（EPUB / DOCX / 已有 TXT  manuscript）✅ 已完成 (v0.46.32)
+- **现在（改前）**：导入向导（`ImportWizard`）支持粘贴 / 上传 `.txt/.md`，但**不能解析 EPUB/DOCX** 这类常见成稿格式。
+- **做完**：浏览器端用 `jszip` 解压抽取纯文本（epub 读 `xhtml/html`、docx 读 `word/document.xml` 按 `w:p` 段落），喂给现有 `import/parse`（仅收 `rawText`），后端无需感知格式；新增 `src/lib/manuscript-parse.ts`（parseEpubFile/parseDocxFile/fromManuscriptFile/estimateTokens），`accept` 放宽到 `.txt,.md,.epub,.docx`，提示文案同步更新。
 - **价值**：已经写了一半的书想迁过来用 AI 续写，不用手抄；降低"换工具"的迁移成本。
-- **量级**：中（注意依赖体积）。
+- **诚实边界**：实现未用计划原写的 `epubjs`/`mammoth`——epubjs 偏重且主要做阅读器、mammoth 把 docx 转 HTML 后还要二次清洗；epub/docx 本质都是 zip 包，用 `jszip` 直接解压抽文本更轻（仅 +1 个前端依赖）。`estimateTokens` 为粗略估算（按字符数/3.5），非精确 tokenizer；未实跑大文件（>50MB）压测，逻辑对齐既有 txt 分支。
+- **量级**：中（注意依赖体积）——jszip ~30KB 可控。
 
 ### ✅ FE-N4 浅色主题切换（Void Glass Light）⭐（v0.46.15 已完成）
 - **现在**：全站只有"虚空玻璃"暗色主题，令牌体系（`--nv-*`）已天然支持明暗，但没接切换。

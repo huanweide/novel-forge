@@ -466,6 +466,23 @@ model DissectionTask {
   updatedAt     DateTime @updatedAt
 }
 
+// ─── 导入任务 (Import Task) —— 多格式书稿导入+AI提取异步化 ──
+
+model ImportTask {
+  id          String   @id @default(uuid())
+  projectId   String   @default("")
+  importMode  String   @default("settings") // settings | characters | quick
+  status      String   @default("pending")  // pending | parsing | completed | failed
+  progress    Float    @default(0)          // 0-100
+  result      Json?                        // 完成后写入: { characters, lore, style }
+  error       String?                      // 错误信息
+  rawTextLen  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
 // ─── 待兑现事项追踪 (Pending Item) ──────────────────────
 
 model PendingItem {

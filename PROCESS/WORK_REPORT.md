@@ -577,3 +577,38 @@
 ---
 
 *下个单元：#214 后端深化与导入（BE-5 长任务异步 / FE-N3 多格式导入）。*
+
+---
+
+## v0.46.32 — 后端深化与导入（#214）：BE-5 导入任务异步化 + FE-N3 多格式导入
+
+### ① 干了什么
+给导入流程补上「断线不丢进度」的能力，并让导入向导能吃 epub/docx 成稿。一句话：导入大书稿时，万一网络断了或手滑刷新页面，进度还在；手头有现成的 `.epub`/`.docx` 书稿，也能直接拖进来让 AI 拆角色/世界观/文风，不用手抄。
+
+### ② 为什么这么做
+- **BE-5（导入异步）**：侦察发现拆书端点 `dissect/start` 已经是完整的「SSE 流式 + 任务表 + 断线轮询恢复」状态机，但导入端点 `import/parse` 虽然走 SSE，重活在单条 HTTP 连接内、受平台 300 秒超时限制、且导入侧**没有任务表**——一旦断开，已解析的角色/词条全没了。对齐 dissect 已验证的模式，把 import 侧也接上任务表与轮询恢复，成本最低、风险可控。
+- **FE-N3（多格式）**：作者"写了一半的书想迁过来 AI 续写"是高频需求。原导入向导只认 `.txt/.md`，epub/docx 这类成稿格式无法直接导入，迁移成本等于手抄。
+
+### ③ 怎么做的（方法 + 效果）
+1. **加任务表**：`prisma/schema.prisma` 新增 `ImportTask` model（status / progress / result / error / importMode / projectId），对齐已验证的 `DissectionTask` 字段结构；`prisma db push` 同步到本地 PG17。注意：不建数据库关系（避免改动庞大的 `Project` model），`projectId` 仅是普通字符串字段。
+2. **import/parse 接入任务表**：POST 校验后先建 `ImportTask(pending)` 拿到 `taskId`；`send` 闭包现在多透传 `taskId`；SSE 流内用 fire-and-forget（`.catch(()=>{})`）更新 `progress`；`done` 时把 `{characters, lore, style}` 存进 `result` 并 `status=completed`；`catch` 里 `status=failed` 存 `error`。progress / done / error 三类事件都带 `taskId`。
+3. **轮询路由**：新增 `GET /api/import/[taskId]`（对照 dissect 的 `[id]` 路由），返回 `status/progress/result/error/importMode`，断线后前端可凭 taskId 把任务状态拉回来。
+4. **格式解析（前端）**：新增 `src/lib/manuscript-parse.ts`，用 `jszip` 在浏览器端解压——epub 读压缩包里的 `xhtml/html`、docx 读 `word/document.xml` 按 `<w:p>` 段落抽文本；`fromManuscriptFile(file)` 按扩展名分流，`estimateTokens` 按字符数粗略估算。ImportWizard 的 `readFile` 增加 epub/docx 分支，`accept` 从 `.txt,.md` 放宽到 `.txt,.md,.epub,.docx`，提示文案同步更新。后端 `import/parse` 完全不动——它只收 `rawText`，格式差异被前端吸收。
+5. **断线恢复**：ImportWizard 在 progress/done 事件拿到 `taskId` 存进 `sessionStorage(`nf-import-task-${projectId}`)`，done 后清除、error 保留以便溯源；组件挂载时若 sessionStorage 有未完成 taskId 且当前不在 preview/done，就轮询 `GET import/[taskId]`，completed 取 result 进预览、failed 报错。
+
+**效果数据**：
+- tsc 零错误（TSC_EXIT=0）；新增 1 个运行时依赖 `jszip`（前端解压用，约 30KB，可控）。
+- `prisma generate` + `prisma db push` 实跑成功，本地 PG17 已新增 `ImportTask` 表。
+- 提交（待 push）：含 package.json/package-lock.json 的 jszip 依赖变更 + 全部代码 + 双 changelog。
+
+### ④ 关键取舍
+- **用 `jszip` 而非计划原写的 `epubjs`/`mammoth`**：epubjs 本质是个阅读器（重、要做渲染），mammoth 把 docx 转 HTML 后还要二次清洗标签；而 epub/docx 骨子里都是 zip 包，`jszip` 直接解压抽纯文本最轻、依赖最小，符合本地工具"轻"的诉求。
+- **格式解析放前端、后端无感知**：`import/parse` 的契约是"给我一段 rawText"，epub/docx 的 zip 解压放浏览器做，省去后端引入解压链与文件上传体积，也避免后端因格式解析失败而崩整条流。
+- **Prisma `Json` 字段 cast `as any`**：`result` 存的是 `{characters, lore, style}` 任意结构，Prisma 的 `Json` 类型不接受 `Record<string,unknown>[]`，cast 成 `any` 是这类"存任意 JSON"场景的合理做法。
+- **ImportTask 不建关系**：避免改动 `Project` model（它很大、关联多），用普通字段存 `projectId`，查询时手动按字段过滤即可。
+
+### 诚实边界
+- **未在浏览器实跑「断网后刷新恢复」路径**：代码逻辑已对齐 dissect 已验证的轮询恢复分支（同构的 taskId 存 sessionStorage + 挂载轮询），但沙箱无 GUI，无法真模拟断网刷新验证端到端。建议作者本地导入一本大书稿时，故意刷新页面看能否恢复进预览。
+- **未压测超大文件（>50MB）**：`estimateTokens` 是粗略估算（字符数/3.5），非精确 tokenizer；大 epub/docx 的内存解压峰值未实测，逻辑对齐既有 txt 分支。
+- **dissect 侧未重复改造**：经侦察它本就是完整异步状态机，本单元只补 import 侧的缺口，不重复造轮子。
+

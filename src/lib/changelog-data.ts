@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.31";
+export const LATEST_VERSION = "v0.46.32";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔀 冗余弹窗合并（FE-10）：CharacterEditDialog 与 CharacterCreateDialog 合并为单一 CharacterDialog（建/编两模式），personality/时间线解析与角色选项抽至 `src/lib/character-parse.ts` 单一数据源",
-  "🧩 错误态一致性（FE-7）：`States.tsx` 新增 `ErrorState`，与 `EmptyState`/`Loading` 组成「空态/加载/错误」三件套；DrawCards 失败块改用统一 `ErrorState`",
-  "♿ 无障碍补课（FE-5）：explore/game 窄屏抽屉切换纯图标按钮补 `aria-label`（Modal 关闭键本已带 `aria-label`）",
-  "🎨 颜色守卫（ARCH-7）：新增 `scripts/lint-colors.mjs` 扫描硬编码十六进制色值，`npm run lint:colors` 接入；CI 加软门（不阻断）",
+  "📥 多格式导入（FE-N3）：导入向导新增 `.epub`/`.docx` 支持，浏览器端用 jszip 解压抽取纯文本喂给现有解析流（`src/lib/manuscript-parse.ts`），后端 import/parse 无需感知格式",
+  "⚙️ 导入任务异步化（BE-5）：`import/parse` 接入新建 `ImportTask` 任务表（status/progress/result/error），SSE 进度/完成/错误事件均带 taskId",
+  "🔌 断线恢复（BE-5）：新增 `GET /api/import/[taskId]` 轮询路由，前端 ImportWizard 用 sessionStorage 缓存 taskId，组件挂载时自动轮询恢复进预览",
+  "🗄️ 表结构：Prisma 新增 `ImportTask` model（对齐已验证的 DissectionTask 模式），本地 PG17 已 `prisma db push` 同步",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.32",
+    date: "2026-08-02",
+    title: "后端深化与导入（#214）：BE-5 导入任务异步化 + FE-N3 多格式导入",
+    sections: [
+      {
+        label: "多格式导入（FE-N3）",
+        items: [
+          "导入向导新增 .epub/.docx 支持：浏览器端用 jszip 解压抽取纯文本（epub 读 xhtml/html、docx 读 word/document.xml + w:p 段落），喂给现有 import/parse（仅收 rawText），后端无需感知格式",
+          "新增 src/lib/manuscript-parse.ts（前端依赖）：parseEpubFile/parseDocxFile/fromManuscriptFile 统一入口 + estimateTokens 估算；accept 放宽到 .txt,.md,.epub,.docx，提示文案同步更新",
+        ],
+      },
+      {
+        label: "导入任务异步化（BE-5）",
+        items: [
+          "Prisma 新增 ImportTask model（status/progress/result/error/importMode/projectId，对齐已验证的 DissectionTask 模式），本地 PG17 已 db push 同步；未建数据库关系以免改动庞大 Project model",
+          "import/parse 路由接入任务表：POST 建 ImportTask(pending) → SSE 流内 fire-and-forget 更新 progress/done(completed,存 characters/lore/style)/error(failed)，progress/done/error 事件均带 taskId",
+          "新增 GET /api/import/[taskId] 轮询路由，返回 status/progress/result/error/importMode，对齐 dissect/[id]",
+        ],
+      },
+      {
+        label: "断线恢复（BE-5）",
+        items: [
+          "ImportWizard 在 progress/done 事件拿 taskId 存 sessionStorage(`nf-import-task-${projectId}`，done 后清除；error 不清除以便溯源）",
+          "组件挂载时若 sessionStorage 有未完成 taskId 且当前非 preview/done，自动轮询 GET import/[taskId]：completed 取 result 进 preview、failed 报错，实现断线/刷新后凭 taskId 恢复",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.31",
     date: "2026-08-02",
