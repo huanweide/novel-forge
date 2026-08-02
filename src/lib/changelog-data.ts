@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.36";
+export const LATEST_VERSION = "v0.46.37";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔒 保存冲突乐观锁（FE-N8·#216 收口）：`StoryNode` 新增 `editVersion Int @default(1)`，每次 PUT 成功 +1；`PUT /api/story/nodes/[id]` 支持条件更新（`where` 含 `editVersion`），客户端携带 `expectedVersion`，库版本不符即返回 409 + 库里当前快照（`conflict:true`）",
-  "🧩 新建 `SaveConflictModal`：保存收到 409 时弹出，并排展示「我的版本」与「库里版本」，三选项——用我的（覆盖）/ 用库里的 / 保留双方（库里版本存为节点备注 `notes`，我的版本覆盖），双方都不丢失",
-  "🖥️ 前端 3 处保存接入乐观锁：`handleSaveNode`（正文）/ `handleDrawSelect`（抽卡章纲）/ `onEditOutline`（大纲编辑）均携带 `expectedVersion`，成功响应回写新 `editVersion`，409 转交冲突面板；`StoryNodeData` 类型补 `editVersion` 字段",
-  "🚫 诚实边界：未处理「AI 流式改写直接覆盖未提交 textarea」的 UI 受控问题（那是 UI 层，需单独改 outline 编辑绑定）；`GameOutlineEditor` 等其他 PUT 入口暂未带 `expectedVersion`（兼容旧调用，不会误冲突）；tsc 零错误",
+  "时间线视图（FE-N6·#216 收口）：`StoryNode` 新增 `worldTime String?`（书中世界时间自由文本，如「天启三年春」），已 `prisma db push` 同步本地 PG17；左侧大纲根视图从「分卷/平铺」二态升级为「分卷/平铺/时间线」三态",
+  "时间线分支：过滤非卷节点、按 `worldTime` 字符串升序排序（未标记排末尾），每行渲染世界时间徽标 + 类型图标 + 标题 + 字数，点击即选中；`LeftPanel` 切换 UI 改为分卷/平铺/时间线三按钮（沙漏图标）",
+  "节点控制栏新增「世界时间」输入框（`CenterPanel`），失焦（或回车）经 `handleSaveWorldTime` 回写库；`PUT /api/story/nodes/[id]` 的 `data` 补 `worldTime`，复用 FE-N8 乐观锁与冲突面板；`StoryNodeData` 补 `worldTime` 字段",
+  "诚实边界：时间线排序用纯字符串序（不解析语义时间），作者想精确控序需填可比较文本；卷节点不参与时间线排序；#216 全部收口（ARCH-3/ARCH-6/ARCH-1/FE-N8/FE-N6 完成），ARCH-4 迁移历史维持暂缓",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.37",
+    date: "2026-08-03",
+    title: "时间线视图（#216 收口）：FE-N6 左侧大纲新增「时间线」视图 + 节点世界时间标记",
+    sections: [
+      {
+        label: "时间线视图（FE-N6）",
+        items: [
+          "Schema：`StoryNode` 新增 `worldTime String?`（书中世界时间自由文本，如「天启三年春」／「星历2049」），已 `prisma db push` 同步本地 PG17 并 `prisma generate` 更新客户端类型",
+          "视图三态升级：左侧大纲根 `volumeView: boolean` 二态重构为 `viewMode: \"volume\" | \"flat\" | \"timeline\"` 三态，与现有分卷/平铺并列；`OutlineTree` 新增时间线分支——过滤非卷节点、按 `worldTime` 字符串升序排序（未标记的排末尾），每行渲染世界时间徽标 + 类型图标 + 标题 + 字数，点击即选中",
+          "`LeftPanel` 切换 UI 改为「分卷 / 平铺 / 时间线」三按钮（沙漏图标），`page.tsx` 状态 `volumeView` → `viewMode` 枚举，并下传 `onSetViewMode`",
+        ],
+      },
+      {
+        label: "世界时间录入与持久化",
+        items: [
+          "`CenterPanel` 节点控制栏新增「世界时间」输入框（沙漏图标），受控 `wtDraft` 同步选中节点，失焦（或回车）调用 `handleSaveWorldTime` 回写库",
+          "`PUT /api/story/nodes/[id]` 的 `data` 补 `worldTime: body.worldTime`，保存经乐观锁 `expectedVersion` 校验、冲突转交 `SaveConflictModal`；`GET` 本就返回完整节点（含 world_time），读取链路无需改",
+          "`StoryNodeData` 类型补 `worldTime: string | null`；tsc 零错误",
+        ],
+      },
+      {
+        label: "诚实边界与计划",
+        items: [
+          "时间线排序用纯字符串 `localeCompare`（中文按拼音序），不解析语义时间——作者想精确控序需填可比较文本（如统一前缀「卷一·」）；多时间线/非线性叙事的复杂轴暂未做",
+          "世界时间仅支持章节/分节/场景节点标记，卷（volume）不参与时间线排序（卷是结构容器）",
+          "#216 全部收口：ARCH-3/ARCH-6/ARCH-1/FE-N8/FE-N6 完成；ARCH-4 迁移历史维持暂缓（schema 与旧迁移已漂移，本地 db push 够用）；非 ⭐ 续做项全部完成",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.36",
     date: "2026-08-03",

@@ -91,6 +91,7 @@ export async function PUT(
         activeLoreIds: body.activeLoreIds,
         coreConflict: body.coreConflict,
         settingDescription: body.settingDescription,
+        worldTime: body.worldTime,
         notes: body.notes,
         reviewLogs: body.reviewLogs,
         revisionCount: body.revisionCount,

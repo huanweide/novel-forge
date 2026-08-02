@@ -72,6 +72,8 @@ export interface StoryNodeData {
   activeCharacters: string[];
   // FE-N8 乐观锁版本号：每次成功保存 +1，保存时携带以检测并发冲突
   editVersion: number;
+  // FE-N6 时间线：书中世界时间标记（自由文本），用于按时间轴排序视图
+  worldTime: string | null;
 }
 
 export interface StorylineData {

@@ -17,6 +17,7 @@ export function CenterPanel({
   chapterOutlinePrompt, onChapterOutlinePromptChange,
   genStep, genStepLabels, chapterOutlineStatus,
   onOpenGame,
+  worldTime, onWorldTimeBlur,
   onEditCharacter, onEditLore, todayWords = 0,
   loadProject,
 }: {
@@ -34,6 +35,8 @@ export function CenterPanel({
   refineInstruction: string; onRefineInstructionChange: (v: string) => void;
   onRefine: () => void;
   onOpenGame: () => void;
+  worldTime?: string | null;
+  onWorldTimeBlur: (v: string) => void;
   genStep: string; genStepLabels: Record<string, { icon: React.ReactNode; label: string }>;
   chapterOutlineStatus: string;
   onEditCharacter?: (id: string) => void;
@@ -44,6 +47,10 @@ export function CenterPanel({
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
   const [outlineDraft, setOutlineDraft] = useState("");
+
+  // FE-N6 世界时间草稿：同步选中节点，失焦时回写库
+  const [wtDraft, setWtDraft] = useState(worldTime || "");
+  useEffect(() => { setWtDraft(worldTime || ""); }, [worldTime, selectedNode?.id]);
 
   useEffect(() => {
     if (contentRef.current && isGenerating) {
@@ -202,6 +209,15 @@ export function CenterPanel({
                   <Icon name="history" size={11} /> 历史
                 </button>
               </span>
+            </div>
+            {/* FE-N6 世界时间标记 */}
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-[10px] text-[var(--nv-text-tertiary)] flex items-center gap-1 shrink-0"><Icon name="hourglass" size={11} /> 世界时间</span>
+              <input value={wtDraft} onChange={(e) => setWtDraft(e.target.value)}
+                onBlur={() => onWorldTimeBlur(wtDraft)}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                placeholder="书中世界时间，如「天启三年春」"
+                className="input-glass flex-1 min-w-0 rounded px-2 py-1 text-xs" />
             </div>
             {/* 大纲编辑 */}
             <div className="mb-2">

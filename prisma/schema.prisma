@@ -148,6 +148,9 @@ model StoryNode {
   // FE-N8 乐观锁：每次 PUT 成功 +1；保存时携带 expectedVersion 以检测并发冲突（手动编辑 vs AI 改写）
   editVersion       Int      @default(1)
 
+  // FE-N6 时间线：书中世界时间标记（自由文本，如"天启三年春"／"星历2049"），用于左侧「时间线」视图按轴排序
+  worldTime        String?   @map("world_time")
+
   // 审校 + 质量
   reviewLogs    Json @default("[]")       // ReviewLog[]
   revisionCount Int @default(0)

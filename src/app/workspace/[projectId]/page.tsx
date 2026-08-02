@@ -163,7 +163,7 @@ export default function WorkspacePage() {
     mine: Record<string, unknown>;
     server: { editVersion: number; title?: string | null; outline?: string | null; content?: string | null; notes?: string | null };
   } | null>(null);
-  const [volumeView, setVolumeView] = useState(true);
+  const [viewMode, setViewMode] = useState<"volume" | "flat" | "timeline">("volume");
 
   // ── FE-N5 全局快捷键 ─────────────────────
   // 保存当前章节：PUT 回写 selectedNode.content（与编辑器落库同源端点）
@@ -231,6 +231,36 @@ export default function WorkspacePage() {
       }
     } catch (err) {
       toastError("解决冲突失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
+  };
+
+  // FE-N6：保存节点世界时间标记（worldTime），复用乐观锁 expectedVersion 与冲突转交
+  const handleSaveWorldTime = async (wt: string) => {
+    if (!selectedNode) return;
+    const prevWt = selectedNode.worldTime;
+    setSelectedNode({ ...selectedNode, worldTime: wt } as any);
+    const body = { worldTime: wt || null, expectedVersion: selectedNode.editVersion };
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 409) {
+        const d = (await res.json().catch(() => ({} as any)));
+        if (d.conflict) { setConflict({ nodeId: selectedNode.id, mine: body, server: d.server }); return; }
+      }
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        setSelectedNode({ ...selectedNode, worldTime: prevWt } as any);
+        toastError(d.error || `时间标记保存失败（${res.status}）`);
+      } else {
+        const saved = await res.json();
+        setSelectedNode({ ...selectedNode, ...saved } as any);
+      }
+    } catch (err) {
+      setSelectedNode({ ...selectedNode, worldTime: prevWt } as any);
+      toastError("时间标记保存失败：" + (err instanceof Error ? err.message : "网络错误"));
     }
   };
 
@@ -891,7 +921,7 @@ export default function WorkspacePage() {
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
           onAddSection={handleAddSection} onEditCharacter={setEditingCharacter} onEditLore={setEditingLore}
           onNewCharacter={() => setShowNewCharacter(true)}
-          loadProject={loadProject} volumeView={volumeView} onToggleVolumeView={() => setVolumeView(!volumeView)}
+          viewMode={viewMode} onSetViewMode={setViewMode} loadProject={loadProject}
           batchMode={batchMode} onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
           selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
@@ -903,7 +933,7 @@ export default function WorkspacePage() {
         {/* 中间列：正文 + 分析面板 */}
         <ErrorBoundary name="编辑器">
         <div className="flex flex-col flex-1 overflow-hidden">
-          <CenterPanel selectedNode={selectedNode} streamContent={streamContent}
+          <CenterPanel selectedNode={selectedNode} worldTime={selectedNode?.worldTime ?? null} onWorldTimeBlur={handleSaveWorldTime} streamContent={streamContent}
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
             targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}

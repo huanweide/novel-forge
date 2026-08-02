@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.37 — 2026-08-03
+**时间线视图（#216 收口）：FE-N6 左侧大纲新增「时间线」视图 + 节点世界时间标记**
+
+- 时间线视图（FE-N6）：`StoryNode` 新增 `worldTime String?`（书中世界时间自由文本，如「天启三年春」／「星历2049」），已 `prisma db push` 同步本地 PG17 并 `prisma generate`；左侧大纲根 `volumeView: boolean` 二态重构为 `viewMode: "volume" | "flat" | "timeline"` 三态，与分卷/平铺并列；`OutlineTree` 新增时间线分支——过滤非卷节点、按 `worldTime` 字符串升序排序（未标记排末尾），每行渲染世界时间徽标 + 类型图标 + 标题 + 字数，点击即选中
+- 视图切换：`LeftPanel` 切换 UI 改为「分卷 / 平铺 / 时间线」三按钮（沙漏图标），`page.tsx` 状态 `volumeView` → `viewMode` 枚举并下传 `onSetViewMode`
+- 世界时间录入与持久化：`CenterPanel` 节点控制栏新增「世界时间」输入框（失焦/回车经 `handleSaveWorldTime` 回写库）；`PUT /api/story/nodes/[id]` 的 `data` 补 `worldTime: body.worldTime`，复用 FE-N8 乐观锁 `expectedVersion` 与冲突面板；`StoryNodeData` 类型补 `worldTime: string | null`；tsc 零错误
+- 诚实边界：时间线排序用纯字符串序（不解析语义时间），作者想精确控序需填可比较文本（如统一前缀）；卷节点不参与时间线排序；#216 全部收口（ARCH-3/ARCH-6/ARCH-1/FE-N8/FE-N6 完成），ARCH-4 迁移历史维持暂缓
+
 ## v0.46.36 — 2026-08-03
 **保存冲突乐观锁（#216 收口）：FE-N8 非流式保存带版本戳 + 冲突解决面板**
 

@@ -11,9 +11,9 @@ import { toastError } from "@/components/ui/toast";
 import { useProjectStore } from "@/store";
 
 export function LeftPanel({
-  activeTab, onTabChange, selectedNode, onSelectNode, onAddSection,
+  activeTab, onTabChange, selectedNode, onSelectNode,   onAddSection,
   onEditCharacter, onEditLore, onNewCharacter, loadProject,
-  volumeView, onToggleVolumeView, batchMode, onToggleBatchMode,
+  viewMode, onSetViewMode, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
   batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId, onLoadSample,
 }: {
@@ -22,7 +22,7 @@ export function LeftPanel({
   selectedNode: StoryNodeData | null; onSelectNode: (node: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
   onEditLore: (l: LorebookData) => void; onNewCharacter: () => void;
-  loadProject: () => void; volumeView: boolean; onToggleVolumeView: () => void;
+  loadProject: () => void; viewMode: "volume" | "flat" | "timeline"; onSetViewMode: (m: "volume" | "flat" | "timeline") => void;
   batchMode: boolean; onToggleBatchMode: () => void; selectedChapterIds: Set<string>;
   onToggleChapterSelect: (id: string) => void; onSelectAll: () => void;
   onClearSelection: () => void; batchGenerating: boolean; onBatchGenerate: () => void;
@@ -55,11 +55,22 @@ export function LeftPanel({
         {activeTab === "outline" && (
           <>
             <div className="flex items-center justify-between px-1 mb-1 flex-wrap gap-1">
-              <span className="text-[10px] text-[var(--nv-text-tertiary)]">{volumeView ? "分卷视图" : "平铺视图"}</span>
+              <span className="text-[10px] text-[var(--nv-text-tertiary)]">{viewMode === "volume" ? "分卷视图" : viewMode === "flat" ? "平铺视图" : "时间线视图"}</span>
               <div className="flex items-center gap-1">
-                <button onClick={onToggleVolumeView}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${volumeView ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}>
-                  {volumeView ? <span className="flex items-center gap-1"><Icon name="package" size={10} /> 分卷</span> : <span className="flex items-center gap-1"><Icon name="file" size={10} /> 平铺</span>}
+                <button onClick={() => onSetViewMode("volume")}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${viewMode === "volume" ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}
+                  title="分卷视图">
+                  <span className="flex items-center gap-1"><Icon name="package" size={10} /> 分卷</span>
+                </button>
+                <button onClick={() => onSetViewMode("flat")}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${viewMode === "flat" ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}
+                  title="平铺视图">
+                  <span className="flex items-center gap-1"><Icon name="file" size={10} /> 平铺</span>
+                </button>
+                <button onClick={() => onSetViewMode("timeline")}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${viewMode === "timeline" ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}
+                  title="时间线视图：按书中世界时间排序">
+                  <span className="flex items-center gap-1"><Icon name="hourglass" size={10} /> 时间线</span>
                 </button>
                 <button onClick={onToggleBatchMode} disabled={batchGenerating}
                   className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${batchMode ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}>
@@ -78,7 +89,7 @@ export function LeftPanel({
               </div>
             )}
             <OutlineTree nodes={project.storyNodes ?? []} selectedNode={selectedNode} onSelectNode={onSelectNode}
-              onAddSection={onAddSection} volumeView={volumeView} batchMode={batchMode}
+              onAddSection={onAddSection} viewMode={viewMode} batchMode={batchMode}
               selectedChapterIds={selectedChapterIds} onToggleChapterSelect={onToggleChapterSelect}
               onDeleteNode={onDeleteNode} projectId={project.id} deletingId={deletingNodeId}
               onLoadSample={onLoadSample} />
