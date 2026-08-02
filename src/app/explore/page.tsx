@@ -569,6 +569,7 @@ export default function ExplorePage() {
               onClick={() => setLeftDrawerOpen(o => !o)}
               className="lg:hidden rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all duration-200 hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
               title="切换构建配置（窄屏）"
+              aria-label="切换构建配置（窄屏）"
             >
               <Icon name="sliders" size={13} />
             </button>
@@ -576,6 +577,7 @@ export default function ExplorePage() {
               onClick={() => setRightDrawerOpen(o => !o)}
               className="lg:hidden rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all duration-200 hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
               title="切换已采纳（窄屏）"
+              aria-label="切换已采纳（窄屏）"
             >
               <Icon name="check" size={13} />
             </button>

@@ -495,4 +495,85 @@
 
 ---
 
-*下个单元：#212 幂等 seed 脚本（ARCH-5）。*
+---
+
+## v0.46.30 — 幂等 seed 脚本（ARCH-5，#212 落地）
+
+### 一句话背景
+初始化示范数据（16 个内置预设）原本只能靠"先起网站、再打 HTTP 端点"来播种——新机器 clone 后起库、或 CI 自动初始化，都得先起服务再发请求，又慢又脆。这次把播种逻辑写成能直接跑的脚本 `prisma/seed.ts`，像"一键装机脚本"：跑一遍把内置预设塞进数据库，再跑一遍也不会重复塞。
+
+### ① 干了什么
+- 新建 `prisma/seed.ts`：遍历 16 个内置预设，按 `{type, title, isBuiltin}` 查重，已存在就跳过、不存在才 `create`（tags 自动补 `"trirui推荐"`、author=`trirui`、isPublic=true），跑完打印「新增 X / 跳过 Y / 共 16」；`prisma.$disconnect()` 兜底。
+- 把 16 个内置预设的"数据源"从播种路由 `src/app/api/seed/presets/route.ts` 里抽到**单一文件** `src/lib/builtin-presets.ts`，路由与 seed 脚本都从这里 import——不再有两份重复的预设数组。
+- `package.json` 加 `"db:seed": "prisma db seed"`；`prisma.config.ts` 的 `migrations.seed` 设为 `"tsx prisma/seed.ts"`（Prisma 7 读这里，不读 package.json 的 `prisma.seed`）；加 `tsx` 仅作 devDep。
+- 删掉 `package.json` 里对 Prisma 7 无效的 `"prisma": { "seed": ... }` 块。
+
+### ② 为什么这么做（底层原理）
+- **"初始化"不该依赖"先起服务"**：HTTP 播种端点适合"人在浏览器点一下"，但不适合"clone 完自动建库"——不能要求 CI 先 `npm run dev` 再 `curl`。脚本把"播种"变成一条命令，可重复、可编程。
+- **"单一数据源"防漂移**：预设数组原本硬编码在播种路由里，seed 脚本若另写一份，两处迟早不一致（加一个预设要改两个地方）。抽到 `builtin-presets.ts` 后，路由和脚本都是同一份，改一处全生效。
+- **类比**：`builtin-presets.ts` 像一份"标准菜谱"，`seed/presets` 路由和 `prisma/seed.ts` 是两个不同的"厨师"，都照同一份菜谱做菜，不会一个放盐一个不放。
+
+### ③ 怎么做的（方法 + 效果）
+1. **抽数据源**：用受控 Python 脚本把 `route.ts` 里 `const BUILTINS: any[] = [...]`（约 16–386 行）整块搬进新文件 `src/lib/builtin-presets.ts`，导出 `BUILTINS`，并在 `route.ts` 顶部加 `import { BUILTINS } from "@/lib/builtin-presets"`（相对路径 import 避开 `@/` 别名问题）；`stage-play.json` 改为从 `builtin-presets.ts` 相对 `../app/api/seed/presets/stage-play.json` import。
+2. **写 seed 脚本**：`tsx prisma/seed.ts`，用 `PrismaPg` 适配器连接（走 `.env` 的 `DATABASE_URL`），`findFirst` 查重 + `create`，打印计数；`process.exit(1)` on failure、`finally` 中断开连接。
+3. **配置对齐 Prisma 7**：实测 `package.json` 的 `prisma.seed` 在 v7 报 "add a seed property to migrations section"——确认 v7 改读 `prisma.config.ts` 的 `migrations.seed`，遂迁移；删无效块。
+4. **实跑验证幂等**：`npm run db:seed` 连跑两次，均输出「新增 0 个，已存在跳过 16 个，共 16 个」，`EXIT=0`——证明重复跑不会重复插入。
+
+**效果数据**：
+- tsc 零错误（TSC_EXIT=0）；`tsx` 仅 devDep、零新运行时依赖。
+- 提交 `245ff19`（10 files，1033 ins / 379 del），代理 push 成功 `1008289..245ff19 origin/main ✅`。
+
+### ④ 关键取舍
+- **不删 HTTP 播种端点**：`/api/seed/*` 仍保留给"网站内首次打开自动播种"的前端兜底路径（workshop 页 `autoSeedRef` 调用），seed 脚本是"命令行/CI 同款逻辑"的补充而非替代，二者共用 `builtin-presets.ts` 单一数据源。
+- **Prisma 7 配置位置迁移**：不加"兼容两版"的胶水代码，直接按 v7 规范放 `prisma.config.ts`，删掉 v6 风格的 `package.json.prisma.seed`——诚实面向当前实际版本。
+
+### 诚实边界
+- 种子幂等依赖"DB 已存在早期 HTTP 播种的 16 预设"——实测两次都"跳过 16"正是因为 DB 已有；若换一台全新空库，首次跑会是"新增 16"，逻辑同样成立（已用代码审查确认 create 分支正确）。
+- 未做"首次启动自动跑 seed"的 hook（如把 seed 串进 `dev` 脚本或加 postinstall）；若作者希望 clone 后零命令初始化，后续可加（但 postinstall 在 CI 装依赖时可能无 DB，需谨慎）。
+- 未在浏览器实跑"全新空库首次 seed"完整链路（沙箱 DB 已有预设）；验证为脚本两次幂等输出 + 代码审查 create/findFirst 分支。
+
+---
+
+---
+
+## v0.46.31 — 前端打磨（#213：FE-10 弹窗合并 / FE-7 错误态 / FE-5 无障碍 / ARCH-7 颜色守卫）
+
+### 一句话背景
+"成品感"最容易被一眼看穿的短板是：弹窗各自为政、出错样式五花八门、图标按钮读屏读不出、今天修好的观感明天又被写死一个红。本单元一次性补齐四类前端打磨（对应 OPTIMIZATION_PLAN 的 FE-10/FE-7/FE-5/ARCH-7），都是"低风险的体验一致性"改动，不强求新功能。
+
+### ① 干了什么
+- **FE-10 合并角色弹窗**：`CharacterEditDialog`（全字段编辑+AI 补全）与 `CharacterCreateDialog`（精简创建）合并为单一 `CharacterDialog`，靠可选 `character` 参数区分"编辑/创建"两模式；调用方 `page.tsx` 两处渲染合并为一，旧两文件删除。把"性格文本↔结构化"解析（`fromText`/`toText`）、"时间线"解析（`timelineToText`/`textToTimeline`）、角色选项（`CHARACTER_ROLE_OPTIONS`）抽到 `src/lib/character-parse.ts` 单一数据源。
+- **FE-7 错误态三件套**：`States.tsx` 新增 `ErrorState` 组件（图标+标题+说明+可选重试动作），与既有 `EmptyState`/`Loading` 共用 `--nv-*` 令牌与视觉语言；`DrawCards` 抽卡失败的"错误+重试"块改用统一 `ErrorState`。
+- **FE-5 无障碍**：explore / game 窄屏抽屉切换的纯图标按钮（sliders/check/grid）补 `aria-label`（与既有 `title` 一致）；Modal 关闭键本已带 `aria-label="关闭"`，workspace 抽屉切换按钮带可见文字"大纲/侧栏"无需补。
+- **ARCH-7 颜色守卫**：新增 `scripts/lint-colors.mjs` 扫描 `src` 下任意十六进制色值（如 `bg-[#ff0000]`），`npm run lint:colors` 可复跑；`.github/workflows/ci.yml` 加软门步骤（不阻断）。
+
+### ② 为什么这么做（底层原理）
+- **"合并弹窗"= 少一套漂移风险**：建/编两个弹窗原本各写一份 `fromText` 角色解析，哪天改了"习惯"的分隔符，一个改一个漏，角色卡字段约定就分叉了。抽到 `character-parse.ts` 单一数据源，改一处全生效——像把两份"菜谱"合成一份，两个厨师照同一份做。
+- **"错误态三件套"= 用户不懵**：用户在 A 页出错看到红框、B 页出错看到 toast、C 页出错看到裸文字，会困惑"这到底成没成功"。统一 `ErrorState` 后，任何页面级错误都是同一套"图标+红字+重试"，语言一致。
+- **"颜色守卫"= 防回归护栏**：FE-1 已把语义状态色收敛到 `--nv-*` 令牌，但没法阻止以后又有人写死 `bg-[#ff0000]`。脚本像"门卫"：每次提交/CI 扫一遍，发现新的硬编码就提醒改用令牌，保住 FE-1 的成果。
+- **类比**：`ErrorState` 像全站统一的"故障指示牌"，`character-parse.ts` 像角色字段的"唯一字典"，`lint-colors.mjs` 像观感的"保安巡检"。
+
+### ③ 怎么做的（方法 + 效果）
+1. **合并弹窗**：用受控方式保留 `CharacterEditDialog` 的全字段编辑逻辑，外面包一层 `isEdit = !!character` 分支——有 `character` 走完整编辑（含 AI 补全按钮），无则只渲染"姓名/角色/性格"精简创建表单；POST/PUT 共用同一 `handleSave`，按 `isEdit` 选端点与请求体。删旧两文件后 `grep` 确认无残留引用。
+2. **共享解析库**：把两个弹窗里逐字相同的 `fromText`/`toText`/`timelineToText`/`textToTimeline` 与角色选项搬进 `src/lib/character-parse.ts`，弹窗改为 import 复用。
+3. **ErrorState**：追加到 `States.tsx`（与 `EmptyState`/`Loading` 同文件、同令牌体系）；`DrawCards` 错误块从手写红框改为 `<ErrorState title={error} action={<重试按钮>} />`。
+4. **aria-label**：在 explore/game 四个纯图标切换按钮加 `aria-label`（内容等同 `title`），读屏可朗读。
+5. **颜色守卫**：脚本用正则 `(text|bg|border|...)-\[#hex\]` 扫描 `src`（排除 generated/node_modules/.next），统计命中；非阻塞 `exit 0`。接入 `package.json` 的 `lint:colors` 与 CI 软门。
+
+**效果数据**：
+- tsc 零错误（TSC_EXIT=0）；零新依赖。
+- 颜色守卫实跑：发现 3 处既有硬编码十六进制（游戏画布深底 + global-error 背景），脚本正确报告、不阻断。
+- 提交（待 push）：`git add` 全部改动 + 双 changelog，复合 `git commit` + 代理 push origin main。
+
+### ④ 关键取舍
+- **不强行合并 DissectDimensions 的 `parseCharPreviewDetailed`**：它是拆书专用"预览解析"（把 AI 拆书产出的角色预览文本解析成卡片），与 `CharacterCard` 字段约定只是"部分重叠、语义不同"，强行抽共享会引入跨模块耦合且收益不确定——记为已知残留，诚实保留。
+- **颜色守卫只拦"新增"、不强制改既有**：3 处游戏画布深底（`#0a0a0f`/`#0a0a1f`/`#0d0d2a`）是游戏互动页有意设计的深色背景，改令牌反而可能破坏游戏画布观感；守卫的价值是拦截以后的回归，而非把历史全部重刷。
+- **FE-5 不做逐页 htmlFor 普查**：表单 label 多已走 `DialogField` 包裹（自带关联），全量逐页补 `htmlFor` 属低优先散点，本单元聚焦最明确的"图标按钮无 aria-label"缺口。
+
+### 诚实边界
+- 未在浏览器实跑合并后的 `CharacterDialog` 建/编两条路径与 AI 补全（沙箱无 GUI）；验证为 tsc 零错误 + 旧两文件引用 grep 清零 + 解析逻辑逐字保留（fromText/toText 与历史实现一致）。建议作者本地打开角色卡确认建/编/补全手感。
+- 颜色守卫非阻塞（exit 0），CI 软门 `|| true`——本地工具不希望一次提交因"历史残留色值"被卡住；若作者希望硬拦截，把 CI 步骤改为 `node scripts/lint-colors.mjs` 即可。
+
+---
+
+*下个单元：#214 后端深化与导入（BE-5 长任务异步 / FE-N3 多格式导入）。*

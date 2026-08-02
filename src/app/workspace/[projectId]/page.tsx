@@ -18,8 +18,7 @@ import { ConflictPanel } from "@/components/workspace/ConflictPanel";
 import { LeftPanel } from "@/components/workspace/LeftPanel";
 import { CenterPanel } from "@/components/workspace/CenterPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
-import { CharacterEditDialog } from "@/components/workspace/CharacterEditDialog";
-import { CharacterCreateDialog } from "@/components/workspace/CharacterCreateDialog";
+import { CharacterDialog } from "@/components/workspace/CharacterDialog";
 import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
 import { BatchProgressPanel } from "@/components/workspace/BatchProgressPanel";
 import { OutlineDialog } from "@/components/workspace/OutlineDialog";
@@ -952,8 +951,8 @@ export default function WorkspacePage() {
       </div>
 
       {/* 弹窗 */}
-      {editingCharacter && <CharacterEditDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
-      {showNewCharacter && <CharacterCreateDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
+      {editingCharacter && <CharacterDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
+      {showNewCharacter && <CharacterDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
       {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={refreshAfterMutate} />}
       {showSettingsImport && <SettingsImporter projectId={project.id} onClose={() => setShowSettingsImport(false)} onImported={refreshAfterMutate} />}
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}

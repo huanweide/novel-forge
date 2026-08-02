@@ -65,3 +65,35 @@ export function LoadingDots({ label, className = "" }: { label?: string; classNa
     </div>
   );
 }
+
+/**
+ * 统一错误态 —— 与 EmptyState / Loading 同属「三件套」规范（FE-7）。
+ * 任何「加载失败 / 请求出错」的页面级错误都应使用它，而不是各自写裸红框，
+ * 保证错误视觉语言一致（图标 + 标题 + 说明 + 可选重试动作）。
+ */
+export function ErrorState({
+  icon = "alert",
+  title,
+  description,
+  action,
+  className = "",
+}: {
+  icon?: IconName;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center rounded-2xl border border-[var(--nv-danger-soft)] bg-[var(--nv-danger-soft)]/40 px-6 py-8 text-center ${className}`}
+    >
+      <div className="relative mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--nv-danger-soft)] text-[var(--nv-danger)]">
+        <Icon name={icon} size={22} />
+      </div>
+      <p className="text-sm font-medium text-[var(--nv-danger)]">{title}</p>
+      {description ? <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--nv-text-tertiary)]">{description}</p> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
+    </div>
+  );
+}

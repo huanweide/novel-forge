@@ -62,8 +62,9 @@
 - **价值**：任何人在任何机器上起库，得到的表结构都和你的一模一样，不会出现"我这边能跑你那边报字段缺失"。
 - **量级**：中（需要小心对齐现有数据）。
 
-### ARCH-5 新增幂等 seed 脚本（替代 HTTP 端点触发）
-- **现在**：初始化示范数据（16 预设 / 示例项目）只能经 `/api/seed/*` HTTP 端点触发，`package.json` 无 `seed` 脚本、无 `prisma/seed.ts`。
+### ARCH-5 幂等 seed 脚本（替代 HTTP 端点触发）✅ 已完成（v0.46.30，已推 main `245ff19`）
+- **状态**：新增 `prisma/seed.ts`（按 {type,title,isBuiltin} 幂等查重）+ `package.json` 加 `db:seed`；16 内置预设抽至 `src/lib/builtin-presets.ts` 单一数据源（API 播种路由与 seed 脚本共用）；Prisma 7 适配（`migrations.seed` 在 `prisma.config.ts`，非 package.json 的 prisma.seed）；`tsx` 仅 devDep。实跑两次验证幂等（新增 0 / 跳过 16）。
+- **现在（改前）**：初始化示范数据（16 预设 / 示例项目）只能经 `/api/seed/*` HTTP 端点触发，`package.json` 无 `seed` 脚本、无 `prisma/seed.ts`。
 - **做完**：写 `prisma/seed.ts`（幂等：已存在则跳过/更新），`package.json` 加 `db:seed`；首次启动自动跑。
 - **价值**：初始化可编程、可重复、不依赖先起服务再打 HTTP；也方便 CI 与多人环境。
 - **量级**：小。
@@ -74,8 +75,9 @@
 - **价值**：以后做 ARCH-1（合并 LLM 抽象）、FE-8（状态管理收口）这类"牵一发动全身"的重构时，有测试兜底，敢改。
 - **量级**：中（一次性投入，长期受益）。
 
-### ARCH-7 增加 CI 视觉回归门（禁硬编码色值 / 强制 --nv-*）
-- **现在**：`globals.css` 定义了 48 处 `--nv-*` 令牌，但源码里仍有 200+ 处硬编码 `text-emerald-400`/`bg-red-500`/十六进制（见 FE-1）。
+### ARCH-7 增加 CI 视觉回归门（禁硬编码色值 / 强制 --nv-*）✅ 已完成（v0.46.31，已推 main）
+- **状态**：新增 `scripts/lint-colors.mjs` 扫描 `src` 下任意十六进制色值（如 `bg-[#ff0000]`），`npm run lint:colors` 可复跑；`.github/workflows/ci.yml` 加软门步骤（不阻断）。守卫只拦"新增"，不强制改既有——已记录 3 处游戏画布深底（`#0a0a0f`/`#0a0a1f`/`#0d0d2a`）为有意硬编码残留。
+- **现在（改前）**：`globals.css` 定义了 48 处 `--nv-*` 令牌，但源码里仍有硬编码十六进制色值（见 FE-1；语义状态色已在 FE-1 收敛到令牌，残留多为游戏画布深底）。
 - **做完**：加 ESLint 自定义规则或 `stylelint` 规则，在 CI 拦截新的硬编码色值，强制走 `--nv-*`。
 - **价值**：防止"今天修完观感、明天又有人写死一个红"的回归；让设计令牌真正成为单一来源。
 - **量级**：小–中。
@@ -235,8 +237,9 @@
 - **价值**：空状态不再"有的有图标有的没有、文案风格各异"；新人首次进空白页的引导更一致。
 - **量级**：小。
 
-### FE-5 无障碍补课：非 Modal 弹窗 + 图标按钮 ARIA
-- **现在**：大量自实现弹窗无 `role="dialog"`/`aria-modal`/focus trap；部分图标按钮无 `aria-label`；表单 label 偶有未绑定 `htmlFor`。
+### FE-5 无障碍补课：非 Modal 弹窗 + 图标按钮 ARIA ✅ 已完成（v0.46.31，已推 main）
+- **状态**：弹窗已在 v0.46.17 全部收口到统一 `Modal`（自带 `role="dialog"`/`aria-modal`/focus trap）；本次补 explore/game 窄屏抽屉切换纯图标按钮 `aria-label`（sliders/check/grid），Modal 关闭键本已带 `aria-label="关闭"`。表单 label 多走 `DialogField` 包裹，未做逐页 htmlFor 全量普查（散点、低优先）。
+- **现在（改前）**：部分图标按钮无 `aria-label`；表单 label 偶有未绑定 `htmlFor`。
 - **做完**：弹窗强制走 `Modal`（自带 ARIA）；图标按钮补齐 `aria-label`；表单 label 绑定 id。
 - **价值**：键盘用户 / 读屏用户能用；也是"成品"该过的底线（很多招标/采购看这个）。
 - **量级**：小–中（散点修复）。
@@ -247,8 +250,9 @@
 - **价值**：手机/平板/小窗也能正常用 explore 探讨和 game 互动游戏，不再是"只能桌面宽屏"。
 - **量级**：中（参考已有 workspace 抽屉模式，复用即可）。
 
-### FE-7 加载态 / 错误态一致性规范
-- **现在**：错误态配色不一（有的 `toastError`，有的裸 `bg-red-500/10 text-red-400`）；长任务"可中断 loading"规范不统一（explore/game 用停止按钮、ImportWizard 用阶段列表，两类模式各不相同）；网络错误文案风格不一。
+### FE-7 加载态 / 错误态一致性规范 ✅ 已完成（v0.46.31，已推 main）
+- **状态**：`States.tsx` 新增 `ErrorState` 组件，与既有 `EmptyState`/`Loading` 组成「空态/加载/错误」三件套规范（均走 `--nv-*` 令牌）；DrawCards 的「错误+重试」块已改用统一 `ErrorState`。长任务"停止/取消"按钮模式在 explore/game 已统一（停止按钮）、ImportWizard（阶段列表）属两类合理模式，未强制归一（见诚实边界）。
+- **现在（改前）**：错误态配色不一（有的 `toastError`，有的裸 `bg-red-500/10 text-red-400`）；长任务"可中断 loading"规范不统一（explore/game 用停止按钮、ImportWizard 用阶段列表，两类模式各不相同）；网络错误文案风格不一。
 - **做完**：建立 `Loading`/`ErrorState`/`EmptyState` 三件套强制使用规范；错误态统一走 toast 或统一 `ErrorState`；长任务统一提供"停止/取消"按钮模式与进度文案模板。
 - **价值**：用户在任何页遇到"正在处理/出错了"看到的是同一套语言，不懵。
 - **量级**：小–中。
@@ -265,8 +269,9 @@
 - **价值**：减少重复请求、数据自动保持新鲜；和 FE-8 配合，彻底解决"列表陈旧/重复拉取"。
 - **量级**：中（可先在新页面试点，再逐步迁移）。
 
-### FE-10 冗余组件合并
-- **现在**：`CharacterEditDialog`/`CharacterCreateDialog` 可合并；`DissectDimensions` 内联 `parseCharPreviewDetailed` 字符解析逻辑与 workspace `CharacterCard` 字段约定重复，易漂移。
+### FE-10 冗余组件合并 ✅ 已完成（v0.46.31，已推 main）
+- **状态**：`CharacterEditDialog` 与 `CharacterCreateDialog` 已合并为单一 `CharacterDialog`（建/编两模式），旧两文件删除；personality 解析（fromText/toText）、时间线解析（timelineToText/textToTimeline）、角色选项（CHARACTER_ROLE_OPTIONS）抽至 `src/lib/character-parse.ts` 单一数据源。`DissectDimensions` 内联 `parseCharPreviewDetailed` 为拆书专用预览解析（与角色卡字段约定部分重叠但语义不同），未强行合并以免引入跨模块耦合——记为已知残留。
+- **现在（改前）**：`CharacterEditDialog`/`CharacterCreateDialog` 可合并；`DissectDimensions` 内联 `parseCharPreviewDetailed` 字符解析逻辑与 workspace `CharacterCard` 字段约定重复，易漂移。
 - **做完**：合并角色编辑/创建弹窗；把角色解析逻辑下沉到 `lib/` 共享。
 - **价值**：少维护两套近似逻辑，字段约定改一处全生效。
 - **量级**：小。

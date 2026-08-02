@@ -2,6 +2,15 @@
 
 ---
 
+## v0.46.31 — 2026-08-02
+**前端打磨（#213）：FE-10 弹窗合并 + FE-7 错误态 + FE-5 无障碍 + ARCH-7 颜色守卫**
+
+- 🔀 合并角色弹窗（FE-10）：CharacterEditDialog 与 CharacterCreateDialog 合并为单一 `CharacterDialog`（可选 `character` 参数：有则编辑全字段 + AI 补全，无则精简创建），调用方 `page.tsx` 两处渲染合并为一，旧两文件删除；personality 文本↔结构化解析、时间线解析、角色选项抽至 `src/lib/character-parse.ts` 单一数据源，避免双份维护漂移
+- 🧩 错误态一致性（FE-7）：`States.tsx` 新增 `ErrorState` 组件（图标+标题+说明+可选重试动作），与既有 `EmptyState`/`Loading` 共用 `--nv-*` 令牌与视觉语言，组成「空态/加载/错误」三件套规范；DrawCards 抽卡失败的「错误+重试」块改用统一 `ErrorState`
+- ♿ 无障碍补课（FE-5）：explore 与 game 窄屏抽屉切换的纯图标按钮（sliders/check/grid）补 `aria-label`（与既有 `title` 一致）；Modal 关闭键本已带 `aria-label="关闭"`，workspace 抽屉切换按钮带可见文字「大纲/侧栏」无需补
+- 🎨 颜色守卫（ARCH-7）：新增 `scripts/lint-colors.mjs` 扫描 `src` 下 TS/TSX 的任意十六进制色值（如 `bg-[#ff0000]`），提醒改用 `--nv-*` 令牌防止观感回归；`package.json` 加 `npm run lint:colors`，`.github/workflows/ci.yml` 加软门步骤（不阻断）；已知残留 3 处游戏画布深底（`#0a0a0f`/`#0a0a1f`/`#0d0d2a`）为有意硬编码，守卫只拦新增
+- ✅ tsc 零错误、零新运行时依赖
+
 ## v0.46.30 — 2026-08-02
 **幂等 seed 脚本（ARCH-5）：prisma/seed.ts + db:seed，16 内置预设可重复播种**
 

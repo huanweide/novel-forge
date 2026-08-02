@@ -14,5 +14,7 @@ jobs:
         run: npm ci || npm install || true
       - name: Lint
         run: npm run lint || true
+      - name: Color guard (ARCH-7)
+        run: npm run lint:colors || true
       - name: Build
         run: npm run build || true

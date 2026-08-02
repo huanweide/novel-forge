@@ -414,6 +414,7 @@ export default function GamePage() {
             onClick={() => setLeftDrawerOpen(o => !o)}
             className="lg:hidden flex items-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
             title="切换左栏（窄屏）"
+            aria-label="切换左栏（窄屏）"
           >
             <Icon name="sliders" size={13} />
           </button>
@@ -421,6 +422,7 @@ export default function GamePage() {
             onClick={() => setRightDrawerOpen(o => !o)}
             className="lg:hidden flex items-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] px-3 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
             title="切换右栏（窄屏）"
+            aria-label="切换右栏（窄屏）"
           >
             <Icon name="grid" size={13} />
           </button>

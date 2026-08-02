@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
+import { ErrorState } from "@/components/ui/States";
 
 // ─── P0 格式行类型着色 ───────────────────────────────────
 
@@ -177,9 +178,18 @@ export function DrawCards({
           )}
 
           {error && (
-            <div className="p-6 rounded-xl bg-[var(--nv-danger-soft)] border border-[var(--nv-danger)]/50 text-center">
-              <p className="flex items-center justify-center gap-1.5 text-sm text-[var(--nv-danger)]"><Icon name="x" size={15} /> {error}</p>
-              <button onClick={() => doDraw(drawCount)} className="mt-3 text-xs text-[var(--nv-danger)] hover:text-[var(--nv-danger)]/70 underline flex items-center gap-1 justify-center"><Icon name="refresh" size={12} /> 重试</button>
+            <div className="p-6">
+              <ErrorState
+                title={error}
+                action={
+                  <button
+                    onClick={() => doDraw(drawCount)}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--nv-danger)] hover:text-[var(--nv-danger)]/70 underline"
+                  >
+                    <Icon name="refresh" size={12} /> 重试
+                  </button>
+                }
+              />
             </div>
           )}
 
