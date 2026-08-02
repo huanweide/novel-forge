@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.24";
+export const LATEST_VERSION = "v0.46.25";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📦 项目备份包 .nfproject（FE-N2）：工作台工具栏新增「备份包」按钮，一键导出整本项目（章节+角色+世界书+规则+文风+分支+剧情线+文风卡+世界表）为单个 `.nfproject` JSON 文件；仪表盘顶栏新增「导入备份」，选文件即可落库为新项目",
-  "🔄 导入即重映射：导入时剥离旧 id / 时间戳，新建项目后重建所有子表并回填 parentId / branchId / relatedEntryIds 关联，保证导入的是一份独立、完整的全新项目（名带「（导入）」后缀）",
-  "💡 可移植性：换电脑、发给搭档、备份到 U 盘，一键搞定，不必懂数据库——本地写作工具的「搬家刚需」",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；导出走 `GET /api/projects/[id]/backup`（Content-Disposition 附件下载），导入走 `POST /api/projects/import` 校验 `format===\"nfproject\"`",
+  "🧩 状态管理收口（FE-8）：`useProjectStore` 升级为 workspace 实体数据唯一源（章节/角色/世界书/故事线/规则/文风卡），`loadProject` 统一写入，`LeftPanel`/`RightPanel` 改从 store 读取、不再由父组件逐层透传 project 大对象",
+  "🔌 消除双源：彻底解决「本地 `useState project` 与 store 并存、删除/编辑后忘了刷导致列表陈旧」的老问题——store 一更新，订阅面板自动刷新",
+  "🛠️ 原子操作：store 新增 `updateNode/addNode/removeNode/upsertCharacter/upsertLore/upsertRule/patchProject` 等粒度操作，后续面板可直接改局部而不必整体 reload",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；回调类 prop（onX 动作）仍按设计透传（动作非数据、不存在陈旧问题），完整 30-prop 清零留待 ARCH-6 测试护栏落地后再推进",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.25",
+    date: "2026-08-02",
+    title: "状态管理收口：useProjectStore 接管 workspace 实体数据，双源陈旧问题终结",
+    sections: [
+      {
+        label: "store 接管为唯一源（FE-8）",
+        items: [
+          "扩展 `useProjectStore`：持有 `project`（章节/角色/世界书/故事线/文风卡全量）+ `rules`，`loadProject` 成功后 `setProjectData(data)` 统一写入；workspace 页移除本地 `useState project`，改为 `useProjectStore(s => s.project)` 读取",
+          "`LeftPanel`/`RightPanel` 不再接收 `project` 大对象 prop，内部 `useProjectStore(s => s.project)` 直读——去掉了最重的实体数据 prop drilling",
+        ],
+      },
+      {
+        label: "原子操作 + 消除双源",
+        items: [
+          "新增粒度 action：`updateNode/addNode/removeNode/upsertCharacter/upsertLore/upsertRule/patchProject/setStyleCard/reset`，面板可改局部而非整体 reload",
+          "终结「本地 project 与 store 并存、编辑后漏刷导致列表旧」的老问题：store 是唯一真相，订阅面板自动刷新",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "回调类 prop（onGenerateOutline 等动作）仍逐层透传——动作不是数据、不存在陈旧问题，留作后续增量优化",
+          "未做 30-prop 100% 清零：计划原将 FE-8 排在 ARCH-6 测试护栏之后（本冲刺未建测试体系），无测试兜底下不盲目大改全页以防回归；tsc 零错误，零新依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.24",
     date: "2026-08-02",

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useProjectStore } from "@/store";
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -54,7 +55,8 @@ export default function WorkspacePage() {
   const [chapterOutlineStatus, setChapterOutlineStatus] = useState<"" | "generating" | "done" | "error">("");
 
   // ── 项目数据 ──────────────────────────────
-  const [project, setProject] = useState<ProjectData | null>(null);
+  // FE-8：project 数据统一收口到 useProjectStore（loadProject 写入，面板直接读取），消除本地 project 与 store 并存
+  const project = useProjectStore((s) => s.project);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
@@ -323,7 +325,7 @@ export default function WorkspacePage() {
           const styleData = await styleRes.json();
           if (!styleData.error) data.styleCard = styleData;
         }
-        setProject(data);
+        useProjectStore.getState().setProjectData(data);
         refreshMonitorToday();
         if (data.authorNote && data.authorNote.trim()) {
           setAuthorNote(data.authorNote);
@@ -789,7 +791,7 @@ export default function WorkspacePage() {
           ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"}
           lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none`}>
         <ErrorBoundary name="大纲">
-        <LeftPanel project={project} activeTab={leftPanel} onTabChange={setLeftPanel}
+        <LeftPanel activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
           onAddSection={handleAddSection} onEditCharacter={setEditingCharacter} onEditLore={setEditingLore}
           onNewCharacter={() => setShowNewCharacter(true)}
@@ -921,7 +923,7 @@ export default function WorkspacePage() {
             ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"}
             lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}>
           <ErrorBoundary name="侧栏">
-        <RightPanel selectedNode={selectedNode} project={project}
+        <RightPanel selectedNode={selectedNode}
             onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
             selectedText={selectedText || undefined}
             onEditCharacter={(id) => {
@@ -972,7 +974,7 @@ export default function WorkspacePage() {
         <BuildConfigDialog
           projectId={project.id}
           buildConfig={project.buildConfig as any}
-          onSaved={(cfg) => setProject((p) => (p ? { ...p, buildConfig: cfg as any } : p))}
+          onSaved={(cfg) => useProjectStore.getState().patchProject({ buildConfig: cfg as any })}
           onClose={() => setShowBuildConfig(false)}
         />
       )}
@@ -985,7 +987,7 @@ export default function WorkspacePage() {
         <ProjectConfigPanel
           projectId={project.id}
           project={project}
-          onSaved={(patch) => setProject((p) => (p ? { ...p, ...patch } : p))}
+          onSaved={(patch) => useProjectStore.getState().patchProject(patch)}
           onClose={() => setShowProjectConfig(false)}
         />
       )}

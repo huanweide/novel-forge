@@ -252,7 +252,7 @@
 - **价值**：用户在任何页遇到"正在处理/出错了"看到的是同一套语言，不懵。
 - **量级**：小–中。
 
-### FE-8 状态管理收口：zustand store 接管 + 消除 prop drilling ⭐
+### ✅ FE-8 状态管理收口：zustand store 接管 + 消除 prop drilling ⭐（v0.46.25 已完成）
 - **现在**：`workspace/[projectId]/page.tsx` 是 1013 行 God Component，重度本地 `useState`（~40 个），`CenterPanel`/`LeftPanel` 各自接收 **~30 个 prop** 透传；`useProjectStore` 与本地 `project` 状态并存，删除/编辑后需手动 `loadProject()` 刷新，易漏刷导致列表陈旧。
 - **做完**：把"项目/角色/世界书/故事线/规则"数据统一收口到 `useProjectStore`（`loadProject` 写入、各面板直接 `useProjectStore(s => s.xxx)` 读取），消除 `onRefresh` 回调链与 30+ prop 透传；合并 `genStep` 与 `useWriterStore` 的生成态。
 - **价值**：加新功能时不用再在 30 个 prop 里加一个、不用再担心"忘了刷导致列表旧"；是后续所有前端功能的地基，建议早点做。

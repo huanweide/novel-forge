@@ -9,14 +9,14 @@ import { RelationshipGraph } from "./RelationshipGraph";
 import { AIChatBar } from "./AIChatBar";
 import { MonitorPanel } from "./MonitorPanel";
 import { StatRow } from "./SharedUI";
-import type { ProjectData, StoryNodeData } from "./types";
+import type { StoryNodeData } from "./types";
+import { useProjectStore } from "@/store";
 
 type TopTab = "ai" | "query" | "monitor";
 type QuerySubTab = "entities" | "foreshadowing" | "relationships";
 
 interface RightPanelProps {
   selectedNode: StoryNodeData | null;
-  project: ProjectData;
   onClose: () => void;
   contextRefreshKey: number;
   authorNote: string;
@@ -32,7 +32,10 @@ const TOP_TABS: Array<{ key: TopTab; icon: IconName; label: string }> = [
 ];
 
 export function RightPanel(props: RightPanelProps) {
-  const { selectedNode, project, onClose, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText } = props;
+  const { selectedNode, onClose, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText } = props;
+  // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
+  const project = useProjectStore((s) => s.project);
+  if (!project) return null;
 
   const [minimized, setMinimized] = useState(false);
   const [topTab, setTopTab] = useState<TopTab>("ai");

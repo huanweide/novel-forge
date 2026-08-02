@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.25 — 2026-08-02
+**状态管理收口：useProjectStore 接管 workspace 实体数据，双源陈旧问题终结**
+- 🧩 store 接管为唯一源（FE-8）：扩展 `useProjectStore` 持有 `project`（章节/角色/世界书/故事线/文风卡）+ `rules`；`loadProject` 成功后 `setProjectData(data)` 统一写入，workspace 页移除本地 `useState project`，改读 store；`LeftPanel`/`RightPanel` 改从 store 直读、去掉 `project` 大对象 prop
+- 🔌 消除双源：终结「本地 project 与 store 并存、编辑后漏刷导致列表陈旧」老问题；store 新增 `updateNode/addNode/removeNode/upsertCharacter/upsertLore/upsertRule/patchProject` 等原子操作，面板可改局部
+- 🧭 诚实边界：回调类 prop（onX 动作）仍按设计透传（动作非数据、无陈旧问题）；未做 30-prop 100% 清零（计划原需 ARCH-6 测试护栏，本冲刺未建，故保留 action 回调透传避免无测试大改回归）；tsc 零错误，零新依赖
+
 ## v0.46.24 — 2026-08-02
 **项目备份包 .nfproject：整本设定一键打包，换电脑 / 送搭档不必懂数据库**
 - 📦 备份包导出（FE-N2）：工作台工具栏新增「备份包」按钮，点击触发 `GET /api/projects/[id]/backup` 下载 `.nfproject`（章节+角色+世界书+规则+文风卡+分支+剧情线+世界表全量 JSON，Content-Disposition 附件）；仪表盘顶栏新增「导入备份」选文件即 `POST /api/projects/import` 落库为新项目

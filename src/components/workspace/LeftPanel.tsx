@@ -6,17 +6,18 @@ import { StorylineList } from "@/components/workspace/StorylineList";
 import { RulesPanel } from "@/components/workspace/RulesPanel";
 import { OutlineTree } from "./OutlineTree";
 import { Icon } from "@/components/ui/icons";
-import type { ProjectData, CharacterData, LorebookData, StoryNodeData } from "./types";
+import type { CharacterData, LorebookData, StoryNodeData } from "./types";
 import { toastError } from "@/components/ui/toast";
+import { useProjectStore } from "@/store";
 
 export function LeftPanel({
-  project, activeTab, onTabChange, selectedNode, onSelectNode, onAddSection,
+  activeTab, onTabChange, selectedNode, onSelectNode, onAddSection,
   onEditCharacter, onEditLore, onNewCharacter, loadProject,
   volumeView, onToggleVolumeView, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
   batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId, onLoadSample,
 }: {
-  project: ProjectData; activeTab: string;
+  activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules") => void;
   selectedNode: StoryNodeData | null; onSelectNode: (node: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
@@ -29,6 +30,9 @@ export function LeftPanel({
   deletingNodeId?: string | null;
   onLoadSample?: () => void;
 }) {
+  // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
+  const project = useProjectStore((s) => s.project);
+  if (!project) return null;
   const tabs = [
     { key: "outline", label: "大纲" },
     { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },

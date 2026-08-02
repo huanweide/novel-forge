@@ -1,51 +1,109 @@
 import { create } from "zustand";
-import type { Project, CharacterCard, LorebookEntry, StoryNode } from "@/core/types";
+import type {
+  ProjectData,
+  CharacterData,
+  LorebookData,
+  StoryNodeData,
+} from "@/components/workspace/types";
 
-// ─── 项目状态 ───────────────────────────────────────────────
+// ─── 项目状态（FE-8：接管 workspace 实体数据，成为唯一数据源，消除本地 project 与 store 并存） ──
 
 interface ProjectState {
-  projects: Project[];
-  currentProject: Project | null;
-  characters: CharacterCard[];
-  loreEntries: LorebookEntry[];
-  storyNodes: StoryNode[];
+  /** 当前项目全量数据（章节 / 角色 / 世界书 / 故事线 / 文风卡），loadProject 写入 */
+  project: ProjectData | null;
+  /** 规则（ProjectData 类型未含 rules 字段，API 实际返回，单独存） */
+  rules: any[];
 
   // Actions
-  setProjects: (projects: Project[]) => void;
-  setCurrentProject: (project: Project | null) => void;
-  setCharacters: (characters: CharacterCard[]) => void;
-  setLoreEntries: (entries: LorebookEntry[]) => void;
-  setStoryNodes: (nodes: StoryNode[]) => void;
-  addStoryNode: (node: StoryNode) => void;
-  updateStoryNode: (id: string, updates: Partial<StoryNode>) => void;
+  /** loadProject 成功后全量写入（含 rules 提取） */
+  setProjectData: (data: ProjectData) => void;
+  /** 局部打补丁（如 buildConfig / styleCard / postProcessingRules / llmConfig 保存后；ProjectData 未穷举所有持久化字段，故用宽松类型） */
+  patchProject: (patch: Record<string, any>) => void;
+  updateNode: (id: string, updates: Partial<StoryNodeData>) => void;
+  addNode: (node: StoryNodeData) => void;
+  removeNode: (id: string) => void;
+  upsertCharacter: (c: CharacterData) => void;
+  upsertLore: (l: LorebookData) => void;
+  upsertRule: (r: any) => void;
+  setStyleCard: (sc: any) => void;
+  reset: () => void;
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
-  projects: [],
-  currentProject: null,
-  characters: [],
-  loreEntries: [],
-  storyNodes: [],
+  project: null,
+  rules: [],
 
-  setProjects: (projects) => set({ projects }),
-  setCurrentProject: (project) => set({ currentProject: project }),
-  setCharacters: (characters) => set({ characters }),
-  setLoreEntries: (loreEntries) => set({ loreEntries }),
-  setStoryNodes: (storyNodes) => set({ storyNodes }),
-  addStoryNode: (node) =>
-    set((state) => ({ storyNodes: [...state.storyNodes, node] })),
-  updateStoryNode: (id, updates) =>
-    set((state) => ({
-      storyNodes: state.storyNodes.map((n) =>
-        n.id === id ? { ...n, ...updates } : n
-      ),
+  setProjectData: (data) =>
+    set({ project: data, rules: (data as any).rules ?? [] }),
+  patchProject: (patch) =>
+    set((s) => ({
+      project: s.project ? ({ ...s.project, ...patch } as ProjectData) : s.project,
     })),
+  updateNode: (id, updates) =>
+    set((s) => ({
+      project: s.project
+        ? {
+            ...s.project,
+            storyNodes: s.project.storyNodes.map((n) =>
+              n.id === id ? { ...n, ...updates } : n
+            ),
+          }
+        : null,
+    })),
+  addNode: (node) =>
+    set((s) => ({
+      project: s.project
+        ? { ...s.project, storyNodes: [...s.project.storyNodes, node] }
+        : null,
+    })),
+  removeNode: (id) =>
+    set((s) => ({
+      project: s.project
+        ? {
+            ...s.project,
+            storyNodes: s.project.storyNodes.filter((n) => n.id !== id),
+          }
+        : null,
+    })),
+  upsertCharacter: (c) =>
+    set((s) => ({
+      project: s.project
+        ? {
+            ...s.project,
+            characters: s.project.characters.some((x) => x.id === c.id)
+              ? s.project.characters.map((x) => (x.id === c.id ? c : x))
+              : [...s.project.characters, c],
+          }
+        : null,
+    })),
+  upsertLore: (l) =>
+    set((s) => ({
+      project: s.project
+        ? {
+            ...s.project,
+            lorebookEntries: s.project.lorebookEntries.some((x) => x.id === l.id)
+              ? s.project.lorebookEntries.map((x) => (x.id === l.id ? l : x))
+              : [...s.project.lorebookEntries, l],
+          }
+        : null,
+    })),
+  upsertRule: (r) =>
+    set((s) => ({
+      rules: s.rules.some((x) => x.id === r.id)
+        ? s.rules.map((x) => (x.id === r.id ? r : x))
+        : [...s.rules, r],
+    })),
+  setStyleCard: (sc) =>
+    set((s) => ({
+      project: s.project ? { ...s.project, styleCard: sc } : null,
+    })),
+  reset: () => set({ project: null, rules: [] }),
 }));
 
 // ─── 写作状态 ───────────────────────────────────────────────
 
 interface WriterState {
-  currentNode: StoryNode | null;
+  currentNode: StoryNodeData | null;
   isGenerating: boolean;
   generatedContent: string;
   generatedTokens: number;
@@ -53,7 +111,7 @@ interface WriterState {
   streamBuffer: string;
 
   // Actions
-  setCurrentNode: (node: StoryNode | null) => void;
+  setCurrentNode: (node: StoryNodeData | null) => void;
   setGenerating: (v: boolean) => void;
   appendContent: (token: string) => void;
   setGeneratedContent: (content: string) => void;
