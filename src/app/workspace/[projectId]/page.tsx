@@ -30,6 +30,7 @@ import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import type { StyleTemplate } from "@/core/templates";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 
 export default function WorkspacePage() {
@@ -703,6 +704,7 @@ export default function WorkspacePage() {
   );
 
   return (
+    <ErrorBoundary name="工作台">
     <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
       <OnboardingModal />
       <Toolbar
@@ -740,6 +742,7 @@ export default function WorkspacePage() {
         const sel = window.getSelection()?.toString()?.trim();
         if (sel && sel.length > 0) setSelectedText(sel);
       }}>
+        <ErrorBoundary name="大纲">
         <LeftPanel project={project} activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
           onAddSection={handleAddSection} onEditCharacter={setEditingCharacter} onEditLore={setEditingLore}
@@ -750,8 +753,10 @@ export default function WorkspacePage() {
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
           batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={deleteNode} deletingNodeId={deletingId}
           onLoadSample={loadSample} />
+        </ErrorBoundary>
 
         {/* 中间列：正文 + 分析面板 */}
+        <ErrorBoundary name="编辑器">
         <div className="flex flex-col flex-1 overflow-hidden">
           <CenterPanel selectedNode={selectedNode} streamContent={streamContent}
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
@@ -859,9 +864,11 @@ export default function WorkspacePage() {
             </div>
           )}
         </div>
+        </ErrorBoundary>
 
         {rightPanelOpen && (
-          <RightPanel selectedNode={selectedNode} project={project}
+          <ErrorBoundary name="侧栏">
+        <RightPanel selectedNode={selectedNode} project={project}
             onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
             selectedText={selectedText || undefined}
             onEditCharacter={(id) => {
@@ -873,6 +880,7 @@ export default function WorkspacePage() {
               if (l) setEditingLore(l);
             }}
           />
+        </ErrorBoundary>
         )}
       </div>
 
@@ -976,5 +984,6 @@ export default function WorkspacePage() {
       )}
 
     </div>
+    </ErrorBoundary>
   );
 }
