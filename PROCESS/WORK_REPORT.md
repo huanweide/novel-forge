@@ -480,3 +480,38 @@ A3 的验收点是「新人 clone→npm i→配 .env→npm run dev→打开即�
 2. 一个最小改动（前端按钮 + 复用既有 POST + 复用既有刷新）；
 3. 一个工程取舍（order 用时间戳而非硬编码）。
 这三点读者照做就能复现，形式没有掩盖实质——不是岛民的竹编控制塔。
+
+## v0.46.8 工作单元报告（互操作：每日目标贯穿写作与统计）
+
+### 一、干了什么（一句话）
+把"每日写作目标"从**只藏在统计面板里**，接到**编辑器底部状态栏**和**统计面板的周历打卡**上——让作者在写作时也能实时看见"今天写了没达标"，目标从此在写作与统计两侧互通。
+
+### 二、为什么这么做（第一性原理）
+- 之前有两个"目标"体系各说各话：统计面板里有"每日目标"（localStorage 存），编辑器状态栏里却是"全书总目标 30 万字"。作者写作时，状态栏显示的是全书进度（几乎不动），每日目标完全不可见。
+- 核心矛盾：**写作者需要的是"今天的节奏感"，而界面只给了"全书的远景"**。节奏感必须即时、在写作现场可见，否则目标就形同虚设。
+- 费曼式自检：不新做一套目标逻辑，而是把已有数据（monitor 接口的今日字数 + localStorage 的每日目标）**接到写作现场**，让两个已有的功能互相照亮——这就是用户说的"互相优化"。
+
+### 三、用了什么方法 / 工具，效果如何
+改动两个前端文件 + 一个页面接线，零新后端、零新依赖：
+
+1. **编辑器状态栏胶囊（互操作①）**
+   - `src/app/workspace/[projectId]/page.tsx`：新增 `monitorTodayWords` state + `refreshMonitorToday()` 函数，在 `loadProject()` 里调用（保存后自动刷新，形成闭环）；把 `todayWords` 传给 `CenterPanel`。
+   - `src/components/workspace/CenterPanel.tsx`：加 `todayWords` prop；内部读 localStorage `nf-daily-goal-${projectId}`（和 MonitorPanel **同一个 key**，保证两边目标一致），状态栏加「今日 X / 目标 Y · Z%」胶囊。达标时胶囊变金色 + `animate-pulse` 脉冲，并用 localStorage 每日去重弹一次 toast「今日目标达成 ✨」。跨标签页改目标经 `storage` 事件同步。
+   - 效果：打字时底部状态栏实时显示今日进度，敲到目标的那一刻金色闪烁 + 轻提示。
+
+2. **统计面板周历打卡（互操作②）**
+   - `src/components/workspace/MonitorPanel.tsx`：在每日目标区块下加一排 7 格"近 7 天节奏"。达标日显示金色 ✓，未达标显示字数（超千用 k 缩写），今天那格加 ring 高亮。数据复用既有的 `dailyWords`（monitor 接口近 14 天聚合）和 `dailyGoal` 判定。
+   - 效果：单日进度环扩展成"可回看的养成轨迹"，作者能一眼看到这周哪天达标。
+
+3. **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 零错误；双 changelog（changelog-data.ts + 根 CHANGELOG.md）升 v0.46.8；提交 `568e133`，代理推送 `f194777..568e133 → origin/main` 成功。
+
+### 四、关键取舍
+- **为什么复用 monitor 接口而不是前端自己数？** monitor 接口已有按章节 updatedAt 聚合的"今日字数"，与统计面板同源——复用保证"状态栏看到的数字"和"统计面板看到的数字"完全一致，不会出现两边对不上的尴尬。代价：今日字数是"已保存"的字数，打字中实时涨的是编辑器 currentWords，保存后才同步进今日进度（与统计面板行为一致，非 bug）。
+- **为什么 dailyGoal 让 CenterPanel 自己读 localStorage 而不是 workspace 传？** 和 MonitorPanel 完全对称（同一 key、同一算法），避免 workspace 再多管一份 localStorage 同步；用 `useEffect` 依赖 `todayWords` + `storage` 事件做实时同步。
+- **为什么周历用近 7 天而非自然周？** 最小改动、语义够用；标签写"近 7 天节奏"避免和日历自然周混淆。星期用 `new Date(d.date + "T00:00:00").getDay()` 本地时区解析，避开 UTC 日期偏移导致星期错位。
+- **cargo cult 检测**：没有为"目标"新造数据库字段或新接口——全用既有 localStorage + monitor 接口，避免重复造轮子（这正是 cargo cult 的反面：形式服务于真需求）。
+
+### 五、反自欺（诚实标注未实测项）
+- 今日字数来自"章节 updatedAt 聚合"，在 5 万字大库里"连续多日打卡"的周历视觉表现**未实跑验证**，建议作者侧实跑确认。
+- 达成 toast 的"每日去重"逻辑（localStorage key 含日期）经代码审查正确，但浏览器实际只弹一次的行为**未在多日场景实测**。
+- 以上两条属"逻辑正确、待真实数据验证"，不伪装成已验证。
