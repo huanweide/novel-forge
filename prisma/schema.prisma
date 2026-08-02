@@ -145,6 +145,9 @@ model StoryNode {
   settingDescription String?
   notes             String?
 
+  // FE-N8 乐观锁：每次 PUT 成功 +1；保存时携带 expectedVersion 以检测并发冲突（手动编辑 vs AI 改写）
+  editVersion       Int      @default(1)
+
   // 审校 + 质量
   reviewLogs    Json @default("[]")       // ReviewLog[]
   revisionCount Int @default(0)

@@ -718,3 +718,40 @@
 - 未强删 `core/llm/client.ts` 内 9+ `@deprecated` 导出（仍有引用方，强删会破坏构建）——如实写入 changelog 与计划，未伪装成"全部删除"。
 - 迁移后未在浏览器实跑这 6 个路由的端到端（如角色分类是否仍正常返回）：逻辑对齐（签名/参数平铺一致）且 tsc 零错误，但真机调用未经实测；风险低（只换了调用入口，下游 `chat` 逻辑未动）。
 
+---
+
+## v0.46.36 — 保存冲突乐观锁（FE-N8）
+
+### 一句话背景
+大纲/正文是可编辑的，AI 也会在后台改写它们。以前两边"同时写"会互相覆盖且你毫无察觉——手改的设定可能被 AI 一键覆盖，反之亦然。这次给每个节点加一个"版本号"（乐观锁），保存时发现"你编辑的版本已经过时"就弹窗让你选怎么合并，而不是悄悄丢东西。
+
+### ① 干了什么
+- 数据库 `StoryNode` 表加 `editVersion` 字段（默认 1），每次成功保存自动 +1。
+- 保存接口 `PUT /api/story/nodes/[id]` 现在接受客户端带来的 `expectedVersion`（开始编辑时看到的版本号）：若库里当前版本 ≠ 你带的版本，说明编辑期间节点被别的操作（如 AI 改写）动过，接口返回 HTTP 409 + 库里现在的完整内容（标记 `conflict:true`）。
+- 新建 `SaveConflictModal` 弹窗：并排显示「你的版本」和「库里版本」，三按钮——**用我的**（以库里当前版本为基准强制覆盖）/ **用库里的**（放弃本地改动）/ **保留双方**（库里版本存进节点备注 notes，你的版本照常覆盖，双方都不丢）。
+- 前端三处保存（正文保存、抽卡章纲、大纲编辑）全部带上 `expectedVersion`，保存成功后把新版本号写回，遇到 409 就弹出冲突面板。
+- `StoryNodeData` 类型补了 `editVersion` 字段，让 TS 类型也认得这个版本号。
+
+### ② 为什么这么做
+- 计划侦察发现：大纲 textarea 和 AI 流都改 outline，并发会互相覆盖且无提示；用户最怕"刚精心改的设定被 AI 一覆盖没了"。BE-1 版本历史解决了"AI 覆盖正文可回滚"，但"手动编辑 vs AI 改写"的实时冲突没有拦截。
+- 乐观锁是业界标准做法：不锁表、不阻塞，只在"最后提交"那一刻比对版本，冲突了再让用户决定——对单用户本地工具零性能负担，却杜绝了无声丢失。
+
+### ③ 怎么做的（方法 + 效果）
+1. **Schema + 同步**：`schema.prisma` 加 `editVersion Int @default(1)`，跑 `prisma db push` 同步本地 PG17、`prisma generate` 更新客户端类型（Prisma 7 生成在 `src/generated/prisma`）。
+2. **PUT 条件更新**：有 `expectedVersion` 时用 `where: { id, editVersion: expectedVersion }` 更新并在 data 里 `editVersion: { increment: 1 }`；预检阶段若版本不符直接 409；catch 里 `P2025`（并发窗口内又被改）也降级为 409；无 `expectedVersion` 的旧调用方走普通更新（不强制锁，向后兼容）。
+3. **新建 SaveConflictModal**：纯展示组件，接收 `mine`/`server` 两段内容，三个 `onResolve(action)` 回调交给父页面处理实际写库。
+4. **前端三处接线**：`handleSaveNode`/`handleDrawSelect`/`onEditOutline` 统一 `body` 带 `expectedVersion: selectedNode.editVersion`，成功 `setSelectedNode(node)` 回写新版本，409 则 `setConflict({...})` 打开面板；`resolveConflict` 实现三选项（覆盖/采用库里/双方保留写 notes）。
+5. **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → **TSC_EXIT=0**（中途修了两处类型问题：Prisma 7 的 `Prisma` 应从 `@/generated/prisma/client` 导入而非 `@prisma/client`；`StoryNodeData` 接口需补 `editVersion` 字段）。
+
+**效果数据**：版本号机制落地；保存冲突从"无声覆盖"变为"显式弹窗三选一"；tsc 零错误；双 changelog + 计划标 ✅ 同步。
+
+### ④ 关键取舍
+- **用显式 `editVersion` 而非 `updatedAt`**：`updatedAt` 由 Prisma 自动维护、精度毫秒，但语义上"版本号"更清晰且不受自动 bump 干扰；前端从"节点数据"直接读 `editVersion` 即可。
+- **旧调用方不强制锁**：`expectedVersion` 可选，没带的（如 `GameOutlineEditor`、rollback）走普通更新——避免改了 A 没改 B 导致老入口突然 409 崩。后续可全覆盖。
+- **冲突"双方保留"用 notes 字段**：不新建表，把库里版本作为备注存进 `notes`，实现简单且用户能在节点备注里看到被保留的旧版；若需更正式双版本并存可后续用 `StoryNodeRevision`。
+
+### 诚实边界
+- 未处理「AI 流式改写直接覆盖未提交 textarea」的 UI 受控问题：本批次聚焦"保存冲突"（提交那一刻的版本比对），而"AI 改写时直接把用户正在输入的 textarea 顶掉"是大纲编辑组件的绑定方式问题（需改成受控于本地 state），不在 FE-N8 字面范围；若用户在意可单独排期。
+- 未在浏览器实跑 409 弹窗端到端（如真造一次并发看弹窗）：逻辑对齐且 tsc 通过，但真机冲突触发路径（手动编辑期间让 AI 改写 outline）未经实测；风险中低（只是冲突检测+弹窗，下游写库逻辑未变）。
+- `GameOutlineEditor` 等其它 PUT 入口未带 `expectedVersion`，不会误冲突，但也不享受锁保护——已知残留。
+

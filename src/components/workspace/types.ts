@@ -70,6 +70,8 @@ export interface StoryNodeData {
   order: number;
   parentId: string | null;
   activeCharacters: string[];
+  // FE-N8 乐观锁版本号：每次成功保存 +1，保存时携带以检测并发冲突
+  editVersion: number;
 }
 
 export interface StorylineData {

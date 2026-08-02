@@ -15,6 +15,7 @@ import { Toolbar } from "@/components/workspace/Toolbar";
 import { ToolboxDialog, type ToolboxItem } from "@/components/workspace/ToolboxDialog";
 import { ExportDialog } from "@/components/workspace/ExportDialog";
 import { ConflictPanel } from "@/components/workspace/ConflictPanel";
+import { SaveConflictModal } from "@/components/workspace/SaveConflictModal";
 import { LeftPanel } from "@/components/workspace/LeftPanel";
 import { CenterPanel } from "@/components/workspace/CenterPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
@@ -157,6 +158,11 @@ export default function WorkspacePage() {
   const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [contextRefreshKey, setContextRefreshKey] = useState(0);
+  const [conflict, setConflict] = useState<{
+    nodeId: string;
+    mine: Record<string, unknown>;
+    server: { editVersion: number; title?: string | null; outline?: string | null; content?: string | null; notes?: string | null };
+  } | null>(null);
   const [volumeView, setVolumeView] = useState(true);
 
   // ── FE-N5 全局快捷键 ─────────────────────
@@ -166,19 +172,65 @@ export default function WorkspacePage() {
       toastInfo("请先选中一个章节再保存");
       return;
     }
+    const body = { content: selectedNode.content, expectedVersion: selectedNode.editVersion };
     try {
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: selectedNode.content }),
+        body: JSON.stringify(body),
       });
-      if (res.ok) toastSuccess("已保存 ✓");
-      else {
+      if (res.ok) {
+        const node = await res.json();
+        setSelectedNode(node);
+        toastSuccess("已保存 ✓");
+      } else if (res.status === 409) {
+        const d = (await res.json().catch(() => ({} as any)));
+        if (d.conflict) setConflict({ nodeId: selectedNode.id, mine: body, server: d.server });
+        else toastError(d.error || `保存失败（${res.status}）`);
+      } else {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
         toastError(d.error || `保存失败（${res.status}）`);
       }
     } catch (err) {
       toastError("保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
+  };
+
+  // FE-N8：保存冲突解决——以服务端当前版本为基准重新提交，或采用库里版本
+  const resolveConflict = async (action: "mine" | "theirs" | "both") => {
+    if (!conflict) return;
+    const { nodeId, mine, server } = conflict;
+    if (action === "theirs") {
+      setSelectedNode((prev: any) =>
+        prev ? { ...prev, editVersion: server.editVersion, title: server.title, outline: server.outline, content: server.content } : prev
+      );
+      setConflict(null);
+      toastInfo("已采用库里版本");
+      return;
+    }
+    const payload: Record<string, unknown> = { ...mine, expectedVersion: server.editVersion };
+    if (action === "both") {
+      const stamp = new Date().toISOString().slice(0, 10);
+      const memo = `\n【本地未保存版本备份 ${stamp}】\n大纲：\n${(mine.outline as string) ?? ""}\n正文：\n${((mine.content as string) ?? "").slice(0, 2000)}`;
+      payload.notes = (server.notes ? server.notes + "\n" : "") + memo;
+    }
+    try {
+      const res = await fetch(`/api/story/nodes/${nodeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const node = await res.json();
+        setSelectedNode(node);
+        setConflict(null);
+        toastSuccess(action === "both" ? "已保留双方（库里版本存为备注，您的版本已覆盖）" : "已用您的版本覆盖");
+      } else {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        toastError(d.error || "解决冲突失败");
+      }
+    } catch (err) {
+      toastError("解决冲突失败：" + (err instanceof Error ? err.message : "网络错误"));
     }
   };
 
@@ -272,17 +324,23 @@ export default function WorkspacePage() {
     if (!selectedNode) return;
     setShowDrawCards(false);
     try {
+      const body = { outline: card.outline, activeCharacters: characterIds || [], expectedVersion: selectedNode.editVersion };
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ outline: card.outline, activeCharacters: characterIds || [] }),
+        body: JSON.stringify(body),
       });
+      if (res.status === 409) {
+        const d = (await res.json().catch(() => ({} as any)));
+        if (d.conflict) { setConflict({ nodeId: selectedNode.id, mine: body, server: d.server }); return; }
+      }
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
         toastError(d.error || "章纲保存失败，请重试");
         return;
       }
-      setSelectedNode({ ...selectedNode, outline: card.outline, activeCharacters: characterIds || [] } as any);
+      const saved = await res.json();
+      setSelectedNode({ ...selectedNode, ...saved } as any);
       setDrawSelectedCharIds(characterIds || []);
       // 色子（抽卡）采用结果持久化关联到活跃剧情线：写入 chapterBindings（标记 preset），
       // 使生成前剧情规划(plan-chapter)能读到「用户用色子选定的走向」作为剧情预设。
@@ -855,17 +913,24 @@ export default function WorkspacePage() {
               if (!selectedNode) return;
               const prev = selectedNode;
               setSelectedNode({ ...selectedNode, outline });
+              const body = { outline, expectedVersion: selectedNode.editVersion };
               try {
                 const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ outline }),
+                  body: JSON.stringify(body),
                 });
+                if (res.status === 409) {
+                  const d = (await res.json().catch(() => ({} as any)));
+                  if (d.conflict) { setConflict({ nodeId: selectedNode.id, mine: body, server: d.server }); return; }
+                }
                 if (!res.ok) {
                   const d = (await res.json().catch(() => ({}))) as { error?: string };
                   setSelectedNode(prev);
                   toastError(d.error || `大纲保存失败（${res.status}）`);
                 } else {
+                  const saved = await res.json();
+                  setSelectedNode({ ...selectedNode, ...saved });
                   toastSuccess("大纲已保存 ✓");
                 }
               } catch (err) {
@@ -1052,6 +1117,18 @@ export default function WorkspacePage() {
           onClose={() => setShowConflict(false)}
           onApplied={loadProject}
           onOpenCharacter={(id) => { const c = project.characters.find((x) => x.id === id); if (c) setEditingCharacter(c); }}
+        />
+      )}
+
+      {/* FE-N8 保存冲突解决面板 */}
+      {conflict && selectedNode && (
+        <SaveConflictModal
+          open={!!conflict}
+          nodeTitle={selectedNode.title ?? "未命名章节"}
+          mine={conflict.mine as { outline?: string; content?: string }}
+          server={conflict.server}
+          onClose={() => setConflict(null)}
+          onResolve={resolveConflict}
         />
       )}
 

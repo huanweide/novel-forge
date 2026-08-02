@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.35";
+export const LATEST_VERSION = "v0.46.36";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧩 合并两套 LLM 抽象（ARCH-1·#216 批次2）：非流式调用统一收口到 `src/core/llm/client.ts` 的 `completeText(system, prompt, { temperature, maxTokens })` 门面；6 个 API 路由（characters/classify、storylines/generate、generate/chapter-outline[+draw]、lorebook/import、lorebook/summarize）的 `callLLM`/`callSiliconFlow` 调用全部迁到新门面，旧层不再承担非流式生成",
-  "🧹 删除旧层死代码：移除 `src/lib/llm.ts` 的 `callLLM` / `callSiliconFlow`（别名）/ `LLMCallOptions` 接口；旧层降级为纯工具库，仅保留仍被广泛引用的 `getSettings` / `mapLLMError` / `recordLlmCall` / `testLLMConnection` / `MODEL_PRICING` 价格表",
-  "📦 移除死依赖 `openai`：全源码无任何 `import \"openai\"`（统一门面与旧封装都用原生 fetch），已从 package.json + lock 删除，npm install 同步",
-  "🚫 诚实边界：未强删 `core/llm/client.ts` 内 9+ 个 `@deprecated` 导出（仍有引用方，强删会破坏构建）——「合并」务实落地为「非流式调用统一走新门面」，而非字面删除全部 deprecated 符号；tsc 零错误",
+  "🔒 保存冲突乐观锁（FE-N8·#216 收口）：`StoryNode` 新增 `editVersion Int @default(1)`，每次 PUT 成功 +1；`PUT /api/story/nodes/[id]` 支持条件更新（`where` 含 `editVersion`），客户端携带 `expectedVersion`，库版本不符即返回 409 + 库里当前快照（`conflict:true`）",
+  "🧩 新建 `SaveConflictModal`：保存收到 409 时弹出，并排展示「我的版本」与「库里版本」，三选项——用我的（覆盖）/ 用库里的 / 保留双方（库里版本存为节点备注 `notes`，我的版本覆盖），双方都不丢失",
+  "🖥️ 前端 3 处保存接入乐观锁：`handleSaveNode`（正文）/ `handleDrawSelect`（抽卡章纲）/ `onEditOutline`（大纲编辑）均携带 `expectedVersion`，成功响应回写新 `editVersion`，409 转交冲突面板；`StoryNodeData` 类型补 `editVersion` 字段",
+  "🚫 诚实边界：未处理「AI 流式改写直接覆盖未提交 textarea」的 UI 受控问题（那是 UI 层，需单独改 outline 编辑绑定）；`GameOutlineEditor` 等其他 PUT 入口暂未带 `expectedVersion`（兼容旧调用，不会误冲突）；tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.36",
+    date: "2026-08-03",
+    title: "保存冲突乐观锁（#216 收口）：FE-N8 非流式保存带版本戳 + 冲突解决面板",
+    sections: [
+      {
+        label: "保存冲突乐观锁（FE-N8）",
+        items: [
+          "Schema：`StoryNode` 新增 `editVersion Int @default(1)`，每次成功 PUT +1，作为乐观锁基准；已 `prisma db push` 同步本地 PG17 并 `prisma generate` 更新客户端类型",
+          "`PUT /api/story/nodes/[id]` 支持可选 `expectedVersion`：有则 `where: { id, editVersion: expectedVersion }` 条件更新；库版本与客户端携带的不符 → 返回 409 + 库里当前 `{editVersion,title,outline,content}` 快照（`conflict:true`）；无 `expectedVersion` 的旧调用方走普通更新（不强制锁）；并发窗口内 `P2025` 也降级为 409",
+          "新建 `src/components/workspace/SaveConflictModal.tsx`：收到 409 弹出，并排展示「我的版本（将保存）」与「库里版本（已更新 vN）」，三按钮——用我的（以服务端当前版本为基准强制覆盖）/ 用库里的（放弃本地，载入服务端）/ 保留双方（库里版本追加进 `notes` 备注，我的版本覆盖）",
+        ],
+      },
+      {
+        label: "前端接线",
+        items: [
+          "workspace 页 3 处保存统一接入：`handleSaveNode`（正文 mod+s）、`handleDrawSelect`（抽卡章纲）、`onEditOutline`（大纲编辑）——均携带 `expectedVersion: selectedNode.editVersion`，成功响应回写 `setSelectedNode(node)`（含新 editVersion），409 转交冲突面板",
+          "`src/components/workspace/types.ts` 的 `StoryNodeData` 补 `editVersion: number` 字段，使 `selectedNode.editVersion` 在 TS 层可见",
+        ],
+      },
+      {
+        label: "诚实边界与计划",
+        items: [
+          "未处理「AI 流式改写直接覆盖未提交 textarea」的 UI 受控问题——那是 UI 受控层（大纲 textarea 绑定方式），不在 FE-N8 字面范围；本批次聚焦「保存冲突」显式化",
+          "`GameOutlineEditor` 等其它 PUT 入口暂未带 `expectedVersion`（兼容旧调用，不会误触发 409）；如需全覆盖后续可补",
+          "#216 仍剩 FE-N6（时间线视图）待续；ARCH-4 迁移历史维持暂缓",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.35",
     date: "2026-08-03",

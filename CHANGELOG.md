@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.36 — 2026-08-03
+**保存冲突乐观锁（#216 收口）：FE-N8 非流式保存带版本戳 + 冲突解决面板**
+
+- 🔒 保存冲突乐观锁（FE-N8）：`StoryNode` 新增 `editVersion Int @default(1)`（每次 PUT 成功 +1）；`PUT /api/story/nodes/[id]` 支持可选 `expectedVersion`，条件更新（`where` 含 `editVersion`），库版本不符返回 409 + 库里当前快照（`conflict:true`）；无 `expectedVersion` 的旧调用走普通更新；并发窗口 `P2025` 也降级为 409
+- 🧩 新建 `SaveConflictModal`：收到 409 弹出，并排展示「我的版本」与「库里版本」，三选项——用我的（覆盖）/ 用库里的（载入服务端）/ 保留双方（库里版本存为节点备注 `notes`，我的版本覆盖）
+- 🖥️ 前端 3 处保存接入乐观锁：`handleSaveNode`（正文）/ `handleDrawSelect`（抽卡章纲）/ `onEditOutline`（大纲编辑）均携带 `expectedVersion`、成功回写新 `editVersion`、409 转交冲突面板；`StoryNodeData` 补 `editVersion` 字段
+- 🚫 诚实边界：未处理「AI 流式改写直接覆盖未提交 textarea」的 UI 受控问题（UI 层，需单独改大纲编辑绑定）；`GameOutlineEditor` 等其它 PUT 暂未带 `expectedVersion`（兼容旧调用，不误冲突）；tsc 零错误
+
 ## v0.46.35 — 2026-08-03
 **合并 LLM 抽象（#216·批次2）：ARCH-1 非流式调用统一到 core/llm 门面**
 

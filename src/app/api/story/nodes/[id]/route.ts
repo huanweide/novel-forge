@@ -1,6 +1,7 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { snapshotRevision } from "@/lib/versions";
 
 // GET /api/story/nodes/[id]
@@ -31,12 +32,41 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    // FE-N8：乐观锁——客户端可携带 expectedVersion，与库内 editVersion 比对以检测并发冲突
+    const expectedVersion =
+      typeof body.expectedVersion === "number" ? body.expectedVersion : undefined;
+
     // BE-1：手动保存前快照当前正文（去重由 helper 处理）
     const existingNode = await prisma.storyNode.findUnique({
       where: { id },
-      select: { content: true, wordCount: true, projectId: true },
+      select: { content: true, wordCount: true, projectId: true, editVersion: true },
     });
-    if (existingNode && body.content !== existingNode.content) {
+    if (!existingNode) {
+      return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+    }
+
+    // FE-N8：编辑期间节点已被改写（如 AI 流式改写 outline）→ 409 冲突，返回库里当前快照
+    if (expectedVersion !== undefined && existingNode.editVersion !== expectedVersion) {
+      const server = await prisma.storyNode.findUnique({ where: { id } });
+      return NextResponse.json(
+        {
+          conflict: true,
+          message:
+            "保存冲突：该节点在您编辑期间已被其他操作（如 AI 改写）更新，请用冲突面板决定如何合并。",
+          server: server
+            ? {
+                editVersion: server.editVersion,
+                title: server.title,
+                outline: server.outline,
+                content: server.content,
+              }
+            : null,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (body.content !== existingNode.content) {
       await snapshotRevision({
         nodeId: id,
         projectId: existingNode.projectId,
@@ -45,8 +75,9 @@ export async function PUT(
         prevWordCount: existingNode.wordCount,
       });
     }
+
     const node = await prisma.storyNode.update({
-      where: { id },
+      where: expectedVersion !== undefined ? { id, editVersion: expectedVersion } : { id },
       data: {
         title: body.title,
         order: body.order,
@@ -63,10 +94,32 @@ export async function PUT(
         notes: body.notes,
         reviewLogs: body.reviewLogs,
         revisionCount: body.revisionCount,
+        // FE-N8：每次成功保存版本号 +1，作为下一次保存的乐观锁基准
+        editVersion: { increment: 1 },
       },
     });
     return NextResponse.json(node);
   } catch (err) {
+    // FE-N8：并发窗口（预检后、更新前）节点又被改 → P2025，降级为 409 冲突
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      const p = await params;
+      const server = await prisma.storyNode.findUnique({ where: { id: p.id } }).catch(() => null);
+      return NextResponse.json(
+        {
+          conflict: true,
+          message: "保存冲突：该节点刚刚被其他操作更新，请用冲突面板决定如何合并。",
+          server: server
+            ? {
+                editVersion: server.editVersion,
+                title: server.title,
+                outline: server.outline,
+                content: server.content,
+              }
+            : null,
+        },
+        { status: 409 }
+      );
+    }
     return jsonError(err);
   }
 }
