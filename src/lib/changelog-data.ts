@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.10";
+export const LATEST_VERSION = "v0.46.11";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛡️ 全局错误边界（稳定性）：新增 ErrorBoundary 组件，捕获渲染 / 生命周期抛错，降级为「该模块出错 + 重试」友好 UI，不再整页白屏摧毁写作会话",
-  "🧱 三栏独立容错：左栏「大纲」/ 中栏「编辑器」/ 右栏「侧栏」各自包裹边界，单栏组件抛错不影响其他栏的正常写作",
-  "🔒 顶层兜底：根渲染树外加「工作台」边界，兜住工具栏 / 引导弹窗 / 对话框等局部未覆盖处的意外，作为最后防线",
-  "✅ 全量 tsc 零错误；零新 npm 依赖——错误上下文仅记录 console，不阻断交互",
+  "💾 保存状态透明化（P1）：正文由 AI 流落库（非手写入口），状态栏新增保存指示——生成中显示「草稿保存中…」旋转、完成后显示绿色「已落库 ✓」，消除「AI 写的内容会不会丢」的焦虑",
+  "✅ 大纲保存成功反馈：onEditOutline 成功补 toastSuccess「大纲已保存 ✓」，填补此前只有失败提示、成功静默变回显示态的缺口",
+  "🎯 诚实修正：原计划「手写正文保存透明化」前提不成立——本产品正文完全由 AI 生成流驱动，无作者手写 textarea 入口；P1 改为聚焦真实缺口（大纲反馈 + AI 落库确认）",
+  "✅ 全量 tsc 零错误；零新 npm 依赖——复用既有 genStep 状态与 toast 组件",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.11",
+    date: "2026-08-02",
+    title: "保存状态透明化：消除「AI 写的内容会不会丢」焦虑",
+    sections: [
+      {
+        label: "正文落库状态可见",
+        items: [
+          "CenterPanel 底部状态栏新增保存指示：AI 生成流传 span「草稿保存中…」(loader 旋转) → 完成后绿色「已落库 ✓」(check)，空闲时不打扰",
+          "复用既有 genStep 状态（generating/done），零新状态、零新依赖；AI 流每 300 字落库草稿，状态指示与真实落库节奏一致",
+        ],
+      },
+      {
+        label: "大纲保存正向反馈",
+        items: [
+          "onEditOutline 成功分支补 toastSuccess「大纲已保存 ✓」，填补此前仅失败 toastError、成功静默变回显示态的缺口",
+          "作者点保存后即时确认写入成功，不再凭「文本消失」猜测",
+        ],
+      },
+      {
+        label: "诚实修正与取舍",
+        items: [
+          "原计划「手写正文保存透明化」经侦察不成立：本产品正文完全由 AI 生成流驱动（生成/重写/微调/Flash/抽卡），无作者手写 textarea 入口，displayContent 为只读 MarkdownViewer",
+          "P1 改为聚焦真实缺口（大纲反馈 + AI 落库确认），避免做假功能；全量 tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.10",
     date: "2026-08-02",

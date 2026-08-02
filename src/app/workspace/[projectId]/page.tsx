@@ -778,6 +778,8 @@ export default function WorkspacePage() {
                   const d = (await res.json().catch(() => ({}))) as { error?: string };
                   setSelectedNode(prev);
                   toastError(d.error || `大纲保存失败（${res.status}）`);
+                } else {
+                  toastSuccess("大纲已保存 ✓");
                 }
               } catch (err) {
                 setSelectedNode(prev);

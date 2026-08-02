@@ -289,7 +289,15 @@ export function CenterPanel({
                 目标 {targetWordCount} 字 · {progressPct}%
               </span>
             </div>
-            <span className="flex items-center gap-1"><Icon name="file" size={11} /> UTF-8</span>
+            <span className="flex items-center gap-2">
+              {genStep === "generating" && (
+                <span className="inline-flex items-center gap-1 text-[var(--nv-primary)]"><Icon name="loader" size={11} className="animate-spin" /> 草稿保存中…</span>
+              )}
+              {genStep === "done" && (
+                <span className="inline-flex items-center gap-1 text-[var(--nv-success)]"><Icon name="check" size={11} /> 已落库 ✓</span>
+              )}
+              <span className="flex items-center gap-1"><Icon name="file" size={11} /> UTF-8</span>
+            </span>
           </div>
         </>
       ) : (
