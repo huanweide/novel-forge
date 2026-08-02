@@ -155,45 +155,65 @@ export async function callLLM(options: LLMCallOptions): Promise<string> {
     throw new Error("LLM API Key 未配置——请在设置页面填入 Key");
   }
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  // 指数退避重试：覆盖网络抖 / 429 限流 / 5xx 服务端异常；4xx 鉴权配置错直接抛不重试
+  const maxRetries = 3;
+  let lastErr: Error | null = null;
 
-  try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-        temperature,
-        max_tokens: maxTokens,
-        stream: false,
-      }),
-      signal: ctrl.signal,
-    });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt },
+          ],
+          temperature,
+          max_tokens: maxTokens,
+          stream: false,
+        }),
+        signal: ctrl.signal,
+      });
 
-    if (!res.ok) {
-      const err = await res.text().catch(() => "");
-      throw new Error(mapLLMError(res.status, err, model));
+      if (!res.ok) {
+        const err = await res.text().catch(() => "");
+        // 4xx（除 429 限流）属配置/鉴权错误，直接抛出不重试
+        if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+          throw new Error(mapLLMError(res.status, err, model));
+        }
+        lastErr = new Error(mapLLMError(res.status, err, model));
+      } else {
+        const data = await res.json().catch(() => null);
+        const raw = data?.choices?.[0]?.message?.content?.trim() || "";
+        if (!raw || raw.length < 10) {
+          // 空响应当作临时故障，纳入重试
+          lastErr = new Error("LLM 返回空响应");
+        } else {
+          return raw;
+        }
+      }
+    } catch (e) {
+      // 配置类错误（Key 未配置等）直接向上传播，不重试
+      if (e instanceof Error && e.message.includes("未配置")) throw e;
+      lastErr = e instanceof Error ? e : new Error(String(e));
+    } finally {
+      clearTimeout(timer);
     }
 
-    const data = await res.json().catch(() => null);
-    const raw = data?.choices?.[0]?.message?.content?.trim() || "";
-
-    if (!raw || raw.length < 10) {
-      throw new Error("LLM 返回空响应");
+    if (attempt < maxRetries) {
+      const delay = Math.min(8000, 600 * Math.pow(2, attempt - 1));
+      await new Promise((r) => setTimeout(r, delay));
     }
-
-    return raw;
-  } finally {
-    clearTimeout(timer);
   }
+
+  throw lastErr ?? new Error("LLM 调用失败");
 }
 
 /**

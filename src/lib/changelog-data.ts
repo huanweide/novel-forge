@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.18";
+export const LATEST_VERSION = "v0.46.19";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📱 响应式补齐（FE-6）：explore 探讨页与 game 游戏页三栏参考 workspace 主页补 `lg:` 抽屉——窄屏左右栏变 fixed 抽屉（`lg:static` 复位），中栏 `flex-1 min-w-0` 全宽不被挤压",
-  "🔘 窄屏顶部新增抽屉切换按钮（`lg:hidden`）：explore 用 `sliders`/`check` 图标分别开构建配置/已采纳抽屉；game 用 `sliders`/`grid` 图标开关左右栏",
-  "🎭 半透明遮罩点击收起：`(leftDrawerOpen || rightDrawerOpen)` 时渲染 `fixed inset-0 z-30 bg-black/50 lg:hidden`，点遮罩即关两栏，单栏故障不影响互动",
-  "✅ 全量 tsc 零错误、零新依赖；dissect 拆书页经核查本就是单栏 `max-w-6xl` 表单（无多列 grid），窄屏天然不挤压，按诚实边界未做无意义改写",
+  "🔁 LLM 重试 + 故障转移（BE-4）：核心客户端 `src/core/llm/client.ts` 的 `chat`/`chatStream` 接入指数退避重试——429 限流 / 5xx 服务端异常 / 网络不可达默认重试 3 次（退避 600ms→封顶 8s 含 ±20% 抖动）；4xx 鉴权/配置错误直接抛出不重试",
+  "🔀 故障转移（多模型兜底）：`LLMConfig` 新增 `fallbackModels` 链，主模型重试耗尽后依次切备用模型（换 model/baseURL/apiKey）；由 `process.env.LLM_FALLBACK`（形如 `modelA@baseURL,modelB`）零 schema 改动注入，不配则纯重试、不引任何新网络架构",
+  "🌊 流式安全：流式生成仅在「建立连接阶段」（fetch 失败 / 首 token 前 HTTP 错）重试与切换备用；一旦进入 token 流即不再重试/切换，避免重复输出污染正文",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；遗留 `src/lib/llm.ts` 的 `callLLM`（个别旧路由）也补同等指数退避重试；重试/故障转移均为本地运行时逻辑，符合本地自用定位",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.19",
+    date: "2026-08-02",
+    title: "LLM 重试 + 故障转移：模型抽风时自动退避重试 / 切备用模型，写作几乎无感",
+    sections: [
+      {
+        label: "重试与退避（BE-4）",
+        items: [
+          "核心 LLM 客户端 `src/core/llm/client.ts` 的 `chat` / `chatStream` 接入指数退避重试：429 限流 / 5xx 服务端异常 / 网络不可达（fetch TypeError）默认重试 3 次，退避 600ms × 2^(n-1) 封顶 8s 并带 ±20% 抖动，避免瞬时抖动直接断生成",
+          "4xx 鉴权/配置错误（401/403/404/400）视为不可重试——直接抛出 `mapLLMError` 中文提示，不浪费重试次数（这类是 Key 配错，重试无意义）",
+        ],
+      },
+      {
+        label: "故障转移（多模型兜底）",
+        items: [
+          "`LLMConfig` 新增 `fallbackModels: FallbackModel[]` 链；主模型重试耗尽后依次用备用模型重发整段请求（换 model / baseURL / apiKey）。配置经 `process.env.LLM_FALLBACK` 注入（形如 `deepseek-v3@https://api.deepseek.com,Pro/xxx@https://api.siliconflow.cn`），不配则纯重试、零 schema 改动",
+          "call 链抽象为「主模型 → 备用模型」统一遍历，对所有生成/agent/game/explore/dissect 入口透明生效；设置页可视化开关留待后续（配置入口已就绪，未伪装「已配 UI」）",
+        ],
+      },
+      {
+        label: "流式安全与诚实边界",
+        items: [
+          "流式生成仅在「建立连接阶段」（fetch 失败 / 首 token 前 HTTP 错）重试与切换备用；一旦进入 token 流即不再重试/切换，避免重复输出污染已生成正文",
+          "遗留路径 `src/lib/llm.ts` 的 `callLLM`（个别旧路由）同步补同等指数退避重试，但不带 fallback（避免范围膨胀）；全部为本地运行时逻辑，不引入任何部署/服务器组件，符合「本地自用、不做真实网络」定位",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.18",
     date: "2026-08-02",

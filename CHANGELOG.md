@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.19 — 2026-08-02
+**LLM 重试 + 故障转移：模型抽风时自动退避重试 / 切备用模型，写作几乎无感**
+- 🔁 重试与退避（BE-4）：核心客户端 `src/core/llm/client.ts` 的 `chat`/`chatStream` 接入指数退避重试——429 限流 / 5xx 服务端异常 / 网络不可达默认重试 3 次（退避 600ms×2^(n-1) 封顶 8s 含 ±20% 抖动）；4xx 鉴权/配置错误（401/403/404/400）直接抛出 `mapLLMError` 中文提示不重试
+- 🔀 故障转移（多模型兜底）：`LLMConfig` 新增 `fallbackModels` 链，主模型重试耗尽后依次切备用模型（换 model/baseURL/apiKey）；配置经 `process.env.LLM_FALLBACK`（形如 `modelA@baseURL,modelB`）零 schema 改动注入，不配则纯重试、不引任何新网络架构
+- 🌊 流式安全：流式生成仅在「建立连接阶段」（fetch 失败 / 首 token 前 HTTP 错）重试与切换备用；一旦进入 token 流即不再重试/切换，避免重复输出污染正文
+- 🛡️ 诚实边界：遗留 `src/lib/llm.ts` 的 `callLLM`（个别旧路由）同步补同等指数退避重试但不带 fallback；全部为本地运行时逻辑，不引入部署/服务器组件，符合「本地自用、不做真实网络」定位
+
 ## v0.46.18 — 2026-08-02
 **响应式补齐：explore 探讨页 / game 游戏页三栏抽屉化（窄屏不再挤压）**
 - 📱 响应式补齐（FE-6）：explore 探讨页三栏（构建配置 w-80 / 中栏 / 已采纳 w-72）与 game 游戏页三栏（左信息 w-52 / 中栏 / 右信息 w-64）参考 workspace 主页补 `lg:` 抽屉——左右栏在 `<lg` 变 `fixed inset-y-0 left/right-0 z-40 w-* max-w-[85vw] h-full transition-transform`，开 `translate-x-0`、关 `-translate-x-full`；`lg:static lg:z-auto lg:shrink-0 lg:w-* lg:translate-x-0 lg:transition-none` 复位，桌面三栏并排零回归

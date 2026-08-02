@@ -423,6 +423,13 @@ export interface Project {
 
 // ─── LLM配置 ────────────────────────────────────────────────
 
+/** 故障转移备用模型：主模型最终失败（重试耗尽）后依次尝试。baseURL/apiKey 省略则复用主配置 */
+export interface FallbackModel {
+  model: string;
+  baseURL?: string;
+  apiKey?: string;
+}
+
 export interface LLMConfig {
   architectModel: string;         // Agent A 大纲模型（推荐：deepseek-chat）
   writerModel: string;            // Agent C 主笔模型（推荐：deepseek-chat，长上下文）
@@ -435,6 +442,8 @@ export interface LLMConfig {
   defaultTopP: number;            // 默认Top-P (0.9-1.0)
   maxTokensPerRequest: number;    // 单次请求最大Token
   contextWindowSize: number;      // 模型上下文窗口大小
+  /** 故障转移备用模型链：主模型重试耗尽后依次尝试；为空则不做故障转移 */
+  fallbackModels?: FallbackModel[];
 }
 
 // ─── Agent通信协议 ──────────────────────────────────────────

@@ -235,9 +235,9 @@
 - **价值**：键盘用户 / 读屏用户能用；也是"成品"该过的底线（很多招标/采购看这个）。
 - **量级**：小–中（散点修复）。
 
-### FE-6 响应式补齐：explore / game 三栏抽屉化 ⭐
-- **现在**：workspace 主页面已做了窄屏抽屉（`lg:hidden` 切换 + 遮罩）；但 **explore 页三栏无任何 `md:/lg:` 断点**（只有 1 处 `sm:`，且用 `calc(100vh-57px)` 固定高度），**game 页三栏 `w-52/flex-1/w-64` 固定无抽屉**。
-- **做完**：explore、game 三栏参考 workspace 主页补 `lg:` 抽屉（切换按钮 + 遮罩），窄屏不再挤压；dissect 长表单在 `<md` 改单栏堆叠。
+### FE-6 响应式补齐：explore / game 三栏抽屉化 ⭐ ✅ 已完成 (v0.46.18)
+- **现在**（实施前）：workspace 主页面已做了窄屏抽屉（`lg:hidden` 切换 + 遮罩）；但 **explore 页三栏无任何 `md:/lg:` 断点**（只有 1 处 `sm:`，且用 `calc(100vh-57px)` 固定高度），**game 页三栏 `w-52/flex-1/w-64` 固定无抽屉**。
+- **做完**：explore、game 三栏参考 workspace 主页补 `lg:` 抽屉（切换按钮 + 遮罩），窄屏不再挤压；explore 左栏(构建配置 w-80)/右栏(已采纳 w-72)、game 左栏(w-52)/右栏(w-64) 在 `<lg` 变 fixed 抽屉（`lg:static` 复位），窄屏顶部加 `lg:hidden` 切换按钮，中栏 `flex-1 min-w-0` 全宽；三栏末加 `lg:hidden` 遮罩点按收起。dissect 拆书页经核查本就单栏 `max-w-6xl` 表单（无多列 grid），窄屏天然不挤压——诚实保留未硬改。tsc 零错误、零新依赖，已推 main（222df26）。
 - **价值**：手机/平板/小窗也能正常用 explore 探讨和 game 互动游戏，不再是"只能桌面宽屏"。
 - **量级**：中（参考已有 workspace 抽屉模式，复用即可）。
 
