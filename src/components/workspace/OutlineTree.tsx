@@ -112,15 +112,32 @@ export function VolumeGroup({
 export function OutlineTree({
   nodes, selectedNode, onSelectNode, onAddSection, volumeView,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
-  projectId,
+  projectId, onLoadSample,
 }: {
   nodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
   volumeView: boolean; batchMode?: boolean; selectedChapterIds?: Set<string>;
-  onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
+  onToggleChapterSelect?: (id: string) => void;   onDeleteNode?: (id: string) => void;
   deletingId?: string | null;
   projectId: string;
+  onLoadSample?: () => void;
 }) {
+  if (nodes.length === 0) {
+    return (
+      <div className="px-2 py-10 text-center">
+        <div className="mb-3 text-xs text-[var(--nv-text-tertiary)]">还没有章节大纲，先有个开头吧：</div>
+        {onLoadSample && (
+          <button onClick={onLoadSample} className="btn-primary h-7 px-3 mb-3 text-xs">看示例（载入示范小说）</button>
+        )}
+        <div>
+          <button onClick={() => onAddSection(null)} className="text-xs text-[var(--nv-primary)] hover:underline">+ 手动添加章节</button>
+        </div>
+        <div className="mt-2">
+          <button onClick={() => { if (typeof window !== "undefined") window.location.href = "/"; }} className="text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">或去首页「按题材开局」</button>
+        </div>
+      </div>
+    );
+  }
   const volumeNodes = nodes.filter((n) => n.type === "volume");
   const nonVolumeRoots = nodes.filter((n) => !n.parentId && n.type !== "volume");
 

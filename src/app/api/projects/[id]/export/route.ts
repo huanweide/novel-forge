@@ -18,6 +18,7 @@ export async function GET(
     const url = new URL(request.url);
     const format = url.searchParams.get("format") || "markdown";
     const includeOutline = url.searchParams.get("includeOutline") !== "false";
+    const author = url.searchParams.get("author")?.trim() || undefined;
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -29,13 +30,29 @@ export async function GET(
     }
 
     // 获取所有节点，按树结构排序
-    const allNodes = await prisma.storyNode.findMany({
+    let allNodes = await prisma.storyNode.findMany({
       where: { projectId: id },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     });
 
     if (allNodes.length === 0) {
       return NextResponse.json({ error: "没有内容可导出" }, { status: 400 });
+    }
+
+    // 范围过滤：指定章节时只导出这些章及其后代（选章导出）
+    const chapterIdsParam = url.searchParams.get("chapterIds");
+    if (chapterIdsParam) {
+      const wanted = new Set(chapterIdsParam.split(",").filter(Boolean));
+      if (wanted.size > 0) {
+        const keep = new Set<string>();
+        const addDesc = (nid: string) => {
+          if (keep.has(nid)) return;
+          keep.add(nid);
+          for (const n of allNodes) if (n.parentId === nid) addDesc(n.id);
+        };
+        for (const id of wanted) addDesc(id);
+        allNodes = allNodes.filter((n) => keep.has(n.id));
+      }
     }
 
     // 构建树结构
@@ -49,7 +66,7 @@ export async function GET(
     // HTML 单文件导出：自带轻量散文→HTML 转换，可直接浏览器打开 / 被 Word 导入
     if (format === "html") {
       const chapters = buildChapterList(roots, allNodes, includeOutline);
-      const htmlDoc = buildHtmlDoc(project.name, chapters, totalWords, completedNodes);
+      const htmlDoc = buildHtmlDoc(project.name, chapters, totalWords, completedNodes, author);
       const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.html`;
       return new Response(htmlDoc, {
         headers: {
@@ -62,7 +79,7 @@ export async function GET(
     // EPUB 电子书导出（零依赖 stored ZIP + CRC32）
     if (format === "epub") {
       const chapters = buildChapterList(roots, allNodes, includeOutline);
-      const epubBuf = buildEpub(project.name, chapters, totalWords, completedNodes);
+      const epubBuf = buildEpub(project.name, chapters, totalWords, completedNodes, author);
       const epubBlob = new Blob([new Uint8Array(epubBuf)], { type: "application/epub+zip" });
       const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.epub`;
       return new Response(epubBlob, {
@@ -76,7 +93,7 @@ export async function GET(
     // DOCX（Word）导出：零依赖 OOXML ZIP，中文靠 styles.xml 的 eastAsia="宋体"
     if (format === "docx") {
       const chapters = buildChapterList(roots, allNodes, includeOutline);
-      const docxBuf = buildDocx(project.name, chapters, { includeOutline });
+      const docxBuf = buildDocx(project.name, chapters, { includeOutline, author });
       const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.docx`;
       return new Response(new Uint8Array(docxBuf), {
         headers: {
@@ -90,6 +107,7 @@ export async function GET(
 
     if (format === "markdown") {
       output += `# ${project.name}\n\n`;
+      if (author) output += `**作者：${author}**\n\n`;
 
       // 目录
       output += "## 目录\n\n";
@@ -113,6 +131,7 @@ export async function GET(
     } else {
       // 纯文本
       output += `${project.name}\n${"=".repeat(project.name.length)}\n\n`;
+      if (author) output += `作者：${author}\n\n`;
 
       for (const root of roots) {
         output += buildTextNode(root, allNodes, includeOutline);

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const [nodes, summaries, beats, commitments] = await Promise.all([
       prisma.storyNode.findMany({
         where: { projectId },
-        select: { id: true, title: true, type: true, status: true, wordCount: true, order: true },
+        select: { id: true, title: true, type: true, status: true, wordCount: true, order: true, updatedAt: true },
         orderBy: { order: "asc" },
       }),
       prisma.chapterSummary.count({ where: { projectId } }),
@@ -58,6 +58,22 @@ export async function GET(request: Request) {
       ? Math.min(...chaptersWithWords.map((n) => n.wordCount))
       : 0;
 
+    // 近 14 天写作节奏（按章节 updatedAt 聚合字数，近似每日产出）
+    const dayMap = new Map<string, number>();
+    const base = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(base);
+      d.setDate(d.getDate() - i);
+      dayMap.set(d.toISOString().slice(0, 10), 0);
+    }
+    for (const n of nodes) {
+      const ts = (n as { updatedAt?: Date | string }).updatedAt ? new Date((n as { updatedAt?: Date | string }).updatedAt as string) : null;
+      if (!ts) continue;
+      const day = ts.toISOString().slice(0, 10);
+      if (dayMap.has(day)) dayMap.set(day, (dayMap.get(day) || 0) + (n.wordCount || 0));
+    }
+    const dailyWords = [...dayMap.entries()].map(([date, words]) => ({ date, words }));
+
     return NextResponse.json({
       totalWords,
       totalChapters,
@@ -86,6 +102,7 @@ export async function GET(request: Request) {
         storyBeats: beats,
         pendingCommitments: commitments,
       },
+      dailyWords,
     });
   } catch (err) {
     return jsonError(err);

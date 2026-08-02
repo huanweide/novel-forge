@@ -15,6 +15,12 @@ import { Icon, type IconName } from "@/components/ui/icons";
 
 const ONBOARD_KEY = "nf_onboarded_v1";
 
+const STEPS: { n: number; title: string; desc: string }[] = [
+  { n: 1, title: "选个开局", desc: "首页点「看示例」载入示范仙侠小说，或「按题材开局」一键建好项目骨架。" },
+  { n: 2, title: "让 AI 写", desc: "选中章节，点「续写 / 微调」，AI 会带着你的世界观与角色自动写。" },
+  { n: 3, title: "导出成书", desc: "工具栏「导出」选 Word / EPUB，直接拿去投稿或阅读。" },
+];
+
 const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   { icon: "bot", title: "自动化填表", desc: "AI 写完一章，自动把人物、设定、伏笔整理进结构化表格，零配置。" },
   { icon: "gem", title: "抽卡剧情", desc: "用「抽卡」随机生成剧情走向，并关联你的角色与故事线。" },
@@ -54,6 +60,19 @@ export function OnboardingModal() {
       icon="book"
       size="lg"
     >
+      {/* 三步上手路径 */}
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {STEPS.map((s) => (
+          <div key={s.n} className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3">
+            <div className="mb-1 flex items-center gap-1.5">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--nv-primary)] text-[10px] font-bold text-white">{s.n}</span>
+              <span className="text-xs font-medium text-[var(--nv-text-primary)]">{s.title}</span>
+            </div>
+            <p className="text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">{s.desc}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="space-y-2.5">
         {FEATURES.map((f) => (
           <div key={f.title} className="flex items-start gap-3 rounded-xl bg-[var(--nv-surface-1)] p-3">

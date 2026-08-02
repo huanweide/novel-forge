@@ -8,6 +8,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 interface MonitorData {
   totalWords: number;
@@ -18,11 +19,21 @@ interface MonitorData {
   tokens: { estimatedGenerated: number; estimatedPrompt: number; estimatedTotal: number; note: string };
   distribution: { avgWordsPerChapter: number; maxChapterWords: number; minChapterWords: number; chaptersWithContent: number };
   dataStats: { chapterSummaries: number; storyBeats: number; pendingCommitments: number };
+  dailyWords: { date: string; words: number }[];
 }
 
 export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?: string }) {
   const [data, setData] = useState<MonitorData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dailyGoal, setDailyGoal] = useState<number>(0);
+  const [goalInput, setGoalInput] = useState<string>("");
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem(`nf-daily-goal-${projectId}`) : null;
+    if (saved) {
+      const g = parseInt(saved, 10);
+      if (!isNaN(g) && g > 0) { setDailyGoal(g); setGoalInput(String(g)); }
+    }
+  }, [projectId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +56,8 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
 
   const fmt = (n: number) => n.toLocaleString("zh-CN");
   const fmtK = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayWords = data?.dailyWords?.find((d) => d.date === todayStr)?.words || 0;
 
   return (
     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar">
@@ -91,6 +104,73 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
           <Row label="故事转折点" value={String(data.dataStats.storyBeats)} />
           <Row label="伏笔/承诺" value={String(data.dataStats.pendingCommitments)} />
         </div>
+      </div>
+
+      {/* 写作节奏（近 7 天） */}
+      <div className="p-3 border-t border-[var(--nv-border-2)]">
+        <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="chart" size={11} /> 写作节奏（近 7 天）</div>
+        <div className="flex h-16 items-end gap-1">
+          {data.dailyWords.slice(-7).map((d) => {
+            const max = Math.max(1, ...data.dailyWords.slice(-7).map((x) => x.words));
+            const h = d.words > 0 ? Math.max(6, Math.round((d.words / max) * 54)) : 2;
+            const isToday = d.date === todayStr;
+            return (
+              <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
+                <div className="flex w-full flex-1 items-end">
+                  <div
+                    className={`w-full rounded-t ${isToday ? "bg-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)]"}`}
+                    style={{ height: `${h}px` }}
+                    title={`${d.date}：${fmt(d.words)}字`}
+                  />
+                </div>
+                <span className="text-[8px] text-[var(--nv-text-muted)]">{d.date.slice(5)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 每日目标 */}
+      <div className="p-3 border-t border-[var(--nv-border-2)]">
+        <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="target" size={11} /> 每日目标</div>
+        {dailyGoal > 0 ? (
+          <div className="flex items-center gap-3">
+            <div className="relative h-12 w-12 shrink-0">
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{ background: `conic-gradient(var(--nv-success) ${Math.min(100, Math.round((todayWords / dailyGoal) * 100))}%, var(--nv-surface-3) 0)` }}
+              />
+              <div className="absolute inset-[3px] flex items-center justify-center rounded-full bg-[var(--nv-surface-1)] text-[9px] text-[var(--nv-text-secondary)]">
+                {Math.min(100, Math.round((todayWords / dailyGoal) * 100))}%
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="text-xs text-[var(--nv-text-primary)]">今日 {fmt(todayWords)} / {fmt(dailyGoal)} 字</div>
+              <button
+                onClick={() => { setDailyGoal(0); setGoalInput(""); localStorage.removeItem(`nf-daily-goal-${projectId}`); }}
+                className="text-[10px] text-[var(--nv-text-muted)] transition-colors hover:text-[var(--nv-text-secondary)]"
+              >清除目标</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="如 2000"
+              className="input-glass w-24 rounded px-2 py-1 text-xs"
+            />
+            <Button
+              size="sm"
+              onClick={() => {
+                const g = parseInt(goalInput, 10);
+                if (!isNaN(g) && g > 0) { setDailyGoal(g); localStorage.setItem(`nf-daily-goal-${projectId}`, String(g)); }
+              }}
+              className="btn-primary h-7 text-xs"
+            >设定</Button>
+          </div>
+        )}
       </div>
     </div>
   );

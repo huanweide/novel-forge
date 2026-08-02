@@ -14,7 +14,7 @@ export function LeftPanel({
   onEditCharacter, onEditLore, onNewCharacter, loadProject,
   volumeView, onToggleVolumeView, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
-  batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId,
+  batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId, onLoadSample,
 }: {
   project: ProjectData; activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules") => void;
@@ -27,6 +27,7 @@ export function LeftPanel({
   onClearSelection: () => void; batchGenerating: boolean; onBatchGenerate: () => void;
   onDeleteNode?: (id: string) => void;
   deletingNodeId?: string | null;
+  onLoadSample?: () => void;
 }) {
   const tabs = [
     { key: "outline", label: "大纲" },
@@ -75,7 +76,8 @@ export function LeftPanel({
             <OutlineTree nodes={project.storyNodes ?? []} selectedNode={selectedNode} onSelectNode={onSelectNode}
               onAddSection={onAddSection} volumeView={volumeView} batchMode={batchMode}
               selectedChapterIds={selectedChapterIds} onToggleChapterSelect={onToggleChapterSelect}
-              onDeleteNode={onDeleteNode} projectId={project.id} deletingId={deletingNodeId} />
+              onDeleteNode={onDeleteNode} projectId={project.id} deletingId={deletingNodeId}
+              onLoadSample={onLoadSample} />
           </>
         )}
         {activeTab === "storylines" && (

@@ -9,18 +9,19 @@ import type { ProjectData } from "./types";
 
 export function Toolbar({
   projectName, onBack, onGenerateOutline, onSummarize, onImportSettings, onImportChapters,
-  onEditStyle, onExport, isGenerating, outlineGenerating, summarizing,
-  projectId, styleTemplateId, onStyleSelect, styleCard, onOpenAutomation,
+  onEditStyle, onOpenExport, isGenerating, outlineGenerating, summarizing,
+  projectId, styleTemplateId, onStyleSelect, styleCard,   onOpenAutomation,
+  onOpenToolbox,
 }: {
   projectName: string; onBack: () => void; onGenerateOutline: () => void;
   onSummarize: () => void; onImportSettings: () => void; onImportChapters: () => void;
-  onEditStyle: () => void; onExport: (format: "markdown" | "txt" | "html" | "epub" | "docx") => void;
+  onEditStyle: () => void; onOpenExport: () => void;
   isGenerating: boolean; outlineGenerating?: boolean; summarizing: boolean;
   projectId: string; styleTemplateId?: string; onStyleSelect: (t: StyleTemplate) => void;
   styleCard?: ProjectData["styleCard"];
   onOpenAutomation: () => void;
+  onOpenToolbox: () => void;
 }) {
-  const [showExport, setShowExport] = useState(false);
   const [copying, setCopying] = useState(false);
   const [copyTip, setCopyTip] = useState<string | null>(null);
 
@@ -33,7 +34,6 @@ export function Toolbar({
   };
 
   const handleCopyMarkdown = async () => {
-    setShowExport(false);
     setCopying(true);
     setCopyTip(null);
     try {
@@ -88,30 +88,12 @@ export function Toolbar({
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]"><Icon name="download" size={12} /> 导入</Button>
         <Button size="sm" variant="outline" onClick={onOpenAutomation} disabled={isGenerating}
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-primary)]"><Icon name="bot" size={12} /> 自动化</Button>
-        <div className="relative">
-          <Button size="sm" variant="outline" onClick={() => setShowExport(!showExport)}
-            disabled={isGenerating} className="flex h-7 items-center gap-1 text-xs"><Icon name="upload" size={12} /> 导出</Button>
-          {showExport && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
-              <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-abyss)] shadow-xl">
-                <button onClick={() => { onExport("markdown"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />Markdown (.md)</button>
-                <button onClick={() => { onExport("txt"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />纯文本 (.txt)</button>
-                <button onClick={() => { onExport("html"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />网页 HTML（可打印PDF）</button>
-                <button onClick={() => { onExport("docx"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />Word 文档 (.docx)</button>
-                <button onClick={() => { onExport("epub"); setShowExport(false); }}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"><Icon name="file" size={12} className="mr-1 inline" />电子书 EPUB (.epub)</button>
-                <div className="my-1 border-t border-[var(--nv-border-2)]" />
-                <button onClick={handleCopyMarkdown} disabled={copying}
-                  className="w-full px-3 py-2 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)] disabled:opacity-50"><Icon name="clipboard" size={12} className="mr-1 inline" />{copying ? "复制中…" : "复制全文 Markdown"}</button>
-              </div>
-            </>
-          )}
-        </div>
+        <Button size="sm" variant="outline" onClick={onOpenToolbox} disabled={isGenerating}
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]"><Icon name="sparkles" size={12} /> 工具箱</Button>
+        <Button size="sm" variant="outline" onClick={onOpenExport} disabled={isGenerating}
+          className="flex h-7 items-center gap-1 text-xs"><Icon name="upload" size={12} /> 导出</Button>
+        <Button size="sm" variant="outline" onClick={handleCopyMarkdown} disabled={copying || isGenerating}
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-text-secondary)]"><Icon name="clipboard" size={12} />{copying ? "复制中…" : "复制全文"}</Button>
         {copyTip && <span className="shrink-0 self-center text-xs text-[var(--nv-accent)]">{copyTip}</span>}
       </div>
     </header>

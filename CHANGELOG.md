@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.6 — 2026-08-02
+**成品感打磨收官：冲突推演 / 工具箱 / 导出增强 / 统计补完**
+- 💡 冲突推演（D4）：新增 `/api/generate/conflict` 端点——基于世界观硬规则 + 主角角色卡 + 近 2 章，AI 推演 ≥3 个结构化冲突 / 转折发展选项（title/trigger/tension/outcome/caution），空响应自动重试一次提升稳定性；新增 `ConflictPanel` 弹窗（工具箱「智能分析」入口），卡片化呈现并明确「仅供参考，决定权在你」，每张卡可一键复制
+- 🧰 工具箱（D2）：新建 `ToolboxDialog`，收拢续写 / 大纲 / 批量 / 摘要 / 抽卡 / 角色 / 工坊 / 表格 / 召回 / 冲突推演 10 项，按「写作辅助 / 内容生成 / 智能分析」三色分类卡片网格，零新增后端
+- 📤 导出增强（C2）：统一 `ExportDialog`（6 格式网格 + 选章范围 + 含大纲开关 + 作者署名）；后端 export 路由扩展 `author` / `chapterIds` 参数并透传 DOCX / EPUB / HTML / Markdown / TXT 五个构建器
+- 📊 统计与引导补完（D1/B3）：monitor 端点加近 14 天 `dailyWords` 聚合；`MonitorPanel` 加近 7 天写作节奏柱状图 + 每日目标 conic 进度环（localStorage 持久化）；`OnboardingModal` 三步上手卡、`OutlineTree` 空态「看示例」经 `LeftPanel` 透传 `onLoadSample` 至 workspace 定义 handler（POST `/api/seed/sample-project` 后跳转）
+- 🔍 D3 复核：发现 `RulesPanel` 已具备逐条启用 / 禁用 + 分类 / 范围标签 + 状态分组（已禁用区），路线图 🔲 为过时标记，无需重复造轮子（cargo cult 检测应用）
+- 🧪 E1/E2 压测：dev 冒烟实测全部关键路径（seed / 导出空边界 / markdown+docx 署名 / conflict / chat / stats）正常；实测中的「中文乱码 / 0 字节 / 400」经隔离定位均为测试环境假象（GBK shell 发送 + dev 首次编译抖动），非产品 bug；真实 5 万字长跑建议作者侧实跑
+- ✅ 全量 tsc 零错误；延续本地优先、零新 npm 依赖铁律
+
 ## v0.46.5 — 2026-08-02
 **开箱即懂 + 投稿闭环：示例项目 / 题材开局 / DOCX 导出**
 - 📖 一键示例项目（B1）：首页「看示例」一键后端播种示范仙侠小说《山海拾遗》——世界观铁律（严禁现代科技造物/修真境界分级/因果必有回响 3 条硬规则）+ 剧情推进倾向 + 主角李尘角色卡（结构化 personality）+ 已写 2 章正文，并自动 syncGlobalPrompt 让规则真正进 globalPrompt（闭环「定义了没用」）；幂等安全

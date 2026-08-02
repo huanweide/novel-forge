@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.5";
+export const LATEST_VERSION = "v0.46.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📖 一键示例项目：首页「看示例」一键载入示范仙侠小说《山海拾遗》——世界观铁律（严禁现代科技造物等 3 条硬规则）+ 剧情推进倾向 + 主角李尘角色卡 + 已写 2 章正文，规则自动进上下文，新人点开即见生成+填表+召回效果",
-  "🎯 题材开局模板库：8 个高频题材（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠）一键建好项目骨架——世界观铁律+剧情倾向+主角原型+卷纲（三段式大纲）+第一章开局钩子，纯静态数据离线可用",
-  "📄 导出补全 DOCX：零依赖 Word 导出（复用 epub 的 makeZip 手写 OOXML ZIP 包，中文靠 styles.xml 的 eastAsia=\"宋体\" 不乱码），连同既有 TXT + 可打印 PDF（HTML 导出改名「网页 HTML（可打印PDF）」引导打印），对齐云笔 6 格式",
-  "✅ B1/B2/C1 三项全部 tsc 零错误、端到端实测通过；延续本地优先、零新 npm 依赖铁律",
+  "💡 冲突推演（D4）：工具箱「智能分析」新增冲突推演——基于世界观硬规则 + 主角角色 + 近 2 章，AI 一次出 ≥3 个结构化冲突 / 转折选项（触发 / 张力 / 走向 / 伏笔），每张卡片明确「仅供参考，决定权在你」",
+  "🧰 工具箱（D2）：顶部「工具箱」按钮收拢 10 个分散能力，按「写作辅助 / 内容生成 / 智能分析」三类卡片网格呈现，零新增后端",
+  "📤 导出增强（C2）：统一导出弹窗——6 格式网格 + 选章范围 + 含大纲开关 + 作者署名，署名透传 DOCX / EPUB / HTML / Markdown / TXT",
+  "📊 统计与引导补完（D1/B3）：MonitorPanel 新增近 7 天写作节奏柱状图 + 每日目标进度环（本地持久化）；新手空态「看示例」一键载入示范小说、首屏三步引导卡",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.6",
+    date: "2026-08-02",
+    title: "成品感打磨收官：冲突推演 / 工具箱 / 导出增强 / 统计补完",
+    sections: [
+      {
+        label: "D4 冲突推演",
+        items: [
+          "新增 /api/generate/conflict 端点：基于世界观硬规则 + 主角角色卡 + 近 2 章，AI 推演 ≥3 个结构化冲突 / 转折发展选项（title/trigger/tension/outcome/caution），空响应自动重试一次提升稳定性",
+          "新增 ConflictPanel 弹窗（工具箱「智能分析」入口）：卡片化呈现选项，顶部明确「仅供参考，最终情节决定权在作者」，每张卡可一键复制",
+        ],
+      },
+      {
+        label: "D2 工具箱 + C2 导出增强 + D1/B3",
+        items: [
+          "工具箱：新建 ToolboxDialog，收拢续写 / 大纲 / 批量 / 摘要 / 抽卡 / 角色 / 工坊 / 表格 / 召回 / 冲突推演 10 项，按 写作辅助 / 内容生成 / 智能分析 三色分类网格",
+          "导出增强：统一 ExportDialog（6 格式网格 + 选章范围 + 含大纲开关 + 作者署名）；后端 export 路由扩展 author / chapterIds 参数并透传 DOCX/EPUB/HTML/Markdown/TXT 构建器",
+          "统计补完：monitor 端点加近 14 天 dailyWords 聚合；MonitorPanel 加近 7 天写作节奏柱状图 + 每日目标 conic 进度环（localStorage 持久化）",
+          "新手引导：OnboardingModal 三步上手卡；OutlineTree 空态「看示例」经 LeftPanel 透传 onLoadSample 至 workspace 定义 handler（POST /api/seed/sample-project 后跳转）",
+        ],
+      },
+      {
+        label: "D3 复核 + E1/E2 压测",
+        items: [
+          "D3 规则中心 UI：复核发现 RulesPanel 已具备逐条启用 / 禁用 + 分类 / 范围标签 + 状态分组（已禁用区），路线图 🔲 为过时标记，无需重复造轮子（cargo cult 检测应用）",
+          "E1/E2 压测：dev 冒烟实测全部关键路径（seed / 导出空边界 / markdown+docx 署名 / conflict / chat / stats）正常；实测中遇到的「中文乱码 / 0 字节 / 400」经隔离定位均为测试环境假象（GBK shell 发送 + dev 首次编译抖动），非产品 bug；真实 5 万字长跑建议作者侧实跑",
+        ],
+      },
+      {
+        label: "质量",
+        items: [
+          "全量 tsc 零错误；延续本地优先、零新 npm 依赖铁律",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.5",
     date: "2026-08-02",

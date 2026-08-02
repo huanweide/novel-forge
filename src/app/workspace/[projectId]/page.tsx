@@ -9,6 +9,9 @@ import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
 import { PostGenPanel } from "@/components/workspace/PostGenPanel";
 import { Toolbar } from "@/components/workspace/Toolbar";
+import { ToolboxDialog, type ToolboxItem } from "@/components/workspace/ToolboxDialog";
+import { ExportDialog } from "@/components/workspace/ExportDialog";
+import { ConflictPanel } from "@/components/workspace/ConflictPanel";
 import { LeftPanel } from "@/components/workspace/LeftPanel";
 import { CenterPanel } from "@/components/workspace/CenterPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
@@ -115,6 +118,7 @@ export default function WorkspacePage() {
   const [showBuildConfig, setShowBuildConfig] = useState(false);
   const [showMemoryDecay, setShowMemoryDecay] = useState(false);
   const [showProjectConfig, setShowProjectConfig] = useState(false);
+  const [showToolbox, setShowToolbox] = useState(false);
   const [extractionData, setExtractionData] = useState<any>(null);
   const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -560,6 +564,22 @@ export default function WorkspacePage() {
     errorPrefix: "删除失败",
   });
 
+  // B3 引导：空态「看示例」——载入内置示范小说（幂等），成功跳转其工作区
+  const loadSample = async () => {
+    try {
+      const res = await fetch("/api/seed/sample-project", { method: "POST" });
+      const d = await res.json();
+      if (res.ok && d.id) {
+        toastSuccess("示例项目已载入");
+        router.push(`/workspace/${d.id}`);
+      } else {
+        toastError(d.error || "载入示例失败");
+      }
+    } catch {
+      toastError("载入示例失败");
+    }
+  };
+
   const handleSummarize = async () => {
     if (!selectedNode || !project) return;
     if (!selectedNode.content) { toastInfo("该节点还没有内容，无法摘要"); return; }
@@ -617,7 +637,23 @@ export default function WorkspacePage() {
   // 导出
   // ═══════════════════════════════════════════
 
-  const handleExport = (format: "markdown" | "txt" | "html" | "epub" | "docx") => { window.open(`/api/projects/${projectId}/export?format=${format}`, "_blank"); };
+  // ── 导出弹窗状态 ──
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showConflict, setShowConflict] = useState(false);
+
+  // ── 工具箱能力清单（收拢分散入口，按用途分类）──
+  const toolboxItems: ToolboxItem[] = [
+    { id: "write", label: "续写 / 微调", desc: "选中章节后让 AI 接着写或润色本章", icon: "pencil", category: "write", action: () => { if (!selectedNode) { toastInfo("请先在左侧大纲选中一个章节"); return; } handleWrite(); } },
+    { id: "outline", label: "生成大纲", desc: "AI 规划整本书的章节结构与走向", icon: "bot", category: "write", action: () => setShowOutlineDialog(true) },
+    { id: "batch", label: "批量生成", desc: "一次勾选多章、批量产出草稿", icon: "package", category: "write", action: () => setBatchMode(true) },
+    { id: "summarize", label: "章节摘要", desc: "为当前章生成要点摘要，便于长文回顾", icon: "clipboard", category: "write", action: () => handleSummarize() },
+    { id: "draw", label: "抽卡选章纲", desc: "用色子抽取剧情走向，选定本章路线", icon: "sparkles", category: "generate", action: () => handleDrawChapterOutline() },
+    { id: "character", label: "新建角色", desc: "添加一张角色卡，定义人设与关系", icon: "user", category: "generate", action: () => setShowNewCharacter(true) },
+    { id: "workshop", label: "创意工坊", desc: "预设 / 角色卡 / 导入导出分享社区预设", icon: "book", category: "generate", action: () => router.push("/workshop") },
+    { id: "tables", label: "结构化表格", desc: "宝宝流数据库，查看已抽取的设定与伏笔", icon: "chart", category: "analyze", action: () => router.push(`/workspace/${project?.id ?? ""}/tables`) },
+    { id: "recall", label: "记忆召回", desc: "查看本轮已注入写作的设定、人设与伏笔", icon: "search", category: "analyze", action: () => setRightPanelOpen(true) },
+    { id: "conflict", label: "冲突推演", desc: "给定局势，AI 出≥3 个发展选项（仅供参考由你决定）", icon: "lightbulb", category: "analyze", badge: "AI", action: () => { setShowConflict(true); } },
+  ];
 
   // ═══════════════════════════════════════════
   // 渲染
@@ -656,11 +692,13 @@ export default function WorkspacePage() {
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
         onImportSettings={() => setShowSettingsImport(true)} onImportChapters={() => setShowImportWizard(true)}
-        onEditStyle={() => setShowStyleEditor(true)} onExport={handleExport}
+        onEditStyle={() => setShowStyleEditor(true)}
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}
         onStyleSelect={(t: StyleTemplate) => setStyleTemplateId(t.id)} styleCard={project.styleCard}
         onOpenAutomation={() => setShowAutomationSettings(true)}
+        onOpenToolbox={() => setShowToolbox(true)}
+        onOpenExport={() => setShowExportDialog(true)}
       />
 
       <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2">
@@ -693,7 +731,8 @@ export default function WorkspacePage() {
           batchMode={batchMode} onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
           selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
-          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={deleteNode} deletingNodeId={deletingId} />
+          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={deleteNode} deletingNodeId={deletingId}
+          onLoadSample={loadSample} />
 
         {/* 中间列：正文 + 分析面板 */}
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -864,6 +903,29 @@ export default function WorkspacePage() {
           project={project}
           onSaved={(patch) => setProject((p) => (p ? { ...p, ...patch } : p))}
           onClose={() => setShowProjectConfig(false)}
+        />
+      )}
+
+      {/* 工具箱入口 */}
+      {showToolbox && <ToolboxDialog items={toolboxItems} onClose={() => setShowToolbox(false)} />}
+
+      {/* 导出弹窗 */}
+      {showExportDialog && project && (
+        <ExportDialog
+          projectId={project.id}
+          projectName={project.name}
+          chapters={project.storyNodes.filter((n) => n.type === "chapter").map((n) => ({ id: n.id, title: n.title }))}
+          onClose={() => setShowExportDialog(false)}
+        />
+      )}
+
+      {/* D4 冲突推演 */}
+      {showConflict && project && (
+        <ConflictPanel
+          open={showConflict}
+          projectId={project.id}
+          projectName={project.name}
+          onClose={() => setShowConflict(false)}
         />
       )}
 

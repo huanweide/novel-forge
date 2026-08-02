@@ -49,12 +49,14 @@ function para(text: string, opts: ParaOpts = {}): string {
 export function buildDocx(
   projectName: string,
   chapters: ChapterItem[],
-  opts: { includeOutline?: boolean } = {}
+  opts: { includeOutline?: boolean; author?: string } = {}
 ): Buffer {
   const includeOutline = opts.includeOutline !== false;
+  const author = opts.author;
   const body: string[] = [];
 
   body.push(para(projectName, { bold: true, sizeHalf: 36 }));
+  if (author) body.push(para(`作者：${author}`, { sizeHalf: 24 }));
 
   for (const ch of chapters) {
     const titleSize = ch.depth <= 0 ? 30 : ch.depth === 1 ? 26 : 24;
@@ -116,7 +118,7 @@ ${body.join("\n")}
   const coreXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <dc:title>${escapeXml(projectName)}</dc:title>
-<dc:creator>Novel Forge</dc:creator>
+<dc:creator>${escapeXml(author || "Novel Forge")}</dc:creator>
 <cp:lastModifiedBy>Novel Forge</cp:lastModifiedBy>
 <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
 <dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>

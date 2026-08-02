@@ -109,7 +109,8 @@ export function buildHtmlDoc(
   projectName: string,
   chapters: ChapterItem[],
   totalWords: number,
-  completedNodes: number
+  completedNodes: number,
+  author?: string
 ): string {
   const toc = chapters
     .map(
@@ -145,15 +146,17 @@ export function buildHtmlDoc(
   blockquote { border-left: 3px solid #ccc; margin: 1em 0; padding: 0.2em 1em; color: #555; }
   hr { border: none; border-top: 1px solid #ddd; margin: 1.5em 0; }
   nav.toc { background: #f7f7f7; padding: 1em 1.5em; border-radius: 8px; margin-bottom: 2em; }
+  .author { color: #666; font-size: 0.95em; margin-bottom: 1.5em; }
   nav.toc ol { padding-left: 1.2em; }
   footer { margin-top: 3em; padding-top: 1em; border-top: 1px solid #eee; color: #999; font-size: 0.85em; }
 </style>
 </head>
 <body>
 <h1>${escapeHtml(projectName)}</h1>
+${author ? `<p class="author">作者：${escapeHtml(author)}</p>` : ""}
 <nav class="toc"><strong>目录</strong><ol>${toc}</ol></nav>
 ${body}
-<footer>共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字 · 由 Novel Forge 生成</footer>
+<footer>${author ? `作者：${escapeHtml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字 · 由 Novel Forge 生成</footer>
 </body>
 </html>`;
 }
@@ -265,7 +268,8 @@ function epubContainerXml(): string {
 
 function epubContentOpf(
   projectName: string,
-  chapters: ChapterItem[]
+  chapters: ChapterItem[],
+  author?: string
 ): string {
   const uuid = `novelforge-${Date.now()}`;
   const manifestItems = chapters
@@ -282,7 +286,7 @@ function epubContentOpf(
     <dc:identifier id="bookid">urn:uuid:${uuid}</dc:identifier>
     <dc:title>${escapeXml(projectName)}</dc:title>
     <dc:language>zh-CN</dc:language>
-    <dc:creator>Novel Forge</dc:creator>
+    <dc:creator>${escapeXml(author || "Novel Forge")}</dc:creator>
     <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/, "Z")}</meta>
   </metadata>
   <manifest>
@@ -295,7 +299,7 @@ ${spineItems}
 </package>`;
 }
 
-function epubNavXhtml(projectName: string, chapters: ChapterItem[]): string {
+function epubNavXhtml(projectName: string, chapters: ChapterItem[], author?: string): string {
   const lis = chapters
     .map((c, i) => `<li><a href="ch${i}.xhtml">${escapeXml(c.title)}</a></li>`)
     .join("\n");
@@ -306,6 +310,7 @@ function epubNavXhtml(projectName: string, chapters: ChapterItem[]): string {
 <body>
 <nav epub:type="toc" id="toc">
   <h1>${escapeXml(projectName)}</h1>
+  ${author ? `<p>作者：${escapeXml(author)}</p>` : ""}
   <ol>${lis}</ol>
 </nav>
 </body>
@@ -338,7 +343,8 @@ export function buildEpub(
   projectName: string,
   chapters: ChapterItem[],
   totalWords: number,
-  completedNodes: number
+  completedNodes: number,
+  author?: string
 ): Buffer {
   const entries: ZipEntry[] = [
     { name: "mimetype", data: Buffer.from("application/epub+zip", "utf8") },
@@ -348,11 +354,11 @@ export function buildEpub(
     },
     {
       name: "OEBPS/content.opf",
-      data: Buffer.from(epubContentOpf(projectName, chapters), "utf8"),
+      data: Buffer.from(epubContentOpf(projectName, chapters, author), "utf8"),
     },
     {
       name: "OEBPS/nav.xhtml",
-      data: Buffer.from(epubNavXhtml(projectName, chapters), "utf8"),
+      data: Buffer.from(epubNavXhtml(projectName, chapters, author), "utf8"),
     },
   ];
 
@@ -368,7 +374,7 @@ export function buildEpub(
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN">
 <head><title>版权信息</title></head>
-<body><p>共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Forge 生成。</p></body>
+<body><p>${author ? `作者：${escapeXml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Forge 生成。</p></body>
 </html>`;
   entries.push({ name: "OEBPS/colophon.xhtml", data: Buffer.from(colophon, "utf8") });
 
