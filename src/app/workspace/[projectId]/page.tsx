@@ -892,19 +892,13 @@ export default function WorkspacePage() {
         <button onClick={() => setRightDrawerOpen(o => !o)} className="lg:hidden text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="切换侧栏（窄屏）">
           <Icon name="grid" size={13} /> 侧栏
         </button>
-        <button onClick={() => router.push(`/workspace/${project.id}/tables`)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
-          结构化表格（宝宝流数据库）
-        </button>
-        <button onClick={() => router.push("/workshop")} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
-          创意工坊
-        </button>
-        <button onClick={() => setShowBuildConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+        <button onClick={() => setShowBuildConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="小说骨架设定：题材 / 受众 / 剧情结构 / 力量体系 / 金手指 / 风格标签">
           <Icon name="settings" size={13} /> 项目设定
         </button>
-        <button onClick={() => setShowMemoryDecay(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+        <button onClick={() => setShowMemoryDecay(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="设定记忆衰减：控制旧设定在写作上下文中的淡出节奏">
           <Icon name="hourglass" size={13} /> 记忆衰减
         </button>
-        <button onClick={() => setShowProjectConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+        <button onClick={() => setShowProjectConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="项目配置：书名 / 模型 / LLM 参数 / 作者注">
           <Icon name="settings" size={13} /> 项目配置
         </button>
       </div>

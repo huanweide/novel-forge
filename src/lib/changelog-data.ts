@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.38";
+export const LATEST_VERSION = "v0.46.39";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "文风机制整合（UI审计 #217-1）：进入小说界面顶部栏原本并排两套文风控件——基于 `styleCard` 的错位标签（实际永远为空）与只读硬编码模板的 `StyleSelector` 下拉——现已统一为单一「文风」入口，点击打开 `StyleEditor` 统一风格中枢；按钮实时显示当前激活风格（从 `styleTemplateId` 解析，加载时已从库水合）",
-  "`StyleEditor` 新增「工坊文风」Tab：异步拉取创意工坊 `type=style` 公开预设，一键「套用」把预设的 `styleDescription` 并入本项目「风格笔记」（参与生成）、`povType` 与 `dialogueRatio`/`descriptionRatio` 按比例同步进 12 维度，并调 `apply` 路由同步更新文风卡——文风与创意工坊真正联动（此前工坊文风预设只写 `StyleCard` 分析模型、不驱动生成）",
-  "删除冗余的 `StyleSelector` 头部下拉组件（职责已由 `StyleEditor` 内置模板库 + 工坊预设覆盖）；`Toolbar`/`page.tsx` 清理 `styleCard`/`onStyleSelect`/`povLabel` 等错位引用；`page.tsx` 加载时补 `setStyleTemplateId(styleData.styleTemplateId)`，修复「激活风格加载后不显示」的隐性 bug",
-  "诚实边界：工坊文风「套用」为追加式（不覆盖用户原有风格笔记/维度）；`StyleCard` 三卡分析模型保持独立，仅作分析参考，生成仍以 `llmConfig` 文风配置为准；未做浏览器端到端实跑（tsc 零错误 + 复用已验证 PUT 链路）",
+  "UI 按钮审计·清理（#217-2/#217-3）：顶部栏「设定」→「导入设定」、「导入」→「导入书稿」，并补 tooltip 厘清二者差异——前者粘贴设定文本拆三卡（不建章节），后者粘贴整本书稿自动分章+抽卡；二者主职责不同（建章节树 vs 不建），故厘清而非硬并",
+  "次级按钮行去重：移除与「工具箱」对话框完全重复的「结构化表格」「创意工坊」（同跳 `/tables`、`/workshop`），避免两个入口指向同一处；保留「项目设定/记忆衰减/项目配置」并补区分标题",
+  "厘清「项目设定」(`BuildConfigDialog`：小说骨架题材/受众/剧情结构/力量体系/金手指/风格标签) 与「项目配置」(`ProjectConfigPanel`：书名/模型/LLM 参数/作者注) 非重复，二者职责不同，仅补 tooltip 区分",
+  "诚实边界：经评估「设定」与「导入」在『从文本抽设定』上确有概念重叠，但主输出不同（前者不建章节、后者建章节树），强行合并会丢能力，故选择厘清标签；未做浏览器端到端实跑，tsc 零错误",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.39",
+    date: "2026-08-03",
+    title: "UI 审计·按钮清理（#217-2/#217-3）：导入按钮厘清 + 次级行去重",
+    sections: [
+      {
+        label: "导入按钮厘清（#238 / 设定 vs 导入）",
+        items: [
+          "问题：顶部栏「设定」(`SettingsImporter`：粘贴设定文本→AI 拆角色卡+世界书+风格卡，不建章节) 与「导入」(`ImportWizard`：粘贴整本书稿→自动分章+抽角色/世界观/风格) 在『从文本抽取设定』上概念重叠，标签又都含混，用户难分",
+          "处理：标签改为「导入设定」/「导入书稿」并补 tooltip 厘清主职责差异；二者主输出不同（建章节树 vs 不建），经评估强行合并会丢能力，故选择厘清而非硬并（符合审计『跟不上才删、有用则整合』原则）",
+        ],
+      },
+      {
+        label: "次级按钮行去重（#240）",
+        items: [
+          "移除次级按钮行与「工具箱」对话框完全重复的「结构化表格」(`/workspace/{id}/tables`)、「创意工坊」(`/workshop`)——两处入口指向同一目的地，属冗余；保留「工具箱」内的入口即可",
+          "保留「项目设定」(`BuildConfigDialog`：小说骨架设定) / 「记忆衰减」 / 「项目配置」(`ProjectConfigPanel`：书名/模型/LLM 参数) 并补 tooltip 区分；确认「项目设定」与「项目配置」职责不同、非重复，仅补说明",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "未做浏览器端到端实跑；本次仅 tsc 零错误 + 文案/指向对齐既有路由（风险低）",
+          "「设定」与「导入」的概念重叠未靠删组件解决，而是靠标签/tooltip 厘清——若后续要把 `SettingsImporter` 的轻量拆卡能力并入 `ImportWizard`，属更大重构，超出本次审计清理范围",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.38",
     date: "2026-08-03",
