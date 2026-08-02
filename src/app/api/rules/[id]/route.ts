@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -14,10 +15,7 @@ export async function GET(
     }
     return NextResponse.json(rule);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取规则失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -32,10 +30,7 @@ export async function PUT(
     const rule = await prisma.rule.update({ where: { id }, data: body });
     return NextResponse.json(rule);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新规则失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -49,9 +44,6 @@ export async function DELETE(
     await prisma.rule.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "删除规则失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

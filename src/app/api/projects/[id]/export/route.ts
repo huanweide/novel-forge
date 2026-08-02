@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { buildChapterList, buildHtmlDoc, buildEpub } from "@/core/epub";
@@ -151,10 +152,7 @@ export async function GET(
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "导出失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 

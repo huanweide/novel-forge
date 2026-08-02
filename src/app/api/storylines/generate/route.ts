@@ -6,6 +6,7 @@
  */
 
 export const maxDuration = 120;
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -124,9 +125,6 @@ ${existingStorylines.filter(s => s.type === "main").length === 0 ? "生成 1 条
       types: { main: created.filter(s => s.type === "main").length, side: created.filter(s => s.type === "side").length },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "生成失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

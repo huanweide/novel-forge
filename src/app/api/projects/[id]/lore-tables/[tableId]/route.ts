@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -12,7 +13,7 @@ export async function PUT(
     const lt = await prisma.loreTable.update({ where: { id: tableId }, data: { ...body } } as any);
     return NextResponse.json(lt);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "更新失败" }, { status: 500 });
+    return jsonError(e);
   }
 }
 

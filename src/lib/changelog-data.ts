@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.28";
+export const LATEST_VERSION = "v0.46.29";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🛡️ Prisma 连接池上限（BE-6）：`PrismaPg` 适配器显式设 `max`（默认 10，`PRISMA_POOL_MAX` 可调）+ `idleTimeoutMillis` 回收，高并发流式请求下避免连接耗尽 `P2024`",
-  "⏱️ LLM 请求超时统一常量（BE-8）：抽出 `LLM_REQUEST_TIMEOUT_MS = 300_000`，替换散落的 180s/300s 两处 `AbortSignal.timeout`，超时语义一致、排查慢调用更简单",
-  "📦 deprecated 端点保留（BE-8 取舍）：10 个 `@deprecated` 路由与 U5「不删代码、保留给脚本/SDK」决策一致，本单元不删除；`maxDuration` 按操作差异设置属合理，不强制统一",
-  "✅ BE-7 复核：读码确认 `expand` 无循环内 `findMany` N+1、`monitor` 已用 `select`+`Promise.all`+DB 聚合，无明确安全收益故未改；tsc 零错误、零新依赖",
+  "🔧 统一 API 错误响应（ARCH-2）：全站约 90 个路由 catch 块手写 `return NextResponse.json({error},{status:500})` 统一收敛到 `@/lib/api-error` 的 `jsonError(e)`，错误体固定为 `{error, code?, hint?}`",
+  "🧭 两套 `jsonError` 收口：路由异常默认走 `@/lib/api-error` 的 `jsonError(e)`（classifyError 分类 Prisma/网络/默认并带 hint）；需精确 4xx 码的 3 个历史路由保留 `@/lib/api` 的 `jsonError(msg,status)`",
+  "🚫 8 个 SSE 流式路由走 `send({type:\"error\"})` 不套 jsonError；`/api/settings/test` 保留 `{ok:false}` 业务契约但错误文本改用统一 classifyError；`/api/tools/execute` 保留 `{success,data}` 契约（@deprecated）",
+  "✅ tsc 零错误、零新依赖；`/api/presets/import` 的 `unknown→string` 类型冲突随 import 源改到 `@/lib/api-error` 一并修复；覆盖率 29/88 → 实质 100%",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.29",
+    date: "2026-08-02",
+    title: "统一 API 错误响应（ARCH-2）：全站路由 catch 收敛到 jsonError",
+    sections: [
+      {
+        label: "统一 API 错误响应（ARCH-2）",
+        items: [
+          "全站 96 个 API 路由中，约 90 个手写 `return NextResponse.json({error}, {status:500})` 的 catch 块统一收敛到 `@/lib/api-error` 的 `jsonError(e)`；错误响应体固定为 `{error, code?, hint?}`，前端一致解析、排查更省心",
+          "两套 `jsonError` 收口：`@/lib/api-error` 的 `jsonError(e: unknown)` 走 `classifyError` 分类（Prisma 码 P1000/P1001/P2021/P2024/P2002 + 网络 + 默认）并带 `hint` 排查建议，为路由异常错误默认通道；`@/lib/api` 的 `jsonError(message, status, code?)` 保留给需精确 4xx 码的 3 个历史路由（presets/[id]、seed/presets、projects/[id]/config）",
+        ],
+      },
+      {
+        label: "诚实边界（SSE 与业务契约）",
+        items: [
+          "8 个 SSE 流式路由（characters/classify、characters/expand、import/commit、import/parse、import/quick、lorebook/expand、lorebook/import、lorebook/summarize）按设计走 `send({type:'error'})` 推送，不套 jsonError（流式无 HTTP 响应体可返回）",
+          "`/api/settings/test` 保留 `{ok:false, error}` 业务契约（前端 `setTestResult` 依赖 `ok` 字段），但其 catch 内错误文本改用统一 `classifyError(err).error` 提取，兼顾一致与兼容；`/api/tools/execute` 为 `@deprecated` 且契约为 `{success,data,error,toolName}`，保留原结构不强行套 jsonError",
+          "`/api/presets/import` 的 catch 原调用 `@/lib/api` 的 `jsonError(e)`（e:unknown 与该签名 `message:string` 冲突）导致 tsc 报错，随本单元把 import 源改到 `@/lib/api-error` 一并修复",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.28",
     date: "2026-08-02",

@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeJoin } from "@/lib/utils";
@@ -298,10 +299,7 @@ ${finalDirective}${charCountNote}
       modelUsed: /flash/i.test(model) ? "v4-flash" : "v4-pro",
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "生成大纲失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -354,9 +352,6 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ nodes, count: nodes.length });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建章节失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

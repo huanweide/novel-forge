@@ -10,6 +10,7 @@
  *
  * 不用 function calling 协议——兼容所有模型（DeepSeek/硅基/OpenAI）。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -256,10 +257,7 @@ CHAT
     });
   } catch (err) {
     console.error("AI 对话失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "对话失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

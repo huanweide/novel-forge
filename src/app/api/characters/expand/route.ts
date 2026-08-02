@@ -6,6 +6,7 @@
  * SSE 流式：逐角色独立并行扩展。
  * 每完成一个角色即时推 SSE 进度。
  */
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { parseAIJson } from "@/lib/json-parser";

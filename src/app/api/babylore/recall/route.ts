@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { recallContext } from "@/core/babylore/recall";
@@ -17,6 +18,6 @@ export async function POST(request: Request) {
     const items = recallContext(context, lore as any, tables as any);
     return NextResponse.json({ items, count: items.length });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "召回失败" }, { status: 500 });
+    return jsonError(e);
   }
 }

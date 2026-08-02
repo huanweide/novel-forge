@@ -9,6 +9,7 @@
  * Body: { message: string, history?: {role:string,content:string}[] }
  * Response: { reply: string }
  */
+import { jsonError } from "@/lib/api-error";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -94,10 +95,7 @@ ${dimSummary}`,
     });
   } catch (err: any) {
     console.error("[dissect/chat] 对话失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "对话失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

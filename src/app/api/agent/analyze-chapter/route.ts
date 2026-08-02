@@ -7,6 +7,7 @@
  *
  * 用 LLM 做语义匹配，不用规则硬匹配。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -208,9 +209,6 @@ ${charsSummary.slice(0, 3000)}`;
     return NextResponse.json(result);
   } catch (err) {
     console.error("章节分析失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "分析失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { snapshotRevision } from "@/lib/versions";
@@ -18,10 +19,7 @@ export async function GET(
     }
     return NextResponse.json(node);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取节点失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -69,10 +67,7 @@ export async function PUT(
     });
     return NextResponse.json(node);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新节点失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -119,9 +114,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, renumbered: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "删除节点失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

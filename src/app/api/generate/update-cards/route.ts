@@ -5,6 +5,7 @@
  */
 
 export const maxDuration = 300;
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -367,9 +368,6 @@ ${contentSnippet}
     });
   } catch (err) {
     console.error("更新分析失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "更新分析失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

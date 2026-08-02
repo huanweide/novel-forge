@@ -7,6 +7,7 @@
  *
  * 输出可直接喂给 RelationshipGraph 组件渲染。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -197,9 +198,6 @@ ${chapterTexts.slice(0, 8000)}
     return NextResponse.json(result);
   } catch (err) {
     console.error("关系分析失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "分析失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.29 — 2026-08-02
+**统一 API 错误响应（ARCH-2）：全站路由 catch 收敛到 jsonError**
+- 🔧 全站约 90 个 API 路由的 catch 块手写 `return NextResponse.json({error},{status:500})` 统一收敛到 `@/lib/api-error` 的 `jsonError(e)`；错误响应体固定为 `{error, code?, hint?}`，前端一致解析、排查更省心
+- 🧭 两套 `jsonError` 收口：`@/lib/api-error` 的 `jsonError(e:unknown)` 走 `classifyError` 分类（Prisma 码 + 网络 + 默认）并带 `hint` 排查建议，为异常错误默认通道；`@/lib/api` 的 `jsonError(msg,status,code?)` 保留给需精确 4xx 码的 3 个历史路由（presets/[id]、seed/presets、projects/[id]/config）
+- 🚫 8 个 SSE 流式路由（characters/classify、characters/expand、import/commit、import/parse、import/quick、lorebook/expand、lorebook/import、lorebook/summarize）走 `send({type:"error"})` 不套 jsonError；`/api/settings/test` 保留 `{ok:false}` 业务契约但错误文本改用统一 classifyError，`/api/tools/execute` 保留 `{success,data}` 契约（@deprecated）
+- ✅ tsc 零错误、零新依赖；`/api/presets/import` 的 `unknown→string` 类型冲突随 import 源改到 `@/lib/api-error` 一并修复；覆盖率 29/88 → 实质 100%（除 SSE 与业务结果契约外）
+
 ## v0.46.28 — 2026-08-02
 **后端健壮性：Prisma 连接池上限（BE-6）+ LLM 超时统一常量（BE-8）**
 - 🛡️ Prisma 连接池上限（BE-6）：`src/lib/prisma.ts` 的 `PrismaPg` 适配器显式传入 `pg.PoolConfig`（`max` 默认 10 + `idleTimeoutMillis` + `allowExitOnIdle`），高并发流式请求下避免连接耗尽 `P2024`；`max` 可用 `PRISMA_POOL_MAX` 环境变量调大

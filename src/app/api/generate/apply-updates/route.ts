@@ -4,6 +4,7 @@
  *
  * 应用用户确认的卡面更新到数据库。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -496,9 +497,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("应用更新失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "应用更新失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

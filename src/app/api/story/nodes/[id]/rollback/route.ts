@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { snapshotRevision } from "@/lib/versions";
@@ -60,9 +61,6 @@ export async function POST(
       rolledBackToVersion: revision.version,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "回滚失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

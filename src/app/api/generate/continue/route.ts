@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
@@ -260,6 +261,6 @@ ${lastParagraphs}
       headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "续写失败" }, { status: 500 });
+    return jsonError(err);
   }
 }

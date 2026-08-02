@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { NextRequest, NextResponse } from "next/server";
 import { PROVIDER_BASE_URLS } from "@/lib/llm";
 import { prisma } from "@/lib/prisma";
@@ -63,8 +64,7 @@ export async function POST(req: NextRequest) {
       : [];
     return NextResponse.json({ models: Array.from(new Set(ids)) });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: `检索失败：${msg}` }, { status: 500 });
+    return jsonError(e);
   } finally {
     clearTimeout(timer);
   }

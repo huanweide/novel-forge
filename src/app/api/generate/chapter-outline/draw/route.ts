@@ -8,6 +8,7 @@
  */
 
 export const maxDuration = 120;
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -195,9 +196,6 @@ ${characterList}
       modelUsed: "v4-flash",
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "抽卡生成失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

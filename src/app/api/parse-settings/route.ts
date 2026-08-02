@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -217,9 +218,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("设定解析失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "解析设定失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

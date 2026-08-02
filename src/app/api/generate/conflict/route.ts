@@ -9,6 +9,7 @@
  *  - 结构化 JSON 输出（标题 / 触发 / 张力 / 走向 / 风险），前端卡片化呈现。
  *  - 上下文只取「世界观硬规则 + 主角卡 + 近 2 章」，控制 token，避免拉全量正文。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -171,9 +172,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ options: safe, note: "以下由 AI 生成，仅供参考，最终情节决定权在作者。" });
   } catch (err) {
     console.error("冲突推演失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "推演失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

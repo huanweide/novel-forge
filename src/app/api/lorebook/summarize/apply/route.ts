@@ -11,6 +11,7 @@
  * - Step 3: 原子删旧建新
  * - Step 4: 全局跨分类去重
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -238,9 +239,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("整理应用失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "应用整理失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

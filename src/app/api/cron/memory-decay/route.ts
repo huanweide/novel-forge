@@ -14,6 +14,7 @@
  *   projectId — 必填，要清理的项目
  *   dryRun    — 可选，"true" 时只统计不实际写入
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { cleanupExpiredMemories, DECAY_RULES } from "@/lib/memory-decay";
@@ -68,9 +69,6 @@ export async function GET(request: Request) {
       rules: DECAY_RULES,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "衰减清理失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

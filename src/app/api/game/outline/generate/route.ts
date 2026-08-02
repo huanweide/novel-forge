@@ -5,6 +5,7 @@
  * 输出格式：C|→R|→L|→G|→P|→CF|→M|→K|→EL|→T|
  * 三层结构：章节元信息 / 叙事段落 / 技术规格
  */
+import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -174,6 +175,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[game/outline/generate] 错误:", err);
-    return NextResponse.json({ error: err.message || "内部错误" }, { status: 500 });
+    return jsonError(err);
   }
 }

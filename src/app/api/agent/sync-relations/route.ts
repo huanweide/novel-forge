@@ -11,6 +11,7 @@
  *
  * 设计目标：正文生成时必定读取这些条目，让 LLM 理解角色间的实际关系。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -228,9 +229,6 @@ ${existingSummary}
     });
   } catch (err) {
     console.error("关系同步失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "同步失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

@@ -4,6 +4,7 @@
  * 接收用户在提取面板中的选择，批量写入各数据表：
  *   角色卡（新建/更新timeline）· 世界书（新建/更新条目）· 伏笔表 · 章节摘要 · 下章大纲
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -362,10 +363,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("应用提取失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "应用失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

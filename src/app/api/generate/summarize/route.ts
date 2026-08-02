@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
@@ -91,9 +92,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("摘要压缩失败:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "摘要失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

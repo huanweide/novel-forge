@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -215,6 +216,6 @@ export async function POST(
     await prisma.preset.update({ where: { id }, data: { downloads: { increment: 1 } } });
     return NextResponse.json({ ok: true, created });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "应用失败" }, { status: 500 });
+    return jsonError(e);
   }
 }

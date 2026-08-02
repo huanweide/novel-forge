@@ -5,6 +5,7 @@
  * 管线：数据加载 → 角色预处理 → 规则注入 → 上下文构建 → 流式生成 → 扫描+存储
  */
 export const maxDuration = 300;
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -211,6 +212,6 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
       headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "微调失败" }, { status: 500 });
+    return jsonError(err);
   }
 }

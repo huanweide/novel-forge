@@ -1,4 +1,5 @@
 // @deprecated: 实体检测已由 /api/entities/highlight 承接，前端无调用
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { createLLMClientFromSettings } from "@/core/llm/client";
@@ -263,9 +264,6 @@ ${text.slice(-5000)}
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "实体检测失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

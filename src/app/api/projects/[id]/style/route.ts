@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { STYLE_TEMPLATES, getTemplate } from "@/core/templates";
@@ -37,10 +38,7 @@ export async function GET(
       template: template || null,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取文风失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }
 
@@ -112,9 +110,6 @@ export async function PUT(
 
     return NextResponse.json(newConfig);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "设置文风失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

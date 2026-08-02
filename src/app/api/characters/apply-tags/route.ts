@@ -4,6 +4,7 @@
  * 接收用户勾选的分类标签，批量更新角色 tags。
  * 合并逻辑：保留旧标签中的系统标签（📥📝），替换分类标签。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -59,9 +60,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, updated, skipped, total: assignments.length });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "标签更新失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

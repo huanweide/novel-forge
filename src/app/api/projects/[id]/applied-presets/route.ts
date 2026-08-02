@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -42,9 +43,6 @@ export async function DELETE(
     await prisma.project.update({ where: { id }, data });
     return NextResponse.json({ ok: true, removed: target ? 1 : 0 });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "移除失败" },
-      { status: 500 },
-    );
+    return jsonError(e);
   }
 }

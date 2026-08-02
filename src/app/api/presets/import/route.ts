@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { jsonError } from "@/lib/api";
+import { jsonError } from "@/lib/api-error";
 
 // POST /api/presets/import —— 从 .preset.json 文件导入预设到本地库（酒馆式分享/分发）
 // 与内置预设（isBuiltin）区分：导入的预设 isBuiltin=false、author="导入"，只存在本机，不共享。
@@ -33,6 +33,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(preset);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "导入失败" }, { status: 500 });
+    return jsonError(e);
   }
 }

@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
@@ -331,9 +332,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "生成失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

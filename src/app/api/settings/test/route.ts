@@ -3,6 +3,7 @@
  */
 import { NextResponse } from "next/server";
 import { testLLMConnection } from "@/lib/llm";
+import { classifyError } from "@/lib/api-error";
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +14,6 @@ export async function POST(request: Request) {
     const result = await testLLMConnection(provider, apiKey, baseUrl, model);
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: classifyError(err).error }, { status: 500 });
   }
 }

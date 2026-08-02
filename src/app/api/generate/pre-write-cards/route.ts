@@ -5,6 +5,7 @@
  * 前端展示后用户确认→带着确认的卡列表调用 write API。
  */
 export const maxDuration = 30;
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -258,9 +259,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取调度卡失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { babyloreFill } from "@/core/babylore/fill";
 
@@ -14,6 +15,6 @@ export async function POST(request: Request) {
     const res = await babyloreFill(projectId, chapterText, { tableKeys });
     return NextResponse.json(res);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "填表失败" }, { status: 500 });
+    return jsonError(e);
   }
 }

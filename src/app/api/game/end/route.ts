@@ -6,6 +6,7 @@
  *   3. 拼接全部正文 → 保存 StoryNode.content
  *   4. 标记会话完成
  */
+import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
 import { endGameAndExport } from "@/core/game/game-engine";
@@ -28,6 +29,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[game/end] 错误:", err);
-    return NextResponse.json({ error: err.message || "内部错误" }, { status: 500 });
+    return jsonError(err);
   }
 }

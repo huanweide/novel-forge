@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -101,9 +102,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, id: pid, created: true, message: "题材骨架已创建" });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "创建题材骨架失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -24,9 +25,6 @@ export async function GET(
       content: revision.content,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "获取版本失败" },
-      { status: 500 }
-    );
+    return jsonError(err);
   }
 }

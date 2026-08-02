@@ -6,6 +6,7 @@
  *
  * Response: { filled: string[], character: CharacterCard }
  */
+import { jsonError } from "@/lib/api-error";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -83,10 +84,7 @@ export async function POST(
     });
   } catch (err: any) {
     console.error("[autofill] 补全失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "AI补全失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }
 

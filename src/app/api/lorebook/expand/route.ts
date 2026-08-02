@@ -11,6 +11,7 @@
  *
  * SSE 流式：每完成一个词条即时推送进度。
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";

@@ -5,6 +5,7 @@
  * 每一轮用户给反馈方向，AI 按 P0 标准格式修改章纲
  * 支持"探讨-反馈-定稿"循环，直到用户满意
  */
+import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -150,6 +151,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[game/outline/chat] 错误:", err);
-    return NextResponse.json({ error: err.message || "内部错误" }, { status: 500 });
+    return jsonError(err);
   }
 }

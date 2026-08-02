@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -39,6 +40,6 @@ export async function POST(
     });
     return NextResponse.json(lt);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "创建失败" }, { status: 500 });
+    return jsonError(e);
   }
 }

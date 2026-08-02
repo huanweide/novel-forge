@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { DimensionResult } from "@/core/dissect/types";
@@ -53,9 +54,6 @@ export async function GET(
     });
   } catch (err: any) {
     console.error("[dissect/dimensions] 查询失败:", err);
-    return NextResponse.json(
-      { error: err?.message || "查询维度失败" },
-      { status: 500 },
-    );
+    return jsonError(err);
   }
 }

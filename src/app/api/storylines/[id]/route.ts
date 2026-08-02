@@ -3,6 +3,7 @@
  * PUT /api/storylines/[id] — 更新故事线
  * DELETE /api/storylines/[id] — 删除故事线
  */
+import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -40,7 +41,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     });
     return NextResponse.json(storyline);
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "更新失败" }, { status: 500 });
+    return jsonError(err);
   }
 }
 
@@ -50,6 +51,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     await prisma.storyline.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "删除失败" }, { status: 500 });
+    return jsonError(err);
   }
 }

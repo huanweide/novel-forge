@@ -1,3 +1,4 @@
+import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { createLLMClientFromSettings, getEffectiveConfig } from "@/core/llm/client";
 
@@ -76,7 +77,7 @@ ${SCHEMA_HINT[type!]}
     return NextResponse.json({ ok: true, fields });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "AI 丰满失败";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return jsonError(msg);
   }
 }
 
