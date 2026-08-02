@@ -105,6 +105,9 @@ export default function WorkspacePage() {
   // ── 面板状态 ──────────────────────────────
   const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "outline" | "storylines" | "rules">("outline");
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  // 窄屏左右栏抽屉开合（桌面端由 lg: 断点复位为内联，此状态仅在 <lg 生效）
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
   // ── 角色/词条编辑弹窗 ──────────────────────
   const [editingCharacter, setEditingCharacter] = useState<CharacterData | null>(null);
@@ -721,6 +724,12 @@ export default function WorkspacePage() {
       />
 
       <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2">
+        <button onClick={() => setLeftDrawerOpen(o => !o)} className="lg:hidden text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="切换大纲栏（窄屏）">
+          <Icon name="book" size={13} /> 大纲
+        </button>
+        <button onClick={() => setRightDrawerOpen(o => !o)} className="lg:hidden text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="切换侧栏（窄屏）">
+          <Icon name="grid" size={13} /> 侧栏
+        </button>
         <button onClick={() => router.push(`/workspace/${project.id}/tables`)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl">
           结构化表格（宝宝流数据库）
         </button>
@@ -742,6 +751,9 @@ export default function WorkspacePage() {
         const sel = window.getSelection()?.toString()?.trim();
         if (sel && sel.length > 0) setSelectedText(sel);
       }}>
+        <div className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] h-full transition-transform duration-200
+          ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none`}>
         <ErrorBoundary name="大纲">
         <LeftPanel project={project} activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
@@ -754,6 +766,7 @@ export default function WorkspacePage() {
           batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={deleteNode} deletingNodeId={deletingId}
           onLoadSample={loadSample} />
         </ErrorBoundary>
+        </div>
 
         {/* 中间列：正文 + 分析面板 */}
         <ErrorBoundary name="编辑器">
@@ -869,6 +882,9 @@ export default function WorkspacePage() {
         </ErrorBoundary>
 
         {rightPanelOpen && (
+          <div className={`fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] h-full transition-transform duration-200
+            ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"}
+            lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}>
           <ErrorBoundary name="侧栏">
         <RightPanel selectedNode={selectedNode} project={project}
             onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
@@ -883,7 +899,12 @@ export default function WorkspacePage() {
             }}
           />
         </ErrorBoundary>
+        </div>
         )}
+      {/* 窄屏抽屉遮罩 */}
+      {(leftDrawerOpen || rightDrawerOpen) && (
+        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
+      )}
       </div>
 
       {/* 弹窗 */}

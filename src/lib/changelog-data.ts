@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.11";
+export const LATEST_VERSION = "v0.46.12";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "💾 保存状态透明化（P1）：正文由 AI 流落库（非手写入口），状态栏新增保存指示——生成中显示「草稿保存中…」旋转、完成后显示绿色「已落库 ✓」，消除「AI 写的内容会不会丢」的焦虑",
-  "✅ 大纲保存成功反馈：onEditOutline 成功补 toastSuccess「大纲已保存 ✓」，填补此前只有失败提示、成功静默变回显示态的缺口",
-  "🎯 诚实修正：原计划「手写正文保存透明化」前提不成立——本产品正文完全由 AI 生成流驱动，无作者手写 textarea 入口；P1 改为聚焦真实缺口（大纲反馈 + AI 落库确认）",
-  "✅ 全量 tsc 零错误；零新 npm 依赖——复用既有 genStep 状态与 toast 组件",
+  "📱 三栏响应式（P2）：此前左/右栏固定宽 shrink-0，窄屏必挤压中栏、横向溢出；本次窄屏（<lg）左右栏变 fixed 抽屉，中栏 flex-1 + min-w-0 全宽优先不被压扁",
+  "🎛️ 抽屉交互：窄屏顶部新增「大纲 / 侧栏」两个 toggle 按钮（lg:hidden 桌面隐藏），点开左右栏从侧边滑出，背景半透明遮罩点击即收，单栏故障不影响写作",
+  "🖥️ 桌面零回归：左右栏保留 lg:static / lg:translate-x-0 复位 + shrink-0 不收缩，桌面三栏并排布局与改前完全一致，向后兼容",
+  "✅ 全量 tsc 零错误；零新 npm 依赖——纯 Tailwind 响应式断点 + 两个抽屉开合状态",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.12",
+    date: "2026-08-02",
+    title: "三栏响应式：窄屏抽屉化，中栏优先不被压扁",
+    sections: [
+      {
+        label: "窄屏抽屉化",
+        items: [
+          "左栏（大纲）/ 右栏（侧栏）在 <lg 断点变为 fixed 抽屉（自带 lg:static lg:translate-x-0 复位），不再固定宽内联挤压中栏",
+          "中栏 flex-1 + min-w-0，窄屏时左右栏脱离文档流后中栏占据全宽，编辑器始终优先不被压扁、不横向溢出",
+        ],
+      },
+      {
+        label: "抽屉交互",
+        items: [
+          "窄屏顶部新增「大纲 / 侧栏」两个 toggle 按钮（lg:hidden，桌面隐藏），点开对应栏从侧边滑出（transition-transform 200ms）",
+          "背景半透明遮罩（z-30，lg:hidden）点击即收起两个抽屉；单栏组件抛错仍由 ErrorBoundary 隔离，不影响写作会话",
+        ],
+      },
+      {
+        label: "桌面零回归与取舍",
+        items: [
+          "左右栏保留 lg:shrink-0 不收缩 + shrink-0 原行为，桌面三栏并排布局与改前完全一致，向后兼容",
+          "本产品定位本地桌面写作工具，响应式聚焦「极端窄窗不崩」而非移动端完整适配；全量 tsc 零错误，零新 npm 依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.11",
     date: "2026-08-02",
