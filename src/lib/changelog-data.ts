@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.32";
+export const LATEST_VERSION = "v0.46.33";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📥 多格式导入（FE-N3）：导入向导新增 `.epub`/`.docx` 支持，浏览器端用 jszip 解压抽取纯文本喂给现有解析流（`src/lib/manuscript-parse.ts`），后端 import/parse 无需感知格式",
-  "⚙️ 导入任务异步化（BE-5）：`import/parse` 接入新建 `ImportTask` 任务表（status/progress/result/error），SSE 进度/完成/错误事件均带 taskId",
-  "🔌 断线恢复（BE-5）：新增 `GET /api/import/[taskId]` 轮询路由，前端 ImportWizard 用 sessionStorage 缓存 taskId，组件挂载时自动轮询恢复进预览",
-  "🗄️ 表结构：Prisma 新增 `ImportTask` model（对齐已验证的 DissectionTask 模式），本地 PG17 已 `prisma db push` 同步",
+  "⌨️ 全局快捷键系统（FE-N5）：根布局挂 `ShortcutProvider`，各页面用 `useShortcut` 注册；支持 `mod+s` 保存、`[`/`]` 切换左右栏、`n` 新建章节；首次进入自动弹速查（可关）",
+  "🚫 网文合规违禁词预检（FE-N7）：新增 `src/lib/banned-words.ts` 词库；导出路由 `?check=1` 返回命中清单，ExportDialog 命中即弹确认（可坚持导出）",
+  "📋 设置页增补：新增「违禁词管理」（自定义追加/重置）+「快捷键速查」两个板块，从已注册快捷键实时渲染",
+  "🧱 安全护栏：非 mod 组合键在输入框/可编辑区自动忽略，不打断打字；带 mod 组合（如 mod+s）在输入框也照常触发",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.33",
+    date: "2026-08-02",
+    title: "前端新功能（#215）：FE-N5 全局快捷键系统 + FE-N7 网文合规违禁词预检",
+    sections: [
+      {
+        label: "全局快捷键系统（FE-N5）",
+        items: [
+          "新增 src/components/ShortcutProvider.tsx：根布局挂载单一 keydown 监听 + 注册表；各页面用 useShortcut(id, combo, desc, handler) 注册，组件卸载自动注销，避免多组件各挂监听导致冲突",
+          "workspace 页接入 4 个快捷键：mod+s 保存、[ 折叠左栏（桌面 lg:hidden / 窄屏抽屉）、] 切换右栏、n 新建章节",
+          "安全护栏：非 mod 组合键（n、[、]）在 input/textarea/contenteditable 内自动忽略不打断打字；带 mod 组合（mod+s）即使在输入框也照常触发",
+          "首次进入若未看过速查且当前页已有注册快捷键，延迟弹一次速查弹层（localStorage 记忆，可关）；设置页「快捷键」板块从已注册列表实时渲染",
+        ],
+      },
+      {
+        label: "网文合规违禁词预检（FE-N7）",
+        items: [
+          "新增 src/lib/banned-words.ts：内置常见网文违禁词基础词库（政治/色情/暴力/迷信等）+ 用户自定义追加/重置接口，导出前扫描命中",
+          "导出路由 /api/projects/[id]/export 新增 ?check=1 模式：只扫描正文返回命中清单（词 + 行号 + 上下文片段），不生成文件",
+          "ExportDialog 在真正导出前先调 ?check=1：命中即弹确认清单（展示命中条数 + 可展开上下文），用户可坚持导出或取消",
+        ],
+      },
+      {
+        label: "设置页增补",
+        items: [
+          "新增「违禁词管理」板块：展示内置词数、自定义词输入追加（回车/按钮）、一键重置自定义词",
+          "新增「快捷键」速查板块：从 ShortcutProvider 已注册列表实时渲染当前页可用快捷键",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.32",
     date: "2026-08-02",

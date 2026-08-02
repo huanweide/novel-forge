@@ -1,5 +1,6 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { scanBannedWords } from "@/lib/banned-words";
 import { NextResponse } from "next/server";
 import { buildChapterList, buildHtmlDoc, buildEpub } from "@/core/epub";
 import { buildDocx } from "@/core/docx";
@@ -20,6 +21,7 @@ export async function GET(
     const format = url.searchParams.get("format") || "markdown";
     const includeOutline = url.searchParams.get("includeOutline") !== "false";
     const author = url.searchParams.get("author")?.trim() || undefined;
+    const check = url.searchParams.get("check") === "1"; // FE-N7 违禁词预检模式
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -59,6 +61,19 @@ export async function GET(
     // 构建树结构
     const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
     const roots = allNodes.filter((n) => !n.parentId);
+
+    // FE-N7 违禁词预检：扫描全部节点的正文，返回命中清单（不下载文件）
+    if (check) {
+      const hits: Array<{ word: string; chapter: string; context: string }> = [];
+      for (const n of allNodes) {
+        if (!n.content) continue;
+        const found = scanBannedWords(n.content);
+        for (const h of found) {
+          hits.push({ word: h.word, chapter: n.title || "未命名", context: h.context });
+        }
+      }
+      return NextResponse.json({ total: hits.length, hits: hits.slice(0, 200) });
+    }
 
     // 统计（所有格式共用）
     const totalWords = allNodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);

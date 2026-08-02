@@ -34,6 +34,7 @@ import type { StyleTemplate } from "@/core/templates";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
+import { useShortcut } from "@/components/ShortcutProvider";
 
 export default function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -135,6 +136,8 @@ export default function WorkspacePage() {
   // 窄屏左右栏抽屉开合（桌面端由 lg: 断点复位为内联，此状态仅在 <lg 生效）
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  // FE-N5：桌面端左栏折叠（[ 触发）
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
 
   // ── 角色/词条编辑弹窗 ──────────────────────
   const [editingCharacter, setEditingCharacter] = useState<CharacterData | null>(null);
@@ -155,6 +158,34 @@ export default function WorkspacePage() {
   const [summarizing, setSummarizing] = useState(false);
   const [contextRefreshKey, setContextRefreshKey] = useState(0);
   const [volumeView, setVolumeView] = useState(true);
+
+  // ── FE-N5 全局快捷键 ─────────────────────
+  // 保存当前章节：PUT 回写 selectedNode.content（与编辑器落库同源端点）
+  const handleSaveNode = async () => {
+    if (!selectedNode) {
+      toastInfo("请先选中一个章节再保存");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: selectedNode.content }),
+      });
+      if (res.ok) toastSuccess("已保存 ✓");
+      else {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        toastError(d.error || `保存失败（${res.status}）`);
+      }
+    } catch (err) {
+      toastError("保存失败：" + (err instanceof Error ? err.message : "网络错误"));
+    }
+  };
+
+  useShortcut("save-node", "mod+s", "保存当前章节", () => { void handleSaveNode(); }, { allowInEditable: true });
+  useShortcut("new-chapter", "n", "新建章节", () => { void handleAddSection(); });
+  useShortcut("toggle-right", "]", "切换右侧栏", () => setRightPanelOpen((v) => !v));
+  useShortcut("toggle-left", "[", "切换左侧栏", () => setLeftCollapsed((v) => !v));
 
   // ── 文风模板 ──────────────────────────────
   const [styleTemplateId, setStyleTemplateId] = useState<string | undefined>();
@@ -795,7 +826,8 @@ export default function WorkspacePage() {
       }}>
         <div className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] h-full transition-transform duration-200
           ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none`}>
+          lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none
+          ${leftCollapsed ? "lg:hidden" : ""}`}>
         <ErrorBoundary name="大纲">
         <LeftPanel activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}

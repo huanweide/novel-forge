@@ -36,6 +36,11 @@ export function ExportDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [includeOutline, setIncludeOutline] = useState(true);
   const [author, setAuthor] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [pendingHits, setPendingHits] = useState<{
+    total: number;
+    hits: { word: string; chapter: string; context: string }[];
+  } | null>(null);
 
   const toggleChapter = (id: string) => {
     setSelected((prev) => {
@@ -45,15 +50,45 @@ export function ExportDialog({
     });
   };
 
-  const doExport = () => {
+  const buildParams = (withCheck: boolean) => {
     const params = new URLSearchParams({ format });
+    if (withCheck) params.set("check", "1");
     if (!includeOutline) params.set("includeOutline", "false");
     if (author.trim()) params.set("author", author.trim());
     if (range === "selected" && selected.size > 0) {
       params.set("chapterIds", [...selected].join(","));
     }
-    window.open(`/api/projects/${projectId}/export?${params.toString()}`, "_blank");
+    return params;
+  };
+
+  // 真正触发下载（不带 check）
+  const proceedExport = () => {
+    window.open(`/api/projects/${projectId}/export?${buildParams(false).toString()}`, "_blank");
+    setPendingHits(null);
     onClose();
+  };
+
+  // FE-N7：导出前先跑违禁词预检，命中则弹确认清单
+  const doExport = async () => {
+    setChecking(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export?${buildParams(true).toString()}`);
+      if (!res.ok) {
+        proceedExport();
+        return;
+      }
+      const data = (await res.json()) as { total: number; hits: { word: string; chapter: string; context: string }[] };
+      if (data.total > 0) {
+        setPendingHits(data);
+        return;
+      }
+      proceedExport();
+    } catch {
+      // 预检失败时退化为直接导出，不打断用户
+      proceedExport();
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -151,9 +186,43 @@ export function ExportDialog({
           </div>
         </div>
 
-        <Button onClick={doExport} className="btn-primary h-9 w-full text-sm">
-          <Icon name="upload" size={14} /> 导出 {FORMATS.find((f) => f.key === format)?.label}
-        </Button>
+        <p className="mb-2 text-[10px] leading-relaxed text-[var(--nv-text-muted)]">
+          导出前会自动跑一遍违禁词预检（可在「设置 → 违禁词」自定义词库）。
+        </p>
+
+        {pendingHits ? (
+          <div className="space-y-3">
+            <div className="rounded-xl border border-[var(--nv-danger-soft)] bg-[var(--nv-danger-soft)]/40 p-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-[var(--nv-danger)]">
+                <Icon name="alert" size={16} /> 预检发现 {pendingHits.total} 处疑似违禁词
+              </div>
+              <p className="mt-1 text-[10px] text-[var(--nv-text-tertiary)]">
+                以下为候选命中（仅显示前 {pendingHits.hits.length} 条），是否真违禁由你判断，工具不自动删改。
+              </p>
+            </div>
+            <div className="max-h-44 space-y-1.5 overflow-y-auto rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2">
+              {pendingHits.hits.map((h, i) => (
+                <div key={i} className="rounded px-2 py-1.5 text-[11px]">
+                  <span className="font-medium text-[var(--nv-danger)]">{h.word}</span>
+                  <span className="text-[var(--nv-text-tertiary)]"> · {h.chapter}</span>
+                  <p className="mt-0.5 truncate text-[var(--nv-text-secondary)]">…{h.context}…</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => setPendingHits(null)} className="btn-ghost h-9 flex-1 text-sm">
+                返回修改
+              </Button>
+              <Button onClick={proceedExport} className="btn-primary h-9 flex-1 text-sm">
+                仍要导出
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button onClick={doExport} disabled={checking} className="btn-primary h-9 w-full text-sm">
+            <Icon name="upload" size={14} /> {checking ? "预检中…" : `导出 ${FORMATS.find((f) => f.key === format)?.label}`}
+          </Button>
+        )}
       </div>
     </Modal>
   );

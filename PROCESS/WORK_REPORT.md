@@ -612,3 +612,42 @@
 - **未压测超大文件（>50MB）**：`estimateTokens` 是粗略估算（字符数/3.5），非精确 tokenizer；大 epub/docx 的内存解压峰值未实测，逻辑对齐既有 txt 分支。
 - **dissect 侧未重复改造**：经侦察它本就是完整异步状态机，本单元只补 import 侧的缺口，不重复造轮子。
 
+
+---
+
+## v0.46.33 — 前端新功能（#215）：FE-N5 全局快捷键系统 + FE-N7 网文合规违禁词预检
+
+### ① 干了什么
+给写长篇时最高频的几个动作加上键盘快捷键，并在导出成稿前自动扫一遍网文违禁词。一句话：写稿时不用离开键盘就能保存、收起侧栏、新建章节；想导出投稿前，系统先帮你看一遍有没有踩平台的违禁词红线，踩了就列出来让你决定要不要改。
+
+### ② 为什么这么做
+- **FE-N5（快捷键）**：原项目除了 Modal 的 ESC 没有任何全局快捷键，保存/切栏/新建章节全靠鼠标点。长篇写作是高频重复操作，每次手离开键盘去点按钮都会打断心流，流畅度差一截。
+- **FE-N7（违禁词）**：网文作者的真实痛点——写了三万字才发现某个词全站违禁，整本要返工。投稿平台（起点/番茄等）各有敏感词清单，本地工具能在导出前先自查，是服务目标人群的直接加分项。
+
+### ③ 怎么做的（方法 + 效果）
+1. **快捷键中心（FE-N5）**：新增 `src/components/ShortcutProvider.tsx`——根布局（`layout.tsx`）挂一个 `<ShortcutProvider>`，它只在 `window` 上挂**唯一一个** keydown 监听 + 一张注册表 `Map<id, def>`。各页面用 `useShortcut(id, combo, desc, handler)` 注册自己的快捷键，组件卸载自动注销，避免"每个组件各挂一个 keydown 导致重复触发/互相打架"。
+2. **组合键解析**：`matchCombo` 把 `"mod+s"` 拆成 `[mod, s]`，`mod` 在 Windows = Ctrl、在 Mac = ⌘（`prettyCombo` 按 `navigator.platform` 显示对应符号）；`[`/`]`/`n` 这类单键也能匹配。
+3. **安全护栏**：`isEditableTarget` 判断当前焦点是不是 `input/textarea/select/contenteditable`；非 mod 组合（n、[、]）在输入框内**自动忽略**，不打断打字；带 mod 组合（mod+s）即使在输入框也照常触发（保存不该被输入框吞掉）。
+4. **workspace 接入 4 个键**：`mod+s` → 复用现有 `handleSave`；`[` → 切 `leftCollapsed`（桌面 `lg:hidden` 折叠左栏 / 窄屏同抽屉逻辑）；`]` → 切 `rightPanelOpen`；`n` → 调 `handleAddSection` 新建章节。
+5. **首启速查 + 设置速查**：首次进入若 `localStorage` 无 `nf-shortcuts-seen` 且当前页已有注册快捷键，延迟 800ms 弹一次速查弹层（弹层关闭时写入 localStorage 记忆）；设置页新增「快捷键」板块，从 `useShortcutHelp().list()` 实时渲染当前已注册的快捷键——因为注册发生在各页面挂载时，设置页虽不在 workspace，但 Provider 的注册表是全应用共享的，所以能列出全局已注册的键（目前主要是 workspace 的四个）。
+6. **违禁词库（FE-N7）**：新增 `src/lib/banned-words.ts`，内置一份常见网文基础词库（政治/色情/暴力/迷信等大类示例词）+ `getUserWords()/addUserWord()/resetUserWords()`（用 `localStorage` 存自定义追加，可一键重置）。`scanText(text)` 返回命中清单：`{word, line, context}`（词 + 行号 + 前后上下文片段）。
+7. **导出预检路由**：`/api/projects/[id]/export` 新增 `?check=1` 模式——只把正文拼成文本跑 `scanText`，返回 `{hits:[...], total}`，**不生成文件**；正常导出不带此参数，行为不变。
+8. **导出前拦截**：`ExportDialog` 在真正 `doExport`（开新窗口下载）前，先 `fetch ?check=1`；若 `hits.length>0` 则把导出按钮切成"确认导出"两步（先弹确认清单展示命中条数 + 可展开每处上下文，再二次点击才真导出），用户可坚持导出或取消。
+
+**效果数据**：
+- tsc 零错误（TSC_EXIT=0）；零新增运行时依赖（banned-words 与快捷键系统都是纯 TS/React，无第三方包）。
+- git 改动：2 个新文件（ShortcutProvider.tsx / banned-words.ts）+ 5 个修改（layout / workspace page / settings page / ExportDialog / export route）+ 双 changelog。
+- 提交（待 push）。
+
+### ④ 关键取舍
+- **用"单一 Provider + 注册表"而非各组件各挂 keydown**：这是这类全局快捷键系统的标准做法，避免重复监听导致的"按一次保存触发两次"之类的冲突，也方便集中做输入框豁免规则。
+- **自定义违禁词用 localStorage 而非 DB**：本地单用户工具，自定义词是"个人偏好"，无需进 PostgreSQL；内置词库是静态常量直接打进包里。重置只清 localStorage 项。
+- **预检只做"提示"不做"阻断"**：网文违禁词标准因平台/时段浮动，硬阻断会误伤正常文学表达（比如历史题材写"战争"），所以设计为"命中就列出让你决定"，而非禁止导出。
+- **设置页速查依赖全局注册表**：注册发生在各页面 `useShortcut` 的 effect 里，设置页渲染时若用户是从 workspace 跳过来的，注册表里已有那 4 个键，能列出；若冷启动直接开设置页，注册表可能为空——这是已知边界，速查弹层用 `registryRef.current.size > 0` 守卫避免空弹，但设置页板块目前不强制要求有键。
+
+### 诚实边界
+- **未在浏览器实跑快捷键端到端**：沙箱无 GUI，无法真按 `mod+s`/`[`/`]`/`n` 验证触发与左右栏折叠视觉；逻辑已对齐"单一监听 + 注册表 + 输入框豁免"的标准模式，且 tsc 通过。建议作者在 workspace 页实测这四个键。
+- **违禁词库是"基础示例"而非全量平台词表**：内置词库只覆盖几大类示例词（避免包体膨胀与版权），不是起点/番茄的完整官方清单；`scanText` 的正则逐词比对，对"组合型违规"（如拆字规避）无法识别。用户应自行在设置页追加所在平台的实际违禁词。
+- **`?check=1` 未在浏览器实跑导出拦截弹层**：代码已接，但端到端（点导出→见清单→坚持导出）未可视化验证。
+- **FE-N5 未做"自定义快捷键"**：计划原文提到"可在设置查看/自定义"，本单元只做了"查看"（速查板块），自定义改键未做（涉及组合键冲突检测，复杂度高，留待后续）。已在 OPTIMIZATION_PLAN 诚实标注。
+

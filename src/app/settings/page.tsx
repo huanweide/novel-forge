@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { loadCustomBannedWords, saveCustomBannedWords, DEFAULT_BANNED_WORDS } from "@/lib/banned-words";
+import { useShortcutHelp } from "@/components/ShortcutProvider";
 
 const PROVIDERS = [
   { key: "siliconflow", name: "硅基流动 (SiliconFlow)", defaultModel: "deepseek-ai/DeepSeek-V4-Flash", desc: "国产，便宜，DeepSeek V4 全系" },
@@ -27,9 +29,21 @@ export default function SettingsPage() {
   const [models, setModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  // FE-N7 违禁词自定义词库
+  const [bannedWords, setBannedWords] = useState("");
+  const [bannedSaved, setBannedSaved] = useState(false);
+  const { openHelp: openShortcutHelp, list: listShortcuts } = useShortcutHelp();
 
   useEffect(() => {
     loadSettings();
+  }, []);
+
+  useEffect(() => {
+    try {
+      setBannedWords(loadCustomBannedWords().join("\n"));
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   async function loadSettings() {
@@ -155,6 +169,20 @@ export default function SettingsPage() {
       setStatusMsg("❌ 网络错误，保存失败");
     } finally {
       setSaving(false);
+    }
+  }
+
+  function handleSaveBannedWords() {
+    try {
+      const arr = bannedWords
+        .split(/\r?\n/)
+        .map((w) => w.trim())
+        .filter(Boolean);
+      saveCustomBannedWords(arr);
+      setBannedSaved(true);
+      setTimeout(() => setBannedSaved(false), 2000);
+    } catch {
+      /* ignore */
     }
   }
 
@@ -358,6 +386,62 @@ export default function SettingsPage() {
             <p className="text-xs text-[var(--nv-text-muted)] mt-2">只需填到 /v1 即可，会自动拼接 /chat/completions</p>
           </section>
         )}
+
+        {/* FE-N7 违禁词预检词库 */}
+        <section>
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+            4. 违禁词预检词库
+          </label>
+          <div className="p-4 rounded-2xl surface-elevated space-y-3">
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
+              导出前会自动扫描正文中的违禁词。内置 {DEFAULT_BANNED_WORDS.length} 个各平台普遍禁止的引流 / 广告 / 联系方式词，你可在此追加自己投稿平台的专有违禁词（每行一个）。扫描结果仅供参考，是否违禁由你判断，工具不自动删改。
+            </p>
+            <textarea
+              value={bannedWords}
+              onChange={(e) => setBannedWords(e.target.value)}
+              placeholder={"每行一个，例如：\n微信\n加群\n代写"}
+              className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono h-32 resize-none"
+            />
+            <div className="flex items-center gap-3">
+              <button onClick={handleSaveBannedWords} className="btn-primary px-5 py-2.5 rounded-xl text-sm font-medium">
+                保存词库
+              </button>
+              {bannedSaved && (
+                <span className="text-xs text-success flex items-center gap-1">
+                  <Icon name="check" size={13} /> 已保存
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* FE-N5 快捷键速查 */}
+        <section>
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+            5. 键盘快捷键
+          </label>
+          <div className="p-4 rounded-2xl surface-elevated space-y-3">
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
+              工作台支持全局快捷键，提升长篇写作流畅度。首次进入工作台会自动弹出速查；在输入框内打字时，非 Ctrl/⌘ 组合（如 N、[、]）不会触发，避免打断输入。
+            </p>
+            <ul className="space-y-1.5">
+              {[
+                { d: "保存当前章节", c: "Ctrl / ⌘ + S" },
+                { d: "切换左侧栏", c: "[（左方括号）" },
+                { d: "切换右侧栏", c: "]（右方括号）" },
+                { d: "新建章节", c: "N" },
+                { d: "命令面板", c: "Ctrl / ⌘ + K" },
+              ].map((s) => (
+                <li key={s.c} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--nv-surface-1)] px-3 py-2">
+                  <span className="text-xs text-[var(--nv-text-secondary)]">{s.d}</span>
+                  <kbd className="shrink-0 rounded border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--nv-text-primary)]">
+                    {s.c}
+                  </kbd>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
         {/* 保存 */}
         <div className="flex items-center gap-4 pt-6 border-t border-[var(--nv-border-2)]">
