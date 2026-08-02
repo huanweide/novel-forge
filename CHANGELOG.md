@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.24 — 2026-08-02
+**项目备份包 .nfproject：整本设定一键打包，换电脑 / 送搭档不必懂数据库**
+- 📦 备份包导出（FE-N2）：工作台工具栏新增「备份包」按钮，点击触发 `GET /api/projects/[id]/backup` 下载 `.nfproject`（章节+角色+世界书+规则+文风卡+分支+剧情线+世界表全量 JSON，Content-Disposition 附件）；仪表盘顶栏新增「导入备份」选文件即 `POST /api/projects/import` 落库为新项目
+- 🔄 导入即重映射：剥离旧 id/时间戳后新建项目，子表两段式回填 parentId/branchId/relatedEntryIds，关联完整；导入名自动加「（导入）」后缀，与原项目互不干扰（新增非覆盖）
+- 🧭 诚实边界：数据模型纯文本/JSON 无二进制附件，JSON 即完整（未用 zip）；仅做「导入为新项目」，未做覆盖（覆盖易误伤原稿）；tsc 零错误，零新依赖
+
 ## v0.46.23 — 2026-08-02
 **全局命令面板 Cmd/Ctrl+K：项目一大，搜索即达，专业感拉满**
 - ⌘ 命令面板（FE-N1）：根 layout 挂全局 `<CommandPalette />`，Cmd/Ctrl+K 唤起；解析当前 projectId 拉 nodes/characters/lore/rules 建内存索引，输入即搜；↑↓ 选、Enter 跳转、Esc 关闭；仪表盘顶栏加「搜索 ⌘K」按钮

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
@@ -112,6 +112,35 @@ export default function Dashboard() {
     } catch { /* */ }
   }, []);
 
+  // 导入 .nfproject 备份包 → 落库为新项目
+  const importBackupRef = useRef<HTMLInputElement>(null);
+  const handleImportBackup = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.name.endsWith(".nfproject") && file.type !== "application/json") {
+      toastError("请选择 .nfproject 备份文件");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const res = await fetch("/api/projects/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: text,
+      });
+      const d = await res.json();
+      if (res.ok && d.id) {
+        toastSuccess("备份已导入为新项目");
+        router.push(`/workspace/${d.id}`);
+      } else {
+        toastError(d.error || "导入失败");
+      }
+    } catch {
+      toastError("文件解析失败，请确认是有效的 .nfproject 备份");
+    }
+  };
+
   const { deletingId, remove: deleteProject } = useConfirmDelete({
     title: "移入回收站",
     description: (id, name) => `确定删除「${name}」？将移入回收站，可在回收站恢复（默认不彻底删除）。`,
@@ -165,6 +194,10 @@ export default function Dashboard() {
             <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">{loadingSample ? "载入中" : "示例"}</span>
             </button>
+            <button onClick={() => importBackupRef.current?.click()} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1" title="从 .nfproject 备份包导入（落库为新项目）">
+              <Icon name="package" size={13} /> <span className="hidden sm:inline">导入备份</span>
+            </button>
+            <input ref={importBackupRef} type="file" accept=".nfproject,application/json" className="hidden" onChange={handleImportBackup} />
           </div>
         </div>
       </header>

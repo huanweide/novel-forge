@@ -747,6 +747,14 @@ export default function WorkspacePage() {
         onOpenAutomation={() => setShowAutomationSettings(true)}
         onOpenToolbox={() => setShowToolbox(true)}
         onOpenExport={() => setShowExportDialog(true)}
+        onBackup={() => {
+          const a = document.createElement("a");
+          a.href = `/api/projects/${project.id}/backup`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          toastSuccess("已导出备份包 .nfproject（章节+角色+世界书+规则+文风）");
+        }}
       />
 
       <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2">

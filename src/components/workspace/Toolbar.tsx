@@ -9,13 +9,13 @@ import type { ProjectData } from "./types";
 
 export function Toolbar({
   projectName, onBack, onGenerateOutline, onSummarize, onImportSettings, onImportChapters,
-  onEditStyle, onOpenExport, isGenerating, outlineGenerating, summarizing,
+  onEditStyle, onOpenExport, onBackup, isGenerating, outlineGenerating, summarizing,
   projectId, styleTemplateId, onStyleSelect, styleCard,   onOpenAutomation,
   onOpenToolbox,
 }: {
   projectName: string; onBack: () => void; onGenerateOutline: () => void;
   onSummarize: () => void; onImportSettings: () => void; onImportChapters: () => void;
-  onEditStyle: () => void; onOpenExport: () => void;
+  onEditStyle: () => void; onOpenExport: () => void; onBackup: () => void;
   isGenerating: boolean; outlineGenerating?: boolean; summarizing: boolean;
   projectId: string; styleTemplateId?: string; onStyleSelect: (t: StyleTemplate) => void;
   styleCard?: ProjectData["styleCard"];
@@ -92,6 +92,8 @@ export function Toolbar({
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]"><Icon name="sparkles" size={12} /> 工具箱</Button>
         <Button size="sm" variant="outline" onClick={onOpenExport} disabled={isGenerating}
           className="flex h-7 items-center gap-1 text-xs"><Icon name="upload" size={12} /> 导出</Button>
+        <Button size="sm" variant="outline" onClick={onBackup} disabled={isGenerating}
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-accent)]" title="导出整本备份包 .nfproject（章节+角色+世界书+规则+文风，可导入还原）"><Icon name="package" size={12} /> 备份包</Button>
         <Button size="sm" variant="outline" onClick={handleCopyMarkdown} disabled={copying || isGenerating}
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-text-secondary)]"><Icon name="clipboard" size={12} />{copying ? "复制中…" : "复制全文"}</Button>
         {copyTip && <span className="shrink-0 self-center text-xs text-[var(--nv-accent)]">{copyTip}</span>}

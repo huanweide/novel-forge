@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.23";
+export const LATEST_VERSION = "v0.46.24";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "⌘ 全局命令面板 Cmd/Ctrl+K（FE-N1）：任意页面按 Cmd/Ctrl+K 唤起面板，输入即搜当前项目的章节标题 / 角色名 / 世界书词条 / 规则，回车直达；也支持「新建章节 / 打开设置 / 探讨 / 拆书 / 创意工坊 / 回收站 / 返回主页」等动作跳转",
-  "🔎 跳转即定位：搜到章节回车跳到该章并自动选中；角色 / 世界书词条回车直接打开编辑弹窗；不在项目页时面板自动聚焦全局操作（页面跳转）",
-  "💡 可发现性：仪表盘顶栏新增「搜索 ⌘K」按钮（移动端点按同样能开），面板内 ↑↓ 选择、Enter 跳转、Esc 关闭",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；检索走前端内存索引（打开时拉当前项目数据），不上 ES；workspace 加 `?node`/`?editCharacter`/`?editLore`/`?tab` 参数接收跳转",
+  "📦 项目备份包 .nfproject（FE-N2）：工作台工具栏新增「备份包」按钮，一键导出整本项目（章节+角色+世界书+规则+文风+分支+剧情线+文风卡+世界表）为单个 `.nfproject` JSON 文件；仪表盘顶栏新增「导入备份」，选文件即可落库为新项目",
+  "🔄 导入即重映射：导入时剥离旧 id / 时间戳，新建项目后重建所有子表并回填 parentId / branchId / relatedEntryIds 关联，保证导入的是一份独立、完整的全新项目（名带「（导入）」后缀）",
+  "💡 可移植性：换电脑、发给搭档、备份到 U 盘，一键搞定，不必懂数据库——本地写作工具的「搬家刚需」",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；导出走 `GET /api/projects/[id]/backup`（Content-Disposition 附件下载），导入走 `POST /api/projects/import` 校验 `format===\"nfproject\"`",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.24",
+    date: "2026-08-02",
+    title: "项目备份包 .nfproject：整本设定一键打包，换电脑 / 送搭档不必懂数据库",
+    sections: [
+      {
+        label: "备份包导出（FE-N2）",
+        items: [
+          "工作台工具栏新增「备份包」按钮，点击即触发 `GET /api/projects/[id]/backup` 下载 `.nfproject` 文件（Content-Disposition 附件）：内含 DB 该项目的全部表——章节 / 角色 / 世界书 / 规则 / 文风卡 / 分支 / 剧情线 / 世界表，纯 JSON 可人读",
+          "仪表盘顶栏新增「导入备份」按钮（`<input type=file accept=.nfproject>`），选文件后 `POST /api/projects/import`，校验 `format===\"nfproject\"` 后落库为新项目并自动跳转新工作台",
+        ],
+      },
+      {
+        label: "导入即重映射",
+        items: [
+          "导入时剥离旧 id / 时间戳 / 关联字段，新建项目后重建子表；storyNode 两段式回填 parentId / branchId，lorebookEntry 回填 parentId / relatedEntryIds，保证关联完整且指向新数据",
+          "导入项目名自动加「（导入）」后缀，与原项目互不干扰——是新增而非覆盖，避免误删原稿",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "数据模型纯文本 / JSON，无二进制附件，故 JSON 即完整备份（计划原写「zip + 附件」，实际无需 zip 即可完整携带，保持单文件可读）",
+          "仅实现「导入为新项目」一种策略（计划提及的「覆盖」未做，覆盖风险高、易误伤原稿，本地工具以安全优先）；tsc 零错误，零新依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.23",
     date: "2026-08-02",
