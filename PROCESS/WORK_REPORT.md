@@ -463,4 +463,36 @@
 
 ---
 
-*下个单元：#211 API 错误响应统一（ARCH-2）。*
+## v0.46.29 — 统一 API 错误响应（ARCH-2）：全站路由 catch 收敛到 jsonError
+
+> 给所有后端的"出错返回"立一个统一格式。类比：原来每家分公司（路由）出错时自己写纸条（有的写"出错"、有的写"error:xxx"、有的还带编号），总部（前端）看不懂；现在规定所有分公司出错都填同一张标准表 `{error, code?, hint?}`，总部一眼就懂、还能照 hint 给用户中文排障建议。
+
+### ① 干了什么
+- 全站 96 个 API 路由中，约 90 个原本在 catch 里手写 `return NextResponse.json({ error: ... }, { status: 500 })` 的，统一改成 `return jsonError(e);`，错误体收敛为 `{ error, code?, hint? }`。
+- 两套 `jsonError` 收口：`@/lib/api-error` 的 `jsonError(e: unknown)` 走 `classifyError` 把 Prisma 错误码（P1000/P1001/P2021/P2024/P2002 等）、网络错误、默认错误分类，并带上中文 `hint` 排障建议，成为路由异常错误的默认通道；`@/lib/api` 的 `jsonError(message, status, code?)` 保留给 3 个需要**精确 4xx 状态码**（404/400）的历史路由（presets/[id]、seed/presets、projects/[id]/config）。
+- 修复 `presets/import` 的 tsc 类型错误：该路由 catch 被写成 `jsonError(e)`（e 是 unknown），但 import 来自 `@/lib/api`（签名 `jsonError(message: string)`），类型不匹配；把 import 源改到 `@/lib/api-error` 一并解决。
+- 8 个 SSE 流式路由（characters/classify、characters/expand、import/commit、import/parse、import/quick、lorebook/expand、lorebook/import、lorebook/summarize）按设计走 `send({ type: "error" })`，不套 jsonError（流式没有一次性 HTTP 响应体可返回）；`/api/settings/test` 保留 `{ ok: false, error }` 业务契约（前端 `setTestResult` 依赖 `ok` 字段）但 catch 内错误文本改用统一 `classifyError(err).error`；`/api/tools/execute` 为 `@deprecated` 且契约为 `{ success, data, error, toolName }`，保留原结构不强行套 jsonError。
+
+### ② 为什么
+- **统一错误格式 = 给所有"出错纸条"一个固定模板**：原来 88 个路由只有 29 个用 `jsonError`，剩下 59 个手写返回，结构五花八门。前端 Toast 想稳定显示"中文排障建议"时，有的响应有 `hint`、有的只有裸字符串，处理起来要写一堆特例。统一后前端只要读 `error` 字段，必要时读 `hint` 给用户具体建议（如"数据库连接失败，请检查 PostgreSQL"），不用再猜每个接口返回长什么样。
+- **保留两套 jsonError 不是重复，是职责分开**：`@/lib/api-error` 接收"异常对象"（unknown）自动分类，适合 catch 里"出了意外"的场景；`@/lib/api` 接收"我主动知道的错误信息和状态码"（如"预设不存在"→404），适合业务逻辑里精确返回 4xx。硬把它们合并会丢失 404/400 的精确语义。
+
+### ③ 怎么做的（方法 + 效果）
+1. **机械替换**：用 Python 脚本扫所有 `src/app/api/**/route.ts`，把 catch 块里的 `return NextResponse.json({ error: ... }, { status: 500 })` 正则匹配替换为 `return jsonError(<var>);`，并自动补/去重 `@/lib/api-error` 的 import。
+2. **类型收口**：替换后跑 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit`，逐轮修复脚本引入的 4 类问题（尾逗号漏配、跨块吞并、误判已导入、重复 import），最终 `TSC_EXIT=0`。
+3. **覆盖率验证**：写一次性脚本统计——96 个路由中 84 个从 `@/lib/api-error` 导入 jsonError、3 个从 `@/lib/api` 保留（精确 4xx）、8 个 SSE 流式为 `send(error)` 排除、1 个 `tools/execute` 保留 `@deprecated` 契约；对有 catch 但没用 jsonError 的 6 个文件逐一提取 catch 块判定，确认其中 3 个（settings/models、settings/test、presets/import）已收口、3 个（dissect/to-project、game/action、health）的 catch 不返回 5xx 无需改。
+4. **升版 + 双 changelog**：`src/lib/changelog-data.ts` 插 VERSIONS 头条 + 改 LATEST_VERSION=v0.46.29 + CHANGELOG_BRIEF 4 条，同步根 `CHANGELOG.md`，同 commit 推 main（`1008289`）。
+
+**效果数据**：tsc 零错误；零新依赖；59 文件改动（153 增 / 198 删，净减 45 行，因统一后更短）；jsonError 覆盖率 29/88 → 实质 100%（除 SSE 与业务结果契约外）。
+
+### ④ 关键取舍
+- **不强行把 settings/test / tools/execute 套 jsonError**：前者前端靠 `ok` 字段判断成败、后者靠 `success/data` 契约，硬改会破坏前端解析；改为保留业务字段、仅用统一 `classifyError` 提取错误文本（settings/test），或完全保留（tools/execute）。这是"统一格式"与"不破坏现有契约"之间的诚实权衡。
+- **SSE 流式不套 jsonError**：流式响应是一个个事件推送，没有"一次性 HTTP JSON 响应体"，套 jsonError 无意义；按设计走 `send({type:"error"})`，前端流式客户端照常处理。
+
+### 诚实边界
+- 未写自动化测试验证每个路由返回体字段（沙箱无 GUI + 无 ARCH-6 测试护栏）；验证为 tsc 零错误 + 覆盖率脚本统计 + 逐一 catch 块代码审查。若后续建 ARCH-6 测试护栏，可加一个"所有非 SSE 路由 catch 必须返回 `{error, code?, hint?}`"的断言。
+- `classifyError` 对普通 `Error` 默认返回 500 + 通用 `error`；对已知 Prisma 码/网络错误才带 `hint`。未扩展新的错误分类（如业务域错误），保持最小改动。
+
+---
+
+*下个单元：#212 幂等 seed 脚本（ARCH-5）。*

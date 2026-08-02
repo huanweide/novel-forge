@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.30 — 2026-08-02
+**幂等 seed 脚本（ARCH-5）：prisma/seed.ts + db:seed，16 内置预设可重复播种**
+
+- 🌱 新增 `prisma/seed.ts` 幂等脚本：遍历 16 内置预设，按 `{type, title, isBuiltin}` 查重，已存在跳过、否则插入，`npm run db:seed` 可重复执行不重复写入
+- 📦 单一数据源：16 内置预设从 `src/app/api/seed/presets/route.ts` 的 `BUILTINS` 抽到 `src/lib/builtin-presets.ts`，API 播种路由与 seed 脚本共用，避免双份维护漂移
+- 🔧 Prisma 7 适配：seed 配置移到 `prisma.config.ts` 的 `migrations.seed`（package.json 的 `prisma.seed` 对 v7 无效）；新增 `tsx` devDep 作为 runner，seed 用相对路径 import 避开 `@/` 别名
+- ✅ tsc 零错误、零新运行时依赖（tsx 仅 devDep）；实跑两次验证幂等（新增 0 / 跳过 16，结果稳定）
+
 ## v0.46.29 — 2026-08-02
 **统一 API 错误响应（ARCH-2）：全站路由 catch 收敛到 jsonError**
 - 🔧 全站约 90 个 API 路由的 catch 块手写 `return NextResponse.json({error},{status:500})` 统一收敛到 `@/lib/api-error` 的 `jsonError(e)`；错误响应体固定为 `{error, code?, hint?}`，前端一致解析、排查更省心

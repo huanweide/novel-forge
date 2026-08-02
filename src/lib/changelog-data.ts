@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.29";
+export const LATEST_VERSION = "v0.46.30";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔧 统一 API 错误响应（ARCH-2）：全站约 90 个路由 catch 块手写 `return NextResponse.json({error},{status:500})` 统一收敛到 `@/lib/api-error` 的 `jsonError(e)`，错误体固定为 `{error, code?, hint?}`",
-  "🧭 两套 `jsonError` 收口：路由异常默认走 `@/lib/api-error` 的 `jsonError(e)`（classifyError 分类 Prisma/网络/默认并带 hint）；需精确 4xx 码的 3 个历史路由保留 `@/lib/api` 的 `jsonError(msg,status)`",
-  "🚫 8 个 SSE 流式路由走 `send({type:\"error\"})` 不套 jsonError；`/api/settings/test` 保留 `{ok:false}` 业务契约但错误文本改用统一 classifyError；`/api/tools/execute` 保留 `{success,data}` 契约（@deprecated）",
-  "✅ tsc 零错误、零新依赖；`/api/presets/import` 的 `unknown→string` 类型冲突随 import 源改到 `@/lib/api-error` 一并修复；覆盖率 29/88 → 实质 100%",
+  "🌱 幂等 seed 脚本（ARCH-5）：新增 `prisma/seed.ts` + `npm run db:seed`，按 {type,title,isBuiltin} 查重播种 16 内置预设，可重复执行不重复插入",
+  "📦 单一数据源：16 内置预设从 `src/app/api/seed/presets/route.ts` 抽到 `src/lib/builtin-presets.ts`，API 播种路由与 seed 脚本共用，避免双份维护",
+  "🔧 Prisma 7 适配：seed 配置移至 `prisma.config.ts` 的 `migrations.seed`（package.json 的 prisma.seed 对 v7 无效）；新增 `tsx` devDep 作为 runner",
+  "✅ tsc 零错误、零新运行时依赖（tsx 仅 devDep）；实跑两次验证幂等（新增 0 / 跳过 16，结果稳定）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.30",
+    date: "2026-08-02",
+    title: "幂等 seed 脚本（ARCH-5）：prisma/seed.ts + db:seed，16 内置预设可重复播种",
+    sections: [
+      {
+        label: "幂等 seed 脚本（ARCH-5）",
+        items: [
+          "新增 `prisma/seed.ts`：遍历 16 个内置预设，按 `findFirst({type, title, isBuiltin:true})` 查重，已存在则跳过、否则 `create`，可重复执行不重复插入（幂等）",
+          "新增 `npm run db:seed` 命令（`prisma db seed` → `tsx prisma/seed.ts`）；Prisma 7 的 seed 配置从 package.json 的 `prisma.seed` 迁移到 `prisma.config.ts` 的 `migrations.seed`（v7 不再读 package.json）",
+          "新增 `tsx` devDependency 作为 seed runner；seed 脚本自包含初始化 PrismaClient（复用 PrismaPg 连接池配置），并用相对路径 import 生成客户端与 BUILTINS，避开 `@/` 别名解析，tsx 可直接运行",
+        ],
+      },
+      {
+        label: "单一数据源（去重维护）",
+        items: [
+          "把 16 个内置预设从 `src/app/api/seed/presets/route.ts` 的 `BUILTINS` 常量抽到 `src/lib/builtin-presets.ts`（相对路径 import stagePlay.json），`/api/seed/presets` 路由与 `prisma/seed.ts` 都从这一处 import，避免两处各维护一份导致漂移",
+          "stagePlay.json 用相对路径 `../app/api/seed/presets/stage-play.json` 引用，兼容 tsx/node 直接运行（不依赖 @/ 别名）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.29",
     date: "2026-08-02",

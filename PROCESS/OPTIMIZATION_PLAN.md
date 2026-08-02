@@ -44,6 +44,7 @@
 - **量级**：中（涉及 30+ 调用方，需逐文件改 + tsc 校验）。
 
 ### ARCH-2 统一 API 错误响应（把 jsonError 覆盖率从 29/88 提到 100%）
+- **状态**：✅ 已完成（v0.46.29，已推 main `1008289`）——约 90 路由 catch 收敛到 `@/lib/api-error` 的 `jsonError(e)`；3 个历史路由保留 `@/lib/api` 精确 4xx；SSE/业务契约路由按边界排除
 - **现在**：88 个路由里只有 29 个用了 `src/lib/api-error.ts` 的 `jsonError`，其余 59 个在 catch 里手写 `return NextResponse.json({ error })`；错误结构不统一（有的带 `code`/`hint`，有的只有字符串）。
 - **做完**：封装 `withError` 高阶函数或统一 `route` 包装，所有路由的错误都走 `jsonError`，响应体固定为 `{ error, code?, hint? }`。
 - **价值**：前端 Toast 能稳定读取 `hint` 给出中文排障建议（如"数据库连接失败，请检查 PostgreSQL"），而不是偶尔只弹一个裸字符串。
