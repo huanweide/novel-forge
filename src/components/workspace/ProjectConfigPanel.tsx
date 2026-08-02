@@ -167,7 +167,7 @@ export function ProjectConfigPanel({
                     <button
                       onClick={() => removePreset(p.presetId)}
                       disabled={busy}
-                      className="shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--nv-text-muted)] hover:bg-red-500/10 hover:text-red-400 transition"
+                      className="shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--nv-text-muted)] hover:bg-danger/10 hover:text-danger transition"
                     >
                       移除
                     </button>
@@ -210,7 +210,7 @@ export function ProjectConfigPanel({
                       />
                       <button
                         onClick={() => setRules((rs) => rs.filter((_, i) => i !== idx))}
-                        className="shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--nv-text-muted)] hover:bg-red-500/10 hover:text-red-400 transition"
+                        className="shrink-0 rounded-lg px-2 py-1 text-xs text-[var(--nv-text-muted)] hover:bg-danger/10 hover:text-danger transition"
                       >
                         删除
                       </button>

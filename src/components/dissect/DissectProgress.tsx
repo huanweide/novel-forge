@@ -31,10 +31,10 @@ export function DissectProgress({
 
   const statusColor: Record<string, string> = {
     pending: "text-[var(--nv-text-muted)]",
-    chunking: "text-blue-400",
+    chunking: "text-info",
     extracting: "text-[var(--nv-primary)]",
-    completed: "text-green-400",
-    failed: "text-red-400",
+    completed: "text-success",
+    failed: "text-danger",
   };
 
   const barColor =
@@ -101,9 +101,9 @@ export function DissectProgress({
               const dimSpin = dim.status === "extracting";
               const bg =
                 dim.status === "completed"
-                  ? "bg-green-500/10 text-green-400"
+                  ? "bg-success/10 text-success"
                   : dim.status === "failed"
-                    ? "bg-red-500/10 text-red-400"
+                    ? "bg-danger/10 text-danger"
                     : dim.status === "extracting"
                       ? "bg-[var(--nv-primary)]/10 text-[var(--nv-primary)]"
                       : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)]";
@@ -123,8 +123,8 @@ export function DissectProgress({
 
       {/* 错误信息 */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
     </div>

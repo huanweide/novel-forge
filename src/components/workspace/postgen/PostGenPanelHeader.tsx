@@ -41,7 +41,7 @@ export function PostGenPanelHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
-        {saveMessage && <span className={`text-[10px] ${saveMessage.startsWith("✅") ? "text-emerald-400" : "text-red-400"}`}>{saveMessage}</span>}
+        {saveMessage && <span className={`text-[10px] ${saveMessage.startsWith("✅") ? "text-success" : "text-danger"}`}>{saveMessage}</span>}
         <Button onClick={onSave} disabled={saving || !extractionData} size="sm" className="btn-success h-7 text-xs">
           {saving ? "保存中…" : "全部采纳"}
         </Button>

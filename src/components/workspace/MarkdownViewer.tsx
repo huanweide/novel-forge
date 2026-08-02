@@ -83,7 +83,7 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="bg-[var(--nv-surface-2)] text-amber-300 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
+        <code className="bg-[var(--nv-surface-2)] text-warning px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
           {children}
         </code>
       );

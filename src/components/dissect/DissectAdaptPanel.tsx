@@ -158,7 +158,7 @@ export function DissectAdaptPanel({
           creating
             ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
             : messages.length > 1
-              ? "bg-green-600 text-[var(--nv-text-primary)] hover:bg-green-500"
+              ? "bg-success text-[var(--nv-text-primary)] hover:bg-success"
               : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >

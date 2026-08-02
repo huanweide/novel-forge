@@ -35,6 +35,20 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+/* 首屏前应用主题，避免闪烁 */
+(function(){
+  try {
+    var t = localStorage.getItem('nf-theme');
+    var d = document.documentElement;
+    if (t === 'light') { d.classList.add('light'); d.classList.remove('dark'); }
+    else { d.classList.add('dark'); d.classList.remove('light'); }
+  } catch(e){}
+})();`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
 /* 清除所有 Service Worker——Novel Forge 不需要离线缓存 */
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){

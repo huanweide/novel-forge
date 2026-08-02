@@ -130,9 +130,9 @@ export function DissectDimensions({
                   </span>
                   <span className="font-medium text-[var(--nv-text-secondary)] truncate">{c.name}</span>
                   <span className={`text-[9px] px-1 py-0 rounded-full shrink-0 ${
-                    c.role === "protagonist" ? "bg-amber-600/30 text-amber-400" :
-                    c.role === "antagonist" ? "bg-red-600/30 text-red-400" :
-                    c.role === "mentor" ? "bg-blue-600/30 text-blue-400" :
+                    c.role === "protagonist" ? "bg-warning/30 text-warning" :
+                    c.role === "antagonist" ? "bg-danger/30 text-danger" :
+                    c.role === "mentor" ? "bg-info/30 text-info" :
                     "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)]"
                   }`}>
                     {c.role === "protagonist" ? "★主角" : c.role === "antagonist" ? "◆反派" : c.role === "mentor" ? "◈导师" : "●配角"}
@@ -152,12 +152,12 @@ export function DissectDimensions({
         </div>
 
         {/* 世界书卡片 */}
-        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-emerald-500/5 border-emerald-500/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
+        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-success/5 border-success/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">📚</span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">世界书词条</span>
             {loreCount > 0 && (
-              <span className="text-xs bg-emerald-600/30 text-emerald-400 px-1.5 py-0.5 rounded-full">{loreCount}条</span>
+              <span className="text-xs bg-success/30 text-success px-1.5 py-0.5 rounded-full">{loreCount}条</span>
             )}
           </div>
           {loreCount > 0 ? (
@@ -192,12 +192,12 @@ export function DissectDimensions({
         </div>
 
         {/* 文风卡片 */}
-        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-amber-500/5 border-amber-500/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
+        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-warning/5 border-warning/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">✍️</span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">文笔风格</span>
             {hasStyle && (
-              <span className="text-xs bg-amber-600/30 text-amber-400 px-1.5 py-0.5 rounded-full">已提取</span>
+              <span className="text-xs bg-warning/30 text-warning px-1.5 py-0.5 rounded-full">已提取</span>
             )}
           </div>
           {hasStyle ? (
@@ -343,7 +343,7 @@ export function DissectDimensions({
           {convertedToProjectId ? (
             <a
               href={`/workspace/${convertedToProjectId}`}
-              className="block w-full py-3 rounded-lg bg-green-600 text-[var(--nv-text-primary)] text-sm font-medium text-center hover:bg-green-500 transition-colors"
+              className="block w-full py-3 rounded-lg bg-success text-[var(--nv-text-primary)] text-sm font-medium text-center hover:bg-success transition-colors"
             >
               ✅ 项目已创建，点击进入工作区 →
             </a>

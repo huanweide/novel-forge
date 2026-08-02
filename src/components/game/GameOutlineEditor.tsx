@@ -26,20 +26,20 @@ interface Props {
 
 const LINE_COLORS: Record<string, string> = {
   "C|": "text-cyan-400",
-  "L0|": "text-red-400/70",
-  "L1|": "text-amber-400/70",
+  "L0|": "text-danger/70",
+  "L1|": "text-warning/70",
   "L2|": "text-orange-400/70",
-  "R|": "text-green-400",
+  "R|": "text-success",
   "L|": "text-teal-400",
-  "G|": "text-yellow-400",
+  "G|": "text-warning",
   "P|": "text-[var(--nv-text-tertiary)]",
   "CF|": "text-purple-400",
-  "M|": "text-rose-400",
-  "K|": "text-amber-300",
+  "M|": "text-danger",
+  "K|": "text-warning",
   "EL|": "text-pink-400",
   "T|": "text-cyan-300",
-  "【章首衔接】": "text-blue-400",
-  "【章尾悬念】": "text-blue-400",
+  "【章首衔接】": "text-info",
+  "【章尾悬念】": "text-info",
   "⟨✍": "text-[var(--nv-creative)]/60 italic",
 };
 
@@ -261,7 +261,7 @@ export default function GameOutlineEditor({
           </button>
           <button
             onClick={handleSave}
-            className="px-3 py-1 text-xs bg-emerald-800/30 hover:bg-emerald-700/30 text-emerald-300 border border-emerald-700/30 rounded transition-colors"
+            className="px-3 py-1 text-xs bg-success/30 hover:bg-success/30 text-success border border-success/30 rounded transition-colors"
           >
             💾 保存
           </button>
@@ -279,9 +279,9 @@ export default function GameOutlineEditor({
         <div
           className={`px-4 py-1.5 text-xs ${
             statusMsg.startsWith("✅")
-              ? "text-emerald-400 bg-emerald-900/10"
+              ? "text-success bg-success/10"
               : statusMsg.startsWith("❌")
-                ? "text-red-400 bg-red-900/10"
+                ? "text-danger bg-danger/10"
                 : "text-[var(--nv-creative)] bg-[var(--nv-creative)]/10"
           }`}
         >

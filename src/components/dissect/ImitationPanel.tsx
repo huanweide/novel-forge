@@ -194,7 +194,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           ))}
         </select>
         {selectedTask && (
-          <p className="text-xs text-green-400 mt-1">
+          <p className="text-xs text-success mt-1">
             已选择: {selectedTask.bookName}
             {selectedTask.bookAuthor ? `（${selectedTask.bookAuthor}）` : ""}
             {" "}({availableDimensions.length}维度可用)
@@ -350,8 +350,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
 
       {/* 错误 */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 

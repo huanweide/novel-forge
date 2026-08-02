@@ -30,7 +30,7 @@ export function AdoptedContentPanel({
     <div className="p-4 flex flex-col h-full">
       {/* 头部 */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="w-1 h-3.5 rounded-full bg-emerald-400/60" />
+        <span className="w-1 h-3.5 rounded-full bg-success/60" />
         <h3 className="text-xs font-semibold text-[var(--nv-text-secondary)] tracking-wider uppercase">
           已采纳内容
         </h3>
@@ -72,7 +72,7 @@ export function AdoptedContentPanel({
                     </span>
                     <button
                       onClick={() => onRemove(item.id)}
-                      className="text-[var(--nv-text-muted)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-200 text-xs shrink-0 hover:scale-110"
+                      className="text-[var(--nv-text-muted)] hover:text-danger opacity-0 group-hover:opacity-100 transition-all duration-200 text-xs shrink-0 hover:scale-110"
                     >
                       ✕
                     </button>
@@ -100,14 +100,14 @@ export function AdoptedContentPanel({
         {createdProjectId ? (
           <div className="space-y-2.5">
             <div className="flex items-center justify-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span className="text-xs text-emerald-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              <span className="text-xs text-success font-medium">
                 项目运行中
               </span>
             </div>
             <Link
               href={`/workspace/${createdProjectId}`}
-              className="block w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-[var(--nv-text-primary)] text-xs font-semibold text-center hover:from-emerald-500 hover:to-emerald-400 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98]"
+              className="block w-full py-3 rounded-xl bg-gradient-to-r from-success to-success text-[var(--nv-text-primary)] text-xs font-semibold text-center hover:from-success hover:to-success shadow-lg shadow-success/20 hover:shadow-success/30 transition-all duration-200 active:scale-[0.98]"
             >
               进入工作区 →
             </Link>

@@ -42,6 +42,16 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  /* ── Novel Forge 语义功能色（映射到虚空令牌，启用 text-success / bg-danger/20 等） ── */
+  --color-success: var(--nv-success);
+  --color-success-soft: var(--nv-success-soft);
+  --color-danger: var(--nv-danger);
+  --color-danger-soft: var(--nv-danger-soft);
+  --color-warning: var(--nv-warning);
+  --color-warning-soft: var(--nv-warning-soft);
+  --color-info: var(--nv-info);
+  --color-info-soft: var(--nv-info-soft);
+  --color-accent: var(--nv-accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -233,9 +243,147 @@
   --sidebar-ring: oklch(0.62 0.19 270 / 0.5);
 }
 
-/* ═══════════════════════════════════════════
+/* ═════════════════════════════════════════
+   浅色主题（虚空玻璃 · 昼面）——仅在 <html class="light"> 时生效
+   通过覆盖设计令牌实现，组件无需任何改动即可换肤。
+   ═════════════════════════════════════════ */
+
+.light {
+  color-scheme: light;
+
+  /* ── 虚空色彩 → 浅色版（同一套语义，降低明度保证对比度） ── */
+  --nv-void:        #EEF0F4;
+  --nv-abyss:       #FFFFFF;
+  --nv-surface-1:   rgba(15, 18, 30, 0.025);
+  --nv-surface-2:   rgba(15, 18, 30, 0.05);
+  --nv-surface-3:   rgba(15, 18, 30, 0.08);
+  --nv-border-1:    rgba(15, 18, 30, 0.07);
+  --nv-border-2:    rgba(15, 18, 30, 0.11);
+  --nv-border-3:    rgba(15, 18, 30, 0.16);
+
+  --nv-primary:      oklch(0.55 0.17 270);
+  --nv-primary-soft: oklch(0.55 0.17 270 / 0.12);
+  --nv-success:      oklch(0.55 0.16 160);
+  --nv-success-soft: oklch(0.55 0.16 160 / 0.12);
+  --nv-warning:      oklch(0.72 0.16 85);
+  --nv-warning-soft: oklch(0.72 0.16 85 / 0.14);
+  --nv-danger:       oklch(0.55 0.22 18);
+  --nv-danger-soft:  oklch(0.55 0.22 18 / 0.12);
+  --nv-creative:     oklch(0.55 0.21 295);
+  --nv-creative-soft:oklch(0.55 0.21 295 / 0.12);
+  --nv-info:         oklch(0.55 0.15 230);
+  --nv-info-soft:    oklch(0.55 0.15 230 / 0.12);
+  --nv-accent:       oklch(0.68 0.14 95);
+  --nv-accent-soft:  oklch(0.68 0.14 95 / 0.14);
+
+  --nv-text-primary:   #1A1C22;
+  --nv-text-secondary: #4A4D57;
+  --nv-text-tertiary:  #6B6E78;
+  --nv-text-muted:     #9A9DA6;
+
+  --shadow-glow-indigo:   0 0 16px oklch(0.55 0.17 270 / 0.15);
+  --shadow-glow-success:  0 0 16px oklch(0.55 0.16 160 / 0.15);
+  --shadow-glow-creative: 0 0 16px oklch(0.55 0.21 295 / 0.15);
+
+  /* ── Shadcn 变量 → 浅色 ── */
+  --background: #EEF0F4;
+  --foreground: #1A1C22;
+  --card: rgba(255, 255, 255, 0.7);
+  --card-foreground: #1A1C22;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1C22;
+  --primary: oklch(0.55 0.17 270);
+  --primary-foreground: #FFFFFF;
+  --secondary: rgba(15, 18, 30, 0.06);
+  --secondary-foreground: #1A1C22;
+  --muted: rgba(15, 18, 30, 0.05);
+  --muted-foreground: #5A5D67;
+  --accent: rgba(15, 18, 30, 0.06);
+  --accent-foreground: #1A1C22;
+  --destructive: oklch(0.55 0.22 18);
+  --border: rgba(15, 18, 30, 0.12);
+  --input: rgba(15, 18, 30, 0.14);
+  --ring: oklch(0.55 0.17 270 / 0.5);
+  --chart-1: oklch(0.55 0.17 270);
+  --chart-2: oklch(0.55 0.16 160);
+  --chart-3: oklch(0.72 0.16 85);
+  --chart-4: oklch(0.55 0.22 18);
+  --chart-5: oklch(0.55 0.21 295);
+  --sidebar: #F7F8FA;
+  --sidebar-foreground: #1A1C22;
+  --sidebar-primary: oklch(0.55 0.17 270);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(15, 18, 30, 0.05);
+  --sidebar-accent-foreground: #1A1C22;
+  --sidebar-border: rgba(15, 18, 30, 0.09);
+  --sidebar-ring: oklch(0.55 0.17 270 / 0.5);
+}
+
+.light body {
+  background-color: #EEF0F4;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% -10%, oklch(0.55 0.17 270 / 0.10), transparent 70%),
+    radial-gradient(ellipse 50% 45% at 88% 8%, oklch(0.55 0.21 295 / 0.07), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 8% 95%, oklch(0.55 0.16 160 / 0.05), transparent 70%);
+  color-scheme: light;
+}
+
+/* 浅色下的玻璃表面：白底 + 深色描边（暗色是透明白 + 白描边） */
+.light .surface-base {
+  background: var(--nv-surface-1);
+  border-color: var(--nv-border-1);
+}
+.light .surface-elevated {
+  background: #FFFFFF;
+  border-color: var(--nv-border-2);
+}
+.light .surface-elevated:hover {
+  border-color: rgba(15, 18, 30, 0.18);
+  box-shadow: var(--shadow-hover-md);
+}
+.light .surface-floating {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--nv-border-3);
+}
+.light .glass-surface {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: var(--nv-border-2);
+}
+.light .glass-surface-strong {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--nv-border-3);
+}
+
+/* 浅色输入框：白底深色字 */
+.light .input-glass {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(15, 18, 30, 0.14);
+  color: var(--nv-text-primary);
+}
+.light .input-glass::placeholder { color: var(--nv-text-muted); }
+.light .input-glass:hover { border-color: rgba(15, 18, 30, 0.22); background: #FFFFFF; }
+.light .input-glass:focus {
+  border-color: oklch(0.55 0.17 270 / 0.45);
+  box-shadow: 0 0 0 3px oklch(0.55 0.17 270 / 0.08);
+  background: #FFFFFF;
+}
+
+/* 正文 / 滚动条 / 幽灵按钮 / 提示气泡 浅色适配 */
+.light .markdown-body { color: #2A2C33; }
+.light .btn-ghost { color: var(--nv-text-secondary); border-color: var(--nv-border-2); }
+.light .btn-ghost:hover { background: var(--nv-surface-2); border-color: rgba(15, 18, 30, 0.2); color: var(--nv-text-primary); }
+.light .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(15, 18, 30, 0.18); }
+.light .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(15, 18, 30, 0.3); }
+.light .tooltip-trigger::after {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: var(--nv-border-2);
+  color: var(--nv-text-secondary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* ═════════════════════════════════════════
    Layer Base — Shadcn 兼容
-   ═══════════════════════════════════════════ */
+   ═════════════════════════════════════════ */
 
 @layer base {
   * {

@@ -69,7 +69,7 @@ export function OutlinePanel({
       {/* ── 大纲输入区 ── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="w-1 h-4 rounded-full bg-amber-400/60" />
+          <span className="w-1 h-4 rounded-full bg-warning/60" />
           <label className="text-xs font-semibold text-[var(--nv-text-secondary)] tracking-wide">
             粘贴大纲文本
           </label>
@@ -79,7 +79,7 @@ export function OutlinePanel({
           onChange={(e) => onTextChange(e.target.value)}
           placeholder="在此粘贴你的小说大纲、设定、角色介绍...可以很长，AI会自动整理格式并丰满细节"
           rows={12}
-          className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-4 py-3 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-amber-400/40 focus:ring-2 focus:ring-amber-500/10 resize-y transition-all duration-200"
+          className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-4 py-3 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-warning/40 focus:ring-2 focus:ring-warning/10 resize-y transition-all duration-200"
         />
 
         <details className="group">
@@ -91,7 +91,7 @@ export function OutlinePanel({
             onChange={(e) => onEnrichPromptChange(e.target.value)}
             placeholder="告诉AI如何丰满你的设定...&#10;例如：角色背景要详细到童年经历、性格要有矛盾点、世界观要写出历史脉络"
             rows={4}
-            className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-4 py-3 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-amber-400/40 focus:ring-2 focus:ring-amber-500/10 resize-y mt-2.5 transition-all duration-200"
+            className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-4 py-3 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-warning/40 focus:ring-2 focus:ring-warning/10 resize-y mt-2.5 transition-all duration-200"
           />
         </details>
 
@@ -99,7 +99,7 @@ export function OutlinePanel({
         {outlineProgress && (
           <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl p-4 space-y-2.5">
             <div className="flex items-center gap-2.5">
-              <Icon name="loader" size={14} className="animate-spin text-amber-400" />
+              <Icon name="loader" size={14} className="animate-spin text-warning" />
               <span className="text-xs text-[var(--nv-text-secondary)] font-medium">
                 {PHASE_LABELS[outlineProgress.phase] || outlineProgress.phase}
                 {outlineProgress.current != null && outlineProgress.total != null && (
@@ -112,7 +112,7 @@ export function OutlinePanel({
             {outlineProgress.total != null && outlineProgress.current != null && (
               <div className="w-full bg-[var(--nv-surface-2)] rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-amber-500 to-amber-400 h-full rounded-full transition-all duration-700 ease-out"
+                  className="bg-gradient-to-r from-warning to-warning h-full rounded-full transition-all duration-700 ease-out"
                   style={{
                     width: `${Math.round(
                       (outlineProgress.current / outlineProgress.total) * 100,
@@ -130,12 +130,12 @@ export function OutlinePanel({
           className={`w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
             outlineLoading || !outlineText.trim()
               ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border border-[var(--nv-border-2)] cursor-not-allowed"
-              : "bg-gradient-to-r from-amber-600 to-amber-500 text-[var(--nv-text-primary)] shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:from-amber-500 hover:to-amber-400"
+              : "bg-gradient-to-r from-warning to-warning text-[var(--nv-text-primary)] shadow-lg shadow-warning/20 hover:shadow-warning/30 hover:from-warning hover:to-warning"
           }`}
         >
           {outlineLoading ? (
             <span className="inline-flex items-center gap-2">
-              <span className="w-1 h-1 bg-amber-200 rounded-full animate-pulse" />
+              <span className="w-1 h-1 bg-warning rounded-full animate-pulse" />
               处理中...
             </span>
           ) : (
@@ -149,7 +149,7 @@ export function OutlinePanel({
         <div className="space-y-4 border-t border-[var(--nv-border-2)] pt-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-1 h-4 rounded-full bg-emerald-400/60" />
+              <span className="w-1 h-4 rounded-full bg-success/60" />
               <h3 className="text-sm font-semibold text-[var(--nv-text-secondary)]">整理结果</h3>
             </div>
             <button
@@ -158,7 +158,7 @@ export function OutlinePanel({
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 ${
                 creating
                   ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border border-[var(--nv-border-2)] cursor-not-allowed"
-                  : "bg-gradient-to-r from-emerald-600 to-emerald-500 text-[var(--nv-text-primary)] shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:from-emerald-500 hover:to-emerald-400"
+                  : "bg-gradient-to-r from-success to-success text-[var(--nv-text-primary)] shadow-lg shadow-success/20 hover:shadow-success/30 hover:from-success hover:to-success"
               }`}
             >
               {creating ? "⏳ 写入中..." : "✅ 确认写入项目"}
@@ -201,7 +201,7 @@ export function OutlinePanel({
           {outlineResult.loreEntries?.length > 0 && (
             <div>
               <div className="text-[10px] text-[var(--nv-text-muted)] font-medium mb-2 flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-amber-400/60" />
+                <span className="w-1 h-1 rounded-full bg-warning/60" />
                 世界设定 ({outlineResult.loreEntries.length})
               </div>
               <div className="space-y-1.5 max-h-52 overflow-y-auto">

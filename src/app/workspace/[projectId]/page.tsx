@@ -47,8 +47,8 @@ export default function WorkspacePage() {
     "generating": { icon: <Icon name="pencil" size={14} className="animate-pulse" />, label: "AI 正在写作..." },
     "reviewing": { icon: <Icon name="search" size={14} className="animate-pulse" />, label: "AI 正在审校..." },
     "summarizing": { icon: <Icon name="package" size={14} />, label: "生成章节摘要..." },
-    "done": { icon: <Icon name="check" size={14} className="text-emerald-400" />, label: "生成完成" },
-    "error": { icon: <Icon name="alert" size={14} className="text-rose-400" />, label: "生成出错" },
+    "done": { icon: <Icon name="check" size={14} className="text-success" />, label: "生成完成" },
+    "error": { icon: <Icon name="alert" size={14} className="text-danger" />, label: "生成出错" },
   };
   const [chapterOutlineStatus, setChapterOutlineStatus] = useState<"" | "generating" | "done" | "error">("");
 
@@ -692,7 +692,7 @@ export default function WorkspacePage() {
   );
   if (loadError) return (
     <div className="h-screen bg-[var(--nv-void)] flex flex-col items-center justify-center text-[var(--nv-text-secondary)] gap-4">
-      <div className="text-rose-400 text-lg font-semibold">⚠ 项目加载失败</div>
+      <div className="text-danger text-lg font-semibold">⚠ 项目加载失败</div>
       <div className="text-[var(--nv-text-muted)] text-sm max-w-md text-center px-6">{loadError}</div>
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => { setLoadError(null); loadProject(); }}>重试</Button>

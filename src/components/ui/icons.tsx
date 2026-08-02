@@ -70,6 +70,7 @@ import {
   RefreshCw,
   Info,
   Cloud,
+  Sun,
   // 状态
   Circle,
 } from "lucide-react";
@@ -132,6 +133,7 @@ const iconMap = {
   refresh: RefreshCw,
   info: Info,
   cloud: Cloud,
+  sun: Sun,
   circle: Circle,
 } as const;
 
@@ -156,12 +158,12 @@ export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: Ico
  */
 export const iconColor = {
   primary:  "text-[var(--nv-primary)]",
-  success:  "text-emerald-400",
-  warning:  "text-amber-400",
-  danger:   "text-rose-400",
+  success:  "text-success",
+  warning:  "text-warning",
+  danger:   "text-danger",
   creative: "text-[var(--nv-creative)]",
-  info:     "text-sky-400",
-  accent:   "text-yellow-400",
+  info:     "text-info",
+  accent:   "text-[var(--nv-accent)]",
   muted:    "text-[var(--nv-text-muted)]",
 } as const;
 
@@ -170,10 +172,10 @@ export const iconColor = {
  */
 export function StatusDot({ color, size = 8 }: { color: "green" | "yellow" | "blue" | "red" | "gray"; size?: number }) {
   const colorMap = {
-    green:  "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.4)]",
-    yellow: "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)]",
-    blue:   "bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.4)]",
-    red:    "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.4)]",
+    green:  "bg-success shadow-[0_0_6px_var(--nv-success-soft)]",
+    yellow: "bg-warning shadow-[0_0_6px_var(--nv-warning-soft)]",
+    blue:   "bg-info shadow-[0_0_6px_var(--nv-info-soft)]",
+    red:    "bg-danger shadow-[0_0_6px_var(--nv-danger-soft)]",
     gray:   "bg-[var(--nv-surface-1)] shadow-[0_0_6px_rgba(113,113,122,0.3)]",
   };
   return <span className={`inline-block rounded-full ${colorMap[color]}`} style={{ width: size, height: size }} />;

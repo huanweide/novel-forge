@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface Health {
   version: string;
@@ -83,30 +84,30 @@ export function SystemStatusBanner() {
   };
 
   return (
-    <div className="relative border-b border-amber-500/30 bg-amber-500/[0.08] backdrop-blur-md">
+    <div className="relative border-b border-warning/30 bg-warning/[0.08] backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-start gap-3">
-        <Icon name="alert" size={18} className="text-amber-400 mt-0.5 shrink-0" />
+        <Icon name="alert" size={18} className="text-warning mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-amber-200">
+          <p className="text-sm font-semibold text-warning">
             系统自检发现 {problems.length} 项需处理——这些会导致部分功能「点了没反应」
           </p>
           <ul className="mt-1.5 space-y-2">
             {problems.map((p) => (
               <li
                 key={p.key}
-                className="text-xs text-amber-100/90 flex flex-wrap items-center gap-x-2 gap-y-1"
+                className="text-xs text-warning/90 flex flex-wrap items-center gap-x-2 gap-y-1"
               >
-                <span className="font-medium text-amber-200">{p.label}：</span>
+                <span className="font-medium text-warning">{p.label}：</span>
                 <span>{p.error}</span>
-                {p.hint ? <span className="text-amber-100/70">— {p.hint}</span> : null}
+                {p.hint ? <span className="text-warning/70">— {p.hint}</span> : null}
                 {p.kind === "db" ? (
                   <>
-                    <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-[11px] text-amber-100">
+                    <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-[11px] text-warning">
                       {DB_FIX_CMD}
                     </code>
                     <button
                       onClick={copyCmd}
-                      className="text-amber-200 hover:text-[var(--nv-text-primary)] underline underline-offset-2"
+                      className="text-warning hover:text-[var(--nv-text-primary)] underline underline-offset-2"
                     >
                       {copied ? "已复制" : "复制命令"}
                     </button>
@@ -114,7 +115,7 @@ export function SystemStatusBanner() {
                 ) : (
                   <Link
                     href="/settings"
-                    className="text-amber-200 hover:text-[var(--nv-text-primary)] underline underline-offset-2"
+                    className="text-warning hover:text-[var(--nv-text-primary)] underline underline-offset-2"
                   >
                     去设置页填 Key →
                   </Link>
@@ -123,13 +124,16 @@ export function SystemStatusBanner() {
             ))}
           </ul>
         </div>
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-amber-300/70 hover:text-amber-100 transition-colors shrink-0"
-          aria-label="关闭提示"
-        >
-          <Icon name="x" size={16} />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle />
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-warning/70 hover:text-warning transition-colors"
+            aria-label="关闭提示"
+          >
+            <Icon name="x" size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -37,7 +37,7 @@ export function CardBrowser({
         </div>
         <button
           onClick={onAdoptAll}
-          className="text-[10px] px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-400/30 transition-all duration-200 active:scale-95 font-medium"
+          className="text-[10px] px-3 py-1 rounded-lg bg-success/15 text-success border border-success/20 hover:bg-success/20 hover:border-success/30 transition-all duration-200 active:scale-95 font-medium"
         >
           全部采纳
         </button>
@@ -67,11 +67,11 @@ export function CardBrowser({
                       disabled={!active}
                       className={`text-left p-2.5 rounded-xl border transition-all duration-200 animate-[nf-card-in_0.4s_ease-out_both] ${
                         status?.startsWith("✅")
-                          ? "bg-emerald-500/[0.04] border-emerald-500/15 animate-[nf-adopt-flash_0.6s_ease-out]"
+                          ? "bg-success/[0.04] border-success/15 animate-[nf-adopt-flash_0.6s_ease-out]"
                           : status === "❌失败"
-                            ? "bg-red-500/[0.04] border-red-500/15"
+                            ? "bg-danger/[0.04] border-danger/15"
                             : status === "writing"
-                              ? "bg-amber-500/[0.04] border-amber-500/15 animate-pulse"
+                              ? "bg-warning/[0.04] border-warning/15 animate-pulse"
                               : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-purple-400/25 hover:bg-[var(--nv-surface-2)] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
                       }`}
                     >
@@ -80,10 +80,10 @@ export function CardBrowser({
                           {card.title}
                         </span>
                         {status === "writing" && (
-                          <Icon name="loader" size={11} className="animate-spin text-amber-400 shrink-0" />
+                          <Icon name="loader" size={11} className="animate-spin text-warning shrink-0" />
                         )}
                         {status?.startsWith("✅") && (
-                          <span className="text-[9px] text-emerald-400 shrink-0">
+                          <span className="text-[9px] text-success shrink-0">
                             {status}
                           </span>
                         )}

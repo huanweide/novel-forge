@@ -274,10 +274,10 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
       {/* 控制栏 */}
       <div className="shrink-0 px-3 py-1.5 flex items-center gap-2 text-[9px] border-b border-[var(--nv-border-2)]/50 flex-wrap">
         <span className="text-[var(--nv-text-tertiary)]">图例：</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />亲缘</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />敌对</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning" />亲缘</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-danger" />敌对</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400" />爱情</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" />盟友</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success" />盟友</span>
 
         {analysis && analysis.staleRelations.length > 0 && (
           <button

@@ -72,17 +72,17 @@ export default function GameCanvas({
         <div
           className={`transition-all duration-700 rounded-lg p-3 border ${
             newEntityFlash
-              ? "border-amber-600/60 bg-amber-900/10"
+              ? "border-warning/60 bg-warning/10"
               : "border-[var(--nv-creative)]/20 bg-[var(--nv-creative)]/5"
           }`}
         >
-          <p className="text-xs text-amber-400/80 mb-2 font-medium">
+          <p className="text-xs text-warning/80 mb-2 font-medium">
             === 新实体 ===
           </p>
           <div className="space-y-1">
             {entities.slice(-5).map((e, i) => (
               <div key={i} className="text-xs text-[var(--nv-text-tertiary)] flex gap-2">
-                <span className="text-amber-500/70 font-mono shrink-0">
+                <span className="text-warning/70 font-mono shrink-0">
                   NE|
                 </span>
                 <span className="text-[var(--nv-text-secondary)]">{e.name}</span>
@@ -102,14 +102,14 @@ export default function GameCanvas({
 
       {/* 物品变动 */}
       {items.length > 0 && (
-        <div className="rounded-lg p-3 border border-emerald-900/20 bg-emerald-900/5">
-          <p className="text-xs text-emerald-400/80 mb-2 font-medium">
+        <div className="rounded-lg p-3 border border-success/20 bg-success/5">
+          <p className="text-xs text-success/80 mb-2 font-medium">
             === 角色物品变动 ===
           </p>
           <div className="space-y-1">
             {items.map((item, i) => (
               <div key={i} className="text-xs text-[var(--nv-text-tertiary)]">
-                <span className="text-emerald-500/70 font-mono">
+                <span className="text-success/70 font-mono">
                   {item.quantity > 0 ? "获得" : "消耗"}
                 </span>
                 <span className="text-[var(--nv-text-muted)] mx-2">×</span>

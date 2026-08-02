@@ -79,7 +79,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">
-            任务名称 <span className="text-red-500">*</span>
+            任务名称 <span className="text-danger">*</span>
           </label>
           <input
             type="text"
@@ -156,7 +156,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             支持 UTF-8 编码的纯文本文件
           </p>
           {text && (
-            <div className="mt-3 text-xs text-green-500">
+            <div className="mt-3 text-xs text-success">
               ✅ 已加载 {text.length.toLocaleString()} 字
             </div>
           )}

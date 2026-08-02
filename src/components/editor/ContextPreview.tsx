@@ -104,7 +104,7 @@ export function ContextPreview({
   }
 
   if (loadError) {
-    return <div className="text-xs text-rose-400 p-4">⚠ {loadError}</div>;
+    return <div className="text-xs text-danger p-4">⚠ {loadError}</div>;
   }
 
   if (!data) {
@@ -133,7 +133,7 @@ export function ContextPreview({
           <span className="text-[var(--nv-text-tertiary)]">Prompt Token 用量</span>
           <span className="text-[var(--nv-text-secondary)] font-mono">
             {totalTokens.toLocaleString()} / {contextWindowSize.toLocaleString()}
-            <span className={Number(usagePercent) > 80 ? "text-red-400" : "text-green-400"}>
+            <span className={Number(usagePercent) > 80 ? "text-danger" : "text-success"}>
               {" "}({usagePercent}%)
             </span>
           </span>
@@ -142,7 +142,7 @@ export function ContextPreview({
         <div className="h-2 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
-              Number(usagePercent) > 80 ? "bg-red-500" : Number(usagePercent) > 50 ? "bg-yellow-500" : "bg-green-500"
+              Number(usagePercent) > 80 ? "bg-danger" : Number(usagePercent) > 50 ? "bg-warning" : "bg-success"
             }`}
             style={{ width: `${Math.min(Number(usagePercent), 100)}%` }}
           />
@@ -162,10 +162,10 @@ export function ContextPreview({
           </div>
           {data.templateInjection.templateVerification && (
             <div className="flex gap-3 text-[10px]">
-              <span className={data.templateInjection.templateVerification.templateInjected ? "text-green-400" : "text-red-400"}>
+              <span className={data.templateInjection.templateVerification.templateInjected ? "text-success" : "text-danger"}>
                 {data.templateInjection.templateVerification.templateInjected ? "✅" : "❌"} 风格描述
               </span>
-              <span className={data.templateInjection.templateVerification.forbiddenInjected ? "text-green-400" : "text-red-400"}>
+              <span className={data.templateInjection.templateVerification.forbiddenInjected ? "text-success" : "text-danger"}>
                 {data.templateInjection.templateVerification.forbiddenInjected ? "✅" : "❌"} 禁用词
               </span>
               <span className="text-[var(--nv-text-muted)]">
@@ -261,9 +261,9 @@ export function ContextPreview({
                   key={c.id}
                   className={`text-[10px] px-1.5 py-0.5 rounded ${
                     c.role === "protagonist"
-                      ? "bg-amber-900/50 text-amber-400"
+                      ? "bg-warning/50 text-warning"
                       : c.role === "antagonist"
-                      ? "bg-red-900/50 text-red-400"
+                      ? "bg-danger/50 text-danger"
                       : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]"
                   }`}
                 >

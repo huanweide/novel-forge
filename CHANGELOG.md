@@ -2,6 +2,15 @@
 
 ---
 
+## v0.46.15 — 2026-08-02
+**视觉一致性收口 + 浅色主题：语义状态色全面令牌化，新增昼面换肤**
+- 🎨 视觉一致性收口（FE-1）：全站 4 类语义状态色（成功绿 / 危险红 / 提醒琥珀 / 信息青）从散落的 emerald/rose/amber/sky/green/yellow/blue/red 等 200+ 处硬编码色值，统一收敛到 `--nv-success` / `--nv-danger` / `--nv-warning` / `--nv-info` 设计令牌
+- 🔧 为支持该收敛，在 Tailwind `@theme` 注册 success/danger/warning/info 语义别名（含 -soft 变体），原生支持 `text-success`、`bg-danger/20` 等带透明度写法；中央图标色板 `iconColor` / `StatusDot` 同步改走令牌
+- 🌗 浅色主题（FE-N4）：新增「虚空玻璃·昼面」——仅覆盖设计令牌实现换肤，组件零改动；白底玻璃面 + 深色描边 + 深色正文
+- 🖱️ 根布局首屏前注入防闪烁脚本读取 `localStorage('nf-theme')`；新增 Sun 图标与 `ThemeToggle` 切换器，置于设置页「外观」区与全局状态横幅右上角；偏好存本机、刷新保持
+- 🛡️ 诚实边界：统一语义色是浅色主题能真正可用的前提（组件直接写 red-400 会绕过令牌、浅色下对比度崩溃），故将状态色收敛做全；cyan 作为游戏节点专属强调色有意保留
+- ✅ 全量 tsc 零错误，Tailwind 仅新增语义别名、零新运行时依赖
+
 ## v0.46.14 — 2026-08-02
 **统一 Loading 态：裸 emoji 转盘全面替换为统一 Icon 旋转图标**
 - 🔄 拆书上传/进度、拆书详情页加载与等待、探索页大纲生成、卡片浏览生成中、文风扫描、仿写/转换/改编等长操作——原用裸 ⏳ emoji 当 CSS 旋转图标（样式失控、与全站 SVG loader 割裂），全部替换为统一 `<Icon name="loader" className="animate-spin" />`

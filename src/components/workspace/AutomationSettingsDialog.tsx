@@ -95,7 +95,7 @@ export function AutomationSettingsDialog({
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 custom-scrollbar">
           {loading && <div className="text-sm text-[var(--nv-text-tertiary)]">加载配置中…</div>}
-          {loadError && <div className="text-sm text-rose-400">{loadError}</div>}
+          {loadError && <div className="text-sm text-danger">{loadError}</div>}
           {!loading && !loadError && (
             <>
               {/* 总开关 */}

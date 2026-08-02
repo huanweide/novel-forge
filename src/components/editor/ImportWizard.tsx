@@ -479,17 +479,17 @@ export function ImportWizard({
                   ))}
                 </div>
                 {importMode === "settings" && (
-                  <p className="text-xs text-amber-400 mt-2">
+                  <p className="text-xs text-warning mt-2">
                     ⚡ 设定模式：不限角色/词条数量上限，穷尽提取文本中的全部设定。不创建章节节点，仅导入三卡。
                   </p>
                 )}
                 {importMode === "quick" && (
-                  <p className="text-xs text-green-400 mt-2">
+                  <p className="text-xs text-success mt-2">
                     ⚡ 快速导入：正则匹配"1.人名"格式→原文全抄进 quickImportContent→直接写DB。不用AI、毫秒级解析、一次搞定。
                   </p>
                 )}
                 {importMode === "chapters" && (
-                  <p className="text-xs text-blue-400 mt-2">
+                  <p className="text-xs text-info mt-2">
                     📖 章节模式：自动识别分章标记，提取叙事中的角色和世界观。同时创建章节大纲节点。
                   </p>
                 )}
@@ -556,7 +556,7 @@ export function ImportWizard({
                     <Button
                       onClick={handleQuickImport}
                       disabled={quickLoading || rawText.trim().length < 30}
-                      className="bg-green-600 hover:bg-green-500"
+                      className="bg-success hover:bg-success"
                     >
                       {quickLoading ? "⚡ 导入中..." : "⚡ 快速导入"}
                     </Button>
@@ -588,12 +588,12 @@ export function ImportWizard({
                   {quickLoading && (
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-green-400 font-medium">{quickStage || "连接中..."}</span>
+                        <span className="text-success font-medium">{quickStage || "连接中..."}</span>
                         <span className="text-[var(--nv-text-muted)]">{quickPct}%</span>
                       </div>
                       <div className="h-2 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-green-600 to-emerald-500 rounded-full transition-all duration-300"
+                          className="h-full bg-gradient-to-r from-success to-success rounded-full transition-all duration-300"
                           style={{ width: `${Math.max(quickPct, 3)}%` }}
                         />
                       </div>
@@ -602,21 +602,21 @@ export function ImportWizard({
 
                   {/* 诊断信息 —— 醒目的绿色 */}
                   {quickDiag && (
-                    <div className="text-xs text-emerald-300 bg-emerald-950/50 rounded px-3 py-2 font-mono border border-emerald-800/50">
+                    <div className="text-xs text-success bg-success/50 rounded px-3 py-2 font-mono border border-success/50">
                       🔬 {quickDiag}
                     </div>
                   )}
 
                   {/* 完成提示 */}
                   {quickResult && (
-                    <div className="text-sm text-emerald-400 font-medium text-center py-2">
+                    <div className="text-sm text-success font-medium text-center py-2">
                       {quickResult}
                     </div>
                   )}
 
                   {/* 验证指引 */}
                   {!quickLoading && quickResult && (
-                    <div className="text-xs text-amber-300 bg-amber-950/30 rounded px-3 py-2 text-center border border-amber-800/50">
+                    <div className="text-xs text-warning bg-warning/30 rounded px-3 py-2 text-center border border-warning/50">
                       👆 <b>验证方法</b>：关掉本窗口 → 左侧点任意角色卡 → 点 ✏️ 编辑 → 往下滚到「背景状态」→ 查看导入的内容
                     </div>
                   )}
@@ -629,7 +629,7 @@ export function ImportWizard({
                       </p>
                       {quickCharList.map((c, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs py-1 px-2 rounded bg-[var(--nv-surface-3)]/40">
-                          <span className="text-green-400 font-medium shrink-0">{c.name}</span>
+                          <span className="text-success font-medium shrink-0">{c.name}</span>
                           <span className="text-[var(--nv-text-muted)] truncate">{c.preview}</span>
                         </div>
                       ))}
@@ -692,9 +692,9 @@ export function ImportWizard({
                     <span className="text-[var(--nv-text-muted)] w-16 text-right text-[10px]">{currentStage === "path-a-done" ? "✅完成" : "进行中"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-emerald-400 w-24 shrink-0">🌍 B路 Flash</span>
+                    <span className="text-success w-24 shrink-0">🌍 B路 Flash</span>
                     <div className="flex-1 h-1.5 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-b-done" ? "100" : "40"}%` }} />
+                      <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-b-done" ? "100" : "40"}%` }} />
                     </div>
                     <span className="text-[var(--nv-text-muted)] w-16 text-right text-[10px]">{currentStage === "path-b-done" ? "✅完成" : "进行中"}</span>
                   </div>
@@ -705,7 +705,7 @@ export function ImportWizard({
               {(charsFound > 0 || loreFound > 0) && (
                 <div className="flex gap-4 text-xs">
                   <span className="text-pink-400">👤 角色 {charsFound}</span>
-                  <span className="text-emerald-400">📖 词条 {loreFound}</span>
+                  <span className="text-success">📖 词条 {loreFound}</span>
                 </div>
               )}
 
@@ -723,7 +723,7 @@ export function ImportWizard({
                     >
                       <span className="text-[var(--nv-text-muted)] font-mono shrink-0 w-14">{step.time}</span>
                       <span className="flex-1">{step.message}</span>
-                      {step.stage === "chunk-done" && <span className="text-green-500 shrink-0">✓</span>}
+                      {step.stage === "chunk-done" && <span className="text-success shrink-0">✓</span>}
                     </div>
                   ))}
                 </div>
@@ -747,8 +747,8 @@ export function ImportWizard({
               <div className="grid grid-cols-4 gap-3">
                 <StatBox label="识别章节" value={String(editedChapters.length)} color="text-[var(--nv-primary)]" />
                 <StatBox label="抽取角色" value={String(editedCharacters.length)} color="text-pink-400" />
-                <StatBox label="世界观词条" value={String(editedLore.length)} color="text-emerald-400" />
-                <StatBox label="分卷模式" value={volumeMode ? "ON" : "OFF"} color="text-amber-400" />
+                <StatBox label="世界观词条" value={String(editedLore.length)} color="text-success" />
+                <StatBox label="分卷模式" value={volumeMode ? "ON" : "OFF"} color="text-warning" />
               </div>
 
               {/* 三栏预览 */}
@@ -788,7 +788,7 @@ export function ImportWizard({
                           />
                           <div className="min-w-0">
                             {ch.volumeTitle && (
-                              <span className="text-amber-400/70 font-medium block">{ch.volumeTitle}</span>
+                              <span className="text-warning/70 font-medium block">{ch.volumeTitle}</span>
                             )}
                             <span className="text-[var(--nv-text-secondary)]">{ch.chapterTitle}</span>
                             <span className="text-[var(--nv-text-muted)] ml-1">{ch.wordCount}字</span>
@@ -802,7 +802,7 @@ export function ImportWizard({
                             next.delete(i);
                             setSelectedChapters(next);
                           }}
-                          className="text-[var(--nv-text-muted)] hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
+                          className="text-[var(--nv-text-muted)] hover:text-danger hover:bg-danger/30 p-1 rounded shrink-0 transition-colors"
                           title="移除"
                         >✕</button>
                       </div>
@@ -867,7 +867,7 @@ export function ImportWizard({
                             next.delete(i);
                             setSelectedChars(next);
                           }}
-                          className="text-[var(--nv-text-muted)] hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
+                          className="text-[var(--nv-text-muted)] hover:text-danger hover:bg-danger/30 p-1 rounded shrink-0 transition-colors"
                           title="移除"
                         >✕</button>
                       </div>
@@ -900,7 +900,7 @@ export function ImportWizard({
                     <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
                       {editedLore.map((entry, i) => (
                         <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
-                          selectedLore.has(i) ? "border-emerald-700 bg-emerald-950/30" : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm"
+                          selectedLore.has(i) ? "border-success bg-success/30" : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm"
                         }`}>
                           <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                             <input
@@ -911,7 +911,7 @@ export function ImportWizard({
                                 next.has(i) ? next.delete(i) : next.add(i);
                                 setSelectedLore(next);
                               }}
-                              className="mt-0.5 rounded accent-emerald-600"
+                              className="mt-0.5 rounded accent-success"
                             />
                             <div className="min-w-0">
                               <span className="text-[var(--nv-text-secondary)]">{entry.title}</span>
@@ -932,7 +932,7 @@ export function ImportWizard({
                               next.delete(i);
                               setSelectedLore(next);
                             }}
-                            className="text-[var(--nv-text-muted)] hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
+                            className="text-[var(--nv-text-muted)] hover:text-danger hover:bg-danger/30 p-1 rounded shrink-0 transition-colors"
                             title="移除"
                           >✕</button>
                         </div>
@@ -959,7 +959,7 @@ export function ImportWizard({
                   <Button
                     variant="outline"
                     onClick={handleRemoveAllUnconfirmed}
-                    className="border-red-800 text-red-400 hover:bg-red-950/30 text-xs"
+                    className="border-danger text-danger hover:bg-danger/30 text-xs"
                     disabled={editedCharacters.length === 0 && editedLore.length === 0 && editedChapters.length === 0}
                   >
                     🗑 一键删除未确认
@@ -983,7 +983,7 @@ export function ImportWizard({
 
           {/* Toast 提示 */}
           {toast && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-emerald-900/90 border border-emerald-700 text-sm text-emerald-200 shadow-lg animate-pulse">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-success/90 border border-success text-sm text-emerald-200 shadow-lg animate-pulse">
               {toast}
             </div>
           )}
@@ -1013,7 +1013,7 @@ export function ImportWizard({
                       i === commitProgress.length - 1 ? "bg-purple-950/30 border border-purple-800/30" : "text-[var(--nv-text-muted)]"
                     }`}>
                       {isDone ? (
-                        <span className="text-green-500 shrink-0">✅</span>
+                        <span className="text-success shrink-0">✅</span>
                       ) : (
                         <span className="shrink-0">{isChars ? "👤" : isLore ? "📖" : "📝"}</span>
                       )}
@@ -1028,7 +1028,7 @@ export function ImportWizard({
                       )}
                       {isLore && commitStats.loreDone !== undefined && commitStats.loreTotal && (
                         <div className="w-24 h-1.5 bg-[var(--nv-surface-2)] rounded-full overflow-hidden shrink-0">
-                          <div className="h-full bg-emerald-500 rounded-full transition-all" style={{
+                          <div className="h-full bg-success rounded-full transition-all" style={{
                             width: `${Math.min(100, Math.round(((commitStats.loreDone || 0) / Math.max(1, Number(commitStats.loreTotal) * 4)) * 100))}%`
                           }} />
                         </div>
@@ -1062,7 +1062,7 @@ export function ImportWizard({
 
           {/* 错误提示 */}
           {error && (
-            <div className="mt-3 p-3 rounded-lg bg-red-950/30 border border-red-900/50 text-sm text-red-400">
+            <div className="mt-3 p-3 rounded-lg bg-danger/30 border border-danger/50 text-sm text-danger">
               {error}
             </div>
           )}

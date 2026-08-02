@@ -9,20 +9,20 @@ import { Icon } from "@/components/ui/icons";
 
 const P0_LINE_COLORS: Record<string, string> = {
   "C|": "text-cyan-400",
-  "L0|": "text-red-400/70",
-  "L1|": "text-amber-400/70",
+  "L0|": "text-danger/70",
+  "L1|": "text-warning/70",
   "L2|": "text-orange-400/70",
-  "R|": "text-green-400",
+  "R|": "text-success",
   "L|": "text-teal-400",
-  "G|": "text-yellow-400",
+  "G|": "text-warning",
   "P|": "text-[var(--nv-text-tertiary)]",
   "CF|": "text-purple-400",
-  "M|": "text-rose-400",
-  "K|": "text-amber-300",
+  "M|": "text-danger",
+  "K|": "text-warning",
   "EL|": "text-pink-400",
   "T|": "text-cyan-300",
-  "【章首衔接】": "text-blue-400",
-  "【章尾悬念】": "text-blue-400",
+  "【章首衔接】": "text-info",
+  "【章尾悬念】": "text-info",
   "⟨✍": "text-[var(--nv-creative)]/60 italic",
 };
 
@@ -137,10 +137,10 @@ export function DrawCards({
 
   const moodColors: Record<string, string> = {
     "暗流涌动": "border-purple-700 bg-purple-950/20",
-    "热血沸腾": "border-red-700 bg-red-950/20",
-    "哀而不伤": "border-blue-700 bg-blue-950/20",
-    "轻松诙谐": "border-green-700 bg-green-950/20",
-    "紧张窒息": "border-amber-700 bg-amber-950/20",
+    "热血沸腾": "border-danger bg-danger/20",
+    "哀而不伤": "border-info bg-info/20",
+    "轻松诙谐": "border-success bg-success/20",
+    "紧张窒息": "border-warning bg-warning/20",
     "温馨治愈": "border-pink-700 bg-pink-950/20",
   };
 

@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.14";
+export const LATEST_VERSION = "v0.46.15";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔄 统一 Loading 态（P5）：拆书/仿写/扫描等长操作的裸 ⏳ emoji 旋转图标，全面替换为全站统一的 <Icon name=\"loader\" className=\"animate-spin\" />",
-  "🧩 拆书维度网格状态字形 ✅❌⏳⬜ 收编为 Icon check/x/loader/circle，与全站状态体系一致",
-  "🎯 异步按钮「⏳ 文案」前缀改为 Icon 旋转 + 文案，与 settings 页 loader 风格对齐；按钮 disabled 保护不变",
-  "✅ 全量 tsc 零错误；零新依赖——纯视觉收口，严格保留 API 协议层 emoji（startsWith(\"✅\")/❌失败）不动",
+  "🎨 视觉一致性收口（FE-1）：全站 4 类语义状态色（绿/红/琥珀/青）从散落的 emerald/rose/amber/sky 等 200+ 处硬编码，统一收敛到 --nv-success/--nv-danger/--nv-warning/--nv-info 设计令牌",
+  "🌗 浅色主题（FE-N4）：新增「虚空玻璃·昼面」浅色主题，设置页或全局横幅一键切换，偏好存本机、刷新保持、无闪烁",
+  "🔧 中央图标色板 iconColor / StatusDot 同步改走令牌；新增 Sun 图标与 ThemeToggle 切换器",
+  "✅ 全量 tsc 零错误；Tailwind 仅新增 success/danger/warning/info 等语义别名，零新运行时依赖",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.15",
+    date: "2026-08-02",
+    title: "视觉一致性收口 + 浅色主题：语义状态色全面令牌化，新增昼面换肤",
+    sections: [
+      {
+        label: "视觉一致性收口（FE-1）",
+        items: [
+          "全站 4 类语义状态色（成功绿 / 危险红 / 提醒琥珀 / 信息青）从散落的 emerald-400/500/600、rose、amber、sky、green、yellow、blue、red 等 200+ 处硬编码色值，统一收敛到 --nv-success / --nv-danger / --nv-warning / --nv-info 设计令牌",
+          "为支持该收敛，在 Tailwind @theme 注册 success/danger/warning/info 语义别名（含 -soft 变体），原生支持 text-success、bg-danger/20 等带透明度的写法",
+          "中央图标色板 iconColor 与 StatusDot 组件同步改走令牌，全站状态点/图标颜色一处定义、处处一致",
+        ],
+      },
+      {
+        label: "浅色主题（FE-N4）",
+        items: [
+          "新增「虚空玻璃·昼面」浅色主题：仅通过覆盖设计令牌实现，组件零改动即可换肤——白底玻璃面 + 深色描边 + 深色正文",
+          "根布局首屏前注入防闪烁脚本读取 localStorage('nf-theme')；新增 Sun 图标与 ThemeToggle 切换器，置于设置页「外观」区与全局状态横幅右上角",
+          "主题偏好存本机、刷新保持；并同步更新 meta theme-color",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "统一语义色是 FE-N4 浅色主题能真正可用的前提——组件若仍直接写 red-400 等会绕过令牌、浅色模式下对比度崩溃，故本次将状态色收敛做全（cyan 作为游戏节点专属强调色有意保留）",
+          "全量 tsc 零错误；Tailwind 仅新增语义别名、零新运行时依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.14",
     date: "2026-08-02",

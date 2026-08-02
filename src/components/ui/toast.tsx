@@ -112,9 +112,9 @@ export function promptDialog(opts: PromptOptions): Promise<string | null> {
 
 // ─── 类型视觉映射 ────────────────────────────────────────────
 const TYPE_STYLES: Record<ToastType, { icon: IconName; accent: string; text: string; soft: string }> = {
-  success: { icon: "check", accent: "border-l-emerald-400", text: "text-emerald-300", soft: "bg-emerald-500/10" },
-  error: { icon: "alert", accent: "border-l-rose-400", text: "text-rose-300", soft: "bg-rose-500/10" },
-  warning: { icon: "alert", accent: "border-l-amber-400", text: "text-amber-300", soft: "bg-amber-500/10" },
+  success: { icon: "check", accent: "border-l-success", text: "text-success", soft: "bg-success/10" },
+  error: { icon: "alert", accent: "border-l-danger", text: "text-danger", soft: "bg-danger/10" },
+  warning: { icon: "alert", accent: "border-l-warning", text: "text-warning", soft: "bg-warning/10" },
   info: { icon: "sparkles", accent: "border-l-[var(--nv-primary)]", text: "text-[var(--nv-primary)]", soft: "bg-[var(--nv-primary)]/10" },
 };
 
@@ -210,7 +210,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <Icon
                 name="alert"
                 size={20}
-                className={`mt-0.5 shrink-0 ${confirmState.opts.danger ? "text-rose-400" : "text-amber-400"}`}
+                className={`mt-0.5 shrink-0 ${confirmState.opts.danger ? "text-danger" : "text-warning"}`}
               />
               <div className="min-w-0">
                 <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">{confirmState.opts.title}</h3>

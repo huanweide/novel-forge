@@ -116,7 +116,7 @@ export function MemoryDecayDialog({
 
         {loadingPreview && <div className="text-xs text-[var(--nv-text-muted)]">加载预览…</div>}
         {error && (
-          <div className="mb-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">⚠ {error}</div>
+          <div className="mb-3 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">⚠ {error}</div>
         )}
 
         {preview && (
@@ -166,15 +166,15 @@ export function MemoryDecayDialog({
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--nv-text-muted)]">保留</span>
-              <span className="text-emerald-400">{result.eventsKept}</span>
+              <span className="text-success">{result.eventsKept}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--nv-text-muted)]">降级</span>
-              <span className="text-amber-400">{result.eventsDowngraded}</span>
+              <span className="text-warning">{result.eventsDowngraded}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--nv-text-muted)]">清理</span>
-              <span className="text-red-400">{result.eventsDeleted}</span>
+              <span className="text-danger">{result.eventsDeleted}</span>
             </div>
           </div>
         )}

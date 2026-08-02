@@ -184,7 +184,7 @@ ${
             />
 
             {error && (
-              <div className="mt-3 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400">
+              <div className="mt-3 p-3 bg-danger/30 border border-danger rounded-lg text-sm text-danger">
                 {error}
               </div>
             )}
@@ -223,7 +223,7 @@ ${
               )}
               {result.loreEntries > 0 && (
                 <p>
-                  创建了 <span className="text-green-400 font-bold">{result.loreEntries}</span> 个世界书词条
+                  创建了 <span className="text-success font-bold">{result.loreEntries}</span> 个世界书词条
                 </p>
               )}
               {result.styleCard && (
@@ -233,7 +233,7 @@ ${
               )}
               {result.writingRules > 0 && (
                 <p>
-                  提取了 <span className="text-amber-400 font-bold">{result.writingRules}</span> 条写作规则
+                  提取了 <span className="text-warning font-bold">{result.writingRules}</span> 条写作规则
                 </p>
               )}
               {result.synopsis && (

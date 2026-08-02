@@ -43,10 +43,10 @@ interface ForeshadowData {
 // ═══════════════════════════════════════════
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: React.ReactNode }> = {
-  pending: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: <StatusDot color="yellow" size={7} /> },
-  detected: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: <StatusDot color="yellow" size={7} /> },
-  partially_fulfilled: { bg: "bg-blue-500/10", text: "text-blue-400", dot: <StatusDot color="blue" size={7} /> },
-  fulfilled: { bg: "bg-green-500/10", text: "text-green-400", dot: <StatusDot color="green" size={7} /> },
+  pending: { bg: "bg-warning/10", text: "text-warning", dot: <StatusDot color="yellow" size={7} /> },
+  detected: { bg: "bg-warning/10", text: "text-warning", dot: <StatusDot color="yellow" size={7} /> },
+  partially_fulfilled: { bg: "bg-info/10", text: "text-info", dot: <StatusDot color="blue" size={7} /> },
+  fulfilled: { bg: "bg-success/10", text: "text-success", dot: <StatusDot color="green" size={7} /> },
   voided: { bg: "bg-[var(--nv-text-muted)]/10", text: "text-[var(--nv-text-muted)]", dot: <StatusDot color="gray" size={7} /> },
 };
 
@@ -110,7 +110,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   }
 
   if (error) {
-    return <div className="p-4 text-xs text-red-400">加载失败：{error}</div>;
+    return <div className="p-4 text-xs text-danger">加载失败：{error}</div>;
   }
 
   if (!data || data.total === 0) {

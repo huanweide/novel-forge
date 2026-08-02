@@ -132,8 +132,8 @@ export default function NewDissectPage() {
               </p>
               <DissectUpload onStart={handleStart} loading={false} />
               {validationError && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                  <p className="text-sm text-red-400">{validationError}</p>
+                <div className="mt-4 p-3 bg-danger/10 border border-danger/30 rounded-lg">
+                  <p className="text-sm text-danger">{validationError}</p>
                 </div>
               )}
             </>
@@ -145,7 +145,7 @@ export default function NewDissectPage() {
                 <h2 className="text-base font-semibold">正在拆解...</h2>
                 <button
                   onClick={handleCancel}
-                  className="px-3 py-1 text-xs text-[var(--nv-text-muted)] hover:text-red-400 bg-[var(--nv-surface-3)] rounded-lg transition-colors"
+                  className="px-3 py-1 text-xs text-[var(--nv-text-muted)] hover:text-danger bg-[var(--nv-surface-3)] rounded-lg transition-colors"
                 >
                   取消
                 </button>
@@ -170,7 +170,7 @@ export default function NewDissectPage() {
           {phase === "done" && (
             <div className="text-center py-8">
               <div className="text-5xl mb-4">✅</div>
-              <h2 className="text-xl font-bold text-green-400 mb-2">拆解完成</h2>
+              <h2 className="text-xl font-bold text-success mb-2">拆解完成</h2>
               <p className="text-sm text-[var(--nv-text-muted)] mb-6">
                 {totalChapters > 0 ? `已识别 ${totalChapters} 章，15维度已提取` : "所有维度已提取完毕"}
               </p>
@@ -186,7 +186,7 @@ export default function NewDissectPage() {
           {phase === "error" && (
             <div className="text-center py-8">
               <div className="text-5xl mb-4">❌</div>
-              <h2 className="text-xl font-bold text-red-400 mb-2">拆解失败</h2>
+              <h2 className="text-xl font-bold text-danger mb-2">拆解失败</h2>
               <p className="text-sm text-[var(--nv-text-tertiary)] mb-6">{error}</p>
               <div className="flex items-center justify-center gap-3">
                 <button

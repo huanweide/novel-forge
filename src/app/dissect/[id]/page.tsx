@@ -163,7 +163,7 @@ export default function DissectDetailPage() {
   return (
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {pollError ? (
-        <div className="border-b border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm text-rose-200">
+        <div className="border-b border-danger/30 bg-danger/10 px-6 py-3 text-sm text-danger">
           ⚠️ {pollError}
           <button
             onClick={() => {
@@ -213,21 +213,21 @@ export default function DissectDetailPage() {
 
         {/* 错误 */}
         {task.status === "failed" && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <p className="text-sm text-red-400">{task.error || "拆解失败"}</p>
+          <div className="mb-6 p-4 bg-danger/10 border border-danger/30 rounded-xl">
+            <p className="text-sm text-danger">{task.error || "拆解失败"}</p>
           </div>
         )}
 
         {/* 成功转换提示 */}
         {convertSuccess && (
-          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center justify-between">
+          <div className="mb-6 p-4 bg-success/10 border border-success/30 rounded-xl flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-green-400">✅ 项目已创建</p>
-              <p className="text-xs text-green-500 mt-0.5">所有维度数据已导入项目</p>
+              <p className="text-sm font-medium text-success">✅ 项目已创建</p>
+              <p className="text-xs text-success mt-0.5">所有维度数据已导入项目</p>
             </div>
             <a
               href={`/workspace/${convertSuccess}`}
-              className="px-4 py-2 bg-green-600 text-[var(--nv-text-primary)] rounded-lg text-sm font-medium hover:bg-green-500 transition-colors"
+              className="px-4 py-2 bg-success text-[var(--nv-text-primary)] rounded-lg text-sm font-medium hover:bg-success transition-colors"
             >
               进入工作区 →
             </a>
@@ -265,16 +265,16 @@ export default function DissectDetailPage() {
                 <button
                   onClick={() => setMode("adapt")}
                   disabled={converting}
-                  className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all text-left group"
+                  className="p-4 rounded-xl border border-warning/30 bg-warning/5 hover:bg-warning/10 hover:border-warning/60 transition-all text-left group"
                 >
                   <div className="text-2xl mb-2">🎨</div>
-                  <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-amber-300">
+                  <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-warning">
                     改编后转项目
                   </div>
                   <div className="text-xs text-[var(--nv-text-muted)] mt-1">
                     跟 Agent 讨论修改方案——换性别、改设定、调整世界观。改到你满意再创建。
                   </div>
-                  <div className="text-xs text-amber-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="text-xs text-warning mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     先聊再建，柔性创作 →
                   </div>
                 </button>

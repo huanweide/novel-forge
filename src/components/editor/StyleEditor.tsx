@@ -246,7 +246,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
         <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
-          <p className="text-rose-400 mb-3">⚠ {loadError}</p>
+          <p className="text-danger mb-3">⚠ {loadError}</p>
           <Button onClick={onClose}>关闭</Button>
         </div>
       </div>
@@ -393,20 +393,20 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                 <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">➕ 自定义禁用词/句式</label>
                 <div className="flex gap-2 mb-2">
                   <input
-                    className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-red-500"
+                    className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-danger"
                     value={newForbidden}
                     onChange={(e) => setNewForbidden(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addForbidden()}
                     placeholder="输入词或 /正则表达式/，回车添加"
                   />
-                  <Button size="sm" onClick={addForbidden} className="bg-red-800 hover:bg-red-700 h-8 text-xs">添加</Button>
+                  <Button size="sm" onClick={addForbidden} className="bg-danger hover:bg-danger h-8 text-xs">添加</Button>
                 </div>
                 {config.customForbiddenPatterns.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {config.customForbiddenPatterns.map((p) => (
-                      <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-950/50 border border-red-900/50 text-xs text-red-400">
+                      <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/50 border border-danger/50 text-xs text-danger">
                         🚫 {p}
-                        <button onClick={() => removeForbidden(p)} className="hover:text-red-300 text-red-500">✕</button>
+                        <button onClick={() => removeForbidden(p)} className="hover:text-danger text-danger">✕</button>
                       </span>
                     ))}
                   </div>
@@ -426,13 +426,13 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     <span className="text-[10px] text-[var(--nv-text-muted)]">请在 workspace 中选中一个章节</span>
                   )}
                   {scanResult && (
-                    <span className={`text-xs font-medium ${scanResult.passed ? "text-emerald-400" : "text-red-400"}`}>
+                    <span className={`text-xs font-medium ${scanResult.passed ? "text-success" : "text-danger"}`}>
                       {scanResult.passed ? "✅ 全部通过" : `❌ ${scanResult.bySeverity.error}处必须修改`}
                       <span className="text-[var(--nv-text-muted)] ml-2">质量分 {scanResult.qualityScore}/100</span>
                     </span>
                   )}
                 </div>
-                {scanError && <p className="text-xs text-red-400 mt-2">{scanError}</p>}
+                {scanError && <p className="text-xs text-danger mt-2">{scanError}</p>}
               </div>
 
               {/* 扫描结果 */}
@@ -452,7 +452,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                       );
                     })}
                     {scanResult.fuzzyDensity > 0 && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-red-950/50 text-red-400" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]"}`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-danger/50 text-danger" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]"}`}>
                         🌫️ 模糊词密度 {scanResult.fuzzyDensity.toFixed(1)}/500字
                       </span>
                     )}
@@ -463,9 +463,9 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     {scanResult.matches
                       .filter((m) => !activeScanCategory || m.category === activeScanCategory)
                       .map((m, i) => (
-                        <div key={i} className={`text-[10px] rounded px-2 py-1.5 ${m.severity === "error" ? "bg-red-950/30 border border-red-900/30" : m.severity === "warning" ? "bg-amber-950/20 border border-amber-900/20" : "bg-[var(--nv-surface-3)]/50"}`}>
+                        <div key={i} className={`text-[10px] rounded px-2 py-1.5 ${m.severity === "error" ? "bg-danger/30 border border-danger/30" : m.severity === "warning" ? "bg-warning/20 border border-warning/20" : "bg-[var(--nv-surface-3)]/50"}`}>
                           <div className="flex items-center gap-1.5">
-                            <span className={`font-medium ${m.severity === "error" ? "text-red-400" : m.severity === "warning" ? "text-amber-400" : "text-[var(--nv-text-tertiary)]"}`}>
+                            <span className={`font-medium ${m.severity === "error" ? "text-danger" : m.severity === "warning" ? "text-warning" : "text-[var(--nv-text-tertiary)]"}`}>
                               {m.severity === "error" ? "❌" : m.severity === "warning" ? "⚠️" : "ℹ️"}
                             </span>
                             <span className="text-[var(--nv-text-secondary)] font-mono">{m.pattern.length > 40 ? m.pattern.slice(0, 40) + "…" : m.pattern}</span>
@@ -475,7 +475,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                             <p className="text-[var(--nv-text-muted)] mt-0.5 ml-4 truncate">{m.context}</p>
                           )}
                           {m.suggestion && (
-                            <p className="text-emerald-500/80 mt-0.5 ml-4">💡 {m.suggestion}</p>
+                            <p className="text-success/80 mt-0.5 ml-4">💡 {m.suggestion}</p>
                           )}
                         </div>
                       ))}
@@ -484,7 +484,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               )}
 
               {scanResult && scanResult.matches.length === 0 && (
-                <p className="text-xs text-emerald-400">🎉 未发现任何问题，文本质量良好！</p>
+                <p className="text-xs text-success">🎉 未发现任何问题，文本质量良好！</p>
               )}
             </>
           )}

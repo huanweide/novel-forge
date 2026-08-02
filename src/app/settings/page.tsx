@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const PROVIDERS = [
   { key: "siliconflow", name: "硅基流动 (SiliconFlow)", defaultModel: "deepseek-ai/DeepSeek-V4-Flash", desc: "国产，便宜，DeepSeek V4 全系" },
@@ -188,6 +189,22 @@ export default function SettingsPage() {
           </p>
         </div>
 
+        {/* 外观 / 主题 */}
+        <section>
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+            0. 外观
+          </label>
+          <div className="flex items-center justify-between p-4 rounded-2xl surface-elevated">
+            <div>
+              <p className="text-sm text-[var(--nv-text-primary)] font-medium">主题</p>
+              <p className="text-xs text-[var(--nv-text-muted)] mt-1">
+                默认暗色（虚空玻璃）。偏好会保存在本机，刷新后保持。
+              </p>
+            </div>
+            <ThemeToggle />
+          </div>
+        </section>
+
         {/* 提供商选择 */}
         <section>
           <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
@@ -226,7 +243,7 @@ export default function SettingsPage() {
           <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
             2. API Key
             {hasExistingKey && (
-              <span className="text-xs text-emerald-400/80 ml-2 font-normal">（已保存 ✓ 留空则不修改）</span>
+              <span className="text-xs text-success/80 ml-2 font-normal">（已保存 ✓ 留空则不修改）</span>
             )}
           </label>
           <div className="flex gap-2">
@@ -266,8 +283,8 @@ export default function SettingsPage() {
             <div
               className={`mt-3 text-xs px-4 py-3 rounded-xl border transition-all duration-200 ${
                 testResult.ok
-                  ? "bg-emerald-500/[0.06] text-emerald-400 border-emerald-500/20"
-                  : "bg-red-500/[0.06] text-red-400 border-red-500/20"
+                  ? "bg-success/[0.06] text-success border-success/20"
+                  : "bg-danger/[0.06] text-danger border-danger/20"
               }`}
             >
               {testResult.ok ? (
@@ -321,7 +338,7 @@ export default function SettingsPage() {
               )}
             </button>
           </div>
-          {modelsError && <p className="text-xs text-red-400 mt-2">{modelsError}</p>}
+          {modelsError && <p className="text-xs text-danger mt-2">{modelsError}</p>}
           <p className="text-xs text-[var(--nv-text-muted)] mt-2">
             切换提供商或点「检索模型」会自动拉取该服务商的可用模型列表（需已填 Key）。也可直接手动输入模型 ID。
           </p>
@@ -362,7 +379,7 @@ export default function SettingsPage() {
           {statusMsg && (
             <span
               className={`text-sm transition-all duration-300 ${
-                statusMsg.startsWith("✅") ? "text-emerald-400" : "text-red-400"
+                statusMsg.startsWith("✅") ? "text-success" : "text-danger"
               }`}
             >
               {statusMsg}

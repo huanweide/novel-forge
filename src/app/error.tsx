@@ -19,13 +19,13 @@ export default function Error({
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-6">
-      <div className="w-full max-w-lg rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 backdrop-blur">
-        <h2 className="text-lg font-semibold text-rose-200">页面出错了</h2>
+      <div className="w-full max-w-lg rounded-2xl border border-danger/20 bg-danger/5 p-6 backdrop-blur">
+        <h2 className="text-lg font-semibold text-danger">页面出错了</h2>
         <p className="mt-2 text-sm text-[var(--nv-text-tertiary)]">
           渲染时发生异常。可先点「重试」；若持续出现，多半是数据库未连接或 AI 配置缺失——
           顶部状态条会给出具体修复命令。
         </p>
-        <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-black/40 p-3 text-xs text-rose-300/80">
+        <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-black/40 p-3 text-xs text-danger/80">
           {error.message || "未知错误"}
         </pre>
         <div className="mt-4 flex gap-3">
