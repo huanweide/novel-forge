@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 import { STYLE_TEMPLATES, getTemplate } from "@/core/templates";
 import {
   scanForbiddenWordsEnhanced,
@@ -419,7 +420,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                 <div className="flex items-center gap-3">
                   <Button onClick={runScan} disabled={scanning || !chapterContent}
                     className={`text-xs h-8 ${scanning ? "bg-[var(--nv-surface-2)]" : "bg-[var(--nv-primary)] hover:brightness-110"}`}>
-                    {scanning ? "⏳ 扫描中…" : "🔍 扫描当前章节"}
+                    {scanning ? (<><Icon name="loader" size={13} className="animate-spin" /> 扫描中…</>) : "🔍 扫描当前章节"}
                   </Button>
                   {!chapterContent && (
                     <span className="text-[10px] text-[var(--nv-text-muted)]">请在 workspace 中选中一个章节</span>

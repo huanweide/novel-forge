@@ -2,6 +2,7 @@
 
 import type { DimensionResult } from "@/core/dissect/types";
 import { DIMENSION_LABELS } from "@/core/dissect/types";
+import { Icon } from "@/components/ui/icons";
 
 interface DissectProgressProps {
   status: string;
@@ -52,7 +53,7 @@ export function DissectProgress({
       <div className="flex items-center justify-between">
         <span className={`text-sm font-medium ${statusColor[status] || "text-[var(--nv-text-tertiary)]"}`}>
           {status === "extracting" && (
-            <span className="inline-block animate-spin mr-1">⏳</span>
+            <Icon name="loader" size={14} className="inline-block animate-spin mr-1" />
           )}
           {statusLabel[status] || status}
         </span>
@@ -89,14 +90,15 @@ export function DissectProgress({
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {Object.entries(dimensions).map(([key, dim]) => {
               const dimLabel = DIMENSION_LABELS[key as keyof typeof DIMENSION_LABELS] || key;
-              const icon =
+              const dimIcon: "check" | "x" | "loader" | "circle" =
                 dim.status === "completed"
-                  ? "✅"
+                  ? "check"
                   : dim.status === "failed"
-                    ? "❌"
+                    ? "x"
                     : dim.status === "extracting"
-                      ? "⏳"
-                      : "⬜";
+                      ? "loader"
+                      : "circle";
+              const dimSpin = dim.status === "extracting";
               const bg =
                 dim.status === "completed"
                   ? "bg-green-500/10 text-green-400"
@@ -110,7 +112,7 @@ export function DissectProgress({
                   key={key}
                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs ${bg}`}
                 >
-                  <span className="shrink-0">{icon}</span>
+                  <Icon name={dimIcon} size={13} className={dimSpin ? "animate-spin" : ""} />
                   <span className="truncate">{dimLabel}</span>
                 </div>
               );

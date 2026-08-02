@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { toastError } from "@/components/ui/toast";
+import { Icon } from "@/components/ui/icons";
 
 interface DissectUploadProps {
   onStart: (data: {
@@ -237,7 +238,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
-            <span className="animate-spin">⏳</span>
+            <Icon name="loader" size={15} className="animate-spin" />
             拆解中...
           </span>
         ) : (

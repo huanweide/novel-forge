@@ -4,6 +4,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { DimensionResult } from "@/core/dissect/types";
 import { DIMENSION_LABELS, DIMENSION_ICONS } from "@/core/dissect/types";
+import { Icon } from "@/components/ui/icons";
 
 // ─── 维度分组 ──────────────────────────────────────────
 
@@ -357,7 +358,7 @@ export function DissectDimensions({
                     : "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
                 }`}
               >
-                {converting ? "⏳ 转换中..." : "📦 原样转为项目（100%还原）"}
+                {converting ? (<><Icon name="loader" size={13} className="animate-spin" /> 转换中...</>) : "📦 原样转为项目（100%还原）"}
               </button>
             </div>
           )}

@@ -99,7 +99,7 @@ export function OutlinePanel({
         {outlineProgress && (
           <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl p-4 space-y-2.5">
             <div className="flex items-center gap-2.5">
-              <span className="text-amber-400 animate-spin text-sm">⏳</span>
+              <Icon name="loader" size={14} className="animate-spin text-amber-400" />
               <span className="text-xs text-[var(--nv-text-secondary)] font-medium">
                 {PHASE_LABELS[outlineProgress.phase] || outlineProgress.phase}
                 {outlineProgress.current != null && outlineProgress.total != null && (

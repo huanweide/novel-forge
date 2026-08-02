@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { DimensionKey, ImitationMode } from "@/core/dissect/types";
+import { Icon } from "@/components/ui/icons";
 import {
   DISSECT_DIMENSIONS,
   DIMENSION_LABELS,
@@ -344,7 +345,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
             : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >
-        {generating ? "⏳ 仿写生成中..." : "开始仿写"}
+        {generating ? (<><Icon name="loader" size={13} className="animate-spin" /> 仿写生成中...</>) : "开始仿写"}
       </button>
 
       {/* 错误 */}

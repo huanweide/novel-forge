@@ -2,6 +2,7 @@
 
 import type { AdoptCard, ExploreStep } from "@/core/explore/types";
 import { EXPLORE_STEPS, STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
+import { Icon } from "@/components/ui/icons";
 
 interface Props {
   allCards: Record<string, AdoptCard[]>;
@@ -79,9 +80,7 @@ export function CardBrowser({
                           {card.title}
                         </span>
                         {status === "writing" && (
-                          <span className="text-[9px] text-amber-400 animate-pulse shrink-0">
-                            ⏳
-                          </span>
+                          <Icon name="loader" size={11} className="animate-spin text-amber-400 shrink-0" />
                         )}
                         {status?.startsWith("✅") && (
                           <span className="text-[9px] text-emerald-400 shrink-0">

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import type { DimensionResult } from "@/core/dissect/types";
+import { Icon } from "@/components/ui/icons";
 
 interface Message {
   role: "user" | "agent";
@@ -162,7 +163,7 @@ export function DissectAdaptPanel({
         }`}
       >
         {creating
-          ? "⏳ 正在创建改编项目..."
+          ? (<><Icon name="loader" size={13} className="animate-spin" /> 正在创建改编项目...</>)
           : messages.length > 1
             ? "🎨 应用修改并创建项目"
             : "先聊聊你想怎么改..."}

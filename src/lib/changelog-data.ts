@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.13";
+export const LATEST_VERSION = "v0.46.14";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "✍️ AI 生成落库确认（P4）：正文由 AI 流落库，作者常担心「AI 写了多少、有没有真的存进去」；本次生成完成显式确认落库",
-  "🔔 生成完成 toast：正文生成流 done 事件触发 toastSuccess「正文已生成并保存 ✓」，比状态栏更显眼，明确告知已落库",
-  "🔢 状态栏字数回填：done 状态「已落库 ✓ · 本章 X 字」（取自 loadProject 刷新后的 selectedNode.wordCount），作者一眼看到本章实写字数",
-  "✅ 全量 tsc 零错误；零新 npm 依赖——复用既有 genStep / toast / loadProject 机制，避免与 P1 状态栏重复的逻辑冲突",
+  "🔄 统一 Loading 态（P5）：拆书/仿写/扫描等长操作的裸 ⏳ emoji 旋转图标，全面替换为全站统一的 <Icon name=\"loader\" className=\"animate-spin\" />",
+  "🧩 拆书维度网格状态字形 ✅❌⏳⬜ 收编为 Icon check/x/loader/circle，与全站状态体系一致",
+  "🎯 异步按钮「⏳ 文案」前缀改为 Icon 旋转 + 文案，与 settings 页 loader 风格对齐；按钮 disabled 保护不变",
+  "✅ 全量 tsc 零错误；零新依赖——纯视觉收口，严格保留 API 协议层 emoji（startsWith(\"✅\")/❌失败）不动",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.14",
+    date: "2026-08-02",
+    title: "统一 Loading 态：裸 emoji 转盘全面替换为统一 Icon 旋转图标",
+    sections: [
+      {
+        label: "裸 emoji 转盘清零",
+        items: [
+          "拆书上传/进度、拆书详情页加载与等待、探索页大纲生成、卡片浏览生成中、文风扫描、仿写/转换/改编等长操作——原用裸 ⏳ emoji 当 CSS 旋转图标（样式失控、与全站 SVG loader 割裂），全部替换为统一 <Icon name=\"loader\" className=\"animate-spin\" />",
+          "拆书维度网格状态字形 ✅❌⏳⬜ 一并收编为 Icon check/x/loader/circle，观感与全站状态体系一致",
+        ],
+      },
+      {
+        label: "按钮标签 loading 对齐",
+        items: [
+          "扫描/仿写/转换/创建改编等异步按钮的「⏳ 文案」前缀改为 Icon 旋转 + 文案，与 settings 页「测试中…/检索中…/保存中…」的 loader 风格完全对齐",
+          "异步按钮本身已有 disabled 保护（canStart/scanning/converting/creating），loading 态仅做视觉统一，行为不变",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "严格区分「UI loading 视觉」与「数据流协议」：API 流式进度串、LLM 提示词、状态检测串（startsWith(\"✅\") / === \"❌失败\"）中的 emoji 属协议层，一律不动，避免破坏前后端契约",
+          "全量 tsc 零错误；零新依赖；纯视觉收口，无逻辑改动",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.13",
     date: "2026-08-02",

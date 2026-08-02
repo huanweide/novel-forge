@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DissectProgress } from "@/components/dissect/DissectProgress";
+import { Icon } from "@/components/ui/icons";
 import { DissectDimensions } from "@/components/dissect/DissectDimensions";
 import { DissectAdaptPanel } from "@/components/dissect/DissectAdaptPanel";
 import type { DimensionResult, ChapterInfo } from "@/core/dissect/types";
@@ -137,7 +138,7 @@ export default function DissectDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--nv-void)] flex items-center justify-center">
-        <div className="animate-spin text-4xl">⏳</div>
+        <Icon name="loader" size={40} className="animate-spin text-[var(--nv-primary)]" />
       </div>
     );
   }
@@ -315,7 +316,7 @@ export default function DissectDetailPage() {
         {isRunning && (
           <div className="bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl p-4 flex items-center justify-center" style={{ minHeight: "40vh" }}>
             <div className="text-center text-[var(--nv-text-muted)]">
-              <div className="animate-spin text-4xl mb-3">⏳</div>
+              <Icon name="loader" size={40} className="animate-spin text-[var(--nv-primary)] mb-3" />
               <p>拆解进行中...</p>
               <p className="text-xs mt-2">进度自动刷新，完成后可选择创建方式</p>
             </div>
