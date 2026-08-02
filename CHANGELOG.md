@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.27 — 2026-08-02
+**空态统一（FE-4/BUG-9）+ 导入向导批量删除二次确认（BUG-13）**
+- 🧹 合并重复 EmptyState（FE-4 / BUG-9）：删除 `src/components/ui/EmptyState.tsx`（旧版用 `hint`、无 `className`、视觉偏小），全局统一走 `States.tsx` 的 `EmptyState`（保留 `description` 语义 + 支持 `className`）；`CharacterList`/`StorylineList`/`RulesPanel`/`WorldEntryList` 4 处 import 改到 `States.tsx`，`hint=` 全部改为 `description=`，空态视觉与引导文案全站一致
+- 🛡️ 导入向导批量动作二次确认（BUG-13）：`ImportWizard.handleRemoveAllUnconfirmed` 清空全部未确认项前，先弹 `confirmDialog({ danger: true })` 让用户确认，避免误清空尚未写入数据库的章节/角色/词条
+- ✅ 诚实边界（BUG-1）：经核查角色删除的「无确认/无 loading」症状已在 FE-8 重构中由 `CharacterList` 的 `useConfirmDelete`（确认弹窗 + 忙态）解决；`LeftPanel` 内联 fetch 仅作 `deleteFn` 被 hook 托管，本单元不重复修、仅做现状确认；tsc 零错误，零新依赖
+
 ## v0.46.26 — 2026-08-02
 **轻量服务端状态层：useApi 缓存 + 失效，与 store 联动终结列表陈旧**
 - 🔄 轻量服务端状态层（FE-9）：新增 `src/hooks/useApi.ts` 自封装 mini React-Query 原语（进程内缓存 + staleTime 默认 30s + 失效订阅），零新依赖；导出 `useQuery`/`invalidateQuery`/`invalidateQueries`

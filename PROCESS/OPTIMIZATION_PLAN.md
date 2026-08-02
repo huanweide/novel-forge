@@ -228,7 +228,7 @@
 - **价值**：弹窗行为一处定义、处处一致；将来改遮罩样式/动画只动一个组件；也顺手补了无障碍（见 FE-5）。
 - **量级**：中（逐个组件迁移，需回归测试）。
 
-### FE-4 合并重复的 EmptyState（States.tsx vs EmptyState.tsx）
+### FE-4 合并重复的 EmptyState（States.tsx vs EmptyState.tsx）✅ 已完成 (v0.46.27)
 - **现在**：存在两个 `EmptyState`（`States.tsx` 用 `description`、`EmptyState.tsx` 用 `hint`），API 不同，`RulesPanel` 同时 import 两者——冗余冲突点。
 - **做完**：合并为单一 `EmptyState`（保留 `description` 语义），全局统一空态视觉与引导文案/行动按钮。
 - **价值**：空状态不再"有的有图标有的没有、文案风格各异"；新人首次进空白页的引导更一致。
@@ -276,7 +276,7 @@
 
 > 以下均为侦察中已定位、可立刻修的具体 bug，单列以便直接派工。
 
-- **BUG-1** `LeftPanel.tsx:89` 角色删除走内联 `fetch DELETE`，**无确认弹窗、无 loading 态**，与同页其他删除路径不一致，误删风险。→ 改复用 `useConfirmDelete`。
+- **BUG-1** `LeftPanel.tsx:89` 角色删除走内联 `fetch DELETE`，**无确认弹窗、无 loading 态**，与同页其他删除路径不一致，误删风险。→ 改复用 `useConfirmDelete`。✅ 已在 FE-8 重构中由 CharacterList.useConfirmDelete 解决，v0.46.27 本单元确认现状无需重复修
 - **BUG-2** `characters/expand/route.ts` 循环内逐条 `update`/`create` 且嵌套 N+1 读，且无事务。→ 见 BE-7 / BE-6。
 - **BUG-3** `stats/monitor/route.ts` 全量拉节点再 JS 聚合，大项目慢。→ 见 BE-7。
 - **BUG-4** `prisma.ts` 连接池未设 `max`，并发下可能 `P2024`。→ 见 BE-6。
@@ -284,11 +284,11 @@
 - **BUG-6** 11 个 `@deprecated` 端点仍随构建打包。→ 见 BE-8。
 - **BUG-7** 两套 LLM 抽象 + 9+ `@deprecated` 导出并存。→ 见 ARCH-1。
 - **BUG-8** 无 `middleware.ts`，cron/seed 无校验（本地可接受，部署需补）。→ 见 ARCH-8。
-- **BUG-9** 两个 `EmptyState` 实现冲突，`RulesPanel` 同时引用。→ 见 FE-4。
+- **BUG-9** 两个 `EmptyState` 实现冲突，`RulesPanel` 同时引用。→ 见 FE-4。✅ 已随 FE-4 合并修复 (v0.46.27)
 - **BUG-10** 200+ 硬编码色值，状态色未走 `--nv-*`。→ 见 FE-1。
 - **BUG-11** emoji 违规遍布 40+ 文件，与游戏页"禁 emoji"注释矛盾。→ 见 FE-2。
 - **BUG-12** explore / game 三栏无响应式抽屉，窄屏挤压。→ 见 FE-6。
-- **BUG-13** `ImportWizard` 一键删除未确认、批量动作缺二次确认。→ 补 `confirmDialog`。
+- **BUG-13** `ImportWizard` 一键删除未确认、批量动作缺二次确认。→ 补 `confirmDialog`。✅ 已修复 (v0.46.27)
 - **BUG-14** **真实 5 万字长跑压测未由作者实跑**（ROADMAP E1 仅架构具备 + dev 冒烟）。→ 需要一次真人实跑验证填表召回不崩、设定不串味、token 成本可控；这是"对外宣称成品"前必须过的质量闸。
 
 ---

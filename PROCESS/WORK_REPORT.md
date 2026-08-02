@@ -300,3 +300,105 @@
 ---
 
 *下个单元：#201 FE-N2 项目备份包 .nfproject。*
+
+---
+
+## v0.46.24 — 项目备份包 .nfproject（FE-N2）
+
+> 给整本书做一个"存档文件"。类比：你玩游戏的存档不是几十个散文件，而是一个 `.sav` 文件，拷走就能在别的电脑接着玩。这里把"一本书"（含所有章节、角色、世界书、规则）打包成一个 `.nfproject` 文件，方便带走或发给朋友。
+
+### ① 干了什么
+- 新增"备份包"能力：点一下把当前项目所有数据导出成一个 `.nfproject` 文件（本质是一个带版本标记 `format:"nfproject"` 的 JSON）；点"导入备份"选这个文件，能把它变成一个全新的项目（不覆盖现有项目）。
+- 导出/导入都走后端 API：导出 `GET /api/projects/[id]/backup` 一次性把项目全量拉出来；导入 `POST /api/projects/import` 收下文件、清空旧 id、建新项目，并把章节之间的父子关系、分支引用、世界书交叉引用重新连好。
+
+### ② 为什么这么做（底层原理）
+- **"备份包" = 把一整棵数据树序列化成一个文件**：项目是树根，下面挂角色、世界书、章节等。打包成单个文件才好带走、好分享。
+- **"id 重映射" = 搬家用新门牌号**：每个数据在数据库里有唯一编号。导出文件带着旧编号，直接塞回库会和现有数据撞号、或父子关系指向错对象。导入时"忘掉旧编号、全重新发号"，并把"谁是谁的孩子"按新号接上。类比：搬家时家具贴旧家门牌号，进新家全换新房牌号，还要保证"餐桌的椅子"指向新餐桌。
+
+### ③ 怎么做的（方法 + 效果）
+1. 导出 API：`Prisma.ProjectInclude` 一次性 include 所有子表，返回 JSON 加 `format:"nfproject"`；前端 Blob 下载成 `.nfproject`。
+2. 导入 API：校验 `format`；建 `branchMap`/`nodeMap`/`loreMap` 把旧 id 映射成新 id；建完新项目后用 map 翻译各节点的 `parentId`/`branchId`/`relatedEntryIds`；项目名加「（导入）」防重名。
+3. UI：Toolbar 加「备份包」按钮触发下载；首页加隐藏 file input + 「导入备份」按钮，选完 POST 给导入 API，成功跳进新项目。
+
+**效果数据**：tsc 零错误（TSC_EXIT=0）；零新增依赖；提交 `c2a8f38` 推上 main。
+**踩坑**：导出 include 写成 `as const` 让 orderBy 变只读元组（Prisma 类型不接受）→ 改 `const INCLUDE: Prisma.ProjectInclude`；首页导入事件写成 `React.ChangeEvent` 但没引入 `React` 命名空间 → 改 `import { ... type ChangeEvent }`。
+
+### ④ 关键取舍
+- **选"JSON 不套 zip"**：数据全是文本，JSON 可读可改、零依赖；套 zip 要引压缩库且备份文件不可肉眼检查。
+- **选"导入为新项目"而非"覆盖导入"**：覆盖会直接抹掉现有数据，风险高；做成独立新项目最安全，可对比后删旧的。
+
+### 诚实边界（没做的 / 没验证的）
+- 未在浏览器实跑"导出→换电脑→导入"完整链路（沙箱无 GUI）；验证为 tsc 零错误 + 路由代码层 + 重映射逻辑审查。建议作者本地导出一个项目、再导入确认成独立新项目。
+- 未做"附件/图片"打包：本项目数据模型纯文本/JSON，无二进制附件，JSON 即完整备份（如未来加封面图需补）。
+
+---
+
+*下个单元：#203 FE-8 状态管理收口 zustand。*
+
+---
+
+## v0.46.25 — 状态管理收口 zustand（FE-8）
+
+> 让"当前项目数据"只有一个真相来源。类比：公司通讯录只存 HR 系统一份，所有人查 HR 系统，不会出现"销售记得的电话和行政记得的不一样"。这里把页面里散落两处的项目数据收拢到全局仓库，子组件自己从仓库取，不再层层传。
+
+### ① 干了什么
+- 把 zustand store（`useProjectStore`）升级为"当前项目数据的唯一真相源"：项目全量 + 规则 + 一系列原子更新方法（setProjectData / patchProject / updateNode / upsertCharacter 等）。
+- workspace 页面去掉本地 `useState` 的 project，改为从 store 读；loadProject 拉到数据后写进 store 而非本地 state。
+- 左栏/右栏组件去掉 `project` 这个大 prop，函数里直接 `const project = useProjectStore((s) => s.project)` 自己取；没有项目时返回 null 不渲染。
+
+### ② 为什么这么做
+- **"双源"= 同一份数据在两地存**：改了一处忘改另一处，界面就显示旧数据（陈旧 bug）。仓库成唯一源后，所有读取从一处拿，改一处处处更新。
+- **"prop 透传"= 数据一层层当参数往下传**：项目对象被透传到左栏右栏，是"巨型组件"前兆。让子组件自己从仓库取，顶层不背包袱。类比：部门查公司资料自己去档案室拿，不用老板挨个发纸质复印件。
+
+### ③ 怎么做的（方法 + 效果）
+1. 重构 `store/index.ts`：ProjectState 只留必要字段与方法，类型对齐页面实际使用的 `ProjectData` 等。
+2. page.tsx：`useState(project)` → store 读取；`setProject(data)` → `useProjectStore.getState().setProjectData(data)`；配置保存回调改 `patchProject(...)`（局部更新）。
+3. LeftPanel/RightPanel：删 `project` 接口字段、函数首行从 store 取 `if (!project) return null`。
+
+**效果数据**：tsc 零错误（TSC_EXIT=0）；零新增依赖；提交 `0eb99f1` 推上 main。
+**踩坑**：`patchProject` 收 ProjectConfigPanel 含 `llmConfig` 等 ProjectData 未穷举字段 → 参数类型放宽为 `Record<string, any>`；`WriterState.currentNode` 误引已弃用 `StoryNode` 类型 → 改 `StoryNodeData`。
+
+### ④ 关键取舍
+- **选"store 唯一源 + 去数据 prop"而非"完整重构 1013 行巨型组件"**：计划原把 FE-8 排在 ARCH-6 测试护栏之后，但 ARCH-6 不在本次 ⭐ 清单、本冲刺也没建测试护栏。完整重构"牵一发动全身"风险高。选真实可工作、有边界的收口：数据单源 + 实体数据不再透传，但动作回调（onSave 类）仍透传（动作非数据、无陈旧问题）。
+
+### 诚实边界
+- **未做 30-prop 100% 清零**：动作回调透传仍保留（非数据、无陈旧问题；全量重构需配套测试护栏，本冲刺未建）。不伪装"全清零"。
+- 未在浏览器实跑交互（沙箱无 GUI）；验证为 tsc 零错误 + 单源接管逻辑审查 + 侦察确认 store 无其他消费者、page 有 `!project` 守卫。
+
+---
+
+*下个单元：#202 FE-9 服务端状态层 React Query。*
+
+---
+
+## v0.46.26 — 轻量服务端状态层（FE-9，自研 useApi 零依赖）
+
+> 自己写一个"迷你 React Query"管"服务端数据缓存 + 失效"。类比：外卖 App 的"我的订单"——你刚取消一单，列表不会自动变；要么手动下拉刷新，要么 App 在你操作后悄悄标"订单列表过期，下次进重新拉"。这里用几十行零依赖代码实现同样的事。
+
+### ① 干了什么
+- 自写 `useApi` 工具（`src/hooks/useApi.ts`）：`useQuery(key, fetcher, opts)` 按"键"取数据、命中缓存不重复发请求；`invalidateQuery(key)`/`invalidateQueries(前缀)` 主动让某键缓存失效、下次用重新拉；内置"新鲜度"机制（staleTime 默认 30 秒）。
+- 仪表盘改用 `useQuery("projects:list", ...)` 拿项目列表，删掉原来一堆 useState + useEffect。
+- workspace 保存/导入后调 `refreshAfterMutate`（刷新当前项目 + `invalidateQueries("projects")`），让仪表盘回到新鲜。
+
+### ② 为什么这么做
+- **"服务端状态"= 存在服务器、前端要拉来显示、还可能被你改的数据**：容易出"我改了但界面没刷新"的 bug。需要"拉过先存着（缓存），改了就标过期（失效）"的机制。
+- **为什么自研而非引 React Query**：React Query 功能强但体积大、API 复杂；本项目只是本地写作工具，只要"缓存 + 失效"两个核心能力，几十行就够，零新依赖、契合"轻量本地工具"定位。类比：只想称个体重，买体重秤就行，不必搬台医用体检仪回家。
+
+### ③ 怎么做的（方法 + 效果）
+1. `useApi.ts`：进程内 `Map<key,{data,ts}>` 存缓存；`Map<key,Set<listener>>` 存订阅；`useQuery` 挂载订阅、命中且未过期直接用缓存跳过 fetch；`invalidateQuery` 删缓存并通知订阅者重拉。
+2. 仪表盘 `page.tsx`：删旧 useState+useEffect，换 `useQuery<ProjectSummary[]>("projects:list", 拉列表)`，派生 `projects = data ?? []`。
+3. workspace 联动：CharacterEditDialog/LorebookEditDialog/ImportWizard 等保存/导入回调改接 `refreshAfterMutate`（= loadProject + invalidateQueries("projects")）。
+
+**效果数据**：tsc 零错误（TSC_EXIT=0）；零新增依赖；提交 `b512050` 推上 main。
+
+### ④ 关键取舍
+- **选"自研零依赖"而非"引 React Query/SWR"**：本地工具要轻；两个核心能力几十行即可，引大库是过度设计。
+- **选"仪表盘试点 + 渐进迁移"而非"一次性改 70+ 端点"**：计划原文"先试点再逐步迁移"。盲目全改风险高；先落原语和试点、跑通，后续按需迁移。
+
+### 诚实边界
+- **未一次性迁移全站 70+ 个 fetch 端点**：仅仪表盘试点 + store 联动失效；`useApi` 已就绪，后续可渐进迁移。不伪装"全站已用"。
+- 未在浏览器实跑缓存命中/staleTime 行为（沙箱无 GUI）；验证为 tsc 零错误 + 缓存/订阅机制代码审查。
+
+---
+
+*下个单元：所有 ⭐ 项已完成，优化冲刺收官。后续可选（非 ⭐）：ARCH-6 测试护栏、FE-7 冗余合并、BUG 清单长跑实测。*

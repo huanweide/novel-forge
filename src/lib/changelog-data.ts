@@ -25,18 +25,44 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.26";
+export const LATEST_VERSION = "v0.46.27";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔄 轻量服务端状态层（FE-9）：自封装 `useApi` hook（进程内缓存 + staleTime + 失效订阅），零新依赖；仪表盘项目列表率先试点，删除/重试即 `refetch`",
-  "🔗 与 FE-8 联动：workspace 内角色/世界书/设定保存完成后，除刷新本页 store，同时 `invalidateQueries(\"projects\")` 让仪表盘列表回到新鲜，彻底告别「列表陈旧」",
-  "🧪 统一原语：导出 `useQuery` / `invalidateQuery` / `invalidateQueries`，为 70+ API 的缓存/失效迁移提供可逐步落地的基础（先试点、再推广）",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；未一次性迁移全部 70+ 端点（计划明确「可先试点再逐步迁移」，避免盲改回归）",
+  "🧹 合并重复 EmptyState（FE-4 / BUG-9）：删除 `components/ui/EmptyState.tsx`，全局统一走 `States.tsx` 的 `EmptyState`（保留 `description` 语义），4 处引用改 import + `hint`→`description`，空态视觉一致",
+  "🛡️ 导入向导批量动作二次确认（BUG-13）：「一键删除未确认」清空前弹 `confirmDialog` 危险确认，避免误清空全部未写入的章节/角色/词条",
+  "✅ 角色删除确认已具备（BUG-1）：核查 `CharacterList` 在 FE-8 重构中已用 `useConfirmDelete` 包裹删除（确认弹窗 + loading 态），`LeftPanel` 内联 fetch 仅作 `deleteFn` 被 hook 托管，症状已解决、本单元不重复修",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；空态统一后新人首次进空白页的引导更一致",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.27",
+    date: "2026-08-02",
+    title: "空态统一（FE-4/BUG-9）+ 导入向导批量删除二次确认（BUG-13）",
+    sections: [
+      {
+        label: "合并重复 EmptyState（FE-4 / BUG-9）",
+        items: [
+          "删除 `src/components/ui/EmptyState.tsx`（旧版用 `hint`、无 `className`、视觉偏小），全局统一走 `States.tsx` 的 `EmptyState`（保留 `description` 语义 + 支持 `className`）",
+          "`CharacterList` / `StorylineList` / `RulesPanel` / `WorldEntryList` 4 处 import 改到 `States.tsx`，`hint=` 全部改为 `description=`，空态视觉与引导文案全站一致",
+        ],
+      },
+      {
+        label: "导入向导批量动作二次确认（BUG-13）",
+        items: [
+          "`ImportWizard.handleRemoveAllUnconfirmed` 清空全部未确认项前，先弹 `confirmDialog({ danger: true })` 让用户确认，避免误清空尚未写入数据库的章节/角色/词条",
+        ],
+      },
+      {
+        label: "诚实边界（BUG-1）",
+        items: [
+          "经核查，角色删除的「无确认弹窗、无 loading 态」症状已在 FE-8 重构中由 `CharacterList` 的 `useConfirmDelete`（确认弹窗 + 忙态锁定）解决；`LeftPanel` 内联 fetch 仅作 `deleteFn` 被 hook 托管，故本单元不重复修、仅做现状确认",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.26",
     date: "2026-08-02",

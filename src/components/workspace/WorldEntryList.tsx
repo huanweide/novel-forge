@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@/components/ui/States";
 import type { LorebookData } from "./types";
 import { WorldEntryCard } from "./WorldEntryCard";
 
@@ -36,7 +36,7 @@ export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, de
           <EmptyState
             icon="book"
             title={`暂无${moduleLabel}设定`}
-            hint='点击"+ 新建"或写完章节后自动提取'
+            description='点击"+ 新建"或写完章节后自动提取'
           />
         )}
         {entries.map((entry) => (

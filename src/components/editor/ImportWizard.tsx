@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
+import { confirmDialog } from "@/components/ui/toast";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -416,8 +417,14 @@ export function ImportWizard({
 
   // ─── 一键删除未确认 ────────────────────────────────────
 
-  const handleRemoveAllUnconfirmed = () => {
+  const handleRemoveAllUnconfirmed = async () => {
     if (editedCharacters.length === 0 && editedLore.length === 0 && editedChapters.length === 0) return;
+    const ok = await confirmDialog({
+      title: "清空所有未确认项",
+      description: "将丢弃当前预览中尚未写入数据库的全部章节、角色与世界观词条，此操作不可撤销。确定继续？",
+      danger: true,
+    });
+    if (!ok) return;
     setEditedCharacters([]);
     setEditedLore([]);
     setEditedChapters([]);

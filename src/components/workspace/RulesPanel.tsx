@@ -4,10 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState, Loading } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastAdded } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
-import { Loading } from "@/components/ui/States";
 
 interface RuleData {
   id: string; projectId: string; name: string; content: string;
@@ -126,7 +125,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
           <EmptyState
             icon="clipboard"
             title="暂无规则"
-            hint='点击「+ 新建」创建第一条'
+            description='点击「+ 新建」创建第一条'
           />
         )}
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { CharacterFilters } from "./CharacterFilters";
@@ -492,7 +492,7 @@ export function CharacterList({
         <EmptyState
           icon="user"
           title="无匹配角色"
-          hint='点击「+ 添加角色」新建，或调整筛选条件'
+          description='点击「+ 添加角色」新建，或调整筛选条件'
         />
       )}
 
