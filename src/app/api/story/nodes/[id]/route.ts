@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { snapshotRevision } from "@/lib/versions";
 
 // GET /api/story/nodes/[id]
 export async function GET(
@@ -32,6 +33,20 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    // BE-1：手动保存前快照当前正文（去重由 helper 处理）
+    const existingNode = await prisma.storyNode.findUnique({
+      where: { id },
+      select: { content: true, wordCount: true, projectId: true },
+    });
+    if (existingNode && body.content !== existingNode.content) {
+      await snapshotRevision({
+        nodeId: id,
+        projectId: existingNode.projectId,
+        source: "manual",
+        prevContent: existingNode.content ?? "",
+        prevWordCount: existingNode.wordCount,
+      });
+    }
     const node = await prisma.storyNode.update({
       where: { id },
       data: {

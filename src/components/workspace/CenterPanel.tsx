@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { Icon } from "@/components/ui/icons";
-import { toastSuccess } from "@/components/ui/toast";
+import { Modal } from "@/components/ui/Modal";
+import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
 
 export function CenterPanel({
@@ -17,6 +18,7 @@ export function CenterPanel({
   genStep, genStepLabels, chapterOutlineStatus,
   onOpenGame,
   onEditCharacter, onEditLore, todayWords = 0,
+  loadProject,
 }: {
   selectedNode: StoryNodeData | null; streamContent: string; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
@@ -37,6 +39,7 @@ export function CenterPanel({
   onEditCharacter?: (id: string) => void;
   onEditLore?: (id: string) => void;
   todayWords?: number;
+  loadProject?: () => void | Promise<void>;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -73,6 +76,81 @@ export function CenterPanel({
   }, [dailyGoalKey, todayWords]);
   const dailyReached = dailyGoal > 0 && (todayWords || 0) >= dailyGoal;
   const dailyPct = dailyGoal > 0 ? Math.min(100, Math.round(((todayWords || 0) / dailyGoal) * 100)) : 0;
+
+  // ── BE-1 版本历史抽屉 ──
+  const [showRevisions, setShowRevisions] = useState(false);
+  const [revisions, setRevisions] = useState<RevisionMeta[]>([]);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [previewRev, setPreviewRev] = useState<RevisionDetail | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [rollbacking, setRollbacking] = useState(false);
+
+  type RevisionMeta = {
+    id: string; version: number; wordCount: number;
+    source: string; summary: string | null; createdAt: string;
+  };
+  type RevisionDetail = RevisionMeta & { content: string };
+
+  const SOURCE_LABEL: Record<string, string> = {
+    "ai-write": "AI 生成", "ai-rewrite": "AI 重写", "ai-polish": "AI 润色",
+    manual: "手动保存", rollback: "回滚快照", "auto-fill": "自动填表", unknown: "未知",
+  };
+
+  const openRevisions = async () => {
+    if (!selectedNode) return;
+    setShowRevisions(true);
+    setRevisionsLoading(true);
+    setPreviewRev(null);
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}/revisions`);
+      const data = await res.json();
+      if (!res.ok) toastError(data.error || "获取版本历史失败");
+      else setRevisions(data.revisions || []);
+    } catch {
+      toastError("网络错误");
+    } finally {
+      setRevisionsLoading(false);
+    }
+  };
+
+  const previewRevision = async (revId: string) => {
+    if (!selectedNode) return;
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}/revisions/${revId}`);
+      const data = await res.json();
+      if (!res.ok) toastError(data.error || "获取版本失败");
+      else setPreviewRev(data);
+    } catch {
+      toastError("网络错误");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const doRollback = async (revId: string) => {
+    if (!selectedNode) return;
+    if (!confirm("确定回滚到该版本？当前正文会先自动备份为可恢复快照。")) return;
+    setRollbacking(true);
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}/rollback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revisionId: revId }),
+      });
+      const data = await res.json();
+      if (!res.ok) toastError(data.error || "回滚失败");
+      else {
+        toastSuccess(`已回滚到第 ${data.rolledBackToVersion} 版 ✓`);
+        setShowRevisions(false);
+        if (loadProject) await loadProject();
+      }
+    } catch (err) {
+      toastError("回滚失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setRollbacking(false);
+    }
+  };
   // 达成庆祝：每日仅一次，localStorage 去重，避免每次渲染重弹
   useEffect(() => {
     if (!dailyReached) return;
@@ -107,6 +185,7 @@ export function CenterPanel({
   }, [displayContent, projectEntities]);
 
   return (
+    <>
     <main className="flex-1 flex flex-col overflow-hidden bg-[var(--nv-void)]">
       {selectedNode ? (
         <>
@@ -114,9 +193,14 @@ export function CenterPanel({
           <div className="border-b border-[var(--nv-border-2)] px-4 py-3 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
-              <span className="text-xs text-[var(--nv-text-tertiary)]">
+              <span className="text-xs text-[var(--nv-text-tertiary)] flex items-center gap-2">
                 {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-[var(--nv-success)]" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-[var(--nv-accent)]" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
                 · {selectedNode.wordCount || 0} 字
+                <button onClick={openRevisions}
+                  className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors"
+                  title="查看 / 回滚历史版本">
+                  <Icon name="history" size={11} /> 历史
+                </button>
               </span>
             </div>
             {/* 大纲编辑 */}
@@ -309,5 +393,89 @@ export function CenterPanel({
         </div>
       )}
     </main>
+
+    {/* BE-1 版本历史抽屉 */}
+    {showRevisions && selectedNode && (
+      <Modal open={showRevisions} onClose={() => setShowRevisions(false)} bare
+        panelClassName="w-[760px] max-w-[94vw] max-h-[88vh] flex flex-col"
+        closeOnOverlay={false}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
+          <div className="flex items-center gap-2">
+            <Icon name="history" size={16} className="text-[var(--nv-primary)]" />
+            <h3 className="text-sm font-semibold text-[var(--nv-text-primary)]">历史版本 · {selectedNode.title}</h3>
+          </div>
+          <button onClick={() => setShowRevisions(false)} aria-label="关闭"
+            className="rounded-lg p-1.5 text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors">
+            <Icon name="x" size={16} />
+          </button>
+        </div>
+        <div className="flex flex-1 min-h-0">
+          {/* 左：版本列表 */}
+          <div className="w-56 shrink-0 border-r border-[var(--nv-border-2)] overflow-y-auto custom-scrollbar p-2 space-y-1.5">
+            {revisionsLoading ? (
+              <p className="text-xs text-[var(--nv-text-tertiary)] px-2 py-3 flex items-center gap-1.5">
+                <Icon name="loader" size={12} className="animate-spin" /> 加载中…
+              </p>
+            ) : revisions.length === 0 ? (
+              <p className="text-xs text-[var(--nv-text-tertiary)] px-2 py-3 leading-relaxed">
+                暂无历史版本。<br />AI 生成 / 重写或手动保存正文时会自动留档。
+              </p>
+            ) : (
+              revisions.map((r) => (
+                <button key={r.id} onClick={() => previewRevision(r.id)}
+                  className={`w-full text-left rounded-lg px-2.5 py-2 transition-colors border ${
+                    previewRev?.id === r.id
+                      ? "bg-[var(--nv-primary-soft)] border-[var(--nv-primary)]/40"
+                      : "border-transparent hover:bg-[var(--nv-surface-2)]"
+                  }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-[var(--nv-text-primary)]">第 {r.version} 版</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">
+                      {SOURCE_LABEL[r.source] || "未知"}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-[var(--nv-text-tertiary)] mt-1">
+                    {r.wordCount} 字 · {new Date(r.createdAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+          {/* 右：预览 + 回滚 */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4">
+              {previewLoading ? (
+                <p className="text-xs text-[var(--nv-text-tertiary)] flex items-center gap-1.5">
+                  <Icon name="loader" size={12} className="animate-spin" /> 加载版本内容…
+                </p>
+              ) : previewRev ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 text-xs text-[var(--nv-text-tertiary)]">
+                    <span className="px-1.5 py-0.5 rounded-full bg-[var(--nv-surface-2)]">第 {previewRev.version} 版</span>
+                    <span>{SOURCE_LABEL[previewRev.source] || "未知"}</span>
+                    <span>· {previewRev.wordCount} 字</span>
+                    <span>· {new Date(previewRev.createdAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</span>
+                  </div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--nv-text-secondary)] max-w-[640px]">
+                    {previewRev.content}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--nv-text-tertiary)]">从左侧选择一版查看内容预览。</p>
+              )}
+            </div>
+            {previewRev && (
+              <div className="shrink-0 border-t border-[var(--nv-border-2)] px-5 py-3 flex justify-end">
+                <button onClick={() => doRollback(previewRev.id)} disabled={rollbacking}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-[var(--nv-primary)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity inline-flex items-center gap-1.5">
+                  {rollbacking ? <><Icon name="loader" size={12} className="animate-spin" /> 回滚中…</> : <><Icon name="history" size={12} /> 回滚到此版本</>}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }

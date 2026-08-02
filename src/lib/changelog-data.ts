@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.20";
+export const LATEST_VERSION = "v0.46.21";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📊 AI 成本看板（BE-3）：新增 `LlmCallLog` 表，在 `src/core/llm/client.ts` 的 `chat`/`chatStream` 单点 fire-and-forget 落库真实 token 用量（覆盖所有生成 / agent / game / explore / dissect），消灭「用完即丢、只靠字数估算」",
-  "💰 内置价格表：`lib/llm.ts` 的 `MODEL_PRICING` 含 DeepSeek / GPT / Claude / 通义 / 智谱 / Kimi 等 20+ 模型每百万 token 单价，`estimateCost` 按模型名匹配估算美元成本；未知模型标「单价未知」不伪造成本",
-  "📈 看板 UI：统计面板 MonitorPanel 新增「AI 成本（全项目 · 本月）」区块——调用次数 / Token 总量 / 估算花费（¥ 按 7.2 汇率折算并标 ≈$）/ 记录起始日 + 按模型分布；monitor 路由加 `llmUsage` 聚合",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；表经 `prisma db push` 同步；诚实边界：仅记 v0.46.20 后调用、全局聚合标注「全项目」、价格为估算、落库失败静默不影响主流程",
+  "🕓 正文版本历史与一键回滚（BE-1）：新增 `StoryNodeRevision` 表，AI 写 / 重写 / 润色覆盖正文前、以及编辑器手动保存前，自动把上一版正文快照入库（去重：内容相同不重复记），从此 AI 大改也敢放心试",
+  "🔄 历史版本抽屉：编辑器状态栏新增「历史」按钮，打开右侧抽屉列出本节点全部版本（版本号 / 来源标签：AI 生成·重写·润色·手动保存·回滚快照 / 字数 / 时间），点选预览正文，一键回滚到任意一版",
+  "♻️ 回滚可逆：回滚操作会先把「当前正文」自动备份为一条新快照，所以回滚本身也能再回滚——不会越滚越乱；回滚后自动刷新节点内容",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；表经 `prisma db push` 同步；诚实边界：仅 v0.46.21 起产生的版本有记录，更早的正文无历史快照",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.21",
+    date: "2026-08-02",
+    title: "正文版本历史与一键回滚：AI 重写再也不怕把写好的稿子改没了",
+    sections: [
+      {
+        label: "版本快照（BE-1）",
+        items: [
+          "新增 `StoryNodeRevision` 表（nodeId / 版本号 version / 正文全文 content / 字数 / 来源 source / 时间），在 `src/core/pipeline/post-processor.ts` 写库前单点快照（覆盖所有走后处理管线的 AI 写 / 重写 / 润色 / 自动填表），并在 `src/app/api/story/nodes/[id]` 的 PUT（手动保存）写前也快照",
+          "去重逻辑：若上一版内容与本节点最近一次快照完全相同则跳过，避免微调 / 频繁保存产生大量重复版本；空正文不快照；快照失败静默忽略，绝不阻断正文生成",
+        ],
+      },
+      {
+        label: "历史版本抽屉与回滚",
+        items: [
+          "编辑器状态栏新增「历史」按钮，打开统一 Modal 抽屉：左列本节点全部版本（版本号 / 来源标签 / 字数 / 时间），右栏预览选中版本正文，底部「回滚到此版本」一键恢复",
+          "回滚 API `POST /api/story/nodes/[id]/rollback`：先把当前正文自动备份为「回滚快照」再覆盖，保证回滚可逆；成功后自动刷新节点内容；列表 / 详情分别由 `GET /revisions` 与 `GET /revisions/[revId]` 提供",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "仅 v0.46.21 起产生的版本有记录，此前的历史正文无快照（无法穿越回溯）；来源标签如实区分 AI 生成 / 重写 / 润色 / 手动保存 / 回滚快照",
+          "全量 tsc 零错误、零新 npm 依赖；表经 `prisma db push` 同步本地 PG；快照为「安全网」，失败静默不影响主流程",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.20",
     date: "2026-08-02",

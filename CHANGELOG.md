@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.21 — 2026-08-02
+**正文版本历史与一键回滚：AI 重写再也不怕把写好的稿子改没了**
+- 🕓 版本快照（BE-1）：新增 `StoryNodeRevision` 表（nodeId/版本号/正文全文/字数/来源/时间），在 `src/core/pipeline/post-processor.ts` 写库前单点快照——覆盖所有走后处理管线的 AI 写/重写/润色/自动填表；编辑器手动保存（PUT `/api/story/nodes/[id]`）写前也快照；去重（内容相同不重复记）+ 空正文不记 + 失败静默
+- 🔄 历史版本抽屉：编辑器状态栏新增「历史」按钮，打开统一 Modal 抽屉——左列本节点全部版本（版本号/来源标签/字数/时间），右栏预览选中版正文，底部「回滚到此版本」一键恢复
+- ♻️ 回滚可逆：`POST /api/story/nodes/[id]/rollback` 先把当前正文自动备份为「回滚快照」再覆盖，回滚本身也能再回滚；列表 `GET /revisions`、详情 `GET /revisions/[revId]` 预览
+- 🧭 诚实边界：仅 v0.46.21 起产生的版本有记录，更早正文无历史快照；来源标签如实区分 AI 生成/重写/润色/手动保存/回滚快照；表经 `prisma db push` 同步，tsc 零错误，零新依赖
+
 ## v0.46.20 — 2026-08-02
 **AI 成本看板：真实 token 用量与估算花费落库，统计面板一眼看清本月 AI 花了多少**
 - 📊 Token 落库（BE-3）：新增 `LlmCallLog` 表（时间/模型/角色/输入·输出·总 token/估算成本/BaseURL/是否故障转移），在 `src/core/llm/client.ts` 的 `chat` 成功返回、`chatStream` 流正常完成（readStream 末尾 `onUsage` 回调）单点 fire-and-forget 落库，覆盖所有走 client 的生成/agent/game/explore/dissect

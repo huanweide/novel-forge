@@ -829,6 +829,7 @@ export default function WorkspacePage() {
             }}
             onEditCharacter={(id) => { const c = project.characters.find((x) => x.id === id); if (c) setEditingCharacter(c); }}
             onEditLore={(id) => { const l = project.lorebookEntries.find((x) => x.id === id); if (l) setEditingLore(l); }}
+            loadProject={loadProject}
           />
 
           {/* 宝宝流记忆召回面板（写作闭环透明度：本轮已自动呼应的设定/人设阶段） */}

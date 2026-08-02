@@ -162,9 +162,31 @@ model StoryNode {
   // 分支关联
   branch StoryBranch? @relation(fields: [branchId], references: [id])
 
+  // 版本历史（BE-1）
+  revisions StoryNodeRevision[]
+
   @@index([projectId])
   @@index([parentId])
   @@index([branchId])
+}
+
+// ─── 正文版本快照 (Story Node Revision) ──────────────────
+// 每次 AI 写/重写/润色或手动保存覆盖正文前，把上一版正文快照存此处，可回滚。
+model StoryNodeRevision {
+  id        String   @id @default(cuid())
+  nodeId    String
+  node      StoryNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  projectId String
+  version   Int      @default(1)            // 递增版本号（同节点内）
+  content   String                          // 快照的正文全文
+  wordCount Int      @default(0)
+  source    String   @default("unknown")    // ai-write | ai-rewrite | ai-polish | manual | rollback | auto-fill
+  summary   String?                         // 可选备注
+  createdAt DateTime @default(now())
+
+  @@index([nodeId])
+  @@index([projectId])
+  @@index([createdAt])
 }
 
 // ─── 故事分支 (Story Branch) ───────────────────────────────

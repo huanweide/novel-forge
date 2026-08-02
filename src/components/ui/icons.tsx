@@ -99,6 +99,7 @@ import {
   PartyPopper,
   Landmark,
   Paperclip,
+  History,
 } from "lucide-react";
 
 /** 图标名称 → React 组件映射 */
@@ -188,6 +189,7 @@ const iconMap = {
   landmark: Landmark,
   paperclip: Paperclip,
   square: Square,
+  history: History,
 } as const;
 
 export type IconName = keyof typeof iconMap;

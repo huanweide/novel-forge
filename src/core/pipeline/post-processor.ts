@@ -15,6 +15,7 @@ import type { KnownEntity, EntityType } from "@/lib/entity-detector";
 import type { AgentOrchestrator } from "@/core/agents";
 import type { ReviewLog } from "@/core/types";
 import type { PostPipelineParams, PostPipelineResult } from "./types";
+import { snapshotRevision } from "@/lib/versions";
 
 /**
  * 运行完整的生成后处理管线。
@@ -158,6 +159,19 @@ export async function runPostGenerationPipeline(
   }
 
   // ── 3. 保存到 storyNode ──
+  // BE-1：写前快照——把被覆盖的上一版正文存入版本历史（AI 写/重写/润色/自动填表均经此单点）
+  const prevContent = (currentNode as any)?.content;
+  const prevWordCount = (currentNode as any)?.wordCount;
+  if (prevContent && String(prevContent).trim()) {
+    await snapshotRevision({
+      nodeId,
+      projectId,
+      source: prevWordCount ? "ai-rewrite" : "ai-write",
+      prevContent: String(prevContent),
+      prevWordCount,
+    });
+  }
+
   const existingReviewLogs = (currentNode as any).reviewLogs || [];
   const reviewLogEntry = reviewLog
     ? {
