@@ -926,6 +926,7 @@ export default function WorkspacePage() {
           projectId={project.id}
           projectName={project.name}
           onClose={() => setShowConflict(false)}
+          onApplied={loadProject}
         />
       )}
 

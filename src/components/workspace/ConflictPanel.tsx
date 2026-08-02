@@ -14,12 +14,13 @@ interface ConflictOption {
 }
 
 export function ConflictPanel({
-  open, projectId, projectName, onClose,
+  open, projectId, projectName, onClose, onApplied,
 }: {
   open: boolean;
   projectId: string;
   projectName: string;
   onClose: () => void;
+  onApplied?: () => void;
 }) {
   const [situation, setSituation] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,6 +59,38 @@ export function ConflictPanel({
       toastSuccess("已复制到剪贴板");
     } catch {
       toastError("复制失败，请手动选择");
+    }
+  };
+
+  const applyOne = async (o: ConflictOption) => {
+    const parts: string[] = [];
+    if (o.trigger) parts.push(`触发：${o.trigger}`);
+    if (o.tension) parts.push(`张力：${o.tension}`);
+    if (o.outcome) parts.push(`走向：${o.outcome}`);
+    if (o.caution) parts.push(`风险 / 伏笔：${o.caution}`);
+    parts.push(`（本节点由「冲突推演」AI 生成，仅供参考）`);
+    try {
+      const res = await fetch("/api/story/nodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          type: "chapter",
+          title: `冲突·${o.title}`,
+          outline: parts.join("\n"),
+          order: Date.now(),
+          status: "outline_only",
+        }),
+      });
+      if (res.ok) {
+        toastSuccess(`已创建章节「冲突·${o.title}」`);
+        onApplied?.();
+      } else {
+        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        toastError("应用失败：" + (d.error || `HTTP ${res.status}`));
+      }
+    } catch {
+      toastError("应用失败，请检查网络后重试");
     }
   };
 
@@ -122,6 +155,12 @@ export function ConflictPanel({
                       className="text-[11px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-primary)] inline-flex items-center gap-1 shrink-0"
                     >
                       <Icon name="clipboard" size={12} /> 复制
+                    </button>
+                    <button
+                      onClick={() => applyOne(o)}
+                      className="text-[11px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-primary)] inline-flex items-center gap-1 shrink-0"
+                    >
+                      <Icon name="plus" size={12} /> 应用为剧情节点
                     </button>
                   </div>
                   {o.trigger && (
