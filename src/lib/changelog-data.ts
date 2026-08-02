@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.21";
+export const LATEST_VERSION = "v0.46.22";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🕓 正文版本历史与一键回滚（BE-1）：新增 `StoryNodeRevision` 表，AI 写 / 重写 / 润色覆盖正文前、以及编辑器手动保存前，自动把上一版正文快照入库（去重：内容相同不重复记），从此 AI 大改也敢放心试",
-  "🔄 历史版本抽屉：编辑器状态栏新增「历史」按钮，打开右侧抽屉列出本节点全部版本（版本号 / 来源标签：AI 生成·重写·润色·手动保存·回滚快照 / 字数 / 时间），点选预览正文，一键回滚到任意一版",
-  "♻️ 回滚可逆：回滚操作会先把「当前正文」自动备份为一条新快照，所以回滚本身也能再回滚——不会越滚越乱；回滚后自动刷新节点内容",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；表经 `prisma db push` 同步；诚实边界：仅 v0.46.21 起产生的版本有记录，更早的正文无历史快照",
+  "🗑️ 软删除 + 回收站（BE-2）：项目删除不再物理抹掉——`Project` 加 `deletedAt`，删除改「软删除」移入回收站，子表（章节/角色/世界书）随项目一起隐藏不丢",
+  "♻️ 回收站页面 `/recycle`：列出已删项目，一键「恢复」回到主页，或「彻底删除」才真正物理清除（级联清掉全部子表）；删除确认文案改为「移入回收站」",
+  "🛡️ 手滑删除不再世界末日：本地工具没有云端兜底，现在自己补了一个回收站；主页项目列表自动过滤已删项目，只显示活跃项目",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；字段经 `prisma db push` 同步；诚实边界：软删除仅隐藏、不自动过期清理（如需「保留 N 天」可后续加定时任务）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.22",
+    date: "2026-08-02",
+    title: "软删除 + 回收站：删项目不再物理抹掉，手滑可救",
+    sections: [
+      {
+        label: "软删除（BE-2）",
+        items: [
+          "Project 模型新增 `deletedAt`（软删除标记）；`DELETE /api/projects/[id]` 改为 `update` 设 `deletedAt = now()`（软删除）而非 `delete`（物理删），子表均 `onDelete: Cascade` 故随项目软删一起被列表隐藏、不丢数据",
+          "`GET /api/projects` 列表加 `where: { deletedAt: null }` 过滤，主页与所有取项目列表处只显示活跃项目；单项目 `GET /api/projects/[id]` 仍正常返回（直接 URL 进旧项目仍可用）",
+        ],
+      },
+      {
+        label: "回收站页面",
+        items: [
+          "新增 `GET /api/projects/recycle`（列出 `deletedAt != null`）、`POST /api/projects/[id]/restore`（清 deletedAt 恢复）、`POST /api/projects/[id]/purge`（硬删除，级联清全部子表）",
+          "新增 `/recycle` 回收站页面：列出已删项目（含删除时间 + 角色/词条/节点计数），一键「恢复」或「彻底删除」（带二次确认）；主页顶栏加「回收站」入口；删除确认文案改为「移入回收站，可在回收站恢复」",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "软删除仅「隐藏」不「自动过期」——未做「保留 N 天自动清理」定时任务（本地工具无需紧迫清理，避免误删真数据；如需可后续加 cron 或启动时清理）",
+          "全量 tsc 零错误、零新 npm 依赖；字段经 `prisma db push` 同步本地 PG；彻底删除走硬删除 + 级联，与旧行为一致但变为显式「彻底删除」按钮，非默认路径",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.21",
     date: "2026-08-02",

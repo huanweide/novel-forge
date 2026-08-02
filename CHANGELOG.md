@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.22 — 2026-08-02
+**软删除 + 回收站：删项目不再物理抹掉，手滑可救**
+- 🗑️ 软删除（BE-2）：Project 新增 `deletedAt`；`DELETE /api/projects/[id]` 改为软删除（设 `deletedAt`，子表 `onDelete: Cascade` 随项目一起隐藏不丢）；`GET /api/projects` 列表过滤 `deletedAt: null`，主页只显示活跃项目
+- ♻️ 回收站：`GET /api/projects/recycle` 列已删 + `POST /restore` 恢复 + `POST /purge` 硬删级联清子表；新增 `/recycle` 页面（恢复/彻底删除）+ 主页「回收站」入口；删除文案改「移入回收站」
+- 🧭 诚实边界：软删除仅隐藏不自动过期（未做保留 N 天清理）；tsc 零错误，零新依赖，字段经 `prisma db push` 同步
+
 ## v0.46.21 — 2026-08-02
 **正文版本历史与一键回滚：AI 重写再也不怕把写好的稿子改没了**
 - 🕓 版本快照（BE-1）：新增 `StoryNodeRevision` 表（nodeId/版本号/正文全文/字数/来源/时间），在 `src/core/pipeline/post-processor.ts` 写库前单点快照——覆盖所有走后处理管线的 AI 写/重写/润色/自动填表；编辑器手动保存（PUT `/api/story/nodes/[id]`）写前也快照；去重（内容相同不重复记）+ 空正文不记 + 失败静默

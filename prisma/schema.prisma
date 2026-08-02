@@ -38,6 +38,7 @@ model Project {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime? @map("deleted_at") // 软删除（回收站）；非空=在回收站
 
   characters    CharacterCard[]
   lorebookEntries LorebookEntry[]

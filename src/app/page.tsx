@@ -113,8 +113,8 @@ export default function Dashboard() {
   }, []);
 
   const { deletingId, remove: deleteProject } = useConfirmDelete({
-    title: "删除项目",
-    description: (id, name) => `确定删除「${name}」？此操作不可逆。`,
+    title: "移入回收站",
+    description: (id, name) => `确定删除「${name}」？将移入回收站，可在回收站恢复（默认不彻底删除）。`,
     deleteFn: async (id) => {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -154,6 +154,9 @@ export default function Dashboard() {
             </Link>
             <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="settings" size={13} /> <span className="hidden sm:inline">设置</span>
+            </Link>
+            <Link href="/recycle" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
+              <Icon name="trash" size={13} /> <span className="hidden sm:inline">回收站</span>
             </Link>
             <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
               <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">{loadingSample ? "载入中" : "示例"}</span>

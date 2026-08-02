@@ -59,15 +59,22 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/projects/[id]
+// DELETE /api/projects/[id] —— 软删除（移入回收站，子表随项目软删一起隐藏）
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    await prisma.project.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+    const project = await prisma.project.findUnique({ where: { id }, select: { deletedAt: true } });
+    if (!project) {
+      return NextResponse.json({ error: "项目不存在" }, { status: 404 });
+    }
+    await prisma.project.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return NextResponse.json({ success: true, recycled: true });
   } catch (err) {
     return jsonError(err);
   }

@@ -2,10 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
 
-// GET /api/projects —— 获取所有项目
+// GET /api/projects —— 获取所有「未删除」项目（回收站内的排除）
 export async function GET() {
   try {
     const projects = await prisma.project.findMany({
+      where: { deletedAt: null },
       orderBy: { updatedAt: "desc" },
       include: {
         _count: {
