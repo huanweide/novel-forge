@@ -211,8 +211,8 @@
 - **价值**：全站颜色一个地方管，换主题/调色一改全站变；也消灭"这个红那个红不一样"的业余感。**这是最直观、最该先做的观感项。**
 - **量级**：中（量大但机械，可分批按组件清）。
 
-### FE-2 清理 emoji 违规，统一用 `<Icon>` ⭐
-- **现在**：游戏页注释明令"禁止 emoji、统一用 `<Icon>`"，但 emoji 实际遍布 `DissectDimensions`(13处)/`ImportWizard`(42处)/`StyleEditor`(35处)/`GameOutlineEditor`(18处) 等 40+ 文件（`📦✅❌⚠️🎨🤖` 等）。与设计体系自相矛盾。
+### FE-2 清理 emoji 违规，统一用 `<Icon>` ⭐ ✅ 已完成（v0.46.16）
+- **现在（历史）**：游戏页注释明令"禁止 emoji、统一用 `<Icon>`"，但 emoji 实际遍布 `DissectDimensions`(13处)/`ImportWizard`(42处)/`StyleEditor`(35处)/`GameOutlineEditor`(18处) 等 40+ 文件（`📦✅❌⚠️🎨🤖` 等）。与设计体系自相矛盾。
 - **做完**：用 `Icon`（loader/check/x/alert/box/bot/brush…）替换装饰性 emoji，保留中文文案；复用 ARCH-7 的 lint 拦截新增。
 - **价值**：图标语言统一，专业感立现；也避免某些系统渲染 emoji 颜色不一致导致的"花屏"。
 - **量级**：中（与 FE-1 同期做最高效）。
