@@ -432,4 +432,35 @@
 
 ---
 
-*下个单元：继续非 ⭐ 剩余项（#210 后端健壮性 BE-6/7/8、#211 API 错误统一 ARCH-2、#212 幂等 seed ARCH-5 等）。*
+## v0.46.28 — 后端健壮性：连接池上限（BE-6）+ LLM 超时统一（BE-8）
+
+> 给数据库连线和 AI 请求各加一道"护栏"。类比：数据库连接像电话线，不设上限会同时拨太多占满交换机（报 `P2024`）；AI 请求像外卖下单，原来有的地方等 3 分钟有的地方等 5 分钟，统一成"最长等 5 分钟"更省心。
+
+### ① 干了什么
+- `src/lib/prisma.ts`：给 `PrismaPg` 适配器显式传入 `pg.PoolConfig`——`max`（默认 10，可用 `PRISMA_POOL_MAX` 调大）+ `idleTimeoutMillis: 30000` + `allowExitOnIdle`，并发流式请求下避免连接耗尽。
+- `src/core/llm/client.ts`：抽出 `export const LLM_REQUEST_TIMEOUT_MS = 300_000`，替换散落在 `chat`/`chatStream` 的两处 `AbortSignal.timeout(180_000/300_000)`，所有 LLM 请求共用同一超时。
+- BE-7 / BE-8 删除端点：经读码诚实处理，未做破坏性改动（见边界）。
+
+### ② 为什么
+- **连接池上限 = 给数据库"同时能接几路电话"设个顶**：PrismaPg 底层是 pg 连接池，不设上限理论上可无限开连接；高并发（多个长流式导入/扩展同时跑）会把连接占满，Postgres 报 `P2024`。显式 `max` 把并发连线控制在可控范围，配合 `idleTimeoutMillis` 让闲连接及时回收。
+- **超时统一 = 一个地方管"等多久"**：原来两处超时数值不一致（180s/300s），排查"为什么这个请求卡那么久"要翻两处；抽成常量后改一处全生效。
+
+### ③ 怎么做的（方法 + 效果）
+1. `prisma.ts`：`new PrismaPg({ connectionString, max, idleTimeoutMillis, allowExitOnIdle })`——`PrismaPg` 第一个参数接受 `pg.PoolConfig`，`max` 是该配置的标准字段。
+2. `client.ts`：模块顶部加 `LLM_REQUEST_TIMEOUT_MS` 常量，两处 `AbortSignal.timeout(...)` 改引用它。
+3. `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → `TSC_EXIT=0`。
+
+**效果数据**：tsc 零错误；双 changelog 同步；提交 `68bde97` 推上 main。
+
+### ④ 关键取舍
+- **只做连接池上限，不盲包"全端点事务"**：计划原还要给多步写端点包 `$transaction`；但 `expand`/`import/commit` 都是 SSE 长流式（最长 300s），整段包事务会长时间持连接/锁，更易出问题；逐批事务需精细设计、风险高，本单元不盲包，诚实标注延后。
+- **超时统一取 300s（更宽松）**：原 180s 处放宽到 300s 只放松不收紧，无副作用。
+
+### 诚实边界
+- **BE-7 复核无明确收益**：读 `characters/expand`——预处理（拆卡/合并/删非角色）是必要逐行顺序写，无"循环内 findMany"的 DB N+1；`stats/monitor` 已用 `select` 只取字段 + `Promise.all` 并行 + DB `aggregate/groupBy` 算 LLM 成本，剩余 JS 归约是对单次 `findMany` 结果的 O(n) 单遍、`dailyWords` 按天聚合本需逐行 `updatedAt`。改成多个 `count/aggregate` 反而增 DB 往返、且按天分组需脆弱原生 SQL——故未改。
+- **BE-8「删除 deprecated」与 U5 冲突**：U5 已刻意决定"10 个死路由不删代码、保留给脚本/SDK"；本单元若删会违背该决策且可能误伤潜在脚本。故只做"超时统一"，删除不执行。`maxDuration` 按操作差异（单聊 60s / 整书导入 300s）属合理，不强制统一。
+- 未在浏览器/真实高并发压测（沙箱无 GUI）；验证为 tsc 零错误 + 读码确认 `PrismaPg` 接受 `pg.PoolConfig`（`max` 为合法字段）。
+
+---
+
+*下个单元：#211 API 错误响应统一（ARCH-2）。*
