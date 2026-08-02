@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { Icon } from "@/components/ui/icons";
+import { toastSuccess } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
 
 export function CenterPanel({
@@ -15,7 +16,7 @@ export function CenterPanel({
   chapterOutlinePrompt, onChapterOutlinePromptChange,
   genStep, genStepLabels, chapterOutlineStatus,
   onOpenGame,
-  onEditCharacter, onEditLore,
+  onEditCharacter, onEditLore, todayWords = 0,
 }: {
   selectedNode: StoryNodeData | null; streamContent: string; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
@@ -35,6 +36,7 @@ export function CenterPanel({
   chapterOutlineStatus: string;
   onEditCharacter?: (id: string) => void;
   onEditLore?: (id: string) => void;
+  todayWords?: number;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -53,6 +55,33 @@ export function CenterPanel({
   const lineCount = displayContent ? displayContent.split("\n").length : 0;
   const targetReached = targetWordCount > 0 && currentWords >= targetWordCount;
   const progressPct = targetWordCount > 0 ? Math.min(100, Math.round((currentWords / targetWordCount) * 100)) : 0;
+
+  // 每日目标（与统计面板同源：localStorage nf-daily-goal-<projectId>）
+  // 依赖 todayWords 触发重读：保存后目标即时同步，形成写作↔统计闭环
+  const [dailyGoal, setDailyGoal] = useState(0);
+  const dailyGoalKey = `nf-daily-goal-${projectId}`;
+  useEffect(() => {
+    const read = () => {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(dailyGoalKey) : null;
+      const g = parseInt(raw || "0", 10);
+      setDailyGoal(isNaN(g) ? 0 : g);
+    };
+    read();
+    const onStorage = (e: StorageEvent) => { if (e.key === dailyGoalKey) read(); };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [dailyGoalKey, todayWords]);
+  const dailyReached = dailyGoal > 0 && (todayWords || 0) >= dailyGoal;
+  const dailyPct = dailyGoal > 0 ? Math.min(100, Math.round(((todayWords || 0) / dailyGoal) * 100)) : 0;
+  // 达成庆祝：每日仅一次，localStorage 去重，避免每次渲染重弹
+  useEffect(() => {
+    if (!dailyReached) return;
+    const ck = `nf-daily-celebrated-${projectId}-${new Date().toISOString().slice(0, 10)}`;
+    if (!localStorage.getItem(ck)) {
+      localStorage.setItem(ck, "1");
+      toastSuccess("今日目标达成 ✨ 继续保持节奏");
+    }
+  }, [dailyReached, projectId, todayWords]);
 
   // 章节实体彩色徽章：拉取项目实体（名→颜色→id），扫描本章正文匹配，点击跳详情
   const [projectEntities, setProjectEntities] = useState<Array<{
@@ -244,6 +273,18 @@ export function CenterPanel({
             <div className="flex items-center gap-4">
               <span>{lineCount} 行</span>
               <span>{currentWords.toLocaleString()} 字</span>
+              {dailyGoal > 0 && (
+                <span
+                  className={
+                    dailyReached
+                      ? "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[var(--nv-success)] bg-[var(--nv-success)]/10 animate-pulse"
+                      : "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]"
+                  }
+                  title="每日目标进度（与统计面板同源，保存后同步）"
+                >
+                  <Icon name="target" size={11} /> 今日 {Math.round(todayWords || 0).toLocaleString()} / {dailyGoal.toLocaleString()} · {dailyPct}%
+                </span>
+              )}
               <span className={targetReached ? "text-[var(--nv-success)]" : "text-[var(--nv-text-secondary)]"}>
                 目标 {targetWordCount} 字 · {progressPct}%
               </span>

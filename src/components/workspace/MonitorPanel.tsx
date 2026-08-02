@@ -171,6 +171,25 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
             >设定</Button>
           </div>
         )}
+        {/* 近 7 天打卡节奏（与状态栏同源：dailyWords 取近 14 天，按 dailyGoal 判定达标） */}
+        <div className="mt-3">
+          <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-1.5">近 7 天节奏</div>
+          <div className="flex gap-1">
+            {data.dailyWords.slice(-7).map((d) => {
+              const reached = dailyGoal > 0 && d.words >= dailyGoal;
+              const isToday = d.date === todayStr;
+              const wd = ["日", "一", "二", "三", "四", "五", "六"][new Date(d.date + "T00:00:00").getDay()];
+              return (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={`${d.date}：${fmt(d.words)}字`}>
+                  <div className={`w-full h-7 rounded flex items-center justify-center text-[9px] ${reached ? "bg-[var(--nv-success)]/20 text-[var(--nv-success)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]"} ${isToday ? "ring-1 ring-[var(--nv-primary)]" : ""}`}>
+                    {reached ? "✓" : (d.words >= 1000 ? `${(d.words / 1000).toFixed(1)}k` : d.words)}
+                  </div>
+                  <span className="text-[8px] text-[var(--nv-text-muted)]">{wd}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

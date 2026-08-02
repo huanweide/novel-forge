@@ -265,6 +265,22 @@ export default function WorkspacePage() {
   // 数据加载
   // ═══════════════════════════════════════════
 
+  // 今日已写字数（来自 monitor 接口，与统计面板同源；保存后自动刷新，形成闭环）
+  const [monitorTodayWords, setMonitorTodayWords] = useState(0);
+  const refreshMonitorToday = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/stats/monitor?projectId=${projectId}`);
+      if (res.ok) {
+        const d = await res.json();
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const tw = d.dailyWords?.find((x: { date: string; words: number }) => x.date === todayStr)?.words || 0;
+        setMonitorTodayWords(tw);
+      }
+    } catch {
+      /* 非关键：统计失败不影响写作 */
+    }
+  }, [projectId]);
+
   const loadProject = useCallback(async () => {
     setLoadError(null);
     try {
@@ -279,6 +295,7 @@ export default function WorkspacePage() {
           if (!styleData.error) data.styleCard = styleData;
         }
         setProject(data);
+        refreshMonitorToday();
         if (data.authorNote && data.authorNote.trim()) {
           setAuthorNote(data.authorNote);
           if (typeof window !== "undefined") localStorage.setItem(`novel-forge-author-note-${projectId}`, data.authorNote);
@@ -303,7 +320,7 @@ export default function WorkspacePage() {
       console.error("加载项目失败:", err);
       setLoadError("加载项目失败：" + (err instanceof Error ? err.message : "网络错误，请检查后端服务是否已启动并连接数据库。"));
     } finally { setLoading(false); }
-  }, [projectId, router]);
+  }, [projectId, router, refreshMonitorToday]);
 
   // ── 自动提取（12 维度，生成完成后自动运行）──
   const autoExtractChapter = useCallback(async (content: string, title: string) => {
@@ -740,6 +757,7 @@ export default function WorkspacePage() {
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
             targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
+            todayWords={monitorTodayWords}
             onWrite={handleWrite} onStop={handleStop}
             onEditOutline={async (outline) => {
               if (!selectedNode) return;

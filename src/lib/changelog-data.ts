@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.7";
+export const LATEST_VERSION = "v0.46.8";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔗 互操作闭环（D4）：冲突推演每个选项卡新增「应用为剧情节点」按钮，将 AI 推演的冲突 / 转折一键创建为大纲章节——触发 / 张力 / 走向 / 伏笔结构化写入新章 outline，左侧大纲自动刷新",
-  "📑 新章命名「冲突·<标题>」排末尾：order 用 Date.now() 保证唯一且靠后，作者可在新章上直接续写，AI 产出从「仅供参考」走向「可一键采纳」",
-  "♻️ 复制能力保留：原「复制」按钮不变，作者仍可按需复制文本；应用 / 复制两条路径并存，失败均有 toast 提示",
-  "🎯 定位不变：冲突推演仍为纯建议，最终情节决定权在作者；本次仅补齐「建议 → 大纲」的数据回流断点",
+  "🎯 每日目标长进编辑器状态栏（互操作①）：写作时底部状态栏新增「今日 X / 目标 Y · Z%」金色胶囊，与统计面板同源（localStorage dailyGoal + monitor 今日字数），保存后自动同步；达标瞬间胶囊变金 + 脉冲 + 每日一次轻提示「今日目标达成 ✨」",
+  "📅 统计面板周历打卡（互操作②）：每日目标区块下新增近 7 天节奏格，达标日显示金色 ✓、今日 ring 高亮，把单日进度环扩展为可回看的养成轨迹，与状态栏同一数据源",
+  "🔗 闭环定位：此前每日目标只活在统计面板，写作界面完全不可见；本次让「目标」在写作与统计两侧互通，作者无需切面板即可感受每日节奏",
+  "✅ 全量 tsc 零错误；零新 npm 依赖——状态栏复用既有 monitor 接口与 localStorage，周历复用既有 dailyWords 聚合",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.8",
+    date: "2026-08-02",
+    title: "互操作：每日目标贯穿写作与统计",
+    sections: [
+      {
+        label: "① 编辑器状态栏 · 每日目标实时可见",
+        items: [
+          "CenterPanel 底部状态栏新增「今日 X / 目标 Y · Z%」胶囊：dailyGoal 读自 localStorage（与 MonitorPanel 同 key），今日字数来自 monitor 接口 dailyWords（与统计面板同源算法），保存后 workspace 自动刷新 monitorTodayWords 形成闭环",
+          "达标时胶囊从灰转金 + animate-pulse 脉冲，并通过 localStorage 每日去重弹一次 toastSuccess「今日目标达成 ✨ 继续保持节奏」；跨标签页改目标经 storage 事件同步",
+        ],
+      },
+      {
+        label: "② 统计面板 · 近 7 天打卡节奏",
+        items: [
+          "MonitorPanel 每日目标区块新增一排 7 格周历：达标日显示金色 ✓、未达标显示字数（k 缩写）、今日 ring 高亮，复用既有 dailyWords 近 14 天聚合与 dailyGoal 判定",
+          "把「单日进度环」扩展为「可回看的养成轨迹」，让每日目标从看数字变为节奏反馈；纯前端、零新依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.7",
     date: "2026-08-02",
