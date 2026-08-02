@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "reac
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
+import { useQuery } from "@/hooks/useApi";
 import { GENRE_TEMPLATES } from "@/core/templates/genres";
 import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
@@ -31,35 +32,22 @@ interface ProjectSummary {
 // ─── 页面组件 ────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [showChangelog, setShowChangelog] = useState(false);
 
-  const loadProjects = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const res = await fetch("/api/projects", { signal });
-      if (res.ok) {
-        const data = await res.json();
-        setProjects(data);
-        setLoadError(null);
-      } else {
+  // FE-9：项目列表走轻量服务端状态层（进程内缓存 + 失效），删除/重试即 refetch
+  const { data: projectsData, loading, error, refetch: loadProjects } = useQuery<ProjectSummary[]>(
+    "projects:list",
+    async () => {
+      const res = await fetch("/api/projects");
+      if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string; hint?: string };
-        setLoadError(d.error || d.hint || "加载项目失败");
+        throw new Error(d.error || d.hint || "加载项目失败");
       }
-    } catch (err) {
-      if ((err as Error).name === "AbortError") return;
-      console.error("加载项目失败:", err);
-    } finally {
-      setLoading(false);
+      return res.json();
     }
-  }, []);
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    loadProjects(ctrl.signal);
-    return () => ctrl.abort();
-  }, [loadProjects]);
+  );
+  const projects = projectsData ?? [];
+  const loadError = error ? (error instanceof Error ? error.message : "加载项目失败") : null;
 
   const router = useRouter();
   const [loadingSample, setLoadingSample] = useState(false);

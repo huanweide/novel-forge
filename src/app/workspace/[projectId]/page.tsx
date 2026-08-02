@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjectStore } from "@/store";
+import { invalidateQueries } from "@/hooks/useApi";
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -374,6 +375,12 @@ export default function WorkspacePage() {
   }, [projectId, selectedNode?.id]);
 
   useEffect(() => { loadProject(); }, [loadProject]);
+
+  // FE-9：任何会改变项目数据的保存/导入完成后，除刷新本页 store 外，同时让仪表盘项目列表 query 失效，回到新鲜
+  const refreshAfterMutate = useCallback(() => {
+    loadProject();
+    invalidateQueries("projects");
+  }, [loadProject]);
 
   // ═══════════════════════════════════════════
   // 大纲生成
@@ -945,12 +952,12 @@ export default function WorkspacePage() {
       </div>
 
       {/* 弹窗 */}
-      {editingCharacter && <CharacterEditDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={loadProject} />}
-      {showNewCharacter && <CharacterCreateDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={loadProject} />}
-      {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={loadProject} />}
-      {showSettingsImport && <SettingsImporter projectId={project.id} onClose={() => setShowSettingsImport(false)} onImported={loadProject} />}
+      {editingCharacter && <CharacterEditDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
+      {showNewCharacter && <CharacterCreateDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
+      {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={refreshAfterMutate} />}
+      {showSettingsImport && <SettingsImporter projectId={project.id} onClose={() => setShowSettingsImport(false)} onImported={refreshAfterMutate} />}
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
-      {showImportWizard && <ImportWizard projectId={project.id} onClose={() => setShowImportWizard(false)} onImported={loadProject} />}
+      {showImportWizard && <ImportWizard projectId={project.id} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
       {batchGenerating && <BatchProgressPanel progress={batchProgress} nodes={project.storyNodes} onAbort={() => setBatchAbort(true)} />}
 
       {/* 大纲生成对话框 */}

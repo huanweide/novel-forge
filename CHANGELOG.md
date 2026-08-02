@@ -2,6 +2,12 @@
 
 ---
 
+## v0.46.26 — 2026-08-02
+**轻量服务端状态层：useApi 缓存 + 失效，与 store 联动终结列表陈旧**
+- 🔄 轻量服务端状态层（FE-9）：新增 `src/hooks/useApi.ts` 自封装 mini React-Query 原语（进程内缓存 + staleTime 默认 30s + 失效订阅），零新依赖；导出 `useQuery`/`invalidateQuery`/`invalidateQueries`
+- 🔗 试点 + 与 FE-8 联动：仪表盘项目列表率先改用 `useQuery("projects:list", ...)`（挂载拉取、删除/重试即 refetch）；workspace 内角色/世界书/设定保存完成 → `refreshAfterMutate` 既刷本页 store 又 `invalidateQueries("projects")` 让仪表盘回到新鲜
+- 🧭 诚实边界：未一次性迁移全部 70+ 端点（计划原文「可先试点再逐步迁移」，盲改全站风险高）；缓存为进程内（刷新即清空），符合本地工具定位；tsc 零错误，零新依赖
+
 ## v0.46.25 — 2026-08-02
 **状态管理收口：useProjectStore 接管 workspace 实体数据，双源陈旧问题终结**
 - 🧩 store 接管为唯一源（FE-8）：扩展 `useProjectStore` 持有 `project`（章节/角色/世界书/故事线/文风卡）+ `rules`；`loadProject` 成功后 `setProjectData(data)` 统一写入，workspace 页移除本地 `useState project`，改读 store；`LeftPanel`/`RightPanel` 改从 store 直读、去掉 `project` 大对象 prop

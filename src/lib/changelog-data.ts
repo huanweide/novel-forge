@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.25";
+export const LATEST_VERSION = "v0.46.26";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧩 状态管理收口（FE-8）：`useProjectStore` 升级为 workspace 实体数据唯一源（章节/角色/世界书/故事线/规则/文风卡），`loadProject` 统一写入，`LeftPanel`/`RightPanel` 改从 store 读取、不再由父组件逐层透传 project 大对象",
-  "🔌 消除双源：彻底解决「本地 `useState project` 与 store 并存、删除/编辑后忘了刷导致列表陈旧」的老问题——store 一更新，订阅面板自动刷新",
-  "🛠️ 原子操作：store 新增 `updateNode/addNode/removeNode/upsertCharacter/upsertLore/upsertRule/patchProject` 等粒度操作，后续面板可直接改局部而不必整体 reload",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；回调类 prop（onX 动作）仍按设计透传（动作非数据、不存在陈旧问题），完整 30-prop 清零留待 ARCH-6 测试护栏落地后再推进",
+  "🔄 轻量服务端状态层（FE-9）：自封装 `useApi` hook（进程内缓存 + staleTime + 失效订阅），零新依赖；仪表盘项目列表率先试点，删除/重试即 `refetch`",
+  "🔗 与 FE-8 联动：workspace 内角色/世界书/设定保存完成后，除刷新本页 store，同时 `invalidateQueries(\"projects\")` 让仪表盘列表回到新鲜，彻底告别「列表陈旧」",
+  "🧪 统一原语：导出 `useQuery` / `invalidateQuery` / `invalidateQueries`，为 70+ API 的缓存/失效迁移提供可逐步落地的基础（先试点、再推广）",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；未一次性迁移全部 70+ 端点（计划明确「可先试点再逐步迁移」，避免盲改回归）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.26",
+    date: "2026-08-02",
+    title: "轻量服务端状态层：useApi 缓存 + 失效，与 store 联动终结列表陈旧",
+    sections: [
+      {
+        label: "轻量服务端状态层（FE-9）",
+        items: [
+          "新增 `src/hooks/useApi.ts`：自封装 mini React-Query 原语——进程内 Map 缓存 + `staleTime`（默认 30s）+ 失效订阅，零新 npm 依赖",
+          "导出 `useQuery(key, fetcher, opts)` / `invalidateQuery(key)` / `invalidateQueries(prefix)`，为 70+ API 的缓存/失效迁移提供统一基础",
+        ],
+      },
+      {
+        label: "试点 + 与 FE-8 联动",
+        items: [
+          "仪表盘项目列表率先改用 `useQuery(\"projects:list\", ...)`：挂载自动拉取、删除/重试即 `refetch`、30s 内命中缓存省重复请求",
+          "workspace 内角色/世界书/设定保存完成 → `refreshAfterMutate` 既刷新本页 store（FE-8）又 `invalidateQueries(\"projects\")` 让仪表盘列表回到新鲜，彻底解决「列表陈旧/重复拉取」",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "未一次性迁移全部 70+ 端点：计划原文「可先在新页面试点，再逐步迁移」，盲改全站风险高，故先落地原语 + 仪表盘试点 + store 联动，作为后续迁移地基",
+          "缓存为进程内（非持久化），刷新页面即清空，符合本地工具定位；tsc 零错误，零新依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.25",
     date: "2026-08-02",
