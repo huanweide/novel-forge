@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icons";
 import { toastSuccess, toastError, confirmDialog, toastCreated } from "@/components/ui/toast";
 import { EmptyState, Loading } from "@/components/ui/States";
 import { useVirtualRows } from "@/hooks/use-virtual-rows";
+import { Modal } from "@/components/ui/Modal";
 
 interface LoreTableT {
   id: string;
@@ -260,8 +261,8 @@ export default function TablesPage() {
       </main>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="surface-floating rounded-2xl w-full max-w-md p-6 animate-spring">
+        <Modal open onClose={() => setShowCreate(false)} bare closeOnOverlay={false} panelClassName="max-w-md">
+          <div className="p-6">
             <h2 className="text-lg font-semibold mb-4">新建结构化表格</h2>
             <div className="space-y-3">
               <input value={create.name} onChange={(e) => setCreate({ ...create, name: e.target.value })} placeholder="表名，如 妃嫔居住建筑表" className="input-glass w-full rounded-xl px-3 py-2 text-sm" />
@@ -274,7 +275,7 @@ export default function TablesPage() {
               <button onClick={createTable} disabled={busy} className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50">创建</button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
+import { DialogField, DialogInput } from "./DialogUI";
+import { Modal } from "@/components/ui/Modal";
 import type { LorebookData } from "./types";
 import { toastError } from "@/components/ui/toast";
 
@@ -79,7 +80,7 @@ export function LorebookEditDialog({
   };
 
   return (
-    <DialogOverlay onClose={onClose}>
+    <Modal open onClose={onClose} panelClassName="max-w-md">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">编辑词条：{entry.title}</h3>
         <div className="flex items-center gap-2">
@@ -141,6 +142,6 @@ export function LorebookEditDialog({
         <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>
         <Button onClick={handleSave} className="bg-[var(--nv-primary)] hover:brightness-110">保存</Button>
       </div>
-    </DialogOverlay>
+    </Modal>
   );
 }

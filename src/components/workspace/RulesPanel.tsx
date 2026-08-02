@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useState, useEffect, useCallback } from "react";
+import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,9 +27,6 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RuleData | null>(null);
   const [saving, setSaving] = useState(false);
-
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, () => setShowForm(false));
 
   const [form, setForm] = useState({
     name: "", content: "", category: "writing", priority: 0, scope: "all",
@@ -148,8 +145,8 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
 
       {/* 创建/编辑弹窗 */}
       {showForm && (
-        <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowForm(false)}>
-          <div className="surface-floating max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <Modal open onClose={() => setShowForm(false)} bare panelClassName="max-h-[85vh] w-full max-w-lg overflow-y-auto">
+          <div className="p-5">
             <h3 className="mb-4 text-base font-semibold text-[var(--nv-text-primary)]">{editing ? "编辑规则" : "新建规则"}</h3>
             <div className="space-y-3">
               <div>
@@ -194,7 +191,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
               </Button>
             </div>
           </div>
-        </div>
+      </Modal>
       )}
     </div>
   );

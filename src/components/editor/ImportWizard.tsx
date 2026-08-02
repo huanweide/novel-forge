@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { Modal } from "@/components/ui/Modal";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -430,14 +431,7 @@ export function ImportWizard({
   // ─── 渲染 ──────────────────────────────────────────────
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => { if (step === "input" || step === "done") onClose(); }}
-    >
-      <div
-        className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={() => { if (step === "input" || step === "done") onClose(); }} bare panelClassName="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <h2 className="text-lg font-semibold">
@@ -1068,8 +1062,7 @@ export function ImportWizard({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

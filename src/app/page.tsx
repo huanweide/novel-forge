@@ -8,6 +8,7 @@ import { GENRE_TEMPLATES } from "@/core/templates/genres";
 import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
+import { Modal } from "@/components/ui/Modal";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -259,8 +260,8 @@ export default function Dashboard() {
 
       {/* 更新公告弹窗 */}
       {showChangelog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="surface-floating rounded-2xl w-full max-w-md p-6 animate-spring">
+        <Modal open onClose={() => setShowChangelog(false)} bare closeOnOverlay={false} panelClassName="max-w-md">
+          <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-1.5 h-5 rounded-full bg-primary/60" />
               <h2 className="text-lg font-semibold text-foreground">更新公告 · {LATEST_VERSION}</h2>
@@ -291,7 +292,7 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

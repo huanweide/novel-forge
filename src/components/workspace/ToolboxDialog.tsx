@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon, type IconName } from "@/components/ui/icons";
+import { Modal } from "@/components/ui/Modal";
 
 export type ToolboxCategory = "write" | "generate" | "analyze";
 
@@ -24,8 +25,8 @@ export function ToolboxDialog({ items, onClose }: { items: ToolboxItem[]; onClos
   const categories: ToolboxCategory[] = ["write", "generate", "analyze"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="surface-floating max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <Modal open onClose={onClose} bare panelClassName="max-h-[85vh] w-full max-w-3xl overflow-y-auto">
+      <div className="p-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">工具箱</h3>
@@ -78,6 +79,6 @@ export function ToolboxDialog({ items, onClose }: { items: ToolboxItem[]; onClos
           })}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

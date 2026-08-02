@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.17 — 2026-08-02
+**弹窗统一收口：22 个手写遮罩全部接入统一 Modal 基座（focus trap + ESC + 滚动锁）**
+- 🪟 弹窗统一收口（FE-3）：全项目 22 个业务弹窗（角色编辑/创建、世界书编辑、风格编辑、导入向导、设置导入、记忆衰减、项目配置、生成前确认、抽卡、扩展结果、工具箱、剧情线、规则面板、建表、首页公告、创意工坊上传、导出、大纲、自动化设置、构建配置等）的手写 `fixed inset-0 z-50 bg-black/60` 遮罩全部删除，统一替换为 `<Modal open onClose={...} bare panelClassName="...">`
+- 🎛️ 引入 `bare` 模式：统一「遮罩层 + 关闭行为」外壳，内部内容结构原样保留——通过 `panelClassName` 透传宽度/布局类、`header` 自定义头部插槽、`showClose` 右上角关闭键，零破坏迁移；bare 不再强加 `max-h/overflow`，高度滚动交给调用方
+- 🔒 关闭语义诚实保留：原「点遮罩不关闭」的弹窗（构建配置/建表/上传/首页公告）用 `closeOnOverlay={false}` 保留；导入向导保留 `step` 条件关闭；其余统一点遮罩 / ESC 关闭
+- 🧹 `DialogUI.DialogOverlay` 退役，不再被任何业务组件引用；grep 复核 `src` 下已无残留手写业务弹窗遮罩（Modal 自身 / 抽屉 / 下拉 / toast / 游戏画布 / 粒子特效合法保留）
+- ✅ 全量 tsc 零错误，零新 npm 依赖
+
 ## v0.46.16 — 2026-08-02
 **UI 装饰 emoji 收口：76 处 JSX 文本装饰 emoji 统一替换为 Icon 图标**
 - 🧹 UI 装饰 emoji 收口（FE-2）：用 ts-morph AST 精准改写 components/app（非 api）里把 emoji 当装饰图标的 JSX 文本节点，共 18 文件、76 处，统一替换为 `<Icon name="..." size={N} className="inline-block align-text-bottom shrink-0" />`，图标尺寸随祖先容器自适应（text-2xl→18 / text-3xl→20 / 默认 15）

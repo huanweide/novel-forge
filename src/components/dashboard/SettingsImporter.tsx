@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { Modal } from "@/components/ui/Modal";
 
 type ParseMode = "all" | "lorebook" | "style";
 
@@ -105,14 +106,7 @@ export function SettingsImporter({
   const modeInfo = MODE_OPTIONS.find((m) => m.mode === mode)!;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2"><Icon name="clipboard" size={18} /> 批量导入设定</h2>
           <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">
@@ -247,7 +241,6 @@ ${
             </Button>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

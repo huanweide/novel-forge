@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
+import { DialogField, DialogInput } from "./DialogUI";
+import { Modal } from "@/components/ui/Modal";
 import type { CharacterData } from "./types";
 import { toastError } from "@/components/ui/toast";
 
@@ -100,9 +100,6 @@ export function CharacterEditDialog({
 
   const [autofilling, setAutofilling] = useState(false);
   const [autofillMsg, setAutofillMsg] = useState("");
-
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, onClose);
 
   const handleAutofill = async () => {
     setAutofilling(true);
@@ -202,8 +199,7 @@ export function CharacterEditDialog({
     </DialogField>;
 
   return (
-    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="surface-floating rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+    <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0 flex items-center justify-between">
           <h3 className="text-lg font-semibold">编辑角色：{character.name}</h3>
           <div className="flex items-center gap-2">
@@ -323,7 +319,6 @@ export function CharacterEditDialog({
           <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>
           <Button onClick={handleSave} className="btn-primary">保存</Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

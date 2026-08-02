@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { DialogOverlay, DialogField, DialogInput } from "./DialogUI";
+import { DialogField, DialogInput } from "./DialogUI";
+import { Modal } from "@/components/ui/Modal";
 import { toastError, toastCreated } from "@/components/ui/toast";
 
 export function CharacterCreateDialog({
@@ -51,7 +52,7 @@ export function CharacterCreateDialog({
   };
 
   return (
-    <DialogOverlay onClose={onClose}>
+    <Modal open onClose={onClose} panelClassName="max-w-md" showClose>
       <h3 className="text-lg font-semibold mb-4">创建新角色</h3>
       <div className="space-y-3">
         <DialogField label="姓名" required>
@@ -76,6 +77,6 @@ export function CharacterCreateDialog({
         <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>
         <Button onClick={handleSave} className="bg-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/80" disabled={!form.name.trim()}>创建</Button>
       </div>
-    </DialogOverlay>
+    </Modal>
   );
 }

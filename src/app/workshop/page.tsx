@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { toastSuccess, toastError, toastInfo, confirmDialog, toastAdded, toastCreated } from "@/components/ui/toast";
 import { EmptyState, Loading } from "@/components/ui/States";
+import { Modal } from "@/components/ui/Modal";
 
 interface Preset {
   id: string;
@@ -476,8 +477,8 @@ export default function Workshop() {
       </main>
 
       {showUpload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="surface-floating rounded-2xl w-full max-w-lg p-6 animate-spring max-h-[90vh] overflow-y-auto">
+        <Modal open onClose={() => setShowUpload(false)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
           <h2 className="text-lg font-semibold mb-4">上传预设</h2>
 
           {/* AI 丰满预设：选好类型 → 大白话描述 → AI 自动填满下面字段 → 审阅后发布 */}
@@ -718,7 +719,7 @@ export default function Workshop() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

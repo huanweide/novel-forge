@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.16";
+export const LATEST_VERSION = "v0.46.17";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🧹 UI 装饰 emoji 收口（FE-2）：用 ts-morph AST 精准改写 components/app（非 api）里 76 处把 emoji 当装饰图标的 JSX 文本节点，统一替换为 `<Icon name=.../>`，图标语言与全站 SVG 体系一致",
-  "🗺️ 图标库扩容：src/components/ui/icons.tsx 新增 26 个 lucide 语义图标（brain / mountain / messageCircle / scale / coins / clapperboard 等），覆盖被替换 emoji 的全部语义",
-  "🛡️ 诚实边界：严格区分三层 emoji——①协议层（API 响应串 ✅❌⚠️ 被前端 startsWith 解析）②提示词层（LLM prompt 分隔符 ★、实体高亮 🟢🟡）一律不动；③大插画 emoji（text-4xl/5xl 容器）保留为视觉焦点",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；Type B 数据字段 emoji（icon: \"📚\" 类）与 JS 字符串字面量 emoji 作为已知残余如实记录，不伪装「全清」",
+  "🪟 弹窗统一收口（FE-3）：全项目 22 个手写 `fixed inset-0 z-50` 业务遮罩全部收口到统一 `Modal` 基座（自带 focus trap + ESC + 滚动锁 + role=dialog aria-modal），消灭重复遮罩代码",
+  "🎛️ 引入 `bare` 模式：统一「遮罩层 + 关闭行为」外壳，内部内容结构原样保留——通过 `panelClassName` 透传宽度/布局类、`header` 自定义头部插槽、`showClose` 右上角关闭键，零破坏迁移",
+  "🔒 关闭语义诚实保留：原「点遮罩不关闭」的弹窗（构建配置/建表/上传/首页公告）用 `closeOnOverlay={false}` 保留；导入向导保留 `step` 条件关闭；其余统一点遮罩或 ESC 关闭",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；grep 复核 `src` 下已无残留手写业务弹窗遮罩（仅 Modal 自身 / 抽屉 / 下拉 / toast / 游戏画布 / 粒子特效合法保留）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.17",
+    date: "2026-08-02",
+    title: "弹窗统一收口：22 个手写遮罩全部接入统一 Modal 基座（focus trap + ESC + 滚动锁）",
+    sections: [
+      {
+        label: "弹窗统一收口（FE-3）",
+        items: [
+          "全项目 22 个业务弹窗（角色编辑/创建、世界书编辑、风格编辑、导入向导、设置导入、记忆衰减、项目配置、生成前确认、抽卡、扩展结果、工具箱、剧情线、规则面板、建表、首页公告、创意工坊上传、导出、大纲、自动化设置、构建配置等）的手写 `fixed inset-0 z-50 bg-black/60` 遮罩全部删除，统一替换为 `<Modal open onClose={...} bare panelClassName=\"...\">`",
+          "统一基座 `src/components/ui/Modal.tsx` 自带：focus trap（Tab/Shift+Tab 在弹窗内循环不逃逸）、ESC 关闭、body 滚动锁、`role=\"dialog\" aria-modal` 无障碍语义——此前这些能力散落在各弹窗的 `useFocusTrap` + 手写遮罩里，现在只维护一处",
+        ],
+      },
+      {
+        label: "bare 模式与零破坏迁移",
+        items: [
+          "Modal 新增 `bare`（无默认标题栏）+ `panelClassName`（透传宽度/布局类）+ `header`（自定义头部插槽）+ `showClose`（bare 模式下右上角关闭键）四个 prop，统一「遮罩外壳 + 关闭行为」而保留各弹窗内部结构与样式",
+          "bare 模式不再强加 `max-h-[88vh] overflow-y-auto`，把高度与滚动完全交给 `panelClassName`，避免与「头部固定 + 内容区滚动」类弹窗（生成前确认、抽卡、导入向导等）布局冲突",
+          "DialogUI 的 `DialogOverlay` 已退役不再被任何业务组件引用，统一走 Modal",
+        ],
+      },
+      {
+        label: "关闭语义诚实保留",
+        items: [
+          "原「点遮罩不关闭」的弹窗（构建配置、建表、创意工坊上传、首页公告）用 `closeOnOverlay={false}` 诚实保留原交互；导入向导保留 `step === \"input\" || \"done\"` 才可点遮罩关闭的语义；其余统一点遮罩 / ESC 关闭",
+          "全量 tsc 零错误、零新 npm 依赖；grep 复核 `src` 下已无残留手写业务弹窗遮罩（Modal 自身、移动抽屉、StyleSelector 下拉、toast、游戏画布、粒子特效等合法保留）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.16",
     date: "2026-08-02",

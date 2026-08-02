@@ -15,6 +15,7 @@ import {
   type EnhancedScanOptions,
 } from "@/lib/forbidden-checker";
 import { toastError } from "@/components/ui/toast";
+import { Modal } from "@/components/ui/Modal";
 
 // ═══════════════════════════════════════════
 // 12 维度定义
@@ -234,30 +235,27 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-        <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
-          <p className="text-[var(--nv-text-tertiary)]">加载中…</p>
-        </div>
-      </div>
+      <Modal open onClose={onClose} bare panelClassName="max-w-xs">
+        <p className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6 text-[var(--nv-text-tertiary)]">加载中…</p>
+      </Modal>
     );
   }
 
   if (loadError) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-        <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
+      <Modal open onClose={onClose} bare panelClassName="max-w-sm">
+        <div className="p-6 text-center">
           <p className="text-danger mb-3"><Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> {loadError}</p>
           <Button onClick={onClose}>关闭</Button>
         </div>
-      </div>
+      </Modal>
     );
   }
 
   // ── 渲染 ──
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <h2 className="text-lg font-semibold"><Icon name="palette" size={15} className="inline-block align-text-bottom shrink-0" /> 文风与质量控制</h2>
@@ -544,7 +542,6 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

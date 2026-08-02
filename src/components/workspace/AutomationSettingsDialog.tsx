@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { toastError, toastSuccess } from "@/components/ui/toast";
@@ -27,8 +27,6 @@ export function AutomationSettingsDialog({
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, onClose);
 
   useEffect(() => {
     let alive = true;
@@ -82,8 +80,8 @@ export function AutomationSettingsDialog({
   };
 
   return (
-    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="surface-floating rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <Modal open onClose={onClose} bare panelClassName="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
@@ -154,6 +152,6 @@ export function AutomationSettingsDialog({
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

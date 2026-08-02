@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icons";
+import { Modal } from "@/components/ui/Modal";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 
 interface DecayRule {
@@ -43,9 +43,6 @@ export function MemoryDecayDialog({
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<CleanupStats | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, onClose);
 
   const loadPreview = useCallback(async () => {
     setLoadingPreview(true);
@@ -92,11 +89,8 @@ export function MemoryDecayDialog({
   };
 
   return (
-    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div
-        className="w-[460px] max-w-[92vw] rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} bare panelClassName="w-[460px] max-w-[92vw]">
+      <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-5 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
             <Icon name="hourglass" size={16} /> 记忆衰减
@@ -194,6 +188,6 @@ export function MemoryDecayDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

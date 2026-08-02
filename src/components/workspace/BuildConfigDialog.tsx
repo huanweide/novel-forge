@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/icons";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { BuildConfig } from "@/core/explore/types";
@@ -19,8 +19,6 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
   const [busy, setBusy] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
 
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, onClose);
 
   useEffect(() => {
     setCfg({ ...DEFAULT_BUILD_CONFIG, ...(buildConfig || {}) });
@@ -61,8 +59,8 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
   const filteredTags = STYLE_TAGS.filter((t) => t.includes(tagSearch.trim()));
 
   return (
-    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="surface-floating rounded-2xl w-full max-w-2xl p-6 animate-spring max-h-[90vh] overflow-y-auto">
+    <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh]" closeOnOverlay={false}>
+      <div className="p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Icon name="settings" size={18} className="text-[var(--nv-primary)]" /> 项目设定
@@ -155,7 +153,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

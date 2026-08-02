@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icons";
+import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 
 type ExportFormat = "markdown" | "txt" | "html" | "docx" | "epub";
@@ -56,8 +57,8 @@ export function ExportDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="surface-floating max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <Modal open onClose={onClose} bare panelClassName="max-w-md max-h-[85vh]">
+      <div className="p-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">导出小说</h3>
@@ -154,6 +155,6 @@ export function ExportDialog({
           <Icon name="upload" size={14} /> 导出 {FORMATS.find((f) => f.key === format)?.label}
         </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

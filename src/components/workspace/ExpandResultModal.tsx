@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef } from "react";
 import { Icon } from "@/components/ui/icons";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { Modal } from "@/components/ui/Modal";
 
 export function ExpandResultModal({
   result,
@@ -21,9 +20,6 @@ export function ExpandResultModal({
   total: number;
   expanding: boolean;
 }) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(overlayRef, true, onClose);
-
   return (
     <>
       {/* 扩展进度 */}
@@ -65,8 +61,7 @@ export function ExpandResultModal({
 
       {/* 扩展结果弹窗 */}
       {result && (
-        <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-          <div className="bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <Modal open onClose={onClose} bare panelClassName="w-[480px] max-h-[80vh] flex flex-col overflow-hidden">
             {/* 头部 */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-1)]">
               <h3 className="text-base font-bold text-[var(--nv-text-primary)]">
@@ -135,8 +130,7 @@ export function ExpandResultModal({
                 知道了
               </button>
             </div>
-          </div>
-        </div>
+      </Modal>
       )}
     </>
   );

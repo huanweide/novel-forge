@@ -1,19 +1,12 @@
 "use client";
 
-import { useRef } from "react";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
-
-export function DialogOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(panelRef, true, onClose);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div ref={panelRef} tabIndex={-1} className="surface-floating rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>
-  );
-}
+/**
+ * 弹窗内通用表单小部件。
+ *
+ * 注意：遮罩层 / 关闭行为 / focus trap 已由 `src/components/ui/Modal.tsx` 统一提供，
+ * 业务弹窗请勿再手写 `fixed inset-0` 遮罩，也不要使用已删除的 `DialogOverlay`，
+ * 统一用 <Modal open onClose bare panelClassName="..."> 包裹即可。
+ */
 
 export function DialogField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
