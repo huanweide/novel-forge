@@ -246,7 +246,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
         <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
-          <p className="text-danger mb-3">⚠ {loadError}</p>
+          <p className="text-danger mb-3"><Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> {loadError}</p>
           <Button onClick={onClose}>关闭</Button>
         </div>
       </div>
@@ -260,8 +260,8 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
       <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
-          <h2 className="text-lg font-semibold">🎨 文风与质量控制</h2>
-          <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-lg">✕</button>
+          <h2 className="text-lg font-semibold"><Icon name="palette" size={15} className="inline-block align-text-bottom shrink-0" /> 文风与质量控制</h2>
+          <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-lg"><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>
         </div>
 
         {/* Tab 切换 */}
@@ -286,7 +286,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
             <>
               {/* 预设风格库 */}
               <div>
-                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">📦 预设风格库（一键切换）</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block"><Icon name="package" size={15} className="inline-block align-text-bottom shrink-0" /> 预设风格库（一键切换）</label>
                 <div className="grid grid-cols-5 gap-1.5">
                   {(function() {
                     // 给 STYLE_TEMPLATES 加一个古风仙侠和极简留白
@@ -309,7 +309,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 叙事视角 */}
               <div>
-                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">🎭 叙事视角</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block"><Icon name="drama" size={15} className="inline-block align-text-bottom shrink-0" /> 叙事视角</label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {POV_OPTIONS.map((opt) => (
                     <button key={opt.key} onClick={() => setConfig({ ...config, povType: opt.key })}
@@ -324,7 +324,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 12 维度滑块 */}
               <div>
-                <label className="text-sm text-[var(--nv-text-tertiary)] mb-3 block">🎚️ 12 维度微调</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-3 block"><Icon name="sliders" size={15} className="inline-block align-text-bottom shrink-0" /> 12 维度微调</label>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                   {DIMENSIONS.map((dim) => (
                     <div key={dim.key} className="space-y-1">
@@ -349,7 +349,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 自定义风格笔记 */}
               <div>
-                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">📝 风格笔记（追加到 System Prompt）</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block"><Icon name="pencil" size={15} className="inline-block align-text-bottom shrink-0" /> 风格笔记（追加到 System Prompt）</label>
                 <textarea
                   className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--nv-primary)]"
                   rows={3}
@@ -369,7 +369,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               {/* 内置规则概览 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-[var(--nv-text-tertiary)]">🛡️ 内置检测规则（{builtinCounts.total} 条）</label>
+                  <label className="text-sm text-[var(--nv-text-tertiary)]"><Icon name="shield" size={15} className="inline-block align-text-bottom shrink-0" /> 内置检测规则（{builtinCounts.total} 条）</label>
                   <button onClick={() => setShowBuiltinRules(!showBuiltinRules)}
                     className="text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">
                     {showBuiltinRules ? "收起" : "展开"}
@@ -390,7 +390,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
               {/* 自定义禁用词 */}
               <div>
-                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">➕ 自定义禁用词/句式</label>
+                <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block"><Icon name="plus" size={15} className="inline-block align-text-bottom shrink-0" /> 自定义禁用词/句式</label>
                 <div className="flex gap-2 mb-2">
                   <input
                     className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-danger"
@@ -405,8 +405,8 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                   <div className="flex flex-wrap gap-1.5">
                     {config.customForbiddenPatterns.map((p) => (
                       <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/50 border border-danger/50 text-xs text-danger">
-                        🚫 {p}
-                        <button onClick={() => removeForbidden(p)} className="hover:text-danger text-danger">✕</button>
+                        <Icon name="ban" size={15} className="inline-block align-text-bottom shrink-0" /> {p}
+                        <button onClick={() => removeForbidden(p)} className="hover:text-danger text-danger"><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>
                       </span>
                     ))}
                   </div>
@@ -453,7 +453,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     })}
                     {scanResult.fuzzyDensity > 0 && (
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${scanResult.fuzzyDensity > 3 ? "bg-danger/50 text-danger" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]"}`}>
-                        🌫️ 模糊词密度 {scanResult.fuzzyDensity.toFixed(1)}/500字
+                        <Icon name="cloud" size={15} className="inline-block align-text-bottom shrink-0" /> 模糊词密度 {scanResult.fuzzyDensity.toFixed(1)}/500字
                       </span>
                     )}
                   </div>
@@ -475,7 +475,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                             <p className="text-[var(--nv-text-muted)] mt-0.5 ml-4 truncate">{m.context}</p>
                           )}
                           {m.suggestion && (
-                            <p className="text-success/80 mt-0.5 ml-4">💡 {m.suggestion}</p>
+                            <p className="text-success/80 mt-0.5 ml-4"><Icon name="lightbulb" size={15} className="inline-block align-text-bottom shrink-0" /> {m.suggestion}</p>
                           )}
                         </div>
                       ))}
@@ -484,7 +484,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               )}
 
               {scanResult && scanResult.matches.length === 0 && (
-                <p className="text-xs text-success">🎉 未发现任何问题，文本质量良好！</p>
+                <p className="text-xs text-success"><Icon name="party" size={15} className="inline-block align-text-bottom shrink-0" /> 未发现任何问题，文本质量良好！</p>
               )}
             </>
           )}
@@ -534,7 +534,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         <div className="flex justify-between items-center px-5 py-3 border-t border-[var(--nv-border-2)] shrink-0">
           <div className="text-[10px] text-[var(--nv-text-muted)]">
             {config.styleTemplateId !== "custom" && (
-              <span>📦 预设：{STYLE_TEMPLATES.find(t => t.id === config.styleTemplateId)?.name || config.styleTemplateId}</span>
+              <span><Icon name="package" size={15} className="inline-block align-text-bottom shrink-0" /> 预设：{STYLE_TEMPLATES.find(t => t.id === config.styleTemplateId)?.name || config.styleTemplateId}</span>
             )}
           </div>
           <div className="flex gap-3">

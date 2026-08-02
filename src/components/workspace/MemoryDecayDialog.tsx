@@ -116,7 +116,7 @@ export function MemoryDecayDialog({
 
         {loadingPreview && <div className="text-xs text-[var(--nv-text-muted)]">加载预览…</div>}
         {error && (
-          <div className="mb-3 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">⚠ {error}</div>
+          <div className="mb-3 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger"><Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> {error}</div>
         )}
 
         {preview && (

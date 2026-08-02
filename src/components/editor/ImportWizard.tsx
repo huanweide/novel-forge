@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -440,9 +441,9 @@ export function ImportWizard({
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <h2 className="text-lg font-semibold">
-            📥 {step === "input" ? "导入文本" : step === "parsing" ? "AI 分析中..." : step === "preview" ? "预览确认" : step === "committing" ? "写入中..." : "导入完成"}
+            <Icon name="download" size={15} className="inline-block align-text-bottom shrink-0" /> {step === "input" ? "导入文本" : step === "parsing" ? "AI 分析中..." : step === "preview" ? "预览确认" : step === "committing" ? "写入中..." : "导入完成"}
           </h2>
-          <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">✕</button>
+          <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>
         </div>
 
         {/* 内容区 */}
@@ -480,18 +481,18 @@ export function ImportWizard({
                 </div>
                 {importMode === "settings" && (
                   <p className="text-xs text-warning mt-2">
-                    ⚡ 设定模式：不限角色/词条数量上限，穷尽提取文本中的全部设定。不创建章节节点，仅导入三卡。
-                  </p>
+                    <Icon name="zap" size={15} className="inline-block align-text-bottom shrink-0" /> 设定模式：不限角色/词条数量上限，穷尽提取文本中的全部设定。不创建章节节点，仅导入三卡。
+                                                        </p>
                 )}
                 {importMode === "quick" && (
                   <p className="text-xs text-success mt-2">
-                    ⚡ 快速导入：正则匹配"1.人名"格式→原文全抄进 quickImportContent→直接写DB。不用AI、毫秒级解析、一次搞定。
-                  </p>
+                    <Icon name="zap" size={15} className="inline-block align-text-bottom shrink-0" /> 快速导入：正则匹配"1.人名"格式→原文全抄进 quickImportContent→直接写DB。不用AI、毫秒级解析、一次搞定。
+                                                        </p>
                 )}
                 {importMode === "chapters" && (
                   <p className="text-xs text-info mt-2">
-                    📖 章节模式：自动识别分章标记，提取叙事中的角色和世界观。同时创建章节大纲节点。
-                  </p>
+                    <Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /> 章节模式：自动识别分章标记，提取叙事中的角色和世界观。同时创建章节大纲节点。
+                                                        </p>
                 )}
               </div>
 
@@ -567,15 +568,15 @@ export function ImportWizard({
                         disabled={rawText.trim().length < 50}
                         className="flex-1 bg-[var(--nv-primary)] hover:brightness-110"
                       >
-                        🤖 AI 分析
-                      </Button>
+                        <Icon name="bot" size={15} className="inline-block align-text-bottom shrink-0" /> AI 分析
+                                                                        </Button>
                       <Button
                         onClick={() => handleParse(true)}
                         disabled={rawText.trim().length < 50}
                         className="flex-1 bg-purple-600 hover:bg-purple-500"
                       >
-                        👤 仅人物卡
-                      </Button>
+                        <Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 仅人物卡
+                                                                        </Button>
                     </div>
                   )}
                 </div>
@@ -603,7 +604,7 @@ export function ImportWizard({
                   {/* 诊断信息 —— 醒目的绿色 */}
                   {quickDiag && (
                     <div className="text-xs text-success bg-success/50 rounded px-3 py-2 font-mono border border-success/50">
-                      🔬 {quickDiag}
+                      <Icon name="flask" size={15} className="inline-block align-text-bottom shrink-0" /> {quickDiag}
                     </div>
                   )}
 
@@ -617,7 +618,7 @@ export function ImportWizard({
                   {/* 验证指引 */}
                   {!quickLoading && quickResult && (
                     <div className="text-xs text-warning bg-warning/30 rounded px-3 py-2 text-center border border-warning/50">
-                      👆 <b>验证方法</b>：关掉本窗口 → 左侧点任意角色卡 → 点 ✏️ 编辑 → 往下滚到「背景状态」→ 查看导入的内容
+                      <Icon name="hand" size={15} className="inline-block align-text-bottom shrink-0" /> <b>验证方法</b>：关掉本窗口 → 左侧点任意角色卡 → 点 ✏️ 编辑 → 往下滚到「背景状态」→ 查看导入的内容
                     </div>
                   )}
 
@@ -646,7 +647,7 @@ export function ImportWizard({
               {/* 大状态 */}
               <div className="flex items-center gap-3">
                 {currentStage === "complete" || currentStage === "done" ? (
-                  <span className="text-3xl">✅</span>
+                  <span className="text-3xl"><Icon name="check" size={20} className="inline-block align-text-bottom shrink-0" /></span>
                 ) : (
                   <div className="w-10 h-10 border-3 border-[var(--nv-primary)] border-t-transparent rounded-full animate-spin" />
                 )}
@@ -685,14 +686,14 @@ export function ImportWizard({
               {(currentStage === "path-a" || currentStage === "path-b" || currentStage === "path-a-done" || currentStage === "path-b-done") && (
                 <div className="w-full max-w-md space-y-1.5 mt-2">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-pink-400 w-24 shrink-0">👤 A路 DeepSeek</span>
+                    <span className="text-pink-400 w-24 shrink-0"><Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> A路 DeepSeek</span>
                     <div className="flex-1 h-1.5 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
                       <div className="h-full bg-pink-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-a-done" ? "100" : "40"}%` }} />
                     </div>
                     <span className="text-[var(--nv-text-muted)] w-16 text-right text-[10px]">{currentStage === "path-a-done" ? "✅完成" : "进行中"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-success w-24 shrink-0">🌍 B路 Flash</span>
+                    <span className="text-success w-24 shrink-0"><Icon name="globe" size={15} className="inline-block align-text-bottom shrink-0" /> B路 Flash</span>
                     <div className="flex-1 h-1.5 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
                       <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-b-done" ? "100" : "40"}%` }} />
                     </div>
@@ -704,8 +705,8 @@ export function ImportWizard({
               {/* 实时统计：角色+词条计数 */}
               {(charsFound > 0 || loreFound > 0) && (
                 <div className="flex gap-4 text-xs">
-                  <span className="text-pink-400">👤 角色 {charsFound}</span>
-                  <span className="text-success">📖 词条 {loreFound}</span>
+                  <span className="text-pink-400"><Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 角色 {charsFound}</span>
+                  <span className="text-success"><Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /> 词条 {loreFound}</span>
                 </div>
               )}
 
@@ -723,7 +724,7 @@ export function ImportWizard({
                     >
                       <span className="text-[var(--nv-text-muted)] font-mono shrink-0 w-14">{step.time}</span>
                       <span className="flex-1">{step.message}</span>
-                      {step.stage === "chunk-done" && <span className="text-success shrink-0">✓</span>}
+                      {step.stage === "chunk-done" && <span className="text-success shrink-0"><Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /></span>}
                     </div>
                   ))}
                 </div>
@@ -757,7 +758,7 @@ export function ImportWizard({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-[var(--nv-text-secondary)]">
-                      📖 章节 ({selectedChapters.size}/{editedChapters.length})
+                      <Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /> 章节 ({selectedChapters.size}/{editedChapters.length})
                     </h3>
                     <button
                       onClick={() => setSelectedChapters(
@@ -804,7 +805,7 @@ export function ImportWizard({
                           }}
                           className="text-[var(--nv-text-muted)] hover:text-danger hover:bg-danger/30 p-1 rounded shrink-0 transition-colors"
                           title="移除"
-                        >✕</button>
+                        ><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>
                       </div>
                     ))}
                   </div>
@@ -814,7 +815,7 @@ export function ImportWizard({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-[var(--nv-text-secondary)]">
-                      👤 角色 ({selectedChars.size}/{editedCharacters.length})
+                      <Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 角色 ({selectedChars.size}/{editedCharacters.length})
                     </h3>
                     <button
                       onClick={() => setSelectedChars(
@@ -869,7 +870,7 @@ export function ImportWizard({
                           }}
                           className="text-[var(--nv-text-muted)] hover:text-danger hover:bg-danger/30 p-1 rounded shrink-0 transition-colors"
                           title="移除"
-                        >✕</button>
+                        ><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>
                       </div>
                     ))}
                     {editedCharacters.length === 0 && (
@@ -884,7 +885,7 @@ export function ImportWizard({
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-medium text-[var(--nv-text-secondary)]">
-                        🌍 世界书 ({selectedLore.size}/{editedLore.length})
+                        <Icon name="globe" size={15} className="inline-block align-text-bottom shrink-0" /> 世界书 ({selectedLore.size}/{editedLore.length})
                       </h3>
                       <button
                         onClick={() => setSelectedLore(
@@ -919,7 +920,7 @@ export function ImportWizard({
                               {entry.keys && entry.keys.length > 0 && (
                                 <div className="flex flex-wrap gap-0.5 mt-0.5">
                                   {entry.keys.slice(0, 4).map((k, j) => (
-                                    <span key={j} className="px-1 py-0.5 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] text-[10px]">🔑{k}</span>
+                                    <span key={j} className="px-1 py-0.5 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] text-[10px]"><Icon name="key" size={15} className="inline-block align-text-bottom shrink-0" />{k}</span>
                                   ))}
                                 </div>
                               )}
@@ -934,7 +935,7 @@ export function ImportWizard({
                             }}
                             className="text-[var(--nv-text-muted)] hover:text-danger hover:bg-danger/30 p-1 rounded shrink-0 transition-colors"
                             title="移除"
-                          >✕</button>
+                          ><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>
                         </div>
                       ))}
                       {editedLore.length === 0 && (
@@ -974,7 +975,7 @@ export function ImportWizard({
                     disabled={selectedChapters.size === 0 && selectedChars.size === 0 && selectedLore.size === 0}
                     className="bg-gradient-to-r from-[var(--nv-primary)] to-purple-600 hover:from-[var(--nv-primary)] hover:to-purple-500 text-xs"
                   >
-                    ✅ 确认选中（{selectedChapters.size}章 {selectedChars.size}角色 {selectedLore.size}词条）
+                    <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 确认选中（{selectedChapters.size}章 {selectedChars.size}角色 {selectedLore.size}词条）
                   </Button>
                 </div>
               </div>
@@ -1013,7 +1014,7 @@ export function ImportWizard({
                       i === commitProgress.length - 1 ? "bg-purple-950/30 border border-purple-800/30" : "text-[var(--nv-text-muted)]"
                     }`}>
                       {isDone ? (
-                        <span className="text-success shrink-0">✅</span>
+                        <span className="text-success shrink-0"><Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /></span>
                       ) : (
                         <span className="shrink-0">{isChars ? "👤" : isLore ? "📖" : "📝"}</span>
                       )}
@@ -1086,7 +1087,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
 function StyleCardPreview({ style }: { style: ExtractedStyle }) {
   return (
     <div className="border border-[var(--nv-border-2)] rounded-xl p-3 bg-[var(--nv-surface-3)]/30">
-      <h3 className="text-sm font-medium text-[var(--nv-text-secondary)] mb-2">🎨 文风分析</h3>
+      <h3 className="text-sm font-medium text-[var(--nv-text-secondary)] mb-2"><Icon name="palette" size={15} className="inline-block align-text-bottom shrink-0" /> 文风分析</h3>
 
       {style.styleDescription && (
         <p className="text-xs text-[var(--nv-text-tertiary)] mb-3 italic">「{style.styleDescription}」</p>

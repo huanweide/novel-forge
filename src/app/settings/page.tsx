@@ -243,7 +243,7 @@ export default function SettingsPage() {
           <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
             2. API Key
             {hasExistingKey && (
-              <span className="text-xs text-success/80 ml-2 font-normal">（已保存 ✓ 留空则不修改）</span>
+              <span className="text-xs text-success/80 ml-2 font-normal">（已保存 <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 留空则不修改）</span>
             )}
           </label>
           <div className="flex gap-2">

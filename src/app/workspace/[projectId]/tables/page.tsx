@@ -231,7 +231,7 @@ export default function TablesPage() {
                     <div>
                       <h3 className="font-semibold">{t.name} <span className="text-xs text-[var(--nv-text-muted)]">（{t.key} · {t.category}）</span></h3>
                       {t.key === "auto_facts" && (
-                        <span className="ml-2 rounded-md bg-[var(--nv-primary)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--nv-primary)] align-middle">🤖 写作自动维护</span>
+                        <span className="ml-2 rounded-md bg-[var(--nv-primary)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--nv-primary)] align-middle"><Icon name="bot" size={15} className="inline-block align-text-bottom shrink-0" /> 写作自动维护</span>
                       )}
                       <p className="text-xs text-[var(--nv-text-muted)]">{t.note || "—"} · {t.rows.length} 行</p>
                     </div>

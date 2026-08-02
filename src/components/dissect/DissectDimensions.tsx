@@ -115,7 +115,7 @@ export function DissectDimensions({
         {/* 角色卡片——迷你角色卡格式，匹配工作区CharacterList */}
         <div className={`p-4 rounded-xl border ${charPreview.length > 0 ? "bg-[var(--nv-primary)]/5 border-[var(--nv-primary)]/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">👥</span>
+            <span className="text-xl"><Icon name="users" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">角色</span>
             {charPreview.length > 0 && (
               <span className="text-xs bg-[var(--nv-primary)]/30 text-[var(--nv-primary)] px-1.5 py-0.5 rounded-full">{charPreview.length}个</span>
@@ -154,7 +154,7 @@ export function DissectDimensions({
         {/* 世界书卡片 */}
         <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-success/5 border-success/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">📚</span>
+            <span className="text-xl"><Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">世界书词条</span>
             {loreCount > 0 && (
               <span className="text-xs bg-success/30 text-success px-1.5 py-0.5 rounded-full">{loreCount}条</span>
@@ -194,7 +194,7 @@ export function DissectDimensions({
         {/* 文风卡片 */}
         <div className={`p-4 rounded-xl border ${hasStyle ? "bg-warning/5 border-warning/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">✍️</span>
+            <span className="text-xl"><Icon name="pencil" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">文笔风格</span>
             {hasStyle && (
               <span className="text-xs bg-warning/30 text-warning px-1.5 py-0.5 rounded-full">已提取</span>
@@ -305,7 +305,7 @@ export function DissectDimensions({
             onClick={() => toggleGroup("chapters")}
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-[var(--nv-surface-3)]/50 transition-colors text-left"
           >
-            <span className="text-lg">📑</span>
+            <span className="text-lg"><Icon name="file" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">章节摘要</span>
             <span className="text-xs text-[var(--nv-text-muted)] ml-2">{chapterList.filter((c) => c.summary).length}/{chapterList.length}章</span>
             <span className="ml-auto text-[var(--nv-text-muted)] text-xs">
@@ -345,8 +345,8 @@ export function DissectDimensions({
               href={`/workspace/${convertedToProjectId}`}
               className="block w-full py-3 rounded-lg bg-success text-[var(--nv-text-primary)] text-sm font-medium text-center hover:bg-success transition-colors"
             >
-              ✅ 项目已创建，点击进入工作区 →
-            </a>
+              <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 项目已创建，点击进入工作区 →
+                                      </a>
           ) : (
             <div className="flex items-center gap-3">
               <button

@@ -157,7 +157,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
           </p>
           {text && (
             <div className="mt-3 text-xs text-success">
-              ✅ 已加载 {text.length.toLocaleString()} 字
+              <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 已加载 {text.length.toLocaleString()} 字
             </div>
           )}
         </div>

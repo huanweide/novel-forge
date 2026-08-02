@@ -366,8 +366,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
               }}
               className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"
             >
-              📋 复制
-            </button>
+              <Icon name="clipboard" size={15} className="inline-block align-text-bottom shrink-0" /> 复制
+                                      </button>
           </div>
           <div className="p-4 bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg max-h-96 overflow-y-auto">
             <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-sm text-[var(--nv-text-secondary)] leading-relaxed">

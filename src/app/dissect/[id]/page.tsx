@@ -164,7 +164,7 @@ export default function DissectDetailPage() {
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {pollError ? (
         <div className="border-b border-danger/30 bg-danger/10 px-6 py-3 text-sm text-danger">
-          ⚠️ {pollError}
+          <Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> {pollError}
           <button
             onClick={() => {
               setPollError(null);
@@ -222,7 +222,7 @@ export default function DissectDetailPage() {
         {convertSuccess && (
           <div className="mb-6 p-4 bg-success/10 border border-success/30 rounded-xl flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-success">✅ 项目已创建</p>
+              <p className="text-sm font-medium text-success"><Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 项目已创建</p>
               <p className="text-xs text-success mt-0.5">所有维度数据已导入项目</p>
             </div>
             <a
@@ -249,7 +249,7 @@ export default function DissectDetailPage() {
                   disabled={converting}
                   className="p-4 rounded-xl border border-[var(--nv-primary)]/30 bg-[var(--nv-primary)]/5 hover:bg-[var(--nv-primary)]/10 hover:border-[var(--nv-primary)]/60 transition-all text-left group"
                 >
-                  <div className="text-2xl mb-2">📦</div>
+                  <div className="text-2xl mb-2"><Icon name="package" size={18} className="inline-block align-text-bottom shrink-0" /></div>
                   <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-[var(--nv-primary)]">
                     原样转为项目
                   </div>
@@ -267,7 +267,7 @@ export default function DissectDetailPage() {
                   disabled={converting}
                   className="p-4 rounded-xl border border-warning/30 bg-warning/5 hover:bg-warning/10 hover:border-warning/60 transition-all text-left group"
                 >
-                  <div className="text-2xl mb-2">🎨</div>
+                  <div className="text-2xl mb-2"><Icon name="palette" size={18} className="inline-block align-text-bottom shrink-0" /></div>
                   <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-warning">
                     改编后转项目
                   </div>
@@ -285,7 +285,7 @@ export default function DissectDetailPage() {
             {mode === "adapt" ? (
               <div className="bg-[var(--nv-abyss)] border border-[var(--nv-border-2)] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold">🎨 讨论改编方案</h3>
+                  <h3 className="text-sm font-semibold"><Icon name="palette" size={15} className="inline-block align-text-bottom shrink-0" /> 讨论改编方案</h3>
                   <button
                     onClick={() => setMode("view")}
                     className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"

@@ -74,8 +74,8 @@ export function AdoptedContentPanel({
                       onClick={() => onRemove(item.id)}
                       className="text-[var(--nv-text-muted)] hover:text-danger opacity-0 group-hover:opacity-100 transition-all duration-200 text-xs shrink-0 hover:scale-110"
                     >
-                      ✕
-                    </button>
+                      <Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" />
+                                                  </button>
                   </div>
                   <p className="text-[10px] text-[var(--nv-text-muted)] mt-1 line-clamp-2 leading-relaxed">
                     {item.content.slice(0, 80)}

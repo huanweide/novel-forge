@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.16 — 2026-08-02
+**UI 装饰 emoji 收口：76 处 JSX 文本装饰 emoji 统一替换为 Icon 图标**
+- 🧹 UI 装饰 emoji 收口（FE-2）：用 ts-morph AST 精准改写 components/app（非 api）里把 emoji 当装饰图标的 JSX 文本节点，共 18 文件、76 处，统一替换为 `<Icon name="..." size={N} className="inline-block align-text-bottom shrink-0" />`，图标尺寸随祖先容器自适应（text-2xl→18 / text-3xl→20 / 默认 15）
+- 🗺️ 图标库扩容：src/components/ui/icons.tsx 新增 26 个 lucide 语义图标（brain / mountain / messageCircle / scale / coins / clapperboard / paperclip / square 等），覆盖被替换 emoji 的全部语义
+- 🛡️ 诚实边界：严格区分三层 emoji——①协议层（API 响应串 ✅❌⚠️ 被前端 startsWith 解析）②提示词层（LLM prompt 分隔符 ★、实体高亮 🟢🟡🔵）一律不动；③大插画 emoji（text-4xl/5xl 容器）保留为视觉焦点
+- 📌 已知残余（如实披露）：Type B 数据字段 emoji（`icon: "📚"` 类，DissectDimensions / ContextPreview）与 JS 字符串字面量 emoji（如 DissectAdaptPanel 按钮文案、ContextPreview 三元状态标）本次未纳入，留待后续专项，不伪装「全清」
+- ✅ 全量 tsc 零错误，零新 npm 依赖
+
 ## v0.46.15 — 2026-08-02
 **视觉一致性收口 + 浅色主题：语义状态色全面令牌化，新增昼面换肤**
 - 🎨 视觉一致性收口（FE-1）：全站 4 类语义状态色（成功绿 / 危险红 / 提醒琥珀 / 信息青）从散落的 emerald/rose/amber/sky/green/yellow/blue/red 等 200+ 处硬编码色值，统一收敛到 `--nv-success` / `--nv-danger` / `--nv-warning` / `--nv-info` 设计令牌

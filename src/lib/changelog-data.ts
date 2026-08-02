@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.15";
+export const LATEST_VERSION = "v0.46.16";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎨 视觉一致性收口（FE-1）：全站 4 类语义状态色（绿/红/琥珀/青）从散落的 emerald/rose/amber/sky 等 200+ 处硬编码，统一收敛到 --nv-success/--nv-danger/--nv-warning/--nv-info 设计令牌",
-  "🌗 浅色主题（FE-N4）：新增「虚空玻璃·昼面」浅色主题，设置页或全局横幅一键切换，偏好存本机、刷新保持、无闪烁",
-  "🔧 中央图标色板 iconColor / StatusDot 同步改走令牌；新增 Sun 图标与 ThemeToggle 切换器",
-  "✅ 全量 tsc 零错误；Tailwind 仅新增 success/danger/warning/info 等语义别名，零新运行时依赖",
+  "🧹 UI 装饰 emoji 收口（FE-2）：用 ts-morph AST 精准改写 components/app（非 api）里 76 处把 emoji 当装饰图标的 JSX 文本节点，统一替换为 `<Icon name=.../>`，图标语言与全站 SVG 体系一致",
+  "🗺️ 图标库扩容：src/components/ui/icons.tsx 新增 26 个 lucide 语义图标（brain / mountain / messageCircle / scale / coins / clapperboard 等），覆盖被替换 emoji 的全部语义",
+  "🛡️ 诚实边界：严格区分三层 emoji——①协议层（API 响应串 ✅❌⚠️ 被前端 startsWith 解析）②提示词层（LLM prompt 分隔符 ★、实体高亮 🟢🟡）一律不动；③大插画 emoji（text-4xl/5xl 容器）保留为视觉焦点",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；Type B 数据字段 emoji（icon: \"📚\" 类）与 JS 字符串字面量 emoji 作为已知残余如实记录，不伪装「全清」",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.16",
+    date: "2026-08-02",
+    title: "UI 装饰 emoji 收口：76 处 JSX 文本装饰 emoji 统一替换为 Icon 图标",
+    sections: [
+      {
+        label: "UI 装饰 emoji 收口（FE-2）",
+        items: [
+          "用 ts-morph AST 精准命中 components/app（非 api）里把 emoji 当作装饰图标的 JSX 文本节点（JsxText），共改写 18 个文件、76 处，统一替换为 `<Icon name=\"...\" size={N} className=\"inline-block align-text-bottom shrink-0\" />`",
+          "图标尺寸随祖先容器自适应（text-2xl→18 / text-3xl→20 / 默认 15），inline 对齐基线、不挤压文字；缺失 import 时自动补 `import { Icon } from \"@/components/ui/icons\"`",
+        ],
+      },
+      {
+        label: "图标库扩容",
+        items: [
+          "src/components/ui/icons.tsx 新增 26 个 lucide 语义图标：brain / mountain / messageCircle / smile / heart / scale / coffee / compass / hand / link / flask / radio / coins / clapperboard / swords / flower / rocket / drama / sliders / ruler / key / ban / party / landmark / paperclip / square",
+          "覆盖被替换 emoji 的全部语义（📥下载 🤖AI 🎨风格 ⚡节奏 🧠记忆 🎯目标 💡灵感 🎉庆祝 📚章节 🌍世界 👥角色 🎒道具 📊图表 🔮伏笔 🗺地图 ⚖权衡 ☕氛围 🔗关联 🔬考据 📡广播 💰成本 🎬脚本 🥋交锋 🌸意境 🚀高潮 🎭戏剧 🎚参数 🏯场景 🚫禁止 📌锚点 等）",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "严格区分三层 emoji：①协议层（API 响应串 ✅❌⚠️，前端靠 startsWith(\"✅\") / ===\"❌失败\" 解析）②提示词层（LLM prompt 分隔符 ★、实体高亮 🟢🟡🔵）一律不动，动了破坏前后端契约或降 prompt 质量——本改写只命中 JsxText，天然不触碰这两层",
+          "大插画 emoji（text-4xl/5xl 容器内，如空态 📭、成功大勾 ✅）保留为视觉焦点，换成小线性图标会视觉退化",
+          "已知残余（如实披露，不伪装全清）：Type B 数据字段 emoji（DissectDimensions / ContextPreview 的 `icon: \"📚\"` 类，需改 render 链且半数无对应图标）与 JS 字符串字面量 emoji（如 DissectAdaptPanel 按钮文案 `🎨 应用修改`、ContextPreview 三元 `✅/❌` 状态标）本次未纳入，留待后续专项",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.15",
     date: "2026-08-02",

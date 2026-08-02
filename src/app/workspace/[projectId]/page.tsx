@@ -692,7 +692,7 @@ export default function WorkspacePage() {
   );
   if (loadError) return (
     <div className="h-screen bg-[var(--nv-void)] flex flex-col items-center justify-center text-[var(--nv-text-secondary)] gap-4">
-      <div className="text-danger text-lg font-semibold">⚠ 项目加载失败</div>
+      <div className="text-danger text-lg font-semibold"><Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> 项目加载失败</div>
       <div className="text-[var(--nv-text-muted)] text-sm max-w-md text-center px-6">{loadError}</div>
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => { setLoadError(null); loadProject(); }}>重试</Button>

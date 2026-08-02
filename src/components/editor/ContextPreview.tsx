@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Icon } from "@/components/ui/icons";
 
 /**
  * 上下文预览面板 —— 展示当前 Prompt 中各区域的 Token 用量
@@ -104,7 +105,7 @@ export function ContextPreview({
   }
 
   if (loadError) {
-    return <div className="text-xs text-danger p-4">⚠ {loadError}</div>;
+    return <div className="text-xs text-danger p-4"><Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> {loadError}</div>;
   }
 
   if (!data) {
@@ -154,7 +155,7 @@ export function ContextPreview({
         <div className="bg-[var(--nv-primary)]/30 border border-[var(--nv-primary)]/50 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="text-[var(--nv-primary)]">
-              🎨 文风模板：<b>{data.templateInjection.templateName || "未选择"}</b>
+              <Icon name="palette" size={15} className="inline-block align-text-bottom shrink-0" /> 文风模板：<b>{data.templateInjection.templateName || "未选择"}</b>
             </span>
             <span className="text-[var(--nv-text-muted)] font-mono text-[10px]">
               {data.templateInjection.systemPromptTokens.toLocaleString()} tokens
@@ -237,7 +238,7 @@ export function ContextPreview({
       {/* 角色读取统计 */}
       <div className="border-t border-[var(--nv-border-2)] pt-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-[var(--nv-text-muted)]">📊 角色卡读取</span>
+          <span className="text-[var(--nv-text-muted)]"><Icon name="chart" size={15} className="inline-block align-text-bottom shrink-0" /> 角色卡读取</span>
           <span className="font-mono">
             <b className="text-[var(--nv-primary)]">{data.activeCharacterCount ?? activeCharacters.length}</b>
             <span className="text-[var(--nv-text-muted)]">/{data.totalCharacterCount ?? "?"}</span>

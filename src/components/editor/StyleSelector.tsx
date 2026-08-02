@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { STYLE_TEMPLATES, type StyleTemplate } from "@/core/templates";
 import { toastError } from "@/components/ui/toast";
+import { Icon } from "@/components/ui/icons";
 
 /**
  * 文风模板选择器
@@ -82,12 +83,12 @@ export function StyleSelector({
                 <div className="text-[var(--nv-text-tertiary)]">
                   🌡 温度: <span className="text-[var(--nv-text-secondary)]">{previewTemplate.temperature}</span>
                   {" · "}
-                  🎯 每节字数: <span className="text-[var(--nv-text-secondary)]">{previewTemplate.targetWordsPerSection}字</span>
+                  <Icon name="target" size={15} className="inline-block align-text-bottom shrink-0" /> 每节字数: <span className="text-[var(--nv-text-secondary)]">{previewTemplate.targetWordsPerSection}字</span>
                   {" · "}
-                  📝 描写密度: <span className="text-[var(--nv-text-secondary)]">{previewTemplate.descriptionDensity}/10</span>
+                  <Icon name="pencil" size={15} className="inline-block align-text-bottom shrink-0" /> 描写密度: <span className="text-[var(--nv-text-secondary)]">{previewTemplate.descriptionDensity}/10</span>
                 </div>
                 <div className="text-[var(--nv-text-muted)]">
-                  🚫 禁用: {previewTemplate.forbiddenPatterns.slice(0, 3).join(" / ")}
+                  <Icon name="ban" size={15} className="inline-block align-text-bottom shrink-0" /> 禁用: {previewTemplate.forbiddenPatterns.slice(0, 3).join(" / ")}
                   {previewTemplate.forbiddenPatterns.length > 3 ? " ..." : ""}
                 </div>
                 <div className="text-[var(--nv-text-muted)] italic">{previewTemplate.pacingGuide}</div>

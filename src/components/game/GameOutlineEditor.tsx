@@ -12,6 +12,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { Icon } from "@/components/ui/icons";
 
 interface Props {
   projectId: string;
@@ -231,8 +232,8 @@ export default function GameOutlineEditor({
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--nv-creative)]/20 bg-[#0d0d2a]">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-[var(--nv-creative)]">
-            📋 章纲编辑器
-          </span>
+            <Icon name="clipboard" size={15} className="inline-block align-text-bottom shrink-0" /> 章纲编辑器
+                                </span>
           <span className="text-xs text-[var(--nv-text-muted)]">— {chapterTitle}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -263,8 +264,8 @@ export default function GameOutlineEditor({
             onClick={handleSave}
             className="px-3 py-1 text-xs bg-success/30 hover:bg-success/30 text-success border border-success/30 rounded transition-colors"
           >
-            💾 保存
-          </button>
+            <Icon name="save" size={15} className="inline-block align-text-bottom shrink-0" /> 保存
+                                </button>
           <button
             onClick={onClose}
             className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-lg leading-none"
@@ -331,7 +332,7 @@ export default function GameOutlineEditor({
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {chatHistory.length === 0 && (
               <div className="text-center text-[var(--nv-text-muted)] text-sm py-8">
-                <p className="mb-2">💬 章纲对话确认模式</p>
+                <p className="mb-2"><Icon name="message" size={15} className="inline-block align-text-bottom shrink-0" /> 章纲对话确认模式</p>
                 <p className="text-xs">
                   输入你的反馈或修改方向，AI 会针对性修改章纲。
                   <br />
@@ -344,16 +345,16 @@ export default function GameOutlineEditor({
                 {turn.role === "user" && (
                   <div className="bg-[var(--nv-creative)]/20 border border-[var(--nv-creative)]/30 rounded-lg p-3 max-w-[85%] ml-auto">
                     <p className="text-xs text-[var(--nv-creative)] font-medium mb-1">
-                      👤 你的反馈
-                    </p>
+                      <Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 你的反馈
+                                                    </p>
                     <p className="text-sm text-[var(--nv-text-secondary)]">{turn.message}</p>
                   </div>
                 )}
                 {turn.role === "assistant" && turn.response && (
                   <div className="bg-[var(--nv-abyss)]/40 border border-[var(--nv-border-2)]/30 rounded-lg p-3">
                     <p className="text-xs text-cyan-400 font-medium mb-2">
-                      🤖 AI 修改后的章纲
-                    </p>
+                      <Icon name="bot" size={15} className="inline-block align-text-bottom shrink-0" /> AI 修改后的章纲
+                                                    </p>
                     <HighlightedOutline text={turn.response} />
                   </div>
                 )}
@@ -362,8 +363,8 @@ export default function GameOutlineEditor({
             {chatStreaming && (
               <div className="bg-[var(--nv-abyss)]/40 border border-cyan-800/30 rounded-lg p-3 animate-pulse">
                 <p className="text-xs text-cyan-400 font-medium mb-2">
-                  🤖 AI 正在修改...
-                </p>
+                  <Icon name="bot" size={15} className="inline-block align-text-bottom shrink-0" /> AI 正在修改...
+                                                  </p>
                 <HighlightedOutline text={chatStreaming} />
               </div>
             )}

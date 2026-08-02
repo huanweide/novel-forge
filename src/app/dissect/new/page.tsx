@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { DissectUpload } from "@/components/dissect/DissectUpload";
 import { DissectProgress } from "@/components/dissect/DissectProgress";
+import { Icon } from "@/components/ui/icons";
 
 interface ProgressState {
   progress: number;
@@ -118,7 +119,7 @@ export default function NewDissectPage() {
           <Link href="/dissect" className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] transition-colors">
             ← 返回
           </Link>
-          <h1 className="text-lg font-bold">📖 新建拆书</h1>
+          <h1 className="text-lg font-bold"><Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /> 新建拆书</h1>
         </div>
       </header>
 

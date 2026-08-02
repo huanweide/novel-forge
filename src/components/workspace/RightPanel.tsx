@@ -103,19 +103,19 @@ export function RightPanel(props: RightPanelProps) {
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
                   querySubTab === "entities" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
-              >📊 实体追踪</button>
+              ><Icon name="chart" size={15} className="inline-block align-text-bottom shrink-0" /> 实体追踪</button>
               <button
                 onClick={() => setQuerySubTab("foreshadowing")}
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
                   querySubTab === "foreshadowing" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
-              >🔮 伏笔</button>
+              ><Icon name="gem" size={15} className="inline-block align-text-bottom shrink-0" /> 伏笔</button>
               <button
                 onClick={() => setQuerySubTab("relationships")}
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
                   querySubTab === "relationships" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
-              >🕸️ 关系图</button>
+              ><Icon name="globe" size={15} className="inline-block align-text-bottom shrink-0" /> 关系图</button>
             </div>
 
             {/* 子内容 */}
@@ -162,7 +162,7 @@ export function RightPanel(props: RightPanelProps) {
           onClick={() => setShowContext(!showContext)}
           className="w-full flex items-center justify-between px-4 py-1.5 text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-3)]/30 transition-colors"
         >
-          <span>🔍 上下文监控</span>
+          <span><Icon name="search" size={15} className="inline-block align-text-bottom shrink-0" /> 上下文监控</span>
           <span>{showContext ? "▲" : "▼"}</span>
         </button>
         {showContext && selectedNode && (
