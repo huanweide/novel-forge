@@ -515,3 +515,26 @@ model Preset {
   @@index([isPublic])
   @@index([tags])
 }
+
+// ─── LLM 调用日志（成本看板数据源）─────────────────────
+// 记录每次真实 LLM 调用的 token 用量与估算成本，供统计面板「AI 成本看板」聚合展示。
+// 仅记录 v0.46.20 之后产生的调用；历史调用无数据（此前未落库）。
+
+model LlmCallLog {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  projectId       String? // 关联项目（部分调用无项目上下文则为空）
+  model           String // 实际调用模型名（故障转移时记录备用模型）
+  role            String   @default("general") // architect/writer/reviewer/summarize/extractor/general
+  promptTokens    Int      @default(0)
+  completionTokens Int     @default(0)
+  totalTokens     Int      @default(0)
+  estimatedCost   Float    @default(0) // 估算成本（美元），按内置价格表计算
+  baseURL         String? // 实际调用 Base URL（故障转移溯源）
+  isFallback      Boolean  @default(false) // 是否经故障转移备用模型完成
+
+  @@index([createdAt])
+  @@index([projectId])
+  @@index([model])
+  @@index([role])
+}

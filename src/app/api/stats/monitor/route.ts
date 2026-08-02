@@ -74,6 +74,41 @@ export async function GET(request: Request) {
     }
     const dailyWords = [...dayMap.entries()].map(([date, words]) => ({ date, words }));
 
+    // AI 成本看板：本月全站 LLM 调用聚合（自 v0.46.20 起记录，client 层单点落库）。
+    // 注：client 层不持有 project 上下文，故此处做「全局」聚合，展示全项目 AI 花费；
+    // 不伪装 per-project 精确统计（若需 per-project 需在调用链注入 projectId，属独立优化）。
+    const usageMonthStart = new Date();
+    usageMonthStart.setDate(1);
+    usageMonthStart.setHours(0, 0, 0, 0);
+    const [llmAgg, llmByModel] = await Promise.all([
+      prisma.llmCallLog.aggregate({
+        where: { createdAt: { gte: usageMonthStart } },
+        _sum: { promptTokens: true, completionTokens: true, totalTokens: true, estimatedCost: true },
+        _count: true,
+      }),
+      prisma.llmCallLog.groupBy({
+        by: ["model"],
+        where: { createdAt: { gte: usageMonthStart } },
+        _sum: { totalTokens: true, estimatedCost: true },
+        _count: true,
+        orderBy: { _sum: { totalTokens: "desc" } },
+      }),
+    ]);
+    const llmUsage = {
+      since: "2026-08-02",
+      totalCalls: llmAgg._count,
+      totalPromptTokens: llmAgg._sum.promptTokens || 0,
+      totalCompletionTokens: llmAgg._sum.completionTokens || 0,
+      totalTokens: llmAgg._sum.totalTokens || 0,
+      totalCost: llmAgg._sum.estimatedCost || 0,
+      byModel: llmByModel.map((g: { model: string; _count: number; _sum: { totalTokens?: number | null; estimatedCost?: number | null } }) => ({
+        model: g.model,
+        calls: g._count,
+        tokens: g._sum.totalTokens || 0,
+        cost: g._sum.estimatedCost || 0,
+      })),
+    };
+
     return NextResponse.json({
       totalWords,
       totalChapters,
@@ -103,6 +138,7 @@ export async function GET(request: Request) {
         pendingCommitments: commitments,
       },
       dailyWords,
+      llmUsage,
     });
   } catch (err) {
     return jsonError(err);

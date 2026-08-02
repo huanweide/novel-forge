@@ -8,7 +8,7 @@
  *    用户设置页改什么模型，所有 API 调用即时生效。
  */
 
-import { getSettings, mapLLMError } from "@/lib/llm";
+import { getSettings, mapLLMError, recordLlmCall } from "@/lib/llm";
 import type { LLMConfig, FallbackModel } from "@/core/types";
 
 // ─── 类型定义 ───────────────────────────────────────────────
@@ -29,6 +29,8 @@ export interface ChatMessage {
 export interface LLMRequest {
   messages: ChatMessage[];
   model: string;
+  /** 业务语义标签（writer/reviewer/summarize/extractor...），用于成本看板按角色聚合；不传则记 general */
+  role?: string;
   temperature?: number;
   topP?: number;
   maxTokens?: number;
@@ -263,6 +265,7 @@ async function establishStream(
 /** 读取 SSE 流并逐 token 产出（与重试 / 故障转移解耦） */
 async function* readStream(
   response: Response,
+  onUsage?: (u: { promptTokens: number; completionTokens: number; totalTokens: number }) => void,
 ): AsyncGenerator<{ type: "token" | "done"; content: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("无法获取响应流");
@@ -287,10 +290,12 @@ async function* readStream(
 
         const dataStr = trimmed.slice(6);
         if (dataStr === "[DONE]") {
+          const finalUsage = { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens };
+          onUsage?.(finalUsage);
           yield {
             type: "done" as const,
             content: "",
-            usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
+            usage: finalUsage,
           };
           return;
         }
@@ -321,10 +326,12 @@ async function* readStream(
     reader.releaseLock();
   }
 
+  const finalUsage = { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens };
+  onUsage?.(finalUsage);
   yield {
     type: "done" as const,
     content: "",
-    usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
+    usage: finalUsage,
   };
 }
 
@@ -347,7 +354,18 @@ export function createLLMClient(config: LLMConfig) {
         while (attempt < DEFAULT_RETRIES) {
           attempt++;
           const res = await attemptChat(target, request, config);
-          if (res.ok) return res.value;
+          if (res.ok) {
+            recordLlmCall({
+              model: target.model,
+              role: request.role,
+              promptTokens: res.value.usage.promptTokens,
+              completionTokens: res.value.usage.completionTokens,
+              totalTokens: res.value.usage.totalTokens,
+              baseURL: target.baseURL,
+              isFallback: target !== chain[0],
+            });
+            return res.value;
+          }
           // 4xx 鉴权/配置错误：直接抛出，不重试也不切备用模型
           if (res.fatal) throw res.error;
           lastError = res.error;
@@ -372,7 +390,17 @@ export function createLLMClient(config: LLMConfig) {
           const est = await establishStream(target, request, config);
           if (est.ok) {
             // 一旦进入 token 流就不再重试 / 切换，避免重复输出
-            yield* readStream(est.response);
+            yield* readStream(est.response, (u) =>
+              recordLlmCall({
+                model: target.model,
+                role: request.role,
+                promptTokens: u.promptTokens,
+                completionTokens: u.completionTokens,
+                totalTokens: u.totalTokens,
+                baseURL: target.baseURL,
+                isFallback: target !== chain[0],
+              }),
+            );
             return;
           }
           // 4xx 鉴权/配置错误：直接抛出，不重试也不切备用模型

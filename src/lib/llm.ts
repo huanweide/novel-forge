@@ -274,3 +274,88 @@ export async function testLLMConnection(provider: string, apiKey: string, baseUr
 
 /** @deprecated 使用 callLLM 替代 */
 export const callSiliconFlow = callLLM;
+
+// ─── Token 价格表与成本估算（成本看板）─────────────────
+// 内置常见模型每百万 token 的美元单价（input/output）。供应商调价会失真，仅作估算参考。
+// 匹配规则：model 名包含下表任一关键字即采用对应单价；都不匹配则标 unknown（成本记 0）。
+
+interface ModelPrice {
+  match: string;
+  input: number; // 每百万 input token 美元价
+  output: number; // 每百万 output token 美元价
+  label: string;
+}
+
+const MODEL_PRICING: ModelPrice[] = [
+  { match: "deepseek-chat", input: 0.14, output: 0.28, label: "DeepSeek Chat" },
+  { match: "deepseek-reasoner", input: 0.55, output: 2.19, label: "DeepSeek Reasoner" },
+  { match: "deepseek-v3", input: 0.27, output: 1.1, label: "DeepSeek V3" },
+  { match: "deepseek-v2", input: 0.27, output: 1.1, label: "DeepSeek V2" },
+  { match: "gpt-4o-mini", input: 0.15, output: 0.6, label: "GPT-4o mini" },
+  { match: "gpt-4o", input: 2.5, output: 10, label: "GPT-4o" },
+  { match: "gpt-4-turbo", input: 10, output: 30, label: "GPT-4 Turbo" },
+  { match: "gpt-3.5-turbo", input: 0.5, output: 1.5, label: "GPT-3.5 Turbo" },
+  { match: "claude-3-5-sonnet", input: 3, output: 15, label: "Claude 3.5 Sonnet" },
+  { match: "claude-3-haiku", input: 0.25, output: 1.25, label: "Claude 3 Haiku" },
+  { match: "claude-3-opus", input: 15, output: 75, label: "Claude 3 Opus" },
+  { match: "qwen", input: 0.4, output: 1.2, label: "通义千问" },
+  { match: "glm", input: 0.5, output: 0.5, label: "智谱 GLM" },
+  { match: "moonshot", input: 1, output: 1, label: "Kimi" },
+  { match: "abab", input: 0.8, output: 0.8, label: "MiniMax" },
+  { match: "yi-", input: 0.99, output: 1.98, label: "零一万物" },
+  { match: "DeepSeek-V3", input: 0.27, output: 1.1, label: "DeepSeek V3 (SF)" },
+  { match: "DeepSeek-V2", input: 0.27, output: 1.1, label: "DeepSeek V2 (SF)" },
+  { match: "Qwen", input: 0.4, output: 1.2, label: "通义千问 (SF)" },
+  { match: "Llama", input: 0.2, output: 0.2, label: "Llama (SF)" },
+];
+
+export interface CostEstimate {
+  cost: number; // 美元
+  known: boolean; // 是否匹配到已知单价
+  label: string; // 匹配到的模型标签（unknown 时为空）
+}
+
+/** 按模型名估算单次调用成本（美元）。单价以「每百万 token」计。 */
+export function estimateCost(model: string, promptTokens: number, completionTokens: number): CostEstimate {
+  const m = (model || "").toLowerCase();
+  const hit = MODEL_PRICING.find((p) => m.includes(p.match.toLowerCase()));
+  if (!hit) return { cost: 0, known: false, label: "" };
+  const cost = (promptTokens / 1_000_000) * hit.input + (completionTokens / 1_000_000) * hit.output;
+  return { cost: Math.round(cost * 100000) / 100000, known: true, label: hit.label };
+}
+
+export interface LlmCallLogInput {
+  model: string;
+  role?: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  baseURL?: string | null;
+  isFallback?: boolean;
+  projectId?: string | null;
+}
+
+/**
+ * 记录一次 LLM 调用（fire-and-forget，不阻塞主流程、失败静默）。
+ * 在 core/llm/client.ts 的 chat / chatStream 成功返回时调用，单点覆盖所有走 client 的生成。
+ */
+export function recordLlmCall(input: LlmCallLogInput): void {
+  const cost = estimateCost(input.model, input.promptTokens, input.completionTokens);
+  void prisma.llmCallLog
+    .create({
+      data: {
+        projectId: input.projectId ?? null,
+        model: input.model,
+        role: input.role && input.role.length > 0 ? input.role : "general",
+        promptTokens: input.promptTokens || 0,
+        completionTokens: input.completionTokens || 0,
+        totalTokens: input.totalTokens || 0,
+        estimatedCost: cost.cost,
+        baseURL: input.baseURL ?? null,
+        isFallback: input.isFallback ?? false,
+      },
+    })
+    .catch(() => {
+      // 落库失败不影响主流程（如 DB 暂不可用），静默忽略
+    });
+}

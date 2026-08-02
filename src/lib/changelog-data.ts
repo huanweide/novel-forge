@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.19";
+export const LATEST_VERSION = "v0.46.20";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🔁 LLM 重试 + 故障转移（BE-4）：核心客户端 `src/core/llm/client.ts` 的 `chat`/`chatStream` 接入指数退避重试——429 限流 / 5xx 服务端异常 / 网络不可达默认重试 3 次（退避 600ms→封顶 8s 含 ±20% 抖动）；4xx 鉴权/配置错误直接抛出不重试",
-  "🔀 故障转移（多模型兜底）：`LLMConfig` 新增 `fallbackModels` 链，主模型重试耗尽后依次切备用模型（换 model/baseURL/apiKey）；由 `process.env.LLM_FALLBACK`（形如 `modelA@baseURL,modelB`）零 schema 改动注入，不配则纯重试、不引任何新网络架构",
-  "🌊 流式安全：流式生成仅在「建立连接阶段」（fetch 失败 / 首 token 前 HTTP 错）重试与切换备用；一旦进入 token 流即不再重试/切换，避免重复输出污染正文",
-  "✅ 全量 tsc 零错误、零新 npm 依赖；遗留 `src/lib/llm.ts` 的 `callLLM`（个别旧路由）也补同等指数退避重试；重试/故障转移均为本地运行时逻辑，符合本地自用定位",
+  "📊 AI 成本看板（BE-3）：新增 `LlmCallLog` 表，在 `src/core/llm/client.ts` 的 `chat`/`chatStream` 单点 fire-and-forget 落库真实 token 用量（覆盖所有生成 / agent / game / explore / dissect），消灭「用完即丢、只靠字数估算」",
+  "💰 内置价格表：`lib/llm.ts` 的 `MODEL_PRICING` 含 DeepSeek / GPT / Claude / 通义 / 智谱 / Kimi 等 20+ 模型每百万 token 单价，`estimateCost` 按模型名匹配估算美元成本；未知模型标「单价未知」不伪造成本",
+  "📈 看板 UI：统计面板 MonitorPanel 新增「AI 成本（全项目 · 本月）」区块——调用次数 / Token 总量 / 估算花费（¥ 按 7.2 汇率折算并标 ≈$）/ 记录起始日 + 按模型分布；monitor 路由加 `llmUsage` 聚合",
+  "✅ 全量 tsc 零错误、零新 npm 依赖；表经 `prisma db push` 同步；诚实边界：仅记 v0.46.20 后调用、全局聚合标注「全项目」、价格为估算、落库失败静默不影响主流程",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.20",
+    date: "2026-08-02",
+    title: "AI 成本看板：真实 token 用量与估算花费落库，统计面板一眼看清本月 AI 花了多少",
+    sections: [
+      {
+        label: "Token 落库与成本估算（BE-3）",
+        items: [
+          "新增 `LlmCallLog` 表（时间 / 模型 / 角色 / 输入·输出·总 token / 估算成本 / BaseURL / 是否故障转移），在 `src/core/llm/client.ts` 的 `chat` 成功返回、`chatStream` 流正常完成时（readStream 末尾 `onUsage` 回调）单点 fire-and-forget 落库，覆盖所有走 client 的生成 / agent / game / explore / dissect，不漏",
+          "内置常见模型每百万 token 单价表（`lib/llm.ts` 的 `MODEL_PRICING`，含 DeepSeek / GPT / Claude / 通义 / 智谱 / Kimi 等 20+ 项），`estimateCost(model, prompt, completion)` 按模型名关键字匹配估算美元成本；未知模型标「单价未知」不伪造成本",
+        ],
+      },
+      {
+        label: "成本看板 UI",
+        items: [
+          "统计面板 MonitorPanel 新增「AI 成本（全项目 · 本月）」区块：本月调用次数 / Token 总量 / 估算花费（¥，按 7.2 汇率折算并标注 ≈$）/ 记录起始日，附按模型分布（次数·token·花费）小条",
+          "monitor 路由 `/api/stats/monitor` 新增 `llmUsage` 聚合（本月 `groupBy model` 的 count/sum）；原字数估算 Token 区块保留不动",
+        ],
+      },
+      {
+        label: "诚实边界与取舍",
+        items: [
+          "client 层不持有 project 上下文，故看板做「全局」聚合并明确标注「全项目」——不伪装 per-project 精确统计（如需 per-project 需在调用链注入 projectId，属独立优化）",
+          "仅记录 v0.46.20 之后产生的调用，历史无数据；UI 在无记录时显示「暂无记录——自 2026-08-02 起累计」，不假装历史花费；价格随供应商调价失真，UI 标注「估算」",
+          "全量 tsc 零错误、零新 npm 依赖；落库失败静默忽略不影响主流程；表经 `prisma db push` 同步本地 PG（无迁移历史文件）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.19",
     date: "2026-08-02",

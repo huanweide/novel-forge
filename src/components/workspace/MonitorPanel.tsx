@@ -20,6 +20,15 @@ interface MonitorData {
   distribution: { avgWordsPerChapter: number; maxChapterWords: number; minChapterWords: number; chaptersWithContent: number };
   dataStats: { chapterSummaries: number; storyBeats: number; pendingCommitments: number };
   dailyWords: { date: string; words: number }[];
+  llmUsage: {
+    since: string;
+    totalCalls: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalTokens: number;
+    totalCost: number; // 美元
+    byModel: { model: string; calls: number; tokens: number; cost: number }[];
+  };
 }
 
 export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?: string }) {
@@ -56,6 +65,7 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
 
   const fmt = (n: number) => n.toLocaleString("zh-CN");
   const fmtK = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+  const RMB_RATE = 7.2; // 美元→人民币固定汇率（估算，仅展示用）
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayWords = data?.dailyWords?.find((d) => d.date === todayStr)?.words || 0;
 
@@ -83,6 +93,36 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
           <TokenRow label="总计估算" value={data.tokens.estimatedTotal} color="text-[var(--nv-text-primary)]" bold />
         </div>
         <div className="text-[10px] text-[var(--nv-text-tertiary)] mt-1.5 leading-relaxed">{data.tokens.note}</div>
+      </div>
+
+      {/* AI 成本看板（全项目 · 本月） */}
+      <div className="p-3 border-b border-[var(--nv-border-2)]">
+        <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="coins" size={11} /> AI 成本（全项目 · 本月）</div>
+        <div className="grid grid-cols-2 gap-2">
+          <StatBlock label="调用次数" value={fmt(data.llmUsage.totalCalls)} color="text-[var(--nv-text-primary)]" />
+          <StatBlock label="Token 总量" value={fmt(data.llmUsage.totalTokens)} color="text-[var(--nv-primary)]" />
+          <StatBlock
+            label="估算花费"
+            value={data.llmUsage.totalCalls > 0 && data.llmUsage.totalCost > 0 ? `¥${(data.llmUsage.totalCost * RMB_RATE).toFixed(2)}` : "单价未知"}
+            color="text-[var(--nv-accent)]"
+            sub={data.llmUsage.totalCalls > 0 && data.llmUsage.totalCost > 0 ? `≈ $${data.llmUsage.totalCost.toFixed(4)}` : "模型不在价格表"}
+          />
+          <StatBlock label="记录始于" value={data.llmUsage.since.slice(5)} color="text-[var(--nv-text-secondary)]" />
+        </div>
+        {data.llmUsage.byModel.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <div className="text-[10px] text-[var(--nv-text-tertiary)]">按模型分布</div>
+            {data.llmUsage.byModel.slice(0, 5).map((b) => (
+              <div key={b.model} className="flex items-center justify-between gap-2 text-[10px]">
+                <span className="truncate text-[var(--nv-text-secondary)]" style={{ maxWidth: 130 }}>{b.model}</span>
+                <span className="shrink-0 text-[var(--nv-text-tertiary)]">{b.calls}次 · {fmt(b.tokens)}tok · ¥{(b.cost * RMB_RATE).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {data.llmUsage.totalCalls === 0 && (
+          <div className="text-[10px] text-[var(--nv-text-tertiary)] mt-1.5 leading-relaxed">暂无记录——自 {data.llmUsage.since} 起，每次 AI 调用会在此累计（含重试 / 故障转移的真实 token 与估算花费）。</div>
+        )}
       </div>
 
       {/* 章节分布 */}

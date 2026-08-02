@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.20 — 2026-08-02
+**AI 成本看板：真实 token 用量与估算花费落库，统计面板一眼看清本月 AI 花了多少**
+- 📊 Token 落库（BE-3）：新增 `LlmCallLog` 表（时间/模型/角色/输入·输出·总 token/估算成本/BaseURL/是否故障转移），在 `src/core/llm/client.ts` 的 `chat` 成功返回、`chatStream` 流正常完成（readStream 末尾 `onUsage` 回调）单点 fire-and-forget 落库，覆盖所有走 client 的生成/agent/game/explore/dissect
+- 💰 成本估算：内置 `MODEL_PRICING`（DeepSeek/GPT/Claude/通义/智谱/Kimi 等 20+ 模型每百万 token 单价），`estimateCost` 按模型名匹配估算美元成本；未知模型标「单价未知」不伪造成本
+- 📈 看板 UI：统计面板 MonitorPanel 新增「AI 成本（全项目 · 本月）」区块——调用次数/Token 总量/估算花费（¥ 按 7.2 汇率折算并标 ≈$）/记录起始日 + 按模型分布；monitor 路由加 `llmUsage` 聚合（本月 groupBy model）
+- 🧭 诚实边界：仅记 v0.46.20 后调用（历史无数据，UI 标「暂无记录」）；client 不持有 project 故做全局聚合标注「全项目」；价格为估算、落库失败静默；表经 `prisma db push` 同步
+
 ## v0.46.19 — 2026-08-02
 **LLM 重试 + 故障转移：模型抽风时自动退避重试 / 切备用模型，写作几乎无感**
 - 🔁 重试与退避（BE-4）：核心客户端 `src/core/llm/client.ts` 的 `chat`/`chatStream` 接入指数退避重试——429 限流 / 5xx 服务端异常 / 网络不可达默认重试 3 次（退避 600ms×2^(n-1) 封顶 8s 含 ±20% 抖动）；4xx 鉴权/配置错误（401/403/404/400）直接抛出 `mapLLMError` 中文提示不重试
