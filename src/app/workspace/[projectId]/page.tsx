@@ -507,6 +507,7 @@ export default function WorkspacePage() {
               const finalContent = accumulated + (event.content || "");
               setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
+              toastSuccess("正文已生成并保存 ✓");
               loadProject();
               autoExtractChapter(finalContent, selectedNode?.title || "");
               onDone?.();

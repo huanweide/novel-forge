@@ -25,42 +25,42 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.12";
+export const LATEST_VERSION = "v0.46.13";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "📱 三栏响应式（P2）：此前左/右栏固定宽 shrink-0，窄屏必挤压中栏、横向溢出；本次窄屏（<lg）左右栏变 fixed 抽屉，中栏 flex-1 + min-w-0 全宽优先不被压扁",
-  "🎛️ 抽屉交互：窄屏顶部新增「大纲 / 侧栏」两个 toggle 按钮（lg:hidden 桌面隐藏），点开左右栏从侧边滑出，背景半透明遮罩点击即收，单栏故障不影响写作",
-  "🖥️ 桌面零回归：左右栏保留 lg:static / lg:translate-x-0 复位 + shrink-0 不收缩，桌面三栏并排布局与改前完全一致，向后兼容",
-  "✅ 全量 tsc 零错误；零新 npm 依赖——纯 Tailwind 响应式断点 + 两个抽屉开合状态",
+  "✍️ AI 生成落库确认（P4）：正文由 AI 流落库，作者常担心「AI 写了多少、有没有真的存进去」；本次生成完成显式确认落库",
+  "🔔 生成完成 toast：正文生成流 done 事件触发 toastSuccess「正文已生成并保存 ✓」，比状态栏更显眼，明确告知已落库",
+  "🔢 状态栏字数回填：done 状态「已落库 ✓ · 本章 X 字」（取自 loadProject 刷新后的 selectedNode.wordCount），作者一眼看到本章实写字数",
+  "✅ 全量 tsc 零错误；零新 npm 依赖——复用既有 genStep / toast / loadProject 机制，避免与 P1 状态栏重复的逻辑冲突",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
   {
-    version: "v0.46.12",
+    version: "v0.46.13",
     date: "2026-08-02",
-    title: "三栏响应式：窄屏抽屉化，中栏优先不被压扁",
+    title: "AI 生成落库确认：写了多少、存没存一目了然",
     sections: [
       {
-        label: "窄屏抽屉化",
+        label: "生成完成显式确认",
         items: [
-          "左栏（大纲）/ 右栏（侧栏）在 <lg 断点变为 fixed 抽屉（自带 lg:static lg:translate-x-0 复位），不再固定宽内联挤压中栏",
-          "中栏 flex-1 + min-w-0，窄屏时左右栏脱离文档流后中栏占据全宽，编辑器始终优先不被压扁、不横向溢出",
+          "正文生成流 done 事件触发 toastSuccess「正文已生成并保存 ✓」，比状态栏更显眼，明确告知作者本次产出已落库",
+          "toast 置于 loadProject() 之前调用，避免读取到刷新前的旧字数导致误导；精确字数交由状态栏回填",
         ],
       },
       {
-        label: "抽屉交互",
+        label: "状态栏字数回填",
         items: [
-          "窄屏顶部新增「大纲 / 侧栏」两个 toggle 按钮（lg:hidden，桌面隐藏），点开对应栏从侧边滑出（transition-transform 200ms）",
-          "背景半透明遮罩（z-30，lg:hidden）点击即收起两个抽屉；单栏组件抛错仍由 ErrorBoundary 隔离，不影响写作会话",
+          "done 状态由「已落库 ✓」增强为「已落库 ✓ · 本章 X 字」，X 取自 loadProject 刷新后的 selectedNode.wordCount（生成后已含新字数）",
+          "作者一眼看到本章实写字数，确认 AI 产出真实落库，消除「写了一半会不会丢」的焦虑",
         ],
       },
       {
-        label: "桌面零回归与取舍",
+        label: "诚实修正与取舍",
         items: [
-          "左右栏保留 lg:shrink-0 不收缩 + shrink-0 原行为，桌面三栏并排布局与改前完全一致，向后兼容",
-          "本产品定位本地桌面写作工具，响应式聚焦「极端窄窗不崩」而非移动端完整适配；全量 tsc 零错误，零新 npm 依赖",
+          "原计划「AI 插入可控/预览确认」基于「AI 会覆盖手写内容」假设——本产品无作者手写入口（正文由 AI 流 append 驱动），覆盖恐惧不成立",
+          "P4 改为聚焦真实缺口（落库确认 + 字数反馈），与 P1 状态栏过程状态（草稿保存中/已落库）互补而非重复；全量 tsc 零错误",
         ],
       },
     ],
