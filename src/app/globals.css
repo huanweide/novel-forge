@@ -876,6 +876,7 @@
   will-change: transform, opacity;
 }
 .home-stagger-item.is-visible {
+  opacity: 1; /* v0.46.54 兜底：即使动画不播放也强制可见，杜绝"书卡透明" */
   animation: nf-card-in 0.5s var(--ease-out-expo) both;
 }
 

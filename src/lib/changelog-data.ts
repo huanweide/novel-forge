@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.53";
+export const LATEST_VERSION = "v0.46.54";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "船太黑修复：六种名船换高辨识亮色涂装——黑珍珠号亮金、复仇女王号猩红、飞翔的荷兰人幽绿、航空母舰浅灰蓝甲板、驱逐舰浅蓝灰、核潜艇亮银（黑帆保留名船特征）；环境光 0.9→1.4 + 新增半球光 + 月光 0.85，所有船清晰可见不再只剩 8 艘亮的",
-  "主题切换按钮修复：顶栏 z-index 10→40（滚动后不再被内容层覆盖导致点不动），「示例/导入备份」窄屏隐藏保证主题按钮常驻可点；整页暗角 0.48→0.22、网格降档，整体更亮更通透",
-  "WebGL 降级兜底：3D 初始化失败时静默跳过并提示，不再拖垮整棵组件树——「我的作品」区在任何浏览器状态下都能显示；背景与雾色从近黑提到深海蓝（与漫画海一致，周边不糊黑）",
-  "诊断结论：本地「我的作品」数据与渲染均正常（9 部作品，API 200）；Vercel 线上展示站无数据库（/api/projects 返回 500），线上永远看不到作品——请以本地 http://127.0.0.1:3001 为准",
+  "修复「我的作品」书卡完全不可见：根因是入场动画依赖 IntersectionObserver 触发时序——观察器一旦未触发（挂载时机/10% 可见阈值/滚动被 3D 画布拦截等任一环节），书卡就永久停在 opacity:0 透明态：书在页面上可交互（hover 特效还在）但看不见，正是你反馈的症状",
+  "修复方式：数据加载完成后直接逐张播放入场动画（不再依赖观察器时序），并给 is-visible 增加 opacity:1 兜底（即使动画异常也强制可见）——现在每一本书 100% 显示",
+  "排查确认无其他隐藏源：全局 opacity/visibility 扫描只有 tooltip/微光等无关项；书卡、新建卡、骨架屏结构均正常；tsc 零错误 + dev 200 + 编译无警告",
+  "诚实边界：入场动画改为页面加载后即播放（滚动到作品区时动画已播完，看到的必定是完整的书），放弃「滚动到才逐本浮现」的叙事，换来书永远可见的确定性",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.54",
+    date: "2026-08-03",
+    title: "修复「我的作品」书卡不可见（入场动画依赖 observer 时序导致永久透明）",
+    sections: [
+      {
+        label: "根因定位（用户反馈：下面应该写着所有书，但完全看不到任何一本，有的却可交互）",
+        items: [
+          "症状吻合：书卡在 DOM 里（hover 虚空特效/交互仍在）但卡片本身透明——.home-stagger-item 初始 opacity:0，只有加上 .is-visible 才播放 nf-card-in 显示",
+          "根因：useStaggerOnView 依赖 IntersectionObserver（threshold 0.1）触发 is-visible——观察器挂载时机、10% 可见阈值、滚动事件被 3D canvas 拦截等任一环节失败，卡片即永久 opacity:0 不可见",
+          "历史回响：changelog 曾记录 v0.46.4x 修过同类 bug（空依赖导致观察器未挂载）；本次为 observer 时序链路的再次失效，说明该机制在真实浏览器环境不可靠",
+        ],
+      },
+      {
+        label: "修复（速度修复，确定性优先）",
+        items: [
+          "useStaggerOnView 重写：ready（!loading && projects.length>0）后直接对全部 data-stagger-item 加 is-visible（保留 60ms 交错 delay，reduced-motion 无 delay）——零异步依赖，100% 显示",
+          "CSS 兜底：.home-stagger-item.is-visible 显式加 opacity:1（animation both 之外），即使动画不播放也强制可见",
+          "排查确认无其他隐藏源：全局 opacity/visibility 扫描仅 tooltip(731)/微光等无关项；NewBookCard/ProjectCard/骨架屏结构正常",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200 + 编译无警告；动画在页面加载后即播完，滚动到作品区时书必完整可见（失去「滚动到才浮现」的叙事，换取确定性）",
+          "浏览器实跑验收：本地 http://127.0.0.1:3001 刷新后「我的作品」应直接看到 9 本书 + 新建卡",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.53",
     date: "2026-08-03",

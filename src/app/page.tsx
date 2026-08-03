@@ -34,6 +34,9 @@ interface ProjectSummary {
 // ─── 页面组件 ────────────────────────────────────────────────
 
 // 进入视口逐张播放 nf-card-in 上浮入场（间隔 60ms；reduced-motion 直接显示）
+// v0.46.54 修复：不再依赖 IntersectionObserver 触发时序——曾导致卡片停在 opacity:0 永不可见
+// （观察器挂载时机/10% 阈值/滚动拦截任一环节失败即全隐）。改为 ready 后直接逐张播放：
+// 动画在页面加载后即播完，用户滚动到「我的作品」时看到的必定是完整可见的书。
 function useStaggerOnView(ready: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -42,26 +45,10 @@ function useStaggerOnView(ready: boolean) {
     if (!el) return;
     const items = Array.from(el.querySelectorAll<HTMLElement>("[data-stagger-item]"));
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      items.forEach((c) => c.classList.add("is-visible"));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const t = entry.target as HTMLElement;
-            const idx = Number(t.dataset.staggerIndex ?? 0);
-            t.style.animationDelay = `${idx * 60}ms`;
-            t.classList.add("is-visible");
-            io.unobserve(t);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    items.forEach((c) => io.observe(c));
-    return () => io.disconnect();
+    items.forEach((c, i) => {
+      if (!reduce) c.style.animationDelay = `${i * 60}ms`;
+      c.classList.add("is-visible");
+    });
   }, [ready]);
   return ref;
 }
