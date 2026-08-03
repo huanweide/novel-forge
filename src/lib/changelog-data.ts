@@ -25,18 +25,52 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.61";
+export const LATEST_VERSION = "v0.46.62";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "船体圆角精细化：makeHull 从长方体形变改为截面半圆放样（龙骨尖底→舷弧→甲板闭合环沿船长放样、首尾收尖），彻底告别长方体；核潜艇保留赞誉的圆柱圆角建模",
-  "意境分层命名 + 弱化真实名：首页文案与书栏改用意境名（暗夜金帆/赤骨怒潮/幽海磷光/云港巨舰/银锋迅影/深蓝潜蛟/无名漂流），真实船名降级为 tooltip 小字；按一层平波/两层扬帆/三层连云归类",
-  "舷窗 + 定制图案旗帜 + 武器放大：每艘船两侧加环形发光舷窗，按船型挂不同图案旗帜（骷髅/幽灵漩涡/星徽/雷达棱纹/波浪鳍/问号）；航母舰载机放大 1.3 倍并增至 4 架、驱逐舰舰炮导弹架放大",
-  "等比例放大 + 随机配色 + 绕圈巡游避让：整体缩放上调并相机后拉、抬升吃水线至船高下 1/3 不再半沉；每型随机亮色相邻不撞色、未命中题材归未名舰队；船只椭圆轨道各自航速巡游并做分离避让避免穿模",
+  "墨灵面板去重：删除 ChatMessageList 空状态里与 AIChatHeader 重复的「AI 写作助手就绪 / 我能直接查角色卡…」文案，避免同一就绪提示出现两次",
+  "项目设定弹窗可滚动：BuildConfigDialog 的 bare Modal 补 overflow-y-auto，长内容（流派标签/开关）超出 90vh 时不再截断、可正常滚动",
+  "原生下拉暗色适配：globals.css 新增 select option/optgroup 的 surface-2 背景 + 主文字色，暗色主题下下拉列表不再呈高亮刺眼白底",
+  "正则规则 UI 统一：项目配置中心加「正则后处理（清洗正文）vs 创作铁律（约束 AI）」区分说明，并把「+ 新增规则」内联行改为与规则面板一致的模态弹窗（提交前校验正则合法性）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.62",
+    date: "2026-08-03",
+    title: "UI 质检 P0：墨灵面板去重 + 项目设定可滚动 + 原生下拉暗色适配 + 正则规则弹窗统一",
+    sections: [
+      {
+        label: "墨灵面板去重（Bug A）",
+        items: [
+          "删除 ChatMessageList 空状态块里与 AIChatHeader 完全重复的「AI 写作助手就绪 / 我能直接查角色卡、世界书、大纲…」文案，空状态由头部统一展示，避免就绪提示出现两次",
+          "同步移出已无引用的 hasHistory/loading 解构参数，保持 tsc 零警告",
+        ],
+      },
+      {
+        label: "项目设定弹窗可滚动（Bug H）",
+        items: [
+          "BuildConfigDialog 的 bare Modal 补 overflow-y-auto（之前 bare 分支不带滚动，长内容超出 90vh 被截断且不可滚动），现在流派标签/开关等超长内容可正常滚动查看",
+        ],
+      },
+      {
+        label: "原生下拉暗色适配（I-1）",
+        items: [
+          "globals.css 新增 select option / select optgroup 的 --nv-surface-2 背景 + --nv-text-primary 文字色，原生 <select> 下拉列表在暗色主题下不再呈现高亮刺眼白底",
+        ],
+      },
+      {
+        label: "正则规则 UI 统一（I-2）",
+        items: [
+          "项目配置中心正则分区加区分说明：正则后处理（生成完成后对正文做替换/清洗）vs 创作铁律（注入 AI 提示词约束写作），二者互不影响、各管一段",
+          "「+ 新增规则」由内联追加行改为与「规则」面板一致的模态弹窗（同级渲染避免嵌套 transform 影响 fixed 定位），并在提交前用 new RegExp 校验正则合法性，非法 pattern 给出明确报错",
+          "实测确认正则规则确实生效：applyRegexRules 已接入 write/refine/continue 三路由并发送 postprocess_regex SSE 事件，属后处理而非上下文注入",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.61",
     date: "2026-08-03",

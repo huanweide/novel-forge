@@ -59,7 +59,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
   const filteredTags = STYLE_TAGS.filter((t) => t.includes(tagSearch.trim()));
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh]" closeOnOverlay={false}>
+    <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh] overflow-y-auto" closeOnOverlay={false}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold flex items-center gap-2">

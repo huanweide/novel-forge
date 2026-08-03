@@ -24,21 +24,10 @@ interface ChatMessageListProps {
   onAdoptSuggestion: (d: AnalysisDiff) => void;
 }
 
-export function ChatMessageList({ messages, hasHistory, loading, onAdoptSuggestion }: ChatMessageListProps) {
+export function ChatMessageList({ messages, onAdoptSuggestion }: ChatMessageListProps) {
   return (
     <>
-      {/* 空状态 */}
-      {!hasHistory && !loading && (
-        <div className="flex flex-col items-center justify-center h-full px-4 text-center">
-          <div className="mb-3"><Icon name="bot" size={32} className="text-[var(--nv-text-tertiary)]" /></div>
-          <div className="text-xs text-[var(--nv-text-secondary)] font-medium mb-1">AI 写作助手就绪</div>
-          <div className="text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed max-w-[220px]">
-            我能直接查角色卡、世界书、大纲来回答你——不猜正文，只看数据
-          </div>
-        </div>
-      )}
-
-      {/* 消息列表 */}
+      {/* 消息列表（空状态由 AIChatHeader 统一展示，避免「墨灵就绪」重复） */}
       {messages.map((msg, i) => (
         <div key={i} className={`px-3 py-2.5 border-b border-[var(--nv-border-1)] ${msg.role === "user" ? "bg-[var(--nv-surface-1)] backdrop-blur-sm" : "bg-[var(--nv-surface-1)]"}`}>
           <div className="flex items-start gap-2">

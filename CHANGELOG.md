@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.62 — 2026-08-03
+**UI 质检 P0：墨灵面板去重 + 项目设定可滚动 + 原生下拉暗色适配 + 正则规则弹窗统一**
+
+- 墨灵面板去重（Bug A）：删除 ChatMessageList 空状态块里与 AIChatHeader 完全重复的「AI 写作助手就绪 / 我能直接查角色卡…」文案，空状态由头部统一展示，避免就绪提示出现两次；同步移出已无引用的 hasHistory/loading 解构参数保持 tsc 零警告
+- 项目设定弹窗可滚动（Bug H）：BuildConfigDialog 的 bare Modal 补 overflow-y-auto，长内容（流派标签/开关）超出 90vh 时不再截断、可正常滚动
+- 原生下拉暗色适配（I-1）：globals.css 新增 select option/optgroup 的 --nv-surface-2 背景 + --nv-text-primary 文字色，暗色主题下原生下拉列表不再呈高亮刺眼白底
+- 正则规则 UI 统一（I-2）：项目配置中心加「正则后处理（清洗正文）vs 创作铁律（约束 AI）」区分说明；「+ 新增规则」由内联行改为与规则面板一致的模态弹窗（提交前用 new RegExp 校验正则合法性，非法 pattern 明确报错）；实测确认正则规则确实生效（applyRegexRules 已接 write/refine/continue 三路由并发送 postprocess_regex SSE 事件，属后处理非上下文注入）
+
 ## v0.46.61 — 2026-08-03
 **纸舟星海重做：圆角真实船体 + 意境分层命名 + 舷窗图案旗帜 + 随机配色 + 绕圈巡游避让**
 

@@ -51,6 +51,9 @@ export function ProjectConfigPanel({
   const [regexPresets, setRegexPresets] = useState<{ id: string; title: string; description?: string; rules: Rule[] }[]>([]);
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [presetHint, setPresetHint] = useState("");
+  const [showNewRule, setShowNewRule] = useState(false);
+  const [draft, setDraft] = useState<Rule>({ name: "", pattern: "", flags: "g", replace: "" });
+  const [draftErr, setDraftErr] = useState("");
 
   // v0.46.58：从创意工坊 regex 预设一键添加（不必手写正则名字/pattern）
   const loadRegexPresets = async () => {
@@ -146,8 +149,32 @@ export function ProjectConfigPanel({
     setRules((rs) => rs.map((r, i) => (i === idx ? { ...r, [key]: val } : r)));
   };
 
+  // I-2：新增规则改为与「规则」面板一致的模态弹窗，并在提交前校验正则合法性
+  const openNewRule = () => {
+    setDraft({ name: "", pattern: "", flags: "g", replace: "" });
+    setDraftErr("");
+    setShowNewRule(true);
+  };
+
+  const confirmNewRule = () => {
+    if (!draft.name.trim() || !draft.pattern.trim()) {
+      setDraftErr("规则名与正则 pattern 必填");
+      return;
+    }
+    try {
+      new RegExp(draft.pattern, draft.flags || "g");
+    } catch (e) {
+      setDraftErr("正则无效：" + (e instanceof Error ? e.message : "格式错误"));
+      return;
+    }
+    setRules((rs) => [...rs, { name: draft.name.trim(), pattern: draft.pattern, flags: draft.flags || "g", replace: draft.replace }]);
+    setShowNewRule(false);
+    setRulesHint("已新增 1 条规则，点「保存规则」生效");
+  };
+
   return (
-    <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[88vh] overflow-y-auto">
+    <>
+      <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[88vh] overflow-y-auto">
       <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] shadow-2xl">
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-[var(--nv-border-2)] px-5 py-4">
@@ -221,13 +248,16 @@ export function ProjectConfigPanel({
                   + 从预设添加
                 </button>
                 <button
-                  onClick={() => setRules((rs) => [...rs, { name: "", pattern: "", flags: "g", replace: "" }])}
+                  onClick={openNewRule}
                   className="rounded-lg bg-[var(--nv-primary)]/15 px-2 py-1 text-xs font-medium text-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/25 transition"
                 >
                   + 新增规则
                 </button>
               </div>
             </div>
+            <p className="mb-3 text-[10px] leading-relaxed text-[var(--nv-text-muted)]">
+              生成完成后，系统用这些正则对正文做替换/清洗（后处理）。它不同于「规则」面板的「创作铁律」——后者把约束写进 AI 提示词、约定它怎么写，两者互不影响、各管一段。
+            </p>
             {showPresetPicker && (
               <div className="mb-3 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
                 <div className="mb-2 flex items-center justify-between">
@@ -360,5 +390,56 @@ export function ProjectConfigPanel({
         </div>
       </div>
     </Modal>
+
+      {/* I-2：新增正则规则——与「规则」面板新建规则风格统一的模态弹窗（同级渲染，避免嵌套在 animate-spring 面板内被 transform 影响 fixed 定位） */}
+      {showNewRule && (
+        <Modal open onClose={() => setShowNewRule(false)} bare panelClassName="max-h-[85vh] w-full max-w-lg overflow-y-auto">
+          <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] shadow-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
+                <Icon name="settings" size={16} /> 新增正则后处理规则
+              </h4>
+              <button onClick={() => setShowNewRule(false)} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-primary)] transition" aria-label="关闭">
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+            <p className="text-[10px] leading-relaxed text-[var(--nv-text-muted)]">
+              保存后，生成完成阶段会用此正则对正文做替换/清洗（后处理），不影响 AI 写作时的提示词。
+            </p>
+            <div className="space-y-2">
+              <input
+                value={draft.name}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                placeholder="规则名（如：去除&nbsp;）"
+                className="w-full rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-void)] px-2 py-1.5 text-xs text-[var(--nv-text-primary)] outline-none focus:border-[var(--nv-primary)]"
+              />
+              <input
+                value={draft.pattern}
+                onChange={(e) => setDraft((d) => ({ ...d, pattern: e.target.value }))}
+                placeholder="正则 pattern（如 &nbsp;）"
+                className="w-full rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-void)] px-2 py-1.5 text-xs text-[var(--nv-text-primary)] outline-none focus:border-[var(--nv-primary)]"
+              />
+              <input
+                value={draft.flags || ""}
+                onChange={(e) => setDraft((d) => ({ ...d, flags: e.target.value }))}
+                placeholder="flags（默认 g）"
+                className="w-full rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-void)] px-2 py-1.5 text-xs text-[var(--nv-text-primary)] outline-none focus:border-[var(--nv-primary)]"
+              />
+              <input
+                value={draft.replace}
+                onChange={(e) => setDraft((d) => ({ ...d, replace: e.target.value }))}
+                placeholder="替换为（留空=删除匹配内容）"
+                className="w-full rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-void)] px-2 py-1.5 text-xs text-[var(--nv-text-primary)] outline-none focus:border-[var(--nv-primary)]"
+              />
+            </div>
+            {draftErr && <p className="text-[11px] text-[var(--nv-warning)]">{draftErr}</p>}
+            <div className="flex gap-3">
+              <button onClick={() => setShowNewRule(false)} className="flex-1 rounded-xl border border-[var(--nv-border-2)] py-2 text-sm text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)] transition">取消</button>
+              <button onClick={confirmNewRule} className="flex-1 rounded-xl bg-[var(--nv-primary)] py-2 text-sm font-medium text-white hover:opacity-90 transition">添加规则</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

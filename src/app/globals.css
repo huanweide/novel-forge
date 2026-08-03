@@ -1264,3 +1264,12 @@ html.azure .btn-primary { color: #04201F; }
   border-bottom: 26px solid color-mix(in oklch, var(--nv-creative) 40%, transparent);
   border-left: 26px solid transparent;
 }
+
+/* I-1：原生 select/option 暗色适配——避免暗色主题下下拉展开呈高亮白底（原生控件不受 Tailwind 暗色变量约束） */
+@layer base {
+  select option,
+  select optgroup {
+    background-color: var(--nv-surface-2);
+    color: var(--nv-text-primary);
+  }
+}
