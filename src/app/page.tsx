@@ -289,13 +289,13 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold text-foreground">纸舟星海 · 设计说明</h2>
         </div>
         <p className="text-[var(--nv-text-tertiary)] max-w-2xl mb-7 text-sm leading-relaxed">
-          纸舟星海把「写小说」这件事，变成墨色海面上漂着的折纸小船——书页折成的船，航行在故事的墨海上。四条设计准则：
+          纸舟星海把「写小说」这件事，变成漫画海面上落下的折纸小船——一艘船一部作品，六种折法各不相同。四条设计准则：
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DesignNote title="船即作品" desc="每艘折纸船是一部小说，船身大小对应字数，折痕透出题材色的光。" />
+          <DesignNote title="船即作品" desc="每艘折纸船是一部小说，六种折法各不相同——经典/塔式/双帆/平筏/长龙/尖角，数量与你的作品一一对应。" />
           <DesignNote title="灯即活性" desc="船头一盏灯，灯光越亮说明最近越活跃；夜深了，只有这些灯还亮着。" />
-          <DesignNote title="舟即起伏" desc="纸船随墨海轻轻起伏，不打扰、不炫技，安静地等你上船——点开进入工作台，续写下一章。" />
-          <DesignNote title="海即下一章" desc="点击一艘船，镜头拉到船头望向前方无边的墨海——那个画面就是下一章。" />
+          <DesignNote title="海即漫画" desc="明亮漫画风格的海浪与浪花，可拖拽旋转视角、滚轮放大缩小，纸船正从上方掉落下来。" />
+          <DesignNote title="点击即入" desc="点击任意纸船或下方书栏，直接进入那本书的写作区域——写它，就是让这艘船继续航行。" />
         </div>
       </section>
 
@@ -415,6 +415,20 @@ export default function Dashboard() {
           </div>
         </Modal>
       )}
+
+      {/* 右下角署名：GitHub + 作者 */}
+      <footer className="fixed bottom-3 right-4 z-20 text-[11px] text-[var(--nv-text-muted)]">
+        <a
+          href="https://github.com/huanweide/novel-forge"
+          target="_blank"
+          rel="noreferrer"
+          className="hover:text-[var(--nv-text-primary)] transition-colors"
+        >
+          GitHub
+        </a>
+        <span className="mx-1.5 opacity-50">·</span>
+        <span>RuiTri</span>
+      </footer>
     </div>
   );
 }
