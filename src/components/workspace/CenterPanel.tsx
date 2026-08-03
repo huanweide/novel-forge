@@ -289,7 +289,7 @@ export function CenterPanel({
                     )}
                   </>
                 )}
-                <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 800)}
+                <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 3000)}
                   className="input-glass w-16 rounded px-2 py-1 text-xs text-center" title="目标字数" />
                 <span className="text-xs text-[var(--nv-text-tertiary)]">字</span>
                 <input placeholder={refineMode ? "微调指令（改对话/加描写/续写500字）..." : "作者指令（高优先级）..."}

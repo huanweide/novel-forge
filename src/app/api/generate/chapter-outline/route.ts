@@ -252,7 +252,6 @@ ${charBriefs}
       outline: outlineText,
       nodeId,
       title: node.title,
-      modelUsed: "v4-flash",
       // 新增：AI 选角信息
       selectedCharacters: selectedChars.map((c: any) => ({
         id: c.id,

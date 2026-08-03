@@ -105,30 +105,12 @@ export default function WorkspacePage() {
   // ── 选中文本（传给 AI 对话栏） ──────────
   const [selectedText, setSelectedText] = useState("");
 
-  // ── 作者指令 ──────────────────────────────
+  // ── 作者指令（临时态：跳转即丢，不持久化） ──
   const [authorNote, setAuthorNote] = useState("");
-  const authorNoteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleAuthorNoteChange = (v: string) => {
     setAuthorNote(v);
-    if (typeof window !== "undefined") localStorage.setItem(`novel-forge-author-note-${projectId}`, v);
-    if (authorNoteSaveTimer.current) clearTimeout(authorNoteSaveTimer.current);
-    authorNoteSaveTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/projects/${projectId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ authorNote: v }),
-        });
-        if (!res.ok) {
-          const d = (await res.json().catch(() => ({}))) as { error?: string };
-          toastError(d.error || "作者注记保存失败，请检查后端服务是否已启动");
-        }
-      } catch (err) {
-        toastError("作者注记保存失败：" + (err instanceof Error ? err.message : "网络错误") + "（已暂存本地，可稍后重试）");
-      }
-    }, 1500);
   };
-  const [targetWordCount, setTargetWordCount] = useState(800);
+  const [targetWordCount, setTargetWordCount] = useState(3000);
 
   // ── 面板状态 ──────────────────────────────
   const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "outline" | "storylines" | "rules">("outline");
@@ -279,23 +261,13 @@ export default function WorkspacePage() {
   const [refineInstruction, setRefineInstruction] = useState("");
   const handleRefineInstructionChange = (v: string) => {
     setRefineInstruction(v);
-    if (typeof window !== "undefined") localStorage.setItem(`novel-forge-refine-${projectId}`, v);
   };
 
-  // ── Flash 章纲提示词 ──────────────────────
+  // ── 章纲提示词（临时态：跳转即丢，不持久化） ──
   const [chapterOutlinePrompt, setChapterOutlinePrompt] = useState("");
   const handleChapterOutlinePromptChange = (v: string) => {
     setChapterOutlinePrompt(v);
-    if (typeof window !== "undefined") localStorage.setItem(`novel-forge-flash-prompt-${projectId}`, v);
   };
-
-  // ── 恢复本地持久化提示词（避免 SSR/CSR initial state 不一致导致 hydration 失败）
-  useEffect(() => {
-    if (typeof window !== "undefined" && projectId) {
-      setRefineInstruction(localStorage.getItem(`novel-forge-refine-${projectId}`) || "");
-      setChapterOutlinePrompt(localStorage.getItem(`novel-forge-flash-prompt-${projectId}`) || "");
-    }
-  }, [projectId]);
 
   // ── 章节更新系统 ──────────────────────────
   const [lastChapterContent, setLastChapterContent] = useState("");
@@ -334,10 +306,8 @@ export default function WorkspacePage() {
   const [outlinePreviewChapters, setOutlinePreviewChapters] = useState<
     { title: string; summary: string; coreConflict: string; characters: string[] }[]
   >([]);
-  const [outlineModelUsed, setOutlineModelUsed] = useState("");
   const [outlineRaw, setOutlineRaw] = useState("");
   const [outlineError, setOutlineError] = useState("");
-  const [outlineUseFlash, setOutlineUseFlash] = useState(false);
   const existingChapterCount = project?.storyNodes.filter(n => n.type === "chapter" && !n.parentId).length || 0;
   const [outlineAppendMode, setOutlineAppendMode] = useState(existingChapterCount > 0);
 
@@ -408,7 +378,7 @@ export default function WorkspacePage() {
   const [drawSelectedCharIds, setDrawSelectedCharIds] = useState<string[]>([]);
   const [preGenOpen, setPreGenOpen] = useState(false);
   const [preGenMode, setPreGenMode] = useState<"write" | "refine" | "continue" | "outline">("write");
-  const [outlineGenConfig, setOutlineGenConfig] = useState<{ chapterCount: number; customPrompt: string; useFlash: boolean } | null>(null);
+  const [outlineGenConfig, setOutlineGenConfig] = useState<{ chapterCount: number; customPrompt: string } | null>(null);
 
   // ═══════════════════════════════════════════
   // 数据加载
@@ -448,10 +418,6 @@ export default function WorkspacePage() {
         }
         useProjectStore.getState().setProjectData(data);
         refreshMonitorToday();
-        if (data.authorNote && data.authorNote.trim()) {
-          setAuthorNote(data.authorNote);
-          if (typeof window !== "undefined") localStorage.setItem(`novel-forge-author-note-${projectId}`, data.authorNote);
-        }
         setSelectedNode((prev) => {
           if (prev && data.storyNodes?.some((n: StoryNodeData) => n.id === prev.id)) {
             const updated = data.storyNodes.find((n: StoryNodeData) => n.id === prev.id);
@@ -514,7 +480,7 @@ export default function WorkspacePage() {
   const handleGenerateOutlinePreview = async () => {
     if (!project) return;
     setGenStep("confirming");
-    setOutlineGenConfig({ chapterCount: getEffectiveChapterCount(), customPrompt: outlineCustomPrompt, useFlash: outlineUseFlash || outlineCustomPrompt.trim().length > 0 });
+    setOutlineGenConfig({ chapterCount: getEffectiveChapterCount(), customPrompt: outlineCustomPrompt });
     setPreGenMode("outline");
     setPreGenOpen(true);
   };
@@ -522,15 +488,15 @@ export default function WorkspacePage() {
   const handleOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
     if (!project || !outlineGenConfig) return;
     setPreGenOpen(false); setGenStep("generating"); setOutlineGenerating(true);
-    setOutlineError(""); setOutlinePreviewChapters([]); setOutlineRaw(""); setOutlineModelUsed("");
-    const { chapterCount, customPrompt, useFlash } = outlineGenConfig;
+    setOutlineError(""); setOutlinePreviewChapters([]); setOutlineRaw("");
+    const { chapterCount, customPrompt } = outlineGenConfig;
     try {
-      const res = await fetch("/api/generate/outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapterCount, customPrompt: customPrompt || undefined, useFlash, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars }) });
+      const res = await fetch("/api/generate/outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapterCount, customPrompt: customPrompt || undefined, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars }) });
       if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); setOutlineError(err.error || `HTTP ${res.status}`); return; }
       const data = await res.json();
       const chapters = data.chapters || [];
       if (chapters.length === 0) { setOutlineError("未生成任何章节，请检查角色和世界书是否有内容"); return; }
-      setOutlinePreviewChapters(chapters); setOutlineRaw(data.rawOutline || ""); setOutlineModelUsed(data.modelUsed || "未知");
+      setOutlinePreviewChapters(chapters); setOutlineRaw(data.rawOutline || "");
       setGenStep("done"); setTimeout(() => setGenStep(""), 5000);
     } catch (err) { setGenStep("error"); setOutlineError(err instanceof Error ? err.message : "网络错误"); }
     finally { setOutlineGenerating(false); }
@@ -974,7 +940,7 @@ export default function WorkspacePage() {
                   setChapterOutlineStatus("done"); setTimeout(() => setChapterOutlineStatus(""), 4000);
                   setSelectedNode({ ...selectedNode, outline: data.outline });
                   const selectedInfo = data.selectedCharacters?.length ? `\nAI 选角（${data.selectedCharacters.length}/${data.totalCharacters}人）：${data.selectedCharacters.map((c: any) => c.name).join("、")}${data.selectionReason ? `\n选角理由：${data.selectionReason}` : ""}` : "";
-                  setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `章纲已生成（${data.modelUsed || "v4-flash"}）${selectedInfo}。点击大纲文字可编辑。` }] });
+                  setReviewResult({ passed: true, issues: [{ type: "info", severity: "minor", description: `章纲已生成${selectedInfo}。点击大纲文字可编辑。` }] });
                   await loadProject();
                 } else { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError("API 返回空内容，请重试"); }
               } catch (err) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`); }
@@ -1082,11 +1048,11 @@ export default function WorkspacePage() {
       {/* 大纲生成对话框 */}
       {showOutlineDialog && (
         <OutlineDialog projectName={project.name} chapterCount={outlineChapterCount}
-          customChapterCount={outlineCustomChapterCount} customPrompt={outlineCustomPrompt} useFlash={outlineUseFlash}
-          previewChapters={outlinePreviewChapters} modelUsed={outlineModelUsed} rawOutline={outlineRaw}
+          customChapterCount={outlineCustomChapterCount} customPrompt={outlineCustomPrompt}
+          previewChapters={outlinePreviewChapters} rawOutline={outlineRaw}
           error={outlineError} isGenerating={outlineGenerating} onChapterCountChange={setOutlineChapterCount}
           onCustomChapterCountChange={setOutlineCustomChapterCount} onCustomPromptChange={setOutlineCustomPrompt}
-          onUseFlashChange={setOutlineUseFlash} onGenerate={handleGenerateOutlinePreview}
+          onGenerate={handleGenerateOutlinePreview}
           onConfirm={handleConfirmOutline} onUpdateChapter={updatePreviewChapter}
           appendMode={outlineAppendMode} onAppendModeChange={setOutlineAppendMode}
           hasExistingChapters={existingChapterCount > 0}

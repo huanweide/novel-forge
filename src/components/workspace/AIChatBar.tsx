@@ -331,7 +331,8 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
       <div className="flex flex-wrap gap-1.5 border-b border-[var(--nv-border-2)] px-3 py-2">
         {PRESETS.map((p) => (
           <button key={p.key} disabled={loading} onClick={() => runPreset(p.prompt)}
-            className="rounded-full border border-[var(--nv-border-2)] px-2.5 py-1 text-[11px] text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-primary)] hover:text-[var(--nv-primary)] disabled:opacity-50">
+            className="rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-2.5 py-1 text-[11px] text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-primary)] hover:bg-[var(--nv-primary-soft)] hover:text-[var(--nv-primary)] hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+            title={p.prompt}>
             {p.label}
           </button>
         ))}

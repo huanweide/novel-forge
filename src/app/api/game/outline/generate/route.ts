@@ -10,6 +10,7 @@ import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { formatStorylines } from "@/core/pipeline/outline-context";
 
 const OUTLINE_SYSTEM_PROMPT = `你是一位资深小说架构师，专精于将故事创意转化为可执行的"工程蓝图"。你的输出将被AI写作引擎直接解析和执行。
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     // 1. 加载项目上下文
-    const [project, node, characters, loreEntries, allNodes, summaries] = await Promise.all([
+    const [project, node, characters, loreEntries, allNodes, summaries, storylines] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
       prisma.characterCard.findMany({ where: { projectId }, take: 30 }),
@@ -69,6 +70,10 @@ export async function POST(req: Request) {
         where: { projectId },
         orderBy: { createdAt: "desc" },
         take: 5,
+      }),
+      prisma.storyline.findMany({
+        where: { projectId, status: { in: ["active", "main"] } },
+        orderBy: { order: "asc" },
       }),
     ]);
 
@@ -113,6 +118,9 @@ export async function POST(req: Request) {
       `- ${f.description} [状态:${f.status}] [来源:第${allNodes.findIndex(n => n.id === f.sourceNodeId) + 1 || "?"}章]`
     ).join("\n");
 
+    // 剧情线感知（与快速章纲/抽卡一致：呼应主线，不盲写）
+    const storylineContext = formatStorylines(storylines as any[]);
+
     // 3. 组装用户提示词
     const userPromptParts = [
       `## 任务：为《${project.name}》生成第${chapterNumber}章章纲`,
@@ -125,6 +133,9 @@ export async function POST(req: Request) {
       locationList || "（无地点数据）",
       "### 势力白名单",
       factionList || "（无势力数据）",
+      "",
+      "## 活跃剧情线（必须呼应，不要偏离主线）",
+      storylineContext || "（暂无剧情线）",
       "",
       "## 伏笔数据库（必须在本章中处理）",
       foreshadowContext || "（暂无活跃伏笔）",

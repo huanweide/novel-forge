@@ -212,7 +212,6 @@ ${characterList}
       cards,
       totalCharacters: characters.length,
       characterDetails: charDetails,
-      modelUsed: "v4-flash",
     });
   } catch (err) {
     return jsonError(err);

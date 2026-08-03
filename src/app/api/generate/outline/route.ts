@@ -21,7 +21,6 @@ export async function POST(request: Request) {
       projectId,
       chapterCount = 8,
       customPrompt,
-      useFlash = false,
       confirmedCardIds,
       cardNotes,
       newCharacterRequests,
@@ -128,7 +127,6 @@ export async function POST(request: Request) {
     const apiKey = projOverride.apiKey || settings.apiKey;
     const model = typeof llmConfig.model === "string" && llmConfig.model.trim() ? llmConfig.model : settings.model;
     const hasCustomPrompt = customPrompt && customPrompt.trim().length > 0;
-    const shouldUseFlash = useFlash || hasCustomPrompt || /flash/i.test(model);
 
     // ── 中文数字 ──
     const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
@@ -296,7 +294,6 @@ ${finalDirective}${charCountNote}
       chapters,
       rawOutline: rawOutline || structuredContent.slice(0, 500),
       totalGenerated: chapters.length,
-      modelUsed: /flash/i.test(model) ? "v4-flash" : "v4-pro",
     });
   } catch (err) {
     return jsonError(err);

@@ -50,7 +50,7 @@ export function NodeTreeItem({
         )}
         {isChapter && (
           <button onClick={(e) => { e.stopPropagation(); router.push(`/workspace/${projectId}/game/${node.id}`); }}
-            className="opacity-0 group-hover:opacity-100 text-[var(--nv-creative)]/70 hover:text-[var(--nv-creative)] text-[12px] px-0.5 transition-opacity" title="游戏模式创作本章"><Icon name="gamepad" size={12} /></button>
+            className="text-[var(--nv-creative)]/80 hover:text-[var(--nv-creative)] hover:bg-[var(--nv-creative)]/10 text-[12px] px-0.5 rounded transition-colors" title="进入游戏模式——像文字 RPG 一样创作本章"><Icon name="gamepad" size={12} /></button>
         )}
         <span className="text-[var(--nv-text-tertiary)] text-[10px]">{node.wordCount > 0 ? `${node.wordCount}字` : ""}</span>
       </div>

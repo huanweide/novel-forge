@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       projectId,
       nodeId,
       authorNote,
-      targetWordCount = 800,
+      targetWordCount = 3000,
       confirmedCardIds,
       cardNotes,
       newCharacterRequests,

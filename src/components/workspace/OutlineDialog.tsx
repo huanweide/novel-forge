@@ -6,18 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 
 export function OutlineDialog({
-  projectName, chapterCount, customChapterCount, customPrompt, useFlash,
-  previewChapters, modelUsed, rawOutline, error, isGenerating,
+  projectName, chapterCount, customChapterCount, customPrompt,
+  previewChapters, rawOutline, error, isGenerating,
   onChapterCountChange, onCustomChapterCountChange, onCustomPromptChange,
-  onUseFlashChange, onGenerate, onConfirm, onUpdateChapter, onClose,
+  onGenerate, onConfirm, onUpdateChapter, onClose,
   appendMode, onAppendModeChange, hasExistingChapters,
 }: {
   projectName: string; chapterCount: number; customChapterCount: string;
-  customPrompt: string; useFlash: boolean;
+  customPrompt: string;
   previewChapters: { title: string; summary: string; coreConflict: string; characters: string[] }[];
-  modelUsed: string; rawOutline: string; error: string; isGenerating: boolean;
+  rawOutline: string; error: string; isGenerating: boolean;
   onChapterCountChange: (n: number) => void; onCustomChapterCountChange: (s: string) => void;
-  onCustomPromptChange: (s: string) => void; onUseFlashChange: (v: boolean) => void;
+  onCustomPromptChange: (s: string) => void;
   onGenerate: () => void; onConfirm: () => void;
   onUpdateChapter: (index: number, field: string, value: string) => void;
   onClose: () => void; appendMode: boolean; onAppendModeChange: (v: boolean) => void;
@@ -83,16 +83,12 @@ export function OutlineDialog({
           <div>
             <label className="text-sm text-[var(--nv-text-secondary)] mb-2 flex items-center gap-3">
               <span>自定义提示词（可选）</span>
-              <label className="flex items-center gap-1.5 text-xs text-[var(--nv-text-tertiary)] cursor-pointer">
-                <input type="checkbox" checked={useFlash} onChange={(e) => onUseFlashChange(e.target.checked)} className="rounded accent-[var(--nv-primary)]" />
-                用 V4 Flash
-              </label>
             </label>
             <textarea value={customPrompt} onChange={(e) => onCustomPromptChange(e.target.value)}
-              placeholder={`不填则自动基于角色、世界书、总纲用 V4 Pro 生成。\n\n填写则按你的提示词生成章纲。例如：\n"重点写主角从懦弱到勇敢的转变过程，前三章铺垫，中间爆发，最后两章收尾"`}
+              placeholder={`不填则自动基于角色、世界书、总纲用默认模型生成。\n\n填写则按你的提示词生成章纲。例如：\n"重点写主角从懦弱到勇敢的转变过程，前三章铺垫，中间爆发，最后两章收尾"`}
               className="input-glass w-full rounded-lg px-3 py-2 text-sm resize-none focus:border-[var(--nv-primary)]"
               rows={3} disabled={isGenerating} />
-            <p className="text-xs text-[var(--nv-text-tertiary)] mt-1">有提示词 → {useFlash ? "V4 Flash" : "V4 Pro"} 快速响应 · 无提示词 → V4 Pro 深度创作</p>
+            <p className="text-xs text-[var(--nv-text-tertiary)] mt-1">有提示词 → 按你的指令生成 · 无提示词 → 默认模型深度创作</p>
           </div>
           {/* 追加/替换 */}
           {hasExistingChapters && (
@@ -111,7 +107,6 @@ export function OutlineDialog({
             <Button onClick={onGenerate} disabled={isGenerating || (chapterCount === -1 && !customChapterCount)} className="btn-primary text-[var(--nv-text-primary)]">
               {isGenerating ? <><Icon name="loader" size={14} className="animate-spin" /> 生成中...</> : <><Icon name="sparkles" size={14} /> 生成大纲预览</>}
             </Button>
-            {modelUsed && <span className="text-xs text-[var(--nv-text-tertiary)]">模型：<span className={modelUsed === "v4-pro" ? "text-[var(--nv-creative)]" : "text-[var(--nv-info)]"}>{modelUsed}</span></span>}
           </div>
           {/* 总览文本 */}
           {rawOutline && (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icons";
+import { useProjectStore } from "@/store";
 
 interface AIChatHeaderProps {
   loading: boolean;
@@ -9,7 +10,8 @@ interface AIChatHeaderProps {
 }
 
 /**
- * 墨灵 — Agent 头部：身份高亮 + 能力教学 + 模式徽标（v0.46.58）
+ * 墨灵 — Agent 头部（活现化重设计 v0.46.59）
+ * 渐变发光头像 + 就绪标语 + 能力说明 + 项目统计条 + 模式徽标。
  */
 const CAPABILITIES: { icon: string; label: string; desc: string }[] = [
   { icon: "user", label: "角色", desc: "查/建/改/删角色卡，比对正文与设定" },
@@ -22,24 +24,58 @@ const CAPABILITIES: { icon: string; label: string; desc: string }[] = [
 
 export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
   const [showHelp, setShowHelp] = useState(false);
+  const project = useProjectStore((s) => s.project);
+
+  const totalWords = project
+    ? project.storyNodes.reduce((sum: number, n: any) => sum + (n.wordCount || 0), 0)
+    : 0;
+  const charCount = project?.characters.length ?? 0;
+  const loreCount = project?.lorebookEntries.length ?? 0;
+  const nodeCount = project?.storyNodes.length ?? 0;
+
+  const stats = [
+    { label: "总字数", value: totalWords },
+    { label: "角色", value: charCount },
+    { label: "词条", value: loreCount },
+    { label: "节点", value: nodeCount },
+  ];
 
   return (
-    <div className="shrink-0 border-b border-[var(--nv-border-1)] bg-[var(--nv-surface-2)]">
-      <div className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div className={`w-2 h-2 rounded-full ${loading ? "bg-[var(--nv-accent)]" : "bg-[var(--nv-success)]"}`} />
-            <div className={`absolute inset-0 w-2 h-2 rounded-full opacity-40 ${loading ? "bg-[var(--nv-accent)] animate-ping" : "bg-[var(--nv-success)] animate-ping"}`} />
+    <div className="shrink-0 border-b border-[var(--nv-border-1)] bg-gradient-to-br from-[var(--nv-surface-2)] to-[var(--nv-surface-1)]">
+      <div className="px-3 py-3">
+        {/* 身份行：发光头像 + 标语 + 模式徽标 */}
+        <div className="flex items-center gap-2.5">
+          <div className="relative shrink-0">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--nv-creative)] via-[var(--nv-accent)] to-[var(--nv-info)]"
+              style={{ boxShadow: "0 0 16px color-mix(in oklch, var(--nv-creative) 55%, transparent)" }}
+            >
+              <Icon name="bot" size={18} className="text-white" />
+            </div>
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--nv-surface-2)] ${
+                loading ? "bg-[var(--nv-accent)]" : "bg-[var(--nv-success)]"
+              }`}
+            />
           </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span
+                className="text-sm font-bold bg-gradient-to-r from-[var(--nv-creative)] via-[var(--nv-accent)] to-[var(--nv-info)] bg-clip-text text-transparent"
+                style={{ filter: "drop-shadow(0 0 6px color-mix(in oklch, var(--nv-creative) 35%, transparent))" }}
+              >
+                墨灵
+              </span>
+              <span className="text-[11px] font-semibold text-[var(--nv-text-primary)]">AI 写作助手就绪</span>
+            </div>
+            <p className="text-[10px] leading-snug text-[var(--nv-text-tertiary)] mt-0.5">
+              我能直接查角色卡、世界书、大纲来回答你——不猜正文，只看数据
+            </p>
+          </div>
+
           <span
-            className="text-xs font-bold bg-gradient-to-r from-[var(--nv-creative)] via-[var(--nv-accent)] to-[var(--nv-info)] bg-clip-text text-transparent"
-            style={{ filter: "drop-shadow(0 0 6px color-mix(in oklch, var(--nv-creative) 40%, transparent))" }}
-          >
-            墨灵
-          </span>
-          <span className="text-[10px] text-[var(--nv-text-tertiary)]">AI 写作助手</span>
-          <span
-            className={`ml-auto inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full ${
+            className={`shrink-0 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full transition-colors ${
               readonlyMode
                 ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]"
                 : "bg-[var(--nv-success)]/15 text-[var(--nv-success)]"
@@ -50,21 +86,33 @@ export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
             {readonlyMode ? "只读" : "可操作"}
           </span>
         </div>
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-[10px] text-[var(--nv-text-secondary)] leading-relaxed">
-            角色卡·世界书·大纲·伏笔·故事线·规则·风格
-          </span>
-          <button
-            onClick={() => setShowHelp((v) => !v)}
-            className="shrink-0 inline-flex items-center gap-0.5 text-[10px] text-[var(--nv-creative)] hover:text-[var(--nv-creative)]/70 transition-colors"
-          >
-            <Icon name="sparkles" size={10} /> {showHelp ? "收起" : "墨灵能做什么？"}
-          </button>
+
+        {/* 项目统计条 */}
+        <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-lg bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] px-1 py-1.5 text-center transition-colors hover:border-[var(--nv-primary)]/40"
+            >
+              <div className="text-sm font-bold text-[var(--nv-text-primary)] leading-none tabular-nums">
+                {typeof s.value === "number" ? s.value.toLocaleString() : s.value}
+              </div>
+              <div className="text-[9px] text-[var(--nv-text-tertiary)] mt-0.5">{s.label}</div>
+            </div>
+          ))}
         </div>
+
+        {/* 能力说明开关 */}
+        <button
+          onClick={() => setShowHelp((v) => !v)}
+          className="mt-2 inline-flex items-center gap-0.5 text-[10px] text-[var(--nv-creative)] hover:text-[var(--nv-creative)]/70 transition-colors"
+        >
+          <Icon name="sparkles" size={10} /> {showHelp ? "收起能力说明" : "墨灵能做什么？"}
+        </button>
       </div>
 
       {showHelp && (
-        <div className="px-3 pb-2 space-y-1">
+        <div className="px-3 pb-3 space-y-1">
           <p className="text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">
             墨灵是会使用项目工具的写作 Agent——直接说需求即可，例如：「把樊斯瑞的性格改成更外放」「列出本章与角色卡不一致的地方」。
           </p>
