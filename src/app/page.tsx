@@ -237,7 +237,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* 纸舟星海：墨色海面漂着折纸船，每艘船载一盏灯（点击拉近望海 · 下方选择一本书） */}
+      {/* 纸舟星海：墨色海面漂着各式真实船型（船型即作品），随机巡游、点击进入写作区 · 下方选择一本书 */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 py-14">
         <div className="mb-6 max-w-2xl">
           <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
@@ -247,7 +247,7 @@ export default function Dashboard() {
             每一艘船，<span className="text-gradient">都是一部作品</span>
           </h2>
           <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
-            黑珍珠号、复仇女王号、飞翔的荷兰人、航空母舰……每一艘都是真实的名船，对应你的一部作品。悬浮看船名，点击确认后进入写作区；拖拽旋转视角、滚轮缩放。
+            每一艘船都是一部尚未写完的故事——有的披着暗夜的金帆，有的在幽海里浮着磷光，有的驮着云港巨舰的宏图。它们在水面随机巡游，各自航速不同却始终相守。悬浮可窥书影，点击确认后登上你的那一艘，进入写作区；拖拽旋转视角、滚轮缩放海面。
           </p>
         </div>
         <div className="nf-boat-stage relative rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/30 p-4">
