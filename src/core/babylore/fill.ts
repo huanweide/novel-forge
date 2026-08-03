@@ -54,6 +54,7 @@ export interface SelfCheckResult {
   checkedTables: number;
   nameIssues: number; // 疑似错误地名/名称
   completenessIssues: number; // 空值/缺名称
+  crossTableIssues: number; // 跨表同名（归属待确认）
   issues: SelfCheckIssue[];
 }
 
@@ -406,7 +407,7 @@ export async function babyloreFillAll(
       applied: 0,
       error: e instanceof Error ? e.message : "LLM 未配置",
       warnings: [],
-      selfCheck: { checkedTables: 0, nameIssues: 0, completenessIssues: 0, issues: [] },
+      selfCheck: { checkedTables: 0, nameIssues: 0, completenessIssues: 0, crossTableIssues: 0, issues: [] },
     };
   }
   const projOverride = buildProjectOverrides(options?.projectLlmConfig || {});
@@ -435,7 +436,7 @@ export async function babyloreFillAll(
       applied: 0,
       error: "项目暂无结构化表格。请先在创意工坊套用「表格模板预设」，或在项目「结构化表格」页新建。",
       warnings: [],
-      selfCheck: { checkedTables: 0, nameIssues: 0, completenessIssues: 0, issues: [] },
+      selfCheck: { checkedTables: 0, nameIssues: 0, completenessIssues: 0, crossTableIssues: 0, issues: [] },
     };
   }
 
@@ -468,10 +469,13 @@ export async function babyloreFillAll(
     operations += r.operations;
     applied += r.applied;
     for (const w of r.warnings) warnings.push(`第${ch.order}章《${ch.title || "未命名"}》：${w}`);
-    filledSet.add(ch.id);
-    // 增量落盘：每填完一章即持久化，避免中途超时/崩溃丢失全部进度（磐石 P0 防丢进度）
-    filledMap[projectId] = Array.from(filledSet);
-    saveFilled(filledMap);
+    // 仅成功章计入已填集合——失败章必须留待重试，否则被永久标记跳过（磐石 P0 修复）。
+    if (r.ok) {
+      filledSet.add(ch.id);
+      // 增量落盘：每填完一章即持久化，避免中途超时/崩溃丢失全部进度（磐石 P0 防丢进度）
+      filledMap[projectId] = Array.from(filledSet);
+      saveFilled(filledMap);
+    }
   }
 
   const selfCheck = await selfCheckFill(projectId);
@@ -503,10 +507,15 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
   const issues: SelfCheckIssue[] = [];
   let nameIssues = 0;
   let completenessIssues = 0;
+  let crossTableIssues = 0;
+
+  // 跨表同名归属校验（F3）：先收集「每个身份列值在哪些表、哪些类别出现」。
+  const valueTables = new Map<string, { tables: string[]; categories: Set<string> }>();
 
   for (const t of dbTables) {
     const rows = (t.rows as any[]) || [];
     const idCol = getIdentityCol({ columns: t.columns as any[] });
+    const seenInTable = new Set<string>();
     for (const r of rows) {
       const v = r[idCol];
       if (v == null || String(v).trim() === "") {
@@ -519,6 +528,27 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
         nameIssues++;
         issues.push({ table: t.name, row: r.row_id ?? "?", value: s, issue: "疑似错误地名/名称（全正文检索不到原文）" });
       }
+      // 跨表同名收集（同表内重复只记一次）
+      const sl = s.toLowerCase();
+      if (sl.length >= 2 && !seenInTable.has(sl)) {
+        seenInTable.add(sl);
+        if (!valueTables.has(sl)) valueTables.set(sl, { tables: [], categories: new Set() });
+        const e = valueTables.get(sl)!;
+        e.tables.push(t.name);
+        e.categories.add(t.category || "custom");
+      }
+    }
+  }
+
+  // 跨表同名：同一名称值出现在 ≥2 个不同类别的表 → 归属待确认（自动填表可能把人名写进地点表等）。
+  for (const [val, info] of valueTables) {
+    const distinct = Array.from(new Set(info.tables));
+    if (distinct.length >= 2 && info.categories.size >= 2) {
+      crossTableIssues++;
+      const others = distinct.join(" / ");
+      for (const tname of distinct) {
+        issues.push({ table: tname, row: "跨表", value: val, issue: `跨表同名（归属待确认）：与表「${others}」类别不同却共享同名「${val}」` });
+      }
     }
   }
 
@@ -526,6 +556,7 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
     checkedTables: dbTables.length,
     nameIssues,
     completenessIssues,
+    crossTableIssues,
     issues: issues.slice(0, 200),
   };
 }

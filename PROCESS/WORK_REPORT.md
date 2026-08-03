@@ -1675,3 +1675,35 @@
 
 - **已真实验证**：tsc 零错误；全部 10 项修复为纯逻辑/可单测/无外部依赖，已 commit+push 到 GitHub；改动文件经逐行审查确认语义正确。
 - **未验证（必须明示）**：F2（单章填表 warnings UI 渲染）、F3（selfCheck 查错表语义）、F6（tables 页标红告警行）、磐石 P0 串行→分批并行架构改造——这些需 UI 或端到端实证，已显式留待 Round 2 由股东先复验再实现，本轮未擅自动手以免无验证的 UI 改动。Round 2 起股东先回归验证本轮修复是否生效，再挖新坑，循环≥5轮。
+
+---
+
+## v0.46.65 会员股东 Round 2 实现（费曼报告）
+
+### 一、干了什么
+把 Round 2 股东复验挖出的 4 类真实漏洞全部落地修复（纯逻辑、无 UI 改动）：
+1. **监控盲区清零（磐石 P0）**：填表、大纲、章纲、角色扩写、导入合并 5 处直接裸 fetch 调 LLM 的代码，全部补上 `recordLlmCall`（成本记账函数），成本看板不再漏记这几路调用。
+2. **实体高亮边界修正（青砚 F1 收尾）**：英文/拼音 2 字关键词从「任一侧是边界即命中」改成「两侧都必须是边界才算命中」，灭 `waitAI`/`xAI`/`AIx` 这类紧贴拉丁字母的伪词误触发。
+3. **导入 AI 合并关系归一化（工坊 P1）**：AI 合并成功写库的分支也走 `normalizeRelationships`，旧格式 `{target,type}` 自动转 `{targetName,relation}`。
+4. **正则后处理校验前置（工坊 P1）**：保存规则前校验全部正则（含手改已有规则）合法性，非法正则阻止保存并提示。
+
+### 二、为什么这么做（第一性原理）
+- 监控盲区：成本看板的「总 token/费用」是靠每次 LLM 调用后调用 `recordLlmCall` 累积的。之前只有 `client.ts` 门面里调，而这 5 处是「绕过门面、自己直接 fetch」的老代码，所以它们的调用从不被记账——磐石（监控后台）看到的成本永远偏低、看不全。
+- 边界退化：中文没有空格，我们用「词边界」判断一个 2 字关键词是不是真的独立出现。但上一轮对英文的处理留了个洞——字符串首尾的「空字符」被无条件当作边界，导致 `AI` 在 `waitAI`（"wait" 后面紧接 "AI"）这种「夹在更长英文单词里」的情况也被判命中。
+- 合并归一化：导入时同名角色若 AI 合并成功，会直接用 AI 返回的数据覆盖；若 AI 用了旧字段名（target/type），关系就静默失效、编译出 `?(?)`。
+- 正则校验：正则规则是用户在生成后用来清洗正文的，若保存了一个非法正则，生成时一用就崩。
+
+### 三、方法 / 工具与效果
+- `recordLlmCall`：从 `src/lib/llm.ts` 已有的记账函数（fire-and-forget 写 `llmCallLog` 表、失败静默），在 5 处裸 fetch 拿到响应后提取 `data.usage`（OpenAI 兼容的 token 数，兼容驼峰），缺字段安全回退 0。改 5 文件：fill.ts / generate/outline/route.ts / core/pipeline/plan-chapter.ts / characters/expand/route.ts / import/commit/route.ts。
+- `match.ts`：`keywordIsCjk ? (A||B) : (A&&B)`——中文保持「任一侧边界即命中」，英文改为「两侧都必须是边界」。用生活类比：中文词像积木，拼起来才成词，所以只要一头接不上别的中文就算独立；英文 `AI` 像被夹在 `waitAI` 里的一个音节，必须两头都不贴字母才算独立单词。
+- `import/commit/route.ts`：AI 合并分支的 `data` 里 `relationships` 字段过一遍 `normalizeRelationships`。
+- `ProjectConfigPanel.tsx`：`saveRules` 保存前 `for` 循环对每条规则的 `pattern` 跑 `new RegExp` 试编译，抛错就提示并中止保存。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → TSC_EXIT=0；双 changelog（v0.46.65）+ commit 3c8a2b2 + 代理 push main（b488cee..3c8a2b2）。
+
+### 四、关键取舍
+- 监控补记选「在裸 fetch 处就地补 `recordLlmCall`」而非「把 5 处重构走 client 门面」：重构更彻底但有回归风险且要动流式/错误链，就地补记零风险、立刻见效，代价是裸 fetch 代码仍冗余（后续可再重构）。
+- 英文边界改 AND：会让极少数「词首/词尾恰好贴着中文/空格以外字符」的合法命中变严，但相比 `waitAI` 这类明显误触发，这是更优权衡。
+
+### 五、诚实边界（反自欺）
+- **已真实验证**：tsc 零错误；全部 4 类修复为纯逻辑/无 UI 改动，已 commit+push；改动逐行审查语义正确；`recordLlmCall` 调用点与字段签名（LlmCallLogInput）对照 `src/lib/llm.ts:245` 确认一致。
+- **未验证（必须明示）**：token usage 实际是否非空依赖真实 LLM 返回（沙箱需代理未实跑）；`recordLlmCall` 落库需 prisma 已生成（沙箱约束）；仍遗留待 Round 3：墨白 F2/F3/F6(UI)、磐石串行→并行架构、阿游主线一致性/断流分叉、青砚 trigger OOC 暴力 includes/禁词未接边界/数字 len≥3 误伤、工坊备份 include 键名不一致/projects/import 还原漏归一化、清览 P1 性能 O(N·L)。Round 3 由股东先回归验证本轮修复再挖新坑，循环≥5轮。

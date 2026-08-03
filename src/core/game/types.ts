@@ -82,6 +82,7 @@ export interface GameActionInput {
   actionType: GameActionType;
   actionText: string;       // 自定义文本 或 按钮标签
   selectedOption?: number;  // 如果选了编号选项
+  selectedOptionText?: string; // 上一轮选项对应的文本（承接分支用，由引擎从 states 补全）
   targetItem?: string;      // 如果用物品，目标物品名
 }
 

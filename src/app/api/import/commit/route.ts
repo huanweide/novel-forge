@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { getSettings, recordLlmCall } from "@/lib/llm";
+import { normalizeRelationships } from "@/lib/relations";
 
 export const maxDuration = 300;
 
@@ -121,22 +122,6 @@ ${pairsText}
 // ═══════════════════════════════════════════════════════════════
 // 规则合并 —— AI 失败时的兜底（互补合并，不丢信息）
 // ═══════════════════════════════════════════════════════════════
-
-/**
- * 角色关系字段归一化：外部导入可能用旧格式 {target, type}，
- * 而 sync-global-prompt 只认 {targetName, relation}（否则编译出「?(?)」）。
- * 此处统一归一化，避免关系字段静默失效（工坊 P1）。
- */
-function normalizeRelationships(raw: unknown): { targetName: string; relation: string }[] {
-  if (!Array.isArray(raw)) return [];
-  return (raw as unknown[])
-    .filter((r: any) => r && (r.targetName || r.target))
-    .map((r: any) => ({
-      targetName: String(r.targetName ?? r.target ?? "").trim(),
-      relation: String(r.relation ?? r.type ?? "").trim(),
-    }))
-    .filter((r: any) => r.targetName.length > 0);
-}
 
 function ruleMergeChar(existing: Record<string, unknown>, incoming: Record<string, unknown>): Record<string, unknown> {
   const mergeArr = (key: string) => {

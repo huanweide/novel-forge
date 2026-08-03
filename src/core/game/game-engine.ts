@@ -173,7 +173,15 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
 
   // 2. 组装提示词
   const systemPrompt = buildGameSystemPrompt(ctx);
-  const userPrompt = buildActionPrompt(input);
+  // 阿游 P1-1：从上一轮 states 取出所选选项文本，让 prompt 显式承接分支
+  let selectedOptionText: string | undefined;
+  if (input.selectedOption != null && session.states.length > 0) {
+    const lastState = session.states[session.states.length - 1] as any;
+    const opts = (lastState?.options || []) as any[];
+    const hit = opts.find((o: any) => o?.index === input.selectedOption);
+    if (hit) selectedOptionText = hit.text;
+  }
+  const userPrompt = buildActionPrompt({ ...input, selectedOptionText });
 
   // 3. 获取 LLM 配置并创建客户端
   const llmConfig = await getEffectiveConfig();
@@ -278,7 +286,10 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
     data: {
       sessionId: session.id,
       round: newRound,
-      playerAction: input.actionText || ACTION_TYPE_LABELS[input.actionType] || "自定义行动",
+      playerAction:
+        input.selectedOption != null
+          ? `选择选项${input.selectedOption}${selectedOptionText ? `：${selectedOptionText}` : ""}`
+          : (input.actionText || ACTION_TYPE_LABELS[input.actionType] || "自定义行动"),
       narrative: parsed.narrative,
       options: finalOptions as any,
       entities: allEntities as any,

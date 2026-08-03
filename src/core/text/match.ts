@@ -32,7 +32,8 @@ function isBoundaryChar(ch: string, keywordIsCjk: boolean): boolean {
  *
  * 规则：
  *  - 文本不含 keyword → false
- *  - keyword 长度 ≥ 3 → true（足够具体，如「青龙镇」「碎玉轩」）
+ *  - keyword 长度 ≥ 3 且非纯数字 → true（足够具体，如「青龙镇」「碎玉轩」）
+ *  - keyword 为纯数字（如「1949」「2049」）→ 无论多长都走词边界判定，否则「2049」会误命中「120499」
  *  - keyword 长度 = 2 → 任一出现位置满足「至少一侧是词边界」（开头/结尾/相邻非汉字）才 true；
  *                     两侧都是汉字（说明夹在更长词里，如「云山」夹在「青云山」）则 false
  *  - keyword 长度 = 1 → false（单字太泛，如「林」会命中「森林」「园林」，一律拒绝）
@@ -46,8 +47,12 @@ export function matchKeyword(text: string, keyword: string): boolean {
   if (!hay.includes(needle)) return false;
 
   const len = needle.length;
-  if (len >= 3) return true;
   if (len <= 1) return false; // 单字直接拒绝
+
+  // 纯数字关键词（如「1949」「2049」）：无论长度都走下方词边界判定，
+  // 否则「2049」会误命中「120499」这类包含子串的数字串（R-F4 数字子串误伤）。
+  const isPureDigit = /^[0-9]+$/.test(needle);
+  if (len >= 3 && !isPureDigit) return true;
 
   // 长度 2：逐位置检查，只要有一处满足「至少一侧是真实词边界」即视为命中。
   // 中文词：相邻非汉字即边界；非中文词：仅在空白/标点/中文相邻处为边界（灭 "AI" 命中 "waitAI"）。

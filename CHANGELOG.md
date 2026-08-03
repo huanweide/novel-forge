@@ -2,6 +2,15 @@
 
 ---
 
+## v0.46.66 — 2026-08-03
+**会员股东 Round 3 实现：监控第6盲区 + 数字子串误伤 + 实体高亮 O(N·L) + 表格告警标红 + 游戏选项承接（tsc 零错误）**
+
+- 监控盲区彻底清零（磐石 P0）：import/parse 的 callFlash 每次 Flash 调用补 recordLlmCall（role:import_parse），成本看板第6处盲区清零，导入解析 token 不再漏记；babyloreFillAll 失败章不再被永久标记跳过（filledSet.add 加 if(r.ok) 守卫），失败章留待重试，灭「一次失败永久跳过」的数据死区
+- 数字子串误伤 + OOC 暴力子串（青砚 R-F4 + OOC）：match.ts 纯数字关键词（如 2049）无论长度都走词边界判定，灭 2049 误命中 120499；findCharacterByName 角色名/OOC 查找改 matchKeyword 词边界匹配，灭「阿游」暴力子串误命中「阿克游说」；banned-words 拉丁/数字短词（长度≤2 且非纯中文）走词边界判定，保留中文词子串，灭 vx 误命中 avx
+- 实体高亮 O(N·L) → O(L+命中)（清览 P1）：findEntitiesInText 改为单遍正则扫描（一次遍历文本命中所有实体名），复杂度从 外层实体×内层 indexOf+占用切片 降为 文本长度 + 命中数，长正文高亮不再卡顿，保留最长名优先与边界判定
+- 表格填表告警 UI（墨白 F2/F3/F6）：单章自动填表卡补 warnings 渲染（此前只显示 operations/applied/error）；selfCheckFill 加跨表同名归属校验（同一名称值出现在≥2个类别不同的表 → 标记归属待确认，灭自动填表把人名写进地点表等误归属）；LoreTableGrid 新增 flaggedRows prop，自检问题行红色高亮
+- 游戏选项承接 + 解析健壮（阿游 P1-1）：selectedOption 显式进入 prompt 承接上一轮选项分支（并从上一轮 states 补全选项文本），playerAction 持久化带选项编号；parseGameOutput 选项解析重写（基于连续编号行块判定选项区，编号放宽 1–6、超界丢弃不残留、同号只取首次）
+
 ## v0.46.65 — 2026-08-03
 **会员股东 Round 2 实现：监控盲区清零 + 边界修正 + 导入合并归一化 + 正则校验前置（tsc 零错误）**
 

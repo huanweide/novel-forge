@@ -60,13 +60,13 @@ export function findCharacterByName(
   text: string,
   characters: { id: string; name: string; aliases: string[] }[]
 ): string[] {
-  const lowerText = text.toLowerCase();
   const found: string[] = [];
 
   for (const char of characters) {
     const names = [char.name, ...char.aliases];
     for (const name of names) {
-      if (lowerText.includes(name.toLowerCase())) {
+      // 改用词边界匹配（matchKeyword），避免「阿游」暴力子串误命中「阿克游说」这类 OOC 假阳性。
+      if (matchKeyword(text, name)) {
         found.push(char.id);
         break;
       }

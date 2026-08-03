@@ -152,36 +152,41 @@ export function findEntitiesInText(
   text: string,
   entityMap: Map<string, EntityHighlight>,
 ): EntityMatch[] {
-  const sorted = Array.from(entityMap.entries())
+  const names = Array.from(entityMap.entries())
     .filter(([name]) => name.length >= 2 && !COMMON_STOP_WORDS.has(name))
-    .sort((a, b) => b[0].length - a[0].length);
+    .sort((a, b) => b[0].length - a[0].length)
+    .map(([name]) => name);
 
+  if (names.length === 0) return [];
+
+  // 单遍正则扫描：一次遍历文本即可命中所有实体名，复杂度 O(L + 命中数)，
+  // 取代原先「逐实体名 × 逐处 indexOf + 占用切片」的 O(N·L)（清览 P1）。
+  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  // 长名排在前 → 同一位置正则优先匹配更长的名；配合 occupied 防止短名覆盖已匹配的长名区间。
+  const regex = new RegExp("(" + escaped.join("|") + ")", "g");
+  const byName = new Map(names.map((n) => [n, entityMap.get(n)!]));
   const occupied = new Array(text.length).fill(false);
   const matches: EntityMatch[] = [];
 
-  for (const [name, entity] of sorted) {
-    let pos = 0;
-    while (pos < text.length) {
-      const idx = text.indexOf(name, pos);
-      if (idx === -1) break;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    const name = m[0];
+    const idx = m.index;
+    const end = idx + name.length;
 
-      const end = idx + name.length;
-      const isOccupied = occupied.slice(idx, end).some(Boolean);
+    // 已占用区间跳过（最长名优先：短名若落在已匹配长名区间内则不重复匹配）。
+    if (occupied.slice(idx, end).some(Boolean)) continue;
 
-      if (!isOccupied) {
-      const prevChar = text[idx - 1];
-      const isHeadBoundary = !prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar);
-      // 头边界必查（防止把别的词中间的片段误当实体）；尾边界对 2 字名放宽（只查头边界），
-      // 3 字及以上本来就不查边界。解决「2 字实体名几乎不高亮」（清览 P1）。
-      const passesBoundary = name.length >= 3 ? true : isHeadBoundary;
+    const prevChar = text[idx - 1];
+    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar);
+    // 头边界必查（防止把别的词中间的片段误当实体）；尾边界对 2 字名放宽（只查头边界），
+    // 3 字及以上本来就不查边界。解决「2 字实体名几乎不高亮」（清览 P1）。
+    const passesBoundary = name.length >= 3 ? true : isHeadBoundary;
 
-      if (passesBoundary) {
-          matches.push({ name, color: entity.color, type: entity.type, category: entity.category, start: idx, end });
-          for (let i = idx; i < end; i++) occupied[i] = true;
-        }
-      }
-
-      pos = idx + 1;
+    if (passesBoundary) {
+      const entity = byName.get(name)!;
+      matches.push({ name, color: entity.color, type: entity.type, category: entity.category, start: idx, end });
+      for (let i = idx; i < end; i++) occupied[i] = true;
     }
   }
 

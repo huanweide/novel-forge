@@ -8,7 +8,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getSettings } from "@/lib/llm";
+import { getSettings, recordLlmCall } from "@/lib/llm";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { THREE_CARD_BOUNDARIES } from "@/core/settings";
 
@@ -167,6 +167,10 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
     if (!res.ok) { const eb = await res.text().catch(() => ""); return { raw: "", error: `${cfg.label} HTTP ${res.status}: ${eb.slice(0, 200)}`, sec: parseFloat(sec) }; }
     const data = await res.json().catch(() => null);
     const raw = data?.choices?.[0]?.message?.content || "";
+    // 监控盲区修复：import_parse 的每次 Flash 调用都记账（P0 第6处盲区）。
+    const promptTokens = countTokens(systemPrompt + "\n" + userPrompt);
+    const completionTokens = countTokens(raw);
+    recordLlmCall({ model: cfg.model, role: "import_parse", promptTokens, completionTokens, totalTokens: promptTokens + completionTokens, baseURL: cfg.baseURL });
     if (!raw || raw.trim().length < 20) return { raw: "", error: `${cfg.label} 返回空内容`, sec: parseFloat(sec) };
     return { raw, sec: parseFloat(sec) };
   } catch (e) {

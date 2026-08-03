@@ -156,9 +156,18 @@ export function buildActionPrompt(input: GameActionInput): string {
   const template =
     ACTION_PROMPTS[input.actionType] ?? ACTION_PROMPTS.custom;
 
-  return template
+  let prompt = template
     .replace("{customText}", input.actionText)
     .replace("{itemHint}", input.targetItem ? `使用：${input.targetItem}` : "请列出可以使用的物品");
+
+  // 阿游 P1-1：显式承接上一轮玩家选择的选项，让 AI 知道从哪个分支继续推进。
+  if (input.selectedOption != null && input.selectedOptionText) {
+    prompt = `（承接上一轮，玩家选择了选项 ${input.selectedOption}：${input.selectedOptionText}）\n` + prompt;
+  } else if (input.selectedOption != null) {
+    prompt = `（承接上一轮，玩家选择了选项 ${input.selectedOption}）\n` + prompt;
+  }
+
+  return prompt;
 }
 
 /**
@@ -177,27 +186,45 @@ export function parseGameOutput(rawOutput: string): {
   const itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string }> = [];
   let plotProgress = -1;
 
-  // ── 提取选项 ──
-  // 匹配 "1. 选项文本" 或 "1、选项文本" 格式
-  const optionPattern = /^(\d)[\.、\s]+(.+)$/gm;
-  const optionLines: Array<{ idx: number; start: number; end: number }> = [];
-  let match: RegExpExecArray | null;
-  while ((match = optionPattern.exec(narrative)) !== null) {
-    const idx = parseInt(match[1]);
-    if (idx >= 1 && idx <= 4 && !optionLines.find((o) => o.idx === idx)) {
-      optionLines.push({
-        idx,
-        start: match.index,
-        end: match.index + match[0].length,
-      });
-      options.push({ index: idx, text: match[2].trim() });
+  // ── 提取选项（阿游 P1-1 重写）──
+  // 基于「连续编号行块」判定选项区：避免把正文里的编号列表（如"1. 首先…"）误当选项；
+  // 编号放宽 1–6；超界编号直接丢弃不残留；同一编号只取首次出现。
+  const lines = narrative.split("\n");
+  const candidatePattern = /^(\d{1,2})[\.、\s]+(.+)$/;
+  const candidates: Array<{ idx: number; text: string; lineNo: number }> = [];
+  lines.forEach((line, i) => {
+    const m = candidatePattern.exec(line);
+    if (m) candidates.push({ idx: parseInt(m[1], 10), text: m[2].trim(), lineNo: i });
+  });
+
+  // 取最靠后的连续候选块（选项通常位于文末）
+  let lastRun: typeof candidates = [];
+  let cur: typeof candidates = [];
+  for (let i = 0; i < candidates.length; i++) {
+    if (cur.length === 0 || candidates[i].lineNo === candidates[i - 1].lineNo + 1) {
+      cur.push(candidates[i]);
+    } else {
+      if (cur.length) lastRun = cur;
+      cur = [candidates[i]];
     }
   }
+  if (cur.length) lastRun = cur;
 
-  // 如果有选项行，截断 narrative 到第一个选项之前
-  if (optionLines.length > 0) {
-    const firstOptionStart = Math.min(...optionLines.map((o) => o.start));
-    narrative = narrative.slice(0, firstOptionStart).trim();
+  const seenIdx = new Set<number>();
+  for (const c of lastRun) {
+    if (c.idx >= 1 && c.idx <= 6 && !seenIdx.has(c.idx)) {
+      seenIdx.add(c.idx);
+      options.push({ index: c.idx, text: c.text });
+    }
+  }
+  options.sort((a, b) => a.index - b.index);
+
+  // 若有选项块，截断 narrative 到该块首行之前
+  if (lastRun.length > 0) {
+    let firstLineStart = 0;
+    const startLine = lastRun[0].lineNo;
+    for (let i = 0; i < startLine; i++) firstLineStart += lines[i].length + 1;
+    narrative = narrative.slice(0, firstLineStart).trim();
   }
 
   // ── 提取新实体（NE|格式）──

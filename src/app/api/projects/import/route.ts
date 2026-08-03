@@ -1,5 +1,6 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { normalizeRelationships } from "@/lib/relations";
 import { NextResponse } from "next/server";
 
 // 去掉会导致冲突的字段（让 Prisma 重新生成 id / 时间戳 / 关联）
@@ -94,7 +95,13 @@ export async function POST(request: Request) {
     // 5. 其余扁平子表
     if (want("characters")) {
       for (const c of p.characters || []) {
-        await prisma.characterCard.create({ data: { ...strip(c, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
+        await prisma.characterCard.create({
+          data: {
+            ...strip(c, ["id", "projectId", "createdAt", "updatedAt"]),
+            relationships: normalizeRelationships((c as any).relationships),
+            projectId: newPid,
+          } as any,
+        });
       }
     }
     if (want("storylines")) {

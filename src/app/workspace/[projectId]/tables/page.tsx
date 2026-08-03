@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
@@ -45,6 +45,21 @@ export default function TablesPage() {
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // F6：根据一键填表自检「问题行」标记需标红的表格行（row_id 集合，按表名分组）。
+  // 「跨表」类问题没有具体 row_id，不参与行级标红。
+  const flaggedByTable = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    const issues = (fillAllResult?.selfCheck?.issues || []) as any[];
+    for (const it of issues) {
+      if (it?.row == null || it.row === "跨表") continue;
+      const num = Number(it.row);
+      if (!Number.isFinite(num)) continue;
+      if (!m.has(it.table)) m.set(it.table, new Set());
+      m.get(it.table)!.add(num);
+    }
+    return m;
+  }, [fillAllResult]);
 
   const saveTable = async (t: LoreTableT) => {
     setBusy(true);
@@ -210,6 +225,14 @@ export default function TablesPage() {
                   )}
                 </div>
                 <div className="mt-1 opacity-70">执行时间：{fillResult.at}</div>
+                {fillResult.warnings?.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1.5 text-[var(--nv-text-primary)]">
+                    <div className="font-medium mb-1">⚠ 疑似错误地名/名称（{fillResult.warnings.length}）</div>
+                    <ul className="list-disc pl-4 space-y-0.5 max-h-40 overflow-auto">
+                      {fillResult.warnings.slice(0, 30).map((w: string, i: number) => <li key={i}>{w}</li>)}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -258,7 +281,7 @@ export default function TablesPage() {
                     </div>
                   )}
                   <div className="text-[var(--nv-text-muted)]">
-                    自检：检查 {fillAllResult.selfCheck?.checkedTables} 个表 · 疑似错误地名 {fillAllResult.selfCheck?.nameIssues} 条 · 空值/缺名称 {fillAllResult.selfCheck?.completenessIssues} 条
+                    自检：检查 {fillAllResult.selfCheck?.checkedTables} 个表 · 疑似错误地名 {fillAllResult.selfCheck?.nameIssues} 条 · 空值/缺名称 {fillAllResult.selfCheck?.completenessIssues} 条 · 跨表同名 {fillAllResult.selfCheck?.crossTableIssues} 条
                   </div>
                   {fillAllResult.selfCheck?.issues?.length > 0 && (
                     <ul className="list-disc pl-4 space-y-0.5 max-h-48 overflow-auto text-[var(--nv-text-muted)]">
@@ -312,6 +335,7 @@ export default function TablesPage() {
                     <LoreTableGrid
                       table={t}
                       busy={busy}
+                      flaggedRows={flaggedByTable.get(t.name)}
                       onUpdateCell={updateCell}
                       onAddRow={addRow}
                       onSave={saveTable}
@@ -350,9 +374,10 @@ export default function TablesPage() {
  * 行数 ≤ 50：普通 <table> 渲染（零开销）；> 50：自动切换虚拟滚动（useVirtualRows），
  * 万行大表也只渲染「视口内一小段 + 上下 overscan」，不卡。
  */
-function LoreTableGrid({ table, busy, onUpdateCell, onAddRow, onSave }: {
+function LoreTableGrid({ table, busy, flaggedRows, onUpdateCell, onAddRow, onSave }: {
   table: LoreTableT;
   busy: boolean;
+  flaggedRows?: Set<number>;
   onUpdateCell: (t: LoreTableT, rowId: number, col: string, val: string) => void;
   onAddRow: (t: LoreTableT) => void;
   onSave: (t: LoreTableT) => void;
@@ -384,6 +409,7 @@ function LoreTableGrid({ table, busy, onUpdateCell, onAddRow, onSave }: {
               {virtualItems.map(({ item: r, offsetTop }) => (
                 <tr
                   key={r.row_id}
+                  className={flaggedRows?.has(Number(r.row_id)) ? "bg-[var(--nv-danger)]/10" : ""}
                   style={{ display: "block", position: "absolute", top: offsetTop, left: 0, width: "100%", borderTop: "1px solid var(--nv-border-2)" }}
                 >
                   <td className="p-1 text-[var(--nv-text-muted)] align-middle" style={{ display: "inline-block", width: 56 }}>{r.row_id}</td>
@@ -414,7 +440,7 @@ function LoreTableGrid({ table, busy, onUpdateCell, onAddRow, onSave }: {
             </thead>
             <tbody>
               {table.rows.map((r) => (
-                <tr key={r.row_id} className="border-t border-[var(--nv-border-2)]">
+                <tr key={r.row_id} className={flaggedRows?.has(Number(r.row_id)) ? "border-t border-[var(--nv-border-2)] bg-[var(--nv-danger)]/10" : "border-t border-[var(--nv-border-2)]"}>
                   <td className="p-1 text-[var(--nv-text-muted)]">{r.row_id}</td>
                   {cols.map((c) => (
                     <td key={c.key} className="p-1">

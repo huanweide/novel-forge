@@ -83,12 +83,26 @@ export function scanBannedWords(
     const w = raw.trim();
     if (!w) continue;
     const lw = w.toLowerCase();
+    // 拉丁/数字短词（长度≤2 且非纯中文）需词边界判定，避免 "vx" 误命中 "avx" 这类子串误伤；
+    // 中文词（含长词）保留子串匹配（预检允许作者复核）。
+    const isPureCjk = /^[一-鿿]+$/.test(lw);
+    const useBoundary = !isPureCjk && lw.length <= 2;
     let from = 0;
     while (from <= lower.length - lw.length) {
       const idx = lower.indexOf(lw, from);
       if (idx === -1) break;
       const start = idx;
       const end = idx + lw.length;
+      if (useBoundary) {
+        const before = idx > 0 ? lower[idx - 1] : "";
+        const after = end < lower.length ? lower[end] : "";
+        const beforeOk = before === "" || !/[a-z0-9]/.test(before);
+        const afterOk = after === "" || !/[a-z0-9]/.test(after);
+        if (!(beforeOk && afterOk)) {
+          from = end;
+          continue;
+        }
+      }
       const ctxStart = Math.max(0, start - 25);
       const ctxEnd = Math.min(text.length, end + 25);
       hits.push({
