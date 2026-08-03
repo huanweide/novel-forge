@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.62";
+export const LATEST_VERSION = "v0.46.63";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "墨灵面板去重：删除 ChatMessageList 空状态里与 AIChatHeader 重复的「AI 写作助手就绪 / 我能直接查角色卡…」文案，避免同一就绪提示出现两次",
-  "项目设定弹窗可滚动：BuildConfigDialog 的 bare Modal 补 overflow-y-auto，长内容（流派标签/开关）超出 90vh 时不再截断、可正常滚动",
-  "原生下拉暗色适配：globals.css 新增 select option/optgroup 的 surface-2 背景 + 主文字色，暗色主题下下拉列表不再呈高亮刺眼白底",
-  "正则规则 UI 统一：项目配置中心加「正则后处理（清洗正文）vs 创作铁律（约束 AI）」区分说明，并把「+ 新增规则」内联行改为与规则面板一致的模态弹窗（提交前校验正则合法性）",
+  "填表引擎灭错名：给 LLM 看全量权威名录 + 全量样例行（不再只给最近8行），强化提示词（零杜撰/复用已有/完整性/填后自检），applyOps 加代码级去重（同名 insert 自动转 update）",
+  "三卡检索词边界匹配：新增 src/core/text/match.ts，trigger.ts/recall.ts 改用词边界匹配 + 最长匹配优先，灭掉「林」误命中「森林」这类瞎匹配，单字关键词直接拒绝",
+  "自动建卡相似度去重：entity-auto-creator 加编辑距离 + 包含关系判定，灭掉「青龙镇/青龍镇」繁简/错别字变体重复入库",
+  "一键填表 + 自检 + 游戏归属：新增 babyloreFillAll（首章→最新 + 防重复跳过 + 填后地名/完整性自检）与 API 路由 + UI 按钮；游戏背包物品加归属字段，游戏获得新物品自动补建 item 类世界书词条",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.63",
+    date: "2026-08-03",
+    title: "全面修复：填表灭错名 + 三卡检索词边界匹配 + 自动建卡相似度去重 + 一键填表自检 + 游戏物品归属联动",
+    sections: [
+      {
+        label: "填表引擎灭错名（Bug F）",
+        items: [
+          "全量权威名录：tablesText 不再只给最近8行，改为给每个表附【权威名录·已有名称】（去重全量）+ 全量样例行（前60行截断保护），LLM 看不到全量才造地名变体的根因消除",
+          "强化提示词铁律：名称零杜撰（逐字复制正文原文用字、禁止繁简混用/同义变体）、复用已有（名录内名称必须 update 不可再 insert）、完整性、填后自检（名称必须在正文有原文否则不填）",
+          "代码级去重：applyOps 的 insert 增加同主键名查重，已存在则自动转 update，杜绝同名重复行",
+          "返回疑似错误地名警告：每个被填名称若不在正文中找到原文，返回 warnings 提示，供人工复核",
+        ],
+      },
+      {
+        label: "三卡检索词边界匹配（Recall/F 检索瞎匹配）",
+        items: [
+          "新增 src/core/text/match.ts：matchKeyword 长度≥3 直接命中、长度2 需处于词边界、长度1 直接拒绝（灭「林」命中「森林」）；dedupSubstring 最长匹配优先（短词被更长已命中词包含则剔除）；scoreKeyword 按长度打分",
+          "trigger.ts/recall.ts 全面接入：世界书绿灯关键词与表格行关键列不再暴力 includes，改用词边界匹配 + 最长匹配优先 + 长度加权排序，瞎匹配与错内容注入归零",
+        ],
+      },
+      {
+        label: "自动建卡相似度去重（entity-auto-creator）",
+        items: [
+          "精确查重之外加相似度去重：编辑距离 ≤1 且长度差 ≤2，灭掉「青龙镇/青龍镇」「李尘/李麈」这类繁简/错别字变体重复入库世界书与角色卡",
+        ],
+      },
+      {
+        label: "一键填表 + 自检 + 游戏物品归属联动",
+        items: [
+          "一键填表：新增 babyloreFillAll（按 order 遍历所有有正文章节，首章→最新；已填章节用 .runtime 标记跳过防重复；填完自动跑 selfCheck 地名正确性 + 信息完整性）；新增 /api/babylore/fill-all 路由 + 表格页「一键填表（首章→最新）」按钮 + 自检报告展示",
+          "游戏物品归属：GameItem 加 owner 字段（默认主角），CI| 标记支持归属者，背包 UI 显示「归属：XX」；游戏获得新物品若无对应 item 类世界书词条则自动补建，世界卡物品类保留、无则补充",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.62",
     date: "2026-08-03",

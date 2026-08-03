@@ -43,10 +43,11 @@ const GAME_SYSTEM_PROMPT = `你是一位资深互动小说大师，正在与用�
    ===新实体===
    NE|实体名|类型|简要描述
    类型可选：角色、地点、物品、势力、功法、生物、其他
-7. 如果主角获得/消耗/装备/丢弃物品，输出：
+  7. 如果主角获得/消耗/装备/丢弃物品，输出：
    ===角色物品变动===
-   CI|获得|物品名|数量
+   CI|获得|物品名|数量|归属者（可选，留空默认主角）
    CI|消耗|物品名|数量
+   说明：归属者填「主角」或具体角色名（如「李尘」），用于区分背包里谁的物品。
 8. 每轮更新情节进度（选项之前输出）：
    【情节进度：X%】
 9. 如果累计字数接近或超过 {maxWords} 字的限制，应该开始收束剧情，给出"走向章节结尾"的选项
@@ -113,7 +114,7 @@ export function buildGameSystemPrompt(ctx: GameSessionContext): string {
   const itemsStr =
     ctx.items.length > 0
       ? ctx.items
-          .map((i) => `- ${i.name} ×${i.quantity}（${i.category}）`)
+          .map((i) => `- ${i.name} ×${i.quantity}（${i.category}）【归属：${i.owner || "主角"}】`)
           .join("\n")
       : "（背包空空如也）";
 
@@ -167,13 +168,13 @@ export function parseGameOutput(rawOutput: string): {
   narrative: string;
   options: Array<{ index: number; text: string }>;
   newEntities: Array<{ name: string; type: string; description: string }>;
-  itemChanges: Array<{ operation: string; name: string; quantity: number }>;
+  itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string }>;
   plotProgress: number;
 } {
   let narrative = rawOutput;
   const options: Array<{ index: number; text: string }> = [];
   const newEntities: Array<{ name: string; type: string; description: string }> = [];
-  const itemChanges: Array<{ operation: string; name: string; quantity: number }> = [];
+  const itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string }> = [];
   let plotProgress = -1;
 
   // ── 提取选项 ──
@@ -230,6 +231,7 @@ export function parseGameOutput(rawOutput: string): {
           operation: parts[0],
           name: parts[1],
           quantity: parseInt(parts[2]) || 1,
+          owner: parts[3] && parts[3].trim() ? parts[3].trim() : undefined,
         });
       }
     }

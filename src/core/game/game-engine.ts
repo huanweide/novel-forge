@@ -223,9 +223,11 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
   let updatedItems = [...prevItems];
   for (const change of parsed.itemChanges) {
     if (change.operation === "gain") {
+      const owner = (change as any).owner || "主角";
       const existing = updatedItems.find((i) => i.name === change.name);
       if (existing) {
         existing.quantity += change.quantity || 1;
+        if (!existing.owner) existing.owner = owner;
       } else {
         updatedItems.push({
           name: change.name,
@@ -233,6 +235,7 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
           category: "other",
           source: `第${session.currentRound + 1}轮获得`,
           acquiredRound: session.currentRound + 1,
+          owner,
         });
       }
     } else if (change.operation === "consume") {
@@ -258,6 +261,13 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
       firstSeenRound: session.currentRound + 1,
     })),
   ];
+
+  // 6.5 世界卡物品联动：游戏新获得的物品，若无对应 item 类世界书词条则自动补充（保留已有物品词条）
+  for (const change of parsed.itemChanges) {
+    if (change.operation === "gain") {
+      await ensureItemLorebook(session.projectId, change.name, (change as any).owner || "主角");
+    }
+  }
 
   // 7. 持久化本轮状态
   const newRound = session.currentRound + 1;
@@ -298,6 +308,30 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
     plotProgress: finalProgress,
     wordCount,
   };
+}
+
+/**
+ * 世界卡物品联动：确保某物品在世界书中有对应 item 类词条。
+ * 已有则保留；无则补充创建（记录归属），使背包物品与世界卡双向打通。
+ */
+async function ensureItemLorebook(projectId: string, itemName: string, owner: string) {
+  if (!itemName || itemName.length < 2) return;
+  const existing = await prisma.lorebookEntry.findFirst({
+    where: { projectId, category: "item", title: itemName },
+  });
+  if (existing) return;
+  await prisma.lorebookEntry.create({
+    data: {
+      projectId,
+      title: itemName,
+      category: "item",
+      keys: [itemName, "物品"],
+      content: `[游戏获得] 物品「${itemName}」，归属：${owner}。`,
+      insertionOrder: 60,
+      enabled: true,
+      relatedEntryIds: [],
+    },
+  });
 }
 
 // 类型标签（避免跨文件导入问题）

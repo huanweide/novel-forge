@@ -57,6 +57,7 @@ export interface GameItem {
   category: string;   // consumable | equipment | quest | currency | other
   source: string;     // 获得来源描述
   acquiredRound: number;
+  owner?: string;     // 归属者（谁的物品），默认「主角」
 }
 
 // ─── 物品变动记录 ─────────────────────────────────────────────

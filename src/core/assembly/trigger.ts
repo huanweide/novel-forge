@@ -1,13 +1,15 @@
 /**
- * 触发词匹配引擎 —— 世界书词条的"检索雷达"
+ * 触发词匹配引擎 —— 世界书词条的「检索雷达」
  *
  * 工作原理：
  * 扫描最近生成的文本，找出所有匹配的触发词，然后把对应的世界书词条注入 Prompt。
  *
- * 当前用暴力关键词匹配（O(n*m)），后续升级为向量检索（pgvector）。
+ * v0.46.63 升级：改用词边界匹配（src/core/text/match），灭掉「林」误命中「森林」这类瞎匹配；
+ * 并采用「最长匹配优先」——短关键词若被更长的已命中关键词包含则剔除，相关性按关键词长度打分。
  */
 
 import type { LorebookEntry } from "@/core/types";
+import { matchKeyword, scoreKeyword, dedupSubstring } from "@/core/text/match";
 
 /**
  * 扫描文本中的触发词，返回命中的所有世界书词条
@@ -15,7 +17,7 @@ import type { LorebookEntry } from "@/core/types";
  * @param text 要扫描的文本（通常是最近生成的内容 + 上下文）
  * @param entries 所有已启用的世界书词条
  * @param maxResults 最多返回多少条（防止塞爆Prompt）
- * @returns 按 insertionOrder 降序排列的匹配词条
+ * @returns 按匹配特异性（关键词长度）降序 + insertionOrder 降序排列的匹配词条
  */
 export function matchLoreEntries(
   text: string,
@@ -24,36 +26,30 @@ export function matchLoreEntries(
 ): { entry: LorebookEntry; triggerKeyword: string; matchScore: number }[] {
   const results: Map<string, { entry: LorebookEntry; triggerKeyword: string; matchScore: number }> = new Map();
 
-  const lowerText = text.toLowerCase();
-
   for (const entry of entries) {
     if (!entry.enabled) continue;
 
+    // 收集本词条命中的关键词（过滤掉单字与瞎匹配），再最长匹配优先
+    const hitKeys: string[] = [];
     for (const key of entry.keys) {
-      const lowerKey = key.toLowerCase();
-
-      // 检查是否命中
-      if (lowerText.includes(lowerKey)) {
-        const existing = results.get(entry.id);
-
-        // 同词条多次命中只保留分数最高的
-        // 精确匹配 > 部分匹配，长关键词 > 短关键词
-        const score = lowerKey.length / lowerText.length;
-
-        if (!existing || score > existing.matchScore) {
-          results.set(entry.id, {
-            entry,
-            triggerKeyword: key,
-            matchScore: score,
-          });
-        }
-      }
+      const k = (key || "").trim();
+      if (!k) continue;
+      if (matchKeyword(text, k)) hitKeys.push(k);
     }
+    if (hitKeys.length === 0) continue;
+
+    const kept = dedupSubstring(hitKeys);
+    const bestKey = (kept.length ? kept : hitKeys).sort(
+      (a, b) => scoreKeyword(b) - scoreKeyword(a)
+    )[0];
+    const score = scoreKeyword(bestKey);
+
+    results.set(entry.id, { entry, triggerKeyword: bestKey, matchScore: score });
   }
 
-  // 按 insertionOrder 降序排列，截取 maxResults
+  // 按匹配特异性降序、再按 insertionOrder 降序，截取 maxResults
   return Array.from(results.values())
-    .sort((a, b) => b.entry.insertionOrder - a.entry.insertionOrder)
+    .sort((a, b) => b.matchScore - a.matchScore || b.entry.insertionOrder - a.entry.insertionOrder)
     .slice(0, maxResults);
 }
 

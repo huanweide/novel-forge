@@ -35,6 +35,7 @@ export default function TablesPage() {
   const [fillResult, setFillResult] = useState<any>(null);
   const [recallCtx, setRecallCtx] = useState("");
   const [recallItems, setRecallItems] = useState<any[]>([]);
+  const [fillAllResult, setFillAllResult] = useState<any>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -137,6 +138,32 @@ export default function TablesPage() {
     } finally { setBusy(false); }
   };
 
+  const runFillAll = async () => {
+    const ok = await confirmDialog({
+      title: "一键填表（首章→最新）",
+      description: "将按章节顺序自动从第一章填到最新一章（已填过的章节会自动跳过防重复）。每章都会调用 LLM 抽取事实写入表格，可能消耗较多 token，且填完会自动自检地名正确性与信息完整性。是否继续？",
+      confirmText: "开始一键填表",
+      cancelText: "取消",
+    });
+    if (!ok) return;
+    setBusy(true);
+    setFillAllResult(null);
+    try {
+      const res = await fetch(`/api/babylore/fill-all`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const d = await res.json();
+      d.at = new Date().toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai" });
+      setFillAllResult(d);
+      if (res.ok && d.ok) {
+        toastSuccess(`一键填表完成：处理 ${d.processed} 章，应用 ${d.applied} 条`);
+        load();
+      } else toastError(d.error || "一键填表失败");
+    } finally { setBusy(false); }
+  };
+
   const updateCell = (t: LoreTableT, rowId: number, col: string, val: string) => {
     setTables((ts) => ts.map((x) => x.id === t.id ? {
       ...x,
@@ -208,6 +235,43 @@ export default function TablesPage() {
               </div>
             )}
           </div>
+        </section>
+
+        {/* 一键填表（首章→最新）+ 自检报告 */}
+        <section className="surface-elevated rounded-2xl p-5">
+          <h2 className="font-semibold mb-2 flex items-center gap-2"><Icon name="sparkles" size={15} /> 一键填表（首章→最新）+ 自动自检</h2>
+          <p className="text-xs text-[var(--nv-text-muted)] mb-3">按章节顺序自动从第一章填到最新一章；已填章节自动跳过防重复；填完自动跑「地名正确性 + 信息完整性」自检，列出疑似错误地名与空值。</p>
+          <button onClick={runFillAll} disabled={busy} className="btn-primary text-xs py-2 px-4 rounded-xl disabled:cursor-not-allowed disabled:opacity-50">{busy ? "运行中（可能较慢）…" : "一键填表（首章→最新）"}</button>
+          {fillAllResult && (
+            <div className={`mt-3 text-xs rounded-xl px-3 py-2 border ${fillAllResult.ok ? "border-[var(--nv-success)]/30 bg-[var(--nv-success)]/10" : "border-[var(--nv-danger)]/40 bg-[var(--nv-danger)]/10"}`}>
+              {!fillAllResult.ok ? (
+                <div className="text-[var(--nv-danger)] font-medium">✗ 失败：{fillAllResult.error ?? "未知错误"}</div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="font-medium text-[var(--nv-success)]">✓ 处理 {fillAllResult.processed} 章 · 跳过已填 {fillAllResult.skipped} 章 · 应用 {fillAllResult.applied} 条</div>
+                  {fillAllResult.warnings?.length > 0 && (
+                    <div className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1.5 text-[var(--nv-text-primary)]">
+                      <div className="font-medium mb-1">⚠ 疑似错误地名/名称（{fillAllResult.warnings.length}）</div>
+                      <ul className="list-disc pl-4 space-y-0.5 max-h-40 overflow-auto">
+                        {fillAllResult.warnings.slice(0, 30).map((w: string, i: number) => <li key={i}>{w}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="text-[var(--nv-text-muted)]">
+                    自检：检查 {fillAllResult.selfCheck?.checkedTables} 个表 · 疑似错误地名 {fillAllResult.selfCheck?.nameIssues} 条 · 空值/缺名称 {fillAllResult.selfCheck?.completenessIssues} 条
+                  </div>
+                  {fillAllResult.selfCheck?.issues?.length > 0 && (
+                    <ul className="list-disc pl-4 space-y-0.5 max-h-48 overflow-auto text-[var(--nv-text-muted)]">
+                      {fillAllResult.selfCheck.issues.slice(0, 40).map((it: any, i: number) => (
+                        <li key={i}>表「{it.table}」行{it.row}：{it.value ? `「${it.value}」` : "（空）"} — {it.issue}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              <div className="mt-1 opacity-70">执行时间：{fillAllResult.at}</div>
+            </div>
+          )}
         </section>
 
         {/* 表格列表 */}

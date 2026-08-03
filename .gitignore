@@ -47,3 +47,6 @@ next-env.d.ts
 # database (local only)
 *.db
 *.db-journal
+
+# runtime state (auto-generated, local only)
+/.runtime/

@@ -5,6 +5,11 @@
 //
 // 本文件实现"召回"：从世界书(LorebookEntry.keys=绿灯关键词)与结构化表格(LoreTable 行)中，
 // 匹配当前上下文命中的条目，返回应注入正文 AI 的记忆片段。
+//
+// v0.46.63 升级：改用词边界匹配（src/core/text/match），灭掉「林」误命中「森林」这类瞎匹配；
+// 并对同一词条/行的命中关键词做「最长匹配优先」去重。
+
+import { matchKeyword, dedupSubstring } from "@/core/text/match";
 
 export interface RecallItem {
   source: "lorebook" | "table";
@@ -23,32 +28,39 @@ export function recallContext(
   const text = contextText || "";
   const items: RecallItem[] = [];
 
-  // 1) 世界书：绿灯机制——enabled 且任一关键词出现在上下文中
+  // 1) 世界书：绿灯机制——enabled 且任一关键词「真实命中」上下文
   for (const e of lorebook) {
     if (e.enabled === false) continue;
     const keys: string[] = e.keys || [];
-    const hit = keys.some((k) => k && text.includes(k));
-    if (hit) items.push({ source: "lorebook", title: e.title, content: e.content });
+    const hitKeys = keys.filter((k) => k && matchKeyword(text, k));
+    if (hitKeys.length === 0) continue;
+    // 最长匹配优先：被更长命中关键词包含的短词剔除（如「青龙」被「青龙镇」包含）
+    dedupSubstring(hitKeys);
+    items.push({ source: "lorebook", title: e.title, content: e.content });
   }
 
-  // 2) 结构化表格：行的关键列值出现在上下文中即召回
+  // 2) 结构化表格：行的关键列值「真实命中」上下文即召回
   for (const t of tables) {
     const rows: any[] = t.rows || [];
     const cols: any[] = t.columns || [];
     const keyCols = cols.length ? cols.map((c) => c.key) : TABLE_KEY_COLS;
     for (const r of rows) {
-      const hit = keyCols.some((kc) => {
+      const hitKeys: string[] = [];
+      for (const kc of keyCols) {
         const v = r[kc];
-        return v && typeof v === "string" && v.length >= 2 && text.includes(v);
-      });
-      if (hit) {
-        const vals = (cols.length ? cols : []).map((c) => `${c.label}:${r[c.key] ?? ""}`).join("，");
-        items.push({
-          source: "table",
-          title: t.name,
-          content: vals || JSON.stringify(r),
-        });
+        if (v && typeof v === "string" && v.length >= 2 && matchKeyword(text, v)) {
+          hitKeys.push(v);
+        }
       }
+      if (hitKeys.length === 0) continue;
+      // 最长匹配优先
+      dedupSubstring(hitKeys);
+      const vals = (cols.length ? cols : []).map((c) => `${c.label}:${r[c.key] ?? ""}`).join("，");
+      items.push({
+        source: "table",
+        title: t.name,
+        content: vals || JSON.stringify(r),
+      });
     }
   }
 

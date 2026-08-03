@@ -257,9 +257,11 @@ export default function GamePage() {
       let updatedItems = [...state.items];
       for (const change of doneData.itemChanges || []) {
         if (change.operation === "gain") {
+          const owner = change.owner || "主角";
           const existing = updatedItems.find((i) => i.name === change.name);
           if (existing) {
             existing.quantity += change.quantity || 1;
+            if (!existing.owner) existing.owner = owner;
           } else {
             updatedItems.push({
               name: change.name,
@@ -267,6 +269,7 @@ export default function GamePage() {
               category: "other",
               source: `第${newRound}轮获得`,
               acquiredRound: newRound,
+              owner,
             });
           }
         } else if (change.operation === "consume") {
@@ -751,7 +754,7 @@ export default function GamePage() {
                                     ×{i.quantity}
                                   </span>
                                   <p className="mt-0.5 text-[10px] text-[var(--nv-text-muted)]">
-                                    {i.source}
+                                    {i.source}{i.owner ? ` · 归属：${i.owner}` : ""}
                                   </p>
                                 </div>
                               ))}
@@ -771,6 +774,9 @@ export default function GamePage() {
                                   <span className="ml-2 text-[var(--nv-success)]">
                                     ×{i.quantity}
                                   </span>
+                                  {i.owner && (
+                                    <p className="mt-0.5 text-[10px] text-[var(--nv-text-muted)]">归属：{i.owner}</p>
+                                  )}
                                 </div>
                               ))}
                             </>
@@ -786,6 +792,9 @@ export default function GamePage() {
                                   className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
                                 >
                                   <span className="text-[var(--nv-warning)]">{i.name}</span>
+                                  {i.owner && (
+                                    <p className="mt-0.5 text-[10px] text-[var(--nv-text-muted)]">归属：{i.owner}</p>
+                                  )}
                                 </div>
                               ))}
                             </>
@@ -804,6 +813,9 @@ export default function GamePage() {
                                   <span className="ml-2 text-[var(--nv-accent)]">
                                     ×{i.quantity}
                                   </span>
+                                  {i.owner && (
+                                    <p className="mt-0.5 text-[10px] text-[var(--nv-text-muted)]">归属：{i.owner}</p>
+                                  )}
                                 </div>
                               ))}
                             </>
