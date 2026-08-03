@@ -11,6 +11,34 @@
 import type { GameSessionContext, GameActionInput } from "./types";
 import { ACTION_LABELS } from "./types";
 
+// ─── 操作归一化（阿游 P0：唯一归一化点）────────────────────────────
+// AI 产出中文操作（CI|获得|…/CI|消耗|/CI|装备|/CI|丢弃|），而引擎(game-engine.ts)、
+// 前端(page.tsx)、开局路由(start/route.ts) 全部用英文枚举 gain/consume/equip/discard
+// 比较。此处统一把中文操作映射为英文枚举，是唯一需要改动的地方（无需四处改比较逻辑）。
+const OP_MAP: Record<string, string> = {
+  "获得": "gain",
+  "消耗": "consume",
+  "装备": "equip",
+  "丢弃": "discard",
+};
+
+// 中文数字表（与选项解析共用）——用于物品数量「二/三」等中文数字解析。
+const CN_NUM: Record<string, number> = {
+  "零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+  "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+};
+
+// 解析物品数量：支持阿拉伯数字与常见中文数字；无法解析给默认 1 并告警（阿游 P2）。
+function parseGameQuantity(raw?: string): number {
+  if (!raw) return 1;
+  const s = raw.trim();
+  if (s === "") return 1;
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  if (CN_NUM[s] != null) return CN_NUM[s];
+  console.warn(`[parseGameOutput] 无法解析物品数量「${s}」，默认按 1 处理`);
+  return 1;
+}
+
 // ─── 系统提示词模板 ─────────────────────────────────────────────
 
 const GAME_SYSTEM_PROMPT = `你是一位资深互动小说大师，正在与用户共同创作一章小说。你的文笔兼具网络文学的爽感和传统文学的画面感。
@@ -194,7 +222,7 @@ export function parseGameOutput(rawOutput: string): {
   const lines = narrative.split("\n");
   // 兼容阿拉伯数字与中文数字（一~六）编号，灭「模型用中文数字列选项却被当空、退回通用选项」的体验退化（阿游 Round4）
   const candidatePattern = /^([0-9]{1,2}|[一二三四五六])[\.、\s]+(.+)$/;
-  const cnNum: Record<string, number> = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6 };
+  const cnNum = CN_NUM;
   const candidates: Array<{ idx: number; text: string; lineNo: number }> = [];
   lines.forEach((line, i) => {
     const m = candidatePattern.exec(line);
@@ -261,14 +289,25 @@ export function parseGameOutput(rawOutput: string): {
     const ciLines = ciSection[1].split("\n").filter((l) => l.startsWith("CI|"));
     for (const line of ciLines) {
       const parts = line.replace("CI|", "").split("|").map((s) => s.trim());
-      if (parts.length >= 2) {
-        itemChanges.push({
-          operation: parts[0],
-          name: parts[1],
-          quantity: parseInt(parts[2]) || 1,
-          owner: parts[3] && parts[3].trim() ? parts[3].trim() : undefined,
-        });
+      // P2：物品名缺失（如 CI|获得|）直接跳过空名，避免落库空物品
+      if (parts.length < 2 || !parts[1]) {
+        if (parts[0]) {
+          console.warn(`[parseGameOutput] 跳过物品名为空的物品变动：${line}`);
+        }
+        continue;
       }
+      const rawOp = parts[0];
+      // P0 唯一归一化点：中文操作 → 英文枚举
+      const op = OP_MAP[rawOp] ?? rawOp;
+      if (!(rawOp in OP_MAP)) {
+        console.warn(`[parseGameOutput] 未知操作「${rawOp}」，保留原值（引擎比较分支将不命中）：${line}`);
+      }
+      itemChanges.push({
+        operation: op,
+        name: parts[1],
+        quantity: parseGameQuantity(parts[2]),
+        owner: parts[3] ? parts[3] : undefined,
+      });
     }
     narrative = narrative.replace(ciSection[0], "").trim();
   }

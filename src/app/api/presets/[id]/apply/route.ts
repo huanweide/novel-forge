@@ -99,19 +99,28 @@ export async function POST(
         }
       }
     } else if (preset.type === "character") {
+      // P2-③：按 projectId+name(忽略大小写) 去重，重复套用角色预设不叠加同名卡
       const c = content;
-      const cc = await prisma.characterCard.create({
-        data: {
-          projectId,
-          name: c.name || "未命名角色",
-          role: c.role || "supporting",
-          background: c.background || "",
-          personality: c.personality || {},
-          appearance: c.appearance || {},
-          tags: c.tags || [],
-        } as any,
+      const charName = c.name || "未命名角色";
+      const existingChar = await prisma.characterCard.findFirst({
+        where: { projectId, name: { equals: charName, mode: "insensitive" } },
       });
-      created.push({ kind: "character", id: cc.id, name: cc.name });
+      if (existingChar) {
+        created.push({ kind: "character", id: existingChar.id, name: existingChar.name, skipped: true });
+      } else {
+        const cc = await prisma.characterCard.create({
+          data: {
+            projectId,
+            name: charName,
+            role: c.role || "supporting",
+            background: c.background || "",
+            personality: c.personality || {},
+            appearance: c.appearance || {},
+            tags: c.tags || [],
+          } as any,
+        });
+        created.push({ kind: "character", id: cc.id, name: cc.name });
+      }
     } else if (preset.type === "regex") {
       // 正则后处理预设：合并 rules 到项目级 postProcessingRules，按 name 去重
       const incoming: any[] = Array.isArray(content.rules) ? content.rules : [];

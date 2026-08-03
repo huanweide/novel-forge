@@ -47,6 +47,38 @@ const TYPE_LABELS: Record<string, string> = {
 
 // ─── 相似度去重 ──────────────────────────────────────────────
 
+/** 常见繁↔简异体映射（繁体字符 → 简体），覆盖小说高频字 */
+const TRAD_TO_SIMP: Record<string, string> = {
+  蕭: "萧",
+  動: "动",
+  雲: "云",
+  葉: "叶",
+  國: "国",
+  龍: "龙",
+  風: "风",
+  會: "会",
+  體: "体",
+  邊: "边",
+  門: "门",
+  馬: "马",
+  長: "长",
+  車: "车",
+  鳥: "鸟",
+  書: "书",
+  時: "时",
+  來: "来",
+  個: "个",
+};
+
+/** 字符级繁简归一化：繁体字符映射为简体，其余字符原样保留 */
+function normalizeTraditional(s: string): string {
+  let out = "";
+  for (const ch of s) {
+    out += TRAD_TO_SIMP[ch] ?? ch;
+  }
+  return out;
+}
+
 /** 编辑距离（Levenshtein），用于识别繁简/错别字变体 */
 function levenshtein(a: string, b: string): number {
   const m = a.length;
@@ -70,7 +102,8 @@ function levenshtein(a: string, b: string): number {
  * 规则：忽略大小写后
  *  - 完全相同 → 是
  *  - 长度差 > 2 → 否（明显不同实体）
- *  - 短名（任一 ≤2 字）要求完全一致——避免「白云/白衣」这类完全不同词被误并；
+ *  - 短名（任一 ≤2 字）先繁简归一化，归一化后相同 → 是（灭「萧炎/蕭炎」重复建卡，
+ *    青砚 P2）；归一化后仍不同 → 否（不并，安全优先，避免「白云/白衣」被误并）
  *  - 长名（≥3 字）编辑距离 ≤ 1 → 是（灭繁简/错别字，如 青龙镇/青龍镇、李尘/李麈）
  */
 export function isSimilarName(a: string, b: string): boolean {
@@ -79,8 +112,10 @@ export function isSimilarName(a: string, b: string): boolean {
   if (!x || !y) return false;
   if (x === y) return true;
   if (Math.abs(x.length - y.length) > 2) return false;
-  // 短名过宽：仅允许精确匹配（宁可漏判「李尘/李麈」这类 2 字变体，也不误并「白云/白衣」）
-  if (x.length <= 2 || y.length <= 2) return false;
+  // 短名（≤2 字）：仅做繁简归一化去重，不引入编辑距离，避免「白云/白衣」被误并。
+  if (x.length <= 2 || y.length <= 2) {
+    return normalizeTraditional(x) === normalizeTraditional(y);
+  }
   return levenshtein(x, y) <= 1;
 }
 

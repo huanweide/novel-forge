@@ -281,6 +281,7 @@ ${chunkText}
         let chars: Record<string, unknown>[] = [];
         let failedChunks = 0;
         let totalChunks = 1;
+        let worldFailed = false; // P1：B路世界设定/文风提取失败独立标记
 
         if (needsChunking && !isCharOnly) {
           // 分块模式：文本切成每CHUNK_SIZE个角色一块
@@ -321,6 +322,7 @@ ${chunkText}
           send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
 
           if (resA.error) {
+            failedChunks++;
             send({ type: "progress", stage: "path-a-done", message: `⚠️ 人物提取失败: ${resA.error}`, pct: 60 });
           } else {
             try {
@@ -329,6 +331,7 @@ ${chunkText}
               chars = pc.map(normChar).filter(c => c.name);
               send({ type: "progress", stage: "path-a-done", message: `✅ 人物提取完成 · ${chars.length}角色 · ${resA.sec}s`, pct: 60 });
             } catch (e) {
+              failedChunks++;
               send({ type: "progress", stage: "path-a-done", message: `⚠️ JSON解析失败: ${String(e).slice(0, 100)}`, pct: 60 });
             }
           }
@@ -365,6 +368,7 @@ ${loreText}
           );
 
           if (resB.error) {
+            worldFailed = true;
             send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界提取失败: ${resB.error}`, pct: 90 });
           } else {
             try {
@@ -373,6 +377,7 @@ ${loreText}
               if (typeof p.style === "object" && p.style !== null) style = p.style as Record<string, unknown>;
               send({ type: "progress", stage: "path-b-done", message: `✅ 世界提取完成 · ${lore.length}词条${chunkNote} · ${resB.sec}s`, pct: 90 });
             } catch (e) {
+              worldFailed = true;
               send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界JSON解析失败`, pct: 90 });
             }
           }
@@ -390,7 +395,9 @@ ${loreText}
 
         send({ type: "progress", stage: "done-pre", message: `${finalChars.length}角色 ${finalLore.length}词条 · ${totalSec}s`, pct: 99 });
 
-        const importStatus = failedChunks === 0 ? "completed" : (failedChunks >= totalChunks ? "failed" : "partial");
+        // P1：闭环失败标记——worldFailed 时即使 failedChunks===0 也至少 'partial'
+        const anyFailed = failedChunks > 0 || worldFailed;
+        const importStatus = anyFailed ? (failedChunks >= totalChunks && !worldFailed ? "failed" : "partial") : "completed";
         send({
           type: "done",
           status: importStatus,
@@ -399,10 +406,10 @@ ${loreText}
           extractedCharacters: finalChars,
           extractedLoreEntries: finalLore,
           extractedStyle: style,
-          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, chunked: needsChunking },
+          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, worldFailed, chunked: needsChunking },
         });
         if (taskId) {
-          void prisma.importTask.update({ where: { id: taskId }, data: { status: importStatus, progress: 100, result: { characters: finalChars, lore: finalLore, style, failedChunks } as any } }).catch(() => {});
+          void prisma.importTask.update({ where: { id: taskId }, data: { status: importStatus, progress: 100, result: { characters: finalChars, lore: finalLore, style, failedChunks, worldFailed } as any } }).catch(() => {});
         }
 
       } catch (err) {

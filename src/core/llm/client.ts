@@ -74,6 +74,9 @@ export type LLMClient = ReturnType<typeof createLLMClient>;
 /** 单次调用最大尝试次数（含首次）。故障转移链长度由 fallbackModels 决定 */
 const DEFAULT_RETRIES = 3;
 
+/** P2 监控记账：失败/重试的尝试也需记账，用此前缀与成功调用区分，避免成功率失真 */
+const FAIL_ROLE_PREFIX = "fail:";
+
 /** 指数退避延迟（含 ±20% 抖动），封顶 8s */
 function backoffDelay(attempt: number, baseMs = 600, maxDelayMs = 8000): number {
   const raw = baseMs * Math.pow(2, attempt - 1);
@@ -370,6 +373,16 @@ export function createLLMClient(config: LLMConfig) {
             });
             return res.value;
           }
+          // P2：失败/重试的尝试也要记账（区分于成功调用），否则调用次数与成功率失真
+          recordLlmCall({
+            model: target.model,
+            role: `${FAIL_ROLE_PREFIX}${request.role || "general"}`,
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            baseURL: target.baseURL,
+            isFallback: target !== chain[0],
+          });
           // 4xx 鉴权/配置错误：直接抛出，不重试也不切备用模型
           if (res.fatal) throw res.error;
           lastError = res.error;
@@ -407,6 +420,16 @@ export function createLLMClient(config: LLMConfig) {
             );
             return;
           }
+          // P2：建立流失败/重试的尝试也要记账（区分于成功调用）
+          recordLlmCall({
+            model: target.model,
+            role: `${FAIL_ROLE_PREFIX}${request.role || "general"}`,
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            baseURL: target.baseURL,
+            isFallback: target !== chain[0],
+          });
           // 4xx 鉴权/配置错误：直接抛出，不重试也不切备用模型
           if (est.fatal) throw est.error;
           lastError = est.error;

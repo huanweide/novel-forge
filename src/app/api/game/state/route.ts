@@ -15,7 +15,20 @@ export async function DELETE(req: NextRequest) {
   if (isNaN(round)) {
     return NextResponse.json({ ok: false, error: "round 必须为数字" }, { status: 400 });
   }
+  // P2：round 非法（<1）直接拒绝
+  if (round < 1) {
+    return NextResponse.json({ ok: false, error: "round 必须为正整数" }, { status: 400 });
+  }
   try {
+    // P2：session 不存在时优雅 no-op，避免 500（前端回退仍可安全重试）
+    const session = await prisma.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) {
+      return NextResponse.json({
+        ok: true,
+        rolledBackTo: 0,
+        summary: { currentRound: 0, totalWords: 0, plotProgress: 0, items: [], entities: [], narrative: "", options: [] },
+      });
+    }
     // 删除该轮及之后所有 gameState
     await prisma.gameState.deleteMany({ where: { sessionId, round: { gte: round } } });
     // 回滚 session 到 N-1 状态：从剩余 rounds 重算累计
@@ -23,14 +36,25 @@ export async function DELETE(req: NextRequest) {
       where: { sessionId, round: { lt: round } },
       orderBy: { round: "asc" },
     });
-    const currentRound = remaining.length ? remaining[remaining.length - 1].round : 0;
+    const last = remaining.length ? remaining[remaining.length - 1] : null;
+    const currentRound = last ? last.round : 0;
     const totalWords = remaining.reduce((s, r) => s + (r.wordCount || 0), 0);
-    const plotProgress = remaining.length ? remaining[remaining.length - 1].plotProgress : 0;
+    const plotProgress = last ? last.plotProgress : 0;
     await prisma.gameSession.update({
       where: { id: sessionId },
       data: { currentRound, totalWords, plotProgress },
     });
-    return NextResponse.json({ ok: true, rolledBackTo: currentRound });
+    // P1：返回重算后的全量会话摘要，供前端整体 setState 覆盖（与 rollback 后权威态一致）
+    const summary = {
+      currentRound,
+      totalWords,
+      plotProgress,
+      items: (last?.items as unknown as any[]) || [],
+      entities: (last?.entities as unknown as any[]) || [],
+      narrative: remaining.map((r) => r.narrative).filter(Boolean).join("\n\n"),
+      options: (last?.options as unknown as any[]) || [],
+    };
+    return NextResponse.json({ ok: true, rolledBackTo: currentRound, summary });
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }

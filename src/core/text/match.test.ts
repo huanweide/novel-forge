@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isCjkChar,
   matchKeyword,
+  matchNameStrict,
   scoreKeyword,
   dedupSubstring,
 } from "./match";
@@ -60,6 +61,36 @@ describe("scoreKeyword —— 最长匹配优先", () => {
   it("长度≥2 时越长越具体得分越高", () => {
     expect(scoreKeyword("青龙镇")).toBe(3);
     expect(scoreKeyword("青龙")).toBe(2);
+  });
+});
+
+describe("matchNameStrict —— 角色名/OOC 召回专用", () => {
+  it("单字「云」：句尾命中、被 CJK 包围不命中", () => {
+    expect(matchNameStrict("乌云", "云")).toBe(true); // 「乌」后接「云」→ 后侧边界
+    expect(matchNameStrict("云。", "云")).toBe(true); // 句尾
+    expect(matchNameStrict("云海", "云")).toBe(false); // 后接 CJK「海」→ 闭边界不成立
+  });
+
+  it("2字「叶凡」：无空格场景各位置均命中（P0 修复）", () => {
+    expect(matchNameStrict("叶凡怒喝", "叶凡")).toBe(true); // 句首，后被包围
+    expect(matchNameStrict("他喊叶凡", "叶凡")).toBe(true); // 句中，前后 CJK
+    expect(matchNameStrict("村头叶凡走过", "叶凡")).toBe(true); // 句中
+    expect(matchNameStrict("叶帆", "叶凡")).toBe(false); // 错字（非繁简）不匹配
+  });
+
+  it("3字「李星云」：前缀复合词不命中、句尾/独立命中（P1 修复）", () => {
+    expect(matchNameStrict("李星云剑法", "李星云")).toBe(false); // 紧后「剑」CJK → 前缀，拒
+    expect(matchNameStrict("李星云。", "李星云")).toBe(true); // 紧后标点
+    expect(matchNameStrict("李星云", "李星云")).toBe(true); // 文末
+  });
+
+  it("纯数字 2049：独立命中、被包入长数字串不命中", () => {
+    expect(matchNameStrict("年份是2049", "2049")).toBe(true);
+    expect(matchNameStrict("120499", "2049")).toBe(false); // 子串误伤防护
+  });
+
+  it("4字「星云剑法」：文末命中", () => {
+    expect(matchNameStrict("李星云剑法", "星云剑法")).toBe(true); // 后接文末
   });
 });
 

@@ -2,6 +2,18 @@
 
 ---
 
+## v0.46.68 — 2026-08-04
+**会员股东 Round 5 实现：游戏物品变动归一化落库 + 角色名2字匹配回归 + 填表伪行/游戏回退错位 + 导入失败标记闭环 + 弹窗滚动/连词高亮（tsc 零错误）**
+
+- 游戏物品变动全部修复（阿游 P0）：game-prompts.ts 的 parseGameOutput 设唯一归一化点 OP_MAP，中文操作 获得/消耗/装备/丢弃 映射英文枚举 gain/consume/equip/discard；引擎/前端/开局英文比较全部生效，修复 Round4 新增 equip/discard 与既有 gain/consume、世界卡自动补建、开场入包全部落库失败
+- 角色名 2字匹配回归修正（青砚 P0）：matchNameStrict 的 2字名由 Round4 两侧闭边界改回任一侧边界命中，修复叶凡/萧炎等最常见2字角色名在 OOC 与召回中全漏检（修正 Round4 过度收紧的回归）
+- 填表伪行 + 游戏回退错位（墨白/阿游 P1）：填表 update/delete 缺有效 match 列时跳过并告警，灭静默插带脏键 undefined 伪行；跨表同类别(custom)同名也报归属待确认；空章不触发 LLM 填表；游戏回退后前端用后端重算 summary 整体覆盖 totalWords/items，灭字数虚高与背包残留
+- 导入失败标记闭环（磐石 P1）：import/parse 新增 worldFailed 标志，非分块 A路角色提取与 B路世界/文风提取失败纳入计数，失败即 partial/failed，灭小项目与 B路失败仍谎报 completed
+- 弹窗滚动 + 2字名连词边界（清览 P1）：bare 弹窗补 max-h+overflow-y-auto（Modal 默认固化）；2字实体名头边界集补连词与全角引号，灭「萧炎与炎帝」仅高亮萧炎
+- 自动建卡/下拉/书卡/备份/预设/正则（青砚P2/清览P2/工坊P2）：2字名繁简归一化去重（萧炎/蕭炎 不重复）；暗色下拉 option 改不透明暗色；书卡窄栏降 1 列 + 标题截断；备份 include 键名对齐、预设 character 按名去重、正则失败告警、.nfproject 补 maxDuration
+
+---
+
 ## v0.46.67 — 2026-08-04
 **会员股东 Round 4 实现：一键填表静默丢数据 + CJK2字尾随误命中 + 实体高亮最长名优先回归 + import分块失败标记 + 游戏状态断裂三修（tsc 零错误）**
 

@@ -1269,7 +1269,12 @@ html.azure .btn-primary { color: #04201F; }
 @layer base {
   select option,
   select optgroup {
-    background-color: var(--nv-surface-2);
+    background-color: var(--nv-abyss);
     color: var(--nv-text-primary);
+  }
+  :root.light select option,
+  :root.light select optgroup {
+    background-color: #fff;
+    color: #1A1C22;
   }
 }

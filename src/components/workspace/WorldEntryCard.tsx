@@ -13,10 +13,10 @@ interface WorldEntryCardProps {
 export function WorldEntryCard({ entry, depthLabels, onDelete, deleting }: WorldEntryCardProps) {
   return (
     <div
-      className="group rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]"
+      className="group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]"
     >
       <div className="flex items-start justify-between">
-        <span className="text-xs font-medium leading-tight text-[var(--nv-text-primary)]">{entry.title}</span>
+        <span className="truncate text-xs font-medium leading-tight text-[var(--nv-text-primary)]">{entry.title}</span>
         <button
           onClick={() => onDelete(entry.id)}
           disabled={deleting}

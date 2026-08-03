@@ -186,7 +186,7 @@ export function findEntitiesInText(
   for (const c of candidates) {
     if (occupied.slice(c.idx, c.end).some(Boolean)) continue;
     const prevChar = text[c.idx - 1];
-    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar);
+    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''「」『』（）【】《》\-\—与和跟同及等把被给向对由的]/.test(prevChar);
     // 头边界必查（防片段误当实体）；尾边界对 2 字名放宽，3 字及以上不查边界（清览 P1）。
     const passesBoundary = c.name.length >= 3 ? true : isHeadBoundary;
     if (!passesBoundary) continue;

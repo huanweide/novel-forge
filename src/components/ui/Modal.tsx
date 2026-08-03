@@ -96,7 +96,7 @@ export function Modal({
   // bare 模式把高度/滚动完全交给 panelClassName，避免与弹窗内部「头部固定 + 内容滚动」布局冲突；
   // 非 bare 模式保留默认 max-h + 整体滚动。
   const panelBase = bare
-    ? "surface-floating relative rounded-2xl shadow-2xl animate-spring"
+    ? "surface-floating relative rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-spring"
     : "surface-floating relative rounded-2xl shadow-2xl max-h-[88vh] overflow-y-auto custom-scrollbar animate-spring";
 
   return (

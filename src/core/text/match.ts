@@ -73,15 +73,18 @@ export function matchKeyword(text: string, keyword: string): boolean {
 }
 
 /**
- * 严格边界匹配（角色名 / 短 key 召回专用）——堵住 CJK 2字「任一侧边界(`||`)」尾随/句末误命中，
- * 并修复单字角色名被静默丢弃（OOC 漏检，青砚 P1-1）。
+ * 严格边界匹配（角色名 / 短 key 召回专用）。
  *
- * 规则：
- *  - 长度 1：必须「独立成词」——匹配处前后都不是汉字相邻（或位于边界/标点）才认，
- *    既堵「林」命中「森林」，又保留单字真名检测。
- *  - CJK 2字：在 matchKeyword 命中基础上追加「前后都不是汉字相邻」（闭边界）过滤，
- *    否则视为更长汉字串的一部分（如「云山」夹在「青云山」）而拒绝（青砚 P0-1/P0-2）。
- *  - 其余（≥3 非纯数字 / 纯数字 / 英文 2字两侧边界）：完全沿用 matchKeyword 行为，无回归。
+ * 语义（青砚 Round 4 修正）：
+ *  - 单字 (len===1, CJK)：走「紧后非 CJK」前缀守卫——匹配处紧后字符非汉字（句尾/标点/文末）
+ *    才命中；紧后是汉字说明它只是更长词的前缀（如「云」在「云海」），拒绝。不查前导。
+ *  - 2字 (len===2, CJK)：直接子串命中（P0 修复）。中文无空格，2字名（叶凡/萧炎/林动）几乎
+ *    总被 CJK 前后包围，任何边界约束都会令最常见名长全漏检（OOC/召回失效）。纯错字由
+ *    includes 前置检查排除（如「叶凡」不会命中「叶帆」）。
+ *  - 3字及以上 (len>=3, CJK)：走「前缀守卫」——仅当匹配处「紧后字符非 CJK」（句尾/标点/文末）
+ *    才命中；若紧后是 CJK 说明是更长词的前缀（如「李星云」+「剑法」），拒绝（P1 修复）。
+ *    不检查前导字符，避免误杀句首合法名。
+ *  - 纯数字 / 非 CJK 2字：完全沿用 matchKeyword 行为（含纯数字边界、英文2字两侧边界），无回归。
  */
 export function matchNameStrict(text: string, keyword: string): boolean {
   if (!keyword || !text) return false;
@@ -92,37 +95,41 @@ export function matchNameStrict(text: string, keyword: string): boolean {
   const len = needle.length;
   const keywordIsCjk = needle.split("").every(isCjkChar);
 
-  // 闭边界判定：匹配处前后字符若存在，都不是 CJK 汉字（即独立成词 / 词边界）。
-  const isClosedBoundary = (idx: number): boolean => {
-    const before = idx > 0 ? hay[idx - 1] : "";
-    const after = idx + len < hay.length ? hay[idx + len] : "";
-    const beforeCjk = before !== "" && isCjkChar(before);
-    const afterCjk = after !== "" && isCjkChar(after);
-    return !beforeCjk && !afterCjk;
-  };
-
-  if (len === 1) {
-    // 单字：逐位置检查，任一处独立成词即认（青砚 P1-1）。
+  if (len === 1 && keywordIsCjk) {
+    // 单字：紧后非 CJK 才认（前缀守卫）。
     let idx = hay.indexOf(needle);
     while (idx >= 0) {
-      if (isClosedBoundary(idx)) return true;
+      const afterIdx = idx + len;
+      const after = afterIdx < hay.length ? hay[afterIdx] : "";
+      if (after === "" || !isCjkChar(after)) return true; // 紧后非CJK → 命中
       idx = hay.indexOf(needle, idx + 1);
     }
     return false;
   }
 
-  // 长度 ≥2：先走共享 matchKeyword（含纯数字边界、英文2字两侧边界、≥3 直命中），
-  // 再对 CJK 2字追加闭边界过滤（青砚 P0-1/P0-2）。
+  // 2字 CJK：直接子串命中（P0 修复），不依赖 matchKeyword 的边界判定，
+  // 否则中文无空格场景下「叶凡」夹在 CJK 间会全漏检。纯错字由 includes 前置排除。
+  if (len === 2 && keywordIsCjk) {
+    return true;
+  }
+
+  // 长度 ≥3（及非 CJK 2字/纯数字）：先走共享 matchKeyword（含纯数字边界、英文2字两侧边界、≥3 直命中）。
   const base = matchKeyword(text, keyword);
   if (!base) return false;
-  if (len === 2 && keywordIsCjk) {
+
+  if (len >= 3 && keywordIsCjk) {
+    // P1 修复：前缀守卫——「李星云」+「剑法」这类前缀复合词不应误命中。
+    // 任一处匹配满足「紧后字符非 CJK」（句尾/标点/文末）即视为合法名命中。
     let idx = hay.indexOf(needle);
     while (idx >= 0) {
-      if (isClosedBoundary(idx)) return true;
+      const afterIdx = idx + len;
+      const after = afterIdx < hay.length ? hay[afterIdx] : "";
+      if (after === "" || !isCjkChar(after)) return base; // 紧后非CJK → 命中
       idx = hay.indexOf(needle, idx + 1);
     }
-    return false;
+    return false; // 所有匹配都紧接 CJK（纯前缀）→ 拒绝
   }
+
   return base;
 }
 

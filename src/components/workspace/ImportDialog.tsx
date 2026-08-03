@@ -66,7 +66,7 @@ export function ImportDialog({
   };
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-md">
+    <Modal open onClose={onClose} bare panelClassName="max-w-md max-h-[88vh] overflow-y-auto">
       <div className="p-5">
         <div className="mb-1 flex items-start justify-between">
           <div>

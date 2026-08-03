@@ -31,7 +31,7 @@ export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, de
           </button>
         </div>
       </div>
-      <div className={view === "grid" ? "flex-1 grid grid-cols-2 gap-2 overflow-y-auto p-2" : "flex-1 space-y-1 overflow-y-auto p-2"}>
+      <div className={view === "grid" ? "flex-1 grid grid-cols-1 min-[360px]:grid-cols-2 gap-2 overflow-y-auto p-2" : "flex-1 space-y-1 overflow-y-auto p-2"}>
         {entries.length === 0 && (
           <EmptyState
             icon="book"

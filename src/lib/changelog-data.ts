@@ -25,18 +25,62 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.67";
+export const LATEST_VERSION = "v0.46.68";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "一键填表静默丢数据修复（墨白 P0-1）：fill.ts 的 applyOps 改为直接累积改 tables 内 t.rows（同一引用贯穿多章循环），灭「一键填表每章整体覆盖写回、静默丢失前序章」的数据黑洞——tsc 零错误",
-  "CJK2字尾随误命中 + 单字名漏检（青砚 P0-1/P0-2/P1-1）：match.ts 新增 matchNameStrict（CJK2字闭边界 + 单字闭边界检测），trigger/recall 全面接线，灭「李星云剑法」误命中「李星云」与 OOC 单字角色名漏检，不翻案既有 matchKeyword 测试",
-  "实体高亮最长名优先回归（清览 P0-1）：findEntitiesInText 改为先收集所有候选（含重叠，lastIndex=idx+1）再按长度降序+idx升序贪心占用，灭「李星云剑法」误高亮「李星云」这类最长名被短名截断",
-  "import 分块失败如实标记 + 游戏状态断裂三修（磐石 P0-1 + 阿游 P0-2/P0-3）：import/parse 分块 failedChunks 计数 → partial/failed 状态如实上链；游戏 itemChanges 补 equip/discard、两步写包 $transaction、新增 DELETE /api/game/state 回退落库 + 前端回退调接口",
+  "游戏物品变动全部修复（阿游 P0）：CI| 中文操作（获得/消耗/装备/丢弃）归一化为英文枚举，修复获得/消耗/装备/丢弃全部落库失败——背包更新、世界卡联动、开场入包一并恢复，tsc 零错误",
+  "角色名 2字匹配回归修正（青砚 P0）：matchNameStrict 的 2字名从 Round4 两侧闭边界改回任一侧边界命中，修复叶凡/萧炎等最常见角色名在 OOC 与召回中全漏检（修正 Round4 过度收紧的回归）",
+  "填表伪行 + 游戏回退错位（墨白/阿游 P1）：填表缺 match 静默插入带脏键 undefined 伪行已灭；游戏回退后前端用后端重算 summary 整体覆盖 totalWords/items，灭字数虚高与背包残留",
+  "导入失败标记闭环 + 弹窗/高亮（磐石/清览 P1）：import 非分块路径与 B路世界提取失败纳入标记，不再谎报 completed；弹窗长内容可滚动、2字名连词后（如「与炎帝」）正常高亮",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.68",
+    date: "2026-08-04",
+    title: "会员股东 Round 5 实现：游戏物品变动归一化落库 + 角色名2字匹配回归 + 填表伪行/游戏回退错位 + 导入失败标记闭环 + 弹窗滚动/连词高亮（tsc 零错误）",
+    sections: [
+      {
+        label: "游戏物品变动全部修复（阿游 P0）",
+        items: [
+          "game-prompts.ts 的 parseGameOutput 设唯一归一化点 OP_MAP：中文操作 获得/消耗/装备/丢弃 映射为英文枚举 gain/consume/equip/discard；引擎(game-engine)、前端(page)、开局(start/route) 的英文比较全部生效，修复 Round4 新增的 equip/discard 与既有 gain/consume、世界卡自动补建、开场入包全部落库失败——CI| 四种变动真实改变背包与世界书",
+        ],
+      },
+      {
+        label: "角色名 2字匹配回归修正（青砚 P0）",
+        items: [
+          "matchNameStrict 的 2字 CJK 关键词由 Round4 两侧闭边界改回任一侧边界/子串命中：中文无空格，叶凡/萧炎/林动等最常见2字角色名在 OOC 检测与 worldbook 召回中不再全漏检（修正 Round4 过度收紧的回归）；单字保留紧后非CJK 前缀守卫、3字+ 加前缀守卫灭尾随复合词误命中",
+        ],
+      },
+      {
+        label: "填表伪行 + 游戏回退错位（墨白/阿游 P1）",
+        items: [
+          "填表 applyOps 的 update/delete 缺有效 match 列时整体跳过并告警，灭静默插入带脏键 undefined 的伪行（防重复/零错名漏防）；跨表同名判定去掉 categories.size>=2 硬门槛，同类别(custom)多表互错填也报归属待确认；空章正文不触发 LLM 填表",
+          "游戏回退后前端用 DELETE /api/game/state 返回的重算 summary 整体覆盖 totalWords/items/plotProgress/entities，灭回退后基于陈旧字数累加导致的字数虚高与背包残留（与后端 rollback 权威态一致）",
+        ],
+      },
+      {
+        label: "导入失败标记闭环（磐石 P1）",
+        items: [
+          "import/parse 新增 worldFailed 标志：非分块 A路角色提取失败与 B路世界/文风提取失败纳入计数，importStatus 在任何阶段失败即 partial/failed，灭小项目(非分块)与 B路世界提取失败仍谎报 completed 的数据丢失误导",
+        ],
+      },
+      {
+        label: "弹窗滚动 + 2字名连词边界（清览 P1）",
+        items: [
+          "bare 弹窗（BackupDialog/ImportDialog/MemoryDecayDialog/ExportDialog）补 max-h+overflow-y-auto 滚动约束，Modal 的 bare 分支默认固化 max-h-[90vh] overflow-y-auto；2字实体名头边界集补连词（与和跟同及等把被给向对由的）与全角引号「」『』，灭「萧炎与炎帝」仅高亮萧炎",
+        ],
+      },
+      {
+        label: "自动建卡/下拉/书卡/备份/预设/正则（青砚P2/清览P2/工坊P2）",
+        items: [
+          "自动建卡 isSimilarName 对 2字名做繁简归一化去重（萧炎/蕭炎 不再各建一张卡，白云/白衣 不误并）；暗色原生下拉 option 背景改不透明暗色（对比度恢复）；书卡网格窄栏降为 1 列 + 标题截断；备份导出 include 键名与导入对齐、预设 character 套用按名去重、正则编译失败结构化告警、.nfproject 还原补 maxDuration",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.67",
     date: "2026-08-04",

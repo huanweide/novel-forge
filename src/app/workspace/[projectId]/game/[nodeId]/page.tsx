@@ -584,22 +584,54 @@ export default function GamePage() {
                 if (turns.length > 1) {
                   const lastRound = turns[turns.length - 1].round;
                   const sid = state.sessionId;
-                  if (sid) {
-                    try {
-                      await fetch(`/api/game/state?sessionId=${encodeURIComponent(sid)}&round=${lastRound}`, { method: "DELETE" });
-                    } catch {
-                      /* 后端回退失败不阻断前端回退，但导出前建议刷新对账 */
-                    }
-                  }
                   const newTurns = turns.slice(0, -1);
                   setTurns(newTurns);
-                  const newNarrative = newTurns.map((t) => t.narrative).join("\n\n");
-                  setState((s) => ({
-                    ...s,
-                    narrative: newNarrative,
-                    currentRound: newTurns.length,
-                    options: [],
-                  }));
+                  if (sid) {
+                    try {
+                      const res = await fetch(`/api/game/state?sessionId=${encodeURIComponent(sid)}&round=${lastRound}`, { method: "DELETE" });
+                      const data = await res.json().catch(() => null);
+                      // P1：优先用后端 rollback 后的权威摘要整体覆盖前端态，避免错位（字数虚高/背包残留）
+                      if (data?.ok && data?.summary) {
+                        const sm = data.summary;
+                        setState((s) => ({
+                          ...s,
+                          currentRound: sm.currentRound,
+                          totalWords: sm.totalWords,
+                          plotProgress: sm.plotProgress,
+                          items: sm.items || [],
+                          entities: sm.entities || [],
+                          narrative: sm.narrative || newTurns.map((t) => t.narrative).join("\n\n"),
+                          options: sm.options || [],
+                        }));
+                      } else {
+                        // 后端未返回摘要（老接口/异常）：按前端剩余轮次重建，保证不崩
+                        const newNarrative = newTurns.map((t) => t.narrative).join("\n\n");
+                        setState((s) => ({
+                          ...s,
+                          narrative: newNarrative,
+                          currentRound: newTurns.length,
+                          options: [],
+                        }));
+                      }
+                    } catch {
+                      // 后端回退失败不阻断前端回退，但导出前建议刷新对账
+                      const newNarrative = newTurns.map((t) => t.narrative).join("\n\n");
+                      setState((s) => ({
+                        ...s,
+                        narrative: newNarrative,
+                        currentRound: newTurns.length,
+                        options: [],
+                      }));
+                    }
+                  } else {
+                    const newNarrative = newTurns.map((t) => t.narrative).join("\n\n");
+                    setState((s) => ({
+                      ...s,
+                      narrative: newNarrative,
+                      currentRound: newTurns.length,
+                      options: [],
+                    }));
+                  }
                 }
               }}
               disabled={turns.length <= 1}

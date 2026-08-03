@@ -92,7 +92,7 @@ export function ExportDialog({
   };
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-md max-h-[85vh]">
+    <Modal open onClose={onClose} bare panelClassName="max-w-md max-h-[85vh] overflow-y-auto">
       <div className="p-5">
         <div className="mb-4 flex items-start justify-between">
           <div>

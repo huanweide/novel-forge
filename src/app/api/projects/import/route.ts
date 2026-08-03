@@ -1,7 +1,9 @@
-import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { normalizeRelationships } from "@/lib/relations";
 import { NextResponse } from "next/server";
+
+// P2-②：.nfproject 还原可能含大量章节/词条，放宽函数执行时长上限（对照 import/commit 已设 300）
+export const maxDuration = 300;
 
 // 去掉会导致冲突的字段（让 Prisma 重新生成 id / 时间戳 / 关联）
 function strip<T extends Record<string, any>>(o: T, keys: string[]): Record<string, any> {
@@ -14,6 +16,8 @@ function strip<T extends Record<string, any>>(o: T, keys: string[]): Record<stri
 // body：备份 JSON；可选 include：["characters","lorebook","chapters","branches","storylines","style","tables","rules"]
 // v0.46.58：支持只导入选中的设定（未列出的部分跳过）。
 export async function POST(request: Request) {
+  // P2-②：记录已建部分，失败时不崩、可回溯已写入的内容（事务回滚列为后续）
+  let built: Record<string, number> | null = null;
   try {
     const bundle = await request.json();
     const p = bundle?.project;
@@ -40,6 +44,9 @@ export async function POST(request: Request) {
     const created = await prisma.project.create({ data: projData as any });
     const newPid = created.id;
 
+    // P2-②：记录已建部分，失败时不崩、可回溯已写入的内容（事务回滚列为后续）
+    built = { project: 1, branches: 0, chapters: 0, lorebook: 0, characters: 0, storylines: 0, style: 0, tables: 0, rules: 0 };
+
     // 2. 故事分支（id 重映射）
     const branchMap: Record<string, string> = {};
     if (want("branches")) {
@@ -48,6 +55,7 @@ export async function POST(request: Request) {
           data: { ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId"]), projectId: newPid } as any,
         });
         branchMap[b.id] = cb.id;
+        built.branches++;
       }
     }
 
@@ -59,6 +67,7 @@ export async function POST(request: Request) {
           data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid, revisionCount: 0 } as any,
         });
         nodeMap[n.id] = cn.id;
+        built.chapters++;
       }
       for (const n of p.storyNodes || []) {
         const upd: Record<string, any> = {};
@@ -78,6 +87,7 @@ export async function POST(request: Request) {
           data: { ...strip(l, ["id", "projectId", "createdAt", "updatedAt", "parentId", "relatedEntryIds"]), projectId: newPid } as any,
         });
         loreMap[l.id] = cl.id;
+        built.lorebook++;
       }
       for (const l of p.lorebookEntries || []) {
         const upd: Record<string, any> = {};
@@ -102,31 +112,41 @@ export async function POST(request: Request) {
             projectId: newPid,
           } as any,
         });
+        built.characters++;
       }
     }
     if (want("storylines")) {
       for (const s of p.storylines || []) {
         await prisma.storyline.create({ data: { ...strip(s, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
+        built.storylines++;
       }
     }
     if (want("style")) {
       for (const sc of p.styleCards || []) {
         await prisma.styleCard.create({ data: { ...strip(sc, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
+        built.style++;
       }
     }
     if (want("tables")) {
       for (const lt of p.loreTables || []) {
         await prisma.loreTable.create({ data: { ...strip(lt, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
+        built.tables++;
       }
     }
     if (want("rules")) {
       for (const r of p.rules || []) {
         await prisma.rule.create({ data: { ...strip(r, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
+        built.rules++;
       }
     }
 
     return NextResponse.json({ success: true, id: newPid });
   } catch (err) {
-    return jsonError(err);
+    // P2-②：失败不崩、保留已建部分计数供排查（事务回滚列为后续）
+    console.error("[import] 还原失败:", err instanceof Error ? err.message : String(err));
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : String(err), built },
+      { status: 500 },
+    );
   }
 }

@@ -227,7 +227,7 @@ ${chapterText.slice(0, 12000)}
         if (attempt < 3) continue;
       }
       const r = await applyOps(filteredTables, ops, chapterText);
-      const warnings = buildWarnings(r.appliedNames, chapterText);
+      const warnings = [...r.warnings, ...buildWarnings(r.appliedNames, chapterText)];
       const usage = (data as any)?.usage;
       recordLlmCall({
         model: llm.model,
@@ -250,10 +250,11 @@ async function applyOps(
   tables: TableDef[],
   ops: LoreTableOp[],
   _chapterText: string,
-): Promise<{ applied: number; appliedNames: { table: string; value: string }[] }> {
+): Promise<{ applied: number; appliedNames: { table: string; value: string }[]; warnings: string[] }> {
   const byKey = new Map(tables.map((t) => [t.key, t]));
   let applied = 0;
   const appliedNames: { table: string; value: string }[] = [];
+  const warnings: string[] = [];
 
   for (const op of ops) {
     const t = byKey.get(op.table);
@@ -284,6 +285,13 @@ async function applyOps(
       }
     } else if (op.op === "update") {
       const { col, val } = (op as any).match || {};
+      const cols = (t.columns || []) as Array<{ key: string }>;
+      // 守卫：LLM 发 update 却漏给 match 或 col 非有效列时，原逻辑会推入带脏键「undefined」的伪行且不报警，
+      // 破坏防重复/零错名。此处无效则跳过该 op，不落库、不插伪行（P1-①）。
+      if (!col || !cols.some((c) => c.key === col)) {
+        warnings.push(`表「${t.name}」update 缺少有效 match 列「${String(col || "")}」，已跳过该操作（不插伪行）`);
+        continue;
+      }
       // 大小写不敏感匹配（与 insert 去重一致），避免「青龙镇」/「青龙鎮」因字形/大小写漏匹配（墨白 F5）
       const idx = rows.findIndex((r: any) => String(r[col] ?? "").toLowerCase() === String(val ?? "").toLowerCase());
       if (idx >= 0) {
@@ -299,6 +307,13 @@ async function applyOps(
       }
     } else if (op.op === "delete") {
       const { col, val } = (op as any).match || {};
+      const cols = (t.columns || []) as Array<{ key: string }>;
+      // 守卫：delete 缺有效 match 列时，原逻辑会按 undefined 列过滤→误删整表或静默不删，
+      // 此处无效则整体跳过该 op，不删除任何行（P1-①）。
+      if (!col || !cols.some((c) => c.key === col)) {
+        warnings.push(`表「${t.name}」delete 缺少有效 match 列「${String(col || "")}」，已跳过该操作（不删除任何行）`);
+        continue;
+      }
       const before = rows.length;
       // 大小写不敏感匹配，与 update 一致（墨白 F5）
       const filtered = rows.filter((r: any) => String(r[col] ?? "").toLowerCase() !== String(val ?? "").toLowerCase());
@@ -309,7 +324,7 @@ async function applyOps(
 
     await prisma.loreTable.update({ where: { id: t.id }, data: { rows } });
   }
-  return { applied, appliedNames };
+  return { applied, appliedNames, warnings };
 }
 
 /** 填后自检：被填名称若未出现在正文中，疑似错误地名/名称 */
@@ -337,6 +352,11 @@ export async function babyloreFill(
   chapterText: string,
   options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null },
 ): Promise<FillResult> {
+  // 空内容守卫（P2-④）：正文为空则不触发 LLM 填表，避免空跑/误插空行。
+  // safeFillAfterWriting 经本入口调用，故一并覆盖，无需重复判断。
+  if (!(chapterText || "").trim()) {
+    return { ok: false, operations: 0, applied: 0, error: "空内容跳过填表" };
+  }
   let settings;
   try {
     settings = await getSettings();
@@ -536,14 +556,19 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
     }
   }
 
-  // 跨表同名：同一名称值出现在 ≥2 个不同类别的表 → 归属待确认（自动填表可能把人名写进地点表等）。
+  // 跨表同名：同一名称值出现在 ≥2 个不同表 → 归属待确认（自动填表可能把人名写进地点表等）。
+  // 不论是否跨类别都报（P1-②）：原逻辑强约束 categories.size>=2，导致两张同类别(custom)表互错填不报警。
   for (const [val, info] of valueTables) {
     const distinct = Array.from(new Set(info.tables));
-    if (distinct.length >= 2 && info.categories.size >= 2) {
+    if (distinct.length >= 2) {
       crossTableIssues++;
       const others = distinct.join(" / ");
+      const sameCat = info.categories.size === 1;
+      const detail = sameCat
+        ? `同类别多表同名(归属待确认)：与表「${others}」同属「${Array.from(info.categories).join("/")}」却共享同名「${val}」`
+        : `跨类别同名(归属待确认)：与表「${others}」类别不同却共享同名「${val}」`;
       for (const tname of distinct) {
-        issues.push({ table: tname, row: "跨表", value: val, issue: `跨表同名（归属待确认）：与表「${others}」类别不同却共享同名「${val}」` });
+        issues.push({ table: tname, row: "跨表", value: val, issue: detail });
       }
     }
   }
