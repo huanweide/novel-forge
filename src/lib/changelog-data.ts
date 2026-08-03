@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.48";
+export const LATEST_VERSION = "v0.46.49";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "纸舟星海全新改版：海面换成明亮漫画风格（亮蓝海水+白色浪花线+扩散同心波纹）；船从「真实船模」改成「各式各样的小纸船」——六种折法各不相同（经典/塔式/双帆/平筏/长龙/尖角），数量与你的作品一一对应，入场从 12 高度掉落 + 落水扑通沉浮",
-  "交互升级：海面可拖拽旋转视角、滚轮放大缩小（缓动跟随）；点击任意纸船或下方书栏，直接进入那本书的写作区域 /workspace/{id}（移除原聚焦面板，交互链条一条直达）",
-  "书架清理与真书确认：作品区书架只渲染真实项目（无占位假书），每本书按题材显示不同的立体书封（题材色封面+书脊+厚度，hover 抽出突出效果）",
-  "右下角署名：GitHub（huanweide/novel-forge）+ 作者 RuiTri；首页文案与设计说明同步更新（船即作品/灯即活性/海即漫画/点击即入）；预览文件重写同步",
+  "全新三档主题系统：夜航（暗色·默认）/ 白昼（浅色）/ 苍青（青绿深色新风格）——主题切换器升级为三档选择器（图标+当前名+弹出菜单），选择持久化在 localStorage('nf-theme')，刷新保持、首屏无闪烁",
+  "苍青主题：整套 Void Glass 令牌换成青绿深色系（主色 oklch(0.70 0.13 200)、创意青、金色强调→亮青、背景深青黑），并保留 dark: 变体保证 shadcn 组件不失效",
+  "入口与说明：首页顶栏新增常驻主题切换按钮（设置旁）；设置页「外观」区改为「界面风格」三档说明；首页右下角 RuiTri + GitHub 署名确认保留",
+  "pipeline 自查全绿：tsc 零错误；路由矩阵全 200（/ /settings /explore /dissect /workshop /recycle /changelog /manifest /workspace/{id}/tables）；首页顶栏 9 个功能按钮 + 书架卡片按钮齐全；SSR 含主题脚本/三档菜单/RuiTri 标记；OPTIMIZATION_PLAN 46 项 ✅ 全闭环",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.49",
+    date: "2026-08-03",
+    title: "三档主题系统（夜航/白昼/苍青）+ pipeline 自查全绿",
+    sections: [
+      {
+        label: "主题系统（用户指令：设置能调整 UI 风格）",
+        items: [
+          "三档主题：夜航（暗色·默认，Void Glass 虚空玻璃）、白昼（浅色，既有 .light）、苍青（新增第三档：青绿深色风格，整套令牌换青绿系——主色 oklch(0.70 0.13 200)、创意青、强调→亮青、背景深青黑 #04090C）",
+          "ThemeToggle.tsx 升级为三档选择器：按钮（图标+当前主题名）+ 弹出菜单（夜航/白昼/苍青 各带说明与勾选态），点击外部关闭；选择写 localStorage('nf-theme')，theme-color meta 同步",
+          "layout.tsx 防闪烁脚本升级三档（azure 同时挂 azure+dark 保留 Tailwind dark: 变体，防止 shadcn 组件在苍青下失效）；入口：首页顶栏常驻按钮（设置旁）+ 设置页「界面风格」区；设置页文案更新",
+        ],
+      },
+      {
+        label: "pipeline 自查（用户指令：确认最终版本/无 bug/按钮齐全/响应正常）",
+        items: [
+          "tsc 零错误（SAFE_DELETE_DISABLE=1 npx tsc --noEmit）",
+          "路由矩阵全 200：/ /settings /explore /dissect /workshop /recycle /changelog /manifest.json /workspace/{id}/tables；/tables 独立页 404 属正常（v0.46.39 已删入口，结构化表格在 workspace 内，已实测 200）",
+          "功能按钮齐全：首页顶栏 开始创作/拆书/创意工坊/回收站/更新面板/主题/设置/⌘K/示例/导入备份 + 书架卡片 删除/进入工作台；SSR 含 主题脚本(nf-theme)/三档菜单/纸舟星海/RuiTri 标记",
+          "OPTIMIZATION_PLAN 46 项 ✅ 全闭环（无 ⏳/待做）；RuiTri + GitHub 右下角署名确认；纸舟星海交互（旋转/缩放/点击直达/掉落）与书架 hover 抽出均在",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "主题切换为代码层验证（tsc/SSR/路由）；三档主题的实际观感（尤其苍青色系配比）需浏览器实跑与用户验收",
+          "苍青主题覆盖了 --nv-* 与 shadcn 主要令牌，个别未覆盖的自定义色（如 body 三层径向渐变）仍在暗色基调上，观感以实跑为准；线上 Vercel 展示站未自动部署",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.48",
     date: "2026-08-03",

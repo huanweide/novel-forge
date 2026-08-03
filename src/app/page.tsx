@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import PaperBoats from "@/components/home/PaperBoats";
 
 // ─── 类型 ────────────────────────────────────────────────────
@@ -210,6 +211,8 @@ export default function Dashboard() {
             <a href="/changelog" className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="更新面板" aria-label="更新面板">
               <Icon name="book" size={13} />
             </a>
+            <ThemeToggle className="h-8" />
+            <span className="w-px h-5 bg-[var(--nv-border-2)] mx-0.5" aria-hidden="true" />
             <Link href="/settings" className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="设置" aria-label="设置">
               <Icon name="settings" size={13} />
             </Link>

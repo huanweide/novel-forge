@@ -224,9 +224,9 @@ export default function SettingsPage() {
           </label>
           <div className="flex items-center justify-between p-4 rounded-2xl surface-elevated">
             <div>
-              <p className="text-sm text-[var(--nv-text-primary)] font-medium">主题</p>
+              <p className="text-sm text-[var(--nv-text-primary)] font-medium">界面风格</p>
               <p className="text-xs text-[var(--nv-text-muted)] mt-1">
-                默认暗色（虚空玻璃）。偏好会保存在本机，刷新后保持。
+                三档主题：夜航（暗色·默认）/ 白昼（浅色）/ 苍青（青绿深色）。偏好保存在本机，刷新后保持。
               </p>
             </div>
             <ThemeToggle />

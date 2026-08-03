@@ -37,13 +37,15 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-/* 首屏前应用主题，避免闪烁 */
+/* 首屏前应用主题，避免闪烁（三档：dark 夜航 / light 白昼 / azure 苍青） */
 (function(){
   try {
     var t = localStorage.getItem('nf-theme');
     var d = document.documentElement;
-    if (t === 'light') { d.classList.add('light'); d.classList.remove('dark'); }
-    else { d.classList.add('dark'); d.classList.remove('light'); }
+    d.classList.remove('light','dark','azure');
+    if (t === 'light') { d.classList.add('light'); }
+    else if (t === 'azure') { d.classList.add('azure'); d.classList.add('dark'); } /* 苍青=深色风格，保留 dark: 变体 */
+    else { d.classList.add('dark'); }
   } catch(e){}
 })();`,
           }}

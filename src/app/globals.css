@@ -1134,3 +1134,56 @@
   .aurora-blob { filter: blur(56px); }
   .nf-home::after { opacity: 0.22; }
 }
+
+/* ═══════════════════════════════════════════
+   「苍青」主题（第三档 · 青绿深色风格）
+   切 html.azure 生效（layout 防闪烁脚本 + ThemeToggle 三档选择器）
+   ═══════════════════════════════════════════ */
+html.azure {
+  --nv-void:        #04090C;
+  --nv-abyss:       #081218;
+  --nv-surface-1:   rgba(190, 230, 235, 0.02);
+  --nv-surface-2:   rgba(190, 230, 235, 0.045);
+  --nv-surface-3:   rgba(190, 230, 235, 0.08);
+  --nv-border-1:    rgba(190, 230, 235, 0.06);
+  --nv-border-2:    rgba(190, 230, 235, 0.10);
+  --nv-border-3:    rgba(190, 230, 235, 0.16);
+
+  --nv-primary:      oklch(0.70 0.13 200);
+  --nv-primary-soft: oklch(0.70 0.13 200 / 0.14);
+  --nv-success:      oklch(0.68 0.16 165);
+  --nv-success-soft: oklch(0.68 0.16 165 / 0.14);
+  --nv-warning:      oklch(0.74 0.15 90);
+  --nv-warning-soft: oklch(0.74 0.15 90 / 0.14);
+  --nv-danger:       oklch(0.62 0.20 20);
+  --nv-danger-soft:  oklch(0.62 0.20 20 / 0.14);
+  --nv-creative:     oklch(0.64 0.15 175);
+  --nv-creative-soft:oklch(0.64 0.15 175 / 0.14);
+  --nv-info:         oklch(0.66 0.13 215);
+  --nv-info-soft:    oklch(0.66 0.13 215 / 0.14);
+  --nv-accent:       oklch(0.80 0.12 160);
+  --nv-accent-soft:  oklch(0.80 0.12 160 / 0.12);
+
+  --nv-text-primary:   #E9F2F0;
+  --nv-text-secondary: #9FB6B2;
+  --nv-text-tertiary:  #7C918D;
+  --nv-text-muted:     #5A6F6C;
+
+  --background: #04090C;
+  --foreground: #E9F2F0;
+  --primary: oklch(0.70 0.13 200);
+  --primary-foreground: #04201F;
+  --accent: oklch(0.80 0.12 160);
+  --accent-foreground: #06211D;
+  --ring: oklch(0.70 0.13 200 / 0.5);
+  --popover: #081218;
+  --popover-foreground: #E9F2F0;
+  --card: #081218;
+  --card-foreground: #E9F2F0;
+  --muted: rgba(190, 230, 235, 0.05);
+  --muted-foreground: #7C918D;
+  --border: rgba(190, 230, 235, 0.10);
+  --input: rgba(190, 230, 235, 0.12);
+}
+/* 苍青主题下按钮主色与浅色强调回退 */
+html.azure .btn-primary { color: #04201F; }
