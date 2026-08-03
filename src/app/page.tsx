@@ -10,8 +10,6 @@ import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
-import AuroraBackground from "@/components/home/AuroraBackground";
-import ParticleField from "@/components/home/ParticleField";
 import PaperBoats from "@/components/home/PaperBoats";
 
 // ─── 类型 ────────────────────────────────────────────────────
@@ -33,21 +31,6 @@ interface ProjectSummary {
 }
 
 // ─── 页面组件 ────────────────────────────────────────────────
-
-// ─── 联动润色辅助（Phase 3）：stagger 入场 + 粒子聚拢 ──
-
-// 卡片 hover/focus 时向粒子层派发聚拢目标点（屏幕坐标），移开/失焦取消
-function emitAttract(el: HTMLElement) {
-  const r = el.getBoundingClientRect();
-  window.dispatchEvent(
-    new CustomEvent("nf-particle-attract", {
-      detail: { x: r.left + r.width / 2, y: r.top + r.height / 2 },
-    })
-  );
-}
-function clearAttract() {
-  window.dispatchEvent(new CustomEvent("nf-particle-attract", { detail: null }));
-}
 
 // 进入视口逐张播放 nf-card-in 上浮入场（间隔 60ms；reduced-motion 直接显示）
 function useStaggerOnView(ready: boolean) {
@@ -197,10 +180,6 @@ export default function Dashboard() {
 
   return (
     <div className="nf-home min-h-screen bg-transparent text-foreground">
-      {/* 背景签名层（极光漂移 + 星尘粒子，fixed z-0，pointer-events-none，不拦截交互） */}
-      <AuroraBackground />
-      <ParticleField />
-
       {/* 顶栏：主操作 / 导航 / 系统 三组，统一 32px 高度 */}
       <header className="nf-header sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between gap-4">
@@ -251,14 +230,6 @@ export default function Dashboard() {
 
       {/* Hero 欢迎区 */}
       <section className="relative z-10 overflow-hidden border-b border-[var(--nv-border-2)] bg-gradient-to-b from-[var(--nv-surface-1)] to-transparent">
-        {/* 光晕装饰：主光收拢到标题后，辅光退为余光 */}
-        <div className="hero-glow" style={{ width: '420px', height: '420px', background: 'color-mix(in oklch, var(--nv-primary) 34%, transparent)', top: '-160px', left: '50%', transform: 'translateX(-50%)', opacity: 0.55 }} />
-        <div className="hero-glow" style={{ width: '240px', height: '240px', background: 'color-mix(in oklch, var(--nv-creative) 24%, transparent)', top: '40px', right: '5%', opacity: 0.35 }} />
-        {/* 轨道装饰：半环从画面外延伸进来 */}
-        <div className="nf-orb hidden md:block" style={{ width: 290, height: 290, top: 28, right: -64 }} aria-hidden="true">
-          <span className="r1" /><span className="r2" /><span className="r3" />
-          <span className="d1" /><span className="d2" /><span className="d3" />
-        </div>
         <div className="relative max-w-7xl mx-auto px-6 py-14 md:py-20">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
@@ -323,7 +294,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <DesignNote title="船即作品" desc="每艘折纸船是一部小说，船身大小对应字数，折痕透出题材色的光。" />
           <DesignNote title="灯即活性" desc="船头一盏灯，灯光越亮说明最近越活跃；夜深了，只有这些灯还亮着。" />
-          <DesignNote title="尾迹即坚持" desc="船尾在墨海上拖出的光尾，长度对应你一路写下来的创作连续性。" />
+          <DesignNote title="舟即起伏" desc="纸船随墨海轻轻起伏，不打扰、不炫技，安静地等你上船——点开进入工作台，续写下一章。" />
           <DesignNote title="海即下一章" desc="点击一艘船，镜头拉到船头望向前方无边的墨海——那个画面就是下一章。" />
         </div>
       </section>
@@ -458,10 +429,6 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
     <div
       className="group surface-elevated card-lift nf-book rounded-2xl p-5 flex flex-col"
       style={{ "--spine": spine } as React.CSSProperties}
-      onMouseEnter={(e) => emitAttract(e.currentTarget)}
-      onMouseLeave={clearAttract}
-      onFocusCapture={(e) => emitAttract(e.currentTarget)}
-      onBlurCapture={clearAttract}
     >
       <span className="nf-bookmark" aria-hidden="true">{project.name.charAt(0)}</span>
       <div className="flex items-start justify-between mb-3">
