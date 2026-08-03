@@ -828,7 +828,7 @@
 .hero-glow {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(90px);
+  filter: blur(70px);
   opacity: 0.4;
   pointer-events: none;
   z-index: 0;
@@ -842,7 +842,7 @@
 .aurora-blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(120px);
+  filter: blur(90px);
   opacity: 0.32;
   will-change: transform, opacity;
 }
@@ -851,16 +851,16 @@
 .aurora-blob-3 { animation: aurora-drift-3 50s var(--ease-out-smooth) infinite alternate both; }
 
 @keyframes aurora-drift-1 {
-  0%   { transform: translate3d(0, 0, 0) scale(1);     opacity: 0.26; }
-  100% { transform: translate3d(6%, 4%, 0) scale(1.12); opacity: 0.40; }
+  0%   { transform: translate3d(0, 0, 0) scale(1);     opacity: 0.18; }
+  100% { transform: translate3d(6%, 4%, 0) scale(1.12); opacity: 0.30; }
 }
 @keyframes aurora-drift-2 {
-  0%   { transform: translate3d(0, 0, 0) scale(1.05);  opacity: 0.24; }
-  100% { transform: translate3d(-5%, 6%, 0) scale(0.95); opacity: 0.38; }
+  0%   { transform: translate3d(0, 0, 0) scale(1.05);  opacity: 0.16; }
+  100% { transform: translate3d(-5%, 6%, 0) scale(0.95); opacity: 0.28; }
 }
 @keyframes aurora-drift-3 {
-  0%   { transform: translate3d(0, 0, 0) scale(1);     opacity: 0.20; }
-  100% { transform: translate3d(4%, -5%, 0) scale(1.1); opacity: 0.32; }
+  0%   { transform: translate3d(0, 0, 0) scale(1);     opacity: 0.13; }
+  100% { transform: translate3d(4%, -5%, 0) scale(1.1); opacity: 0.22; }
 }
 
 /* 浅色下极光整体降透明度，避免刺眼（与 .light body 渐变同调） */
@@ -877,4 +877,172 @@
 }
 .home-stagger-item.is-visible {
   animation: nf-card-in 0.5s var(--ease-out-expo) both;
+}
+
+/* =========================================================
+   首页视觉系统 v2 · 光的秩序 + 布局一致性
+   仅作用于 .nf-home 内的首页元素，不污染其他页面
+   ========================================================= */
+
+.nf-home { position: relative; }
+
+/* 暗角：光沉到中央，四周压暗 */
+.nf-home::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 135% 100% at 50% 6%, transparent 50%, rgba(0, 0, 0, 0.48) 96%),
+    radial-gradient(ellipse 70% 55% at 50% 0%, transparent 58%, rgba(0, 0, 0, 0.34) 100%);
+}
+
+/* 细网格：深空的刻度感，中心可见、四周淡出 */
+.nf-home::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 100% 72% at 50% 20%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 100% 72% at 50% 20%, #000 25%, transparent 78%);
+}
+.light .nf-home::before {
+  background:
+    radial-gradient(ellipse 135% 100% at 50% 6%, transparent 55%, rgba(10, 14, 24, 0.16) 100%);
+}
+.light .nf-home::after {
+  opacity: 0.35;
+  background-image:
+    linear-gradient(rgba(20, 26, 40, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 26, 40, 0.045) 1px, transparent 1px);
+}
+
+/* 极光整体再降一档 */
+.aurora-blob { opacity: 0.22; }
+
+/* 顶栏：更沉更透，底部一道靛蓝发光线 */
+.nf-header {
+  position: relative;
+  background: linear-gradient(180deg, rgba(7, 9, 16, 0.88), rgba(5, 5, 8, 0.6)) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(18px) !important;
+}
+.nf-header::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(0.62 0.19 270 / 0.32), transparent);
+  pointer-events: none;
+}
+.light .nf-header {
+  background: linear-gradient(180deg, rgba(250, 251, 253, 0.92), rgba(240, 242, 246, 0.72)) !important;
+}
+.light .nf-header::after {
+  background: linear-gradient(90deg, transparent, oklch(0.55 0.17 270 / 0.25), transparent);
+}
+
+/* 品牌 LOGO 星形 */
+.nf-logo {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, oklch(0.62 0.19 270 / 0.25), oklch(0.58 0.21 295 / 0.18));
+  border: 1px solid oklch(0.62 0.19 270 / 0.35);
+  box-shadow: 0 0 14px oklch(0.62 0.19 270 / 0.22), inset 0 0 10px oklch(0.62 0.19 270 / 0.12);
+  color: #dbe6ff;
+}
+
+/* 标题：均衡断行 + 发光 */
+.nf-home h1, .nf-home h2, .nf-home h3 { text-wrap: balance; }
+.nf-hero-title .text-gradient {
+  filter: drop-shadow(0 0 20px oklch(0.62 0.19 270 / 0.32)) drop-shadow(0 0 44px oklch(0.58 0.21 295 / 0.16));
+}
+.nf-hero-sub { color: #B7B4AC !important; }
+.light .nf-hero-sub { color: var(--nv-text-secondary) !important; }
+
+/* Hero 轨道装饰：同心圆环 + 光点 */
+.nf-orb { position: absolute; pointer-events: none; border-radius: 9999px; }
+.nf-orb .r1 {
+  position: absolute; inset: 0; border-radius: inherit;
+  border: 1px solid rgba(130, 180, 255, 0.13);
+}
+.nf-orb .r2 {
+  position: absolute; inset: 14%; border-radius: inherit;
+  border: 1px dashed rgba(130, 180, 255, 0.10);
+  animation: nf-orb-spin 36s linear infinite;
+}
+.nf-orb .r3 {
+  position: absolute; inset: 30%; border-radius: inherit;
+  border: 1px solid rgba(130, 180, 255, 0.08);
+}
+.nf-orb .d1, .nf-orb .d2, .nf-orb .d3 {
+  position: absolute; border-radius: 9999px; background: oklch(0.62 0.19 270 / 0.8);
+  box-shadow: 0 0 12px oklch(0.62 0.19 270 / 0.9);
+}
+.nf-orb .d1 { width: 5px; height: 5px; top: 12%; left: 62%; }
+.nf-orb .d2 { width: 3px; height: 3px; top: 55%; left: 8%; background: oklch(0.58 0.21 295 / 0.8); box-shadow: 0 0 10px oklch(0.58 0.21 295 / 0.9); }
+.nf-orb .d3 { width: 4px; height: 4px; top: 78%; left: 44%; background: oklch(0.75 0.14 95 / 0.75); box-shadow: 0 0 10px oklch(0.75 0.14 95 / 0.85); }
+@keyframes nf-orb-spin { to { transform: rotate(360deg); } }
+
+/* 主 CTA 流光扫过 */
+.nf-btn-flow { position: relative; overflow: hidden; }
+.nf-btn-flow::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0; left: -75%; width: 42%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.nf-btn-flow:hover::after { left: 135%; }
+
+/* 项目卡：书脊 + 水印 + 题材色 */
+.nf-book { position: relative; overflow: hidden; }
+.nf-book::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--spine, oklch(0.62 0.19 270)), transparent 80%);
+  opacity: 0.95; transition: height 0.25s var(--ease-out-smooth), opacity 0.25s var(--ease-out-smooth);
+  z-index: 1;
+}
+.nf-book:hover::before { height: 6px; }
+.nf-book:hover { border-color: color-mix(in oklch, var(--spine, oklch(0.62 0.19 270)) 38%, transparent); }
+.nf-bookmark {
+  position: absolute; right: 12px; bottom: -14px; z-index: 0;
+  font-size: 84px; font-weight: 800; line-height: 1; letter-spacing: -0.05em;
+  color: var(--spine, oklch(0.62 0.19 270)); opacity: 0.06;
+  pointer-events: none; user-select: none;
+}
+.light .nf-bookmark { opacity: 0.05; }
+
+/* 统计标签：书架刻度 */
+.nf-stat {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--nv-surface-2); border: 1px solid var(--nv-border-1);
+  font-size: 10px; color: var(--nv-text-secondary);
+  white-space: nowrap;
+}
+
+/* 题材卡：图标底光 */
+.nf-genre-card { position: relative; overflow: hidden; }
+.nf-genre-card .gi {
+  width: 38px; height: 38px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: linear-gradient(135deg, oklch(0.62 0.19 270 / 0.16), oklch(0.58 0.21 295 / 0.10));
+  border: 1px solid oklch(0.62 0.19 270 / 0.18);
+  box-shadow: inset 0 0 12px oklch(0.62 0.19 270 / 0.10);
+  transition: transform 0.25s var(--ease-out-smooth);
+}
+.nf-genre-card:hover .gi { transform: translateY(-2px) scale(1.06); }
+
+/* 空状态引导：分隔光 */
+.nf-glow-line {
+  height: 1px; border: none; margin: 26px auto; width: min(420px, 70%);
+  background: linear-gradient(90deg, transparent, oklch(0.62 0.19 270 / 0.3), transparent);
+}
+
+/* 移动端：轨道装饰隐藏 */
+@media (max-width: 900px) {
+  .nf-orb { display: none; }
+  .aurora-blob { filter: blur(56px); }
+  .nf-home::after { opacity: 0.22; }
 }

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Novel Forge · 创作星系 预览</title>
+<style>
+:root{
+  --bg:#070a12; --void:#0a0e18; --surface1:#0e1320; --surface2:#161d2e;
+  --border2:rgba(120,150,210,0.14); --border3:rgba(140,170,230,0.28);
+  --txt:#e9eefb; --txt2:#aebbe0; --txt3:#6b7ba0; --muted:#4a5878;
+  --primary:#5fb0ff; --creative:#b077ff; --accent:#5fffa8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--txt);
+  background:radial-gradient(1100px 700px at 75% -10%,rgba(60,90,180,0.16),transparent 60%),
+             radial-gradient(900px 600px at 5% 110%,rgba(150,80,210,0.12),transparent 60%),var(--bg);
+  overflow-x:hidden;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+
+/* 顶栏 */
+.topbar{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
+  background:rgba(10,14,24,0.86);border-bottom:1px solid var(--border2)}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+.brand{font-weight:800;font-size:18px;letter-spacing:.02em}
+.brand small{display:block;font-weight:500;font-size:11px;color:var(--txt3);letter-spacing:.18em}
+.nav{display:flex;gap:8px}
+.nav a{font-size:12px;color:var(--txt2);text-decoration:none;padding:7px 12px;border-radius:10px;
+  border:1px solid var(--border2);background:var(--surface2);opacity:.9}
+.nav a:hover{border-color:var(--border3);color:var(--txt)}
+
+/* Hero */
+.hero{padding:56px 0 36px}
+.hero .pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--txt3);
+  border:1px solid var(--border2);background:var(--surface2);padding:5px 11px;border-radius:999px;margin-bottom:18px}
+.hero .pill i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.hero h1{font-size:34px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+.hero h1 span{background:linear-gradient(100deg,#dff0ff,#9ec6ff 50%,#c8a6ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin-top:14px;color:var(--txt2);font-size:15px;max-width:560px;line-height:1.6}
+
+/* 创作星系区块 */
+.cosmos{padding:20px 0 40px}
+.cosmos .grid2{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center}
+@media(max-width:760px){.cosmos .grid2{grid-template-columns:1fr}}
+.cosmos .txt h2{font-size:24px;font-weight:800;letter-spacing:-.01em}
+.cosmos .txt h2 span{color:var(--creative)}
+.cosmos .txt p{margin-top:12px;color:var(--txt2);font-size:14px;line-height:1.6;max-width:380px}
+.stage{position:relative;height:360px;border-radius:20px;overflow:hidden;
+  border:1px solid var(--border2);background:linear-gradient(180deg,rgba(14,19,32,0.6),rgba(7,10,18,0.9))}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+.stage .label{position:absolute;z-index:3;pointer-events:none;padding:5px 9px;border-radius:9px;font-size:12px;font-weight:600;
+  color:var(--txt);background:rgba(22,29,46,0.9);border:1px solid var(--border3);backdrop-filter:blur(6px);
+  white-space:nowrap;opacity:0;transition:opacity .15s}
+.stage .hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:11px;color:var(--muted);z-index:2;letter-spacing:.05em}
+
+/* 详情卡（点击星球弹出） */
+.detail{position:absolute;top:50%;right:14px;transform:translateY(-50%) translateX(30px);width:240px;z-index:5;
+  opacity:0;visibility:hidden;transition:opacity .25s,transform .25s;
+  background:rgba(14,19,32,0.92);border:1px solid var(--border3);border-radius:16px;padding:18px;backdrop-filter:blur(14px)}
+.detail.show{opacity:1;visibility:visible;transform:translateY(-50%) translateX(0)}
+.detail .chip{font-size:10px;padding:3px 8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--txt2);margin-right:5px}
+.detail h3{font-size:19px;font-weight:700;margin:10px 0}
+.detail p{font-size:13px;color:var(--txt2);line-height:1.5;margin-bottom:12px}
+.detail .enter{width:100%;padding:9px;border:none;border-radius:10px;font-weight:700;font-size:13px;color:#04101f;
+  background:linear-gradient(100deg,#9ec6ff,#c8a6ff);cursor:pointer}
+
+/* 行星设计区（下滑可见） */
+.design{padding:30px 0 60px;border-top:1px solid var(--border2);margin-top:10px}
+.design h2{font-size:20px;font-weight:700;display:flex;align-items:center;gap:9px}
+.design h2 i{width:6px;height:20px;border-radius:3px;background:var(--primary);opacity:.7}
+.design>p{color:var(--txt3);font-size:13px;margin:10px 0 22px;max-width:620px;line-height:1.6}
+.notes{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:760px){.notes{grid-template-columns:repeat(2,1fr)}}
+.note{background:var(--surface1);border:1px solid var(--border2);border-radius:16px;padding:18px}
+.note .dot{width:9px;height:9px;border-radius:50%;background:var(--primary);margin-bottom:12px}
+.note h3{font-size:14px;font-weight:700;margin-bottom:7px}
+.note p{font-size:12px;color:var(--txt3);line-height:1.55}
+
+/* 卡片网格示意 */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:10px 0 50px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface1);border:1px solid var(--border2);border-radius:16px;padding:18px;min-height:150px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.card p{font-size:12px;color:var(--txt3);line-height:1.5}
+.scrollcue{text-align:center;color:var(--muted);font-size:12px;padding:8px 0 26px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="wrap">
+  <div class="brand">Novel Forge<small>小说缔造 · AI NOVEL STUDIO</small></div>
+  <nav class="nav">
+    <a href="#">开始创作</a><a href="#">拆书</a><a href="#">创意工坊</a><a href="#">设置</a><a href="#">回收站</a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div class="pill"><i></i> AI 驱动的小说创作引擎</div>
+  <h1>构建你的<span>小说宇宙</span></h1>
+  <p>用 AI 探讨灵感、拆解好书、管理角色与世界观——从一句话构思到完整成稿，一站式完成。</p>
+</div></section>
+
+<section class="cosmos"><div class="wrap">
+  <div class="grid2">
+    <div class="txt">
+      <h2>每一颗星球，<br><span>都是一个故事宇宙</span></h2>
+      <p>它们很小、很轻，只在你靠近时轻声报出名字；轻点，便进入那片天地。向下滑，看清这套设计如何把「创作」具象成一片星海。</p>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="bg"></canvas>
+      <div class="label" id="label"></div>
+      <div class="hint">悬浮显现名字 · 点击进入对应小说</div>
+      <div class="detail" id="detail">
+        <div id="dChips"></div>
+        <h3 id="dTitle"></h3>
+        <p id="dDesc"></p>
+        <button class="enter">进入工作台 →</button>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<div class="scrollcue">↓ 下滑 · 查看行星设计 ↓</div>
+
+<section class="design"><div class="wrap">
+  <h2><i></i> 行星设计 · 设计说明</h2>
+  <p>创作星系把「写小说」变成一个可以俯瞰、可以靠近、可以进入的微缩宇宙。四条设计准则：</p>
+  <div class="notes">
+    <div class="note"><div class="dot"></div><h3>星球很小</h3><p>每颗星只是轻轻悬浮的点缀，不抢占阅读，只在需要时显形。</p></div>
+    <div class="note"><div class="dot" style="background:var(--creative)"></div><h3>悬浮显字</h3><p>默认不标注，靠近（hover）才浮现名字，保持画面干净。</p></div>
+    <div class="note"><div class="dot" style="background:var(--accent)"></div><h3>点击进入</h3><p>轻点星球即进入对应小说的创作工作台，与卡片等价。</p></div>
+    <div class="note"><div class="dot" style="background:var(--primary)"></div><h3>下滑看设计</h3><p>继续向下滑，展开这套视觉设计本身——星轨、配色与理念。</p></div>
+  </div>
+</div></section>
+
+<section class="wrap"><div class="grid">
+  <div class="card"><h3>山海拾遗</h3><p>上古山海之间，散落的异兽与遗闻。</p></div>
+  <div class="card"><h3>仙侠开局骨架</h3><p>以一卷残破功法为起点的修行路。</p></div>
+  <div class="card"><h3>沈砚觉醒</h3><p>平凡青年在雨夜后看见世界的另一面。</p></div>
+</div></section>
+
+<script src="./three.min.js"></script>
+<script>
+const WORKS=[
+  {name:"山海拾遗",desc:"上古山海之间，散落的异兽与遗闻。",genre:["东方","志怪"]},
+  {name:"仙侠开局骨架",desc:"以一卷残破功法为起点的修行路。",genre:["仙侠","修真"]},
+  {name:"沈砚觉醒",desc:"平凡青年在雨夜后看见世界的另一面。",genre:["都市","异能"]},
+  {name:"探讨中的小说",desc:"尚在构思，等待一个落笔的理由。",genre:["待定"]},
+  {name:"灵感 5",desc:"一颗尚未命名的小星，等待故事降临。",genre:["待定"]},
+  {name:"灵感 6",desc:"一颗尚未命名的小星，等待故事降临。",genre:["待定"]},
+];
+const canvas=document.getElementById('bg'), stage=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42,1,0.1,100); camera.position.set(0,0,12);
+scene.add(new THREE.AmbientLight(0xffffff,0.7));
+const dir=new THREE.DirectionalLight(0xffffff,0.9); dir.position.set(3,4,5); scene.add(dir);
+
+const NOISE=`float hash(vec3 p){p=fract(p*vec3(0.1031,0.1030,0.0973));p+=dot(p,p.yxz+33.33);return fract((p.x+p.y)*p.z);}
+float vnoise(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+float a=hash(i+vec3(0,0,0)),b=hash(i+vec3(1,0,0)),c=hash(i+vec3(0,1,0)),d=hash(i+vec3(1,1,0));
+float e=hash(i+vec3(0,0,1)),f1=hash(i+vec3(1,0,1)),g=hash(i+vec3(0,1,1)),h=hash(i+vec3(1,1,1));
+float ab=mix(a,b,f.x),cd=mix(c,d,f.x),ef=mix(e,f1,f.x),gh=mix(g,h,f.x);
+return mix(mix(ab,cd,f.y),mix(ef,gh,f.y),f.z);}
+float fbm(vec3 p){float v=0.0,a=0.5;for(int i=0;i<6;i++){v+=a*vnoise(p);p*=2.02;a*=0.5;}return v;}`;
+const vert=`varying vec3 vPos;varying vec3 vWN;varying vec3 vVN;varying vec3 vView;
+void main(){vPos=position;vWN=normalize(mat3(modelMatrix)*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);
+vVN=normalize(normalMatrix*normal);vView=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`;
+function frag(){return NOISE+`
+uniform float uTime;uniform vec3 uA;uniform vec3 uB;uniform float uMode;uniform float uGlow;
+varying vec3 vPos;varying vec3 vWN;varying vec3 vVN;varying vec3 vView;
+void main(){vec3 p=normalize(vPos);vec3 col;
+if(uMode<0.5){float bands=sin(p.y*16.0+fbm(p*2.2)*7.0+uTime*0.05);col=mix(uA,uB,smoothstep(-0.35,0.35,bands));col+=uB*pow(max(bands,0.0),4.0)*0.15;}
+else if(uMode<1.5){float n=fbm(p*3.2);float cr=smoothstep(0.46,0.5,n)-smoothstep(0.5,0.55,n);col=mix(uA,uB,step(0.5,n));col+=uB*cr*3.2;}
+else if(uMode<2.5){float n=fbm(p*2.6);col=mix(uA,uB,n);col+=uB*pow(n,3.0)*0.6;}
+else if(uMode<3.5){float n=fbm(p*1.6+3.0);col=mix(uA,uB,n);}
+else{float n=fbm(p*4.0);float m=smoothstep(0.4,0.6,n);col=mix(uA*0.7,uB,m);col+=uA*0.2*(1.0-m);}
+vec3 L=normalize(vec3(0.5,0.4,0.85));float diff=clamp(dot(normalize(vWN),L),0.0,1.0);col*=(0.40+0.62*diff);
+float fres=pow(1.0-max(dot(normalize(vVN),vView),0.0),3.0);col+=uB*fres*uGlow;gl_FragColor=vec4(col,1.0);}`;}
+const PAL=[[[0.30,0.45,0.95],[0.62,0.78,1.0],2],[[0.69,0.47,1.0],[0.82,0.68,1.0],3],[[0.31,0.84,0.77],[0.62,0.95,0.9],0],[[0.96,0.77,0.32],[1.0,0.9,0.62],3],[[1.0,0.42,0.54],[1.0,0.72,0.78],1],[[0.47,1.0,0.69],[0.80,1.0,0.88],2]];
+const group=new THREE.Group(); scene.add(group);
+const stars=[];
+WORKS.forEach((w,i)=>{const pal=PAL[i%PAL.length];const r=0.42+(i%3)*0.12;
+  const mat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uA:{value:new THREE.Color(pal[0][0],pal[0][1],pal[0][2])},uB:{value:new THREE.Color(pal[1][0],pal[1][1],pal[1][2])},uMode:{value:pal[2]},uGlow:{value:0.85}},vertexShader:vert,fragmentShader:frag()});
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,64,64),mat);
+  const ang=(i/WORKS.length)*Math.PI*2, dist=2.3+(i%3)*0.7;
+  m.position.set(Math.cos(ang)*dist,Math.sin(ang*1.3)*1.3,Math.sin(ang)*dist*0.5-0.6);
+  m.userData={name:w.name,info:w,spin:0.005+Math.random()*0.01}; group.add(m); stars.push(m);});
+// 背景星点
+const sg=new THREE.BufferGeometry(),sp=new Float32Array(120*3);
+for(let i=0;i<120;i++){sp[i*3]=(Math.random()-0.5)*30;sp[i*3+1]=(Math.random()-0.5)*20;sp[i*3+2]=(Math.random()-0.5)*20-6;}
+sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fa6d8,size:0.05,transparent:true,opacity:0.5})));
+
+const label=document.getElementById('label'), detail=document.getElementById('detail');
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2(); let mx=0,my=0,downX=0,downY=0,hovered=null;
+canvas.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY;});
+canvas.addEventListener('pointermove',e=>{const rc=canvas.getBoundingClientRect();
+  const x=e.clientX-rc.left,y=e.clientY-rc.top; mouse.x=(x/rc.width)*2-1; mouse.y=-(y/rc.height)*2+1; mx=x;my=y;
+  ray.setFromCamera(mouse,camera); const hit=ray.intersectObjects(group.children,false).find(h=>h.object.userData.name);
+  if(hit){hovered=hit.object; label.textContent=hit.object.userData.name; label.style.left=(x+14)+'px'; label.style.top=(y+14)+'px'; label.style.opacity=1; canvas.style.cursor='pointer';}
+  else{hovered=null; label.style.opacity=0; canvas.style.cursor='default';}});
+canvas.addEventListener('pointerleave',()=>{hovered=null;label.style.opacity=0;});
+canvas.addEventListener('pointerup',e=>{if(Math.hypot(e.clientX-downX,e.clientY-downY)>6)return;
+  if(hovered){const w=hovered.userData.info;
+    document.getElementById('dChips').innerHTML=w.genre.map(g=>`<span class="chip">${g}</span>`).join('');
+    document.getElementById('dTitle').textContent=w.name; document.getElementById('dDesc').textContent=w.desc;
+    detail.classList.add('show');}});
+detail.querySelector('.enter').addEventListener('click',()=>{detail.classList.remove('show');});
+
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+resize(); new ResizeObserver(resize).observe(stage);
+const clock=new THREE.Clock();
+(function animate(){const t=clock.getElapsedTime(); group.rotation.y+=0.0015; group.rotation.x=Math.sin(t*0.2)*0.05;
+  stars.forEach(s=>{s.material.uniforms.uTime.value=t; s.rotation.y+=s.userData.spin;});
+  camera.position.x+=(mx*0.002-camera.position.x)*0.05; camera.position.y+=(-my*0.002-camera.position.y)*0.05;
+  camera.lookAt(0,0,0); renderer.render(scene,camera); requestAnimationFrame(animate);})();
+</script>
+</body>
+</html>

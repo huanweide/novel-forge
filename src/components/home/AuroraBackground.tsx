@@ -21,36 +21,48 @@ export default function AuroraBackground() {
       <div
         className="aurora-blob aurora-blob-1"
         style={{
-          width: "56vw",
-          height: "56vw",
-          top: "-20%",
-          left: "6%",
+          width: "42vw",
+          height: "42vw",
+          top: "-14%",
+          left: "29%",
           background:
-            "radial-gradient(circle at 50% 50%, var(--nv-primary), transparent 66%)",
+            "radial-gradient(circle at 50% 50%, color-mix(in oklch, var(--nv-primary) 46%, transparent), transparent 66%)",
         }}
       />
       {/* Blob 2 · 紫罗兰（呼应 body 右上紫罗兰，偏右上） */}
       <div
         className="aurora-blob aurora-blob-2"
         style={{
-          width: "50vw",
-          height: "50vw",
-          top: "0%",
-          right: "2%",
+          width: "22vw",
+          height: "22vw",
+          top: "-4%",
+          right: "-2%",
           background:
-            "radial-gradient(circle at 50% 50%, var(--nv-creative), transparent 66%)",
+            "radial-gradient(circle at 50% 50%, color-mix(in oklch, var(--nv-creative) 36%, transparent), transparent 66%)",
         }}
       />
       {/* Blob 3 · 金（点睛强调色，偏下中） */}
       <div
         className="aurora-blob aurora-blob-3"
         style={{
-          width: "52vw",
-          height: "52vw",
-          bottom: "-22%",
-          left: "32%",
+          width: "13vw",
+          height: "13vw",
+          bottom: "6%",
+          right: "14%",
           background:
-            "radial-gradient(circle at 50% 50%, var(--nv-accent), transparent 68%)",
+            "radial-gradient(circle at 50% 50%, color-mix(in oklch, var(--nv-accent) 28%, transparent), transparent 68%)",
+        }}
+      />
+      {/* Blob 4 */}
+      <div
+        className="aurora-blob aurora-blob-3"
+        style={{
+          width: "17vw",
+          height: "17vw",
+          bottom: "-10%",
+          left: "10%",
+          background:
+            "radial-gradient(circle at 50% 50%, color-mix(in oklch, var(--nv-info) 22%, transparent), transparent 68%)",
         }}
       />
     </div>

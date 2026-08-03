@@ -12,6 +12,7 @@ import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
 import AuroraBackground from "@/components/home/AuroraBackground";
 import ParticleField from "@/components/home/ParticleField";
+import PaperBoats from "@/components/home/PaperBoats";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -195,50 +196,53 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-transparent text-foreground">
+    <div className="nf-home min-h-screen bg-transparent text-foreground">
       {/* 背景签名层（极光漂移 + 星尘粒子，fixed z-0，pointer-events-none，不拦截交互） */}
       <AuroraBackground />
       <ParticleField />
 
-      {/* 顶栏 */}
-      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Novel Forge</h1>
-              <p className="text-xs text-[var(--nv-text-tertiary)]">
-                AI 小说工坊 ·{" "}
-                <a href="/changelog" className="text-primary hover:text-primary transition-colors">
-                  更新面板
-                </a>
-              </p>
+      {/* 顶栏：主操作 / 导航 / 系统 三组，统一 32px 高度 */}
+      <header className="nf-header sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="nf-logo" aria-hidden="true">
+              <Icon name="sparkles" size={16} />
+            </span>
+            <div className="leading-tight">
+              <h1 className="text-lg font-bold tracking-tight text-foreground">Novel Forge</h1>
+              <p className="text-[10px] text-[var(--nv-text-tertiary)] tracking-[0.22em]">小说工坊 · 创作引擎</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/explore" className="btn-primary text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 font-medium">
-              <Icon name="sparkles" size={14} /> <span className="hidden sm:inline">开始创作</span>
+          <div className="flex items-center gap-1.5">
+            <Link href="/explore" className="btn-primary nf-btn-flow text-xs h-8 px-3.5 rounded-xl inline-flex items-center gap-1.5 font-medium">
+              <Icon name="sparkles" size={14} /> <span>开始创作</span>
             </Link>
-            <Link href="/dissect" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
+            <span className="w-px h-5 bg-[var(--nv-border-2)] mx-0.5" aria-hidden="true" />
+            <Link href="/dissect" className="btn-ghost text-xs h-8 px-3 rounded-xl inline-flex items-center gap-1.5">
               <Icon name="book" size={13} /> <span className="hidden sm:inline">拆书</span>
             </Link>
-            <Link href="/workshop" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
+            <Link href="/workshop" className="btn-ghost text-xs h-8 px-3 rounded-xl inline-flex items-center gap-1.5">
               <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">创意工坊</span>
             </Link>
-            <Link href="/settings" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
-              <Icon name="settings" size={13} /> <span className="hidden sm:inline">设置</span>
-            </Link>
-            <Link href="/recycle" className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
+            <Link href="/recycle" className="btn-ghost text-xs h-8 px-3 rounded-xl inline-flex items-center gap-1.5">
               <Icon name="trash" size={13} /> <span className="hidden sm:inline">回收站</span>
             </Link>
-            <button onClick={() => window.dispatchEvent(new Event("nf-open-command-palette"))} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1" title="全局命令面板（Cmd/Ctrl+K）">
-              <Icon name="search" size={13} /> <span className="hidden sm:inline">搜索</span>
-              <kbd className="ml-0.5 text-[10px] px-1 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">⌘K</kbd>
+            <span className="w-px h-5 bg-[var(--nv-border-2)] mx-0.5" aria-hidden="true" />
+            <a href="/changelog" className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="更新面板" aria-label="更新面板">
+              <Icon name="book" size={13} />
+            </a>
+            <Link href="/settings" className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="设置" aria-label="设置">
+              <Icon name="settings" size={13} />
+            </Link>
+            <button onClick={() => window.dispatchEvent(new Event("nf-open-command-palette"))} className="btn-ghost text-xs h-8 px-2.5 rounded-xl inline-flex items-center gap-1.5 tooltip-trigger" data-tooltip="全局命令面板（Cmd/Ctrl+K）">
+              <Icon name="search" size={13} />
+              <kbd className="text-[10px] px-1 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">⌘K</kbd>
             </button>
-            <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1">
-              <Icon name="sparkles" size={13} /> <span className="hidden sm:inline">{loadingSample ? "载入中" : "示例"}</span>
+            <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip={loadingSample ? "载入中…" : "一键载入示例项目"} aria-label="示例">
+              <Icon name="sparkles" size={13} />
             </button>
-            <button onClick={() => importBackupRef.current?.click()} className="btn-ghost text-xs px-3 py-1.5 rounded-xl active:scale-95 flex items-center gap-1" title="从 .nfproject 备份包导入（落库为新项目）">
-              <Icon name="package" size={13} /> <span className="hidden sm:inline">导入备份</span>
+            <button onClick={() => importBackupRef.current?.click()} className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="从 .nfproject 备份包导入" aria-label="导入备份">
+              <Icon name="package" size={13} />
             </button>
             <input ref={importBackupRef} type="file" accept=".nfproject,application/json" className="hidden" onChange={handleImportBackup} />
           </div>
@@ -247,31 +251,80 @@ export default function Dashboard() {
 
       {/* Hero 欢迎区 */}
       <section className="relative z-10 overflow-hidden border-b border-[var(--nv-border-2)] bg-gradient-to-b from-[var(--nv-surface-1)] to-transparent">
-        {/* 光晕装饰 */}
-        <div className="hero-glow" style={{ width: '480px', height: '480px', background: 'var(--nv-primary)', top: '-180px', left: '50%', transform: 'translateX(-50%)' }} />
-        <div className="hero-glow" style={{ width: '340px', height: '340px', background: 'var(--nv-creative)', top: '30px', right: '6%' }} />
+        {/* 光晕装饰：主光收拢到标题后，辅光退为余光 */}
+        <div className="hero-glow" style={{ width: '420px', height: '420px', background: 'color-mix(in oklch, var(--nv-primary) 34%, transparent)', top: '-160px', left: '50%', transform: 'translateX(-50%)', opacity: 0.55 }} />
+        <div className="hero-glow" style={{ width: '240px', height: '240px', background: 'color-mix(in oklch, var(--nv-creative) 24%, transparent)', top: '40px', right: '5%', opacity: 0.35 }} />
+        {/* 轨道装饰：半环从画面外延伸进来 */}
+        <div className="nf-orb hidden md:block" style={{ width: 290, height: 290, top: 28, right: -64 }} aria-hidden="true">
+          <span className="r1" /><span className="r2" /><span className="r3" />
+          <span className="d1" /><span className="d2" /><span className="d3" />
+        </div>
         <div className="relative max-w-7xl mx-auto px-6 py-14 md:py-20">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
+              <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-accent)] glow-dot" /> AI 驱动的小说创作引擎
               </div>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
+              <h2 className="nf-hero-title text-4xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.15]">
                 构建你的<span className="text-gradient">小说宇宙</span>
               </h2>
-              <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed max-w-xl">
+              <p className="nf-hero-sub mt-5 text-base leading-relaxed max-w-xl">
                 用 AI 探讨灵感、拆解好书、管理角色与世界观——从一句话构思到完整成稿，一站式完成。
               </p>
             </div>
             <div className="flex shrink-0 gap-3">
-              <Link href="/explore" className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
+              <Link href="/explore" className="btn-primary nf-btn-flow text-sm px-7 py-3.5 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
                 <Icon name="sparkles" size={15} /> 开始创作
               </Link>
-              <Link href="/dissect" className="btn-ghost text-sm px-5 py-3 rounded-xl inline-flex items-center gap-1.5">
+              <Link href="/dissect" className="btn-ghost text-sm px-5 py-3.5 rounded-xl inline-flex items-center gap-1.5">
                 <Icon name="book" size={14} /> 拆书分析
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 纸舟星海：墨色海面漂着折纸船，每艘船载一盏灯（点击拉近望海 · 下方选择一本书） */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 py-14">
+        <div className="mb-6 max-w-2xl">
+          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-creative)] glow-dot" /> 纸舟星海 · Paper Boats
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-tight">
+            每艘纸船，<span className="text-gradient">都载着一个故事</span>
+          </h2>
+          <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
+            墨色海面上漂着折纸小船，每艘船头都点着一盏灯——书页折成的船，航行在故事的墨海上。点击一艘船，镜头会拉到船头，望向前方无边的墨海，那就是「下一章」。
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/30 p-4">
+          <PaperBoats
+            projects={projects.map((p) => ({
+              id: p.id,
+              name: p.name,
+              genre: p.genre,
+              targetWordCount: p.targetWordCount,
+              updatedAt: p.updatedAt,
+              storyNodes: p._count.storyNodes,
+            }))}
+          />
+        </div>
+      </section>
+
+      {/* 纸舟星海 · 设计说明 */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pb-16">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-1.5 h-5 rounded-full bg-primary/60" />
+          <h2 className="text-xl font-semibold text-foreground">纸舟星海 · 设计说明</h2>
+        </div>
+        <p className="text-[var(--nv-text-tertiary)] max-w-2xl mb-7 text-sm leading-relaxed">
+          纸舟星海把「写小说」这件事，变成墨色海面上漂着的折纸小船——书页折成的船，航行在故事的墨海上。四条设计准则：
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <DesignNote title="船即作品" desc="每艘折纸船是一部小说，船身大小对应字数，折痕透出题材色的光。" />
+          <DesignNote title="灯即活性" desc="船头一盏灯，灯光越亮说明最近越活跃；夜深了，只有这些灯还亮着。" />
+          <DesignNote title="尾迹即坚持" desc="船尾在墨海上拖出的光尾，长度对应你一路写下来的创作连续性。" />
+          <DesignNote title="海即下一章" desc="点击一艘船，镜头拉到船头望向前方无边的墨海——那个画面就是下一章。" />
         </div>
       </section>
 
@@ -301,12 +354,17 @@ export default function Dashboard() {
         ) : projects.length === 0 ? (
           <div className="py-10">
             <p className="text-center text-[var(--nv-text-tertiary)] text-sm mb-8">还没有小说项目，从下面任选一种方式开始：</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FeatureCard featured icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲，从一句话灵感聊到完整纲要" href="/explore" cta="开始探讨" />
               <FeatureCard icon="book" title="拆书分析" desc="上传文本，逆向学习结构与文风" href="/dissect" cta="去拆书" />
-              <FeatureCard icon="settings" title="配置 AI" desc="先填好 LLM Key，功能才能跑通" href="/settings" cta="去设置" />
             </div>
-            <div className="mt-6 flex flex-col items-center gap-4">
+            <div className="mt-4 text-center">
+              <Link href="/settings" className="inline-flex items-center gap-1.5 text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] transition-colors">
+                <Icon name="settings" size={13} /> 还没配置 AI？先去设置里填好 LLM Key
+              </Link>
+            </div>
+            <hr className="nf-glow-line" />
+            <div className="mt-2 flex flex-col items-center gap-4">
               <button onClick={loadSample} disabled={loadingSample}
                 className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
                 <Icon name="sparkles" size={15} /> {loadingSample ? "正在载入示例…" : "一键载入示例项目（仙侠）"}
@@ -319,8 +377,8 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
                   {GENRE_TEMPLATES.map((g) => (
                     <button key={g.id} onClick={() => loadGenre(g.id)} disabled={loadingGenre !== null}
-                      className="surface-elevated rounded-xl p-3 text-left transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] disabled:opacity-60">
-                      <div className="text-lg mb-1">{g.icon}</div>
+                      className="nf-genre-card surface-elevated rounded-xl p-3.5 text-left transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] disabled:opacity-60">
+                      <div className="gi mb-2.5">{g.icon}</div>
                       <div className="text-sm font-medium text-[var(--nv-text-primary)]">{g.name}</div>
                       <div className="text-[11px] text-[var(--nv-text-tertiary)] mt-0.5 leading-snug">{g.desc}</div>
                       {loadingGenre === g.id && <div className="text-[10px] text-[var(--nv-accent)] mt-1">创建中…</div>}
@@ -331,13 +389,22 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div ref={staggerRef} className="home-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {projects.map((p, i) => (
-              <div key={p.id} data-stagger-item data-stagger-index={i} className="home-stagger-item">
-                <ProjectCard project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
+          <>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-1 h-4 rounded-full bg-primary/70" />
+                <h2 className="text-sm font-semibold tracking-[0.18em] text-[var(--nv-text-secondary)]">我的作品</h2>
               </div>
-            ))}
-          </div>
+              <span className="text-[11px] text-[var(--nv-text-muted)]">{projects.length} 部</span>
+            </div>
+            <div ref={staggerRef} className="home-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {projects.map((p, i) => (
+                <div key={p.id} data-stagger-item data-stagger-index={i} className="home-stagger-item">
+                  <ProjectCard project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </main>
 
@@ -385,15 +452,18 @@ export default function Dashboard() {
 
 function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; }) {
   const timeAgo = getTimeAgo(new Date(project.updatedAt));
+  const spine = genreColor(project.genre);
 
   return (
     <div
-      className="group surface-elevated card-lift rounded-2xl p-5 flex flex-col"
+      className="group surface-elevated card-lift nf-book rounded-2xl p-5 flex flex-col"
+      style={{ "--spine": spine } as React.CSSProperties}
       onMouseEnter={(e) => emitAttract(e.currentTarget)}
       onMouseLeave={clearAttract}
       onFocusCapture={(e) => emitAttract(e.currentTarget)}
       onBlurCapture={clearAttract}
     >
+      <span className="nf-bookmark" aria-hidden="true">{project.name.charAt(0)}</span>
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-base truncate flex-1 mr-2 text-foreground">
           {project.name}
@@ -422,11 +492,11 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
         </div>
       )}
 
-      <div className="flex items-center gap-4 text-[10px] text-[var(--nv-text-muted)] mb-3">
-        <span className="flex items-center gap-1"><Icon name="user" size={11} /> {project._count.characters} 角色</span>
-        <span className="flex items-center gap-1"><Icon name="book" size={11} /> {project._count.lorebookEntries} 词条</span>
-        <span className="flex items-center gap-1"><Icon name="file" size={11} /> {project._count.storyNodes} 节点</span>
-        <span className="flex items-center gap-1"><Icon name="target" size={11} /> {formatWordCount(project.targetWordCount)}</span>
+      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+        <span className="nf-stat"><Icon name="user" size={11} /> {project._count.characters} 角色</span>
+        <span className="nf-stat"><Icon name="book" size={11} /> {project._count.lorebookEntries} 词条</span>
+        <span className="nf-stat"><Icon name="file" size={11} /> {project._count.storyNodes} 节点</span>
+        <span className="nf-stat"><Icon name="target" size={11} /> {formatWordCount(project.targetWordCount)}</span>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-[var(--nv-border-2)]">
@@ -438,6 +508,17 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
           进入工作台 →
         </Link>
       </div>
+    </div>
+  );
+}
+
+// ─── 子组件：设计说明卡 ─────────────────────────────────────
+function DesignNote({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="surface-elevated rounded-2xl p-5 border border-[var(--nv-border-2)]">
+      <div className="w-2 h-2 rounded-full bg-primary/70 mb-3" />
+      <h3 className="font-semibold text-foreground text-sm mb-1.5">{title}</h3>
+      <p className="text-[var(--nv-text-tertiary)] text-xs leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -525,4 +606,28 @@ function formatWordCount(n: number): string {
   if (n >= 10000) return `${(n / 10000).toFixed(1)}万字`;
   if (n >= 1000) return `${n.toLocaleString()}字`;
   return `${n}字`;
+}
+
+// 题材 → 书脊色：常见题材关键词取对应色相，未命中回退靛蓝
+const GENRE_SPINE: Array<[string, string]> = [
+  ["仙侠", "oklch(0.70 0.13 95)"],
+  ["玄幻", "oklch(0.68 0.12 120)"],
+  ["科幻", "oklch(0.62 0.19 270)"],
+  ["都市", "oklch(0.62 0.15 230)"],
+  ["悬疑", "oklch(0.55 0.20 22)"],
+  ["历史", "oklch(0.70 0.13 70)"],
+  ["言情", "oklch(0.60 0.20 295)"],
+  ["奇幻", "oklch(0.66 0.16 320)"],
+  ["军事", "oklch(0.60 0.14 160)"],
+  ["游戏", "oklch(0.72 0.15 85)"],
+  ["体育", "oklch(0.62 0.17 45)"],
+  ["恐怖", "oklch(0.56 0.15 290)"],
+];
+function genreColor(genre: string[]): string {
+  for (const g of genre) {
+    for (const [keyword, color] of GENRE_SPINE) {
+      if (g.includes(keyword)) return color;
+    }
+  }
+  return "oklch(0.62 0.19 270)";
 }

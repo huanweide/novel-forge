@@ -32,6 +32,16 @@ type Particle = {
   oy: number; // 聚拢偏移 Y
 };
 
+type Meteor = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  len: number;
+};
+
 // 三色族点缀（与 .text-gradient 同源），中性星白单列在调色板内按主题切换
 const TINTS: ReadonlyArray<readonly [number, number, number]> = [
   [120, 140, 255], // 靛蓝
@@ -63,6 +73,8 @@ export default function ParticleField() {
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     let particles: Particle[] = [];
+    let meteors: Meteor[] = [];
+    let meteorTimer = 40;
     let rafId = 0;
     let running = false;
     const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -72,7 +84,7 @@ export default function ParticleField() {
     const seed = () => {
       // 按视口面积动态上限，避免大屏过密 / 小屏过稀（与 GameParticles 思路一致但更克制）
       const area = width * height;
-      const count = Math.max(50, Math.min(150, Math.round(area / 16000)));
+      const count = Math.max(70, Math.min(230, Math.round(area / 10500)));
       particles = [];
       for (let i = 0; i < count; i++) {
         const tint = Math.random() < 0.7 ? 0 : Math.floor(Math.random() * 3) + 1; // 70% 中性 + 30% 三色族
@@ -120,7 +132,7 @@ export default function ParticleField() {
       }
 
       // 星图连线：仅对近距离粒子对绘制极淡线，开销可控（n<90 → <4000 次距离判断）
-      const LINK = 120;
+      const LINK = 150;
       for (let i = 0; i < particles.length; i++) {
         const a = particles[i];
         for (let j = i + 1; j < particles.length; j++) {
@@ -129,7 +141,7 @@ export default function ParticleField() {
           const dy = a.y - b.y;
           const dist = Math.hypot(dx, dy);
           if (dist < LINK) {
-            const o = (1 - dist / LINK) * 0.06 * scale;
+            const o = (1 - dist / LINK) * 0.09 * scale;
             ctx.strokeStyle = `rgba(${pal.neutral[0]}, ${pal.neutral[1]}, ${pal.neutral[2]}, ${o})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
@@ -139,9 +151,56 @@ export default function ParticleField() {
           }
         }
       }
+
+      // 流星拖尾：斜向划过，暗色主题明显，浅色主题减半
+      const mScale = theme === "light" ? 0.45 : 1;
+      for (const m of meteors) {
+        const SEG = 10;
+        for (let i = 0; i < SEG; i++) {
+          const f = i / SEG;
+          const px = m.x - m.vx * f * 6;
+          const py = m.y - m.vy * f * 6;
+          ctx.beginPath();
+          ctx.arc(px, py, 1.7 * (1 - f) + 0.35, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(205, 222, 255, ${(1 - f) * 0.55 * mScale})`;
+          ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 2.1, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(235, 242, 255, ${0.9 * mScale})`;
+        ctx.fill();
+      }
+    };
+
+    const spawnMeteor = () => {
+      meteors.push({
+        x: width * (0.15 + Math.random() * 0.7),
+        y: height * (0.04 + Math.random() * 0.3),
+        vx: -(1.6 + Math.random() * 1.6),
+        vy: 1.2 + Math.random() * 1.4,
+        life: 0,
+        maxLife: 130 + Math.random() * 80,
+        len: 70 + Math.random() * 60,
+      });
+      if (meteors.length > 5) meteors.shift();
     };
 
     const step = () => {
+      // 流星：定时生成 + 更新
+      meteorTimer -= 1;
+      if (meteorTimer <= 0) {
+        spawnMeteor();
+        meteorTimer = 55 + Math.random() * 130;
+      }
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.x += m.vx;
+        m.y += m.vy;
+        m.life += 1;
+        if (m.life > m.maxLife || m.x < -m.len || m.y > height + m.len) {
+          meteors.splice(i, 1);
+        }
+      }
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
