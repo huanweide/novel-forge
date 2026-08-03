@@ -329,7 +329,7 @@ export function ProjectConfigPanel({
               <input
                 value={(llm.model as string) || ""}
                 onChange={(e) => setLlm((l) => ({ ...l, model: e.target.value }))}
-                placeholder="模型名（如 deepseek-v4-flash）"
+                placeholder="模型名（如 deepseek-chat）"
                 className="w-full rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-void)] px-2 py-1.5 text-xs text-[var(--nv-text-primary)] outline-none focus:border-[var(--nv-primary)]"
               />
               <input

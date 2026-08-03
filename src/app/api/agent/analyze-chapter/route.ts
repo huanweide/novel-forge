@@ -176,7 +176,7 @@ ${charsSummary.slice(0, 3000)}`;
 
     const raw = response.content?.trim() || "";
 
-    // 解析 JSON（v0.46.55 修复：v4-flash 常返回 markdown 包裹/尾逗号/截断 JSON，用多级鲁棒解析）
+    // 解析 JSON（v0.46.55 修复：模型偶发返回 markdown 包裹/尾逗号/截断 JSON，用多级鲁棒解析）
     let result: AnalysisResult;
     try {
       let jsonStr = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();

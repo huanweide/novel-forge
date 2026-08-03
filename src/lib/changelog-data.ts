@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.59";
+export const LATEST_VERSION = "v0.46.60";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "移除 Flash 模型名：快速章纲/抽卡/多章大纲不再出现「v4-flash」字样——实际模型始终走数据库默认设置，仅清理误导性 UI 文案（含多章大纲的 V4 Flash 复选框与死逻辑）",
-  "游戏模式：①章纲生成接入活跃剧情线感知（与抽卡/快速章纲一致）；②大纲树游戏按钮改为常显（不再 hover 才出现）+ 清晰提示，入口可发现；后端 /api/game/start 实测可用",
-  "目标字数默认 3000 且可调（写作区与 write 路由兜底同步 800→3000）；快速文本框（作者指令/章纲提示词/微调指令）改为会话临时态——移除 localStorage 与服务端持久化，跳转即丢",
-  "AI 助手面板活现化：头部渐变发光头像 + 「墨灵 AI 写作助手就绪」+ 能力说明 + 实时项目统计条（总字数/角色/词条/节点）；试试 chips 加图标与渐变悬停、发送按钮改渐变发光、快捷预设芯片更生动",
+  "彻底清除「Flash」品牌露出：补全 v0.46.59 遗漏的写作区「Flash 章纲」按钮（→「轻量章纲」）、其提示词占位符与 title，以及导入合并/章节分析路由里的 v4-flash 注释文案",
+  "写作区轻量预览按钮改名「轻量章纲」：功能不变（仍用数据库默认模型生成本章草稿章纲），只去掉界面上的 Flash 字样，更符合用户「不提 Flash、用默认模型」的要求",
+  "模型配置占位符示例改为中性写法（deepseek-v4-flash → deepseek-chat），避免设置页/项目配置页继续露出 Flash 品牌名",
+  "全量 grep 复核：UI 与生成/分析/导入路由已无任何用户可见的 Flash 字样（保留 settings/llm.ts 内真实模型默认值与历史 CHANGELOG 记录，不影响使用）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.60",
+    date: "2026-08-03",
+    title: "彻底清除 Flash 品牌露出：写作区「Flash 章纲」→「轻量章纲」+ 补全遗漏的占位符/注释文案",
+    sections: [
+      {
+        label: "写作区轻量预览按钮去 Flash 化（v0.46.59 遗漏项）",
+        items: [
+          "CenterPanel 写作区「Flash 章纲」按钮改名「轻量章纲」：提示词输入框 placeholder（Flash 轻量预览提示词 → 轻量预览提示词）、按钮 title（移除 V4 Flash 字样）、按钮文字（Flash 章纲 → 轻量章纲）三处同步清理",
+          "功能完全不变：仍走 onGenerateChapterOutline → /api/generate/chapter-outline，模型由 completeText 取数据库默认设置，不绑定 Flash",
+        ],
+      },
+      {
+        label: "注释与占位符文案同步清理",
+        items: [
+          "路由注释：chapter-outline/draw、agent/analyze-chapter、import/commit 三处历史「v4-flash 常返回…」健壮性注释改为中性「模型偶发返回…」表述（不影响逻辑）",
+          "import/commit 文件头与合并引擎注释的「V4 Flash」→「AI 模型/模型」；ProjectConfigPanel 模型名占位符示例 deepseek-v4-flash → deepseek-chat",
+        ],
+      },
+      {
+        label: "复核与保留项说明",
+        items: [
+          "全量 grep 复核：src/app/api/generate、agent、import、components、workspace 下已无任何用户可见 Flash 字样",
+          "刻意保留：settings/page.tsx 与 lib/llm.ts 中的真实模型默认值（如 deepseek-ai/DeepSeek-V4-Flash，用户需选型）、自动生成 Prisma 客户端、历史 CHANGELOG 记录——这些不是误导标签，移除会破坏功能或丢失记录",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.59",
     date: "2026-08-03",

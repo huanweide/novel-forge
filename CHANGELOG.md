@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.60 — 2026-08-03
+**彻底清除 Flash 品牌露出：写作区「Flash 章纲」→「轻量章纲」+ 补全遗漏的占位符/注释文案**
+
+- 写作区轻量预览按钮去 Flash 化（v0.46.59 遗漏）：CenterPanel 的「Flash 章纲」按钮改名「轻量章纲」，同步清理其提示词输入框 placeholder（Flash 轻量预览提示词 → 轻量预览提示词）与按钮 title（移除 V4 Flash 字样）；功能不变，仍走默认模型
+- 注释与占位符清理：chapter-outline/draw、agent/analyze-chapter、import/commit 三处「v4-flash 常返回…」健壮性注释改为中性「模型偶发返回…」；import/commit 文件头与合并引擎「V4 Flash」→「AI 模型/模型」；ProjectConfigPanel 模型名占位符示例 deepseek-v4-flash → deepseek-chat
+- 全量 grep 复核：src 下 UI 与生成/分析/导入路由已无任何用户可见 Flash 字样
+- 保留项：settings/page.tsx 与 lib/llm.ts 内真实模型默认值（用户需选型）、自动生成 Prisma 客户端、历史 CHANGELOG 记录均不删——非误导标签，移除会破坏功能或丢失记录
+
 ## v0.46.59 — 2026-08-03
 **交互打磨：移除 Flash 模型名 / 游戏章纲剧情感知 / 目标字数默认3000 / 快速文本框跳转即丢 / 游戏入口常显 / AI助手面板活现化**
 

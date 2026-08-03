@@ -137,7 +137,7 @@ ${characterList}
       }
 
       try {
-        // ── 鲁棒 JSON 解析（v0.46.55 修复：v4-flash 常返回 markdown 包裹/尾逗号/截断的 JSON）──
+        // ── 鲁棒 JSON 解析（v0.46.55 修复：模型偶发返回 markdown 包裹/尾逗号/截断的 JSON）──
         let raw = result.value.trim();
         // 1) 剥 markdown 代码块（```json ... ``` 或 ``` ... ```）
         const md = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
