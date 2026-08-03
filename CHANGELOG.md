@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.41 — 2026-08-03
+**首页 UI 升级·背景签名层（Phase 1）：极光漂移 + 星尘粒子**
+
+- 新增 `src/components/home/AuroraBackground.tsx`（Layer A 极光）：fixed z-0 pointer-events-none 容器内 3 个超大模糊光斑（blur 120px，靛蓝/紫罗兰/金），仅动 transform/opacity 做 38~50s 极慢漂移呼吸，与 body 三层径向渐变叠加成流动星云
+- 新增 `src/components/home/ParticleField.tsx`（Layer B 星尘）：canvas 2D 星点（60~90 按视口动态上限，30% 三色族点缀）+ 邻近星图连线；DPR 适配、requestIdleCallback 延迟启动、prefers-reduced-motion 静态降级、visibilitychange 暂停、鼠标视差、浅色主题重着色
+- page.tsx 根 div 注入两固定层；Hero section 与 main 提至 relative z-10 确保内容在背景之上；globals.css 补 .aurora-blob 关键帧 + .light 降透明度适配；锁定三色族、在 Void Glass 体系增量升级，不重写
+- 诚实边界：tsc 零错误 + dev 200 + SSR 含新标记验证；背景观感需浏览器实跑；Phase 2（状态补全）/3（联动润色）待续
+
 ## v0.46.40 — 2026-08-03
 **清理 10 个 @deprecated API 端点（BE-8 收官）：死代码删除**
 

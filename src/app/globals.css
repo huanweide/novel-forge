@@ -831,3 +831,35 @@
   pointer-events: none;
   z-index: 0;
 }
+
+/* ═══════════════════════════════════════════
+   极光漂移背景层（首页 Layer A · 与 body 三层渐变叠加）
+   仅动 transform/opacity；prefers-reduced-motion 下全局兜底归零即静态光斑
+   ═══════════════════════════════════════════ */
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  opacity: 0.32;
+  will-change: transform, opacity;
+}
+.aurora-blob-1 { animation: aurora-drift-1 38s var(--ease-out-smooth) infinite alternate both; }
+.aurora-blob-2 { animation: aurora-drift-2 44s var(--ease-out-smooth) infinite alternate both; }
+.aurora-blob-3 { animation: aurora-drift-3 50s var(--ease-out-smooth) infinite alternate both; }
+
+@keyframes aurora-drift-1 {
+  0%   { transform: translate3d(0, 0, 0) scale(1);     opacity: 0.26; }
+  100% { transform: translate3d(6%, 4%, 0) scale(1.12); opacity: 0.40; }
+}
+@keyframes aurora-drift-2 {
+  0%   { transform: translate3d(0, 0, 0) scale(1.05);  opacity: 0.24; }
+  100% { transform: translate3d(-5%, 6%, 0) scale(0.95); opacity: 0.38; }
+}
+@keyframes aurora-drift-3 {
+  0%   { transform: translate3d(0, 0, 0) scale(1);     opacity: 0.20; }
+  100% { transform: translate3d(4%, -5%, 0) scale(1.1); opacity: 0.32; }
+}
+
+/* 浅色下极光整体降透明度，避免刺眼（与 .light body 渐变同调） */
+.light .aurora-layer { opacity: 0.5; }

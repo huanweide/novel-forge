@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.40";
+export const LATEST_VERSION = "v0.46.41";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "清理 10 个 @deprecated API 端点（BE-8 收官）：tools/execute、generate/detect-entities、generate/update-cards、generate/apply-updates、lorebook/summarize(+apply)、lorebook/import、lorebook/expand、pending-items、presets/[id] 的 GET/PUT/DELETE——两轮全量 grep 确认前端与后端均无 live 引用（仅 changelog 历史与自身注释），当初『与 U5 冲突保留』为过度谨慎",
-  "删除约 130KB 死代码（10 个路由文件 + 空目录）；保留 presets/[id] 的 apply/fork 子路由与 PendingItem 模型（路由删、模型无害保留），避免无谓的结构迁移风险",
-  "收紧攻击面与维护负担：少 11 个仍随构建打包的废弃端点；超时配置此前已在 v0.46.28 统一抽到 core/llm 常量，本次纯删除死路径",
-  "诚实边界：API 路由为文件式端点（非 import），删除不触发 tsc 报错——已用全量 grep 交叉核验零引用 + tsc 零错误兜底；未在浏览器逐个点击验证（纯删除无 UI 改动），PendingItem 模型未顺手删（属 ORM 层、删需迁移）",
+  "首页背景升级（Phase 1）：新增极光漂移层 AuroraBackground（三色模糊光斑 transform/opacity 缓慢漂移呼吸）与星尘粒子层 ParticleField（canvas 星点+邻近星图连线，隐喻『小说宇宙/记忆星图』），构成全页唯一炫酷签名元素",
+  "粒子工程化：DPR 适配防高分屏模糊、requestIdleCallback 延迟启动不阻塞 LCP、prefers-reduced-motion 静态降级（仅一帧星点无 rAF）、visibilitychange 隐藏暂停、鼠标视差（canvas 整体 transform 合成）、浅色主题监听 html.light 切换深蓝灰调色板",
+  "接入：两固定层 fixed z-0 pointer-events-none 注入首页根 div，Hero 与 main 提至 relative z-10 确保内容在背景之上；在现有 Void Glass 体系上增量，不引入第四装饰色（锁定靛蓝/紫罗兰/金三色族，与 .text-gradient 标题渐变同源）",
+  "诚实边界：tsc 零错误 + dev 编译 200 + SSR HTML 含 aurora-layer/-inset-6/aurora-blob 新标记验证；背景观感需浏览器实跑确认；性能红线 CLS=0、LCP 不被背景阻塞；Phase 2（状态补全）/3（联动润色）待续",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.41",
+    date: "2026-08-03",
+    title: "首页 UI 升级·背景签名层（Phase 1）：极光漂移 + 星尘粒子",
+    sections: [
+      {
+        label: "背景签名层（Layer A 极光 + Layer B 粒子）",
+        items: [
+          "新增 src/components/home/AuroraBackground.tsx：fixed z-0 pointer-events-none 容器内 3 个超大模糊光斑（blur 120px，靛蓝/紫罗兰/金三色族），仅动 transform/opacity 做 38~50s 极慢漂移呼吸，与 body 既有三层径向渐变叠加成流动星云",
+          "新增 src/components/home/ParticleField.tsx：canvas 2D 星尘场，60~90 个微光点（按视口面积动态上限，70% 中性星白+30% 三色族点缀），邻近粒子极淡连线构成星图；隐喻『故事星尘/记忆碎片』，契合小说宇宙主题",
+        ],
+      },
+      {
+        label: "粒子工程化与无障碍",
+        items: [
+          "DPR 适配（上限 2）防高分屏模糊；requestIdleCallback 延迟启动（timeout 1200ms）不阻塞 LCP",
+          "prefers-reduced-motion 静态降级：仅绘制一帧静态星点、不进入 rAF 循环；visibilitychange 页面隐藏暂停 rAF、回前台恢复",
+          "鼠标视差：canvas 整体 transform 位移合成（不重算粒子坐标），缓动跟随；-inset-6 溢出覆盖边缘避免露白；浅色主题监听 html.light 切换深蓝灰调色板",
+        ],
+      },
+      {
+        label: "接入与一致性",
+        items: [
+          "page.tsx 根 div 注入 <AuroraBackground/>+<ParticleField/>（fixed z-0）；Hero section 与 main 提至 relative z-10，确保内容恒定在背景层之上、交互不被拦截",
+          "globals.css 补 .aurora-blob 基础与 aurora-drift-1/2/3 关键帧、.light .aurora-layer 降透明度适配；颜色锁定三色族，与 .text-gradient 同源，不引入第四装饰色——在现有 Void Glass 体系增量升级，不重写",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 编译 200 + SSR HTML 含 aurora-layer/-inset-6/aurora-blob 新标记验证；背景具体观感（极光流动、星点密度、连线观感）需在浏览器实跑确认，文档色值/时长均引用现有令牌、未实测渲染以实际为准",
+          "粒子连线/hover 聚拢属签名增强，INP 超标则降级为静态星点（待 Phase 3 实测）；CLS=0、LCP 不被背景阻塞为性能红线；计划文档见 PROCESS/HOMEPAGE_UI_UPGRADE_PLAN.md",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.40",
     date: "2026-08-03",

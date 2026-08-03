@@ -10,6 +10,8 @@ import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
+import AuroraBackground from "@/components/home/AuroraBackground";
+import ParticleField from "@/components/home/ParticleField";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -145,6 +147,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-transparent text-foreground">
+      {/* 背景签名层（极光漂移 + 星尘粒子，fixed z-0，pointer-events-none，不拦截交互） */}
+      <AuroraBackground />
+      <ParticleField />
+
       {/* 顶栏 */}
       <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -191,7 +197,7 @@ export default function Dashboard() {
       </header>
 
       {/* Hero 欢迎区 */}
-      <section className="relative overflow-hidden border-b border-[var(--nv-border-2)] bg-gradient-to-b from-[var(--nv-surface-1)] to-transparent">
+      <section className="relative z-10 overflow-hidden border-b border-[var(--nv-border-2)] bg-gradient-to-b from-[var(--nv-surface-1)] to-transparent">
         {/* 光晕装饰 */}
         <div className="hero-glow" style={{ width: '480px', height: '480px', background: 'var(--nv-primary)', top: '-180px', left: '50%', transform: 'translateX(-50%)' }} />
         <div className="hero-glow" style={{ width: '340px', height: '340px', background: 'var(--nv-creative)', top: '30px', right: '6%' }} />
@@ -221,7 +227,7 @@ export default function Dashboard() {
       </section>
 
       {/* 主区 */}
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <span className="inline-flex items-center gap-2 text-[var(--nv-text-tertiary)]">
