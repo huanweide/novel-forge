@@ -101,6 +101,7 @@ export interface GameSessionContext {
   bookName: string;
   chapterTitle: string;
   outline: string | null;           // 章纲原文
+  existingContent: string | null;   // v0.46.58：本章已有正文（游戏从其后续接）
   characters: Array<{
     name: string;
     role: string;

@@ -67,15 +67,17 @@ export function ImportWizard({
   projectId,
   onClose,
   onImported,
+  initialMode = "auto",
 }: {
   projectId: string;
   onClose: () => void;
   onImported: () => void;
+  initialMode?: "auto" | "chapters" | "settings" | "quick";
 }) {
   const [step, setStep] = useState<Step>("input");
   const [rawText, setRawText] = useState("");
   const [volumeMode, setVolumeMode] = useState(true);
-  const [importMode, setImportMode] = useState<"auto" | "chapters" | "settings" | "quick">("auto");
+  const [importMode, setImportMode] = useState<"auto" | "chapters" | "settings" | "quick">(initialMode);
   const [result, setResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");

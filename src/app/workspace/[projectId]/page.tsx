@@ -7,13 +7,13 @@ import { invalidateQueries } from "@/hooks/useApi";
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { SettingsImporter } from "@/components/dashboard/SettingsImporter";
 import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
 import { PostGenPanel } from "@/components/workspace/PostGenPanel";
 import { Toolbar } from "@/components/workspace/Toolbar";
 import { ToolboxDialog, type ToolboxItem } from "@/components/workspace/ToolboxDialog";
 import { ExportDialog } from "@/components/workspace/ExportDialog";
+import { BackupDialog } from "@/components/workspace/BackupDialog";
 import { ConflictPanel } from "@/components/workspace/ConflictPanel";
 import { SaveConflictModal } from "@/components/workspace/SaveConflictModal";
 import { LeftPanel } from "@/components/workspace/LeftPanel";
@@ -145,9 +145,9 @@ export default function WorkspacePage() {
   const [showNewCharacter, setShowNewCharacter] = useState(false);
 
   // ── 弹窗状态 ──────────────────────────────
-  const [showSettingsImport, setShowSettingsImport] = useState(false);
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
+  const [importWizardMode, setImportWizardMode] = useState<"auto" | "chapters" | "settings" | "quick">("auto");
   const [showAutomationSettings, setShowAutomationSettings] = useState(false);
   const [showBuildConfig, setShowBuildConfig] = useState(false);
   const [showMemoryDecay, setShowMemoryDecay] = useState(false);
@@ -759,6 +759,11 @@ export default function WorkspacePage() {
   const handleSummarize = async () => {
     if (!selectedNode || !project) return;
     if (!selectedNode.content) { toastInfo("该节点还没有内容，无法摘要"); return; }
+    // v0.46.58：摘要前明确范围与产出，避免误触
+    const ok = window.confirm(
+      `为本章生成摘要？\n\n【范围】仅本章《${selectedNode.title}》正文（前文窗口与角色卡不变）\n【产出】①章节摘要 ②关键事件 ③角色状态快照 ④事件重要度（S/A/B/C，供记忆衰减分级）\n\n摘要将写入记忆系统，供后续章节的上下文引用。确认生成？`
+    );
+    if (!ok) return;
     setSummarizing(true);
     try {
       const res = await fetch("/api/generate/summarize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapterId: selectedNode.id }) });
@@ -815,6 +820,7 @@ export default function WorkspacePage() {
 
   // ── 导出弹窗状态 ──
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [showConflict, setShowConflict] = useState(false);
 
   // ── 工具箱能力清单（收拢分散入口，按用途分类）──
@@ -868,21 +874,14 @@ export default function WorkspacePage() {
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
-        onImportSettings={() => setShowSettingsImport(true)} onImportChapters={() => setShowImportWizard(true)}
+        onImportSettings={() => { setImportWizardMode("settings"); setShowImportWizard(true); }} onImportChapters={() => { setImportWizardMode("chapters"); setShowImportWizard(true); }}
         onEditStyle={() => setShowStyleEditor(true)}
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}
         onOpenAutomation={() => setShowAutomationSettings(true)}
         onOpenToolbox={() => setShowToolbox(true)}
         onOpenExport={() => setShowExportDialog(true)}
-        onBackup={() => {
-          const a = document.createElement("a");
-          a.href = `/api/projects/${project.id}/backup`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          toastSuccess("已导出备份包 .nfproject（章节+角色+世界书+规则+文风）");
-        }}
+        onBackup={() => setShowBackupDialog(true)}
       />
 
       <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2">
@@ -1076,9 +1075,8 @@ export default function WorkspacePage() {
       {editingCharacter && <CharacterDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
       {showNewCharacter && <CharacterDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
       {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={refreshAfterMutate} />}
-      {showSettingsImport && <SettingsImporter projectId={project.id} onClose={() => setShowSettingsImport(false)} onImported={refreshAfterMutate} />}
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
-      {showImportWizard && <ImportWizard projectId={project.id} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
+      {showImportWizard && <ImportWizard projectId={project.id} initialMode={importWizardMode} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
       {batchGenerating && <BatchProgressPanel progress={batchProgress} nodes={project.storyNodes} onAbort={() => setBatchAbort(true)} />}
 
       {/* 大纲生成对话框 */}
@@ -1130,6 +1128,13 @@ export default function WorkspacePage() {
           projectName={project.name}
           chapters={project.storyNodes.filter((n) => n.type === "chapter").map((n) => ({ id: n.id, title: n.title }))}
           onClose={() => setShowExportDialog(false)}
+        />
+      )}
+      {showBackupDialog && project && (
+        <BackupDialog
+          projectId={project.id}
+          projectName={project.name}
+          onClose={() => setShowBackupDialog(false)}
         />
       )}
 

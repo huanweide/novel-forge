@@ -71,10 +71,20 @@ function buildToolContext(projectId: string): ToolContext {
 
 export async function POST(request: Request) {
   try {
-    const { projectId, message, context } = await request.json();
+    const { projectId, message, context, mode } = await request.json();
     if (!projectId || !message) {
       return NextResponse.json({ error: "缺少 projectId 或 message" }, { status: 400 });
     }
+
+    // v0.46.58：只读模式（设置 → Agent 模式）——禁止一切写工具
+    const readonlyMode = mode === "readonly";
+    const WRITE_TOOLS = new Set([
+      "character_create", "character_update", "character_delete",
+      "lore_create", "lore_update", "lore_delete",
+      "outline_create", "outline_update", "outline_delete",
+      "foreshadowing_create", "foreshadowing_update",
+      "chapter_generate", "relation_sync",
+    ]);
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -188,7 +198,9 @@ CHAT
           args = JSON.parse(jsonStr);
         } catch { /* keep empty args */ }
 
-        const result = await toolRegistry.execute(toolName, args, toolCtx);
+        const result = readonlyMode && WRITE_TOOLS.has(toolName)
+          ? { success: false, error: "只读模式下不可修改项目数据（请在设置 → Agent 模式开启「可操作」权限）", data: null as unknown, frontendAction: null }
+          : await toolRegistry.execute(toolName, args, toolCtx);
         if (result.frontendAction) frontendActions.push(result.frontendAction);
 
         // 生成人类可读的思考摘要

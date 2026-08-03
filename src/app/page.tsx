@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
+import { ImportDialog } from "@/components/workspace/ImportDialog";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import PaperBoats from "@/components/home/PaperBoats";
 
@@ -125,7 +126,9 @@ export default function Dashboard() {
 
   // 导入 .nfproject 备份包 → 落库为新项目
   const importBackupRef = useRef<HTMLInputElement>(null);
-  const handleImportBackup = async (e: ChangeEvent<HTMLInputElement>) => {
+  const [importFile, setImportFile] = useState<File | null>(null);
+  // v0.46.58：选择文件后先弹「选择保留哪些设定」再导入（与导出选择对称）
+  const handleImportBackup = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -133,23 +136,12 @@ export default function Dashboard() {
       toastError("请选择 .nfproject 备份文件");
       return;
     }
-    try {
-      const text = await file.text();
-      const res = await fetch("/api/projects/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: text,
-      });
-      const d = await res.json();
-      if (res.ok && d.id) {
-        toastSuccess("备份已导入为新项目");
-        router.push(`/workspace/${d.id}`);
-      } else {
-        toastError(d.error || "导入失败");
-      }
-    } catch {
-      toastError("文件解析失败，请确认是有效的 .nfproject 备份");
-    }
+    setImportFile(file);
+  };
+  const handleImportDone = (id: string) => {
+    setImportFile(null);
+    toastSuccess("备份已导入为新项目");
+    router.push(`/workspace/${id}`);
   };
 
   const { deletingId, remove: deleteProject } = useConfirmDelete({
@@ -356,6 +348,13 @@ export default function Dashboard() {
       </main>
 
       {/* 更新公告弹窗 */}
+      {importFile && (
+        <ImportDialog
+          file={importFile}
+          onDone={handleImportDone}
+          onClose={() => setImportFile(null)}
+        />
+      )}
       {showChangelog && (
         <Modal open onClose={() => setShowChangelog(false)} bare closeOnOverlay={false} panelClassName="max-w-md">
           <div className="p-6">

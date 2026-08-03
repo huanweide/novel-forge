@@ -17,8 +17,8 @@ interface HastNode {
   value?: string;
 }
 
-/** 需要跳过的标签——里面的文本不高亮 */
-const SKIP_TAGS = new Set(["code", "pre", "a", "script", "style"]);
+/** 需要跳过的标签——里面的文本不高亮（v0.46.58：加 h1-h6 标题与引用块，章头不显示高亮标记） */
+const SKIP_TAGS = new Set(["code", "pre", "a", "script", "style", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"]);
 
 /**
  * 在文本中查找所有实体匹配位置（委托给共享 findEntitiesInText）。

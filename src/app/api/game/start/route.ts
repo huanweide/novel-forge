@@ -32,11 +32,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
 
-    // 3. 组装起始提示词
+    // 3. 组装起始提示词（v0.46.58：带上本章已有正文——游戏从已有内容之后继续，不再从零开始）
+    const existingContent = (node.content || "").trim();
     const ctx = {
       bookName: project.name,
       chapterTitle: node.title,
       outline: node.outline ?? null,
+      existingContent: existingContent || null,
       characters: characters.map((c: { name: string; role: string; currentStatus: string; background?: string }) => ({
         name: c.name,
         role: c.role,
@@ -48,15 +50,17 @@ export async function POST(req: Request) {
       entities: [] as any[],
       items: [] as any[],
       currentRound: 0,
-      totalWords: 0,
+      totalWords: existingContent.length,
       maxWords: 3000,
       plotProgress: 0,
     };
 
     const systemPrompt = buildGameSystemPrompt(ctx);
-    const userPrompt = node.outline
-      ? `【开始游戏】根据章纲，为本章写一个开场。从"${node.outline.slice(0, 80)}..."开始，生成精彩的入场叙事。记住在叙事结束后给出 3-4 个编号选项。`
-      : `【开始游戏】为本章写一个精彩的开场。描述场景、氛围和角色的初始状态，然后给出 3-4 个编号选项。`;
+    const userPrompt = existingContent
+      ? `【开始游戏】本章已有正文 ${existingContent.length} 字。请从现有正文的结尾自然续接，为游戏开场：简短承接上一段情节，然后给出 3-4 个编号选项让玩家选择接下来的行动。`
+      : node.outline
+        ? `【开始游戏】根据章纲，为本章写一个开场。从"${node.outline.slice(0, 80)}..."开始，生成精彩的入场叙事。记住在叙事结束后给出 3-4 个编号选项。`
+        : `【开始游戏】为本章写一个精彩的开场。描述场景、氛围和角色的初始状态，然后给出 3-4 个编号选项。`;
 
     // 4. 调用 LLM
     const llmConfig = await getEffectiveConfig();

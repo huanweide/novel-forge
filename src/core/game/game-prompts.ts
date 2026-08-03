@@ -19,6 +19,7 @@ const GAME_SYSTEM_PROMPT = `你是一位资深互动小说大师，正在与用�
 - 书名：《{bookName}》
 - 章节：{chapterTitle}
 {outlineSection}
+{existingSection}
 {worldSection}
 {characterSection}
 
@@ -86,6 +87,11 @@ export function buildGameSystemPrompt(ctx: GameSessionContext): string {
     ? `\n## 本章章纲（必须遵循的情节规划）\n${ctx.outline}`
     : "\n（本章暂无章纲，请根据世界观和角色自由展开剧情，但需要逐渐收束到有意义的情节方向）";
 
+  // v0.46.58：本章已有正文——游戏从已有内容之后继续（含原字数），不推翻已写情节
+  const existingSection = ctx.existingContent
+    ? `\n## 本章已有正文（${ctx.existingContent.length} 字——游戏从这段内容之后续接，不得重复或推翻）\n${ctx.existingContent.slice(0, 3000)}`
+    : "";
+
   const worldSection =
     ctx.worldLore.length > 0
       ? `\n## 世界观设定\n${ctx.worldLore
@@ -130,6 +136,7 @@ export function buildGameSystemPrompt(ctx: GameSessionContext): string {
   return GAME_SYSTEM_PROMPT.replace("{bookName}", ctx.bookName)
     .replace("{chapterTitle}", ctx.chapterTitle)
     .replace("{outlineSection}", outlineSection)
+    .replace("{existingSection}", existingSection)
     .replace("{worldSection}", worldSection)
     .replace("{characterSection}", characterSection)
     .replace("{round}", String(ctx.currentRound + 1))

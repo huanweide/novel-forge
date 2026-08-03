@@ -17,6 +17,7 @@ import GameParticles from "@/components/game/GameParticles";
 import GameOutlineEditor from "@/components/game/GameOutlineEditor";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
+import { Modal } from "@/components/ui/Modal";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
 
 // ─── 类型 ─────────────────────────────────────────────────────
@@ -99,6 +100,10 @@ export default function GamePage() {
   const [endingNarrative, setEndingNarrative] = useState("");
   const [showOutlineEditor, setShowOutlineEditor] = useState(false);
   const [nodeOutline, setNodeOutline] = useState<string | null>(null);
+  // v0.46.58：首次进入教程（localStorage 记忆）
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try { return localStorage.getItem("nf-game-tutorial-seen") !== "1"; } catch { return true; }
+  });
   const [lorebook, setLorebook] = useState<any[]>([]);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
@@ -366,6 +371,49 @@ export default function GamePage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--nv-void)] font-sans text-[var(--nv-text-secondary)]">
       <GameParticles />
+
+      {/* ═══ 首次教程（v0.46.58） ═══ */}
+      {showTutorial && (
+        <Modal
+          open
+          onClose={() => {
+            try { localStorage.setItem("nf-game-tutorial-seen", "1"); } catch { /* ignore */ }
+            setShowTutorial(false);
+          }}
+          bare
+          panelClassName="max-w-lg"
+        >
+          <div className="p-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Icon name="gamepad" size={22} className="text-[var(--nv-creative)]" />
+              <h2 className="text-lg font-bold text-[var(--nv-text-primary)]">游戏模式 · 跑团式互动创作</h2>
+            </div>
+            <div className="space-y-3 text-sm leading-relaxed text-[var(--nv-text-secondary)]">
+              <p>
+                游戏模式把「写这一章」变成一场<span className="text-[var(--nv-accent)] font-medium">互动跑团</span>：AI 扮演剧情引擎，每轮给你一段叙事和几个选项，你选择（或输入自由行动），剧情随之推进——边玩边把这一章写出来。
+              </p>
+              <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 space-y-1.5">
+                <p className="text-xs font-medium text-[var(--nv-text-primary)]">怎么玩：</p>
+                <p className="text-xs">① 点击「开始游戏」→ 阅读开场叙事 → ② 点选编号选项，或直接输入你的行动 → ③ 每轮剧情推进、字数累加 → ④ 随时回到工作区精修正文</p>
+              </div>
+              <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 space-y-1.5">
+                <p className="text-xs font-medium text-[var(--nv-text-primary)]">与你的小说融合：</p>
+                <p className="text-xs">本章已有正文会<span className="text-[var(--nv-success)]">带入游戏</span>（含原有字数）——游戏从现有内容之后续接，不推翻已写情节；世界观、角色卡、章纲全部生效，与工作区的设定实时联动。</p>
+              </div>
+              <p className="text-xs text-[var(--nv-text-tertiary)]">提示：右上角可随时查看背包/世界观/角色；「结束回合」后可将游戏叙事写入本章正文。</p>
+            </div>
+            <button
+              onClick={() => {
+                try { localStorage.setItem("nf-game-tutorial-seen", "1"); } catch { /* ignore */ }
+                setShowTutorial(false);
+              }}
+              className="mt-5 w-full btn-primary rounded-xl py-2.5 text-sm font-medium"
+            >
+              开始冒险
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* ═══ 顶栏 ═══ */}
       <header className="relative z-10 flex items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-3 backdrop-blur-sm">

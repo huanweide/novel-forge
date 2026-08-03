@@ -116,6 +116,7 @@ async function loadGameContext(projectId: string, nodeId: string, session: any):
     bookName: project.name,
     chapterTitle: node.title,
     outline: node.outline ?? null,
+    existingContent: (node.content || "").trim() || null, // v0.46.58：本章已有正文
     characters: characters.map((c: { name: string; role: string; currentStatus: string; background?: string }) => ({
       name: c.name,
       role: c.role,

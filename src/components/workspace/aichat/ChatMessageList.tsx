@@ -45,9 +45,11 @@ export function ChatMessageList({ messages, hasHistory, loading, onAdoptSuggesti
             <span className="shrink-0 mt-0.5">{msg.role === "user" ? <Icon name="user" size={13} /> : <Icon name="bot" size={13} />}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-medium text-[var(--nv-text-secondary)]">
-                  {msg.role === "user" ? "你" : "AI 助手"}
-                </span>
+                {msg.role === "user" ? (
+                  <span className="text-[10px] font-medium text-[var(--nv-text-secondary)]">你</span>
+                ) : (
+                  <span className="text-[10px] font-bold bg-gradient-to-r from-[var(--nv-creative)] to-[var(--nv-accent)] bg-clip-text text-transparent">墨灵</span>
+                )}
                 {msg.trace && msg.trace.length > 0 && (
                   <span className="text-[10px] text-[var(--nv-text-tertiary)]">
                     (调了 {msg.trace.length} 次工具)

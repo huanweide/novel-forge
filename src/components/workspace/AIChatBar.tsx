@@ -30,9 +30,19 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
   const [error, setError] = useState("");
   const [pendingSteps, setPendingSteps] = useState<PendingStep[]>([]);
   const [stepIdx, setStepIdx] = useState(0);
+  const [readonlyMode, setReadonlyMode] = useState(() => {
+    try { return localStorage.getItem("nf-agent-mode") === "readonly"; } catch { return false; }
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // 监听 Agent 模式切换（设置页）
+  useEffect(() => {
+    const onMode = (e: StorageEvent) => { if (e.key === "nf-agent-mode") setReadonlyMode(e.newValue === "readonly"); };
+    window.addEventListener("storage", onMode);
+    return () => window.removeEventListener("storage", onMode);
+  }, []);
 
   // 思考步骤轮播
   useEffect(() => {
@@ -152,7 +162,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
       const res = await fetch("/api/generate/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, message: text, context: context || undefined }),
+        body: JSON.stringify({ projectId, message: text, context: context || undefined, mode: readonlyMode ? "readonly" : "operate" }),
         signal: controller.signal,
       });
 
@@ -315,7 +325,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
 
   return (
     <div className={`flex flex-col min-h-0 flex-1 ${className}`}>
-      <AIChatHeader loading={loading} />
+      <AIChatHeader loading={loading} readonlyMode={readonlyMode} />
 
       {/* ═══ 快捷芯片条（一键触发常用动作） ═══ */}
       <div className="flex flex-wrap gap-1.5 border-b border-[var(--nv-border-2)] px-3 py-2">

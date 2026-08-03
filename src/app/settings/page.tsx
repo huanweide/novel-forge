@@ -23,6 +23,9 @@ export default function SettingsPage() {
   const [hasExistingKey, setHasExistingKey] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [agentOperate, setAgentOperate] = useState(() => {
+    try { return localStorage.getItem("nf-agent-mode") !== "readonly"; } catch { return true; }
+  });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [statusMsg, setStatusMsg] = useState("");
@@ -440,6 +443,70 @@ export default function SettingsPage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* 记忆衰减说明（v0.46.58） */}
+        <section>
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+            6. 记忆衰减
+          </label>
+          <div className="p-4 rounded-2xl surface-elevated space-y-3">
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
+              记忆衰减模拟人类的自然遗忘曲线：越久远的章节记忆越模糊，系统按重要度自动降级或清理，防止旧设定无限堆积挤占上下文。
+            </p>
+            <ul className="space-y-1">
+              {[
+                { t: "S 级 · 核心记忆", d: "永久保留，不衰减" },
+                { t: "A 级 · 重要", d: "超过 30 章降级为 B" },
+                { t: "B 级 · 一般", d: "超过 15 章降级为 C" },
+                { t: "C 级 · 琐碎", d: "超过 5 章直接删除" },
+              ].map((r) => (
+                <li key={r.t} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--nv-surface-1)] px-3 py-2">
+                  <span className="text-xs text-[var(--nv-text-secondary)]">{r.t}</span>
+                  <span className="text-[11px] text-[var(--nv-text-muted)]">{r.d}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
+              <span className="text-[var(--nv-accent)]">执行方式：</span>
+              部署到 Vercel 等平台时由定时任务（cron）自动触发；本地运行时为<b>手动</b>——写作页底部「记忆衰减」按钮可预览受影响内容并执行清理。衰减只影响章节摘要里的重要性事件，<b>不改动正文与伏笔</b>。
+            </p>
+          </div>
+        </section>
+
+        {/* Agent 助手模式（v0.46.58） */}
+        <section>
+          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+            7. Agent 助手 · 墨灵
+          </label>
+          <div className="p-4 rounded-2xl surface-elevated space-y-3">
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
+              墨灵是会使用项目工具的写作 Agent：能查询角色/词条/大纲，也能直接填写、修改、生成（如「把樊斯瑞的性格改成更外放」）。
+              开启「可操作」时墨灵可修改项目数据；改为「只读」后仅查信息、不写任何数据，速度更快。
+            </p>
+            <button
+              onClick={() => {
+                const next = agentOperate ? "readonly" : "operate";
+                try { localStorage.setItem("nf-agent-mode", next); } catch { /* ignore */ }
+                setAgentOperate(!agentOperate);
+              }}
+              className={`flex items-center justify-between w-full rounded-xl border px-4 py-3 transition-colors ${
+                agentOperate ? "border-[var(--nv-success)]/40 bg-[var(--nv-success)]/10" : "border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]"
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <span className={`text-sm font-medium ${agentOperate ? "text-[var(--nv-success)]" : "text-[var(--nv-text-secondary)]"}`}>
+                  {agentOperate ? "可操作模式（当前）" : "只读模式（当前）"}
+                </span>
+                <span className="text-[10px] text-[var(--nv-text-muted)]">
+                  {agentOperate ? "墨灵可查询并修改项目数据" : "墨灵仅查信息，不改数据，响应更快"}
+                </span>
+              </span>
+              <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${agentOperate ? "bg-[var(--nv-success)]" : "bg-[var(--nv-surface-3)]"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${agentOperate ? "left-[18px]" : "left-0.5"}`} />
+              </span>
+            </button>
           </div>
         </section>
 

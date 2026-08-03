@@ -48,6 +48,38 @@ export function ProjectConfigPanel({
   const [busy, setBusy] = useState(false);
   const [rulesHint, setRulesHint] = useState("");
   const [llmHint, setLlmHint] = useState("");
+  const [regexPresets, setRegexPresets] = useState<{ id: string; title: string; description?: string; rules: Rule[] }[]>([]);
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
+  const [presetHint, setPresetHint] = useState("");
+
+  // v0.46.58：从创意工坊 regex 预设一键添加（不必手写正则名字/pattern）
+  const loadRegexPresets = async () => {
+    try {
+      const res = await fetch("/api/presets");
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : data.presets || [];
+      const regexOnes = items
+        .filter((p: any) => p.type === "regex")
+        .map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          rules: (p.content?.rules || []) as Rule[],
+        }));
+      setRegexPresets(regexOnes);
+      setShowPresetPicker(true);
+      setPresetHint("");
+    } catch {
+      setPresetHint("读取创意工坊预设失败，请确认后端已启动");
+    }
+  };
+
+  const applyRegexPreset = (p: { title: string; rules: Rule[] }) => {
+    if (!p.rules.length) { setPresetHint(`预设「${p.title}」没有可用的规则`); return; }
+    setRules((rs) => [...rs, ...p.rules.map((r) => ({ name: r.name, pattern: r.pattern, flags: r.flags || "g", replace: r.replace || "" }))]);
+    setShowPresetPicker(false);
+    setRulesHint(`已从预设「${p.title}」添加 ${p.rules.length} 条规则，点「保存规则」生效`);
+  };
 
   const removePreset = async (presetId: string) => {
     setBusy(true);
@@ -180,13 +212,50 @@ export function ProjectConfigPanel({
               <h4 className="text-sm font-semibold text-[var(--nv-text-secondary)]">
                 正则后处理规则
               </h4>
-              <button
-                onClick={() => setRules((rs) => [...rs, { name: "", pattern: "", flags: "g", replace: "" }])}
-                className="rounded-lg bg-[var(--nv-primary)]/15 px-2 py-1 text-xs font-medium text-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/25 transition"
-              >
-                + 新增规则
-              </button>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={loadRegexPresets}
+                  className="rounded-lg bg-[var(--nv-creative)]/15 px-2 py-1 text-xs font-medium text-[var(--nv-creative)] hover:bg-[var(--nv-creative)]/25 transition"
+                  title="从创意工坊已有的正则预设一键添加（无需手写）"
+                >
+                  + 从预设添加
+                </button>
+                <button
+                  onClick={() => setRules((rs) => [...rs, { name: "", pattern: "", flags: "g", replace: "" }])}
+                  className="rounded-lg bg-[var(--nv-primary)]/15 px-2 py-1 text-xs font-medium text-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/25 transition"
+                >
+                  + 新增规则
+                </button>
+              </div>
             </div>
+            {showPresetPicker && (
+              <div className="mb-3 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-[var(--nv-text-secondary)]">选择正则预设（点击即添加其全部规则）</span>
+                  <button onClick={() => setShowPresetPicker(false)} className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-primary)]">✕</button>
+                </div>
+                {regexPresets.length === 0 ? (
+                  <p className="text-xs text-[var(--nv-text-muted)]">暂无正则类预设。可先去「创意工坊」创建/导入正则预设。</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {regexPresets.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => applyRegexPreset(p)}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-surface-1)] px-3 py-2 text-left transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)]"
+                      >
+                        <span>
+                          <span className="block text-xs font-medium text-[var(--nv-text-primary)]">{p.title}</span>
+                          <span className="block text-[10px] text-[var(--nv-text-muted)] mt-0.5">{p.description || `${p.rules.length} 条规则`}</span>
+                        </span>
+                        <span className="shrink-0 text-[10px] rounded bg-[var(--nv-surface-3)] px-1.5 py-0.5 text-[var(--nv-text-secondary)]">{p.rules.length} 条</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {presetHint && <p className="mb-2 text-[11px] text-[var(--nv-warning)]">{presetHint}</p>}
             {rules.length === 0 ? (
               <p className="text-xs text-[var(--nv-text-muted)]">
                 暂无规则。可在「创意工坊」套用 regex 预设，或在此手动新增。
