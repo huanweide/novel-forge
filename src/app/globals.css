@@ -1013,6 +1013,94 @@
 }
 .light .nf-bookmark { opacity: 0.05; }
 
+/* 书架：一排排立着的立体书（作品区） */
+.nf-bookshelf {
+  position: relative;
+  padding: 18px 14px 22px;
+  border-radius: 20px;
+  border: 1px solid var(--nv-border-2);
+  background:
+    repeating-linear-gradient(90deg, rgba(120, 140, 200, 0.045) 0 1px, transparent 1px 46px),
+    linear-gradient(180deg, rgba(14, 19, 38, 0.55), rgba(8, 11, 22, 0.8));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 40px rgba(2, 6, 18, 0.35);
+}
+.nf-book3d {
+  --spine: oklch(0.62 0.19 270);
+  position: relative;
+  height: 100%;
+  border-radius: 3px 14px 14px 3px;
+  background:
+    linear-gradient(100deg,
+      color-mix(in oklch, var(--spine) 60%, #0a0e1c 40%) 0%,
+      color-mix(in oklch, var(--spine) 42%, #10162a 58%) 16%,
+      color-mix(in oklch, var(--spine) 26%, #161d36 74%) 42%,
+      color-mix(in oklch, var(--spine) 20%, #1a223d 80%) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.18),
+    0 14px 30px rgba(2, 6, 18, 0.55),
+    0 3px 8px rgba(2, 6, 18, 0.6);
+  transition: transform 260ms var(--ease-out-smooth), box-shadow 260ms var(--ease-out-smooth), border-color 260ms var(--ease-out-smooth);
+  transform: translateY(0);
+}
+/* 书脊：左侧深色竖条 */
+.nf-book3d::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0; width: 16px;
+  background: linear-gradient(90deg,
+    color-mix(in oklch, var(--spine) 28%, #05070f 72%) 0%,
+    color-mix(in oklch, var(--spine) 42%, #0a0e1c 58%) 100%);
+  border-radius: 3px 0 0 3px;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+/* 书页厚度：底部浅色边 */
+.nf-book3d::after {
+  content: "";
+  position: absolute; left: 16px; right: 0; bottom: 0; height: 8px;
+  background: linear-gradient(180deg, rgba(238, 242, 248, 0.12), rgba(238, 242, 248, 0.02));
+  border-radius: 0 0 14px 0;
+  pointer-events: none;
+}
+/* hover/焦点：从书架抽出的突出效果 */
+.nf-book3d:hover,
+.nf-book3d:focus-within {
+  transform: translateY(-10px) scale(1.02);
+  border-color: color-mix(in oklch, var(--spine) 45%, rgba(255, 255, 255, 0.08));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 26px 50px rgba(2, 6, 18, 0.7),
+    0 8px 18px rgba(2, 6, 18, 0.6),
+    0 0 26px color-mix(in oklch, var(--spine) 38%, transparent);
+  z-index: 1;
+}
+/* 浅色主题书架 */
+.light .nf-bookshelf {
+  background:
+    repeating-linear-gradient(90deg, rgba(90, 110, 170, 0.08) 0 1px, transparent 1px 46px),
+    linear-gradient(180deg, rgba(240, 243, 252, 0.9), rgba(224, 230, 246, 0.95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 14px 34px rgba(20, 30, 70, 0.12);
+}
+.light .nf-book3d {
+  background:
+    linear-gradient(100deg,
+      color-mix(in oklch, var(--spine) 42%, #f4f6fc 58%) 0%,
+      color-mix(in oklch, var(--spine) 30%, #f6f8fd 70%) 16%,
+      color-mix(in oklch, var(--spine) 20%, #f8faff 80%) 42%,
+      color-mix(in oklch, var(--spine) 16%, #fafbff 84%) 100%);
+  border: 1px solid rgba(10, 16, 34, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 12px 26px rgba(20, 30, 70, 0.16), 0 3px 8px rgba(20, 30, 70, 0.12);
+}
+.light .nf-book3d::before {
+  background: linear-gradient(90deg, color-mix(in oklch, var(--spine) 30%, #dfe4f2 70%) 0%, color-mix(in oklch, var(--spine) 46%, #e8ecf8 54%) 100%);
+  box-shadow: inset -1px 0 0 rgba(10, 16, 34, 0.08);
+}
+.light .nf-book3d:hover,
+.light .nf-book3d:focus-within {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 24px 44px rgba(20, 30, 70, 0.22), 0 0 22px color-mix(in oklch, var(--spine) 32%, transparent);
+}
+
 /* 统计标签：书架刻度 */
 .nf-stat {
   display: inline-flex; align-items: center; gap: 4px;

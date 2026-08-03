@@ -368,7 +368,7 @@ export default function Dashboard() {
               </div>
               <span className="text-[11px] text-[var(--nv-text-muted)]">{projects.length} 部</span>
             </div>
-            <div ref={staggerRef} className="home-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div ref={staggerRef} className="home-stagger nf-bookshelf grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {projects.map((p, i) => (
                 <div key={p.id} data-stagger-item data-stagger-index={i} className="home-stagger-item">
                   <ProjectCard project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
@@ -427,7 +427,7 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
 
   return (
     <div
-      className="group surface-elevated card-lift nf-book rounded-2xl p-5 flex flex-col"
+      className="group nf-book3d rounded-2xl p-5 flex flex-col overflow-hidden"
       style={{ "--spine": spine } as React.CSSProperties}
     >
       <span className="nf-bookmark" aria-hidden="true">{project.name.charAt(0)}</span>
@@ -529,7 +529,7 @@ function FeatureCard({
 // ─── 子组件：项目卡片骨架屏（加载态，与 ProjectCard 同形，禁通用 spinner） ──
 function ProjectCardSkeleton() {
   return (
-    <div className="surface-elevated rounded-2xl p-5 flex flex-col gap-3">
+    <div className="nf-book3d rounded-2xl p-5 flex flex-col gap-3">
       <div className="relative h-5 w-2/3 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden">
         <span className="absolute inset-0 shimmer-line" />
       </div>

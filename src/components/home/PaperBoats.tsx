@@ -49,7 +49,7 @@ function boatTypeFor(genre?: string[]): BoatType {
 
 // 双层波（CPU 与 GPU 同公式，保证船贴浪）
 function seaH(x: number, z: number, t: number) {
-  return 0.16 * Math.sin(0.5 * x + t * 0.8) + 0.11 * Math.sin(0.7 * z + t * 1.1);
+  return 0.19 * Math.sin(0.5 * x + t * 0.8) + 0.13 * Math.sin(0.7 * z + t * 1.1);
 }
 
 const NOISE = `
@@ -62,7 +62,7 @@ float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*vnoise(p); p*=2
 const seaVert = `
 uniform float uTime;
 varying vec3 vWP; varying vec3 vN;
-float waveH(float x, float z, float t){ return 0.16*sin(0.5*x + t*0.8) + 0.11*sin(0.7*z + t*1.1); }
+float waveH(float x, float z, float t){ return 0.19*sin(0.5*x + t*0.8) + 0.13*sin(0.7*z + t*1.1); }
 void main(){
   vec4 wp = modelMatrix * vec4(position, 1.0);
   float h = waveH(wp.x, wp.z, uTime);
@@ -82,11 +82,13 @@ void main(){
   vec3 V = normalize(cameraPosition - vWP);
   vec3 N = normalize(vN);
   float fres = pow(1.0 - max(dot(V, N), 0.0), 2.2);
-  vec3 deep = vec3(0.012, 0.020, 0.045);
-  vec3 sheen = vec3(0.10, 0.22, 0.45);
-  vec3 col = deep + sheen * fres * 0.9;
+  vec3 deep = vec3(0.014, 0.024, 0.05);
+  vec3 sheen = vec3(0.13, 0.28, 0.55);
+  vec3 col = deep + sheen * fres * 1.15;
   float flow = fbm(vWP.xz*0.35 + vec2(uTime*0.03, uTime*0.02));
-  col += vec3(0.05, 0.10, 0.22) * flow * 0.4;
+  col += vec3(0.05, 0.10, 0.22) * flow * 0.5;
+  float foam = smoothstep(0.66, 0.82, fbm(vWP.xz*1.7 + vec2(uTime*0.05, uTime*0.03)));
+  col += vec3(0.34, 0.50, 0.75) * foam * 0.32;
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -128,17 +130,93 @@ function makeNetTexture(): THREE.CanvasTexture {
 }
 
 // ─── 部件库（共享材质，按船型组合，不写新类） ──────────────────
-const HULL_MAT = new THREE.MeshStandardMaterial({ color: 0xe8e6dc, flatShading: true, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
-const METAL_HULL_MAT = new THREE.MeshStandardMaterial({ color: 0x2a3340, flatShading: true, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide });
-const CANOPY_MAT = new THREE.MeshStandardMaterial({ color: 0x2b313d, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide });
-const WOOD_MAT = new THREE.MeshStandardMaterial({ color: 0x3a3328, roughness: 0.8, metalness: 0.0 });
-const SAIL_MAT = new THREE.MeshStandardMaterial({ color: 0xdfe3ea, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide });
-const DARK_MAT = new THREE.MeshStandardMaterial({ color: 0x1a1f2b, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
-const COLD_MAT = new THREE.MeshBasicMaterial({ color: 0x6fd6ff });
+// 纯色材质：模块顶层创建安全（不触 document），SSR 可用
+const METAL_MAT = new THREE.MeshStandardMaterial({ color: 0x2a3340, flatShading: true, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide }); // 机关舟金属壳
+const DARK_MAT = new THREE.MeshStandardMaterial({ color: 0x1a1f2b, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide }); // 暗部件（檐/窗/舷边）
+const COLD_MAT = new THREE.MeshBasicMaterial({ color: 0x6fd6ff }); // 冷蓝发光（机关舟/龙眼）
 // 共享墨色配件材质（乔布斯统一语法：船是墨海里被光照亮的一笔，不喧宾夺主）
 const FLAG_MAT = new THREE.MeshStandardMaterial({ color: 0x7a3a3a, roughness: 0.7, metalness: 0.0, side: THREE.DoubleSide }); // 低饱和墨红，楼船旗
 const CORE_WARM = new THREE.MeshBasicMaterial({ color: 0xfff2d8 }); // 暖白船头灯（非机关舟）
-// 渔网材质：贴图依赖 document（canvas），故仅在客户端（useEffect 内 createBoat）惰性创建，避免 SSR 报错
+
+// 带纹理材质：贴图依赖 document（canvas），仅在客户端（useEffect 内 createBoat）惰性构建，SSR 安全
+let _paperTex: THREE.CanvasTexture | null = null;
+function getPaperTex(): THREE.CanvasTexture { // 宣纸纹：米白底 + 极淡噪点
+  if (!_paperTex) {
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const x = c.getContext("2d")!;
+    x.fillStyle = "#e9e7dd"; x.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 1100; i++) {
+      x.fillStyle = `rgba(96,88,72,${0.03 + Math.random() * 0.05})`;
+      x.fillRect(Math.random() * 128, Math.random() * 128, 1.4, 1.4);
+    }
+    _paperTex = new THREE.CanvasTexture(c); _paperTex.needsUpdate = true;
+  }
+  return _paperTex;
+}
+let _woodTex: THREE.CanvasTexture | null = null;
+function getWoodTex(): THREE.CanvasTexture { // 木纹：深棕底 + 深浅竖木纹
+  if (!_woodTex) {
+    const c = document.createElement("canvas"); c.width = 128; c.height = 128;
+    const x = c.getContext("2d")!;
+    x.fillStyle = "#3a3328"; x.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 26; i++) {
+      x.strokeStyle = `rgba(${90 + Math.random() * 50},${80 + Math.random() * 45},${55 + Math.random() * 35},${0.25 + Math.random() * 0.3})`;
+      x.lineWidth = 1 + Math.random() * 2.4;
+      x.beginPath();
+      const sx = Math.random() * 128;
+      x.moveTo(sx, 0);
+      x.bezierCurveTo(sx + (Math.random() * 30 - 15), 42, sx + (Math.random() * 30 - 15), 86, sx + (Math.random() * 20 - 10), 128);
+      x.stroke();
+    }
+    _woodTex = new THREE.CanvasTexture(c); _woodTex.needsUpdate = true;
+  }
+  return _woodTex;
+}
+let _sailTex: THREE.CanvasTexture | null = null;
+function getSailTex(): THREE.CanvasTexture { // 帆布纹：米白底 + 斜织细纹
+  if (!_sailTex) {
+    const c = document.createElement("canvas"); c.width = c.height = 64;
+    const x = c.getContext("2d")!;
+    x.fillStyle = "#e3e6ec"; x.fillRect(0, 0, 64, 64);
+    x.strokeStyle = "rgba(140,146,160,0.26)"; x.lineWidth = 1;
+    for (let i = -64; i < 64; i += 6) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 64, 64); x.stroke(); }
+    for (let i = -64; i < 64; i += 6) { x.beginPath(); x.moveTo(i, 64); x.lineTo(i + 64, 0); x.stroke(); }
+    _sailTex = new THREE.CanvasTexture(c); _sailTex.needsUpdate = true;
+  }
+  return _sailTex;
+}
+let _bambooTex: THREE.CanvasTexture | null = null;
+function getBambooTex(): THREE.CanvasTexture { // 竹篷纹：深色底 + 竖向竹篾
+  if (!_bambooTex) {
+    const c = document.createElement("canvas"); c.width = 64; c.height = 64;
+    const x = c.getContext("2d")!;
+    x.fillStyle = "#2b313d"; x.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 64; i += 6) { x.fillStyle = "rgba(58,64,78,0.75)"; x.fillRect(i, 0, 2.5, 64); }
+    _bambooTex = new THREE.CanvasTexture(c); _bambooTex.needsUpdate = true;
+  }
+  return _bambooTex;
+}
+let _hullMat: THREE.MeshStandardMaterial | null = null;
+function getHullMat(): THREE.MeshStandardMaterial { // 船体：宣纸纹 + 米白
+  if (!_hullMat) _hullMat = new THREE.MeshStandardMaterial({ map: getPaperTex(), color: 0xe9e7dd, flatShading: true, roughness: 0.92, metalness: 0.0, side: THREE.DoubleSide });
+  return _hullMat;
+}
+let _woodMat: THREE.MeshStandardMaterial | null = null;
+function getWoodMat(): THREE.MeshStandardMaterial { // 木料：木纹
+  if (!_woodMat) _woodMat = new THREE.MeshStandardMaterial({ map: getWoodTex(), color: 0x4a4133, roughness: 0.85, metalness: 0.0 });
+  return _woodMat;
+}
+let _sailMat: THREE.MeshStandardMaterial | null = null;
+function getSailMat(): THREE.MeshStandardMaterial { // 帆：帆布纹 + 近不透
+  if (!_sailMat) _sailMat = new THREE.MeshStandardMaterial({ map: getSailTex(), color: 0xe3e6ec, roughness: 0.9, metalness: 0.0, transparent: true, opacity: 0.97, side: THREE.DoubleSide });
+  return _sailMat;
+}
+let _canopyMat: THREE.MeshStandardMaterial | null = null;
+function getCanopyMat(): THREE.MeshStandardMaterial { // 篷：竹篾
+  if (!_canopyMat) _canopyMat = new THREE.MeshStandardMaterial({ map: getBambooTex(), color: 0x2b313d, roughness: 0.88, metalness: 0.0, side: THREE.DoubleSide });
+  return _canopyMat;
+}
+// 渔网材质（惰性，避免 SSR 报错）
 let _netMat: THREE.MeshStandardMaterial | null = null;
 function getNetMat(): THREE.MeshStandardMaterial {
   if (!_netMat) {
@@ -150,7 +228,7 @@ function getNetMat(): THREE.MeshStandardMaterial {
 // 半圆柱篷（轴沿 X，弧朝上）
 function makeCanopy(r: number, len: number): THREE.Mesh {
   const geo = new THREE.CylinderGeometry(r, r, len, 16, 1, true, 0, Math.PI);
-  const m = new THREE.Mesh(geo, CANOPY_MAT);
+  const m = new THREE.Mesh(geo, getCanopyMat());
   m.rotateZ(Math.PI / 2);
   m.rotateX(-Math.PI / 2);
   return m;
@@ -166,7 +244,7 @@ function makeSail(w: number, h: number): THREE.Mesh {
     p.setZ(i, belly);
   }
   geo.computeVertexNormals();
-  return new THREE.Mesh(geo, SAIL_MAT);
+  return new THREE.Mesh(geo, getSailMat());
 }
 
 // 楼船：多层甲板 + 飞檐（四角上翘）+ 暗窗 + 顶饰
@@ -176,7 +254,7 @@ function makeTower(levels: number, w: number): THREE.Group {
   const lh = 0.3;
   for (let i = 0; i < levels; i++) {
     const lw = w * (1 - i * 0.16);
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(lw, lh, lw * 0.7), HULL_MAT);
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(lw, lh, lw * 0.7), getHullMat());
     floor.position.y = y + lh / 2;
     grp.add(floor);
     const eave = new THREE.Mesh(new THREE.BoxGeometry(lw * 1.18, 0.05, lw * 0.84), DARK_MAT);
@@ -196,7 +274,7 @@ function makeTower(levels: number, w: number): THREE.Group {
     }
     y += lh + 0.06;
   }
-  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 6), WOOD_MAT);
+  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 6), getWoodMat());
   finial.position.y = y + 0.1;
   grp.add(finial);
   return grp;
@@ -205,20 +283,20 @@ function makeTower(levels: number, w: number): THREE.Group {
 // 龙首：锥头 + 下颌 + 双眼 + 角 + 鬃毛
 function makeDragonHead(): THREE.Group {
   const grp = new THREE.Group();
-  const head = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 6), HULL_MAT);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 6), getHullMat());
   head.rotation.z = -Math.PI / 2; head.position.set(0.25, 0.1, 0);
   grp.add(head);
-  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.14), HULL_MAT);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.14), getHullMat());
   jaw.position.set(0.42, -0.02, 0); jaw.rotation.z = -0.2;
   grp.add(jaw);
   const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), COLD_MAT);
   eye.position.set(0.34, 0.16, 0.1); grp.add(eye);
   const eye2 = eye.clone(); eye2.position.z = -0.1; grp.add(eye2);
-  const horn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 5), WOOD_MAT);
+  const horn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 5), getWoodMat());
   horn.position.set(0.2, 0.34, 0); horn.rotation.z = 0.5;
   grp.add(horn);
   for (let i = 0; i < 4; i++) { // 鬃毛
-    const m = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.18, 4), WOOD_MAT);
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.18, 4), getWoodMat());
     m.position.set(0.1 - i * 0.07, 0.26 + i * 0.02, 0); m.rotation.z = 0.3;
     grp.add(m);
   }
@@ -248,24 +326,24 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
 
   if (type === "wupeng") {
     const hull = makeHull(2.0, 0.8, 0.5, { sheer: 0.22, bottomTaper: 0.4 });
-    const body = new THREE.Mesh(hull, HULL_MAT);
+    const body = new THREE.Mesh(hull, getHullMat());
     group.add(body); addEdges(hull, color, body);
     const canopy = makeCanopy(0.42, 1.1);
     canopy.position.set(-0.1, 0.32, 0);
     group.add(canopy);
-    const ridge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.03, 0.06), CANOPY_MAT); // 篷脊
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.03, 0.06), getCanopyMat()); // 篷脊
     ridge.position.set(-0.1, 0.74, 0);
     group.add(ridge);
-    const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 1.3, 6), WOOD_MAT); // 长橹拖尾
+    const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 1.3, 6), getWoodMat()); // 长橹拖尾
     oar.rotation.z = Math.PI / 2.2; oar.position.set(-1.05, 0.05, 0.3);
     group.add(oar);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.24, 0.04), WOOD_MAT);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.24, 0.04), getWoodMat());
     blade.position.set(-1.68, 0.02, 0.3); blade.rotation.z = 0.4;
     group.add(blade);
     bowLocal = lantern(0.9, 0.45, 0);
   } else if (type === "tower") {
     const hull = makeHull(2.4, 1.1, 0.9, { sheer: 0.14, bottomTaper: 0.5 });
-    const body = new THREE.Mesh(hull, HULL_MAT);
+    const body = new THREE.Mesh(hull, getHullMat());
     group.add(body); addEdges(hull, color, body);
     const gunwale = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 1.12), DARK_MAT);
     gunwale.position.y = 0.46;
@@ -273,7 +351,7 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     const tower = makeTower(3, 1.0);
     tower.position.set(-0.1, 0.5, 0);
     group.add(tower);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 5), WOOD_MAT);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 5), getWoodMat());
     pole.position.set(0.2, 0.5 + 3 * 0.36 + 0.45, 0);
     group.add(pole);
     const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.25), FLAG_MAT);
@@ -282,9 +360,9 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     bowLocal = lantern(1.1, 0.62, 0);
   } else if (type === "sail") {
     const hull = makeHull(2.2, 0.7, 0.45, { sheer: 0.3, bottomTaper: 0.4 });
-    const body = new THREE.Mesh(hull, HULL_MAT);
+    const body = new THREE.Mesh(hull, getHullMat());
     group.add(body); addEdges(hull, color, body);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.6, 8), WOOD_MAT);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.6, 8), getWoodMat());
     mast.position.set(0.1, 0.25 + 0.8, 0);
     group.add(mast);
     const sail = makeSail(1.1, 1.4);
@@ -293,7 +371,7 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     const sail2 = makeSail(0.7, 0.7);
     sail2.position.set(0.6, 0.25 + 0.45, 0.02);
     group.add(sail2); addEdges(sail2.geometry, color, sail2);
-    const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.0, 6), WOOD_MAT);
+    const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.0, 6), getWoodMat());
     boom.rotation.z = Math.PI / 2; boom.position.set(-0.1, 0.25 + 0.08, 0.02);
     group.add(boom);
     const top = new THREE.Vector3(0.1, 0.25 + 1.55, 0); // 桅索：让桅"长"在船上
@@ -308,12 +386,12 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     bowLocal = lantern(1.0, 0.45, 0);
   } else if (type === "fishing") {
     const hull = makeHull(1.9, 0.72, 0.5, { sheer: 0.2, bottomTaper: 0.42 });
-    const body = new THREE.Mesh(hull, HULL_MAT);
+    const body = new THREE.Mesh(hull, getHullMat());
     group.add(body); addEdges(hull, color, body);
-    const derrick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.1, 6), WOOD_MAT);
+    const derrick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.1, 6), getWoodMat());
     derrick.rotation.z = Math.PI / 2.6; derrick.position.set(0.7, 0.55, 0);
     group.add(derrick);
-    const rope = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 12), WOOD_MAT);
+    const rope = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 12), getWoodMat());
     rope.position.set(0.7, 0.3, 0);
     group.add(rope);
     const net = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.7, 5, 5), getNetMat());
@@ -324,44 +402,44 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.3, 0.4), DARK_MAT);
     cabin.position.set(-0.55, 0.4, 0);
     group.add(cabin);
-    const hold = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.4), HULL_MAT);
+    const hold = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.4), getHullMat());
     hold.position.set(-0.1, 0.34, 0);
     group.add(hold);
     bowLocal = lantern(0.9, 0.45, 0);
   } else if (type === "dragon") {
     const hull = makeHull(3.2, 0.5, 0.4, { sheer: 0.5, bottomTaper: 0.35 });
-    const body = new THREE.Mesh(hull, HULL_MAT);
+    const body = new THREE.Mesh(hull, getHullMat());
     group.add(body); addEdges(hull, color, body);
     const head = makeDragonHead();
     head.position.set(1.5, 0.2, 0);
     group.add(head);
     for (let i = 0; i < 8; i++) { // 横坐板
-      const bench = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.36), WOOD_MAT);
+      const bench = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.36), getWoodMat());
       bench.position.set(-1.4 + i * 0.4, 0.28, 0);
       group.add(bench);
     }
-    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.18, 12), WOOD_MAT); // 中央鼓
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.18, 12), getWoodMat()); // 中央鼓
     drum.position.set(-0.1, 0.45, 0);
     group.add(drum);
     const drumTop = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 12), DARK_MAT);
     drumTop.position.set(-0.1, 0.55, 0);
     group.add(drumTop);
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.4, 5), HULL_MAT); // 尾鳍上翘
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.4, 5), getHullMat()); // 尾鳍上翘
     tail.position.set(-1.55, 0.3, 0); tail.rotation.z = Math.PI / 2.4;
     group.add(tail);
     bowLocal = lantern(1.45, 0.4, 0);
   } else { // mech 机关舟
     const hull = makeHull(2.0, 0.8, 0.5, { sheer: 0.1, bottomTaper: 0.55, segsX: 8, segsZ: 4 });
-    const body = new THREE.Mesh(hull, METAL_HULL_MAT);
+    const body = new THREE.Mesh(hull, METAL_MAT);
     group.add(body);
     const seams = new THREE.LineSegments(new THREE.EdgesGeometry(hull, 18), new THREE.LineBasicMaterial({ color: 0x6fd6ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending }));
     group.add(seams);
     for (const sz of [-1, 1]) { // 侧鳍
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.18), METAL_HULL_MAT);
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.18), METAL_MAT);
       fin.position.set(-0.3, 0.0, sz * 0.45); fin.rotation.y = sz * 0.2;
       group.add(fin);
     }
-    const stern = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 8), METAL_HULL_MAT);
+    const stern = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 8), METAL_MAT);
     stern.rotation.z = -Math.PI / 2; stern.position.set(-1.0, 0.1, 0);
     group.add(stern);
     const thruster = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), COLD_MAT);
@@ -370,7 +448,7 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 10), COLD_MAT);
     core.position.set(0.4, 0.2, 0);
     group.add(core);
-    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 4), METAL_HULL_MAT);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 4), METAL_MAT);
     ant.position.set(0.5, 0.5, 0);
     group.add(ant);
     const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), COLD_MAT);
@@ -545,9 +623,9 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
           y = seaH(b.baseX, b.baseZ, t);
         }
         b.group.position.set(b.baseX, y, b.baseZ);
-        b.group.rotation.z = Math.sin(t * 0.8 + b.phase) * 0.06;
-        b.group.rotation.x = Math.cos(t * 0.6 + b.phase) * 0.05;
-        const target = focusRef.current === i ? 1.15 : 1.0;
+        b.group.rotation.z = Math.sin(t * 0.8 + b.phase) * 0.1;
+        b.group.rotation.x = Math.cos(t * 0.6 + b.phase) * 0.07;
+        const target = focusRef.current === i ? 1.32 : 1.0;
         b.group.scale.setScalar(b.scale * target);
       });
 
@@ -571,12 +649,16 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
       });
 
       // 相机
-      if (focusRef.current != null && focusRef.current < boats.length && boats[focusRef.current]) {
+      if (reduced) {
+        // 尊重系统「减弱动态」：船仍随海起伏（物理姿态），仅相机静止不漂移
+        camera.position.lerp(new THREE.Vector3(0, 3, 14), 0.08);
+        lookTarget.lerp(new THREE.Vector3(0, 0.5, -2), 0.08);
+      } else if (focusRef.current != null && focusRef.current < boats.length && boats[focusRef.current]) {
         const b = boats[focusRef.current];
         const pos = b.group.position;
         const camDesired = new THREE.Vector3(pos.x - 2.1 * b.scale, pos.y + 1.15 * b.scale, pos.z + 0.2);
-        camera.position.lerp(camDesired, 0.06);
-        lookTarget.lerp(new THREE.Vector3(pos.x + 7, pos.y + 0.3, pos.z), 0.08);
+        camera.position.lerp(camDesired, 0.085);
+        lookTarget.lerp(new THREE.Vector3(pos.x + 7, pos.y + 0.3, pos.z), 0.1);
       } else {
         const idle = new THREE.Vector3(Math.sin(t * 0.04) * 2.5, 3 + Math.sin(t * 0.06) * 0.25, 14);
         camera.position.lerp(idle, 0.04);
@@ -588,14 +670,14 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
     };
 
     const animate = () => { if (!running) return; renderOnce(); raf = requestAnimationFrame(animate); };
-    const start = () => { if (running || reduced) return; running = true; raf = requestAnimationFrame(animate); };
+    const start = () => { if (running) return; running = true; raf = requestAnimationFrame(animate); };
     const stop = () => { running = false; cancelAnimationFrame(raf); };
     renderOnce();
     const onVis = () => { if (document.hidden) stop(); else start(); };
     document.addEventListener("visibilitychange", onVis);
     const io = new IntersectionObserver((es) => { if (es[0]?.isIntersecting) start(); else stop(); }, { rootMargin: "100px" });
     io.observe(mount);
-    const onReduce = () => { reduced = reduceMotion.matches; if (reduced) { stop(); renderOnce(); } else start(); };
+    const onReduce = () => { reduced = reduceMotion.matches; start(); };
     reduceMotion.addEventListener("change", onReduce);
     start();
 
