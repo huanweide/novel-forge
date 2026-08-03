@@ -9,7 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
-import { getSettings } from "@/lib/llm";
+import { getSettings, recordLlmCall } from "@/lib/llm";
 
 export const maxDuration = 300;
 
@@ -92,6 +92,15 @@ ${pairsText}
 
     if (!r.ok) return null;
     const data = await r.json().catch(() => null);
+    const usage = (data as any)?.usage;
+    recordLlmCall({
+      model,
+      role: "assistant",
+      promptTokens: usage?.prompt_tokens ?? usage?.promptTokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
+      totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
+      baseURL,
+    });
     const raw = data?.choices?.[0]?.message?.content;
     if (!raw) return null;
 
@@ -459,7 +468,12 @@ export async function POST(request: Request) {
                 if (existing) {
                   await prisma.characterCard.update({
                     where: { id: existing.id },
-                    data: { ...merged, name: pair.name, projectId: undefined } as any,
+                    data: {
+                      ...merged,
+                      name: pair.name,
+                      projectId: undefined,
+                      relationships: normalizeRelationships((merged as any)?.relationships),
+                    } as any,
                   });
                 }
               }

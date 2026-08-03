@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { parseAIJson } from "@/lib/json-parser";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
-import { getSettings } from "@/lib/llm";
+import { getSettings, recordLlmCall } from "@/lib/llm";
 
 export const maxDuration = 300;
 
@@ -77,6 +77,15 @@ async function callDS(system: string, prompt: string, model: string, baseUrl: st
     }
 
     const data = await r.json().catch(() => null);
+    const usage = (data as any)?.usage;
+    recordLlmCall({
+      model,
+      role: "assistant",
+      promptTokens: usage?.prompt_tokens ?? usage?.promptTokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
+      totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
+      baseURL: baseUrl,
+    });
     const raw = data?.choices?.[0]?.message?.content;
     if (!raw) return { error: "DeepSeek 返回空内容" };
     return { raw };

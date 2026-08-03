@@ -8,7 +8,7 @@
 // 容错：任何异常返回 null，绝不阻断正文生成（规划是"锦上添花"，不是交付前置）。
 
 import { prisma } from "@/lib/prisma";
-import { getSettings } from "@/lib/llm";
+import { getSettings, recordLlmCall } from "@/lib/llm";
 
 export interface ChapterPlan {
   /** 本章核心焦点（一句话） */
@@ -120,6 +120,15 @@ ${slText}
     });
     if (!res.ok) return null;
     const data = await res.json();
+    const usage = (data as any)?.usage;
+    recordLlmCall({
+      model: settings.model,
+      role: "assistant",
+      promptTokens: usage?.prompt_tokens ?? usage?.promptTokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
+      totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
+      baseURL: settings.baseUrl,
+    });
     const raw = data?.choices?.[0]?.message?.content?.trim() || "";
     const plan = parsePlan(raw);
     if (!plan) return null;

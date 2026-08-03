@@ -20,6 +20,7 @@
 import fs from "fs";
 import path from "path";
 import { prisma } from "@/lib/prisma";
+import { recordLlmCall } from "@/lib/llm";
 import { getSettings } from "@/lib/llm";
 import { buildProjectOverrides } from "@/core/llm/client";
 import type { LoreTableOp, TableDef } from "./types";
@@ -226,6 +227,15 @@ ${chapterText.slice(0, 12000)}
       }
       const r = await applyOps(filteredTables, ops, chapterText);
       const warnings = buildWarnings(r.appliedNames, chapterText);
+      const usage = (data as any)?.usage;
+      recordLlmCall({
+        model: llm.model,
+        role: "assistant",
+        promptTokens: usage?.prompt_tokens ?? usage?.promptTokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
+        totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
+        baseURL: llm.baseURL,
+      });
       return { ok: true, operations: ops.length, applied: r.applied, warnings };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);

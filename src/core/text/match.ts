@@ -58,7 +58,10 @@ export function matchKeyword(text: string, keyword: string): boolean {
     const after = idx + len < hay.length ? hay[idx + len] : "";
     const beforeBoundary = isBoundaryChar(before, keywordIsCjk);
     const afterBoundary = isBoundaryChar(after, keywordIsCjk);
-    if (beforeBoundary || afterBoundary) return true;
+    // 中文关键词：任一侧为边界即命中（中文无空格，允许词首/词尾紧贴）。
+    // 英文/拼音关键词：必须两侧都为边界（两端都不是字母数字）才是独立词，
+    //   否则 "AI" 会误命中 "waitAI"/"xAI"/"AIx" 这类紧贴拉丁字母的伪词。
+    if (keywordIsCjk ? (beforeBoundary || afterBoundary) : (beforeBoundary && afterBoundary)) return true;
     idx = hay.indexOf(needle, idx + 1);
   }
   return false;

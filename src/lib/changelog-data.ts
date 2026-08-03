@@ -25,18 +25,50 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.64";
+export const LATEST_VERSION = "v0.46.65";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "写章自动填表与一键 fill-all 防重复真正打通：safeFillAfterWriting 成功填表后写入 .runtime 防重复标记（此前写章填表不标记，fill-all 会重复填同一章）",
-  "实体高亮修复：2 字实体名尾边界放宽（仅查头边界），灭「2 字实体名几乎不高亮」；中英文关键词边界区分，灭「AI」等英文 2 字关键词边界退化误触发",
-  "填表/召回精度：applyOps 的 update/delete 改大小写不敏感（灭「青龙镇/青龙鎮」漏匹配）；recall 按关键词特异性(score)降序截断，灭 200+ 词条时截断丢长词；ensureItemLorebook 移除字面量「物品」键灭召回噪音",
-  "导入健壮性：同批重复角色/词条去重（灭 createMany 重复行）；角色关系字段归一化（旧格式 target/type 自动转 targetName/relation，灭 sync-global-prompt 编译出 ?(?)）；babyloreFillAll 每章增量落盘（灭中途超时丢全部进度）",
+  "监控盲区清零：填表/大纲/章纲/角色扩写/导入合并 5 处裸 fetch 全补 recordLlmCall（磐石 P0），成本看板不再漏记这几路 LLM 调用",
+  "实体高亮边界修正：英文/拼音 2 字关键词改为「两侧都须为词边界」才算命中，灭 waitAI/xAI/AIx 这类紧贴拉丁字母的伪词误触发（青砚 F1 收尾）",
+  "导入 AI 合并关系归一化：AI 合并成功写入分支也走 normalizeRelationships（旧格式 target/type 自动转 targetName/relation），灭合并后角色关系静默失效（工坊 P1）",
+  "正则后处理校验前置：保存规则前校验全部正则（含手改已有规则）合法性，灭非法正则在生成后处理时崩溃（工坊 P1）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.65",
+    date: "2026-08-03",
+    title: "会员股东 Round 2 实现：监控盲区清零 + 边界修正 + 导入合并归一化 + 正则校验前置（tsc 零错误）",
+    sections: [
+      {
+        label: "监控盲区清零（磐石 P0）",
+        items: [
+          "填表(babylore runFillForText)、大纲(generate/outline)、章纲(plan-chapter)、角色扩写(characters/expand)、导入合并(import/commit) 5 处裸 fetch 全部补 recordLlmCall，成本看板不再漏记这几路 LLM 调用",
+          "usage 取自 OpenAI 兼容响应的 data.usage（prompt_tokens/completion_tokens/total_tokens，兼容 camelCase），失败/缺字段安全回退 0",
+        ],
+      },
+      {
+        label: "实体高亮边界修正（青砚 F1 收尾）",
+        items: [
+          "match.ts：英文/拼音 2 字关键词改为「两侧都须为词边界」才算命中（beforeBoundary && afterBoundary），灭 waitAI/xAI/AIx 紧贴拉丁字母的伪词误触发；中文关键词保持任一侧边界即命中",
+        ],
+      },
+      {
+        label: "导入 AI 合并关系归一化（工坊 P1）",
+        items: [
+          "import/commit 的 AI 合并成功写入分支（characterCard.update）也走 normalizeRelationships，旧格式 {target,type} 自动转 {targetName,relation}，灭合并后角色关系静默失效",
+        ],
+      },
+      {
+        label: "正则后处理校验前置（工坊 P1）",
+        items: [
+          "ProjectConfigPanel 保存规则前校验全部正则（含手改已有规则）合法性，非法正则阻止保存并提示，灭生成后处理时因非法正则崩溃",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.64",
     date: "2026-08-03",

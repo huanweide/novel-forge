@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.65 — 2026-08-03
+**会员股东 Round 2 实现：监控盲区清零 + 边界修正 + 导入合并归一化 + 正则校验前置（tsc 零错误）**
+
+- 监控盲区清零（磐石 P0）：填表(babylore runFillForText)、大纲(generate/outline)、章纲(plan-chapter)、角色扩写(characters/expand)、导入合并(import/commit) 5 处裸 fetch 全部补 recordLlmCall，成本看板不再漏记这几路 LLM 调用；usage 取自 OpenAI 兼容响应的 data.usage，失败/缺字段安全回退 0
+- 实体高亮边界修正（青砚 F1 收尾）：match.ts 英文/拼音 2 字关键词改为「两侧都须为词边界」才算命中（beforeBoundary && afterBoundary），灭 waitAI/xAI/AIx 紧贴拉丁字母的伪词误触发；中文关键词保持任一侧边界即命中
+- 导入 AI 合并关系归一化（工坊 P1）：import/commit 的 AI 合并成功写入分支（characterCard.update）也走 normalizeRelationships，旧格式 {target,type} 自动转 {targetName,relation}，灭合并后角色关系静默失效
+- 正则后处理校验前置（工坊 P1）：ProjectConfigPanel 保存规则前校验全部正则（含手改已有规则）合法性，非法正则阻止保存并提示，灭生成后处理时因非法正则崩溃
+
 ## v0.46.64 — 2026-08-03
 **会员股东 Round 1 收口：填表/召回/高亮精度 + 导入健壮性（10 项逻辑修复，tsc 零错误）**
 

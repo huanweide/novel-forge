@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeJoin } from "@/lib/utils";
 import { getActiveRules, injectRules } from "@/core/rules";
-import { getSettings } from "@/lib/llm";
+import { getSettings, recordLlmCall } from "@/lib/llm";
 import { buildProjectOverrides } from "@/core/llm/client";
 
 export const maxDuration = 300;
@@ -229,6 +229,16 @@ ${finalDirective}${charCountNote}
       }
 
       const data = await llmRes.json();
+      const usage = (data as any)?.usage;
+      recordLlmCall({
+        model,
+        role: "assistant",
+        promptTokens: usage?.prompt_tokens ?? usage?.promptTokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
+        totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
+        baseURL,
+        projectId,
+      });
       structuredContent = data.choices?.[0]?.message?.content || "";
     } catch (err) {
       return NextResponse.json(

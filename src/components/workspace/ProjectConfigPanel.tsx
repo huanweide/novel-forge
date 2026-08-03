@@ -106,6 +106,17 @@ export function ProjectConfigPanel({
   const saveRules = async () => {
     setBusy(true);
     setRulesHint("");
+    // 校验所有正则规则合法性（含手改已有规则），避免非法正则在生成后处理时崩溃（工坊 P1）
+    for (const r of rules) {
+      if (!r.pattern) continue;
+      try {
+        new RegExp(r.pattern, r.flags || "g");
+      } catch (e) {
+        setRulesHint("正则无效（" + (r.name || "未命名") + "）：" + (e instanceof Error ? e.message : "格式错误"));
+        setBusy(false);
+        return;
+      }
+    }
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
