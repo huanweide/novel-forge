@@ -1481,3 +1481,30 @@
 ## 五、诚实边界
 - **已真实验证**：三章正文实跑成功、四个 bug 修复前后对比实测、上下文各层数据实测、tsc 零错误、dev 200、GitHub 已推 v0.46.55（含三章正文入库）。
 - **未验证/外部限制**：DeepSeek 并发限流（抽卡并行部分失败，有"生成失败"标签可重抽）和偶发空响应（重试即成功）是模型端限制，代码已做容错；第 2 章 1140 字只覆盖前两条故事线（mystery 模板 1000 字/节限制）；Agent 回复偏简略（"（处理完成）"，工具链路正常但话术可再润色）；三章正文观感需你在本地浏览器阅读验收（已存 PROCESS/dragon-ch1~3.txt）。
+
+---
+
+# v0.46.56 修复全局快捷键无限更新循环 — 一次经典的 React 反模式（费曼报告）
+
+## 一、干了什么
+页面弹出 `Maximum update depth exceeded`（React 认为更新层数超限、强制中止）——指向 ShortcutProvider.tsx:89 的 `setVersion`。修复了全局快捷键系统的注册/注销死循环，升 v0.46.56 推送。
+
+## 二、为什么这么做（第一性原理）
+这个报错的含义：**组件反复 setState → 重渲染 → 又 setState → 又重渲染，永远不停**，直到 React 认为"这肯定是 bug"并抛出。
+
+这次的循环链很隐蔽：快捷键的 register（注册函数）每次被调用都 `setVersion(+1)` 去"刷新快捷键列表"；而 Provider 的 context 值 `value` 是 `useMemo` 计算出来的，**依赖数组里有 `version`**——所以版本号一变，context 对象就变成"新对象"；所有用了快捷键的组件（useShortcut）的 effect 依赖数组里有 `ctx`（这个 context 对象），一看对象引用变了就重跑 effect；重跑时先执行旧 effect 的清理函数（unregister，注销）——注销里又 `setVersion(+1)`……于是：注册→版本号变→ctx 变→注销→版本号变→ctx 变→注册，死循环。
+
+写作页有 4 个快捷键同时注册，每个都在放大这个循环，几帧内就触顶。
+
+## 三、方法/工具与效果
+- 读源码：`register`（L84-91）每次 setVersion；`value` useMemo（L130-134）依赖 version；`useShortcut`（L213-223）effect 依赖 ctx——三条线索一拼就是完整循环。
+- 关键洞察：**`version` 这个 state 是多余的**。注册表存在 `registryRef`（useRef），快捷键按键监听和列表展示都是"每次调用时实时读 ref"——根本不需要用 state 去"通知"谁更新。它存在的唯一效果就是制造死循环。
+- 修复：注册/注销只操作 ref（set/delete），零渲染；value 的 useMemo 去掉 version 依赖。改完 tsc 零错误。
+
+## 四、关键取舍
+- **删 state 而不是"防抖"**：有人会想"setVersion 加个条件跳过重复"——但那是在循环上贴创可贴。正确做法是问"这个 state 真的需要吗"，答案是版本号根本不需要（ref 已足够）。
+- **ctx 对象稳定性**：context value 必须尽量稳定（useMemo 依赖最小化），否则所有 consumer 的 effect 都会被牵连重跑——这是 context + effect 组合的第一原则。
+
+## 五、诚实边界
+- **已真实验证**：tsc 零错误、dev 200、依赖审计（4 处 useShortcut 的 handler 走 ref、combo/description 常量、opts 取标量）确认无其他循环源、GitHub 已推 v0.46.56。
+- **未验证（必须明示）**：本环境无浏览器，修复后"打开写作页不再弹错"的最终确认需要你本地刷新 `http://127.0.0.1:3001` 后进一个写作页看控制台——应该不再有 Maximum update depth exceeded。
