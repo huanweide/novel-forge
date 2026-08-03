@@ -79,14 +79,15 @@ function prettyCombo(combo: string): string {
 export function ShortcutProvider({ children }: { children: React.ReactNode }) {
   const registryRef = useRef<Map<string, ShortcutDef>>(new Map());
   const [helpOpen, setHelpOpen] = useState(false);
-  const [version, setVersion] = useState(0); // 触发 list 重算
 
+  // v0.46.56 修复：register 不再触发 setVersion（原实现导致无限更新循环——
+  // register→setVersion→value.useMemo 依赖 version→ctx 引用变化→useShortcut
+  // effect 依赖 [ctx] 重跑→cleanup 再 setVersion→循环，Maximum update depth exceeded）。
+  // registryRef 是 ref，keydown 监听与 list() 均实时读取，无需 state 参与。
   const register = useCallback((def: ShortcutDef) => {
     registryRef.current.set(def.id, def);
-    setVersion((v) => v + 1);
     return () => {
       registryRef.current.delete(def.id);
-      setVersion((v) => v + 1);
     };
   }, []);
 
@@ -130,7 +131,7 @@ export function ShortcutProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<ShortcutContextValue>(
     () => ({ register, list, openHelp, closeHelp, helpOpen }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [register, openHelp, closeHelp, helpOpen, version]
+    [register, openHelp, closeHelp, helpOpen]
   );
 
   return (

@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.56 — 2026-08-03
+**修复全局快捷键系统无限更新循环（Maximum update depth exceeded）**
+
+- 根因：register 每次注册/注销 setVersion，而 context value 的 useMemo 依赖 version → ctx 引用变化 → useShortcut effect 重跑 → 注销再 setVersion → 无限循环（workspace 4 个快捷键同时注册时必现）
+- 修复：register/注销不再触发 setVersion（注册表是 ref 实时读取，无需 state 参与）；value 依赖移除 version，ctx 引用稳定，注册零渲染
+- 调用方依赖审计：handler 走 ref、combo/description 常量、opts 取标量——无其他循环源
+- 诚实边界：tsc 零错误 + dev 200；快捷键速查功能不变
+
 ## v0.46.55 — 2026-08-03
 **终极实验修复轮：抽卡/上下文预览/Agent 分析 JSON 解析鲁棒性 + 写作空正文容错**
 

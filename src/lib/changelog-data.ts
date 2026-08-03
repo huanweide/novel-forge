@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.55";
+export const LATEST_VERSION = "v0.46.56";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "终极实验（全链路实测「新城 · 龙陨之地」：导入设定 → 建项目 → 写 3 章 → 全功能压测）后修复 4 个真实 bug：①章纲抽卡 JSON 解析不鲁棒（v4-flash 返回 markdown 包裹/尾逗号/截断 JSON 时 3/3 全解析失败、卡片空白）——多级容错解析 + 正则兜底，修复后 2/3 成功；②上下文预览不显示作者指令（preview-context 不读 project.authorNote）——回退到数据库作者指令；③Agent 章节分析同样 JSON 解析失败——同款鲁棒解析；④写作偶发空正文时静默 done（用户以为成功）——空内容改为明确 error 提示重试",
-  "同时修正导入数据：16 位角色关系字段格式（target/type → targetName/relation，修复编译后显示 ?(?) 的问题）与樊斯瑞错误别名；globalPrompt 预编译验证通过（16 角色 + 55 词条 + 关系网全部正确编译）",
-  "全链路实测结论：设定导入 ✅ 文风模板注入（6 项全生效）✅ 世界观词条按需触发 ✅ 前文窗口保留 ✅ 章节摘要记忆 ✅ 章纲生成/抽卡/正文写作 ✅ 后处理管线（召回/禁用词扫描/质量评分/审校/摘要/分类/逻辑检查/自动填表）✅ 剧情推进预设应用 ✅ 创意工坊 17 预设 ✅ Agent 工具调用（查角色/改数据）✅ 写后分析 ✅ 监控统计 ✅",
-  "诚实边界：DeepSeek v4-flash 并发限流（抽卡并行 3-5 路会部分失败，前端有「生成失败」标签可重抽）与偶发空响应（重试即成功，已加 error 提示）为外部模型端限制；正文 1140-2120 字/章符合 mystery 模板 1000 字/节配置",
+  "修复全局快捷键系统无限更新循环（Maximum update depth exceeded）：根因是 ShortcutProvider 的 register 每次注册/注销都 setVersion，而 context value 的 useMemo 依赖 version——注册→版本号变→ctx 引用变→所有 useShortcut 的 effect 重跑→注销再 setVersion→无限循环（workspace 页 4 个快捷键注册同时触发时必现）",
+  "修复方式：register/注销不再触发 setVersion（注册表是 ref，keydown 监听与 list() 均实时读取，无需 state 参与重渲染）；value 的 useMemo 依赖移除 version——ctx 引用稳定，快捷键注册/注销零渲染，循环彻底消除",
+  "验证：tsc 零错误 + dev 200；调用方依赖审计（handler 走 ref、combo/description 字符串常量、opts 取标量值）确认无其他循环源",
+  "诚实边界：快捷键速查弹层（helpOpen）仍正常（list() 实时读注册表）；修复后快捷键注册不触发任何重渲染，性能更优",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.56",
+    date: "2026-08-03",
+    title: "修复全局快捷键系统无限更新循环（Maximum update depth exceeded）",
+    sections: [
+      {
+        label: "报错定位（用户反馈：弹出报错，Console Error — Maximum update depth exceeded，ShortcutProvider.tsx:89 setVersion）",
+        items: [
+          "症状：打开使用全局快捷键的页面（workspace 写作页 4 个快捷键同时注册）时，React 报 Maximum update depth exceeded",
+          "根因（典型 React 反模式）：register 每次注册/注销都 setVersion(v+1) → context value 的 useMemo 依赖 version → version 变则 ctx 对象引用变 → useShortcut 的 effect 依赖 [ctx, ...] 重跑 → cleanup（unregister）再 setVersion → 再循环——注册→版本号→ctx 变化→注销→版本号→ctx 变化，无限往复",
+          "version 本身冗余：registryRef 是 ref（不触发渲染），keydown 监听与 list() 每次调用都实时读 ref，无需 state 参与——引入 version 的唯一效果就是制造循环",
+        ],
+      },
+      {
+        label: "修复",
+        items: [
+          "register 不再 setVersion：注册/注销只操作 registryRef（set/delete），零渲染",
+          "value 的 useMemo 依赖移除 version（保留 register/openHelp/closeHelp/helpOpen）——ctx 引用只在 helpOpen 开/关时变化",
+          "调用方依赖审计：workspace 4 处 useShortcut 的 id/combo/description 均为字符串常量、handler 走 handlerRef、opts 只取 allowInEditable 标量——无其他不稳定依赖，循环彻底消除",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200；快捷键速查弹层（helpOpen + list() 实时读注册表）功能不变",
+          "修复后快捷键注册/注销零渲染，性能优于原实现；需浏览器实跑确认无报错",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.55",
     date: "2026-08-03",
