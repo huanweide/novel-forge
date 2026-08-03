@@ -359,6 +359,8 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [list, setList] = useState<PaperProject[]>([]);
+  const [hoverName, setHoverName] = useState<string | null>(null);
+  const hoverIdxRef = useRef<number | null>(null);
 
   useEffect(() => {
     setList(
@@ -461,7 +463,12 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
         tPitch = clamp(tPitch + (e.clientY - lastY) * 0.004, 0.12, 1.1);
         lastX = e.clientX; lastY = e.clientY;
       }
-      cv.style.cursor = pickBoat(e) != null ? "pointer" : (dragging ? "grabbing" : "grab");
+      const idx = pickBoat(e);
+      cv.style.cursor = idx != null ? "pointer" : (dragging ? "grabbing" : "grab");
+      if (idx !== hoverIdxRef.current) {
+        hoverIdxRef.current = idx;
+        setHoverName(idx != null && boats[idx] ? boats[idx].name : null);
+      }
     };
     const onDown = (e: PointerEvent) => {
       downX = e.clientX; downY = e.clientY;
@@ -474,6 +481,7 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
       const idx = pickBoat(e);
       if (idx == null) return;
       const p = boats[idx];
+      if (!window.confirm(`你确认要进入《${p.name}》吗？`)) return;
       if (p.id) router.push(`/workspace/${p.id}`);
       else router.push("/explore");
     };
@@ -584,6 +592,7 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
   }, [list]);
 
   const openBoat = (p: PaperProject) => {
+    if (!window.confirm(`你确认要进入《${p.name}》吗？`)) return;
     if (p.id) router.push(`/workspace/${p.id}`);
     else router.push("/explore");
   };
@@ -592,6 +601,11 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
     <div className="relative w-full select-none">
       <div className="relative h-[420px] md:h-[480px] rounded-xl overflow-hidden">
         <div ref={mountRef} className="absolute inset-0" />
+        {hoverName && (
+          <div className="pointer-events-none absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-[var(--nv-border-3)] bg-[var(--nv-surface-3)]/90 px-3.5 py-1.5 text-xs text-[var(--nv-text-primary)] shadow-lg backdrop-blur-sm">
+            《{hoverName}》
+          </div>
+        )}
         <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px] text-[var(--nv-text-muted)] tracking-wide">
           点击纸船进入写作区 · 拖拽旋转视角 · 滚轮缩放 · 下方书栏点击直达
         </div>

@@ -271,7 +271,7 @@ export default function Dashboard() {
             墨色海面上漂着折纸小船，每艘船头都点着一盏灯——书页折成的船，航行在故事的墨海上。点击一艘船，镜头会拉到船头，望向前方无边的墨海，那就是「下一章」。
           </p>
         </div>
-        <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/30 p-4">
+        <div className="nf-boat-stage relative rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/30 p-4">
           <PaperBoats
             projects={projects.map((p) => ({
               id: p.id,
@@ -372,9 +372,12 @@ export default function Dashboard() {
               <span className="text-[11px] text-[var(--nv-text-muted)]">{projects.length} 部</span>
             </div>
             <div ref={staggerRef} className="home-stagger nf-bookshelf grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div data-stagger-item data-stagger-index={0} className="home-stagger-item">
+                <NewBookCard />
+              </div>
               {projects.map((p, i) => (
-                <div key={p.id} data-stagger-item data-stagger-index={i} className="home-stagger-item">
-                  <ProjectCard project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
+                <div key={p.id} data-stagger-item data-stagger-index={i + 1} className="home-stagger-item">
+                  <ProjectCard project={p} index={i} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
                 </div>
               ))}
             </div>
@@ -438,18 +441,22 @@ export default function Dashboard() {
 
 // ─── 子组件：项目卡片 ───────────────────────────────────────
 
-function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; }) {
+function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; index?: number; }) {
   const timeAgo = getTimeAgo(new Date(project.updatedAt));
   const spine = genreColor(project.genre);
+  // 虚空特效位置随作品变化（每本书的悬浮"虚空"不同）
+  const vx = 18 + (index * 37) % 64;
+  const vy = 14 + (index * 53) % 70;
 
   return (
     <div
       className="group nf-book3d rounded-2xl p-5 flex flex-col overflow-hidden"
-      style={{ "--spine": spine } as React.CSSProperties}
+      style={{ "--spine": spine, "--vx": `${vx}%`, "--vy": `${vy}%` } as React.CSSProperties}
     >
+      <span className="nf-void" aria-hidden="true" />
       <span className="nf-bookmark" aria-hidden="true">{project.name.charAt(0)}</span>
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="font-semibold text-base truncate flex-1 mr-2 text-foreground">
+      <div className="flex items-start justify-between mb-3 relative z-[1]">
+        <h3 className="font-bold text-lg md:text-xl truncate flex-1 mr-2 text-foreground">
           {project.name}
         </h3>
         <button
@@ -462,12 +469,12 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
         </button>
       </div>
 
-      <p className="text-sm text-[var(--nv-text-tertiary)] mb-3 line-clamp-2 flex-1 leading-relaxed">
+      <p className="text-sm text-[var(--nv-text-tertiary)] mb-3 line-clamp-2 flex-1 leading-relaxed relative z-[1]">
         {project.description || "暂无描述"}
       </p>
 
       {project.genre.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-1.5 mb-3 relative z-[1]">
           {project.genre.map((g) => (
             <span key={g} className="text-[10px] px-2 py-0.5 rounded-lg bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] border border-[var(--nv-border-2)]">
               {g}
@@ -476,14 +483,14 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+      <div className="flex flex-wrap items-center gap-1.5 mb-4 relative z-[1]">
         <span className="nf-stat"><Icon name="user" size={11} /> {project._count.characters} 角色</span>
         <span className="nf-stat"><Icon name="book" size={11} /> {project._count.lorebookEntries} 词条</span>
         <span className="nf-stat"><Icon name="file" size={11} /> {project._count.storyNodes} 节点</span>
         <span className="nf-stat"><Icon name="target" size={11} /> {formatWordCount(project.targetWordCount)}</span>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-[var(--nv-border-2)]">
+      <div className="flex items-center justify-between pt-3 border-t border-[var(--nv-border-2)] relative z-[1]">
         <span className="text-[10px] text-[var(--nv-text-muted)]">{timeAgo}</span>
         <Link
           href={`/workspace/${project.id}`}
@@ -493,6 +500,22 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
         </Link>
       </div>
     </div>
+  );
+}
+
+// ─── 子组件：新建小说卡（+ 号入口） ─────────────────────────
+function NewBookCard() {
+  return (
+    <Link
+      href="/explore"
+      className="nf-book3d nf-newbook group flex h-full min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[var(--nv-border-3)] text-[var(--nv-text-tertiary)] transition-all hover:border-primary/50 hover:text-[var(--nv-text-primary)]"
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-2xl font-light text-[var(--nv-text-secondary)] transition-transform duration-200 group-hover:scale-110 group-hover:border-primary/40 group-hover:bg-[var(--nv-primary-soft)] group-hover:text-primary">
+        +
+      </span>
+      <span className="text-sm font-medium">新建小说</span>
+      <span className="text-[11px] text-[var(--nv-text-muted)]">从探讨模式开始构思</span>
+    </Link>
   );
 }
 

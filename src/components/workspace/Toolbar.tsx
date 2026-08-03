@@ -45,7 +45,7 @@ export function Toolbar({
   return (
     <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)] px-4">
       <div className="flex min-w-0 items-center gap-3">
-        <button onClick={onBack} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]" aria-label="返回">
+        <button onClick={onBack} title="退出写作页，返回首页" aria-label="返回首页" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] active:scale-[0.94]">
           <Icon name="arrowLeft" size={16} />
         </button>
         <span className="shrink-0 text-[var(--nv-border-3)]">|</span>

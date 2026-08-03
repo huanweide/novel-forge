@@ -1187,3 +1187,77 @@ html.azure {
 }
 /* 苍青主题下按钮主色与浅色强调回退 */
 html.azure .btn-primary { color: #04201F; }
+
+/* ═══════════════════════════════════════════
+   我的作品区 · 交互/视觉增强（v0.46.50）
+   ═══════════════════════════════════════════ */
+/* hover 虚空特效：题材色光圈 + 黑洞渐变，每本书按 --spine/--vx/--vy 不同 */
+.nf-void {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at var(--vx, 30%) var(--vy, 20%), color-mix(in oklch, var(--spine) 24%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 50% 132%, color-mix(in oklch, var(--spine) 32%, transparent) 0%, transparent 58%);
+  opacity: 0;
+  transition: opacity 320ms var(--ease-out-smooth), transform 600ms var(--ease-out-smooth);
+  transform: scale(1.04);
+}
+.nf-book3d:hover .nf-void,
+.nf-book3d:focus-within .nf-void {
+  opacity: 1;
+  transform: scale(1.06);
+}
+/* 新建小说卡：虚线书形，hover 与真书一致的抽书效果 */
+.nf-newbook {
+  background:
+    linear-gradient(100deg, color-mix(in oklch, var(--nv-primary) 14%, #0a0e1c 86%) 0%, color-mix(in oklch, var(--nv-primary) 8%, #10162a 92%) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 10px 24px rgba(2, 6, 18, 0.4);
+}
+.nf-newbook:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 24px 44px rgba(2, 6, 18, 0.55), 0 0 22px color-mix(in oklch, var(--nv-primary) 30%, transparent);
+  z-index: 1;
+}
+/* 书架设计感：顶部横梁 + 底部底座（不再只是矩形） */
+.nf-bookshelf::before {
+  content: "";
+  position: absolute; left: 12px; right: 12px; top: 7px; height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--nv-primary) 38%, transparent), transparent);
+  opacity: 0.65;
+  pointer-events: none;
+}
+.nf-bookshelf::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0; height: 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.4));
+  border-radius: 0 0 20px 20px;
+  pointer-events: none;
+}
+/* 书脊纸页层叠纹理 */
+.nf-book3d::before {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3.5px),
+    linear-gradient(90deg, color-mix(in oklch, var(--spine) 28%, #05070f 72%) 0%, color-mix(in oklch, var(--spine) 42%, #0a0e1c 58%) 100%);
+}
+
+/* 纸舟星海舞台：切角棱框 + 折纸角装饰（有棱有角，不堆砌） */
+.nf-boat-stage {
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+  background:
+    linear-gradient(180deg, rgba(10, 14, 28, 0.6), rgba(8, 11, 22, 0.75)),
+    repeating-linear-gradient(90deg, rgba(124, 92, 255, 0.05) 0 1px, transparent 1px 42px);
+}
+.nf-boat-stage::before { /* 左上折纸角 */
+  content: "";
+  position: absolute; left: -1px; top: -1px; z-index: 1; pointer-events: none;
+  border-top: 34px solid color-mix(in oklch, var(--nv-creative) 55%, transparent);
+  border-right: 34px solid transparent;
+  border-radius: 2px 0 0 0;
+}
+.nf-boat-stage::after { /* 右下折纸角 */
+  content: "";
+  position: absolute; right: -1px; bottom: -1px; z-index: 1; pointer-events: none;
+  border-bottom: 26px solid color-mix(in oklch, var(--nv-creative) 40%, transparent);
+  border-left: 26px solid transparent;
+}

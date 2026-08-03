@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.49";
+export const LATEST_VERSION = "v0.46.50";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "全新三档主题系统：夜航（暗色·默认）/ 白昼（浅色）/ 苍青（青绿深色新风格）——主题切换器升级为三档选择器（图标+当前名+弹出菜单），选择持久化在 localStorage('nf-theme')，刷新保持、首屏无闪烁",
-  "苍青主题：整套 Void Glass 令牌换成青绿深色系（主色 oklch(0.70 0.13 200)、创意青、金色强调→亮青、背景深青黑），并保留 dark: 变体保证 shadcn 组件不失效",
-  "入口与说明：首页顶栏新增常驻主题切换按钮（设置旁）；设置页「外观」区改为「界面风格」三档说明；首页右下角 RuiTri + GitHub 署名确认保留",
-  "pipeline 自查全绿：tsc 零错误；路由矩阵全 200（/ /settings /explore /dissect /workshop /recycle /changelog /manifest /workspace/{id}/tables）；首页顶栏 9 个功能按钮 + 书架卡片按钮齐全；SSR 含主题脚本/三档菜单/RuiTri 标记；OPTIMIZATION_PLAN 46 项 ✅ 全闭环",
+  "纸舟交互升级：点击任意纸船或书栏会先弹确认「你确认要进入《书名》吗？」，确认后才进入写作区；鼠标悬浮纸船顶部浮现书名 chip，一眼知道是那本书",
+  "纸舟舞台设计感：海面容器改为切角棱框（六边形切角 + 左上/右下折纸角装饰 + 紫罗兰细纹底），有棱有角不再是矩形堆砌",
+  "我的作品区：新增「+ 新建小说」卡（点进探讨模式）；书名放大加粗一眼可辨（如「探讨中的小说」「仙侠 · 开局骨架」）；hover 每本书呈现不同的「虚空」特效——题材色光圈 + 黑洞渐变，位置随作品序号变化，本本不同",
+  "书架设计感：顶部横梁 + 底部底座 + 书脊纸页层叠纹理，像真的书架；写作页返回按钮补 title/按下反馈（退出写作页返回首页）；tsc 零错误 + 路由全 200 自查通过",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.50",
+    date: "2026-08-03",
+    title: "纸舟/作品区交互与视觉升级（确认进入/悬浮书名/虚空特效/书架设计感）",
+    sections: [
+      {
+        label: "交互优化（用户指令 a/b/c）",
+        items: [
+          "a 写作页返回：Toolbar 返回按钮补 title「退出写作页，返回首页」+ aria-label + active 按下反馈（原 onClick=router.push('/') 本就生效，补全视觉提示）",
+          "b 确认进入：点击纸船（pointerup）或下方书栏，先弹 window.confirm「你确认要进入《书名》吗？」，确认后才 router.push(/workspace/{id})（取消则留在海面）",
+          "c 悬浮见名：pointermove 命中纸船时顶部浮现书名 chip（《书名》悬浮标签，pointer-events-none），移开消失——纸船与书一一对应",
+        ],
+      },
+      {
+        label: "视觉设计（用户指令 2）",
+        items: [
+          "纸舟舞台设计感：容器加 nf-boat-stage——六边形 clip-path 切角棱框 + 左上/右下折纸角（紫罗兰三角）+ 竖向细纹底，有棱有角不再矩形堆砌",
+          "我的作品区：网格首项插入「+ 新建小说」卡（虚线书形，hover 抽书效果，点进 /explore 探讨模式）；ProjectCard 书名放大加粗（text-lg/xl）",
+          "hover 虚空特效：卡片加 .nf-void 层——题材色光圈（--spine 派生）+ 黑洞渐变，位置按作品序号 --vx/--vy 变化，每本书悬浮效果本本不同",
+          "书架设计感：.nf-bookshelf 加顶部横梁（主题色渐变线）+ 底部底座（深色渐变）；书脊加纸页层叠纹理（repeating-linear-gradient）",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200 + /settings /workspace/{id} 200 自查通过；SSR 含 nf-boat-stage 标记（作品区为客户端渲染，SSR 仅骨架屏属正常）",
+          "confirm 用浏览器原生弹窗（轻量）；虚空特效/切角/悬浮 chip 的观感需浏览器实跑与用户验收；线上 Vercel 展示站未自动部署",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.49",
     date: "2026-08-03",
