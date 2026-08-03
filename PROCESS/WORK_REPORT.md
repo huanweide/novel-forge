@@ -937,3 +937,39 @@
 - `.light` 浅色适配靠 `MutationObserver` 切调色板，逻辑写了但未在浅色主题下肉眼比对过对比度。
 - 粒子数量按视口面积动态上限，超大屏（如 4K）粒子密度可能偏稀，属已知可调参数，未针对极端分辨率调过。
 
+---
+
+## 首页 UI 升级·润色修复（v0.46.44 Phase 4）—— 续"继续优化"
+
+### ① 干了什么
+用户说"继续优化，看看原本的能不能继续优化"。我把刚落地的首页升级三阶段代码重新读了一遍做审查，找出一个**致命 bug** 和三处润色，修掉后升 v0.46.44 推上主分支。最严重的是：首页项目卡片其实是**看不见的**。
+
+### ② 为什么这么做
+- **审查比盲改重要（第一性原理）**：上一轮靠"SSR 抓 HTML grep 标记"验证，没有真机跑。条件渲染 + 空依赖 `useEffect` 这种组合坑，光看编译通过是发现不了的——必须顺着"这个 effect 什么时候跑、那时候 DOM 在不在"推一遍。结果真挖出一个让卡片永久隐形的 bug。
+- **润色有针对性**：大屏粒子稀疏、reduced-motion 不跟随系统切换、触屏乱抖、键盘用户删不掉卡片——这些不是"加功能"，是把上一轮诚实边界里自己标注的"待验证/已知可调"补完。
+
+### ③ 怎么做的（方法 + 效果）
+**致命修复 — stagger 观察器时序（v0.46.44 核心）**
+- 根因：`useStaggerOnView()` 用 `useEffect(..., [])` 空依赖，且项目网格 `<div ref={staggerRef}>` 只在 `projects` 加载完成后才渲染（loading 时是骨架屏）。React 提交顺序：首帧 loading→骨架屏，此时 `staggerRef.current` 是 `null`，effect 跑一次直接 `return`；等数据回来网格出现，ref 被赋值，但空依赖的 effect **不会重跑** → IntersectionObserver 从未挂载 → `[data-stagger-item]` 永远拿不到 `is-visible` → CSS `.home-stagger-item{opacity:0}` 让卡片永久隐形。
+- 修法：钩子改成 `useStaggerOnView(ready: boolean)`，依赖 `[ready]`，调用处传 `!loading && projects.length > 0`。数据加载完、网格真正挂载后 effect 才跑，这次 `ref.current` 有值，观察器正常挂上，卡片逐张浮现。reduced-motion 分支也一并走 `ready` 门控。
+
+**粒子场润色（ParticleField.tsx）**
+- 密度：粒子上限 `90→150`、公式 `area/22000→area/16000`。1080p 从 ~94 提到 ~130，4K 从 90 提到上限 150，大屏不再空荡。≤150 时 O(n²) 连线开销仍可忽略，故不上空间网格（避免过度复杂化）。
+- reduced-motion 实时响应：新增 `reduceMotion.addEventListener("change", ...)`，系统设置中途切到"减少动态"→ `stop()`+静态帧；切回→ `start()`。鼠标/聚拢监听改为始终挂载（回调极廉价），动画循环才由 reduced-motion 门控，避免状态不同步。
+- 触屏：视差改为 `pointer:fine` 才做（`if (finePointer)`），手机/平板不抖。
+
+**无障碍（page.tsx ProjectCard）**
+- 删除按钮原本 `opacity-0 group-hover:opacity-100`——键盘 focus 时看不见也点不到。补 `group-focus-within:opacity-100 focus-visible:opacity-100`，键盘 Tab 到卡片即可见可删。
+
+**效果数据**：tsc 零错误（TSC_EXIT=0）；dev(:3001) 首页 HTTP 200、无 `Failed to compile`/运行时错误（SSR 仅含 Next 内置 `error.tsx` 资源引用，非报错）；双 changelog + 代理推送 PUSH_EXIT=0，HEAD=v0.46.44。
+
+### ④ 关键取舍
+- **修 bug 不"顺手重构"**：stagger 只动"加 ready 依赖"这一处最小改动，不动观察器内部逻辑、不动 CSS——降低引入新回归的风险。证据是根因明确（条件渲染 + ref 时序），最小补丁即可根治。
+- **粒子密度提上限但不上空间网格**：150 粒子 O(n²)≈1.1 万次/帧，现代设备毫无压力；上网格是"为未来几千粒子"提前优化，违反"不堆复杂度"，故拒绝。
+- **reduced-motion 监听始终挂载**：看似多挂了事件，但鼠标/聚拢回调只是写两个变量（O(1)），真正耗电的 rAF 循环仍严格门控——用"廉价监听 + 昂贵循环门控"换"设置切换零状态不同步"，划算。
+
+### 诚实边界
+- 卡片可见性修复是**代码审查推导确认**（条件渲染 + ref 时序铁证），未真机逐张点验入场动画，但逻辑上 effect 必然在数据后挂载、观察器必然挂上。
+- 粒子密度/reduced-motion 实时切换/触屏视差行为需浏览器实跑最终确认（本环境无 GUI）。
+- 删除按钮键盘显形经 CSS 类名审查确认，未真机用 Tab 走查过聚焦态渲染。
+
