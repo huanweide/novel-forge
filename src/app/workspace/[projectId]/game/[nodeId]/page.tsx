@@ -280,6 +280,17 @@ export default function GamePage() {
               updatedItems = updatedItems.filter((i) => i.name !== change.name);
             }
           }
+        } else if (change.operation === "equip") {
+          const existing = updatedItems.find((i) => i.name === change.name);
+          if (existing) existing.equipped = true;
+        } else if (change.operation === "discard") {
+          const existing = updatedItems.find((i) => i.name === change.name);
+          if (existing) {
+            existing.quantity -= change.quantity || 1;
+            if (existing.quantity <= 0) {
+              updatedItems = updatedItems.filter((i) => i.name !== change.name);
+            }
+          }
         }
       }
 
@@ -568,9 +579,18 @@ export default function GamePage() {
           {/* 左侧底部控制 */}
           <div className="space-y-2 border-t border-[var(--nv-border-2)] p-3">
             <button
-              onClick={() => {
-                // 回退：移除最后一轮
+              onClick={async () => {
+                // 回退：移除最后一轮，并同步后端删除该轮及之后所有 gameState、回滚 session（阿游 P0-1）
                 if (turns.length > 1) {
+                  const lastRound = turns[turns.length - 1].round;
+                  const sid = state.sessionId;
+                  if (sid) {
+                    try {
+                      await fetch(`/api/game/state?sessionId=${encodeURIComponent(sid)}&round=${lastRound}`, { method: "DELETE" });
+                    } catch {
+                      /* 后端回退失败不阻断前端回退，但导出前建议刷新对账 */
+                    }
+                  }
                   const newTurns = turns.slice(0, -1);
                   setTurns(newTurns);
                   const newNarrative = newTurns.map((t) => t.narrative).join("\n\n");

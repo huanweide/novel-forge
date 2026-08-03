@@ -279,10 +279,13 @@ ${chunkText}
 
         // ── 人物提取 ──
         let chars: Record<string, unknown>[] = [];
+        let failedChunks = 0;
+        let totalChunks = 1;
 
         if (needsChunking && !isCharOnly) {
           // 分块模式：文本切成每CHUNK_SIZE个角色一块
           const chunks = chunkText(text, charBlocks);
+          totalChunks = chunks.length;
           send({ type: "progress", stage: "chunk", message: `📦 分${chunks.length}块处理 · 每块≤${CHUNK_SIZE}个角色`, pct: 5 });
           await new Promise(r => setTimeout(r, 100));
 
@@ -293,6 +296,7 @@ ${chunkText}
 
             const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 32768);
             if (res.error) {
+              failedChunks++;
               send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
               continue;
             }
@@ -302,6 +306,7 @@ ${chunkText}
               chars.push(...pc);
               totalChars += pc.length;
             } catch (e) {
+              failedChunks++;
               send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块JSON解析失败`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
             }
           }
@@ -385,16 +390,19 @@ ${loreText}
 
         send({ type: "progress", stage: "done-pre", message: `${finalChars.length}角色 ${finalLore.length}词条 · ${totalSec}s`, pct: 99 });
 
+        const importStatus = failedChunks === 0 ? "completed" : (failedChunks >= totalChunks ? "failed" : "partial");
         send({
           type: "done",
+          status: importStatus,
+          failedChunks,
           detectedChapters: [],
           extractedCharacters: finalChars,
           extractedLoreEntries: finalLore,
           extractedStyle: style,
-          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, chunked: needsChunking },
+          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, chunked: needsChunking },
         });
         if (taskId) {
-          void prisma.importTask.update({ where: { id: taskId }, data: { status: "completed", progress: 100, result: { characters: finalChars, lore: finalLore, style } as any } }).catch(() => {});
+          void prisma.importTask.update({ where: { id: taskId }, data: { status: importStatus, progress: 100, result: { characters: finalChars, lore: finalLore, style, failedChunks } as any } }).catch(() => {});
         }
 
       } catch (err) {

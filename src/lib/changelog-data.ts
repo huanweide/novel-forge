@@ -25,18 +25,59 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.66";
+export const LATEST_VERSION = "v0.46.67";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "监控盲区彻底清零：import/parse 的 Flash 调用补 recordLlmCall（第6处盲区），babyloreFillAll 失败章不再被永久标记（if(r.ok) 守卫，可重试）——磐石 P0",
-  "数字子串误伤修复：match.ts 纯数字关键词（2049）走词边界判定灭 120499 误命中；OOC 角色名查找改 matchKeyword 灭暴力子串；禁词拉丁短词走边界——青砚 R-F4+OOC",
-  "实体高亮 O(N·L)→O(L+命中)：findEntitiesInText 改单遍正则扫描，长正文高亮不再卡顿，保留最长名优先与边界判定——清览 P1",
-  "表格告警 UI：单章填表卡补 warnings、selfCheckFill 加跨表同名归属校验、LoreTableGrid 问题行红色高亮；游戏选项承接分支+解析健壮（idx 1–6 成块判定）——墨白 F2/F3/F6 + 阿游 P1-1",
+  "一键填表静默丢数据修复（墨白 P0-1）：fill.ts 的 applyOps 改为直接累积改 tables 内 t.rows（同一引用贯穿多章循环），灭「一键填表每章整体覆盖写回、静默丢失前序章」的数据黑洞——tsc 零错误",
+  "CJK2字尾随误命中 + 单字名漏检（青砚 P0-1/P0-2/P1-1）：match.ts 新增 matchNameStrict（CJK2字闭边界 + 单字闭边界检测），trigger/recall 全面接线，灭「李星云剑法」误命中「李星云」与 OOC 单字角色名漏检，不翻案既有 matchKeyword 测试",
+  "实体高亮最长名优先回归（清览 P0-1）：findEntitiesInText 改为先收集所有候选（含重叠，lastIndex=idx+1）再按长度降序+idx升序贪心占用，灭「李星云剑法」误高亮「李星云」这类最长名被短名截断",
+  "import 分块失败如实标记 + 游戏状态断裂三修（磐石 P0-1 + 阿游 P0-2/P0-3）：import/parse 分块 failedChunks 计数 → partial/failed 状态如实上链；游戏 itemChanges 补 equip/discard、两步写包 $transaction、新增 DELETE /api/game/state 回退落库 + 前端回退调接口",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.67",
+    date: "2026-08-04",
+    title: "会员股东 Round 4 实现：一键填表静默丢数据 + CJK2字尾随误命中 + 实体高亮最长名优先回归 + import分块失败标记 + 游戏状态断裂三修（tsc 零错误）",
+    sections: [
+      {
+        label: "一键填表静默丢数据修复（墨白 P0-1）",
+        items: [
+          "fill.ts 的 applyOps 由「rowsCache/getRows 独立副本」模式改为直接累积改 tables 内 t.rows（同一引用贯穿多章循环）：上一章写回后 t.rows 即最新，下一章 applyOps 看到累积结果，灭「一键填表每章整体覆盖写回、静默丢失前序章」的数据黑洞",
+        ],
+      },
+      {
+        label: "CJK2字尾随误命中 + 单字名漏检（青砚 P0-1/P0-2/P1-1）",
+        items: [
+          "match.ts 新增 matchNameStrict：CJK 2字关键词要求闭边界（前后都非 CJK 字符）才命中，灭「李星云剑法」误命中「李星云」这类尾随伪词；单字关键词要求闭边界，灭 OOC 单字角色名（如「林」）漏检",
+          "matchNameStrict 不动 matchKeyword 本体、不翻案既有 match.test.ts，仅在 trigger.ts/recall.ts 的唤起名与世界书/表格行匹配处接线替换，风险隔离",
+        ],
+      },
+      {
+        label: "实体高亮最长名优先回归（清览 P0-1）",
+        items: [
+          "findEntitiesInText 改为先收集所有候选（含重叠，regex.lastIndex=idx+1 不跳整段），再按名称长度降序、idx 升序贪心占用，灭「李星云剑法」误高亮「李星云」这类最长名被短名截断；最终按 start 升序输出，保留 O(L+命中) 复杂度",
+        ],
+      },
+      {
+        label: "import 分块失败如实标记（磐石 P0-1）",
+        items: [
+          "import/parse 分块分支新增 failedChunks/totalChunks 计数，每块 res.error 与 JSON 解析 catch 各加 failedChunks++；importStatus = 全成功 completed / 全失败 failed / 否则 partial，done 事件与 task 更新如实带上 status 与 failedChunks，灭「部分块失败却标记 completed」的误导",
+        ],
+      },
+      {
+        label: "游戏状态断裂三修（阿游 P0-2/P0-3）",
+        items: [
+          "game-engine 的 itemChanges 补 equip（existing.equipped=true）与 discard（减到 0 移除）分支，CI|装备|物品名|数量 与 CI|丢弃|物品名|数量 真实改变背包状态",
+          "gameState.create + gameSession.update 包进 prisma.$transaction，灭两步写中间崩溃导致状态机断裂",
+          "新增 DELETE /api/game/state?sessionId=&round=N：删 ≥round 的 gameState 并重算 currentRound/totalWords/plotProgress 回滚 session；前端回退按钮改为 async 调此接口后再内存裁剪，灭「回退只改 UI 不落库」的假回退",
+          "GameItem 接口加 equipped?: boolean 字段；game-prompts 中文数字选项兼容（candidatePattern 放宽 [一二三四五六]），承接 Round 4 既有改动一并提交",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.66",
     date: "2026-08-03",

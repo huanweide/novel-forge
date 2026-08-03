@@ -58,6 +58,7 @@ export interface GameItem {
   source: string;     // 获得来源描述
   acquiredRound: number;
   owner?: string;     // 归属者（谁的物品），默认「主角」
+  equipped?: boolean; // 是否已装备（阿游 P0-3）
 }
 
 // ─── 物品变动记录 ─────────────────────────────────────────────

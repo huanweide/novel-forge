@@ -47,7 +47,9 @@ const GAME_SYSTEM_PROMPT = `你是一位资深互动小说大师，正在与用�
    ===角色物品变动===
    CI|获得|物品名|数量|归属者（可选，留空默认主角）
    CI|消耗|物品名|数量
-   说明：归属者填「主角」或具体角色名（如「李尘」），用于区分背包里谁的物品。
+   CI|装备|物品名|数量
+   CI|丢弃|物品名|数量
+   说明：归属者填「主角」或具体角色名（如「李尘」），用于区分背包里谁的物品；装备/丢弃同样通过 CI| 标记，引擎会真实改变背包状态（阿游 P0-3）。
 8. 每轮更新情节进度（选项之前输出）：
    【情节进度：X%】
 9. 如果累计字数接近或超过 {maxWords} 字的限制，应该开始收束剧情，给出"走向章节结尾"的选项
@@ -190,11 +192,17 @@ export function parseGameOutput(rawOutput: string): {
   // 基于「连续编号行块」判定选项区：避免把正文里的编号列表（如"1. 首先…"）误当选项；
   // 编号放宽 1–6；超界编号直接丢弃不残留；同一编号只取首次出现。
   const lines = narrative.split("\n");
-  const candidatePattern = /^(\d{1,2})[\.、\s]+(.+)$/;
+  // 兼容阿拉伯数字与中文数字（一~六）编号，灭「模型用中文数字列选项却被当空、退回通用选项」的体验退化（阿游 Round4）
+  const candidatePattern = /^([0-9]{1,2}|[一二三四五六])[\.、\s]+(.+)$/;
+  const cnNum: Record<string, number> = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6 };
   const candidates: Array<{ idx: number; text: string; lineNo: number }> = [];
   lines.forEach((line, i) => {
     const m = candidatePattern.exec(line);
-    if (m) candidates.push({ idx: parseInt(m[1], 10), text: m[2].trim(), lineNo: i });
+    if (m) {
+      const raw = m[1];
+      const idx = /^\d+$/.test(raw) ? parseInt(raw, 10) : (cnNum[raw] ?? -1);
+      if (idx > 0) candidates.push({ idx, text: m[2].trim(), lineNo: i });
+    }
   });
 
   // 取最靠后的连续候选块（选项通常位于文末）

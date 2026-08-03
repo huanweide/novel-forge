@@ -159,36 +159,43 @@ export function findEntitiesInText(
 
   if (names.length === 0) return [];
 
-  // 单遍正则扫描：一次遍历文本即可命中所有实体名，复杂度 O(L + 命中数)，
+  // 单遍正则扫描：收集所有候选（含重叠），复杂度 O(L + 命中数)，
   // 取代原先「逐实体名 × 逐处 indexOf + 占用切片」的 O(N·L)（清览 P1）。
   const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  // 长名排在前 → 同一位置正则优先匹配更长的名；配合 occupied 防止短名覆盖已匹配的长名区间。
+  // 长名排在前 → 同一位置正则优先匹配更长的名；为捕获被更长名覆盖的较短名，
+  // 收集候选时每次仅前进一步（lastIndex = idx+1），确保重叠候选全部入围（清览 P0-1 修复）。
   const regex = new RegExp("(" + escaped.join("|") + ")", "g");
   const byName = new Map(names.map((n) => [n, entityMap.get(n)!]));
-  const occupied = new Array(text.length).fill(false);
-  const matches: EntityMatch[] = [];
 
+  // 1) 收集所有候选（含重叠）：每个匹配位置仅前进一步，捕获「李星云剑法」中夹着的「星云剑法」。
+  const candidates: { name: string; idx: number; end: number }[] = [];
   let m: RegExpExecArray | null;
   while ((m = regex.exec(text)) !== null) {
     const name = m[0];
     const idx = m.index;
-    const end = idx + name.length;
-
-    // 已占用区间跳过（最长名优先：短名若落在已匹配长名区间内则不重复匹配）。
-    if (occupied.slice(idx, end).some(Boolean)) continue;
-
-    const prevChar = text[idx - 1];
-    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar);
-    // 头边界必查（防止把别的词中间的片段误当实体）；尾边界对 2 字名放宽（只查头边界），
-    // 3 字及以上本来就不查边界。解决「2 字实体名几乎不高亮」（清览 P1）。
-    const passesBoundary = name.length >= 3 ? true : isHeadBoundary;
-
-    if (passesBoundary) {
-      const entity = byName.get(name)!;
-      matches.push({ name, color: entity.color, type: entity.type, category: entity.category, start: idx, end });
-      for (let i = idx; i < end; i++) occupied[i] = true;
-    }
+    candidates.push({ name, idx, end: idx + name.length });
+    regex.lastIndex = idx + 1;
   }
 
+  // 2) 最长名优先 + 左优先：降序排长度，等长按 idx 升序。
+  candidates.sort((a, b) => b.name.length - a.name.length || a.idx - b.idx);
+
+  // 3) 贪心占用：长名先占区间，短名若落在已占区间则跳过（最长名优先，清览 P0-1）。
+  const occupied = new Array(text.length).fill(false);
+  const matches: EntityMatch[] = [];
+  for (const c of candidates) {
+    if (occupied.slice(c.idx, c.end).some(Boolean)) continue;
+    const prevChar = text[c.idx - 1];
+    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar);
+    // 头边界必查（防片段误当实体）；尾边界对 2 字名放宽，3 字及以上不查边界（清览 P1）。
+    const passesBoundary = c.name.length >= 3 ? true : isHeadBoundary;
+    if (!passesBoundary) continue;
+    const entity = byName.get(c.name)!;
+    matches.push({ name: c.name, color: entity.color, type: entity.type, category: entity.category, start: c.idx, end: c.end });
+    for (let i = c.idx; i < c.end; i++) occupied[i] = true;
+  }
+
+  // 按出现顺序输出（前端高亮依赖 start 升序）
+  matches.sort((a, b) => a.start - b.start);
   return matches;
 }

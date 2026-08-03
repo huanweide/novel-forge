@@ -2,6 +2,15 @@
 
 ---
 
+## v0.46.67 — 2026-08-04
+**会员股东 Round 4 实现：一键填表静默丢数据 + CJK2字尾随误命中 + 实体高亮最长名优先回归 + import分块失败标记 + 游戏状态断裂三修（tsc 零错误）**
+
+- 一键填表静默丢数据修复（墨白 P0-1）：fill.ts 的 applyOps 改为直接累积改 tables 内 t.rows（同一引用贯穿多章循环），上一章写回后 t.rows 即最新、下一章看到累积结果，灭「一键填表每章整体覆盖写回、静默丢失前序章」的数据黑洞
+- CJK2字尾随误命中 + 单字名漏检（青砚 P0-1/P0-2/P1-1）：match.ts 新增 matchNameStrict（CJK2字闭边界 + 单字闭边界检测），trigger.ts/recall.ts 全面接线，灭「李星云剑法」误命中「李星云」与 OOC 单字角色名漏检；不改动 matchKeyword 本体、不翻案既有测试
+- 实体高亮最长名优先回归（清览 P0-1）：findEntitiesInText 改为先收集所有候选（含重叠，lastIndex=idx+1）再按长度降序+idx升序贪心占用，灭「李星云剑法」误高亮「李星云」这类最长名被短名截断，保留 O(L+命中) 复杂度
+- import 分块失败如实标记（磐石 P0-1）：import/parse 分块 failedChunks/totalChunks 计数，每块失败累加，importStatus=全成功 completed / 全失败 failed / 否则 partial，done 事件与 task 更新如实带上 status 与 failedChunks，灭「部分失败却标 completed」的误导
+- 游戏状态断裂三修（阿游 P0-2/P0-3）：game-engine 的 itemChanges 补 equip/discard 分支（CI|装备/丢弃 真实改变背包）；gameState.create+gameSession.update 包 $transaction 灭两步写断裂；新增 DELETE /api/game/state 回退落库重算 currentRound/totalWords/plotProgress，前端回退按钮 async 调接口灭假回退；GameItem 加 equipped 字段、game-prompts 中文数字选项兼容一并提交
+
 ## v0.46.66 — 2026-08-03
 **会员股东 Round 3 实现：监控第6盲区 + 数字子串误伤 + 实体高亮 O(N·L) + 表格告警标红 + 游戏选项承接（tsc 零错误）**
 

@@ -254,6 +254,19 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
           updatedItems = updatedItems.filter((i) => i.name !== change.name);
         }
       }
+    } else if (change.operation === "equip") {
+      // 装备：标记该物品为已装备（阿游 P0-3 修复）
+      const existing = updatedItems.find((i) => i.name === change.name);
+      if (existing) existing.equipped = true;
+    } else if (change.operation === "discard") {
+      // 丢弃：等同消耗，减到 0 即从背包移除（阿游 P0-3 修复）
+      const existing = updatedItems.find((i) => i.name === change.name);
+      if (existing) {
+        existing.quantity -= change.quantity || 1;
+        if (existing.quantity <= 0) {
+          updatedItems = updatedItems.filter((i) => i.name !== change.name);
+        }
+      }
     }
   }
 
@@ -282,32 +295,33 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
   const newTotalWords = session.totalWords + wordCount;
   const finalProgress = parsed.plotProgress > 0 ? parsed.plotProgress : session.plotProgress;
 
-  await prisma.gameState.create({
-    data: {
-      sessionId: session.id,
-      round: newRound,
-      playerAction:
-        input.selectedOption != null
-          ? `选择选项${input.selectedOption}${selectedOptionText ? `：${selectedOptionText}` : ""}`
-          : (input.actionText || ACTION_TYPE_LABELS[input.actionType] || "自定义行动"),
-      narrative: parsed.narrative,
-      options: finalOptions as any,
-      entities: allEntities as any,
-      items: updatedItems as any,
-      plotProgress: finalProgress,
-      wordCount,
-    },
-  });
-
-  // 8. 更新会话
-  await prisma.gameSession.update({
-    where: { id: session.id },
-    data: {
-      currentRound: newRound,
-      totalWords: newTotalWords,
-      plotProgress: finalProgress,
-    },
-  });
+  // 7→8 两步写包进事务：避免「gameState 已落库、session 未更新」之间断流留下孤儿态（阿游 P0-2）。
+  await prisma.$transaction([
+    prisma.gameState.create({
+      data: {
+        sessionId: session.id,
+        round: newRound,
+        playerAction:
+          input.selectedOption != null
+            ? `选择选项${input.selectedOption}${selectedOptionText ? `：${selectedOptionText}` : ""}`
+            : (input.actionText || ACTION_TYPE_LABELS[input.actionType] || "自定义行动"),
+        narrative: parsed.narrative,
+        options: finalOptions as any,
+        entities: allEntities as any,
+        items: updatedItems as any,
+        plotProgress: finalProgress,
+        wordCount,
+      },
+    }),
+    prisma.gameSession.update({
+      where: { id: session.id },
+      data: {
+        currentRound: newRound,
+        totalWords: newTotalWords,
+        plotProgress: finalProgress,
+      },
+    }),
+  ]);
 
   // 9. 产出完整回合结果
   yield {

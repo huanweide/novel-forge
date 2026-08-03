@@ -9,7 +9,7 @@
  */
 
 import type { LorebookEntry } from "@/core/types";
-import { matchKeyword, scoreKeyword, dedupSubstring } from "@/core/text/match";
+import { scoreKeyword, dedupSubstring, matchNameStrict } from "@/core/text/match";
 
 /**
  * 扫描文本中的触发词，返回命中的所有世界书词条
@@ -34,7 +34,7 @@ export function matchLoreEntries(
     for (const key of entry.keys) {
       const k = (key || "").trim();
       if (!k) continue;
-      if (matchKeyword(text, k)) hitKeys.push(k);
+      if (matchNameStrict(text, k)) hitKeys.push(k);
     }
     if (hitKeys.length === 0) continue;
 
@@ -66,7 +66,7 @@ export function findCharacterByName(
     const names = [char.name, ...char.aliases];
     for (const name of names) {
       // 改用词边界匹配（matchKeyword），避免「阿游」暴力子串误命中「阿克游说」这类 OOC 假阳性。
-      if (matchKeyword(text, name)) {
+      if (matchNameStrict(text, name)) {
         found.push(char.id);
         break;
       }

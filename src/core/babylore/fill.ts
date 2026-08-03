@@ -252,20 +252,16 @@ async function applyOps(
   _chapterText: string,
 ): Promise<{ applied: number; appliedNames: { table: string; value: string }[] }> {
   const byKey = new Map(tables.map((t) => [t.key, t]));
-  const rowsCache = new Map<string, any[]>();
-  const getRows = (t: TableDef): any[] => {
-    if (!rowsCache.has(t.id)) {
-      rowsCache.set(t.id, Array.isArray(t.rows) ? [...(t.rows as any[])] : []);
-    }
-    return rowsCache.get(t.id)!;
-  };
   let applied = 0;
   const appliedNames: { table: string; value: string }[] = [];
 
   for (const op of ops) {
     const t = byKey.get(op.table);
     if (!t) continue;
-    const rows = getRows(t);
+    // 直接累积修改 tables 内的 t.rows（同一引用贯穿多章循环）：
+    // 上一章写回后 t.rows 即最新，下一章 applyOps 看到累积结果，
+    // 灭「一键填表每章整体覆盖写回、静默丢失前序章」的缺陷（墨白 P0-1）。
+    const rows: any[] = Array.isArray(t.rows) ? t.rows : (t.rows = []);
     const idCol = getIdentityCol(t);
 
     if (op.op === "insert") {

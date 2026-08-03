@@ -72,6 +72,60 @@ export function matchKeyword(text: string, keyword: string): boolean {
   return false;
 }
 
+/**
+ * 严格边界匹配（角色名 / 短 key 召回专用）——堵住 CJK 2字「任一侧边界(`||`)」尾随/句末误命中，
+ * 并修复单字角色名被静默丢弃（OOC 漏检，青砚 P1-1）。
+ *
+ * 规则：
+ *  - 长度 1：必须「独立成词」——匹配处前后都不是汉字相邻（或位于边界/标点）才认，
+ *    既堵「林」命中「森林」，又保留单字真名检测。
+ *  - CJK 2字：在 matchKeyword 命中基础上追加「前后都不是汉字相邻」（闭边界）过滤，
+ *    否则视为更长汉字串的一部分（如「云山」夹在「青云山」）而拒绝（青砚 P0-1/P0-2）。
+ *  - 其余（≥3 非纯数字 / 纯数字 / 英文 2字两侧边界）：完全沿用 matchKeyword 行为，无回归。
+ */
+export function matchNameStrict(text: string, keyword: string): boolean {
+  if (!keyword || !text) return false;
+  const hay = text.toLowerCase();
+  const needle = keyword.toLowerCase();
+  if (!hay.includes(needle)) return false;
+
+  const len = needle.length;
+  const keywordIsCjk = needle.split("").every(isCjkChar);
+
+  // 闭边界判定：匹配处前后字符若存在，都不是 CJK 汉字（即独立成词 / 词边界）。
+  const isClosedBoundary = (idx: number): boolean => {
+    const before = idx > 0 ? hay[idx - 1] : "";
+    const after = idx + len < hay.length ? hay[idx + len] : "";
+    const beforeCjk = before !== "" && isCjkChar(before);
+    const afterCjk = after !== "" && isCjkChar(after);
+    return !beforeCjk && !afterCjk;
+  };
+
+  if (len === 1) {
+    // 单字：逐位置检查，任一处独立成词即认（青砚 P1-1）。
+    let idx = hay.indexOf(needle);
+    while (idx >= 0) {
+      if (isClosedBoundary(idx)) return true;
+      idx = hay.indexOf(needle, idx + 1);
+    }
+    return false;
+  }
+
+  // 长度 ≥2：先走共享 matchKeyword（含纯数字边界、英文2字两侧边界、≥3 直命中），
+  // 再对 CJK 2字追加闭边界过滤（青砚 P0-1/P0-2）。
+  const base = matchKeyword(text, keyword);
+  if (!base) return false;
+  if (len === 2 && keywordIsCjk) {
+    let idx = hay.indexOf(needle);
+    while (idx >= 0) {
+      if (isClosedBoundary(idx)) return true;
+      idx = hay.indexOf(needle, idx + 1);
+    }
+    return false;
+  }
+  return base;
+}
+
 /** 关键词特异性打分：越长越具体，单字/空返回 0（不参与召回） */
 export function scoreKeyword(keyword: string): number {
   const len = keyword ? keyword.length : 0;

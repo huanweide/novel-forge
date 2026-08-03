@@ -9,7 +9,7 @@
 // v0.46.63 升级：改用词边界匹配（src/core/text/match），灭掉「林」误命中「森林」这类瞎匹配；
 // 并对同一词条/行的命中关键词做「最长匹配优先」去重。
 
-import { matchKeyword, dedupSubstring, scoreKeyword } from "@/core/text/match";
+import { dedupSubstring, scoreKeyword, matchNameStrict } from "@/core/text/match";
 
 export interface RecallItem {
   source: "lorebook" | "table";
@@ -34,7 +34,7 @@ export function recallContext(
   for (const e of lorebook) {
     if (e.enabled === false) continue;
     const keys: string[] = e.keys || [];
-    const hitKeys = keys.filter((k) => k && matchKeyword(text, k));
+    const hitKeys = keys.filter((k) => k && matchNameStrict(text, k));
     if (hitKeys.length === 0) continue;
     // 最长匹配优先：被更长命中关键词包含的短词剔除（如「青龙」被「青龙镇」包含）
     const kept = dedupSubstring(hitKeys);
@@ -51,7 +51,7 @@ export function recallContext(
       const hitKeys: string[] = [];
       for (const kc of keyCols) {
         const v = r[kc];
-        if (v && typeof v === "string" && v.length >= 2 && matchKeyword(text, v)) {
+        if (v && typeof v === "string" && v.length >= 2 && matchNameStrict(text, v)) {
           hitKeys.push(v);
         }
       }
