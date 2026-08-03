@@ -32,15 +32,16 @@ const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 // ─── 船型系统（BoatFactory，参数驱动，≤6 种几何） ──────────────
 type BoatType = "wupeng" | "tower" | "sail" | "fishing" | "dragon" | "mech";
 const TYPE_NAMES: Record<BoatType, string> = {
-  wupeng: "乌篷船", tower: "楼船", sail: "帆船", fishing: "渔船", dragon: "龙舟", mech: "机关舟",
+  wupeng: "黑珍珠号", tower: "复仇女王号", sail: "飞翔的荷兰人", fishing: "航空母舰", dragon: "驱逐舰", mech: "核潜艇",
 };
-// 题材 → 船型映射（张雪峰语义）；未命中回退 wupeng（不新增第 7 种几何）
+// 题材 → 名船映射（船型即语义）；未命中回退 wupeng（黑珍珠号）
 const GENRE_TO_TYPE: Record<string, BoatType> = {
   武侠: "wupeng", 言情: "wupeng", 爱情: "wupeng", 田园: "wupeng", 古典: "wupeng", 市井: "wupeng",
   仙侠: "tower", 玄幻: "tower", 历史: "tower", 奇幻: "tower",
   冒险: "sail", 西幻: "sail", 翻译: "sail", 成长: "sail",
-  悬疑: "fishing", 灵异: "fishing", 恐怖: "fishing",
-  科幻: "mech", 推理: "mech",
+  科幻: "fishing", 军事: "fishing", 游戏: "fishing", 赛博: "fishing",
+  推理: "dragon", 都市: "dragon", 竞技: "dragon",
+  悬疑: "mech", 灵异: "mech", 恐怖: "mech", 谍战: "mech",
 };
 function boatTypeFor(genre?: string[]): BoatType {
   if (genre) for (const g of genre) if (GENRE_TO_TYPE[g]) return GENRE_TO_TYPE[g];
@@ -122,28 +123,22 @@ function makeHull(L: number, W: number, H: number, opt: {
   return g;
 }
 
-function makeNetTexture(): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const x = c.getContext("2d")!;
-  x.clearRect(0, 0, 64, 64);
-  x.strokeStyle = "rgba(180,200,220,0.85)"; x.lineWidth = 1;
-  for (let i = 0; i <= 64; i += 8) {
-    x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 64); x.stroke();
-    x.beginPath(); x.moveTo(0, i); x.lineTo(64, i); x.stroke();
-  }
-  const t = new THREE.CanvasTexture(c); t.needsUpdate = true; return t;
-}
 
 // ─── 部件库（共享材质，按船型组合，不写新类） ──────────────────
 // 纯色材质：模块顶层创建安全（不触 document），SSR 可用
-const METAL_MAT = new THREE.MeshStandardMaterial({ color: 0x2a3340, flatShading: true, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide }); // 机关舟金属壳
-const DARK_MAT = new THREE.MeshStandardMaterial({ color: 0x1a1f2b, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide }); // 暗部件（檐/窗/舷边/龙骨）
-const COLD_MAT = new THREE.MeshBasicMaterial({ color: 0x6fd6ff }); // 冷蓝发光（机关舟/龙眼）
-const FLAG_MAT = new THREE.MeshStandardMaterial({ color: 0x7a3a3a, roughness: 0.7, metalness: 0.0, side: THREE.DoubleSide }); // 低饱和墨红，楼船旗
-const CORE_WARM = new THREE.MeshBasicMaterial({ color: 0xfff2d8 }); // 暖白船头灯（非机关舟）
+const BLACK_MAT = new THREE.MeshStandardMaterial({ color: 0x181820, roughness: 0.45, metalness: 0.25, side: THREE.DoubleSide }); // 黑珍珠号/复仇女王号 船体+黑帆
+const GOLD_MAT = new THREE.MeshStandardMaterial({ color: 0xd9a441, roughness: 0.35, metalness: 0.6 }); // 金饰（船艏像/艉楼/炮窗框）
+const GHOST_MAT = new THREE.MeshStandardMaterial({ color: 0x2e3a42, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide }); // 飞翔的荷兰人 船体
+const GHOST_SAIL_MAT = new THREE.MeshStandardMaterial({ color: 0x9aa4a8, roughness: 0.9, transparent: true, opacity: 0.72, side: THREE.DoubleSide }); // 破帆
+const GHOST_GLOW = new THREE.MeshBasicMaterial({ color: 0x5dffd0 }); // 荷兰人 幽绿发光
+const DECK_MAT = new THREE.MeshStandardMaterial({ color: 0x4a505c, roughness: 0.85, metalness: 0.1 }); // 航母甲板
+const HULL_GREY_MAT = new THREE.MeshStandardMaterial({ color: 0x58606e, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }); // 军舰舰体（航母/驱逐舰）
+const METAL_MAT = new THREE.MeshStandardMaterial({ color: 0x2a3340, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide }); // 深灰金属（潜艇/上层建筑）
+const DARK_MAT = new THREE.MeshStandardMaterial({ color: 0x141a26, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide }); // 暗部（炮门/缝隙）
+const COLD_MAT = new THREE.MeshBasicMaterial({ color: 0x6fd6ff }); // 冷蓝发光（点缀）
+const CORE_WARM = new THREE.MeshBasicMaterial({ color: 0xfff2d8 }); // 暖白船头灯
 
-// 带纹理材质：贴图依赖 document（canvas），仅在客户端（useEffect 内 createBoat）惰性构建，SSR 安全
+// 纹理材质：桅杆木纹（贴图依赖 document，客户端惰性构建，SSR 安全）
 let _woodTex: THREE.CanvasTexture | null = null;
 function getWoodTex(): THREE.CanvasTexture { // 木纹：深棕底 + 深浅竖木纹
   if (!_woodTex) {
@@ -163,133 +158,55 @@ function getWoodTex(): THREE.CanvasTexture { // 木纹：深棕底 + 深浅竖�
   }
   return _woodTex;
 }
-let _sailTex: THREE.CanvasTexture | null = null;
-function getSailTex(): THREE.CanvasTexture { // 帆布纹：米白底 + 斜织细纹
-  if (!_sailTex) {
-    const c = document.createElement("canvas"); c.width = c.height = 64;
-    const x = c.getContext("2d")!;
-    x.fillStyle = "#e3e6ec"; x.fillRect(0, 0, 64, 64);
-    x.strokeStyle = "rgba(140,146,160,0.26)"; x.lineWidth = 1;
-    for (let i = -64; i < 64; i += 6) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 64, 64); x.stroke(); }
-    for (let i = -64; i < 64; i += 6) { x.beginPath(); x.moveTo(i, 64); x.lineTo(i + 64, 0); x.stroke(); }
-    _sailTex = new THREE.CanvasTexture(c); _sailTex.needsUpdate = true;
-  }
-  return _sailTex;
-}
-let _bambooTex: THREE.CanvasTexture | null = null;
-function getBambooTex(): THREE.CanvasTexture { // 竹篷纹：深色底 + 竖向竹篾
-  if (!_bambooTex) {
-    const c = document.createElement("canvas"); c.width = 64; c.height = 64;
-    const x = c.getContext("2d")!;
-    x.fillStyle = "#2b313d"; x.fillRect(0, 0, 64, 64);
-    for (let i = 0; i < 64; i += 6) { x.fillStyle = "rgba(58,64,78,0.75)"; x.fillRect(i, 0, 2.5, 64); }
-    _bambooTex = new THREE.CanvasTexture(c); _bambooTex.needsUpdate = true;
-  }
-  return _bambooTex;
-}
-let _hullMat: THREE.MeshStandardMaterial | null = null;
-function getHullMat(): THREE.MeshStandardMaterial { // 船体：浅木色木纹（真实木船）
-  if (!_hullMat) _hullMat = new THREE.MeshStandardMaterial({ map: getWoodTex(), color: 0x7d6b52, flatShading: true, roughness: 0.88, metalness: 0.0, side: THREE.DoubleSide });
-  return _hullMat;
-}
 let _woodMat: THREE.MeshStandardMaterial | null = null;
-function getWoodMat(): THREE.MeshStandardMaterial { // 木料：深木纹（桅/橹/凳/鼓）
+function getWoodMat(): THREE.MeshStandardMaterial { // 木料（桅杆）
   if (!_woodMat) _woodMat = new THREE.MeshStandardMaterial({ map: getWoodTex(), color: 0x4a4133, roughness: 0.85, metalness: 0.0 });
   return _woodMat;
 }
-let _sailMat: THREE.MeshStandardMaterial | null = null;
-function getSailMat(): THREE.MeshStandardMaterial { // 帆：帆布纹 + 近不透
-  if (!_sailMat) _sailMat = new THREE.MeshStandardMaterial({ map: getSailTex(), color: 0xe3e6ec, roughness: 0.9, metalness: 0.0, transparent: true, opacity: 0.97, side: THREE.DoubleSide });
-  return _sailMat;
-}
-let _canopyMat: THREE.MeshStandardMaterial | null = null;
-function getCanopyMat(): THREE.MeshStandardMaterial { // 篷：竹篾
-  if (!_canopyMat) _canopyMat = new THREE.MeshStandardMaterial({ map: getBambooTex(), color: 0x2b313d, roughness: 0.88, metalness: 0.0, side: THREE.DoubleSide });
-  return _canopyMat;
-}
-// 渔网材质（惰性，避免 SSR 报错）
-let _netMat: THREE.MeshStandardMaterial | null = null;
-function getNetMat(): THREE.MeshStandardMaterial {
-  if (!_netMat) {
-    _netMat = new THREE.MeshStandardMaterial({ map: makeNetTexture(), transparent: true, side: THREE.DoubleSide, roughness: 0.9 });
-  }
-  return _netMat;
-}
 
-// ─── 真实船部件（实体几何，带真实材质） ───────────────────────
-// 半圆柱篷（轴沿 X，弧朝上）
-function makeCanopy(r: number, len: number): THREE.Mesh {
-  const geo = new THREE.CylinderGeometry(r, r, len, 16, 1, true, 0, Math.PI);
-  const m = new THREE.Mesh(geo, getCanopyMat());
-  m.rotateZ(Math.PI / 2);
-  m.rotateX(-Math.PI / 2);
-  return m;
+// ─── 现代名船部件（实体几何，低模但特征鲜明） ────────────────
+// 桅杆
+function makeMast(len: number, r = 0.035): THREE.Mesh {
+  return new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.3, len, 7), getWoodMat());
 }
-// 受风帆（中间鼓起）
-function makeSail(w: number, h: number): THREE.Mesh {
+// 帆（中间微鼓）
+function makeSailPnl(w: number, h: number, mat: THREE.Material): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(w, h, 6, 6);
   const p = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i);
-    const belly = 0.28 * (1 - Math.pow((x / (w / 2)), 2)) * (1 - Math.pow((y / (h / 2)), 2));
+    const belly = 0.16 * (1 - Math.pow((x / (w / 2)), 2)) * (1 - Math.pow((y / (h / 2)), 2));
     p.setZ(i, belly);
   }
   geo.computeVertexNormals();
-  return new THREE.Mesh(geo, getSailMat());
+  return new THREE.Mesh(geo, mat);
 }
-// 楼船：多层甲板 + 飞檐（四角上翘）+ 暗窗 + 顶饰
-function makeTower(levels: number, w: number): THREE.Group {
-  const grp = new THREE.Group();
-  let y = 0;
-  const lh = 0.3;
-  for (let i = 0; i < levels; i++) {
-    const lw = w * (1 - i * 0.16);
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(lw, lh, lw * 0.7), getHullMat());
-    floor.position.y = y + lh / 2;
-    grp.add(floor);
-    const eave = new THREE.Mesh(new THREE.BoxGeometry(lw * 1.18, 0.05, lw * 0.84), DARK_MAT);
-    eave.position.y = y + lh + 0.02;
-    grp.add(eave);
-    const cw = lw * 0.5;
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { // 飞檐四角上翘
-      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.12), DARK_MAT);
-      tip.position.set(sx * cw, y + lh + 0.06, sz * cw * 0.7);
-      tip.rotation.z = sx * 0.5; tip.rotation.x = sz * 0.5;
-      grp.add(tip);
-    }
-    for (const sx of [-1, 1]) { // 正面暗窗
-      const win = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.04), DARK_MAT);
-      win.position.set(sx * lw * 0.28, y + lh / 2, lw * 0.35 + 0.01);
-      grp.add(win);
-    }
-    y += lh + 0.06;
-  }
-  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 6), getWoodMat());
-  finial.position.y = y + 0.1;
-  grp.add(finial);
-  return grp;
+// 舰载机（航母甲板上的"子舰"）
+function makeJet(): THREE.Mesh {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.06), HULL_GREY_MAT);
+  body.position.y = 0.03;
+  g.add(body);
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.015, 0.3), HULL_GREY_MAT);
+  wing.position.y = 0.045;
+  g.add(wing);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.06, 0.04), HULL_GREY_MAT);
+  tail.position.set(-0.13, 0.06, 0);
+  g.add(tail);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.06), HULL_GREY_MAT); // 容器
+  m.add(g);
+  return m;
 }
-// 龙首：锥头 + 下颌 + 双眼 + 角 + 鬃毛
-function makeDragonHead(): THREE.Group {
-  const grp = new THREE.Group();
-  const head = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 6), getHullMat());
-  head.rotation.z = -Math.PI / 2; head.position.set(0.25, 0.1, 0);
-  grp.add(head);
-  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.14), getHullMat());
-  jaw.position.set(0.42, -0.02, 0); jaw.rotation.z = -0.2;
-  grp.add(jaw);
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), COLD_MAT);
-  eye.position.set(0.34, 0.16, 0.1); grp.add(eye);
-  const eye2 = eye.clone(); eye2.position.z = -0.1; grp.add(eye2);
-  const horn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 5), getWoodMat());
-  horn.position.set(0.2, 0.34, 0); horn.rotation.z = 0.5;
-  grp.add(horn);
-  for (let i = 0; i < 4; i++) { // 鬃毛
-    const m = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.18, 4), getWoodMat());
-    m.position.set(0.1 - i * 0.07, 0.26 + i * 0.02, 0); m.rotation.z = 0.3;
-    grp.add(m);
-  }
-  return grp;
+// 舰炮（驱逐舰）
+function makeTurret(): THREE.Group {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.16), DARK_MAT);
+  base.position.y = 0.05;
+  g.add(base);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), DARK_MAT);
+  barrel.rotation.z = Math.PI / 2; barrel.position.set(0.2, 0.09, 0);
+  g.add(barrel);
+  return g;
 }
 
 interface BuiltBoat { group: THREE.Group; bowLocal: THREE.Vector3; }
@@ -302,149 +219,170 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
   const addEdges = (geo: THREE.BufferGeometry, col: [number, number, number], parent: THREE.Object3D) => {
     const e = new THREE.LineSegments(
       new THREE.EdgesGeometry(geo, 22),
-      new THREE.LineBasicMaterial({ color: new THREE.Color(col[0], col[1], col[2]), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending })
+      new THREE.LineBasicMaterial({ color: new THREE.Color(col[0], col[1], col[2]), transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending })
     );
     parent.add(e);
   };
-  // 船头灯柱：给真灯一个"灯座"，让光影有承接（费曼：灯亮则船身受光）
   const lantern = (x: number, y: number, z: number): THREE.Vector3 => {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.22, 5), DARK_MAT);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 5), DARK_MAT);
     post.position.set(x, y, z);
     group.add(post);
-    return new THREE.Vector3(x, y + 0.14, z);
+    return new THREE.Vector3(x, y + 0.13, z);
+  };
+  // 黑帆三桅（黑珍珠号 / 复仇女王号共用骨架）
+  const rigBlack = (L: number, W: number, H: number, opt: { sheer?: number; bottomTaper?: number; gold?: boolean } = {}) => {
+    const hull = makeHull(L, W, H, { sheer: opt.sheer ?? 0.28, bottomTaper: opt.bottomTaper ?? 0.42, segsX: 12, segsZ: 5 });
+    const body = new THREE.Mesh(hull, BLACK_MAT);
+    group.add(body); addEdges(hull, color, body);
+    const masts: Array<[number, number]> = [[-0.85, 1.6], [0.0, 1.9], [0.75, 1.4]];
+    for (const [mx, mh] of masts) {
+      const mast = makeMast(mh);
+      mast.position.set(mx, 0.45 + mh / 2, 0);
+      group.add(mast);
+      const sail = makeSailPnl(0.9, mh * 0.72, BLACK_MAT);
+      sail.position.set(mx - 0.02, 0.45 + mh * 0.5, 0.01);
+      group.add(sail);
+    }
+    const sternSail = makeSailPnl(0.75, 1.0, BLACK_MAT);
+    sternSail.rotation.y = 0.35; sternSail.position.set(0.95, 1.0, 0);
+    group.add(sternSail);
+    if (opt.gold) { // 金饰
+      const bowOrn = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), GOLD_MAT);
+      bowOrn.position.set(L / 2 + 0.05, 0.42, 0);
+      group.add(bowOrn);
+      const sternCastle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.5), GOLD_MAT);
+      sternCastle.position.set(-L / 2 + 0.2, 0.55, 0);
+      group.add(sternCastle);
+      for (const sz of [-1, 1]) for (let i = 0; i < 3; i++) { // 金框炮门
+        const port = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.03), GOLD_MAT);
+        port.position.set(L / 2 - 0.35 - i * 0.45, 0.28, sz * (W / 2 + 0.01));
+        group.add(port);
+      }
+    }
+    return lantern(L / 2 + 0.05, 0.55, 0);
   };
 
-  if (type === "wupeng") {
-    const hull = makeHull(2.0, 0.8, 0.5, { sheer: 0.22, bottomTaper: 0.4 });
-    const body = new THREE.Mesh(hull, getHullMat());
+  if (type === "wupeng") { // 黑珍珠号：黑色三桅 + 黑帆 + 加勒比最快船
+    bowLocal = rigBlack(2.6, 0.85, 0.75, { sheer: 0.3, bottomTaper: 0.4, gold: true });
+  } else if (type === "tower") { // 复仇女王号：黑胡子旗舰，黑帆 + 金饰 + 骷髅
+    bowLocal = rigBlack(2.5, 0.95, 0.85, { sheer: 0.26, bottomTaper: 0.45, gold: true });
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xe8e4d8, roughness: 0.4 }));
+    skull.position.set(-1.1, 1.15, 0);
+    group.add(skull);
+  } else if (type === "sail") { // 飞翔的荷兰人：幽灵船，青灰船体 + 破帆 + 幽绿光
+    const hull = makeHull(2.6, 0.9, 0.8, { sheer: 0.35, bottomTaper: 0.4, segsX: 12, segsZ: 5 });
+    const body = new THREE.Mesh(hull, GHOST_MAT);
     group.add(body); addEdges(hull, color, body);
-    const canopy = makeCanopy(0.42, 1.1);
-    canopy.position.set(-0.1, 0.32, 0);
-    group.add(canopy);
-    const ridge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.03, 0.06), getCanopyMat()); // 篷脊
-    ridge.position.set(-0.1, 0.74, 0);
-    group.add(ridge);
-    const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 1.3, 6), getWoodMat()); // 长橹拖尾
-    oar.rotation.z = Math.PI / 2.2; oar.position.set(-1.05, 0.05, 0.3);
-    group.add(oar);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.24, 0.04), getWoodMat());
-    blade.position.set(-1.68, 0.02, 0.3); blade.rotation.z = 0.4;
-    group.add(blade);
-    bowLocal = lantern(0.9, 0.45, 0);
-  } else if (type === "tower") {
-    const hull = makeHull(2.4, 1.1, 0.9, { sheer: 0.14, bottomTaper: 0.5 });
-    const body = new THREE.Mesh(hull, getHullMat());
-    group.add(body); addEdges(hull, color, body);
-    const gunwale = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 1.12), DARK_MAT);
-    gunwale.position.y = 0.46;
-    group.add(gunwale);
-    const tower = makeTower(3, 1.0);
-    tower.position.set(-0.1, 0.5, 0);
-    group.add(tower);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 5), getWoodMat());
-    pole.position.set(0.2, 0.5 + 3 * 0.36 + 0.45, 0);
-    group.add(pole);
-    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.25), FLAG_MAT);
-    flag.position.set(0.42, 0.5 + 3 * 0.36 + 0.6, 0);
-    group.add(flag);
-    bowLocal = lantern(1.1, 0.62, 0);
-  } else if (type === "sail") {
-    const hull = makeHull(2.2, 0.7, 0.45, { sheer: 0.3, bottomTaper: 0.4 });
-    const body = new THREE.Mesh(hull, getHullMat());
-    group.add(body); addEdges(hull, color, body);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.6, 8), getWoodMat());
-    mast.position.set(0.1, 0.25 + 0.8, 0);
-    group.add(mast);
-    const sail = makeSail(1.1, 1.4);
-    sail.position.set(-0.1, 0.25 + 0.75, 0.02);
-    group.add(sail); addEdges(sail.geometry, color, sail);
-    const sail2 = makeSail(0.7, 0.7);
-    sail2.position.set(0.6, 0.25 + 0.45, 0.02);
-    group.add(sail2); addEdges(sail2.geometry, color, sail2);
-    const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.0, 6), getWoodMat());
-    boom.rotation.z = Math.PI / 2; boom.position.set(-0.1, 0.25 + 0.08, 0.02);
-    group.add(boom);
-    const top = new THREE.Vector3(0.1, 0.25 + 1.55, 0); // 桅索：让桅"长"在船上
-    for (const [dx, dz] of [[0.9, 0], [-1.0, 0], [0, 0.34], [0, -0.34]] as const) {
-      const b = new THREE.Vector3(0.1 + dx, 0.32, dz);
-      const len = top.distanceTo(b);
-      const rig = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, len, 4), DARK_MAT);
-      rig.position.copy(top.clone().lerp(b, 0.5));
-      rig.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(top).normalize());
-      group.add(rig);
+    const gmasts: Array<[number, number]> = [[-0.85, 1.7], [0.0, 2.0], [0.75, 1.5]];
+    for (const [mx, mh] of gmasts) {
+      const mast = makeMast(mh);
+      mast.position.set(mx, 0.5 + mh / 2, 0);
+      group.add(mast);
+      const sail = makeSailPnl(0.95, mh * 0.8, GHOST_SAIL_MAT);
+      sail.position.set(mx - 0.02, 0.5 + mh * 0.55, 0.01);
+      group.add(sail);
     }
-    bowLocal = lantern(1.0, 0.45, 0);
-  } else if (type === "fishing") {
-    const hull = makeHull(1.9, 0.72, 0.5, { sheer: 0.2, bottomTaper: 0.42 });
-    const body = new THREE.Mesh(hull, getHullMat());
-    group.add(body); addEdges(hull, color, body);
-    const derrick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.1, 6), getWoodMat());
-    derrick.rotation.z = Math.PI / 2.6; derrick.position.set(0.7, 0.55, 0);
-    group.add(derrick);
-    const rope = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 12), getWoodMat());
-    rope.position.set(0.7, 0.3, 0);
-    group.add(rope);
-    const net = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.7, 5, 5), getNetMat());
-    const np = net.geometry.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < np.count; i++) { const y = np.getY(i); if (y < 0) np.setY(i, y - 0.25 * (1 + y / 0.35)); }
-    net.position.set(0.55, 0.15, 0.2);
-    group.add(net);
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.3, 0.4), DARK_MAT);
-    cabin.position.set(-0.55, 0.4, 0);
-    group.add(cabin);
-    const hold = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.4), getHullMat());
-    hold.position.set(-0.1, 0.34, 0);
-    group.add(hold);
-    bowLocal = lantern(0.9, 0.45, 0);
-  } else if (type === "dragon") {
-    const hull = makeHull(3.2, 0.5, 0.4, { sheer: 0.5, bottomTaper: 0.35 });
-    const body = new THREE.Mesh(hull, getHullMat());
-    group.add(body); addEdges(hull, color, body);
-    const head = makeDragonHead();
-    head.position.set(1.5, 0.2, 0);
-    group.add(head);
-    for (let i = 0; i < 8; i++) { // 横坐板
-      const bench = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.36), getWoodMat());
-      bench.position.set(-1.4 + i * 0.4, 0.28, 0);
-      group.add(bench);
+    const tusk = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 0.3 }));
+    tusk.rotation.z = -Math.PI / 2; tusk.position.set(1.45, 0.55, 0);
+    group.add(tusk);
+    for (const sz of [-1, 1]) for (let i = 0; i < 4; i++) { // 幽绿舷灯
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), GHOST_GLOW);
+      glow.position.set(1.0 - i * 0.55, 0.42, sz * 0.46);
+      group.add(glow);
     }
-    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.18, 12), getWoodMat()); // 中央鼓
-    drum.position.set(-0.1, 0.45, 0);
-    group.add(drum);
-    const drumTop = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 12), DARK_MAT);
-    drumTop.position.set(-0.1, 0.55, 0);
-    group.add(drumTop);
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.4, 5), getHullMat()); // 尾鳍上翘
-    tail.position.set(-1.55, 0.3, 0); tail.rotation.z = Math.PI / 2.4;
-    group.add(tail);
-    bowLocal = lantern(1.45, 0.4, 0);
-  } else { // mech 机关舟
-    const hull = makeHull(2.0, 0.8, 0.5, { sheer: 0.1, bottomTaper: 0.55, segsX: 8, segsZ: 4 });
-    const body = new THREE.Mesh(hull, METAL_MAT);
-    group.add(body);
-    const seams = new THREE.LineSegments(new THREE.EdgesGeometry(hull, 18), new THREE.LineBasicMaterial({ color: 0x6fd6ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending }));
-    group.add(seams);
-    for (const sz of [-1, 1]) { // 侧鳍
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.18), METAL_MAT);
-      fin.position.set(-0.3, 0.0, sz * 0.45); fin.rotation.y = sz * 0.2;
-      group.add(fin);
-    }
-    const stern = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 8), METAL_MAT);
-    stern.rotation.z = -Math.PI / 2; stern.position.set(-1.0, 0.1, 0);
-    group.add(stern);
-    const thruster = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), COLD_MAT);
-    thruster.position.set(-1.15, 0.1, 0);
-    group.add(thruster);
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 10), COLD_MAT);
-    core.position.set(0.4, 0.2, 0);
-    group.add(core);
-    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 4), METAL_MAT);
-    ant.position.set(0.5, 0.5, 0);
+    bowLocal = lantern(1.2, 0.6, 0);
+  } else if (type === "fishing") { // 航空母舰：宽平甲板 + 右舷舰岛 + 斜角甲板 + 舰载机（子舰=作品）
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.5, 1.25), HULL_GREY_MAT);
+    hull.position.y = 0.1;
+    group.add(hull);
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.07, 1.05), DECK_MAT);
+    deck.position.y = 0.4;
+    group.add(deck);
+    const island = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 0.32), DARK_MAT);
+    island.position.set(-0.7, 0.72, 0.4);
+    group.add(island);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), DARK_MAT);
+    ant.position.set(-0.7, 1.05, 0.4);
     group.add(ant);
-    const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), COLD_MAT);
-    antTip.position.set(0.5, 0.75, 0);
-    group.add(antTip);
-    bowLocal = lantern(0.9, 0.45, 0);
+    const angled = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.015, 0.09), DARK_MAT); // 斜角甲板线
+    angled.position.set(0.1, 0.44, -0.35); angled.rotation.y = 0.22;
+    group.add(angled);
+    const cats = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.015, 0.75), GHOST_SAIL_MAT); // 弹射线
+    cats.position.set(0.55, 0.44, 0.3);
+    group.add(cats);
+    // 舰载机（子舰=作品，甲板上 3 架）
+    const jets: Array<[number, number, number, number]> = [[0.7, 0.44, 0.32, 0.1], [-0.1, 0.44, 0.36, -0.12], [0.35, 0.44, -0.3, 0.25]];
+    for (const [jx, jy, jz, jr] of jets) {
+      const jet = makeJet();
+      jet.position.set(jx, jy, jz); jet.rotation.y = jr;
+      group.add(jet);
+    }
+    for (const sz of [-1, 1]) { // 舷台
+      const sponson = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 0.12), DARK_MAT);
+      sponson.position.set(-0.3, 0.18, sz * 0.62);
+      group.add(sponson);
+    }
+    bowLocal = lantern(1.55, 0.55, 0);
+  } else if (type === "dragon") { // 驱逐舰：现代军舰，舰桥 + 主炮 + 导弹架 + 天线
+    const hull = makeHull(2.8, 0.55, 0.45, { sheer: 0.06, bottomTaper: 0.6, segsX: 10, segsZ: 4 });
+    const body = new THREE.Mesh(hull, HULL_GREY_MAT);
+    group.add(body);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.34), DARK_MAT);
+    bridge.position.set(-0.6, 0.42, 0);
+    group.add(bridge);
+    const radar = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.14), DARK_MAT);
+    radar.position.set(-0.6, 0.68, 0);
+    group.add(radar);
+    const gun = makeTurret();
+    gun.position.set(0.7, 0.3, 0);
+    group.add(gun);
+    const launchers: Array<[number, number, number]> = [[0.15, 0.18, 0.5], [0.15, -0.18, -0.5]];
+    for (const [mx, mz, mr] of launchers) { // 导弹发射架
+      const launcher = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.08), DARK_MAT);
+      launcher.position.set(mx, 0.36, mz); launcher.rotation.y = mr;
+      group.add(launcher);
+    }
+    const sternGun = makeTurret();
+    sternGun.position.set(-1.2, 0.3, 0);
+    group.add(sternGun);
+    const ants: Array<[number, number]> = [[0.9, 0], [-0.2, 0.2], [0.4, -0.2]];
+    for (const [ax, az] of ants) {
+      const a = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.4, 4), DARK_MAT);
+      a.position.set(ax, 0.5, az);
+      group.add(a);
+    }
+    bowLocal = lantern(1.35, 0.45, 0);
+  } else { // mech 核潜艇：圆柱艇身 + 围壳 + 潜望镜 + 螺旋桨
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 2.4, 12), METAL_MAT);
+    hull.rotation.z = Math.PI / 2;
+    group.add(hull);
+    const bow = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.45, 12), METAL_MAT);
+    bow.rotation.z = -Math.PI / 2; bow.position.set(1.35, 0, 0);
+    group.add(bow);
+    const stern = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.35, 12), METAL_MAT);
+    stern.rotation.z = Math.PI / 2; stern.position.set(-1.3, 0, 0);
+    group.add(stern);
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.16), METAL_MAT); // 尾鳍
+    fin.position.set(-1.15, 0, 0);
+    group.add(fin);
+    const prop = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.06), DARK_MAT); // 螺旋桨
+    prop.position.set(-1.5, 0, 0);
+    group.add(prop);
+    const sail = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.26, 0.2), DARK_MAT); // 围壳
+    sail.position.set(0.15, 0.35, 0);
+    group.add(sail);
+    const periscope = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 4), DARK_MAT);
+    periscope.position.set(0.15, 0.56, 0);
+    group.add(periscope);
+    const pTip = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), GHOST_GLOW);
+    pTip.position.set(0.15, 0.7, 0);
+    group.add(pTip);
+    for (const sz of [-1, 1]) for (let i = 0; i < 2; i++) { // 侧舷绿灯
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), GHOST_GLOW);
+      l.position.set(0.5 + i * 0.7, 0.1, sz * 0.27);
+      group.add(l);
+    }
+    bowLocal = lantern(1.2, 0.4, 0);
   }
 
   return { group, bowLocal };

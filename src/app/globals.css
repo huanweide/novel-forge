@@ -78,37 +78,37 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  /* ── 虚空色彩（功能语义） ── */
-  --nv-void:        #050508;   /* 最深底色——页背景 */
-  --nv-abyss:       #0A0A0E;   /* 次级底色——容器背景 */
-  --nv-surface-1:   rgba(255, 255, 255, 0.015);  /* 基底面——行/分组 */
-  --nv-surface-2:   rgba(255, 255, 255, 0.03);   /* 抬升面——卡片 */
-  --nv-surface-3:   rgba(255, 255, 255, 0.055);  /* 浮起面——模态/弹出 */
-  --nv-border-1:    rgba(255, 255, 255, 0.05);   /* 基底边线 */
-  --nv-border-2:    rgba(255, 255, 255, 0.08);   /* 抬升边线 */
-  --nv-border-3:    rgba(255, 255, 255, 0.12);   /* 浮起边线 */
+  /* ── 虚空色彩（功能语义）—— 整体提亮、对比加强 ── */
+  --nv-void:        #0E1424;   /* 最深底色——页背景（提亮） */
+  --nv-abyss:       #161E34;   /* 次级底色——容器背景（提亮） */
+  --nv-surface-1:   rgba(255, 255, 255, 0.03);  /* 基底面——行/分组 */
+  --nv-surface-2:   rgba(255, 255, 255, 0.055);  /* 抬升面——卡片 */
+  --nv-surface-3:   rgba(255, 255, 255, 0.09);  /* 浮起面——模态/弹出 */
+  --nv-border-1:    rgba(255, 255, 255, 0.07);   /* 基底边线 */
+  --nv-border-2:    rgba(255, 255, 255, 0.11);   /* 抬升边线 */
+  --nv-border-3:    rgba(255, 255, 255, 0.16);   /* 浮起边线 */
 
-  /* ── 功能色彩（OKLCH 空间，感知均匀） ── */
-  --nv-primary:      oklch(0.62 0.19 270);       /* 靛蓝 —— 主操作/生成 */
-  --nv-primary-soft: oklch(0.62 0.19 270 / 0.12);
-  --nv-success:      oklch(0.65 0.18 160);       /* 翠绿 —— 确认/保存 */
-  --nv-success-soft: oklch(0.65 0.18 160 / 0.12);
-  --nv-warning:      oklch(0.72 0.16 85);        /* 琥珀 —— 提醒/待处理 */
-  --nv-warning-soft: oklch(0.72 0.16 85 / 0.12);
-  --nv-danger:       oklch(0.58 0.22 18);        /* 玫瑰 —— 删除/危险 */
-  --nv-danger-soft:  oklch(0.58 0.22 18 / 0.12);
-  --nv-creative:     oklch(0.58 0.21 295);       /* 紫罗兰 —— AI/魔法 */
-  --nv-creative-soft:oklch(0.58 0.21 295 / 0.12);
-  --nv-info:         oklch(0.62 0.15 230);       /* 青 —— 提示/信息 */
-  --nv-info-soft:    oklch(0.62 0.15 230 / 0.12);
-  --nv-accent:       oklch(0.75 0.14 95);        /* 金色 —— 强调/高亮 */
-  --nv-accent-soft:  oklch(0.75 0.14 95 / 0.1);
+  /* ── 功能色彩（OKLCH 空间，感知均匀）—— 亮度微升保对比 ── */
+  --nv-primary:      oklch(0.66 0.19 270);       /* 靛蓝 —— 主操作/生成 */
+  --nv-primary-soft: oklch(0.66 0.19 270 / 0.14);
+  --nv-success:      oklch(0.68 0.18 160);       /* 翠绿 —— 确认/保存 */
+  --nv-success-soft: oklch(0.68 0.18 160 / 0.14);
+  --nv-warning:      oklch(0.74 0.16 85);        /* 琥珀 —— 提醒/待处理 */
+  --nv-warning-soft: oklch(0.74 0.16 85 / 0.14);
+  --nv-danger:       oklch(0.62 0.22 18);        /* 玫瑰 —— 删除/危险 */
+  --nv-danger-soft:  oklch(0.62 0.22 18 / 0.14);
+  --nv-creative:     oklch(0.62 0.21 295);       /* 紫罗兰 —— AI/魔法 */
+  --nv-creative-soft:oklch(0.62 0.21 295 / 0.14);
+  --nv-info:         oklch(0.66 0.15 230);       /* 青 —— 提示/信息 */
+  --nv-info-soft:    oklch(0.66 0.15 230 / 0.14);
+  --nv-accent:       oklch(0.78 0.14 95);        /* 金色 —— 强调/高亮 */
+  --nv-accent-soft:  oklch(0.78 0.14 95 / 0.12);
 
-  /* ── 文字层级（4级明度 + 功能色） ── */
-  --nv-text-primary:   #EEECE6;   /* L1 主文字——暖白，对比度 16:1 */
-  --nv-text-secondary: #9E9C94;   /* L2 辅文字——暖灰，对比度 6:1 */
-  --nv-text-tertiary:  #7A786F;   /* L3 弱文字——中灰，对比度 4.6:1（达 WCAG AA） */
-  --nv-text-muted:     #5C5A53;   /* L4 禁用/占位文字——暗灰，对比度 3.0:1（占位可读） */
+  /* ── 文字层级（4级明度 + 功能色）—— 更亮、对比更强 ── */
+  --nv-text-primary:   #F8F7F2;   /* L1 主文字——近白，对比度 17:1 */
+  --nv-text-secondary: #B9B7AD;   /* L2 辅文字——亮灰，对比度 7:1 */
+  --nv-text-tertiary:  #98968C;   /* L3 弱文字——中灰，对比度 5.2:1（达 WCAG AA） */
+  --nv-text-muted:     #75736B;   /* L4 禁用/占位文字——灰，对比度 3.6:1（占位可读） */
 
   /* ── 字体栈（Next.js Google Fonts CSS变量 → 中文系统字体 fallback） ── */
   --font-sans:       var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
@@ -175,58 +175,58 @@
   /* ── 圆角 ── */
   --radius: 0.625rem;
 
-  /* ── Shadcn 变量映射到虚空体系 ── */
-  --background: #050508;
-  --foreground: #F0EEE8;
-  --card: rgba(255, 255, 255, 0.03);
-  --card-foreground: #F0EEE8;
-  --popover: #0E0E14;
-  --popover-foreground: #F0EEE8;
-  --primary: oklch(0.62 0.19 270);
-  --primary-foreground: #F0EEE8;
-  --secondary: rgba(255, 255, 255, 0.04);
-  --secondary-foreground: #F0EEE8;
-  --muted: rgba(255, 255, 255, 0.025);
-  --muted-foreground: #A1A09A;
-  --accent: rgba(255, 255, 255, 0.04);
-  --accent-foreground: #F0EEE8;
-  --destructive: oklch(0.58 0.22 18);
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.06);
-  --ring: oklch(0.62 0.19 270 / 0.5);
-  --chart-1: oklch(0.62 0.19 270);
-  --chart-2: oklch(0.65 0.18 160);
-  --chart-3: oklch(0.72 0.16 85);
-  --chart-4: oklch(0.58 0.22 18);
-  --chart-5: oklch(0.58 0.21 295);
-  --sidebar: #080810;
-  --sidebar-foreground: #F0EEE8;
-  --sidebar-primary: oklch(0.62 0.19 270);
-  --sidebar-primary-foreground: #F0EEE8;
-  --sidebar-accent: rgba(255, 255, 255, 0.03);
-  --sidebar-accent-foreground: #F0EEE8;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: oklch(0.62 0.19 270 / 0.5);
+  /* ── Shadcn 变量映射到虚空体系（提亮） ── */
+  --background: #0E1424;
+  --foreground: #F8F7F2;
+  --card: rgba(255, 255, 255, 0.045);
+  --card-foreground: #F8F7F2;
+  --popover: #161E34;
+  --popover-foreground: #F8F7F2;
+  --primary: oklch(0.66 0.19 270);
+  --primary-foreground: #F8F7F2;
+  --secondary: rgba(255, 255, 255, 0.055);
+  --secondary-foreground: #F8F7F2;
+  --muted: rgba(255, 255, 255, 0.04);
+  --muted-foreground: #B0AEA4;
+  --accent: rgba(255, 255, 255, 0.055);
+  --accent-foreground: #F8F7F2;
+  --destructive: oklch(0.62 0.22 18);
+  --border: rgba(255, 255, 255, 0.11);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: oklch(0.66 0.19 270 / 0.5);
+  --chart-1: oklch(0.66 0.19 270);
+  --chart-2: oklch(0.68 0.18 160);
+  --chart-3: oklch(0.74 0.16 85);
+  --chart-4: oklch(0.62 0.22 18);
+  --chart-5: oklch(0.62 0.21 295);
+  --sidebar: #10172A;
+  --sidebar-foreground: #F8F7F2;
+  --sidebar-primary: oklch(0.66 0.19 270);
+  --sidebar-primary-foreground: #F8F7F2;
+  --sidebar-accent: rgba(255, 255, 255, 0.045);
+  --sidebar-accent-foreground: #F8F7F2;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --sidebar-ring: oklch(0.66 0.19 270 / 0.5);
 }
 
 .dark {
-  --background: #050508;
-  --foreground: #F0EEE8;
-  --card: rgba(255, 255, 255, 0.03);
-  --card-foreground: #F0EEE8;
-  --popover: #0E0E14;
-  --popover-foreground: #F0EEE8;
-  --primary: oklch(0.62 0.19 270);
-  --primary-foreground: #F0EEE8;
-  --secondary: rgba(255, 255, 255, 0.04);
-  --secondary-foreground: #F0EEE8;
-  --muted: rgba(255, 255, 255, 0.025);
-  --muted-foreground: #A1A09A;
-  --accent: rgba(255, 255, 255, 0.04);
-  --accent-foreground: #F0EEE8;
-  --destructive: oklch(0.58 0.22 18);
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.06);
+  --background: #0E1424;
+  --foreground: #F8F7F2;
+  --card: rgba(255, 255, 255, 0.045);
+  --card-foreground: #F8F7F2;
+  --popover: #161E34;
+  --popover-foreground: #F8F7F2;
+  --primary: oklch(0.66 0.19 270);
+  --primary-foreground: #F8F7F2;
+  --secondary: rgba(255, 255, 255, 0.055);
+  --secondary-foreground: #F8F7F2;
+  --muted: rgba(255, 255, 255, 0.04);
+  --muted-foreground: #B0AEA4;
+  --accent: rgba(255, 255, 255, 0.055);
+  --accent-foreground: #F8F7F2;
+  --destructive: oklch(0.62 0.22 18);
+  --border: rgba(255, 255, 255, 0.11);
+  --input: rgba(255, 255, 255, 0.08);
   --ring: oklch(0.62 0.19 270 / 0.5);
   --chart-1: oklch(0.62 0.19 270);
   --chart-2: oklch(0.65 0.18 160);
@@ -407,11 +407,11 @@
 
   body {
     @apply bg-background text-foreground;
-    background-color: #050508;
+    background-color: #0E1424;
     background-image:
-      radial-gradient(ellipse 70% 50% at 50% -10%, oklch(0.62 0.19 270 / 0.14), transparent 70%),
-      radial-gradient(ellipse 50% 45% at 88% 8%, oklch(0.58 0.21 295 / 0.10), transparent 70%),
-      radial-gradient(ellipse 55% 45% at 8% 95%, oklch(0.65 0.18 160 / 0.06), transparent 70%);
+      radial-gradient(ellipse 70% 50% at 50% -10%, oklch(0.66 0.19 270 / 0.20), transparent 70%),
+      radial-gradient(ellipse 50% 45% at 88% 8%, oklch(0.62 0.21 295 / 0.14), transparent 70%),
+      radial-gradient(ellipse 55% 45% at 8% 95%, oklch(0.68 0.18 160 / 0.08), transparent 70%);
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -1020,26 +1020,28 @@
   border-radius: 20px;
   border: 1px solid var(--nv-border-2);
   background:
-    repeating-linear-gradient(90deg, rgba(120, 140, 200, 0.045) 0 1px, transparent 1px 46px),
-    linear-gradient(180deg, rgba(14, 19, 38, 0.55), rgba(8, 11, 22, 0.8));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 40px rgba(2, 6, 18, 0.35);
+    repeating-linear-gradient(90deg, rgba(150, 170, 225, 0.06) 0 1px, transparent 1px 46px),
+    linear-gradient(180deg, rgba(30, 40, 72, 0.85), rgba(18, 26, 50, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 40px rgba(2, 6, 18, 0.35);
 }
 .nf-book3d {
   --spine: oklch(0.62 0.19 270);
   position: relative;
   height: 100%;
   border-radius: 3px 14px 14px 3px;
+  /* fallback：不支持 color-mix(in oklch) 的浏览器也有亮色底，避免"一团黑" */
+  background: linear-gradient(100deg, #3d4a70 0%, #333f63 42%, #2c3757 100%);
   background:
     linear-gradient(100deg,
-      color-mix(in oklch, var(--spine) 60%, #0a0e1c 40%) 0%,
-      color-mix(in oklch, var(--spine) 42%, #10162a 58%) 16%,
-      color-mix(in oklch, var(--spine) 26%, #161d36 74%) 42%,
-      color-mix(in oklch, var(--spine) 20%, #1a223d 80%) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+      color-mix(in oklch, var(--spine) 68%, #1a2340 32%) 0%,
+      color-mix(in oklch, var(--spine) 50%, #222c4e 50%) 16%,
+      color-mix(in oklch, var(--spine) 34%, #2a3558 66%) 42%,
+      color-mix(in oklch, var(--spine) 27%, #2f3b60 73%) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.18),
-    0 14px 30px rgba(2, 6, 18, 0.55),
-    0 3px 8px rgba(2, 6, 18, 0.6);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.14),
+    0 14px 30px rgba(2, 6, 18, 0.5),
+    0 3px 8px rgba(2, 6, 18, 0.55);
   transition: transform 260ms var(--ease-out-smooth), box-shadow 260ms var(--ease-out-smooth), border-color 260ms var(--ease-out-smooth);
   transform: translateY(0);
 }
@@ -1048,10 +1050,10 @@
   content: "";
   position: absolute; left: 0; top: 0; bottom: 0; width: 16px;
   background: linear-gradient(90deg,
-    color-mix(in oklch, var(--spine) 28%, #05070f 72%) 0%,
-    color-mix(in oklch, var(--spine) 42%, #0a0e1c 58%) 100%);
+    color-mix(in oklch, var(--spine) 34%, #0a0f20 66%) 0%,
+    color-mix(in oklch, var(--spine) 50%, #141c38 50%) 100%);
   border-radius: 3px 0 0 3px;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
   pointer-events: none;
 }
 /* 书页厚度：底部浅色边 */

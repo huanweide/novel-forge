@@ -181,9 +181,9 @@ export default function Dashboard() {
 
   return (
     <div className="nf-home min-h-screen bg-transparent text-foreground">
-      {/* 顶栏：主操作 / 导航 / 系统 三组，统一 32px 高度 */}
-      <header className="nf-header sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between gap-4">
+      {/* 顶栏：悬浮下移（不贴死顶部，让系统提示条可见）+ 主操作 / 导航 / 系统三组 */}
+      <header className="nf-header sticky top-2 z-10 mx-2 rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/90 shadow-lg backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <span className="nf-logo" aria-hidden="true">
               <Icon name="sparkles" size={16} />
@@ -265,10 +265,10 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-creative)] glow-dot" /> 纸舟星海 · Paper Boats
           </div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-tight">
-            每艘纸船，<span className="text-gradient">都载着一个故事</span>
+            每一艘船，<span className="text-gradient">都是一部作品</span>
           </h2>
           <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
-            墨色海面上漂着折纸小船，每艘船头都点着一盏灯——书页折成的船，航行在故事的墨海上。点击一艘船，镜头会拉到船头，望向前方无边的墨海，那就是「下一章」。
+            黑珍珠号、复仇女王号、飞翔的荷兰人、航空母舰……每一艘都是真实的名船，对应你的一部作品。悬浮看船名，点击确认后进入写作区；拖拽旋转视角、滚轮缩放。
           </p>
         </div>
         <div className="nf-boat-stage relative rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/30 p-4">
@@ -282,23 +282,6 @@ export default function Dashboard() {
               storyNodes: p._count.storyNodes,
             }))}
           />
-        </div>
-      </section>
-
-      {/* 纸舟星海 · 设计说明 */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 pb-16">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-1.5 h-5 rounded-full bg-primary/60" />
-          <h2 className="text-xl font-semibold text-foreground">纸舟星海 · 设计说明</h2>
-        </div>
-        <p className="text-[var(--nv-text-tertiary)] max-w-2xl mb-7 text-sm leading-relaxed">
-          纸舟星海把「写小说」这件事，变成漫画海面上落下的折纸小船——一艘船一部作品，六种折法各不相同。四条设计准则：
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DesignNote title="船即作品" desc="每艘折纸船是一部小说，六种折法各不相同——经典/塔式/双帆/平筏/长龙/尖角，数量与你的作品一一对应。" />
-          <DesignNote title="灯即活性" desc="船头一盏灯，灯光越亮说明最近越活跃；夜深了，只有这些灯还亮着。" />
-          <DesignNote title="海即漫画" desc="明亮漫画风格的海浪与浪花，可拖拽旋转视角、滚轮放大缩小，纸船正从上方掉落下来。" />
-          <DesignNote title="点击即入" desc="点击任意纸船或下方书栏，直接进入那本书的写作区域——写它，就是让这艘船继续航行。" />
         </div>
       </section>
 
@@ -516,17 +499,6 @@ function NewBookCard() {
       <span className="text-sm font-medium">新建小说</span>
       <span className="text-[11px] text-[var(--nv-text-muted)]">从探讨模式开始构思</span>
     </Link>
-  );
-}
-
-// ─── 子组件：设计说明卡 ─────────────────────────────────────
-function DesignNote({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="surface-elevated rounded-2xl p-5 border border-[var(--nv-border-2)]">
-      <div className="w-2 h-2 rounded-full bg-primary/70 mb-3" />
-      <h3 className="font-semibold text-foreground text-sm mb-1.5">{title}</h3>
-      <p className="text-[var(--nv-text-tertiary)] text-xs leading-relaxed">{desc}</p>
-    </div>
   );
 }
 
