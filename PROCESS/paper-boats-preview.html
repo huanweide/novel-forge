@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>纸舟星海 · 各式小纸船（漫画海 + 旋转缩放 + 点击进入）</title>
+<title>纸舟星海 · 真实船型（漫画海 + 旋转缩放 + 点击确认进入）</title>
 <style>
   :root { --nv-void:#080b16; --nv-surface-2:#10152a; --nv-border-2:#1d2640; --nv-border-3:#26304d; --nv-text-primary:#eaf0ff; --nv-text-tertiary:#9aa6c4; --nv-text-muted:#5e6a8a; --nv-creative:#7c5cff; }
   * { box-sizing: border-box; }
@@ -17,6 +17,9 @@
   .stage { position:relative; height:480px; border-radius:14px; overflow:hidden; background:#0a2a55; }
   .stage canvas { display:block; width:100%; height:100%; cursor:grab; }
   .hint { position:absolute; bottom:10px; left:0; right:0; text-align:center; font-size:11px; color:var(--nv-text-muted); pointer-events:none; }
+  .hoverchip { position:absolute; left:50%; top:12px; transform:translateX(-50%); z-index:5; pointer-events:none;
+    background:rgba(16,21,42,.92); border:1px solid var(--nv-border-3); border-radius:999px; padding:6px 14px; font-size:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); backdrop-filter:blur(6px); }
   .picker-label { display:flex; align-items:center; gap:8px; margin:14px 2px 8px; font-size:12px; color:var(--nv-text-tertiary); }
   .bar { width:7px; height:14px; border-radius:99px; background:rgba(124,92,255,.7); }
   .picks { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
@@ -25,7 +28,6 @@
   .pick .sw { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .pick .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pick .tp { font-size:10px; color:var(--nv-text-muted); opacity:.75; }
-  /* 书架示意 */
   .shelfhead { display:flex; align-items:center; gap:8px; margin:26px 2px 12px; font-size:12px; color:var(--nv-text-tertiary); }
   .shelf { position:relative; display:grid; grid-template-columns:repeat(6,1fr); gap:14px; padding:20px 16px 26px; border:1px solid var(--nv-border-2); border-radius:18px;
     background:repeating-linear-gradient(90deg, rgba(120,140,200,.05) 0 1px, transparent 1px 44px), linear-gradient(180deg, rgba(14,19,38,.55), rgba(8,11,22,.8)); }
@@ -34,7 +36,7 @@
     border:1px solid rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18), 0 14px 26px rgba(2,6,18,.5), 0 3px 8px rgba(2,6,18,.55);
     transition:transform .26s cubic-bezier(.16,1,.3,1), box-shadow .26s cubic-bezier(.16,1,.3,1); }
   .bk::before { content:""; position:absolute; left:0; top:0; bottom:0; width:14px; border-radius:3px 0 0 3px; pointer-events:none;
-    background:linear-gradient(90deg, color-mix(in oklch, var(--spine, oklch(.62 .19 270)) 28%, #05070f 72%) 0%, color-mix(in oklch, var(--spine, oklch(.62 .19 270)) 42%, #0a0e1c 58%) 100%); }
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 3.5px), linear-gradient(90deg, color-mix(in oklch, var(--spine, oklch(.62 .19 270)) 28%, #05070f 72%) 0%, color-mix(in oklch, var(--spine, oklch(.62 .19 270)) 42%, #0a0e1c 58%) 100%); }
   .bk .nm { position:absolute; left:20px; right:12px; bottom:12px; font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .bk .tp { position:absolute; left:20px; top:12px; font-size:10px; color:var(--nv-text-muted); }
   .bk:hover { transform:translateY(-10px) scale(1.03); z-index:1;
@@ -56,15 +58,16 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="eyebrow"><span class="dot"></span> 纸舟星海 · 各式小纸船（漫画海 + 旋转缩放 + 点击进入）</span>
-  <h1>每艘纸船，都是一部书</h1>
-  <p class="sub">明亮的漫画风格海面上，六种折法的小纸船正从天空掉落——经典/塔式/双帆/平筏/长龙/尖角，一艘对应一部作品。拖拽旋转视角、滚轮放大缩小；点击任意纸船或下方书栏，直接进入那本书的写作区域。再往下是作品区「书架」示意（一排排立着的立体书，hover 有从书架抽出的效果）。</p>
+  <span class="eyebrow"><span class="dot"></span> 纸舟星海 · 真实船型（漫画海 + 旋转缩放 + 点击确认进入）</span>
+  <h1>每艘船，都是一部书</h1>
+  <p class="sub">明亮的漫画风格海面上，六种真实的船漂着——乌篷/楼船/帆船/渔船/龙舟/机关舟，一艘对应一部作品。拖拽旋转视角、滚轮放大缩小；悬浮纸船可见书名，点击弹确认「你确认要进入《书名》吗？」。再往下是作品区「书架」示意。</p>
 
   <div class="card">
     <div class="stage" id="stage">
-      <div class="hint">点击纸船进入写作区 · 拖拽旋转视角 · 滚轮缩放 · 下方书栏点击直达</div>
+      <div class="hoverchip" id="hoverchip" style="display:none"></div>
+      <div class="hint">悬浮看船名 · 点击进入写作区 · 拖拽旋转 · 滚轮缩放 · 下方书栏点击直达</div>
     </div>
-    <div class="picker-label"><span class="bar"></span>选择一本书（点击直达）</div>
+    <div class="picker-label"><span class="bar"></span>选择一本书（点击确认进入）</div>
     <div class="picks" id="picks"></div>
   </div>
 
@@ -74,10 +77,10 @@
   <div class="legend" id="legend"></div>
 
   <div class="notes">
-    <div class="note"><div class="d"></div><h4>船即作品</h4><p>每艘折纸船是一部小说，六种折法各不相同，数量与作品一一对应，折痕透出题材色的光。</p></div>
+    <div class="note"><div class="d"></div><h4>船即作品</h4><p>每艘真实船是一部小说，六种船型各不相同，数量与作品一一对应，折痕透出题材色的光。</p></div>
     <div class="note"><div class="d"></div><h4>灯即活性</h4><p>船头一盏灯，亮=最近活跃；最近/最活跃 ≤8 艘为真点光源，全局真灯封顶 8。</p></div>
-    <div class="note"><div class="d"></div><h4>海即漫画</h4><p>明亮漫画风格的海浪、白色浪花线与同心波纹，拖拽旋转、滚轮缩放，纸船从上方掉落。</p></div>
-    <div class="note"><div class="d"></div><h4>点击即入</h4><p>点击纸船或书栏，直接进入那本书的写作区域——写它，就是让这艘船继续航行。</p></div>
+    <div class="note"><div class="d"></div><h4>海即漫画</h4><p>明亮漫画风格的海浪、白色浪花线与同心波纹，拖拽旋转、滚轮缩放，船从上方掉落。</p></div>
+    <div class="note"><div class="d"></div><h4>点击即入</h4><p>悬浮见船名，点击弹确认「你确认要进入《书名》吗？」，确认后进入写作区。</p></div>
   </div>
 </div>
 <div class="sign"><a href="https://github.com/huanweide/novel-forge" target="_blank">GitHub</a> · RuiTri</div>
@@ -104,38 +107,40 @@ void main(){ vec3 V=normalize(cameraPosition-vWP); vec3 N=normalize(vN);
  float rings=sin(length(vWP.xz)*7.0-uTime*2.5); col+=vec3(1.0)*smoothstep(0.88,1.0,abs(rings))*0.08;
  gl_FragColor=vec4(col,1.0); }`;
 
-// ─── 题材/纸船系统 ───────────────────────────────────────────
 const GENRE_COLORS={"武侠":[0.45,0.80,0.45],"仙侠":[0.35,0.85,0.80],"冒险":[0.40,0.65,1.00],"悬疑":[0.95,0.45,0.50],"历史":[0.95,0.75,0.40],"科幻":[0.35,0.60,1.00]};
 const DEFAULT_COLOR=[0.45,0.70,1.00];
 function genreColor(g){ if(g&&GENRE_COLORS[g])return GENRE_COLORS[g]; return DEFAULT_COLOR; }
-const TYPE_NAMES={wupeng:"经典纸船",tower:"塔式纸船",sail:"双帆纸船",fishing:"平筏纸船",dragon:"长龙纸船",mech:"尖角纸船"};
+const TYPE_NAMES={wupeng:"乌篷船",tower:"楼船",sail:"帆船",fishing:"渔船",dragon:"龙舟",mech:"机关舟"};
 const GENRE_TO_TYPE={武侠:"wupeng",仙侠:"tower",冒险:"sail",悬疑:"fishing",历史:"dragon",科幻:"mech"};
 function boatTypeFor(g){ if(g&&GENRE_TO_TYPE[g])return GENRE_TO_TYPE[g]; return "wupeng"; }
 
-// ─── 惰性纹理（浏览器端无 SSR，直接建） ────────────────────────
-function makePaperTex(){ const c=document.createElement("canvas"); c.width=c.height=128; const x=c.getContext("2d");
-  x.fillStyle="#e9e7dd"; x.fillRect(0,0,128,128); for(let i=0;i<1100;i++){ x.fillStyle=`rgba(96,88,72,${0.03+Math.random()*0.05})`; x.fillRect(Math.random()*128,Math.random()*128,1.4,1.4); }
-  const t=new THREE.CanvasTexture(c); t.needsUpdate=true; return t; }
 function makeWoodTex(){ const c=document.createElement("canvas"); c.width=128; c.height=128; const x=c.getContext("2d");
-  x.fillStyle="#3a3328"; x.fillRect(0,0,128,128); for(let i=0;i<22;i++){ x.strokeStyle=`rgba(${90+Math.random()*50},${80+Math.random()*45},${55+Math.random()*35},${0.25+Math.random()*0.3})`; x.lineWidth=1+Math.random()*2.2;
-    x.beginPath(); const sx=Math.random()*128; x.moveTo(sx,0); x.bezierCurveTo(sx+(Math.random()*28-14),42,sx+(Math.random()*28-14),86,sx+(Math.random()*18-9),128); x.stroke(); }
+  x.fillStyle="#3a3328"; x.fillRect(0,0,128,128); for(let i=0;i<26;i++){ x.strokeStyle=`rgba(${90+Math.random()*50},${80+Math.random()*45},${55+Math.random()*35},${0.25+Math.random()*0.3})`; x.lineWidth=1+Math.random()*2.4;
+    x.beginPath(); const sx=Math.random()*128; x.moveTo(sx,0); x.bezierCurveTo(sx+(Math.random()*30-15),42,sx+(Math.random()*30-15),86,sx+(Math.random()*20-10),128); x.stroke(); }
   const t=new THREE.CanvasTexture(c); t.needsUpdate=true; return t; }
 function makeSailTex(){ const c=document.createElement("canvas"); c.width=c.height=64; const x=c.getContext("2d");
   x.fillStyle="#e3e6ec"; x.fillRect(0,0,64,64); x.strokeStyle="rgba(140,146,160,0.26)"; x.lineWidth=1;
   for(let i=-64;i<64;i+=6){ x.beginPath(); x.moveTo(i,0); x.lineTo(i+64,64); x.stroke(); } for(let i=-64;i<64;i+=6){ x.beginPath(); x.moveTo(i,64); x.lineTo(i+64,0); x.stroke(); }
   const t=new THREE.CanvasTexture(c); t.needsUpdate=true; return t; }
+function makeBambooTex(){ const c=document.createElement("canvas"); c.width=64; c.height=64; const x=c.getContext("2d");
+  x.fillStyle="#2b313d"; x.fillRect(0,0,64,64); for(let i=0;i<64;i+=6){ x.fillStyle="rgba(58,64,78,0.75)"; x.fillRect(i,0,2.5,64); }
+  const t=new THREE.CanvasTexture(c); t.needsUpdate=true; return t; }
 function makeNetTexture(){ const c=document.createElement("canvas"); c.width=c.height=64; const x=c.getContext("2d"); x.clearRect(0,0,64,64);
   x.strokeStyle="rgba(180,200,220,0.85)"; x.lineWidth=1; for(let i=0;i<=64;i+=8){ x.beginPath(); x.moveTo(i,0); x.lineTo(i,64); x.stroke(); x.beginPath(); x.moveTo(0,i); x.lineTo(64,i); x.stroke(); }
   const t=new THREE.CanvasTexture(c); t.needsUpdate=true; return t; }
+const METAL_MAT=new THREE.MeshStandardMaterial({color:0x2a3340,flatShading:true,roughness:0.4,metalness:0.6,side:THREE.DoubleSide});
+const DARK_MAT=new THREE.MeshStandardMaterial({color:0x1a1f2b,roughness:0.9,metalness:0.0,side:THREE.DoubleSide});
 const COLD_MAT=new THREE.MeshBasicMaterial({color:0x6fd6ff});
+const FLAG_MAT=new THREE.MeshStandardMaterial({color:0x7a3a3a,roughness:0.7,metalness:0.0,side:THREE.DoubleSide});
 const CORE_WARM=new THREE.MeshBasicMaterial({color:0xfff2d8});
-let _hullMat=null,_woodMat=null,_sailMat=null,_netMat=null;
-const getHullMat=()=> _hullMat||(_hullMat=new THREE.MeshStandardMaterial({map:makePaperTex(),color:0xe9e7dd,flatShading:true,roughness:0.92,metalness:0.0,side:THREE.DoubleSide}));
+let _hullMat=null,_woodMat=null,_sailMat=null,_canopyMat=null,_netMat=null;
+const getHullMat=()=> _hullMat||(_hullMat=new THREE.MeshStandardMaterial({map:makeWoodTex(),color:0x7d6b52,flatShading:true,roughness:0.88,metalness:0.0,side:THREE.DoubleSide}));
 const getWoodMat=()=> _woodMat||(_woodMat=new THREE.MeshStandardMaterial({map:makeWoodTex(),color:0x4a4133,roughness:0.85,metalness:0.0}));
 const getSailMat=()=> _sailMat||(_sailMat=new THREE.MeshStandardMaterial({map:makeSailTex(),color:0xe3e6ec,roughness:0.9,metalness:0.0,transparent:true,opacity:0.97,side:THREE.DoubleSide}));
+const getCanopyMat=()=> _canopyMat||(_canopyMat=new THREE.MeshStandardMaterial({map:makeBambooTex(),color:0x2b313d,roughness:0.88,metalness:0.0,side:THREE.DoubleSide}));
 const getNetMat=()=> _netMat||(_netMat=new THREE.MeshStandardMaterial({map:makeNetTexture(),transparent:true,side:THREE.DoubleSide,roughness:0.9}));
 
-function makeHull(L,W,H,opt){ opt=opt||{}; const sheer=opt.sheer||0.18,keel=opt.keel||0.16,bottomTaper=opt.bottomTaper||0.42,segsX=opt.segsX||8,segsZ=opt.segsZ||4;
+function makeHull(L,W,H,opt){ opt=opt||{}; const sheer=opt.sheer||0.18,keel=opt.keel||0.16,bottomTaper=opt.bottomTaper||0.42,segsX=opt.segsX||14,segsZ=opt.segsZ||6;
   const g=new THREE.BoxGeometry(L,H,W,segsX,1,segsZ); const p=g.attributes.position;
   for(let i=0;i<p.count;i++){ let x=p.getX(i),y=p.getY(i),z=p.getZ(i); const t=(x+L/2)/L;
     const wMul=Math.pow(Math.sin(Math.PI*t),0.5); z*=wMul;
@@ -144,52 +149,73 @@ function makeHull(L,W,H,opt){ opt=opt||{}; const sheer=opt.sheer||0.18,keel=opt.
     if(y<0&&Math.abs(z)<0.06*W) y-=keel*0.4;
     p.setXYZ(i,x,y,z);
   } g.computeVertexNormals(); return g; }
-// 折纸部件
-function paperBoard(w,h,opts){ opts=opts||{}; const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),opts.mat||getHullMat());
-  if(opts.rotX)m.rotation.x=opts.rotX; if(opts.rotY)m.rotation.y=opts.rotY; if(opts.rotZ)m.rotation.z=opts.rotZ;
-  m.position.set(opts.x||0,opts.y||0,opts.z||0); return m; }
-function paperStick(len,r){ return new THREE.Mesh(new THREE.CylinderGeometry(r||0.028,r||0.028,len,5),getWoodMat()); }
-function paperTent(w,h){ const g=new THREE.Group(); g.add(paperBoard(w,h,{rotZ:-0.55,y:h/2})); g.add(paperBoard(w,h,{rotZ:0.55,y:h/2})); return g; }
-function paperSail(w,h,tilt){ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),getSailMat()); m.rotation.z=tilt; return m; }
+function makeCanopy(r,len){ const geo=new THREE.CylinderGeometry(r,r,len,16,1,true,0,Math.PI); const m=new THREE.Mesh(geo,getCanopyMat());
+  m.rotateZ(Math.PI/2); m.rotateX(-Math.PI/2); return m; }
+function makeSail(w,h){ const geo=new THREE.PlaneGeometry(w,h,6,6); const p=geo.attributes.position;
+  for(let i=0;i<p.count;i++){ const x=p.getX(i),y=p.getY(i); const belly=0.28*(1-Math.pow(x/(w/2),2))*(1-Math.pow(y/(h/2),2)); p.setZ(i,belly); }
+  geo.computeVertexNormals(); return new THREE.Mesh(geo,getSailMat()); }
+function makeTower(levels,w){ const grp=new THREE.Group(); let y=0; const lh=0.3;
+  for(let i=0;i<levels;i++){ const lw=w*(1-i*0.16); const floor=new THREE.Mesh(new THREE.BoxGeometry(lw,lh,lw*0.7),getHullMat()); floor.position.y=y+lh/2; grp.add(floor);
+    const eave=new THREE.Mesh(new THREE.BoxGeometry(lw*1.18,0.05,lw*0.84),DARK_MAT); eave.position.y=y+lh+0.02; grp.add(eave);
+    const cw=lw*0.5; for(const sx of [-1,1]) for(const sz of [-1,1]){ const tip=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.04,0.12),DARK_MAT); tip.position.set(sx*cw,y+lh+0.06,sz*cw*0.7); tip.rotation.z=sx*0.5; tip.rotation.x=sz*0.5; grp.add(tip); }
+    for(const sx of [-1,1]){ const win=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.14,0.04),DARK_MAT); win.position.set(sx*lw*0.28,y+lh/2,lw*0.35+0.01); grp.add(win); }
+    y+=lh+0.06; }
+  const finial=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.22,6),getWoodMat()); finial.position.y=y+0.1; grp.add(finial); return grp; }
+function makeDragonHead(){ const grp=new THREE.Group(); const head=new THREE.Mesh(new THREE.ConeGeometry(0.16,0.5,6),getHullMat()); head.rotation.z=-Math.PI/2; head.position.set(0.25,0.1,0); grp.add(head);
+  const jaw=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.08,0.14),getHullMat()); jaw.position.set(0.42,-0.02,0); jaw.rotation.z=-0.2; grp.add(jaw);
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,8),COLD_MAT); eye.position.set(0.34,0.16,0.1); grp.add(eye);
+  const eye2=eye.clone(); eye2.position.z=-0.1; grp.add(eye2);
+  const horn=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.3,5),getWoodMat()); horn.position.set(0.2,0.34,0); horn.rotation.z=0.5; grp.add(horn);
+  for(let i=0;i<4;i++){ const m=new THREE.Mesh(new THREE.ConeGeometry(0.03,0.18,4),getWoodMat()); m.position.set(0.1-i*0.07,0.26+i*0.02,0); m.rotation.z=0.3; grp.add(m); } return grp; }
 
 function createBoat(type,color){ const group=new THREE.Group(); let bowLocal;
-  const addEdges=(geo,col,parent)=>{ const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo,22),new THREE.LineBasicMaterial({color:new THREE.Color(col[0],col[1],col[2]),transparent:true,opacity:0.65,blending:THREE.AdditiveBlending})); parent.add(e); };
-  const lantern=(x,y,z)=>{ const post=paperStick(0.22,0.014); post.position.set(x,y,z); group.add(post); return new THREE.Vector3(x,y+0.14,z); };
-  if(type==="wupeng"){ const hull=makeHull(2.0,0.8,0.5,{sheer:0.28,bottomTaper:0.4}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
-    const tent=paperTent(0.9,0.42); tent.position.set(-0.1,0.3,0); group.add(tent);
-    group.add(paperBoard(0.34,0.3,{rotX:-0.7,x:0.92,y:0.28})); group.add(paperBoard(0.34,0.3,{rotX:0.7,x:-0.92,y:0.28}));
+  const addEdges=(geo,col,parent)=>{ const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo,22),new THREE.LineBasicMaterial({color:new THREE.Color(col[0],col[1],col[2]),transparent:true,opacity:0.6,blending:THREE.AdditiveBlending})); parent.add(e); };
+  const lantern=(x,y,z)=>{ const post=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.22,5),DARK_MAT); post.position.set(x,y,z); group.add(post); return new THREE.Vector3(x,y+0.14,z); };
+  if(type==="wupeng"){ const hull=makeHull(2.0,0.8,0.5,{sheer:0.22,bottomTaper:0.4}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
+    const canopy=makeCanopy(0.42,1.1); canopy.position.set(-0.1,0.32,0); group.add(canopy);
+    const ridge=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.03,0.06),getCanopyMat()); ridge.position.set(-0.1,0.74,0); group.add(ridge);
+    const oar=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.02,1.3,6),getWoodMat()); oar.rotation.z=Math.PI/2.2; oar.position.set(-1.05,0.05,0.3); group.add(oar);
+    const blade=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.24,0.04),getWoodMat()); blade.position.set(-1.68,0.02,0.3); blade.rotation.z=0.4; group.add(blade);
     bowLocal=lantern(0.9,0.45,0); }
-  else if(type==="tower"){ const hull=makeHull(2.2,0.95,0.55,{sheer:0.2,bottomTaper:0.5}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
-    group.add(paperBoard(1.1,0.62,{y:0.42})); group.add(paperBoard(0.8,0.44,{y:0.78}));
-    const pole=paperStick(0.5); pole.position.set(0.05,1.05,0); group.add(pole);
-    group.add(paperBoard(0.34,0.2,{rotY:0.4,x:0.24,y:1.18}));
-    bowLocal=lantern(1.05,0.55,0); }
-  else if(type==="sail"){ const hull=makeHull(2.0,0.6,0.42,{sheer:0.32,bottomTaper:0.4}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
-    const mast1=paperStick(1.5); mast1.position.set(-0.2,0.95,0); group.add(mast1);
-    const mast2=paperStick(1.1); mast2.position.set(0.5,0.75,0); group.add(mast2);
-    const sail1=paperSail(0.9,1.1,-0.35); sail1.position.set(-0.5,0.95,0.02); group.add(sail1);
-    const sail2=paperSail(0.6,0.7,0.3); sail2.position.set(0.75,0.7,0.02); group.add(sail2);
-    bowLocal=lantern(0.95,0.42,0); }
-  else if(type==="fishing"){ const hull=makeHull(1.8,0.9,0.32,{sheer:0.18,bottomTaper:0.45}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
-    const tent=paperTent(0.7,0.3); tent.position.set(-0.5,0.24,0); group.add(tent);
-    group.add(paperBoard(0.16,0.9,{rotY:0.3,x:0.75,y:0.1,z:0.25}));
-    const net=new THREE.Mesh(new THREE.PlaneGeometry(0.7,0.5,4,4),getNetMat()); const np=net.geometry.attributes.position;
-    for(let i=0;i<np.count;i++){ const yy=np.getY(i); if(yy<0) np.setY(i,yy-0.2); } net.position.set(0.5,0.12,-0.2); group.add(net);
-    bowLocal=lantern(0.85,0.4,0); }
-  else if(type==="dragon"){ const hull=makeHull(3.0,0.42,0.36,{sheer:0.55,bottomTaper:0.35,segsX:10,segsZ:3}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
-    group.add(paperBoard(0.4,0.5,{rotX:-0.9,x:1.42,y:0.4})); group.add(paperBoard(0.4,0.5,{rotX:0.9,x:-1.42,y:0.4}));
-    for(let i=0;i<7;i++){ group.add(paperBoard(0.34,0.05,{rotY:Math.PI/2,x:-1.2+i*0.42,y:0.22})); }
-    const drum=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.14,10),getHullMat()); drum.position.set(-0.05,0.34,0); group.add(drum);
-    bowLocal=lantern(1.38,0.42,0); }
-  else { const hull=makeHull(2.0,0.75,0.5,{sheer:0.15,bottomTaper:0.55,segsX:6,segsZ:3}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body);
-    const seams=new THREE.LineSegments(new THREE.EdgesGeometry(hull,18),new THREE.LineBasicMaterial({color:0x6fd6ff,transparent:true,opacity:0.95,blending:THREE.AdditiveBlending})); group.add(seams);
-    for(const sz of [-1,1]){ group.add(paperBoard(0.5,0.22,{rotY:sz*0.5,x:-0.25,y:0.05,z:sz*0.42})); }
-    const ant=paperStick(0.5,0.015); ant.position.set(0.45,0.5,0); group.add(ant);
-    const antTip=new THREE.Mesh(new THREE.SphereGeometry(0.03,8,8),COLD_MAT); antTip.position.set(0.45,0.75,0); group.add(antTip);
+  else if(type==="tower"){ const hull=makeHull(2.4,1.1,0.9,{sheer:0.14,bottomTaper:0.5}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
+    const gunwale=new THREE.Mesh(new THREE.BoxGeometry(2.35,0.06,1.12),DARK_MAT); gunwale.position.y=0.46; group.add(gunwale);
+    const tower=makeTower(3,1.0); tower.position.set(-0.1,0.5,0); group.add(tower);
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.5,5),getWoodMat()); pole.position.set(0.2,0.5+3*0.36+0.45,0); group.add(pole);
+    const flag=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.25),FLAG_MAT); flag.position.set(0.42,0.5+3*0.36+0.6,0); group.add(flag);
+    bowLocal=lantern(1.1,0.62,0); }
+  else if(type==="sail"){ const hull=makeHull(2.2,0.7,0.45,{sheer:0.3,bottomTaper:0.4}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
+    const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,1.6,8),getWoodMat()); mast.position.set(0.1,0.25+0.8,0); group.add(mast);
+    const sail=makeSail(1.1,1.4); sail.position.set(-0.1,0.25+0.75,0.02); group.add(sail); addEdges(sail.geometry,color,sail);
+    const sail2=makeSail(0.7,0.7); sail2.position.set(0.6,0.25+0.45,0.02); group.add(sail2); addEdges(sail2.geometry,color,sail2);
+    const boom=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,1.0,6),getWoodMat()); boom.rotation.z=Math.PI/2; boom.position.set(-0.1,0.25+0.08,0.02); group.add(boom);
+    const top=new THREE.Vector3(0.1,0.25+1.55,0); for(const [dx,dz] of [[0.9,0],[-1.0,0],[0,0.34],[0,-0.34]]){ const b=new THREE.Vector3(0.1+dx,0.32,dz); const len=top.distanceTo(b); const rig=new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,len,4),DARK_MAT); rig.position.copy(top.clone().lerp(b,0.5)); rig.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),b.clone().sub(top).normalize()); group.add(rig); }
+    bowLocal=lantern(1.0,0.45,0); }
+  else if(type==="fishing"){ const hull=makeHull(1.9,0.72,0.5,{sheer:0.2,bottomTaper:0.42}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
+    const derrick=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.03,1.1,6),getWoodMat()); derrick.rotation.z=Math.PI/2.6; derrick.position.set(0.7,0.55,0); group.add(derrick);
+    const rope=new THREE.Mesh(new THREE.TorusGeometry(0.12,0.03,6,12),getWoodMat()); rope.position.set(0.7,0.3,0); group.add(rope);
+    const net=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.7,5,5),getNetMat()); const np=net.geometry.attributes.position;
+    for(let i=0;i<np.count;i++){ const y=np.getY(i); if(y<0) np.setY(i,y-0.25*(1+y/0.35)); } net.position.set(0.55,0.15,0.2); group.add(net);
+    const cabin=new THREE.Mesh(new THREE.BoxGeometry(0.45,0.3,0.4),DARK_MAT); cabin.position.set(-0.55,0.4,0); group.add(cabin);
+    const hold=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.18,0.4),getHullMat()); hold.position.set(-0.1,0.34,0); group.add(hold);
+    bowLocal=lantern(0.9,0.45,0); }
+  else if(type==="dragon"){ const hull=makeHull(3.2,0.5,0.4,{sheer:0.5,bottomTaper:0.35}); const body=new THREE.Mesh(hull,getHullMat()); group.add(body); addEdges(hull,color,body);
+    const head=makeDragonHead(); head.position.set(1.5,0.2,0); group.add(head);
+    for(let i=0;i<8;i++){ const bench=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.06,0.36),getWoodMat()); bench.position.set(-1.4+i*0.4,0.28,0); group.add(bench); }
+    const drum=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,0.18,12),getWoodMat()); drum.position.set(-0.1,0.45,0); group.add(drum);
+    const drumTop=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.17,0.03,12),DARK_MAT); drumTop.position.set(-0.1,0.55,0); group.add(drumTop);
+    const tail=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.4,5),getHullMat()); tail.position.set(-1.55,0.3,0); tail.rotation.z=Math.PI/2.4; group.add(tail);
+    bowLocal=lantern(1.45,0.4,0); }
+  else { const hull=makeHull(2.0,0.8,0.5,{sheer:0.1,bottomTaper:0.55,segsX:8,segsZ:4}); const body=new THREE.Mesh(hull,METAL_MAT); group.add(body);
+    const seams=new THREE.LineSegments(new THREE.EdgesGeometry(hull,18),new THREE.LineBasicMaterial({color:0x6fd6ff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending})); group.add(seams);
+    for(const sz of [-1,1]){ const fin=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.04,0.18),METAL_MAT); fin.position.set(-0.3,0.0,sz*0.45); fin.rotation.y=sz*0.2; group.add(fin); }
+    const stern=new THREE.Mesh(new THREE.ConeGeometry(0.18,0.4,8),METAL_MAT); stern.rotation.z=-Math.PI/2; stern.position.set(-1.0,0.1,0); group.add(stern);
+    const thruster=new THREE.Mesh(new THREE.SphereGeometry(0.1,10,10),COLD_MAT); thruster.position.set(-1.15,0.1,0); group.add(thruster);
+    const core=new THREE.Mesh(new THREE.SphereGeometry(0.08,10,10),COLD_MAT); core.position.set(0.4,0.2,0); group.add(core);
+    const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.5,4),METAL_MAT); ant.position.set(0.5,0.5,0); group.add(ant);
+    const antTip=new THREE.Mesh(new THREE.SphereGeometry(0.03,8,8),COLD_MAT); antTip.position.set(0.5,0.75,0); group.add(antTip);
     bowLocal=lantern(0.9,0.45,0); }
   return {group,bowLocal}; }
 
-// ─── 样例书（覆盖全部 6 纸船） ───────────────────────────────
 const SAMPLE=[
   {id:"1",name:"枫桥夜泊",genre:"武侠",targetWordCount:48000,storyNodes:9,updatedAt:Date.now()-1*86400000},
   {id:"2",name:"九霄云阙",genre:"仙侠",targetWordCount:160000,storyNodes:30,updatedAt:Date.now()-2*86400000},
@@ -220,14 +246,15 @@ SAMPLE.forEach((p,i)=>{ const color=genreColor(p.genre); const type=boatTypeFor(
   boats.push({id:p.id,name:p.name,type,color,group,bowLocal:built.bowLocal,baseX,baseZ,scale,bright,bornAt:i*0.35,landed:false,phase:Math.random()*Math.PI*2});
 });
 
-// ─── 交互：拖拽旋转 + 滚轮缩放 + 点击进入 ─────────────────────
 const ray=new THREE.Raycaster(); const mouse=new THREE.Vector2(); let downX=0,downY=0; let dragging=false,lastX=0,lastY=0;
 let tYaw=0,tPitch=0.24,tRadius=13; let cYaw=0,cPitch=0.24,cRadius=13; const lookTarget=new THREE.Vector3(0,0.3,-1);
+const hoverchip=document.getElementById("hoverchip"); let hoverIdx=-1;
 const pickBoat=(e)=>{ const rect=cv.getBoundingClientRect(); mouse.x=((e.clientX-rect.left)/rect.width)*2-1; mouse.y=-((e.clientY-rect.top)/rect.height)*2+1; ray.setFromCamera(mouse,camera); const hits=ray.intersectObjects(boats.map(b=>b.group),true); if(!hits.length)return null; let o=hits[0].object; while(o&&o.userData.index===undefined)o=o.parent; return o?o.userData.index:null; };
 cv.addEventListener("pointermove",(e)=>{ if(dragging){ tYaw-=(e.clientX-lastX)*0.006; tPitch=clamp(tPitch+(e.clientY-lastY)*0.004,0.12,1.1); lastX=e.clientX; lastY=e.clientY; }
-  cv.style.cursor=pickBoat(e)!=null?"pointer":(dragging?"grabbing":"grab"); });
+  const idx=pickBoat(e); cv.style.cursor=idx!=null?"pointer":(dragging?"grabbing":"grab");
+  if(idx!==hoverIdx){ hoverIdx=idx; if(idx!=null&&boats[idx]){ hoverchip.textContent="《"+boats[idx].name+"》"; hoverchip.style.display="block"; } else hoverchip.style.display="none"; } });
 cv.addEventListener("pointerdown",(e)=>{ downX=e.clientX; downY=e.clientY; lastX=e.clientX; lastY=e.clientY; dragging=true; });
-cv.addEventListener("pointerup",(e)=>{ dragging=false; if(Math.hypot(e.clientX-downX,e.clientY-downY)>6)return; const idx=pickBoat(e); if(idx==null)return; alert("进入写作区："+boats[idx].name); });
+cv.addEventListener("pointerup",(e)=>{ dragging=false; if(Math.hypot(e.clientX-downX,e.clientY-downY)>6)return; const idx=pickBoat(e); if(idx==null)return; if(!confirm("你确认要进入《"+boats[idx].name+"》吗？"))return; alert("进入写作区："+boats[idx].name); });
 cv.addEventListener("wheel",(e)=>{ e.preventDefault(); tRadius=clamp(tRadius*(1+e.deltaY*0.0012),6,26); },{passive:false});
 
 const resize=()=>{ const w=mount.clientWidth,h=mount.clientHeight; if(!w||!h)return; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }; resize(); new ResizeObserver(resize).observe(mount);
@@ -252,11 +279,10 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden)stop(); el
 new IntersectionObserver((es)=>{ if(es[0].isIntersecting)start(); else stop(); },{rootMargin:"100px"}).observe(mount);
 start();
 
-// ─── UI：书栏 + 书架 ────────────────────────────────────────
 const picks=document.getElementById("picks");
-SAMPLE.forEach((p,i)=>{ const c=genreColor(p.genre); const tp=boatTypeFor(p.genre); const el=document.createElement("button"); el.className="pick";
+SAMPLE.forEach(p=>{ const c=genreColor(p.genre); const tp=boatTypeFor(p.genre); const el=document.createElement("button"); el.className="pick";
   const rgb=`rgb(${c[0]*255},${c[1]*255},${c[2]*255})`; el.innerHTML=`<span class="sw" style="background:${rgb};box-shadow:0 0 8px ${rgb}"></span><span class="nm">${p.name}</span><span class="tp">${TYPE_NAMES[tp]}</span>`;
-  el.onclick=()=>alert("进入写作区："+p.name); picks.appendChild(el); });
+  el.onclick=()=>{ if(confirm("你确认要进入《"+p.name+"》吗？")) alert("进入写作区："+p.name); }; picks.appendChild(el); });
 const shelf=document.getElementById("shelf");
 SAMPLE.forEach(p=>{ const c=genreColor(p.genre); const tp=boatTypeFor(p.genre);
   const col=`oklch(${0.55+c[0]*0.12} ${0.10+c[1]*0.10} ${c[2]*330})`;
@@ -264,7 +290,7 @@ SAMPLE.forEach(p=>{ const c=genreColor(p.genre); const tp=boatTypeFor(p.genre);
   el.innerHTML=`<span class="tp">${TYPE_NAMES[tp]}</span><span class="nm">${p.name}</span>`;
   el.onclick=()=>alert("进入工作台："+p.name); shelf.appendChild(el); });
 const legend=document.getElementById("legend");
-const LEG=[["经典纸船","V 形船身+中央纸棚+首尾纸角上折","武侠/言情/田园"],["塔式纸船","两层叠纸台+顶层纸旗","仙侠/玄幻/历史"],["双帆纸船","双纸桅+两片斜纸帆","冒险/西幻"],["平筏纸船","浅平船身+小纸棚+尾桨+线网","悬疑/灵异"],["长龙纸船","窄长船身+首尾纸尖大幅上翘+纸坐板","历史连载"],["尖角纸船","灰纸棱角+冷蓝折痕+纸翼+天线","科幻/推理"]];
+const LEG=[["乌篷船","半圆竹篷、窄长平底、单橹拖尾","武侠/言情/田园"],["楼船","多层甲板+飞檐暗窗顶饰、宽底防翻、墨红旗","仙侠/玄幻/历史"],["帆船","桅杆桅索连承重、鼓起受风帆","冒险/西幻"],["渔船","吊杆+下垂网具+舱房、小体量","悬疑/灵异"],["龙舟","极窄长、龙首下颌双眼鬃毛、中央鼓+尾鳍","历史连载"],["机关舟","棱角金属、冷蓝发光缝、侧鳍天线","科幻/推理"]];
 LEG.forEach(([n,d,g])=>{ const el=document.createElement("div"); el.className="lg"; el.innerHTML=`<h4>${n}</h4><p>${d}<br><span style="color:var(--nv-text-muted)">映射：${g}</span></p>`; legend.appendChild(el); });
 </script>
 </body>
