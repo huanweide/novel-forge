@@ -886,19 +886,19 @@
 
 .nf-home { position: relative; }
 
-/* 暗角：光沉到中央，四周压暗 */
+/* 暗角：光沉到中央，四周轻压（v0.46.53 降低，避免整页发闷） */
 .nf-home::before {
   content: "";
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
   background:
-    radial-gradient(ellipse 135% 100% at 50% 6%, transparent 50%, rgba(0, 0, 0, 0.48) 96%),
-    radial-gradient(ellipse 70% 55% at 50% 0%, transparent 58%, rgba(0, 0, 0, 0.34) 100%);
+    radial-gradient(ellipse 135% 100% at 50% 6%, transparent 58%, rgba(0, 0, 0, 0.22) 100%),
+    radial-gradient(ellipse 70% 55% at 50% 0%, transparent 68%, rgba(0, 0, 0, 0.14) 100%);
 }
 
-/* 细网格：深空的刻度感，中心可见、四周淡出 */
+/* 细网格：深空的刻度感，中心可见、四周淡出（透明度降档） */
 .nf-home::after {
   content: "";
-  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.5;
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.3;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);

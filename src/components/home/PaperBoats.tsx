@@ -126,15 +126,18 @@ function makeHull(L: number, W: number, H: number, opt: {
 
 // ─── 部件库（共享材质，按船型组合，不写新类） ──────────────────
 // 纯色材质：模块顶层创建安全（不触 document），SSR 可用
-const BLACK_MAT = new THREE.MeshStandardMaterial({ color: 0x181820, roughness: 0.45, metalness: 0.25, side: THREE.DoubleSide }); // 黑珍珠号/复仇女王号 船体+黑帆
-const GOLD_MAT = new THREE.MeshStandardMaterial({ color: 0xd9a441, roughness: 0.35, metalness: 0.6 }); // 金饰（船艏像/艉楼/炮窗框）
-const GHOST_MAT = new THREE.MeshStandardMaterial({ color: 0x2e3a42, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide }); // 飞翔的荷兰人 船体
-const GHOST_SAIL_MAT = new THREE.MeshStandardMaterial({ color: 0x9aa4a8, roughness: 0.9, transparent: true, opacity: 0.72, side: THREE.DoubleSide }); // 破帆
+// 六种现代名船的亮色涂装（用户验收：船太黑看不清 → 每种船一种高辨识亮色，深色细节保留）
+const HULL_GOLD_MAT = new THREE.MeshStandardMaterial({ color: 0xc9a24e, roughness: 0.5, metalness: 0.45, side: THREE.DoubleSide }); // 黑珍珠号 · 亮金船体
+const HULL_RED_MAT = new THREE.MeshStandardMaterial({ color: 0xa8433a, roughness: 0.55, metalness: 0.3, side: THREE.DoubleSide }); // 复仇女王号 · 猩红船体
+const SAIL_BLACK_MAT = new THREE.MeshStandardMaterial({ color: 0x33333f, roughness: 0.5, metalness: 0.35, side: THREE.DoubleSide }); // 黑帆（保留名船特征，微反光不糊黑）
+const GOLD_MAT = new THREE.MeshStandardMaterial({ color: 0xe6b54e, roughness: 0.3, metalness: 0.7 }); // 金饰（船艏像/艉楼/炮窗框）
+const GHOST_MAT = new THREE.MeshStandardMaterial({ color: 0x3f9f8c, roughness: 0.6, metalness: 0.2, side: THREE.DoubleSide }); // 飞翔的荷兰人 · 幽绿青船体
+const GHOST_SAIL_MAT = new THREE.MeshStandardMaterial({ color: 0xd6e8e4, roughness: 0.9, transparent: true, opacity: 0.75, side: THREE.DoubleSide }); // 破帆（亮白绿半透）
 const GHOST_GLOW = new THREE.MeshBasicMaterial({ color: 0x5dffd0 }); // 荷兰人 幽绿发光
-const DECK_MAT = new THREE.MeshStandardMaterial({ color: 0x4a505c, roughness: 0.85, metalness: 0.1 }); // 航母甲板
-const HULL_GREY_MAT = new THREE.MeshStandardMaterial({ color: 0x58606e, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }); // 军舰舰体（航母/驱逐舰）
-const METAL_MAT = new THREE.MeshStandardMaterial({ color: 0x2a3340, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide }); // 深灰金属（潜艇/上层建筑）
-const DARK_MAT = new THREE.MeshStandardMaterial({ color: 0x141a26, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide }); // 暗部（炮门/缝隙）
+const DECK_MAT = new THREE.MeshStandardMaterial({ color: 0x9aabbf, roughness: 0.8, metalness: 0.1 }); // 航母甲板（浅灰蓝，弹射线可辨）
+const HULL_GREY_MAT = new THREE.MeshStandardMaterial({ color: 0x6e88a8, roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide }); // 军舰舰体（航母/驱逐舰 · 浅蓝灰）
+const METAL_MAT = new THREE.MeshStandardMaterial({ color: 0x9fb0c0, roughness: 0.35, metalness: 0.7, side: THREE.DoubleSide }); // 核潜艇 · 亮银
+const DARK_MAT = new THREE.MeshStandardMaterial({ color: 0x232c40, roughness: 0.6, metalness: 0.15, side: THREE.DoubleSide }); // 暗部细节（炮门/舰桥/缝隙，微亮不糊）
 const COLD_MAT = new THREE.MeshBasicMaterial({ color: 0x6fd6ff }); // 冷蓝发光（点缀）
 const CORE_WARM = new THREE.MeshBasicMaterial({ color: 0xfff2d8 }); // 暖白船头灯
 
@@ -229,21 +232,21 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     group.add(post);
     return new THREE.Vector3(x, y + 0.13, z);
   };
-  // 黑帆三桅（黑珍珠号 / 复仇女王号共用骨架）
-  const rigBlack = (L: number, W: number, H: number, opt: { sheer?: number; bottomTaper?: number; gold?: boolean } = {}) => {
+  // 黑帆三桅（黑珍珠号 / 复仇女王号共用骨架；hullMat 决定船体亮色涂装）
+  const rigBlack = (L: number, W: number, H: number, opt: { sheer?: number; bottomTaper?: number; gold?: boolean; hullMat?: THREE.Material } = {}) => {
     const hull = makeHull(L, W, H, { sheer: opt.sheer ?? 0.28, bottomTaper: opt.bottomTaper ?? 0.42, segsX: 12, segsZ: 5 });
-    const body = new THREE.Mesh(hull, BLACK_MAT);
+    const body = new THREE.Mesh(hull, opt.hullMat ?? HULL_GOLD_MAT);
     group.add(body); addEdges(hull, color, body);
     const masts: Array<[number, number]> = [[-0.85, 1.6], [0.0, 1.9], [0.75, 1.4]];
     for (const [mx, mh] of masts) {
       const mast = makeMast(mh);
       mast.position.set(mx, 0.45 + mh / 2, 0);
       group.add(mast);
-      const sail = makeSailPnl(0.9, mh * 0.72, BLACK_MAT);
+      const sail = makeSailPnl(0.9, mh * 0.72, SAIL_BLACK_MAT);
       sail.position.set(mx - 0.02, 0.45 + mh * 0.5, 0.01);
       group.add(sail);
     }
-    const sternSail = makeSailPnl(0.75, 1.0, BLACK_MAT);
+    const sternSail = makeSailPnl(0.75, 1.0, SAIL_BLACK_MAT);
     sternSail.rotation.y = 0.35; sternSail.position.set(0.95, 1.0, 0);
     group.add(sternSail);
     if (opt.gold) { // 金饰
@@ -262,10 +265,10 @@ function createBoat(type: BoatType, color: [number, number, number]): BuiltBoat 
     return lantern(L / 2 + 0.05, 0.55, 0);
   };
 
-  if (type === "wupeng") { // 黑珍珠号：黑色三桅 + 黑帆 + 加勒比最快船
-    bowLocal = rigBlack(2.6, 0.85, 0.75, { sheer: 0.3, bottomTaper: 0.4, gold: true });
-  } else if (type === "tower") { // 复仇女王号：黑胡子旗舰，黑帆 + 金饰 + 骷髅
-    bowLocal = rigBlack(2.5, 0.95, 0.85, { sheer: 0.26, bottomTaper: 0.45, gold: true });
+  if (type === "wupeng") { // 黑珍珠号：亮金船体 + 黑帆 + 金饰 + 加勒比最快船
+    bowLocal = rigBlack(2.6, 0.85, 0.75, { sheer: 0.3, bottomTaper: 0.4, gold: true, hullMat: HULL_GOLD_MAT });
+  } else if (type === "tower") { // 复仇女王号：猩红船体 + 黑胡子旗舰黑帆 + 金饰 + 骷髅
+    bowLocal = rigBlack(2.5, 0.95, 0.85, { sheer: 0.26, bottomTaper: 0.45, gold: true, hullMat: HULL_RED_MAT });
     const skull = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xe8e4d8, roughness: 0.4 }));
     skull.position.set(-1.1, 1.15, 0);
     group.add(skull);
@@ -433,20 +436,29 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
     if (!mount || list.length === 0) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x05070f, 18, 46);
+    scene.fog = new THREE.Fog(0x0a2a55, 18, 46); // 雾色与清除色一致（深海蓝），远景不糊黑
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 120);
     camera.position.set(0, 3, 14);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = (() => {
+      try {
+        return new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      } catch (err) {
+        console.warn("[PaperBoats] WebGL 不可用，3D 已降级（不影响下方作品区）：", err);
+        return null;
+      }
+    })();
+    if (!renderer) return; // 3D 失败静默降级，绝不让整页组件树崩溃
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
-    renderer.setClearColor(0x05070f, 1);
+    renderer.setClearColor(0x0a2a55, 1); // 深海蓝背景（不再近黑，周边不糊黑）
     mount.appendChild(renderer.domElement);
     const cv = renderer.domElement;
     cv.style.width = "100%"; cv.style.height = "100%"; cv.style.display = "block";
     cv.style.cursor = "default";
 
-    scene.add(new THREE.AmbientLight(0x2a3860, 0.9));
-    const moon = new THREE.DirectionalLight(0x8fb0ff, 0.5);
+    scene.add(new THREE.AmbientLight(0x9fb4e8, 1.4)); // 亮环境光：所有船体清晰可见（不再只亮 8 艘）
+    scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x2a3a55, 1.15)); // 天顶暖 + 海底冷的自然光
+    const moon = new THREE.DirectionalLight(0x8fb0ff, 0.85);
     moon.position.set(6, 12, 8);
     scene.add(moon);
 

@@ -182,7 +182,7 @@ export default function Dashboard() {
   return (
     <div className="nf-home min-h-screen bg-transparent text-foreground">
       {/* 顶栏：悬浮下移（不贴死顶部，让系统提示条可见）+ 主操作 / 导航 / 系统三组 */}
-      <header className="nf-header sticky top-2 z-10 mx-2 rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/90 shadow-lg backdrop-blur-md">
+      <header className="nf-header sticky top-2 z-40 mx-2 rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/90 shadow-lg backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <span className="nf-logo" aria-hidden="true">
@@ -220,10 +220,10 @@ export default function Dashboard() {
               <Icon name="search" size={13} />
               <kbd className="text-[10px] px-1 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">⌘K</kbd>
             </button>
-            <button onClick={loadSample} disabled={loadingSample} className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip={loadingSample ? "载入中…" : "一键载入示例项目"} aria-label="示例">
+            <button onClick={loadSample} disabled={loadingSample} className="btn-ghost hidden md:inline-flex text-xs h-8 w-8 rounded-xl items-center justify-center tooltip-trigger" data-tooltip={loadingSample ? "载入中…" : "一键载入示例项目"} aria-label="示例">
               <Icon name="sparkles" size={13} />
             </button>
-            <button onClick={() => importBackupRef.current?.click()} className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="从 .nfproject 备份包导入" aria-label="导入备份">
+            <button onClick={() => importBackupRef.current?.click()} className="btn-ghost hidden md:inline-flex text-xs h-8 w-8 rounded-xl items-center justify-center tooltip-trigger" data-tooltip="从 .nfproject 备份包导入" aria-label="导入备份">
               <Icon name="package" size={13} />
             </button>
             <input ref={importBackupRef} type="file" accept=".nfproject,application/json" className="hidden" onChange={handleImportBackup} />
