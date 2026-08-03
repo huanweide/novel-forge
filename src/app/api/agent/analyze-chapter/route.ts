@@ -176,15 +176,26 @@ ${charsSummary.slice(0, 3000)}`;
 
     const raw = response.content?.trim() || "";
 
-    // 解析 JSON
+    // 解析 JSON（v0.46.55 修复：v4-flash 常返回 markdown 包裹/尾逗号/截断 JSON，用多级鲁棒解析）
     let result: AnalysisResult;
     try {
-      // 去掉可能的 markdown 代码块包裹
-      const jsonStr = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-      const parsed = JSON.parse(jsonStr);
+      let jsonStr = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      const a = jsonStr.indexOf("{"), b = jsonStr.lastIndexOf("}");
+      if (a >= 0 && b > a) jsonStr = jsonStr.slice(a, b + 1);
+      const tryParse = (s: string): Record<string, unknown> | null => {
+        try { return JSON.parse(s) as Record<string, unknown>; } catch { /* 下一级 */ }
+        try {
+          return JSON.parse(s
+            .replace(/,\s*([}\]])/g, "$1")
+            .replace(/\u2028|\u2029/g, " ")
+            .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "")) as Record<string, unknown>;
+        } catch { return null; }
+      };
+      const parsed = tryParse(jsonStr);
+      if (!parsed) throw new Error("JSON 解析失败");
       result = {
         differences: Array.isArray(parsed.differences) ? parsed.differences : [],
-        summary: parsed.summary || "分析完成",
+        summary: typeof parsed.summary === "string" ? parsed.summary : "分析完成",
         charactersAnalyzed: targetChars.length,
       };
     } catch {

@@ -50,6 +50,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // v0.46.55 修复：请求体未显式传 authorNote 时，回退到 project.authorNote
+    // （作者指令是持久化配置，上下文预览必须如实反映写作用到的指令）
+    const effectiveAuthorNote = authorNote || project.authorNote || undefined;
+
     // 找到当前节点之前的节点
     const currentNodeIndex = allNodes.findIndex((n) => n.id === nodeId);
     const previousNodes = allNodes.slice(
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
       characters: characters as any,
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
-      authorNote,
+      authorNote: effectiveAuthorNote,
     });
 
     // ── 注入文风模板（与 write 路由保持一致）──

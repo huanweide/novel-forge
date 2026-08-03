@@ -290,6 +290,15 @@ export async function POST(request: Request) {
             send({ type: "postprocess_skip", content: e instanceof Error ? e.message : "后处理跳过" });
           }
 
+          // ── v0.46.55 容错：模型偶发空响应时明确报错，不再静默 done ──
+          if (!fullContent || fullContent.trim().length === 0) {
+            send({
+              type: "error",
+              content: "生成内容为空（模型未返回正文），请重试或检查 LLM 配置",
+            });
+            return;
+          }
+
           // ── 宝宝流自动填表（正文 → 填表，闭合「正文→填表→召回→正文」写作闭环） ──
           // 每章写完后自动用 DeepSeek 抽取结构化事实回填表格；失败不影响正文交付。
           const babylore = await safeFillAfterWriting({
