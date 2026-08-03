@@ -24,6 +24,7 @@ import { NextResponse } from "next/server";
 import {
   loadOutlineData, extractPrevContext, extractNextContext,
   buildCharacterList, prepareOutlineDirective, formatSummaries,
+  formatStorylines, extractLastChapterHook,
 } from "@/core/pipeline/outline-context";
 import { completeText } from "@/core/llm/client";
 
@@ -39,13 +40,15 @@ export async function POST(request: Request) {
     // Step 1: 读数据——使用共享模块
     // ═══════════════════════════════════════════════
 
-    const { project, node, allNodes, characters, summaries } = await loadOutlineData(projectId, nodeId, 3);
+    const { project, node, allNodes, characters, summaries, storylines } = await loadOutlineData(projectId, nodeId, 3);
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
 
     const prevContext = extractPrevContext(allNodes, nodeId);
     const nextContext = extractNextContext(allNodes, nodeId);
+    const storylineContext = formatStorylines(storylines); // v0.46.57：章纲剧情感知
+    const lastHook = extractLastChapterHook(allNodes, nodeId); // 上章钩子
 
     const authorDirectiveRaw = await prepareOutlineDirective(projectId, explicitAuthorNote || project.authorNote);
     const authorDirective = authorDirectiveRaw
@@ -202,6 +205,11 @@ ${authorDirective}
 
 【前文上下文——你读了才知道从哪里接】
 ${prevContext || "（本章为开头）"}
+
+【活跃剧情线——本章必须顺着这些线推进（v0.46.57 剧情感知）】
+${storylineContext || "（暂无剧情线，按总纲自由推进）"}
+
+${lastHook ? `【上一章结尾钩子——本章开头必须承接】\n${lastHook}\n` : ""}
 
 【后文——知道后面会发生什么才能埋好伏笔】
 ${nextContext || "（无后续章节规划）"}

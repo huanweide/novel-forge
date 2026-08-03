@@ -6,44 +6,67 @@ import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { ErrorState } from "@/components/ui/States";
 
-// ─── P0 格式行类型着色 ───────────────────────────────────
+// ─── 章纲人话渲染（v0.46.57：去掉 C| R| L0| 等彩色代码标签，按自然语言小节分区展示） ───
 
-const P0_LINE_COLORS: Record<string, string> = {
-  "C|": "text-cyan-400",
-  "L0|": "text-danger/70",
-  "L1|": "text-warning/70",
-  "L2|": "text-orange-400/70",
-  "R|": "text-success",
-  "L|": "text-teal-400",
-  "G|": "text-warning",
-  "P|": "text-[var(--nv-text-tertiary)]",
-  "CF|": "text-purple-400",
-  "M|": "text-danger",
-  "K|": "text-warning",
-  "EL|": "text-pink-400",
-  "T|": "text-cyan-300",
-  "【章首衔接】": "text-info",
-  "【章尾悬念】": "text-info",
-  "⟨✍": "text-[var(--nv-creative)]/60 italic",
-};
+const OUTLINE_SECTIONS = [
+  { key: "【场景】", label: "场景" },
+  { key: "【事件】", label: "事件" },
+  { key: "【人物】", label: "人物" },
+  { key: "【悬念/钩子】", label: "悬念/钩子" },
+  { key: "【伏笔】", label: "伏笔" },
+  { key: "【情绪】", label: "情绪" },
+];
 
-function getP0LineColor(line: string): string {
-  for (const [prefix, color] of Object.entries(P0_LINE_COLORS)) {
-    if (line.trimStart().startsWith(prefix)) return color;
-  }
-  return "text-[var(--nv-text-muted)]";
-}
-
-function P0HighlightedPreview({ text }: { text: string }) {
+function OutlinePreview({ text }: { text: string }) {
   const lines = text.split("\n");
-  return (
-    <pre className="text-xs leading-relaxed font-mono whitespace-pre-wrap">
-      {lines.map((line, i) => (
-        <div key={i} className={getP0LineColor(line)}>
-          {line || " "}
+  const hasSections = text.includes("【场景】") || text.includes("【悬念") || text.includes("【事件】");
+
+  // 新格式：按六小节分组渲染
+  if (hasSections) {
+    const groups: { label: string; lines: string[] }[] = [];
+    let current: { label: string; lines: string[] } | null = null;
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) continue;
+      const meta = OUTLINE_SECTIONS.find((m) => t.startsWith(m.key));
+      if (meta) {
+        current = { label: meta.key, lines: [t.slice(meta.key.length).trim()] };
+        groups.push(current);
+      } else if (current) {
+        current.lines.push(t);
+      }
+    }
+    if (groups.length > 0) {
+      return (
+        <div className="space-y-2.5">
+          {groups.map((g, i) => (
+            <div key={i}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-1 h-3 rounded-full bg-[var(--nv-primary)]/50" />
+                <span className="text-[10px] font-semibold tracking-wide text-[var(--nv-text-tertiary)]">{g.label}</span>
+              </div>
+              {g.lines.filter(Boolean).map((l, j) => (
+                <div key={j} className="text-xs text-[var(--nv-text-secondary)] leading-relaxed pl-3 border-l border-[var(--nv-border-2)] ml-[3px] py-px">
+                  {l}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
+      );
+    }
+  }
+
+  // 兼容旧格式/杂文：剥离 C| R| 等前缀，普通段落展示
+  const clean = lines
+    .map((l) => l.replace(/^(C\||L0\||L1\||L2\||R\||L\||G\||P\||K\||CF\||M\||EL\||T\|)\s*/, ""))
+    .filter((l) => l.trim());
+  return (
+    <div className="space-y-1.5">
+      {clean.map((l, i) => (
+        <p key={i} className="text-xs text-[var(--nv-text-secondary)] leading-relaxed">{l}</p>
       ))}
-    </pre>
+    </div>
   );
 }
 
@@ -230,10 +253,10 @@ export function DrawCards({
                       </p>
                     )}
 
-                    {/* 章纲正文——P0格式高亮 */}
+                    {/* 章纲正文——人话分区展示 */}
                     {card.outline && (
-                      <div className="text-xs leading-relaxed mb-3 max-h-64 overflow-y-auto scrollbar-thin custom-scrollbar">
-                        <P0HighlightedPreview text={card.outline} />
+                      <div className="text-xs leading-relaxed mb-3 max-h-72 overflow-y-auto scrollbar-thin custom-scrollbar">
+                        <OutlinePreview text={card.outline} />
                       </div>
                     )}
 

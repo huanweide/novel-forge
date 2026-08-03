@@ -28,6 +28,7 @@ export interface OutlineContextData {
   allNodes: any[];
   characters: any[];
   summaries: any[];
+  storylines: any[];
 }
 
 export async function loadOutlineData(
@@ -35,7 +36,7 @@ export async function loadOutlineData(
   nodeId: string,
   summaryTake = 3,
 ): Promise<OutlineContextData> {
-  const [project, node, allNodes, characters, summaries] = await Promise.all([
+  const [project, node, allNodes, characters, summaries, storylines] = await Promise.all([
     prisma.project.findUnique({ where: { id: projectId } }),
     prisma.storyNode.findUnique({ where: { id: nodeId } }),
     prisma.storyNode.findMany({
@@ -48,8 +49,53 @@ export async function loadOutlineData(
       orderBy: { createdAt: "desc" },
       take: summaryTake,
     }),
+    prisma.storyline.findMany({
+      where: { projectId, status: { in: ["active", "main"] } },
+      orderBy: { order: "asc" },
+    }),
   ]);
-  return { project, node, allNodes: allNodes as any[], characters: characters as any[], summaries: summaries as any[] };
+  return {
+    project, node, allNodes: allNodes as any[], characters: characters as any[],
+    summaries: summaries as any[], storylines: storylines as any[],
+  };
+}
+
+// ─── 剧情线上下文（v0.46.57：章纲生成剧情感知——不再盲写） ────────
+
+const SEVEN_ELEMENTS: Array<[key: string, label: string]> = [
+  ["desire", "欲望"], ["obstacle", "阻碍"], ["action", "行动"],
+  ["result", "结果"], ["twist", "意外"], ["turn", "转折"], ["ending", "结局"],
+];
+
+/** 活跃剧情线摘要：每条线的 title + description + 非空七要素 */
+export function formatStorylines(storylines: any[]): string {
+  if (!storylines || storylines.length === 0) return "";
+  return storylines
+    .map((s: any) => {
+      const parts: string[] = [];
+      parts.push(`【剧情线：${s.title}】${s.type === "main" ? "（主线）" : "（支线）"}`);
+      if (s.description) parts.push(`说明：${s.description}`);
+      const elems = SEVEN_ELEMENTS
+        .map(([k, label]) => (s[k] ? `${label}:${s[k]}` : ""))
+        .filter(Boolean);
+      if (elems.length) parts.push(elems.join(" | "));
+      return parts.join("\n");
+    })
+    .join("\n\n");
+}
+
+/** 上一章结尾钩子：优先取 outline 里的【悬念/钩子】小节，否则取结尾 300 字 */
+export function extractLastChapterHook(allNodes: any[], nodeId: string): string {
+  const chapters = allNodes.filter((n: any) => n.type === "chapter" || n.type === "section");
+  const nodeIndex = chapters.findIndex((n: any) => n.id === nodeId);
+  if (nodeIndex <= 0) return "";
+  const prev = chapters[nodeIndex - 1];
+  if (!prev) return "";
+  // 找 outline 里的钩子小节
+  const hookMatch = (prev.outline || "").match(/【悬念\/钩子】\s*([^\n]*)/);
+  if (hookMatch && hookMatch[1]?.trim()) return hookMatch[1].trim();
+  const tail = (prev.content || "").slice(-300);
+  return tail ? `（上一章结尾）${tail}` : "";
 }
 
 // ─── 前文/后文上下文 ────────────────────────────────────────────

@@ -25,18 +25,62 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.56";
+export const LATEST_VERSION = "v0.46.57";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "修复全局快捷键系统无限更新循环（Maximum update depth exceeded）：根因是 ShortcutProvider 的 register 每次注册/注销都 setVersion，而 context value 的 useMemo 依赖 version——注册→版本号变→ctx 引用变→所有 useShortcut 的 effect 重跑→注销再 setVersion→无限循环（workspace 页 4 个快捷键注册同时触发时必现）",
-  "修复方式：register/注销不再触发 setVersion（注册表是 ref，keydown 监听与 list() 均实时读取，无需 state 参与重渲染）；value 的 useMemo 依赖移除 version——ctx 引用稳定，快捷键注册/注销零渲染，循环彻底消除",
-  "验证：tsc 零错误 + dev 200；调用方依赖审计（handler 走 ref、combo/description 字符串常量、opts 取标量值）确认无其他循环源",
-  "诚实边界：快捷键速查弹层（helpOpen）仍正常（list() 实时读注册表）；修复后快捷键注册不触发任何重渲染，性能更优",
+  "章纲人话化（质检 P0-1）：抽卡/章纲生成改为自然语言六小节（【场景】【事件】【人物】【悬念/钩子】【伏笔】【情绪】），彻底去掉 C| R| L0| 等机器代码前缀；抽卡卡片从等宽字体+彩色代码标签改为按小节分区的人话展示——章纲终于像章纲而不是程序代码",
+  "章纲剧情感知（质检 P0-2）：章纲生成现在注入「活跃剧情线（含七要素）+ 上一章结尾钩子 + 最近摘要」——不再盲写，自动承接上章钩子、顺着剧情线走，与剧情预设（plan-chapter 推进引擎）一致不打架；实测第四章抽卡自动续上「周远征循潮痕追陈牧、龙渊叶凌云天台棋局」",
+  "编辑保护（质检 P1）：章纲预览手动编辑后未「确认写入」就关窗 → 弹确认提示防丢失；保存边界铁律固化（正文=自动保存；定义/要求类=显式保存；编辑半成品绝不进上下文编译）",
+  "诚实边界：DeepSeek 并发限流仍会偶发空卡（有「生成失败」标签可重抽）；章纲生成 prompt 换新格式后旧格式章纲（已生成的）在卡片上自动兼容展示（剥离前缀）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.57",
+    date: "2026-08-03",
+    title: "质检化处理：章纲人话化 + 章纲剧情感知 + 编辑保护（P0/P1/P2 全实施）",
+    sections: [
+      {
+        label: "质检背景（用户：用户视角判断方便/麻烦；章纲 vs 剧情预设关系；一键生成章纲意义；先出计划再实施）",
+        items: [
+          "先出计划（PROCESS/QUALITY_PLAN.md）→ 用户确认「继续」→ 按 P0→P1→P2 实施",
+          "现状实证：保存边界已正确（角色/词条/预设/作者指令=显式保存；正文=mod+s+流式落库；globalPrompt 仅显式保存后 sync 编译）；正文干净（格式铁律防章节标题入正文）；「关键词写在开头」实指抽卡卡片等宽字体+彩色代码标签",
+          "关键架构结论：剧情预设（plan-chapter）= 推进引擎（write 前自动跑，管剧情往哪走）；章纲 = 内容蓝图（管本章写哪些场景事件）——原本两套机制脱节（章纲不读剧情线=盲写），本轮打通",
+        ],
+      },
+      {
+        label: "P0-1 章纲人话化",
+        items: [
+          "draw/route.ts 的 system prompt 改为自然语言六小节（【场景】【事件】【人物】【悬念/钩子】【伏笔】【情绪】），严禁 C| R| K| 等前缀；chapter-outline（非 draw）本就是自然语言格式未动",
+          "DrawCards.tsx：删除 P0_LINE_COLORS 14 色代码高亮 + 等宽字体，改 OutlinePreview 按小节分区渲染（小节标题 + 缩进条目）；兼容旧格式（无小节标题时剥离 C| R| 前缀当普通段落）",
+        ],
+      },
+      {
+        label: "P0-2 章纲剧情感知（打通章纲与剧情预设）",
+        items: [
+          "outline-context.ts：loadOutlineData 并行查活跃 storylines；新增 formatStorylines（title+description+非空七要素）与 extractLastChapterHook（优先取上章 outline 的【悬念/钩子】小节，找不到回退正文结尾 300 字）",
+          "chapter-outline/draw 两路由 prompt 注入【活跃剧情线——本章必须顺着这些线推进】+【上一章结尾钩子——本章开头必须承接】",
+          "回归实测（第四章抽卡）：自动生成「周远征循潮痕追查找到陈牧、龙渊与叶凌云天台棋局续接、高千惠与欧阳佩对接」——完美承接上章钩子并沿剧情线推进；旧格式上章（无【悬念/钩子】）走正文结尾回退，容错生效",
+        ],
+      },
+      {
+        label: "P1 编辑保护 + 保存铁律",
+        items: [
+          "OutlineDialog：预览章纲手动编辑（touched 跟踪）后未「确认写入」就关窗 → window.confirm 提示防丢失（章纲编辑只进预览 state，不确认即丢）",
+          "保存边界铁律固化进 QUALITY_PLAN.md：①正文/草稿允许自动保存；②定义/要求类（角色卡/词条/预设/作者指令/章纲）一律显式保存；③globalPrompt 只在显式保存后 sync 重编译；④关窗即丢的编辑场景必须给未保存提示",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200 + 回归实测（人话章纲 + 剧情感知 + 旧格式兼容）",
+          "DeepSeek 并发限流仍会偶发空卡（前端「生成失败」标签可重抽）——外部限制；DrawCards 人话视觉需浏览器实跑验收",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.56",
     date: "2026-08-03",

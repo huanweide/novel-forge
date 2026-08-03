@@ -24,7 +24,24 @@ export function OutlineDialog({
   hasExistingChapters: boolean;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [touched, setTouched] = useState(false); // v0.46.57：预览章纲被手动编辑过但未确认
   const hasPreview = previewChapters.length > 0;
+
+  // 手动编辑预览章纲 → 标记 dirty；确认写入后清除
+  const handleUpdateChapter = (index: number, field: string, value: string) => {
+    setTouched(true);
+    onUpdateChapter(index, field, value);
+  };
+  // 关闭前检查：有编辑未确认则询问（章纲编辑只进预览 state，不确认即丢）
+  const handleClose = () => {
+    if (touched && !window.confirm("章纲有编辑但尚未「确认写入」，关闭将丢失这些修改，确定关闭？")) return;
+    setTouched(false);
+    onClose();
+  };
+  const handleConfirm = () => {
+    setTouched(false);
+    onConfirm();
+  };
 
   const chapterOptions = [
     { value: 4, label: "4 章" }, { value: 8, label: "8 章" },
@@ -32,7 +49,7 @@ export function OutlineDialog({
   ];
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <Modal open onClose={handleClose} bare panelClassName="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
       <div className="flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>
@@ -41,7 +58,7 @@ export function OutlineDialog({
             </h2>
             <p className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">《{projectName}》</p>
           </div>
-          <button onClick={onClose} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] text-lg transition-colors"><Icon name="x" size={18} /></button>
+          <button onClick={handleClose} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] text-lg transition-colors"><Icon name="x" size={18} /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 custom-scrollbar">
           {/* 章节数选择 */}
@@ -113,12 +130,12 @@ export function OutlineDialog({
                     {editingIndex === i ? (
                       <div className="space-y-2">
                         <input className="input-glass w-full rounded px-2 py-1 text-sm text-[var(--nv-text-primary)] focus:border-[var(--nv-primary)]"
-                          value={ch.title} onChange={(e) => onUpdateChapter(i, "title", e.target.value)} autoFocus />
+                          value={ch.title} onChange={(e) => handleUpdateChapter(i, "title", e.target.value)} autoFocus />
                         <textarea className="input-glass w-full rounded px-2 py-1 text-sm text-[var(--nv-text-secondary)] resize-none focus:border-[var(--nv-primary)]"
-                          rows={3} value={ch.summary} onChange={(e) => onUpdateChapter(i, "summary", e.target.value)} placeholder="本章梗概..." />
+                          rows={3} value={ch.summary} onChange={(e) => handleUpdateChapter(i, "summary", e.target.value)} placeholder="本章梗概..." />
                         <div className="flex gap-2">
                           <input className="input-glass flex-1 rounded px-2 py-1 text-xs text-[var(--nv-text-secondary)] focus:border-[var(--nv-primary)]"
-                            value={ch.coreConflict} onChange={(e) => onUpdateChapter(i, "coreConflict", e.target.value)} placeholder="核心冲突（可选）" />
+                            value={ch.coreConflict} onChange={(e) => handleUpdateChapter(i, "coreConflict", e.target.value)} placeholder="核心冲突（可选）" />
                           <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)} className="text-xs border-[var(--nv-border-2)] h-7">完成</Button>
                         </div>
                       </div>
@@ -142,8 +159,8 @@ export function OutlineDialog({
           <div className="flex items-center justify-between px-5 py-4 border-t border-[var(--nv-border-2)] shrink-0 bg-[var(--nv-surface-2)]">
             <p className="text-xs text-[var(--nv-text-tertiary)]">可点击章节编辑标题和梗概，确认后写入大纲树</p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => { onClose(); }} className="border-[var(--nv-border-2)] text-sm">取消</Button>
-              <Button onClick={onConfirm} disabled={isGenerating} className="btn-primary text-[var(--nv-text-primary)] text-sm"><Icon name="check" size={14} /> 确认写入 ({previewChapters.length} 章)</Button>
+              <Button variant="outline" onClick={handleClose} className="border-[var(--nv-border-2)] text-sm">取消</Button>
+              <Button onClick={handleConfirm} disabled={isGenerating} className="btn-primary text-[var(--nv-text-primary)] text-sm"><Icon name="check" size={14} /> 确认写入 ({previewChapters.length} 章)</Button>
             </div>
           </div>
         )}

@@ -17,6 +17,7 @@ import { NextResponse } from "next/server";
 import {
   loadOutlineData, extractPrevContext,
   buildCharacterList, prepareOutlineDirective, formatSummaries,
+  formatStorylines, extractLastChapterHook,
 } from "@/core/pipeline/outline-context";
 import { completeText } from "@/core/llm/client";
 
@@ -34,12 +35,14 @@ export async function POST(request: Request) {
     // Step 1: 读数据——使用共享模块
     // ═══════════════════════════════════════════════
 
-    const { project, node, allNodes, characters, summaries } = await loadOutlineData(projectId, nodeId, 3);
+    const { project, node, allNodes, characters, summaries, storylines } = await loadOutlineData(projectId, nodeId, 3);
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
 
     const prevContext = extractPrevContext(allNodes, nodeId);
+    const storylineContext = formatStorylines(storylines); // v0.46.57：章纲剧情感知
+    const lastHook = extractLastChapterHook(allNodes, nodeId); // 上章钩子
 
     const authorDirectiveRaw = await prepareOutlineDirective(projectId, explicitAuthorNote || project.authorNote);
     const authorDirective = authorDirectiveRaw
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
 
 【卡片格式——纯JSON】
 {
-  "outline": "完整的标准格式章纲（详见下方）",
+  "outline": "自然语言章纲（严格按下方六小节，不要任何前缀符号）",
   "characters": ["角色名1", "角色名2"],
   "coreConflict": "一句话——谁和谁因为什么对立",
   "mood": "情感基调标签（如：暗流涌动 / 热血沸腾 / 哀而不伤）",
@@ -67,39 +70,21 @@ export async function POST(request: Request) {
   "cardLabel": "这张卡片的特色标签（如：🔥高冲突向 / 🧊冷峻智斗向 / 💔情感向 / ⚡快节奏动作向）"
 }
 
-【outline 字段必须严格按以下P0标准格式输出——三层结构】
+【outline 字段必须严格按以下六小节输出——自然语言，禁止 C| R| K| 等任何前缀符号】
 
-### 第一部分：章节元信息
-C| 章节号 | 章节标题 | 开头承接（时间+地点+氛围）| 主视角人物
-L0| ✅ 平台合规 | ✅ 数据有效性 | ✅ 剧情连贯
-L1| ✅ 信息不对称 | ✅ 延迟揭示 | ✅ 章尾钩子(类型)
-L2| ✅ 否定对比式比喻禁令 | ✅ 内省配额(<20%) | ✅ 段尾硬停 | ✅ 行为说话
-
-### 第二部分：叙事段落
-- 【章首衔接】：[与C行第三列一致的时空描写]
-以下行按需交替使用（每行单独占一行）：
-R| [角色名][标签] [动作] [对象/地点] [结果/状态]
-⟨✍ 写作指令⟩（可选，给AI的导演批注）
-L| [地点名] [场景氛围描述]
-G| [金手指名称] [触发条件/表现]
-P| [事件描述]
-K| [台词内容] | [说话人] | [情境]
-- 【章尾悬念】：[本章最后一行]
-
-### 第三部分：技术规格
-CF| [伏笔名] | [操作类型:埋设/呼应/暗示/回收] | [操作细节]
-M| [情绪类型] | [强度1-10] | [通过什么描写手段实现]
-K| [金句内容] | [说话人] | [情境]
-EL| [当前幕名] | [本章情绪定位] | [对整体曲线的贡献]
-T| [下一章标题] | [剧情目标/需承接的状态]
+【场景】本章 2-3 个主要场景，每个一行：时间 + 地点 + 一句氛围
+【事件】按顺序列出 3-5 个关键事件，每行一个：谁做了什么，导致什么
+【人物】本章出场角色及其作用（每行一个：角色名——作用）
+【悬念/钩子】本章结尾钩子（一句话，必须存在）
+【伏笔】本章埋设/呼应的伏笔（每行一个：伏笔名——埋设或呼应）
+【情绪】本章情绪走向（一句话，如：从压抑到破局 / 持续低气压）
 
 【规则】
 - 所有角色/地点/势力来自给定的白名单，不创造新角色
-- 每章至少3个R|行,1-2个L|行
-- 【章首衔接】和【章尾悬念】强制且必须存在
-- CF| 伏笔操作要明确写出埋设了什么和如何体现
+- 【场景】【事件】【悬念/钩子】强制存在
 - 5条路线的章纲必须有明显不同的侧重点和走向
-- 路线间的差异应体现在：核心冲突不同、角色侧重不同、章尾钩子类型不同、伏笔方向不同`;
+- 路线间的差异应体现在：核心冲突不同、角色侧重不同、章尾钩子类型不同、伏笔方向不同
+- 章纲是给作者看的人话，不是机器指令——每个小节用流畅短句，不要任何代码式前缀`;
 
     const userPrompt = `${authorDirective}
 【章纲目标】
@@ -113,6 +98,11 @@ ${node.outline ? `现有大纲（如有）：${node.outline.slice(0, 300)}\n` : 
 【前文上下文】
 ${prevContext || "（本章为开头）"}
 ${recentSummary ? `\n最近摘要：${recentSummary}` : ""}
+
+【活跃剧情线——本章必须顺着这些线推进（v0.46.57 剧情感知）】
+${storylineContext || "（暂无剧情线，按总纲自由推进）"}
+
+${lastHook ? `【上一章结尾钩子——本章开头必须承接】\n${lastHook}\n` : ""}
 
 【角色卡】
 ${characterList}
