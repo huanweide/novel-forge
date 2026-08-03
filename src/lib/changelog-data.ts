@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.43";
+export const LATEST_VERSION = "v0.46.44";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "联动润色（Phase 3）：项目卡片列表包 stagger 容器，进入视口逐张 nf-card-in 上浮入场（IntersectionObserver 触发、间隔 60ms），叙事上像『书一本本浮现』",
-  "轻量粒子聚拢（可选增强·已做）：卡片 hover/focus 经 window 事件 nf-particle-attract 向粒子层注入目标点，附近星点（<320px）受微弱吸引力偏移、移开弹性回位——仅局部受力、不全局重绘、INP 友好",
-  "入场动画作用于外层 home-stagger-item、hover 起伏作用于内层 ProjectCard，父子不同元素互不冲突；reduced-motion 下 stagger 直接显示、聚拢事件不监听，双层降级",
-  "诚实边界：tsc 零错误 + dev 200 + 无错误页验证；stagger/聚拢观感需浏览器实跑；首屏 loading 渲染骨架屏故首屏 HTML 不含 home-stagger-item（已审查）；首页升级三阶段 v0.46.41/42/43 收官",
+  "修复（致命）：首页项目卡片 stagger 观察器时序——原 useStaggerOnView 用空依赖，网格在 loading 后才挂载导致观察器从未挂上、卡片永久 opacity:0 不可见；改为依赖 ready 标志，数据加载完网格挂载后再挂 IntersectionObserver，卡片真正浮现",
+  "粒子场润色：粒子上限 90→150、密度公式放宽（area/16000），4K 等大屏不再稀疏；reduced-motion 增 change 监听，系统设置中途切换也能正确停/启动；pointer:fine 才做鼠标视差，触屏不抖",
+  "无障碍：项目卡片删除按钮在 group-focus-within/focus-visible 时也显形，键盘用户能看见并触发删除（原本仅 hover 显形）",
+  "诚实边界：tsc 零错误 + dev 200 验证；卡片可见性修复经代码审查确认（条件渲染 + ref 时序）；粒子密度/reduced-motion 实时切换/触屏行为需浏览器实跑最终确认",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.44",
+    date: "2026-08-03",
+    title: "首页 UI 升级·润色修复（Phase 4）：stagger 致命修复 + 粒子场润色 + 无障碍",
+    sections: [
+      {
+        label: "致命修复 · stagger 观察器时序",
+        items: [
+          "根因：useStaggerOnView 原用 [] 空依赖，且项目网格仅在 projects 加载完成后才渲染（loading 时为骨架屏）；挂载时 staggerRef.current 为 null、观察器从未挂上，数据回来网格出现时 effect 早已跑过不再执行 → 卡片永久 opacity:0 不可见",
+          "修复：useStaggerOnView 改为接收 ready 标志（!loading && projects.length>0），数据加载完网格挂载后再挂 IntersectionObserver，逐张 add is-visible 触发 nf-card-in 上浮入场；reduced-motion 路径同步改走 ready 门控",
+        ],
+      },
+      {
+        label: "粒子场润色",
+        items: [
+          "粒子上限 90→150、密度公式 area/22000→area/16000，4K 等大屏星点密度显著提升、不再稀疏（≤150 时 O(n²) 连线开销仍可忽略）",
+          "reduced-motion 增 MediaQueryList change 监听：系统设置中途切换也能正确 stop()+renderStatic() 或 start()，避免状态不同步",
+          "鼠标视差改由 pointer:fine 门控：触屏设备（pointer:coarse）不做 canvas transform 视差，避免点击/滑动时背景乱抖",
+        ],
+      },
+      {
+        label: "无障碍",
+        items: [
+          "项目卡片删除按钮原本仅 group-hover 显形，键盘 focus 不可见、无法触发；补 group-focus-within:opacity-100 + focus-visible:opacity-100，键盘用户可正常看见并删除",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200 验证；卡片可见性修复经代码审查确认（条件渲染 + ref 时序根因）",
+          "粒子密度/reduced-motion 实时切换/触屏视差行为需浏览器实跑最终确认；O(n²) 连线在 150 粒子内安全，未上空间网格（避免过度复杂化）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.43",
     date: "2026-08-03",

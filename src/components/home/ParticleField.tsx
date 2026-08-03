@@ -66,12 +66,13 @@ export default function ParticleField() {
     let rafId = 0;
     let running = false;
     const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
     let attract: { x: number; y: number } | null = null; // 卡片 hover/focus 聚拢目标点（屏幕坐标，经 window 事件注入）
 
     const seed = () => {
       // 按视口面积动态上限，避免大屏过密 / 小屏过稀（与 GameParticles 思路一致但更克制）
       const area = width * height;
-      const count = Math.max(40, Math.min(90, Math.round(area / 22000)));
+      const count = Math.max(50, Math.min(150, Math.round(area / 16000)));
       particles = [];
       for (let i = 0; i < count; i++) {
         const tint = Math.random() < 0.7 ? 0 : Math.floor(Math.random() * 3) + 1; // 70% 中性 + 30% 三色族
@@ -166,12 +167,14 @@ export default function ParticleField() {
       }
       draw();
 
-      // 鼠标视差：整体位移合成，不重算粒子坐标
-      mouse.tx += (mouse.x - mouse.tx) * 0.05;
-      mouse.ty += (mouse.y - mouse.ty) * 0.05;
-      const px = (mouse.tx / width - 0.5) * 18;
-      const py = (mouse.ty / height - 0.5) * 18;
-      canvas.style.transform = `translate3d(${px}px, ${py}px, 0)`;
+      // 鼠标视差：整体位移合成，不重算粒子坐标（仅精确指针设备，触屏不做）
+      if (finePointer) {
+        mouse.tx += (mouse.x - mouse.tx) * 0.05;
+        mouse.ty += (mouse.y - mouse.ty) * 0.05;
+        const px = (mouse.tx / width - 0.5) * 18;
+        const py = (mouse.ty / height - 0.5) * 18;
+        canvas.style.transform = `translate3d(${px}px, ${py}px, 0)`;
+      }
 
       rafId = requestAnimationFrame(step);
     };
@@ -196,15 +199,6 @@ export default function ParticleField() {
 
     resize();
 
-    if (reduceMotion.matches) {
-      renderStatic();
-    } else {
-      // idle 启动，不阻塞 LCP
-      const idle = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
-      if (idle) idle(start, { timeout: 1200 });
-      else window.setTimeout(start, 300);
-    }
-
     const onMouse = (e: MouseEvent) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
@@ -213,16 +207,22 @@ export default function ParticleField() {
       const detail = (e as CustomEvent<{ x: number; y: number } | null>).detail;
       attract = detail ?? null;
     };
-    if (!reduceMotion.matches) {
-      window.addEventListener("mousemove", onMouse, { passive: true });
-      window.addEventListener("nf-particle-attract", onAttract as EventListener);
-    }
+    // 监听始终挂载（回调极廉价），动画循环由 reduced-motion 门控——
+    // 避免「系统设置中途切换」后鼠标监听与 rAF 状态不同步
+    window.addEventListener("mousemove", onMouse, { passive: true });
+    window.addEventListener("nf-particle-attract", onAttract as EventListener);
 
     const onVis = () => {
       if (document.hidden) stop();
       else if (!reduceMotion.matches) start();
     };
     document.addEventListener("visibilitychange", onVis);
+
+    const onReduceChange = () => {
+      if (reduceMotion.matches) { stop(); renderStatic(); }
+      else start();
+    };
+    reduceMotion.addEventListener("change", onReduceChange);
 
     // 主题切换重着色
     const mo = new MutationObserver(() => {
@@ -234,12 +234,22 @@ export default function ParticleField() {
     const onResize = () => resize();
     window.addEventListener("resize", onResize);
 
+    if (reduceMotion.matches) {
+      renderStatic();
+    } else {
+      // idle 启动，不阻塞 LCP
+      const idle = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+      if (idle) idle(start, { timeout: 1200 });
+      else window.setTimeout(start, 300);
+    }
+
     return () => {
       stop();
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("nf-particle-attract", onAttract as EventListener);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVis);
+      reduceMotion.removeEventListener("change", onReduceChange);
       mo.disconnect();
     };
   }, []);

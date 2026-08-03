@@ -49,9 +49,10 @@ function clearAttract() {
 }
 
 // 进入视口逐张播放 nf-card-in 上浮入场（间隔 60ms；reduced-motion 直接显示）
-function useStaggerOnView() {
+function useStaggerOnView(ready: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (!ready) return;
     const el = ref.current;
     if (!el) return;
     const items = Array.from(el.querySelectorAll<HTMLElement>("[data-stagger-item]"));
@@ -76,7 +77,7 @@ function useStaggerOnView() {
     );
     items.forEach((c) => io.observe(c));
     return () => io.disconnect();
-  }, []);
+  }, [ready]);
   return ref;
 }
 
@@ -99,7 +100,7 @@ export default function Dashboard() {
   const loadError = error ? (error instanceof Error ? error.message : "加载项目失败") : null;
 
   const router = useRouter();
-  const staggerRef = useStaggerOnView();
+  const staggerRef = useStaggerOnView(!loading && projects.length > 0);
   const [loadingSample, setLoadingSample] = useState(false);
   const loadSample = async () => {
     setLoadingSample(true);
@@ -400,7 +401,7 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
           disabled={deletingId === project.id}
-          className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-muted)] hover:text-destructive transition-all shrink-0 disabled:opacity-40"
+          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 text-[var(--nv-text-muted)] hover:text-destructive transition-all shrink-0 disabled:opacity-40"
           title="删除项目"
         >
           <Icon name="x" size={14} />

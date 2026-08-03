@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.44 — 2026-08-03
+**首页 UI 升级·润色修复（Phase 4）：stagger 致命修复 + 粒子场润色 + 无障碍**
+
+- 致命修复：首页项目卡片 stagger 观察器时序——原 `useStaggerOnView` 用空依赖，网格在 loading 后才挂载导致观察器从未挂上、卡片永久 `opacity:0` 不可见；改为依赖 `ready` 标志（!loading && projects.length>0），数据加载完网格挂载后再挂 IntersectionObserver，卡片真正浮现
+- 粒子场润色：粒子上限 90→150、密度公式放宽（area/16000），4K 等大屏不再稀疏；reduced-motion 增 `change` 监听，系统设置中途切换也能正确停/启动；`pointer:fine` 才做鼠标视差，触屏不抖
+- 无障碍：项目卡片删除按钮在 `group-focus-within`/`focus-visible` 时也显形，键盘用户能看见并触发删除（原本仅 hover 显形）
+- 诚实边界：tsc 零错误 + dev 200 验证；卡片可见性修复经代码审查确认（条件渲染 + ref 时序）；粒子密度/reduced-motion 实时切换/触屏行为需浏览器实跑最终确认
+
 ## v0.46.43 — 2026-08-03
 **首页 UI 升级·联动润色（Phase 3）：卡片 stagger 入场 + 粒子聚拢**
 
