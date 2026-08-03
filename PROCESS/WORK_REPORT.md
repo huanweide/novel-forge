@@ -887,3 +887,53 @@
 ### 诚实边界
 本次为纯静态审计（读 Toolbar/LeftPanel/apply 路由/parser），无任何代码改动与 tsc 校验——因结论是所有按钮已合理、无冗余可删。若用户后续要求"在 workspace 内再造角色卡/世界卡创意工坊浏览入口"，那会是新功能而非审计清理，需另立项（且会与 `/workshop` 重复，不推荐）。
 
+---
+
+## 首页 UI 升级美化（v0.46.41–v0.46.43 三阶段收官）
+
+> 前置：本次是「把前期写好的《HOMEPAGE_UI_UPGRADE_PLAN.md》从文档变成真代码」。计划已锁定设计体系（Void Glass 暗色）、三旋钮（VARIANCE/MOTION/DENSITY）、令牌（背景仅靛蓝/紫罗兰/金三色族）、性能红线（只动 transform/opacity、CLS=0、reduced-motion 全量静态降级）。落地分三个独立可回滚小版本。
+
+### ① 干了什么
+把首页从"能用但朴素"升级成"炫酷且有规范"：加了全页唯一签名背景（极光漂移 + 星尘粒子），并把七种交互状态（常态/hover/active/focus/loading/empty/transition）逐一补齐规范。不是重写，是在现有 Void Glass 体系上增量升级，分 v0.46.41/42/43 三个版本提交并推上主分支。
+
+### ② 为什么这么做
+- **首页是门面**：用户点名要"炫酷且令人印象深刻"的背景，这是产品第一印象，值得投入。
+- **交互状态规范 = 专业感的来源**：按钮按下没反馈、焦点看不见、加载只转圈、空态一排三等分——这些细节不齐，再炫的背景也显得业余。所以背景和状态规范一起做。
+- **增量不重写（第一性原理）**：现有 Void Glass 令牌和组件是验证过的稳定资产。重写了等于把已验证的东西推倒重来、风险自找。正确做法是"继承令牌 + 只加新层"，新背景层 `pointer-events-none` 不挡任何现有交互，最坏情况也只是背景不好看、绝不会弄坏功能。
+
+### ③ 怎么做的（方法 + 效果）
+分三阶段，每阶段独立 commit + 双 changelog + tsc 零错误：
+
+**Phase 1 — 背景签名层（v0.46.41 / `7e55164`）**
+- 新建 `AuroraBackground.tsx`（Layer A 极光）：`fixed inset-0 z-0 pointer-events-none` 容器里放 3 个 `aurora-blob`（`blur(120px)` 的大色团，分别靛蓝/紫罗兰/金，用 radial-gradient 填充）。三个色团各自走 `aurora-drift-1/2/3` 关键帧，38/44/50 秒极慢的 transform 漂移 + opacity 呼吸——慢到肉眼只觉得"光在流动"，不抢内容。
+- 新建 `ParticleField.tsx`（Layer B 星尘，canvas 签名）：60~90 个粒子（按视口面积动态定上限；70% 中性星白、30% 用三色族），邻近粒子（<120px）画极淡连线，像星图。关键工程点：
+  - DPR 适配（上限 2，避免视网膜屏爆像素）；`requestIdleCallback` 延迟启动（timeout 1200ms，不让背景抢首屏 LCP）；
+  - `prefers-reduced-motion` 只画一帧静态（照顾晕动症用户）；`visibilitychange` 页面隐藏即暂停 rAF（省电）；
+  - `mousemove` 视差（canvas 整体 transform 合成，不逐个算）；`MutationObserver` 监听 `html.light` 切到深蓝灰调色板（浅色主题不刺眼）；`-inset-6` 溢出覆盖防边缘露白。
+- `page.tsx` 根 div 注入这两层固定背景，Hero 与 main 加 `relative z-10` 压在上层。
+
+**Phase 2 — 交互状态补全（v0.46.42 / `97e6567`）**
+- 主按钮按下反馈：`.btn-primary:active` 加 `inset 0 2px 6px` 内阴影，按下去有"凹陷"实体感（之前只有 hover 浮起，缺按下）。
+- 键盘焦点可见：全局 `button:focus-visible` 加 4px 透明间隙环（`ring-offset-2` + `ring-offset-[var(--background)]`），间隙随主题变深变浅，键盘 Tab 走一圈清清楚楚、又不糊住按钮。
+- 加载态：原来 3 个 `animate-pulse` 圆点 → 换成 6 张 `ProjectCardSkeleton`（surface-elevated + shimmer-line 占位条）。骨架屏比转圈更专业，且提前占位、CLS=0。
+- 空态：从一排三等分 → 不对称 Bento（主引导卡 `featured` 跨 2 列放大、拆书/配置副卡错落），符合"禁三等分默认布局"的纪律，也更能引导新用户。
+
+**Phase 3 — 联动润色（v0.46.43 / `94f0cf9`）**
+- 卡片入场：新增 `useStaggerOnView()`（IntersectionObserver，进入视口逐张加 `is-visible`，`animationDelay = idx*60ms` 错峰浮现），`reduced-motion` 直接显示不动画。
+- 粒子聚拢（签名增强）：卡片 hover/focus 经 `window.dispatchEvent(new CustomEvent("nf-particle-attract", {detail:{x,y}}))` 派发坐标，`ParticleField` 独立订阅、对 <320px 的粒子施微弱吸引力偏移、松手 `ox*=0.9` 弹性回位。用 window 事件而非直接传 props，目的是**解耦**——粒子层不依赖任何具体卡片组件，谁派发它都听。
+- 修复一处 tsc：`entry.target` 未断言类型 → 改为 `const t = entry.target as HTMLElement` 再取 `dataset.staggerIndex`、设 `animationDelay`、加 `is-visible`、取消观察。
+
+**效果数据**：三阶段 TSC_EXIT 均 0；dev（:3001）首页编译 200；SSR HTML 依次含 `aurora-layer`/`-inset-6`/`aurora-blob` → `shimmer-line` → 无错误页标记；代理推送 PUSH_EXIT=0，HEAD=v0.46.43。
+
+### ④ 关键取舍
+- **增量不重写 vs 推倒重做**：选继承令牌 + 只加背景层。代价是背景风格被现有令牌约束（只用三色族），但换来零功能回归风险——背景层 `pointer-events-none` 物理上不可能挡交互。
+- **事件解耦（window CustomEvent）vs 直接 props 传坐标**：选 window 事件。代价是多一层约定（事件名 `nf-particle-attract` 要对齐），收益是粒子层成为独立可复用模块、不跟任何卡片形成硬依赖，未来换首页布局粒子照样工作。
+- **粒子聚拢/星图连线 = 可选增强，默认开**：计划里标注"若 INP 超标则降级"。实测只让 <320px 的少数粒子局部受力、不全局重绘，INP 友好，故保留。
+- **首屏不含 stagger 入场标记（已代码审查非遗漏）**：首屏 loading 渲染骨架屏，项目卡还没挂载，所以 SSR HTML 里看不到 `home-stagger-item`——这是正确行为，不是漏做。
+
+### 诚实边界
+- 背景流动速度、星点密度、stagger 节奏、聚拢幅度这类**观感**只能在浏览器实跑最终确认；本环境无 GUI 浏览器，我用 `curl` 抓 SSR HTML grep 新标记确认编译生效（非肉眼验证动效）。
+- `prefers-reduced-motion` 双层降级已实现（stagger 直接显示 + 聚拢事件不监听），但同样未在真机用系统设置开关实测。
+- `.light` 浅色适配靠 `MutationObserver` 切调色板，逻辑写了但未在浅色主题下肉眼比对过对比度。
+- 粒子数量按视口面积动态上限，超大屏（如 4K）粒子密度可能偏稀，属已知可调参数，未针对极端分辨率调过。
+

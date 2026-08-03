@@ -198,3 +198,18 @@
 - 本计划为**设计规格文档**，不含实现代码；落地以 Phase 1→3 逐步执行为准。
 - 粒子「星图连线」与「hover 聚拢 / 焦点聚光」为可选增强，是否启用取决于 Phase 3 实测性能，若 INP 超标则降级为静态星点。
 - 背景视觉的具体观感需在浏览器实跑确认；文档中的色值/时长均引用现有令牌，未实测的渲染效果以实际为准。
+
+---
+
+## 8. 执行状态（2026-08-03 收官）
+
+三阶段全部落地、tsc 零错误、dev 编译 200、代理推送 main：
+
+| Phase | 内容 | 版本 | Commit | 状态 |
+| ----- | ---- | ---- | ------ | ---- |
+| Phase 1 | 背景签名层：AuroraBackground 极光漂移 + ParticleField 星尘粒子（DPR/idle/reduced-motion/visibility/视差/连线/浅色） | v0.46.41 | `7e55164` | ✅ |
+| Phase 2 | 状态补全：主按钮 active inset 凹陷、focus 4px 间隙、ProjectCardSkeleton 骨架屏、空态 Bento 不对称 | v0.46.42 | `97e6567` | ✅ |
+| Phase 3 | 联动润色：卡片 stagger 入场（IntersectionObserver 60ms）、粒子聚拢（hover/focus 经 window 事件） | v0.46.43 | `94f0cf9` | ✅ |
+
+- 验证：每个 phase `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 零错误；dev（:3001）首页编译 200、SSR HTML 含对应新标记（aurora-layer/-inset-6/aurora-blob → shimmer-line → 无错误页），无运行时错误页。
+- 诚实边界：粒子连线/hover 聚拢为签名增强，已实现且 INP 友好（局部受力、不全局重绘）；背景流动、星点密度、stagger 节奏、聚拢幅度等具体观感需在浏览器实跑最终确认；首屏 loading 渲染骨架屏故首屏 SSR 不含 home-stagger-item（已代码审查，非遗漏）。
