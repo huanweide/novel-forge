@@ -28,6 +28,8 @@ type Particle = {
   alpha: number;
   alphaDir: number;
   tint: number; // 0 中性星白 / 1 靛蓝 / 2 紫罗兰 / 3 金
+  ox: number; // 聚拢偏移 X（卡片 hover/focus 时向目标点轻微位移）
+  oy: number; // 聚拢偏移 Y
 };
 
 // 三色族点缀（与 .text-gradient 同源），中性星白单列在调色板内按主题切换
@@ -64,6 +66,7 @@ export default function ParticleField() {
     let rafId = 0;
     let running = false;
     const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+    let attract: { x: number; y: number } | null = null; // 卡片 hover/focus 聚拢目标点（屏幕坐标，经 window 事件注入）
 
     const seed = () => {
       // 按视口面积动态上限，避免大屏过密 / 小屏过稀（与 GameParticles 思路一致但更克制）
@@ -83,6 +86,8 @@ export default function ParticleField() {
           alpha: baseAlpha,
           alphaDir: Math.random() > 0.5 ? 0.004 : -0.004,
           tint,
+          ox: 0,
+          oy: 0,
         });
       }
     };
@@ -108,7 +113,7 @@ export default function ParticleField() {
       for (const p of particles) {
         const rgb = p.tint === 0 ? pal.neutral : TINTS[p.tint - 1];
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.arc(p.x + p.ox, p.y + p.oy, p.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${p.alpha * scale})`;
         ctx.fill();
       }
@@ -127,8 +132,8 @@ export default function ParticleField() {
             ctx.strokeStyle = `rgba(${pal.neutral[0]}, ${pal.neutral[1]}, ${pal.neutral[2]}, ${o})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
+            ctx.moveTo(a.x + a.ox, a.y + a.oy);
+            ctx.lineTo(b.x + b.ox, b.y + b.oy);
             ctx.stroke();
           }
         }
@@ -145,6 +150,19 @@ export default function ParticleField() {
         if (p.x > width + 10) p.x = -10;
         if (p.y < -10) p.y = height + 10;
         if (p.y > height + 10) p.y = -10;
+        // 聚拢偏移：仅目标点附近粒子受微弱吸引力，取消后弹性回位（开销极小，不全局重绘）
+        if (attract) {
+          const dx = attract.x - p.x;
+          const dy = attract.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 320) {
+            const f = (1 - dist / 320) * 0.15;
+            p.ox += dx * 0.02 * f;
+            p.oy += dy * 0.02 * f;
+          }
+        }
+        p.ox *= 0.9;
+        p.oy *= 0.9;
       }
       draw();
 
@@ -191,7 +209,14 @@ export default function ParticleField() {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
     };
-    if (!reduceMotion.matches) window.addEventListener("mousemove", onMouse, { passive: true });
+    const onAttract = (e: Event) => {
+      const detail = (e as CustomEvent<{ x: number; y: number } | null>).detail;
+      attract = detail ?? null;
+    };
+    if (!reduceMotion.matches) {
+      window.addEventListener("mousemove", onMouse, { passive: true });
+      window.addEventListener("nf-particle-attract", onAttract as EventListener);
+    }
 
     const onVis = () => {
       if (document.hidden) stop();
@@ -212,6 +237,7 @@ export default function ParticleField() {
     return () => {
       stop();
       window.removeEventListener("mousemove", onMouse);
+      window.removeEventListener("nf-particle-attract", onAttract as EventListener);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVis);
       mo.disconnect();

@@ -33,6 +33,53 @@ interface ProjectSummary {
 
 // ─── 页面组件 ────────────────────────────────────────────────
 
+// ─── 联动润色辅助（Phase 3）：stagger 入场 + 粒子聚拢 ──
+
+// 卡片 hover/focus 时向粒子层派发聚拢目标点（屏幕坐标），移开/失焦取消
+function emitAttract(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  window.dispatchEvent(
+    new CustomEvent("nf-particle-attract", {
+      detail: { x: r.left + r.width / 2, y: r.top + r.height / 2 },
+    })
+  );
+}
+function clearAttract() {
+  window.dispatchEvent(new CustomEvent("nf-particle-attract", { detail: null }));
+}
+
+// 进入视口逐张播放 nf-card-in 上浮入场（间隔 60ms；reduced-motion 直接显示）
+function useStaggerOnView() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const items = Array.from(el.querySelectorAll<HTMLElement>("[data-stagger-item]"));
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      items.forEach((c) => c.classList.add("is-visible"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const t = entry.target as HTMLElement;
+            const idx = Number(t.dataset.staggerIndex ?? 0);
+            t.style.animationDelay = `${idx * 60}ms`;
+            t.classList.add("is-visible");
+            io.unobserve(t);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    items.forEach((c) => io.observe(c));
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
 export default function Dashboard() {
   const [showChangelog, setShowChangelog] = useState(false);
 
@@ -52,6 +99,7 @@ export default function Dashboard() {
   const loadError = error ? (error instanceof Error ? error.message : "加载项目失败") : null;
 
   const router = useRouter();
+  const staggerRef = useStaggerOnView();
   const [loadingSample, setLoadingSample] = useState(false);
   const loadSample = async () => {
     setLoadingSample(true);
@@ -282,9 +330,11 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
+          <div ref={staggerRef} className="home-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {projects.map((p, i) => (
+              <div key={p.id} data-stagger-item data-stagger-index={i} className="home-stagger-item">
+                <ProjectCard project={p} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
+              </div>
             ))}
           </div>
         )}
@@ -336,7 +386,13 @@ function ProjectCard({ project, onDelete, deletingId }: { project: ProjectSummar
   const timeAgo = getTimeAgo(new Date(project.updatedAt));
 
   return (
-    <div className="group surface-elevated card-lift rounded-2xl p-5 flex flex-col">
+    <div
+      className="group surface-elevated card-lift rounded-2xl p-5 flex flex-col"
+      onMouseEnter={(e) => emitAttract(e.currentTarget)}
+      onMouseLeave={clearAttract}
+      onFocusCapture={(e) => emitAttract(e.currentTarget)}
+      onBlurCapture={clearAttract}
+    >
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-base truncate flex-1 mr-2 text-foreground">
           {project.name}

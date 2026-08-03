@@ -865,3 +865,16 @@
 
 /* 浅色下极光整体降透明度，避免刺眼（与 .light body 渐变同调） */
 .light .aurora-layer { opacity: 0.5; }
+
+/* ═══════════════════════════════════════════
+   首页卡片 stagger 入场（Phase 3 · 联动润色）
+   进入视口逐张 nf-card-in 上浮，叙事上像「书一本本浮现」
+   ═══════════════════════════════════════════ */
+
+.home-stagger-item {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.home-stagger-item.is-visible {
+  animation: nf-card-in 0.5s var(--ease-out-expo) both;
+}

@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.42";
+export const LATEST_VERSION = "v0.46.43";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "交互状态补全（Phase 2）：主按钮按下叠加 inset 凹陷阴影（沿用 --dur-micro 150ms 快速触感），全局按钮焦点环加 4px 透明间隙（ring-offset 随主题切换），键盘焦点更清晰且不贴边",
-  "加载态由三点脉冲改为 ProjectCardSkeleton 骨架屏——与最终 ProjectCard 同形（标题/描述/标签/统计条占位 + shimmer-line 流光横扫），禁通用圆形 spinner，加载即呈现真实布局骨架",
-  "空态由三等分等宽 FeatureCard 改为不对称 Bento：主引导卡（探讨模式）跨整行放大、拆书/配置两张副卡并排错落，拉开视觉层级、避免 AI 默认三卡布局",
-  "诚实边界：tsc 零错误 + dev 200 + SSR 含 shimmer-line 骨架屏标记验证；Bento 属空态条件渲染（首屏不出现）已代码审查；Phase 3（联动润色）待续",
+  "联动润色（Phase 3）：项目卡片列表包 stagger 容器，进入视口逐张 nf-card-in 上浮入场（IntersectionObserver 触发、间隔 60ms），叙事上像『书一本本浮现』",
+  "轻量粒子聚拢（可选增强·已做）：卡片 hover/focus 经 window 事件 nf-particle-attract 向粒子层注入目标点，附近星点（<320px）受微弱吸引力偏移、移开弹性回位——仅局部受力、不全局重绘、INP 友好",
+  "入场动画作用于外层 home-stagger-item、hover 起伏作用于内层 ProjectCard，父子不同元素互不冲突；reduced-motion 下 stagger 直接显示、聚拢事件不监听，双层降级",
+  "诚实边界：tsc 零错误 + dev 200 + 无错误页验证；stagger/聚拢观感需浏览器实跑；首屏 loading 渲染骨架屏故首屏 HTML 不含 home-stagger-item（已审查）；首页升级三阶段 v0.46.41/42/43 收官",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.43",
+    date: "2026-08-03",
+    title: "首页 UI 升级·联动润色（Phase 3）：卡片 stagger 入场 + 粒子聚拢",
+    sections: [
+      {
+        label: "卡片 stagger 入场",
+        items: [
+          "项目网格包 home-stagger 容器，每张卡包 home-stagger-item；IntersectionObserver 进入视口逐张播放 nf-card-in（translateY+scale+rotateX 上浮），间隔 60ms，像『书一本本浮现』",
+          "入场动画作用于外层 home-stagger-item、card-lift:hover 起伏作用于内层 ProjectCard——父子不同元素、transform 互不覆盖；reduced-motion 下直接 add is-visible（无动画）",
+        ],
+      },
+      {
+        label: "轻量粒子聚拢（hover/focus）",
+        items: [
+          "卡片 hover 与键盘 focus 经 window 事件 nf-particle-attract 向 ParticleField 注入屏幕坐标目标点；粒子层仅对目标点 320px 内粒子施加微弱吸引力偏移，移开/失焦后 elastic 衰减回位",
+          "仅局部受力、不全局重绘、开销可忽略（INP 友好）；reduced-motion 下不监听该事件；派发/监听解耦（page 只 dispatch，粒子层独立订阅），零跨组件硬依赖",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200 + 无错误页验证；stagger/聚拢具体观感（上浮节奏、聚拢幅度）需浏览器实跑确认",
+          "首屏 loading 态渲染骨架屏、不渲染项目网格，故首屏 SSR HTML 不含 home-stagger-item（已代码审查确认逻辑正确，非遗漏）；首页升级三阶段 v0.46.41/42/43 全部收官",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.42",
     date: "2026-08-03",

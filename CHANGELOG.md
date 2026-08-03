@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.43 — 2026-08-03
+**首页 UI 升级·联动润色（Phase 3）：卡片 stagger 入场 + 粒子聚拢**
+
+- 项目网格包 `home-stagger` 容器，卡片进入视口逐张 `nf-card-in` 上浮入场（IntersectionObserver，间隔 60ms）
+- 卡片 hover/focus 经 `window` 事件 `nf-particle-attract` 向粒子层注入目标点，附近星点轻微聚拢、移开弹性回位（局部受力、INP 友好）
+- 入场动画作用于外层 `home-stagger-item`、hover 起伏作用于内层 `ProjectCard`，互不冲突；reduced-motion 双层降级
+- 诚实边界：tsc 零错误 + dev 200 验证；首屏 loading 渲染骨架屏不含项目网格（已审查）；首页升级三阶段收官
+
 ## v0.46.42 — 2026-08-03
 **首页 UI 升级·交互状态补全（Phase 2）：active 凹陷 / focus 间隙 / 骨架屏 / Bento 空态**
 
