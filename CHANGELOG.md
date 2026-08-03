@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.42 — 2026-08-03
+**首页 UI 升级·交互状态补全（Phase 2）：active 凹陷 / focus 间隙 / 骨架屏 / Bento 空态**
+
+- 主按钮 `.btn-primary:active` 叠加 inset 凹陷阴影（沿用 --dur-micro 150ms）；全局 `button:focus-visible` 加 4px 透明间隙（ring-offset 随主题切换），键盘焦点更清晰
+- 加载态由三点脉冲改为 `ProjectCardSkeleton` 骨架屏（与 ProjectCard 同形 + shimmer-line 流光），禁通用 spinner
+- 空态三张等宽卡改不对称 Bento：主引导卡跨整行放大、副卡并排错落，避免 AI 默认三等分
+- 诚实边界：tsc 零错误 + dev 200 + SSR 含 shimmer-line 验证；Bento/骨架屏观感需浏览器实跑；Phase 3 待续
+
 ## v0.46.41 — 2026-08-03
 **首页 UI 升级·背景签名层（Phase 1）：极光漂移 + 星尘粒子**
 

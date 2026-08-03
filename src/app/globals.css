@@ -401,7 +401,8 @@
     @apply cursor-not-allowed opacity-50;
   }
   button:focus-visible {
-    @apply ring-2 ring-ring/50;
+    /* 焦点环 + 4px 透明间隙（间隙色随主题切换 --background），确保键盘焦点可见且不贴边 */
+    @apply ring-2 ring-ring/50 ring-offset-2 ring-offset-[var(--background)];
   }
 
   body {
@@ -505,7 +506,8 @@
 }
 .btn-primary:active {
   transform: scale(0.97);
-  box-shadow: 0 1px 6px oklch(0.62 0.19 270 / 0.2);
+  /* 按压凹陷：额外 inset 阴影叠加（沿用 --dur-micro 150ms 快速触感反馈），与外投影并存 */
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35), 0 1px 6px oklch(0.62 0.19 270 / 0.2);
 }
 
 /* 确认（翠绿渐变） */

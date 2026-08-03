@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.41";
+export const LATEST_VERSION = "v0.46.42";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "首页背景升级（Phase 1）：新增极光漂移层 AuroraBackground（三色模糊光斑 transform/opacity 缓慢漂移呼吸）与星尘粒子层 ParticleField（canvas 星点+邻近星图连线，隐喻『小说宇宙/记忆星图』），构成全页唯一炫酷签名元素",
-  "粒子工程化：DPR 适配防高分屏模糊、requestIdleCallback 延迟启动不阻塞 LCP、prefers-reduced-motion 静态降级（仅一帧星点无 rAF）、visibilitychange 隐藏暂停、鼠标视差（canvas 整体 transform 合成）、浅色主题监听 html.light 切换深蓝灰调色板",
-  "接入：两固定层 fixed z-0 pointer-events-none 注入首页根 div，Hero 与 main 提至 relative z-10 确保内容在背景之上；在现有 Void Glass 体系上增量，不引入第四装饰色（锁定靛蓝/紫罗兰/金三色族，与 .text-gradient 标题渐变同源）",
-  "诚实边界：tsc 零错误 + dev 编译 200 + SSR HTML 含 aurora-layer/-inset-6/aurora-blob 新标记验证；背景观感需浏览器实跑确认；性能红线 CLS=0、LCP 不被背景阻塞；Phase 2（状态补全）/3（联动润色）待续",
+  "交互状态补全（Phase 2）：主按钮按下叠加 inset 凹陷阴影（沿用 --dur-micro 150ms 快速触感），全局按钮焦点环加 4px 透明间隙（ring-offset 随主题切换），键盘焦点更清晰且不贴边",
+  "加载态由三点脉冲改为 ProjectCardSkeleton 骨架屏——与最终 ProjectCard 同形（标题/描述/标签/统计条占位 + shimmer-line 流光横扫），禁通用圆形 spinner，加载即呈现真实布局骨架",
+  "空态由三等分等宽 FeatureCard 改为不对称 Bento：主引导卡（探讨模式）跨整行放大、拆书/配置两张副卡并排错落，拉开视觉层级、避免 AI 默认三卡布局",
+  "诚实边界：tsc 零错误 + dev 200 + SSR 含 shimmer-line 骨架屏标记验证；Bento 属空态条件渲染（首屏不出现）已代码审查；Phase 3（联动润色）待续",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.42",
+    date: "2026-08-03",
+    title: "首页 UI 升级·交互状态补全（Phase 2）：active 凹陷 / focus 间隙 / 骨架屏 / Bento 空态",
+    sections: [
+      {
+        label: "点击态与聚焦态",
+        items: [
+          "主按钮 .btn-primary:active 在现有 scale(0.97) 基础上叠加 inset 0 2px 6px 阴影，形成『按压下陷』语义，过渡沿用全局 --dur-micro(150ms) 快速触感反馈",
+          "全局 button:focus-visible 加 ring-offset-2 + ring-offset-[var(--background)]（间隙色随明暗主题自动切换），键盘 Tab 焦点环清晰可见且不与元素贴边",
+        ],
+      },
+      {
+        label: "加载态骨架屏（替代三点脉冲）",
+        items: [
+          "新增 ProjectCardSkeleton 子组件：surface-elevated 容器 + 标题/描述/标签/统计条占位块，每块内嵌 shimmer-line 流光横扫（复用现有 .shimmer-line），与最终 ProjectCard 同形",
+          "项目列表加载分支由 3 个 animate-pulse 圆点改为 6 张同列骨架屏网格，加载即呈现真实布局骨架、禁通用圆形 spinner，对齐前端纪律",
+        ],
+      },
+      {
+        label: "空态 Bento 不对称",
+        items: [
+          "FeatureCard 组件加 featured/className 可选 props；空态三张等宽卡改为 sm:grid-cols-2 不对称 Bento——主引导卡（探讨模式）featured 跨整行放大（p-7、图标/标题加大），拆书/配置两张副卡并排错落",
+          "拉开视觉层级、避免技能明确不推荐的 AI 默认三等分布局；邀请式文案『还没有小说项目…』保留（非道歉腔）",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "tsc 零错误 + dev 200 + SSR HTML 含 shimmer-line 骨架屏标记验证（首屏 loading 态已被 SSR 渲染）；col-span-2 Bento 因属空态条件渲染、首屏不出现，已代码审查确认逻辑正确",
+          "骨架屏/空态/Bento 具体观感（流光密度、错落比例）需浏览器实跑确认；Phase 3（卡片 stagger 入场 + 可选 hover 聚拢/焦点聚光）待续",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.41",
     date: "2026-08-03",

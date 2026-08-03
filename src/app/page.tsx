@@ -229,12 +229,10 @@ export default function Dashboard() {
       {/* 主区 */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <span className="inline-flex items-center gap-2 text-[var(--nv-text-tertiary)]">
-              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse delay-150" />
-              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse delay-300" />
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
           </div>
         ) : loadError && projects.length === 0 ? (
           <div className="text-center py-20">
@@ -254,8 +252,8 @@ export default function Dashboard() {
         ) : projects.length === 0 ? (
           <div className="py-10">
             <p className="text-center text-[var(--nv-text-tertiary)] text-sm mb-8">还没有小说项目，从下面任选一种方式开始：</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <FeatureCard icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲" href="/explore" cta="开始探讨" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FeatureCard featured icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲，从一句话灵感聊到完整纲要" href="/explore" cta="开始探讨" />
               <FeatureCard icon="book" title="拆书分析" desc="上传文本，逆向学习结构与文风" href="/dissect" cta="去拆书" />
               <FeatureCard icon="settings" title="配置 AI" desc="先填好 LLM Key，功能才能跑通" href="/settings" cta="去设置" />
             </div>
@@ -395,27 +393,59 @@ function FeatureCard({
   desc,
   href,
   cta,
+  featured = false,
+  className,
 }: {
   icon: "sparkles" | "book" | "settings";
   title: string;
   desc: string;
   href: string;
   cta: string;
+  featured?: boolean;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className="group surface-elevated rounded-2xl p-5 flex flex-col hover:border-primary/30 transition-all"
+      className={`group surface-elevated rounded-2xl p-5 flex flex-col hover:border-primary/30 transition-all ${featured ? "sm:col-span-2 p-7" : ""} ${className ?? ""}`}
     >
-      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
-        <Icon name={icon} size={20} />
+      <div className={`w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3 ${featured ? "w-12 h-12" : ""}`}>
+        <Icon name={icon} size={featured ? 24 : 20} />
       </div>
-      <h3 className="font-semibold text-foreground mb-1">{title}</h3>
+      <h3 className={`font-semibold text-foreground mb-1 ${featured ? "text-xl" : ""}`}>{title}</h3>
       <p className="text-sm text-[var(--nv-text-tertiary)] leading-relaxed flex-1 mb-3">{desc}</p>
       <span className="text-xs text-primary group-hover:text-primary font-medium inline-flex items-center gap-1">
         {cta} <Icon name="arrowRight" size={12} />
       </span>
     </Link>
+  );
+}
+
+// ─── 子组件：项目卡片骨架屏（加载态，与 ProjectCard 同形，禁通用 spinner） ──
+function ProjectCardSkeleton() {
+  return (
+    <div className="surface-elevated rounded-2xl p-5 flex flex-col gap-3">
+      <div className="relative h-5 w-2/3 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden">
+        <span className="absolute inset-0 shimmer-line" />
+      </div>
+      <div className="relative h-3 w-full rounded bg-[var(--nv-surface-2)] overflow-hidden">
+        <span className="absolute inset-0 shimmer-line" />
+      </div>
+      <div className="relative h-3 w-4/5 rounded bg-[var(--nv-surface-2)] overflow-hidden">
+        <span className="absolute inset-0 shimmer-line" />
+      </div>
+      <div className="flex gap-2 mt-2">
+        <div className="relative h-4 w-14 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden">
+          <span className="absolute inset-0 shimmer-line" />
+        </div>
+        <div className="relative h-4 w-14 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden">
+          <span className="absolute inset-0 shimmer-line" />
+        </div>
+      </div>
+      <div className="relative h-3 w-1/3 rounded bg-[var(--nv-surface-2)] overflow-hidden mt-2">
+        <span className="absolute inset-0 shimmer-line" />
+      </div>
+    </div>
   );
 }
 
