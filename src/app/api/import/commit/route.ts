@@ -113,6 +113,22 @@ ${pairsText}
 // 规则合并 —— AI 失败时的兜底（互补合并，不丢信息）
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * 角色关系字段归一化：外部导入可能用旧格式 {target, type}，
+ * 而 sync-global-prompt 只认 {targetName, relation}（否则编译出「?(?)」）。
+ * 此处统一归一化，避免关系字段静默失效（工坊 P1）。
+ */
+function normalizeRelationships(raw: unknown): { targetName: string; relation: string }[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as unknown[])
+    .filter((r: any) => r && (r.targetName || r.target))
+    .map((r: any) => ({
+      targetName: String(r.targetName ?? r.target ?? "").trim(),
+      relation: String(r.relation ?? r.type ?? "").trim(),
+    }))
+    .filter((r: any) => r.targetName.length > 0);
+}
+
 function ruleMergeChar(existing: Record<string, unknown>, incoming: Record<string, unknown>): Record<string, unknown> {
   const mergeArr = (key: string) => {
     const old = Array.isArray(existing[key]) ? existing[key] as unknown[] : [];
@@ -138,8 +154,8 @@ function ruleMergeChar(existing: Record<string, unknown>, incoming: Record<strin
     return old + "\n\n【补充】\n" + add;
   };
 
-  const oldRels = Array.isArray(existing.relationships) ? existing.relationships as Record<string, unknown>[] : [];
-  const newRels = Array.isArray(incoming.relationships) ? incoming.relationships as Record<string, unknown>[] : [];
+  const oldRels = normalizeRelationships(existing.relationships);
+  const newRels = normalizeRelationships(incoming.relationships);
   const relNames = new Set(oldRels.map((r: any) => r?.targetName || ""));
   const mergedRels = [...oldRels, ...newRels.filter((r: any) => !relNames.has(r?.targetName || ""))];
 
@@ -361,10 +377,13 @@ export async function POST(request: Request) {
 
         const charMergePairs: MergePair[] = [];
         const charNewData: Record<string, unknown>[] = [];
+        const seenCharNames = new Set<string>(); // 同批去重：防止 createMany 写入重复行（工坊 P1）
 
         for (const char of characters) {
           if (!char.name) continue;
           const nameLower = String(char.name).toLowerCase();
+          if (seenCharNames.has(nameLower)) continue; // 同批内重复名，跳过（取首个），避免重复写库
+          seenCharNames.add(nameLower);
           let existing = charByName.get(nameLower);
 
           // 别名模糊匹配
@@ -407,7 +426,7 @@ export async function POST(request: Request) {
               timeline: Array.isArray(char.timeline) ? char.timeline : [],
               currentStatus: String(char.currentStatus || "alive"),
               arcProgress: String(char.arcProgress || ""),
-              relationships: Array.isArray(char.relationships) ? char.relationships : [],
+              relationships: normalizeRelationships(char.relationships),
               tags: ["📥导入"],
             });
           }
@@ -487,10 +506,14 @@ export async function POST(request: Request) {
 
         const loreMergePairs: MergePair[] = [];
         const loreNewData: Record<string, unknown>[] = [];
+        const seenLoreTitles = new Set<string>(); // 同批去重：防止 createMany 写入重复词条（工坊 P1）
 
         for (const entry of loreEntries) {
           if (!entry.title) continue;
-          const existing = loreByTitle.get(String(entry.title).toLowerCase());
+          const titleLower = String(entry.title).toLowerCase();
+          if (seenLoreTitles.has(titleLower)) continue; // 同批内重复标题，跳过
+          seenLoreTitles.add(titleLower);
+          const existing = loreByTitle.get(titleLower);
 
           if (existing) {
             loreMergePairs.push({

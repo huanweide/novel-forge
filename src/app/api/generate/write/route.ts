@@ -307,6 +307,7 @@ export async function POST(request: Request) {
             send,
             nodeOrder: (data.currentNode as any).order,
             isLatestChapter,
+            nodeId,
             projectLlmConfig: projLlm as Record<string, unknown> | null,
           });
 

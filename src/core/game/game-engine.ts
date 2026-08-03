@@ -325,7 +325,7 @@ async function ensureItemLorebook(projectId: string, itemName: string, owner: st
       projectId,
       title: itemName,
       category: "item",
-      keys: [itemName, "物品"],
+      keys: [itemName],
       content: `[游戏获得] 物品「${itemName}」，归属：${owner}。`,
       insertionOrder: 60,
       enabled: true,

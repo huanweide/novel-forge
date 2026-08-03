@@ -169,13 +169,13 @@ export function findEntitiesInText(
       const isOccupied = occupied.slice(idx, end).some(Boolean);
 
       if (!isOccupied) {
-        const nextChar = text[end];
-        const prevChar = text[idx - 1];
-        const isWordBoundary =
-          (!prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar)) &&
-          (!nextChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(nextChar));
+      const prevChar = text[idx - 1];
+      const isHeadBoundary = !prevChar || /[\s，。！？、；：""''（）【】《》\-\—]/.test(prevChar);
+      // 头边界必查（防止把别的词中间的片段误当实体）；尾边界对 2 字名放宽（只查头边界），
+      // 3 字及以上本来就不查边界。解决「2 字实体名几乎不高亮」（清览 P1）。
+      const passesBoundary = name.length >= 3 ? true : isHeadBoundary;
 
-        if (isWordBoundary || name.length >= 3) {
+      if (passesBoundary) {
           matches.push({ name, color: entity.color, type: entity.type, category: entity.category, start: idx, end });
           for (let i = idx; i < end; i++) occupied[i] = true;
         }

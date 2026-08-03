@@ -70,14 +70,17 @@ function levenshtein(a: string, b: string): number {
  * 规则：忽略大小写后
  *  - 完全相同 → 是
  *  - 长度差 > 2 → 否（明显不同实体）
- *  - 编辑距离 ≤ 1 → 是（灭繁简/错别字，如 青龙镇/青龍镇、李尘/李麈）
+ *  - 短名（任一 ≤2 字）要求完全一致——避免「白云/白衣」这类完全不同词被误并；
+ *  - 长名（≥3 字）编辑距离 ≤ 1 → 是（灭繁简/错别字，如 青龙镇/青龍镇、李尘/李麈）
  */
-function isSimilarName(a: string, b: string): boolean {
+export function isSimilarName(a: string, b: string): boolean {
   const x = a.trim().toLowerCase();
   const y = b.trim().toLowerCase();
   if (!x || !y) return false;
   if (x === y) return true;
   if (Math.abs(x.length - y.length) > 2) return false;
+  // 短名过宽：仅允许精确匹配（宁可漏判「李尘/李麈」这类 2 字变体，也不误并「白云/白衣」）
+  if (x.length <= 2 || y.length <= 2) return false;
   return levenshtein(x, y) <= 1;
 }
 

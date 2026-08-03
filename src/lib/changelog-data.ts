@@ -25,18 +25,60 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.63";
+export const LATEST_VERSION = "v0.46.64";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "填表引擎灭错名：给 LLM 看全量权威名录 + 全量样例行（不再只给最近8行），强化提示词（零杜撰/复用已有/完整性/填后自检），applyOps 加代码级去重（同名 insert 自动转 update）",
-  "三卡检索词边界匹配：新增 src/core/text/match.ts，trigger.ts/recall.ts 改用词边界匹配 + 最长匹配优先，灭掉「林」误命中「森林」这类瞎匹配，单字关键词直接拒绝",
-  "自动建卡相似度去重：entity-auto-creator 加编辑距离 + 包含关系判定，灭掉「青龙镇/青龍镇」繁简/错别字变体重复入库",
-  "一键填表 + 自检 + 游戏归属：新增 babyloreFillAll（首章→最新 + 防重复跳过 + 填后地名/完整性自检）与 API 路由 + UI 按钮；游戏背包物品加归属字段，游戏获得新物品自动补建 item 类世界书词条",
+  "写章自动填表与一键 fill-all 防重复真正打通：safeFillAfterWriting 成功填表后写入 .runtime 防重复标记（此前写章填表不标记，fill-all 会重复填同一章）",
+  "实体高亮修复：2 字实体名尾边界放宽（仅查头边界），灭「2 字实体名几乎不高亮」；中英文关键词边界区分，灭「AI」等英文 2 字关键词边界退化误触发",
+  "填表/召回精度：applyOps 的 update/delete 改大小写不敏感（灭「青龙镇/青龙鎮」漏匹配）；recall 按关键词特异性(score)降序截断，灭 200+ 词条时截断丢长词；ensureItemLorebook 移除字面量「物品」键灭召回噪音",
+  "导入健壮性：同批重复角色/词条去重（灭 createMany 重复行）；角色关系字段归一化（旧格式 target/type 自动转 targetName/relation，灭 sync-global-prompt 编译出 ?(?)）；babyloreFillAll 每章增量落盘（灭中途超时丢全部进度）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.64",
+    date: "2026-08-03",
+    title: "会员股东 Round 1 收口：填表/召回/高亮精度 + 导入健壮性（10 项逻辑修复，tsc 零错误）",
+    sections: [
+      {
+        label: "写章自动填表 ↔ 一键 fill-all 防重复打通（墨白 F1）",
+        items: [
+          "safeFillAfterWriting 成功填表后写入 .runtime/babylore-filled.json 防重复标记（此前写章填表全程不标记，导致一键 fill-all 会把已填章节再填一遍）",
+          "fill.ts 导出 markChapterFilled 供写章与 fill-all 共享同一防重复标记；write 路由补传 nodeId",
+        ],
+      },
+      {
+        label: "实体高亮修复（清览 P1 + 青砚）",
+        items: [
+          "2 字实体名尾边界放宽：仅查头边界（防止把别的词中间片段误当实体），灭「2 字实体名几乎不高亮」；3 字及以上本来就不查边界",
+          "match.ts 新增 isBoundaryChar：英文 2 字关键词（如 AI）仅在空白/标点/中文相邻处算边界，灭英文短词边界退化误触发",
+        ],
+      },
+      {
+        label: "填表 / 召回精度（墨白 F5 + 墨白/磐石 recall + 阿游 P2）",
+        items: [
+          "applyOps 的 update/delete 匹配改大小写不敏感（与 insert 去重一致），灭「青龙镇/青龙鎮」字形/大小写漏匹配",
+          "recall 命中按关键词特异性 score 降序再截断（table 优先于 lorebook），灭 200+ 词条时按数组序截断丢关键长词；清除 RecallItem.score 死代码",
+          "ensureItemLorebook 移除字面量「物品」键（只留 itemName），灭游戏物品词条把「物品」二字当召回关键词导致的噪音",
+        ],
+      },
+      {
+        label: "导入健壮性（工坊 P1）",
+        items: [
+          "同批重复角色/词条去重：导入循环内加 seenCharNames/seenLoreTitles，同批内重复名跳过，灭 createMany 写入重复行",
+          "角色关系字段归一化：新增 normalizeRelationships，把旧格式 {target, type} 自动转 {targetName, relation}，灭 sync-global-prompt 编译出 ?(?)；ruleMergeChar 合并也走归一化",
+        ],
+      },
+      {
+        label: "一键填表容错（磐石 P0 部分缓解）",
+        items: [
+          "babyloreFillAll 循环内每填完一章即增量 saveFilled，灭中途超时/崩溃丢失全部进度（串行→分批并行架构优化留待 Round 2）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.63",
     date: "2026-08-03",

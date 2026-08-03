@@ -10,7 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { recallContext, RecallItem } from "./recall";
-import { babyloreFill, FillResult } from "./fill";
+import { babyloreFill, markChapterFilled, FillResult } from "./fill";
 import { evaluateIfCell } from "./ifcell";
 import { buildProjectOverrides } from "@/core/llm/client";
 
@@ -51,10 +51,12 @@ export async function buildRecallBlock(input: RecallBuildInput): Promise<RecallB
 
   const recallRaw = recallContext(recallText, cleanLore as any, tableShapes);
 
-  // 优先保留结构化表格命中（精确），限制总数避免 prompt 膨胀
+  // 按特异性（score=命中关键词长度）降序，优先保留高价值长词命中（避免 200+ 词条时截掉关键长词），
+  // 再 table 精确命中优先于 lorebook，限制总数避免 prompt 膨胀
+  const sorted = [...recallRaw].sort((a, b) => b.score - a.score);
   const recallItems = [
-    ...recallRaw.filter((i) => i.source === "table"),
-    ...recallRaw.filter((i) => i.source === "lorebook"),
+    ...sorted.filter((i) => i.source === "table"),
+    ...sorted.filter((i) => i.source === "lorebook"),
   ].slice(0, 12);
 
   console.log(`[recall] project=${projectId} 召回命中 ${recallItems.length} 条 (table/lorebook)`);
@@ -91,6 +93,8 @@ export interface FillAfterWritingInput {
   nodeOrder?: number;
   /** 当前节点是否为最新节点（最后一章）；用于"跳过最近一章"判断。 */
   isLatestChapter?: boolean;
+  /** 当前章节节点 ID；填表成功后写入防重复标记，使一键填表 fill-all 真正跳过已填章节（墨白 F1） */
+  nodeId?: string;
   /** 项目级 LLM 覆盖（Json）；非空字段覆盖全局设置，使自动填表也走项目 key */
   projectLlmConfig?: Record<string, unknown> | null;
 }
@@ -100,7 +104,7 @@ export interface FillAfterWritingInput {
  * 失败不影响正文交付；返回 FillResult，并（若提供 send）推送事件。
  */
 export async function safeFillAfterWriting(input: FillAfterWritingInput): Promise<FillResult> {
-  const { projectId, content, send, nodeOrder, isLatestChapter, projectLlmConfig } = input;
+  const { projectId, content, send, nodeOrder, isLatestChapter, nodeId, projectLlmConfig } = input;
 
   // ── 频率 / 跳过配置（用户逻辑 2c：填表频率可配 + 默认跳过最近章）──
   let cfg: { autoFillEnabled?: boolean; fillFrequency?: number; skipLatestChapter?: boolean } | null = null;
@@ -171,6 +175,15 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
       applied: 0,
       error: e instanceof Error ? e.message : "填表异常",
     };
+  }
+
+  // 写章自动填表成功后，复用 fill.ts 的防重复标记，使一键 fill-all 真正跳过已填章节（墨白 F1）
+  if (babylore.ok && nodeId) {
+    try {
+      markChapterFilled(projectId, nodeId);
+    } catch {
+      /* 标记失败不影响正文交付 */
+    }
   }
 
   console.log(`[babylore] 填表 project=${projectId} chapter=${(nodeOrder ?? 0) + 1} ok=${babylore.ok} ops=${babylore.operations} applied=${babylore.applied}${babylore.error ? " err=" + babylore.error : ""}`);

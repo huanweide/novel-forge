@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.64 — 2026-08-03
+**会员股东 Round 1 收口：填表/召回/高亮精度 + 导入健壮性（10 项逻辑修复，tsc 零错误）**
+
+- 写章自动填表 ↔ 一键 fill-all 防重复打通（墨白 F1）：safeFillAfterWriting 成功填表后写入 .runtime 防重复标记；fill.ts 导出 markChapterFilled 共享；write 路由补传 nodeId
+- 实体高亮修复（清览 P1 + 青砚）：2 字实体名尾边界放宽（仅查头边界），灭「2 字实体名几乎不高亮」；match.ts 新增 isBoundaryChar 区分中英文边界，灭「AI」等英文 2 字边界退化误触发
+- 填表/召回精度（墨白 F5 + recall + 阿游 P2）：applyOps 的 update/delete 改大小写不敏感（灭「青龙镇/青龙鎮」漏匹配）；recall 按关键词特异性 score 降序截断（灭 200+ 词条截断丢长词）；ensureItemLorebook 移除字面量「物品」键灭召回噪音
+- 导入健壮性（工坊 P1）：同批重复角色/词条去重（灭 createMany 重复行）；角色关系字段归一化（旧格式 target/type 自动转 targetName/relation，灭 sync-global-prompt 编译出 ?(?)）；babyloreFillAll 每章增量落盘（灭中途超时丢全部进度）
+
 ## v0.46.63 — 2026-08-03
 **全面修复：填表灭错名 + 三卡检索词边界匹配 + 自动建卡相似度去重 + 一键填表自检 + 游戏物品归属联动**
 

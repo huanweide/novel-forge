@@ -14,6 +14,19 @@ export function isCjkChar(ch: string): boolean {
   return CJK_RE.test(ch);
 }
 
+const WORDCHAR_RE = /[A-Za-z0-9]/;
+/**
+ * 判断字符是否为「真实词边界」。
+ * - keywordIsCjk=true（中文关键词）：相邻非汉字即边界（含拉丁/标点/空格）；
+ * - keywordIsCjk=false（英文/拼音关键词）：仅在空白/标点/中文相邻处为边界，
+ *   相邻拉丁字母不算边界——否则 "AI" 会命中 "waitAI" 这类伪边界。
+ */
+function isBoundaryChar(ch: string, keywordIsCjk: boolean): boolean {
+  if (ch === "") return true;
+  if (keywordIsCjk) return !isCjkChar(ch);
+  return !WORDCHAR_RE.test(ch);
+}
+
 /**
  * 判断 keyword 是否「真实命中」text。
  *
@@ -36,13 +49,15 @@ export function matchKeyword(text: string, keyword: string): boolean {
   if (len >= 3) return true;
   if (len <= 1) return false; // 单字直接拒绝
 
-  // 长度 2：逐位置检查，只要有一处满足「至少一侧是边界」即视为命中
+  // 长度 2：逐位置检查，只要有一处满足「至少一侧是真实词边界」即视为命中。
+  // 中文词：相邻非汉字即边界；非中文词：仅在空白/标点/中文相邻处为边界（灭 "AI" 命中 "waitAI"）。
+  const keywordIsCjk = needle.split("").every(isCjkChar);
   let idx = hay.indexOf(needle);
   while (idx >= 0) {
     const before = idx > 0 ? hay[idx - 1] : "";
     const after = idx + len < hay.length ? hay[idx + len] : "";
-    const beforeBoundary = before === "" || !isCjkChar(before);
-    const afterBoundary = after === "" || !isCjkChar(after);
+    const beforeBoundary = isBoundaryChar(before, keywordIsCjk);
+    const afterBoundary = isBoundaryChar(after, keywordIsCjk);
     if (beforeBoundary || afterBoundary) return true;
     idx = hay.indexOf(needle, idx + 1);
   }

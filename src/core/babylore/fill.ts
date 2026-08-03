@@ -70,6 +70,16 @@ function saveFilled(m: Record<string, string[]>) {
   fs.writeFileSync(FILLED_PATH, JSON.stringify(m, null, 2));
 }
 
+/** 标记某章节已填表（供写章自动填表与一键填表共享同一防重复标记） */
+export function markChapterFilled(projectId: string, nodeId: string) {
+  const m = loadFilled();
+  const set = new Set(m[projectId] || []);
+  if (set.has(nodeId)) return;
+  set.add(nodeId);
+  m[projectId] = Array.from(set);
+  saveFilled(m);
+}
+
 // ─── 工具 ──────────────────────────────────────────────────
 
 function parseOps(raw: string): LoreTableOp[] {
@@ -267,7 +277,8 @@ async function applyOps(
       }
     } else if (op.op === "update") {
       const { col, val } = (op as any).match || {};
-      const idx = rows.findIndex((r: any) => String(r[col]) === String(val));
+      // 大小写不敏感匹配（与 insert 去重一致），避免「青龙镇」/「青龙鎮」因字形/大小写漏匹配（墨白 F5）
+      const idx = rows.findIndex((r: any) => String(r[col] ?? "").toLowerCase() === String(val ?? "").toLowerCase());
       if (idx >= 0) {
         rows[idx] = { ...rows[idx], ...(op.values || {}) };
         applied++;
@@ -282,7 +293,8 @@ async function applyOps(
     } else if (op.op === "delete") {
       const { col, val } = (op as any).match || {};
       const before = rows.length;
-      const filtered = rows.filter((r: any) => String(r[col]) !== String(val));
+      // 大小写不敏感匹配，与 update 一致（墨白 F5）
+      const filtered = rows.filter((r: any) => String(r[col] ?? "").toLowerCase() !== String(val ?? "").toLowerCase());
       applied += before - filtered.length;
       rows.length = 0;
       rows.push(...filtered);
@@ -447,11 +459,10 @@ export async function babyloreFillAll(
     applied += r.applied;
     for (const w of r.warnings) warnings.push(`第${ch.order}章《${ch.title || "未命名"}》：${w}`);
     filledSet.add(ch.id);
+    // 增量落盘：每填完一章即持久化，避免中途超时/崩溃丢失全部进度（磐石 P0 防丢进度）
+    filledMap[projectId] = Array.from(filledSet);
+    saveFilled(filledMap);
   }
-
-  // 持久化防重复标记
-  filledMap[projectId] = Array.from(filledSet);
-  saveFilled(filledMap);
 
   const selfCheck = await selfCheckFill(projectId);
 
