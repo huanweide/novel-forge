@@ -2140,3 +2140,31 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 ### 诚实边界（反自欺）
 - **已真实验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误；`schema` 加字段后 `db push + generate` 成功（`LlmCallLog` 现已含 `durationMs`/`firstTokenMs` 类型）；`client.ts` 计时逻辑（chat start/streamStart/firstTokenMs 闭包共享）与 `recordLlmCall` 写入字段逐行对齐；双 changelog 升 v0.46.85（`changelog-data.ts` + 根 `CHANGELOG.md` 同 commit）；API 的 `where` 过滤（`role.not.startsWith("fail:")` + `durationMs.not.null`）经源码通读复核。
 - **未验证（必须明示）**：① 真实数据下 P95/吞吐/本地vs云端数值是否合理——沙箱无任何生成记录，未实跑渲染（面板空状态已写引导文案）。② 阈值 2000ms 是否一刀切过严：长文流式生成可能 >2s 但作者可接受，留待你本地目测调常量。③ 面板窄栏（320px）下多卡布局拥挤度需浏览器目测。④ `projectId` 落库为 null 导致无法按项目分延迟——当前全量，若你后续想要分项目，需给 client 各调用点补传 projectId（已知范围，未做）。
+
+---
+
+## v0.46.86 — 删 UI 噪声（马斯克优化计划 P3·先减法后乘法）
+
+### 干了什么
+把写作页三栏界面里「作者 90% 时间用不到的密度」收起来：顶栏 9 个按钮→7 个可见（导出/复制合并成「导出▾」下拉，自动化/工具箱收进「更多▾」）；右栏监测 tab 里三个分析面板默认折叠、点开才加载；左栏 5 个 tab→3 个常显（故事线/规则收进「更多▾」）；后处理面板 5 个分析 tab 的「章节提取」常显、其余 4 个收进「高级▾」第二行。所有功能零删除——只是收起/下拉化。
+
+### 为什么这么做（第一性原理）
+马斯克计划书 P3 原话：「先减法后乘法 / UI 噪声就是非核心密度」。界面越密，作者找核心功能越费眼。减法不是删功能，是把低频入口收进「更多」、高频入口留在面上。我此前实测了界面密度（顶栏 9 按钮、左 5 tab、右监测三叠、后处理 5 tab），列了噪声清单 A–E，由你勾选锁定三包视觉收敛、明确不删低频模块（抽卡/记忆衰减/拆解页保留），确保「先减法」不伤核心。
+
+### 方法 / 工具 / 效果（对比过什么）
+- **重新核实图标库（关键纠偏）**：计划阶段一度误记图标库「只有 arrowLeft/arrowRight」，差点用文本三角硬凑。本轮动手前重新读 `src/components/ui/icons.tsx`，发现实际有上百个 Lucide 图标（`sliders`/`zap`/`radio`/`chart` 等），只是**没有 chevron/more/ellipsis**。结论：折叠/下拉指示仍统一用文本三角 `▾/▸`（与既有 `▲/▼` 风格一致），零 tsc 风险；下拉按钮用真实图标（palette/bot/sparkles/sliders）。
+- **工作区多层 overflow-hidden 逼出两种模式**：读 `src/app/workspace/[projectId]/page.tsx` 发现根布局有 3 处 `overflow-hidden`（846/881/913 行），绝对定位下拉若超出容器边界会被裁切。据此分两套方案：
+  - **Toolbar / LeftPanel 用下拉菜单**：触发按钮包在 `relative z-50` 容器，菜单 `absolute`，配 `fixed inset-0 z-40` 遮罩点外部关闭。展开区域仍在面板边界内（顶栏下拉在 flex 行内、左栏下拉在 w-64 内），不被裁切。
+  - **RightPanel 监测 / PostGenPanel 用内联折叠**：监测 tab 三面板改成「标题栏 + 点开区块」内联结构（非绝对定位），折叠时**不挂载子组件**（省 fetch）；后处理「高级▾」用**内联双行展开**（第二行 tab 条），规避 PostGenPanel `overflow-hidden` 容器（181 行）对下拉菜单的裁切——这是唯一用双行而非下拉的地方，因为该容器内容可能很短、下拉会溢出底部被切。
+- **状态与交互**：四个组件各加 `useState`（Toolbar 两个菜单开合、LeftPanel 一个、RightPanel 一个折叠表、PostGenPanel 一个高级开合）；「更多▾」在 activeTab 落在隐藏 tab 时高亮；后处理高级入口在有问题的 tab 上显红点角标（复用原 hasIssues 逻辑）。
+- **零功能丢失验证**：左栏隐藏 tab 的内容渲染块（`activeTab === "storylines"` 等）原样保留，只是入口收进下拉；导出/复制/自动化/工具箱全部从下拉里照原回调触发。
+
+### 关键取舍
+- **下拉 vs 双行**：ToolBar/LeftPanel 下拉安全（边界内），PostGenPanel 因 `overflow-hidden` + 内容可空改用双行——同一「收起」目标、两种实现，根因是容器裁切差异，不是随意。
+- **折叠不挂载 vs 折叠隐藏**：RightPanel 监测选「折叠不挂载子组件」，因为三个面板都带 fetch，默认收起能省首屏请求；若只 `hidden` 仍会挂载并 fetch，违背「减法省开销」初衷。
+- **未删任何低频模块**：你明确未勾选「删低频模块」，故抽卡/记忆衰减/拆解页物理保留，本次纯视觉收敛——规避误删作者在用功能。
+- **文本三角而非新增图标**：icons.tsx 无 chevron，新增要改图标注册表；用 `▾/▸` 与既有 `▲/▼` 同源风格，改动最小、零风险。
+
+### 诚实边界（反自欺）
+- **已真实验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误；四个组件改动逐行写就；图标名全部来自 icons.tsx 实际导出清单（palette/bot/sparkles/sliders/upload/clipboard/package/download/chart/zap/radio 均存在）；双 changelog 升 v0.46.86（`changelog-data.ts` 头部插入 + 根 `CHANGELOG.md` 同步）同 commit `0da8e0d`；代理 push 成功 `871a8db..0da8e0d`。
+- **未验证（必须明示）**：① 沙箱无 Chromium/显示，下拉/折叠的**真实点击与遮罩关闭、z-index 层叠、裁切是否真不发生**未浏览器目测——基于源码通读 + overflow 规则推断，需你本地 `npm run dev` 目测确认。② 下拉菜单在导航栏/左栏的精确像素位置与窄屏换行未目测。③ 后处理「高级▾」双行在 5 个 tab 全有内容时的换行拥挤度未目测。④ LeftPanel 下拉 `fixed inset-0` 遮罩在左栏 `overflow-hidden` 内、点击隐藏 tab 后的内容滚动交互未目测。
