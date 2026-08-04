@@ -43,6 +43,7 @@ export function RightPanel(props: RightPanelProps) {
   const [topTab, setTopTab] = useState<TopTab>("ai");
   const [querySubTab, setQuerySubTab] = useState<QuerySubTab>("entities");
   const [showContext, setShowContext] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   // ── 最小化状态 ──
   if (minimized) {
@@ -147,12 +148,25 @@ export function RightPanel(props: RightPanelProps) {
           </div>
         )}
 
-        {/* ── 监测 tab ── */}
+        {/* ── 监测 tab（三面板默认折叠，按需展开；折叠时不挂载子组件以省 fetch） ── */}
         {topTab === "monitor" && (
           <div className="flex-1 overflow-y-auto">
-            <NarrativeEnergyPanel projectId={project.id} />
-            <GenerationLatencyPanel />
-            <MonitorPanel projectId={project.id} nodeId={selectedNode?.id} />
+            {([
+              { key: "energy", label: "叙事能量曲线", icon: "chart" as IconName, node: <NarrativeEnergyPanel projectId={project.id} /> },
+              { key: "latency", label: "生成延迟", icon: "zap" as IconName, node: <GenerationLatencyPanel /> },
+              { key: "monitor", label: "节点监测", icon: "radio" as IconName, node: <MonitorPanel projectId={project.id} nodeId={selectedNode?.id} /> },
+            ] as const).map((s) => (
+              <div key={s.key} className="border-b border-[var(--nv-border-2)]">
+                <button
+                  onClick={() => setOpenSections((o) => ({ ...o, [s.key]: !o[s.key] }))}
+                  className="flex w-full items-center justify-between px-3 py-2 text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)]"
+                >
+                  <span className="flex items-center gap-1.5"><Icon name={s.icon} size={13} /> {s.label}</span>
+                  <span className="text-[10px] opacity-60">{openSections[s.key] ? "▾" : "▸"}</span>
+                </button>
+                {openSections[s.key] && <div className="px-1 pb-2">{s.node}</div>}
+              </div>
+            ))}
           </div>
         )}
       </div>

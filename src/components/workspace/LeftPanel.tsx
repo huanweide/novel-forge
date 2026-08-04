@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CharacterList } from "@/components/workspace/CharacterList";
 import { WorldPanel } from "@/components/workspace/WorldPanel";
 import { StorylineList } from "@/components/workspace/StorylineList";
@@ -33,23 +34,45 @@ export function LeftPanel({
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
-  const tabs = [
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const visibleTabs = [
     { key: "outline", label: "大纲" },
-    { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
     { key: "characters", label: `角色 (${project.characters?.length || 0})` },
     { key: "world", label: `世界 (${project.lorebookEntries?.length || 0})` },
+  ] as const;
+  const moreTabs = [
+    { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
     { key: "rules", label: "规则" },
   ] as const;
+  const moreActive = moreTabs.some((t) => t.key === activeTab);
 
   return (
     <aside className="w-64 border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
       <div className="flex border-b border-[var(--nv-border-2)]">
-        {tabs.map((t) => (
+        {visibleTabs.map((t) => (
           <button key={t.key} onClick={() => onTabChange(t.key)}
             className={`flex-1 text-xs py-2 text-center transition-colors ${
               activeTab === t.key ? "text-[var(--nv-primary)] border-b border-[var(--nv-primary)] bg-[var(--nv-primary-soft)]" : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
             }`}>{t.label}</button>
         ))}
+        {/* 更多▾：故事线 / 规则 收起，避免低频 tab 占据常显密度 */}
+        <div className="relative z-50">
+          <button onClick={() => setMoreMenuOpen((o) => !o)}
+            className={`text-xs py-2 px-2 text-center transition-colors border-b ${
+              moreActive || moreMenuOpen ? "text-[var(--nv-primary)] border-[var(--nv-primary)] bg-[var(--nv-primary-soft)]" : "text-[var(--nv-text-tertiary)] border-transparent hover:text-[var(--nv-text-primary)]"
+            }`}>更多 <span className="text-[10px] opacity-70">▾</span></button>
+          {moreMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setMoreMenuOpen(false)} aria-hidden />
+              <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 shadow-xl">
+                {moreTabs.map((t) => (
+                  <button key={t.key} onClick={() => { setMoreMenuOpen(false); onTabChange(t.key); }}
+                    className={`block w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-[var(--nv-surface-2)] ${activeTab === t.key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{t.label}</button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-2">
         {activeTab === "outline" && (
