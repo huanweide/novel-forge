@@ -1810,3 +1810,28 @@ Round 6 是 maxloop 会员股东循环第 6 轮：6 位股东先只读复验 Rou
 - 3字匹配选「最长匹配优先 + knownNames 吞并」而非回退 Round4 闭边界：闭边界会重演 2字全漏检，最长优先在保留召回能力的同时靠实体集合抑制误命中，是精度与召回的平衡点。
 - 选择「前端 abort 后拉 GET 对账」而非后端回滚：游戏状态需保留已生成内容，对账覆盖比回滚更符合叙事连续性，且复用 Round5 已有的 summary 通道零新增接口成本。
 - 已真实验证：tsc 零错误；多文件 vitest 单测过；6 股东 Agent 改动逐文件核验在授权范围、无越界；commit+push 完成。未验证（明示）：真机交互（游戏流式对账/弹窗无障碍读屏/导入部分失败 UI/ReDoS 实测恶意正则）仍待用户本地实跑。
+
+# Round 7 实现报告（v0.46.70）—— 费曼式沉淀
+
+## 干了什么
+Round 7 是 maxloop 第 7 轮：6 股东只读复验 Round 6 修复并挖新坑（L1），Chair 派 6 Agent 并行修复（L2），tsc + 双 changelog + commit + push（L3）。改 30 处源码、覆盖 2 P0 + 8 P1，tsc 零错误，单测 trigger 5/game 36/regex 15 等全绿。
+
+## 为什么这么做（底层原理）
+- abort 信号未透传（阿游 P0，Round6 回归）：Round6 加了 GET 对账自愈，但 abort 信号没从前端透传到引擎，后端照提交被停轮、前端读事务前旧快照→重新错位。根因是信号链路断在 action/route→game-engine 之间，正解是透传 AbortSignal 并在提交前判 aborted 丢弃本轮。
+- 幂等锁 DoS（磐石 P0）：空载荷 400 在加锁之后返回，锁未释放→合法写入被 300s 阻塞。正解是校验前置到加锁前。
+- OOC 词条误报（青砚 P1，Round6 回归）：Round6 撤 3字前缀守卫后，OOC 的 knownNames 仅角色名不含词条，「李星云剑法」内「李星云」被误命中。正解是 knownNames 补词条长名，复用已有吞并逻辑。
+- 其余 P1：babyloreFillAll 恒 ok 假完成、前端不可变更新、world 长文截断、commit 缺事务、弹窗裸 aria、forkPoint 丢失、正则重叠交替、交互事务 5s 超时——均为健壮性与一致性缺口。
+
+## 用了什么方法 / 效果
+- 阿游：game-engine processGameTurn 收 signal，提交前 if(aborted) return；action/route 透传 req.signal；前端 handleStop async + reconcileWithBackend；背包改纯函数不可变；entities 按 name 去重。补 game-engine.test.ts（abort 对账/不可变/去重）。
+- 磐石：commit 空载荷校验前置加锁前 + finally 释放；parse world/文风改头中尾三段采样（>32k 取中段）；commit 多步写包 $transaction。
+- 青砚：trigger.findCharacterByName 新增 extraKnownNames 并入词条长名；补 trigger.test.ts（李星云剑法不误报）。
+- 墨白：babyloreFillAll 汇总各章 applied/ok，失败真返 ok:false。
+- 工坊：import forkPointNodeId 缓存+回填重映射；regex isLikelyUnsafeRegex 增补重叠交替检测 (a|aa)+；交互事务 timeout:60000。
+- 清览：Grep 全项目裸弹窗，19 处补 aria 关联（StyleEditor 两状态 + 17 处标题 labelledBy）。
+- 验证：vitest 多文件全过；SAFE_DELETE_DISABLE=1 npx tsc --noEmit → EXIT:0（Chair 亲自跑，揭穿并行 Agent 的 tsc 竞态假象）；commit（双 changelog 同 commit）+ 代理 push。
+
+## 关键取舍 / 诚实边界
+- Chair 亲自 tsc 零错误，关键经验：6 个 L2 Agent 并行各自跑 tsc 时互相看到对方正在写的文件，报出「预存错误」假象；Chair 等所有写入完成后统一跑 tsc 得真实 EXIT:0。证明并行 Agent 的自测不可单独信，必须 Chair 统一门禁。
+- abort 选「透传 signal + 提交前判 aborted 丢弃」而非「后端回滚」：游戏需保留已生成内容，丢弃本轮+前端对账比回滚更符合叙事连续。
+- 已真实验证：tsc 零错误；多文件 vitest 过；6 股东改动全在授权范围、无越界；commit+push 完成。未验证（明示）：真机交互（abort 实测对账/锁并发/弹窗读屏/正则 ReDoS 实战）仍待用户本地实跑。
