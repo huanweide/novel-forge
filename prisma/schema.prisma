@@ -373,7 +373,7 @@ model GameState {
   session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
-  @@index([sessionId, round])
+  @@unique([sessionId, round]) // 阿游 P1-2：并发/重试写重复轮次快照的数据库层兜底，消除对账歧义
 }
 
 // ─── 规则 (Rule) —— 写作规则/约束 ──────────────────────────────

@@ -439,7 +439,7 @@ export default function GamePage() {
       )}
 
       {/* ═══ 顶栏 ═══ */}
-      <header className="relative z-10 flex items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-3 backdrop-blur-sm">
+      <header className="relative z-10 flex items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-3 backdrop-blur-sm" inert={leftDrawerOpen || rightDrawerOpen}>
         <div className="flex items-center gap-4">
           <button
             onClick={handleBack}

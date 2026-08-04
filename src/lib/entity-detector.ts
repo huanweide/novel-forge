@@ -27,6 +27,8 @@ export interface DetectedEntity {
   isKnown: boolean;
   /** 匹配的具体模式描述 */
   matchedBy: string;
+  /** 别名列表（可选，用于批内/跨批别名去重防双卡） */
+  aliases?: string[];
 }
 
 export type EntityType = "pill" | "artifact" | "technique" | "location" | "material" | "character";

@@ -68,6 +68,10 @@ export function applyItemChanges(
     } else if (change.operation === "equip") {
       const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
       if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], equipped: true };
+    } else if (change.operation === "unequip") {
+      // 阿游 P1-1：脱下/解下类。仅清 equipped 标记，物品仍在背包（不删）。
+      const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+      if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], equipped: false };
     } else if (change.operation === "discard") {
       const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
       if (idx >= 0) {
@@ -78,17 +82,34 @@ export function applyItemChanges(
           updatedItems[idx] = { ...updatedItems[idx], quantity: q };
         }
       }
+    } else if (change.operation === "destroy") {
+      // 阿游 P1-1：损毁/摧毁类。从背包移除该物品（按数量递减，归零即移除）。
+      const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+      if (idx >= 0) {
+        const q = updatedItems[idx].quantity - (change.quantity || 1);
+        if (q <= 0) {
+          updatedItems.splice(idx, 1);
+        } else {
+          updatedItems[idx] = { ...updatedItems[idx], quantity: q };
+        }
+      }
+    } else if (change.operation === "skip") {
+      // 阿游 P1-1：流转/出售类（典当/抵押/出售经 OP_MAP 归一）。安全跳过，不改动背包。
+      // 直接 no-op 返回成功（无告警，属预期行为）。
     } else {
-      // 阿游 N3：未知动词兜底。
-      // 「出售/交换」类属正常流转（已从背包移除或换出），安全跳过、不入库——不属于丢物。
-      // 其余真正未知动词：无提示丢物风险，告警并默认当 gain 处理，保证叙事有物、背包有记录。
-      const SAFE_SKIP = new Set(["出售", "售卖", "交换", "交易"]);
+      // 阿游 P1-1 修复：收窄兜底，不再对一切未知动词无脑 gain（原 else→gain 反向坑）。
+      // 仅当操作确属「获得/得到/获取」类动词才兜底 gain（避免静默丢物）；
+      // 其余真正未知动词 → 告警并安全跳过（不污染背包计数）。
+      const SAFE_SKIP = new Set([
+        "出售", "售卖", "交换", "交易", "卖出", "买出", "当掉", "典当", "抵押", "典押",
+      ]);
+      const GAIN_LIKE = new Set([
+        "获得", "得到", "获取", "收下", "赢得", "缴获", "收到", "得手", "到手",
+        "拾取", "捡到", "取得", "拾起", "拿",
+      ]);
       if (SAFE_SKIP.has(change.operation)) {
         console.warn(`[applyItemChanges] 已知流转操作「${change.operation}」跳过入库（不计入背包）：${change.name}`);
-      } else {
-        console.warn(
-          `[applyItemChanges] 未知操作「${change.operation}」，无映射→默认按 gain 处理以避免静默丢物：${change.name}`
-        );
+      } else if (GAIN_LIKE.has(change.operation)) {
         const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
         if (idx >= 0) {
           updatedItems[idx] = {
@@ -106,6 +127,10 @@ export function applyItemChanges(
             owner,
           });
         }
+      } else {
+        console.warn(
+          `[applyItemChanges] 未知操作「${change.operation}」，无明确获得语义→安全跳过（不污染背包）：${change.name}`
+        );
       }
     }
   }

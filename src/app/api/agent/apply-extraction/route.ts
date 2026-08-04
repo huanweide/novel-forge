@@ -49,23 +49,58 @@ export async function POST(request: Request) {
     if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
     // ── G4+G5 查重支持数据 ──
-    // G5 变体比对用：一次性拉取项目已有角色名 + 世界书标题（繁简/错别字归一在 isSimilarName 内）
+    // G5 变体比对用：一次性拉取项目已有角色名 + 世界书标题（+ 角色别名，P1-1 别名归一）。
+    // 繁简/错别字归一在 isSimilarName 内完成。
+    interface DedupChar { id: string; name: string; aliases: string[]; }
+    let existingChars: DedupChar[] = [];
+    let existingLore: Array<{ id: string; title: string }> = [];
     let variantNames: string[] = [];
+    // 别名(小写) → 角色卡 id 索引（P1-1：候选名命中别名即复用该角色卡，不新建）
+    const aliasToCharId = new Map<string, string>();
     try {
       const [ec, el] = await Promise.all([
-        prisma.characterCard.findMany({ where: { projectId }, select: { name: true } }),
-        prisma.lorebookEntry.findMany({ where: { projectId }, select: { title: true } }),
+        prisma.characterCard.findMany({
+          where: { projectId },
+          select: { id: true, name: true, aliases: true },
+        }),
+        prisma.lorebookEntry.findMany({
+          where: { projectId },
+          select: { id: true, title: true },
+        }),
       ]);
-      variantNames = [...ec.map((c) => c.name), ...el.map((l) => l.title)];
+      existingChars = ec.map((c) => ({
+        id: c.id,
+        name: c.name,
+        aliases: Array.isArray(c.aliases) ? (c.aliases as string[]) : [],
+      }));
+      existingLore = el;
+      // 主名 + 别名 一并摊平进变体比对集（P1-1：别名维度）
+      variantNames = [
+        ...existingChars.flatMap((c) => [c.name, ...c.aliases]),
+        ...existingLore.map((l) => l.title),
+      ];
+      // 建立 别名(小写) → 角色卡 id 索引
+      for (const c of existingChars) {
+        for (const al of c.aliases) {
+          const low = al.trim().toLowerCase();
+          if (low) aliasToCharId.set(low, c.id);
+        }
+      }
     } catch {
+      existingChars = [];
+      existingLore = [];
       variantNames = []; // 查重数据拉取失败：后续逐条放行建卡
     }
 
-    /** G4 精确去重：大小写不敏感匹配已有角色名/世界书标题，返回类型与 id */
+    /** G4 精确去重 + P1-1 别名归一去重：返回已存在实体的类型与 id（命中即复用，不新建）。
+     *  保留 P0 主名精确查重（name/title equals insensitive）主线，仅叠加别名维度。 */
     async function findExactDuplicate(
       name: string,
     ): Promise<{ kind: "character" | "lore"; id: string } | null> {
+      const low = name.trim().toLowerCase();
+      if (!low) return null;
       try {
+        // 1) 主名精确查重（P0 已落地，保留）
         const char = await prisma.characterCard.findFirst({
           where: { projectId, name: { equals: name, mode: "insensitive" } },
           select: { id: true },
@@ -76,13 +111,16 @@ export async function POST(request: Request) {
           select: { id: true },
         });
         if (lore) return { kind: "lore", id: lore.id };
+        // 2) 别名归一（P1-1）：候选名命中所属角色卡别名 → 复用该角色卡而非新建
+        const aliasedCharId = aliasToCharId.get(low);
+        if (aliasedCharId) return { kind: "character", id: aliasedCharId };
         return null;
       } catch {
         return null; // 查重异常放行
       }
     }
 
-    /** G5 变体去重：与已有名称构成繁简/错别字变体（如「青龙镇」vs「青龍镇」「青龙填」） */
+    /** G5 变体去重：与已有主名/别名构成繁简/错别字变体（如「青龙镇」vs「青龍镇」） */
     function isVariantDuplicate(name: string): boolean {
       try {
         return variantNames.some((n) => isSimilarName(n, name));
@@ -135,7 +173,7 @@ export async function POST(request: Request) {
           continue;
         }
         // 新建角色卡
-        await prisma.characterCard.create({
+        const newCard = await prisma.characterCard.create({
           data: {
             projectId,
             name: c.name,
@@ -146,7 +184,12 @@ export async function POST(request: Request) {
             currentStatus: "alive",
           },
         });
-        variantNames.push(c.name); // 批次内去重
+        // 批次内去重：主名 + 别名 摊平进比对集与别名索引
+        variantNames.push(c.name, ...(c.aliases || []));
+        for (const al of c.aliases || []) {
+          const low = al.trim().toLowerCase();
+          if (low) aliasToCharId.set(low, newCard.id);
+        }
         charsCreated++;
         results.push(`新建角色「${c.name}」`);
       } else if (c.suggestion === "update" && c.existingCardId) {

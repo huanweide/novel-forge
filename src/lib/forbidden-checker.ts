@@ -11,6 +11,9 @@
  * 所有检测结果统一为 ForbiddenReport，severity 分 error/warning/info 三级。
  */
 
+// 复用正则后处理层的 ReDoS 静态启发式，避免禁用词扫描单独一套正则编译路径漏掉灾难性回溯防护
+import { isLikelyUnsafeRegex } from "@/core/post-process/regex";
+
 // ─── 类型 ─────────────────────────────────────────────────
 
 export interface ForbiddenMatch {
@@ -147,15 +150,26 @@ function isRegexPattern(pattern: string): boolean {
 }
 
 function parseRegexPattern(pattern: string): { regex: RegExp; source: string } | null {
+  let regex: RegExp;
+  let source: string;
+  let allFlags: string;
   try {
     const lastSlash = pattern.lastIndexOf("/");
-    const source = pattern.slice(1, lastSlash);
+    source = pattern.slice(1, lastSlash);
     const flags = pattern.slice(lastSlash + 1);
-    const allFlags = flags.includes("g") ? flags : "g" + flags;
-    return { regex: new RegExp(source, allFlags), source };
+    allFlags = flags.includes("g") ? flags : "g" + flags;
+    regex = new RegExp(source, allFlags);
   } catch {
+    // 编译期错误（非法语法）静默返回 null，交由调用方跳过该规则
     return null;
   }
+  // P2-① 纵深防御：编译通过后额外做 ReDoS 预判；命中则抛出友好错误而非静默放行，
+  // 避免未来若有用户可控正则进入此路径时被灾难性回溯挂死。
+  const unsafe = isLikelyUnsafeRegex(source, allFlags);
+  if (unsafe) {
+    throw new Error(`正则存在灾难性回溯风险，已拒绝（${unsafe}）`);
+  }
+  return { regex, source };
 }
 
 // ─── 核心扫描（v3.0 五类检测） ──────────────────────────
@@ -222,7 +236,21 @@ export function scanForbiddenWordsEnhanced(
     ...(options.customSentencePatterns || []).map(normalizePattern("sentence_pattern")),
   ];
   for (const item of sentencePatterns) {
-    const parsed = parseRegexPattern(item.pattern);
+    let parsed: { regex: RegExp; source: string } | null = null;
+    try {
+      parsed = parseRegexPattern(item.pattern);
+    } catch (e) {
+      // P2-①：正则被 ReDoS 防护拒绝——记录友好提示并跳过该规则，避免扫描崩溃
+      allMatches.push({
+        pattern: item.pattern, category: "sentence_pattern", isRegex: true, index: -1,
+        context: e instanceof Error ? e.message : "正则存在灾难性回溯风险，已拒绝",
+        severity: "info",
+        suggestion: "该句式正则存在灾难性回溯风险，已被拒绝，请改用更安全的写法或直接删除该规则。",
+      });
+      bySeverity.info++;
+      byCategory.sentence_pattern++;
+      continue;
+    }
     if (!parsed) continue;
     parsed.regex.lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -251,7 +279,21 @@ export function scanForbiddenWordsEnhanced(
     ...(options.customBodyTemplates || []).map(normalizePattern("body_template")),
   ];
   for (const item of bodyPatterns) {
-    const parsed = parseRegexPattern(item.pattern);
+    let parsed: { regex: RegExp; source: string } | null = null;
+    try {
+      parsed = parseRegexPattern(item.pattern);
+    } catch (e) {
+      // P2-①：正则被 ReDoS 防护拒绝——记录友好提示并跳过该规则，避免扫描崩溃
+      allMatches.push({
+        pattern: item.pattern, category: "body_template", isRegex: true, index: -1,
+        context: e instanceof Error ? e.message : "正则存在灾难性回溯风险，已拒绝",
+        severity: "info",
+        suggestion: "该身体模板正则存在灾难性回溯风险，已被拒绝，请改用更安全的写法或直接删除该规则。",
+      });
+      bySeverity.info++;
+      byCategory.body_template++;
+      continue;
+    }
     if (!parsed) continue;
     parsed.regex.lastIndex = 0;
     let match: RegExpExecArray | null;

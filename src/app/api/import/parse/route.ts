@@ -358,93 +358,26 @@ ${chunkText}
 
 {"characters":[{"name":"","aliases":[],"role":"supporting","age":"","gender":"","appearance":{"hair":"","eyes":"","height":"","build":"","features":"","attire":""},"personality":{"dominant":"","drive":"","contradiction":"","habits":[],"socialMask":""},"background":"","abilities":[],"hiddenMotives":[],"relationships":[],"dialogueStyle":{"description":"","examples":[],"vocabulary":[],"speechPatterns":[]},"timeline":[],"arcProgress":"","currentStatus":"alive","tags":["📥导入"]}]}`;
 
-        // ── 人物提取 ──
+        // ── 人物提取 + 世界提取 ──
         let chars: Record<string, unknown>[] = [];
         let failedChunks = 0;
+        let skippedChunks = 0;
         let totalChunks = 1;
         let worldFailed = false; // P1：B路世界设定/文风提取失败独立标记
-
-        if (needsChunking && !isCharOnly) {
-          // 分块模式：按字符预算分块（保留重叠），不再纯按编号行数（P1-3）
-          const chunks = chunkByBudget(text, CHUNK_CHAR_BUDGET, CHUNK_OVERLAP);
-          totalChunks = chunks.length;
-          send({ type: "progress", stage: "chunk", message: `📦 分${chunks.length}块处理 · 每块≤${CHUNK_SIZE}个角色`, pct: 5 });
-          await new Promise(r => setTimeout(r, 100));
-
-          let totalChars = 0;
-          // F4：限流并发解析各块（4 路 Promise.all 池），压短总耗时避免超 maxDuration(300s) 被强杀。
-          // 逐块进度按完成顺序回报（不丢块、不重复）；最终按块序聚合，保证角色/词条完整。
-          const CONCURRENCY = 4;
-          const chunkResults: Record<number, Record<string, unknown>[]> = {};
-          let doneCount = 0;
-          let nextIdx = 0;
-          const workers: Promise<void>[] = [];
-          const workerCount = Math.min(CONCURRENCY, chunks.length);
-          for (let w = 0; w < workerCount; w++) {
-            workers.push((async () => {
-              while (nextIdx < chunks.length) {
-                const ci = nextIdx++;
-                const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
-                send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
-
-                const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 32768);
-                if (res.error) {
-                  failedChunks++;
-                  send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
-                } else {
-                  try {
-                    const p = parseJSON(res.raw);
-                    const pc = Array.isArray(p.characters) ? p.characters.map(normChar).filter(c => c.name) : [];
-                    chunkResults[ci] = pc;
-                    totalChars += pc.length;
-                    send({ type: "progress", stage: `chunk-${ci}-ok`, message: `✅ 第${ci + 1}块完成 · ${pc.length}角色`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
-                  } catch (e) {
-                    failedChunks++;
-                    send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块JSON解析失败`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
-                  }
-                }
-                doneCount++;
-              }
-            })());
-          }
-          await Promise.all(workers);
-          // 按块序聚合，确保不丢块、不重复
-          for (let ci = 0; ci < chunks.length; ci++) {
-            if (chunkResults[ci]) chars.push(...chunkResults[ci]);
-          }
-          send({ type: "progress", stage: "chunk-done", message: `✅ 分块完成 · ${totalChars}角色 · ${chunks.length}块`, pct: 85 });
-        } else {
-          // 单次调用模式（角色少或仅人物卡模式）
-          send({ type: "progress", stage: "launch", message: isCharOnly ? `👤 仅人物卡 · Flash单路` : `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
-          await new Promise(r => setTimeout(r, 100));
-          send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
-
-          const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 32768);
-          send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
-
-          if (resA.error) {
-            failedChunks++;
-            send({ type: "progress", stage: "path-a-done", message: `⚠️ 人物提取失败: ${resA.error}`, pct: 60 });
-          } else {
-            try {
-              const p = parseJSON(resA.raw);
-              const pc = Array.isArray(p.characters) ? p.characters : [];
-              chars = pc.map(normChar).filter(c => c.name);
-              send({ type: "progress", stage: "path-a-done", message: `✅ 人物提取完成 · ${chars.length}角色 · ${resA.sec}s`, pct: 60 });
-            } catch (e) {
-              failedChunks++;
-              send({ type: "progress", stage: "path-a-done", message: `⚠️ JSON解析失败: ${String(e).slice(0, 100)}`, pct: 60 });
-            }
-          }
-        }
-
-        // ── 世界设定+文风（仅非分块+非仅人物卡模式）──
         let lore: Record<string, unknown>[] = [];
         let style: Record<string, unknown> = {};
 
-        // B路：世界设定+文风——分块模式也执行（独立调用，不跳过）
-        if (!isCharOnly) {
-          // 分块模式：长文按头/中/尾采样覆盖后段设定；非分块模式用完整文本（P1 修复）
+        // P1-2：全局 deadline——避免 300s 平台强杀导致整次解析结果丢失。
+        // 到点即停：不再领取新块/B路，已完成块如实上链为 partial，不整次丢弃（更糟的回归）。
+        const PARSE_DEADLINE_MS = 280_000; // 留 20s 余量给平台 maxDuration(300s) 与收尾
+        const parseDeadline = t0 + PARSE_DEADLINE_MS;
+        const pastDeadline = () => Date.now() > parseDeadline;
+        let deadlineHit = false;
+
+        // P1-3：B 路世界/文风提取抽为可并发函数，与分块同受 deadline 约束；
+        // 在分块模式下与 A 路并行拉起，避免串行尾部独自吃掉数十~180s 加剧超时。
+        const runWorldExtraction = async () => {
+          if (pastDeadline()) { worldFailed = true; return; }
           const loreText = needsChunking ? buildLoreSample(text) : text;
           const chunkNote = needsChunking ? "(长文已按头/中/尾采样抽取)" : "";
 
@@ -482,6 +415,91 @@ ${loreText}
               send({ type: "progress", stage: "path-b-done", message: `⚠️ 世界JSON解析失败`, pct: 90 });
             }
           }
+        };
+
+        if (needsChunking && !isCharOnly) {
+          // 分块模式：按字符预算分块（保留重叠），不再纯按编号行数（P1-3）
+          const chunks = chunkByBudget(text, CHUNK_CHAR_BUDGET, CHUNK_OVERLAP);
+          totalChunks = chunks.length;
+          send({ type: "progress", stage: "chunk", message: `📦 分${chunks.length}块处理 · 每块≤${CHUNK_SIZE}个角色`, pct: 5 });
+          await new Promise(r => setTimeout(r, 100));
+
+          let totalChars = 0;
+          // F4：限流并发解析各块（4 路 Promise.all 池），压短总耗时避免超 maxDuration(300s) 被强杀。
+          // 逐块进度按完成顺序回报（不丢块、不重复）；最终按块序聚合，保证角色/词条完整。
+          // P1-2：worker 取块前检查 deadline，到点停止领取新块。
+          const CONCURRENCY = 4;
+          const chunkResults: Record<number, Record<string, unknown>[]> = {};
+          let doneCount = 0;
+          let nextIdx = 0;
+          const workers: Promise<void>[] = [];
+          const workerCount = Math.min(CONCURRENCY, chunks.length);
+          for (let w = 0; w < workerCount; w++) {
+            workers.push((async () => {
+              while (true) {
+                if (pastDeadline()) { deadlineHit = true; break; }
+                const ci = nextIdx++;
+                if (ci >= chunks.length) break;
+                const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
+                send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
+
+                const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 32768);
+                if (res.error) {
+                  failedChunks++;
+                  send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
+                } else {
+                  try {
+                    const p = parseJSON(res.raw);
+                    const pc = Array.isArray(p.characters) ? p.characters.map(normChar).filter(c => c.name) : [];
+                    chunkResults[ci] = pc;
+                    totalChars += pc.length;
+                    send({ type: "progress", stage: `chunk-${ci}-ok`, message: `✅ 第${ci + 1}块完成 · ${pc.length}角色`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
+                  } catch (e) {
+                    failedChunks++;
+                    send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块JSON解析失败`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
+                  }
+                }
+                doneCount++;
+              }
+            })());
+          }
+          // P1-3：B 路与分块并行拉起（独立并发），受同一 deadline 约束，避免串行尾部加剧超时
+          const bPromise = runWorldExtraction();
+          await Promise.all([...workers, bPromise]);
+          // 按块序聚合，确保不丢块、不重复
+          for (let ci = 0; ci < chunks.length; ci++) {
+            if (chunkResults[ci]) chars.push(...chunkResults[ci]);
+          }
+          if (deadlineHit) skippedChunks = chunks.length - Object.keys(chunkResults).length;
+          send({ type: "progress", stage: "chunk-done", message: `✅ 分块完成 · ${totalChars}角色 · ${chunks.length}块${deadlineHit ? "（deadline 中断，未完成块记为 partial）" : ""}`, pct: 85 });
+        } else {
+          // 单次调用模式（角色少或仅人物卡模式）
+          send({ type: "progress", stage: "launch", message: isCharOnly ? `👤 仅人物卡 · Flash单路` : `A路 Flash→人物 | B路 Flash→世界`, pct: 5 });
+          await new Promise(r => setTimeout(r, 100));
+          send({ type: "progress", stage: "calling", message: `📡 调用DeepSeek Flash...`, pct: 10 });
+
+          // P1-3：A 路与 B 路并发拉起（仅人物卡模式只跑 A 路），均受 deadline 约束
+          const aPromise = (async () => {
+            const resA = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(text), 32768);
+            send({ type: "progress", stage: "api-done", message: `📥 API返回 · 解析中...`, pct: 85 });
+
+            if (resA.error) {
+              failedChunks++;
+              send({ type: "progress", stage: "path-a-done", message: `⚠️ 人物提取失败: ${resA.error}`, pct: 60 });
+            } else {
+              try {
+                const p = parseJSON(resA.raw);
+                const pc = Array.isArray(p.characters) ? p.characters : [];
+                chars = pc.map(normChar).filter(c => c.name);
+                send({ type: "progress", stage: "path-a-done", message: `✅ 人物提取完成 · ${chars.length}角色 · ${resA.sec}s`, pct: 60 });
+              } catch (e) {
+                failedChunks++;
+                send({ type: "progress", stage: "path-a-done", message: `⚠️ JSON解析失败: ${String(e).slice(0, 100)}`, pct: 60 });
+              }
+            }
+          })();
+          const bPromise = isCharOnly ? Promise.resolve() : runWorldExtraction();
+          await Promise.all([aPromise, bPromise]);
         }
 
         // ── 去重 ──
@@ -496,9 +514,9 @@ ${loreText}
 
         send({ type: "progress", stage: "done-pre", message: `${finalChars.length}角色 ${finalLore.length}词条 · ${totalSec}s`, pct: 99 });
 
-        // P1：闭环失败标记——worldFailed 时即使 failedChunks===0 也至少 'partial'
-        const anyFailed = failedChunks > 0 || worldFailed;
-        const importStatus = anyFailed ? (failedChunks >= totalChunks && !worldFailed ? "failed" : "partial") : "completed";
+        // P1-2/P1：闭环失败标记——worldFailed 或 deadline 跳过块（skippedChunks>0）时，已完成的块如实上链为 partial，不丢全部结果
+        const anyFailed = failedChunks > 0 || worldFailed || skippedChunks > 0;
+        const importStatus = anyFailed ? (failedChunks + skippedChunks >= totalChunks && !worldFailed ? "failed" : "partial") : "completed";
         send({
           type: "done",
           status: importStatus,
@@ -507,10 +525,10 @@ ${loreText}
           extractedCharacters: finalChars,
           extractedLoreEntries: finalLore,
           extractedStyle: style,
-          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, worldFailed, chunked: needsChunking, worldCoverage: needsChunking ? "sampled" : "full" },
+          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, skippedChunks, worldFailed, chunked: needsChunking, worldCoverage: needsChunking ? "sampled" : "full" },
         });
         if (taskId) {
-          void prisma.importTask.update({ where: { id: taskId }, data: { status: importStatus, progress: 100, result: { characters: finalChars, lore: finalLore, style, failedChunks, worldFailed } as any } }).catch(() => {});
+          void prisma.importTask.update({ where: { id: taskId }, data: { status: importStatus, progress: 100, result: { characters: finalChars, lore: finalLore, style, failedChunks, skippedChunks, worldFailed } as any } }).catch(() => {});
         }
 
       } catch (err) {

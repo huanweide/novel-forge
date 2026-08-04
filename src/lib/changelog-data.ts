@@ -25,18 +25,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.73";
+export const LATEST_VERSION = "v0.46.74";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "填表完整性闭环（墨白 4 P1）：单章填表跑归属自检 + 单 op 失败可追溯 skippedOps + 表内同名异体弱告警 + 行级溯源 _src/_ts + 清脏标记出口 API，灭软静默丢数据与无限重填残留",
-  "游戏归属/前后端对齐/主线一致（阿游 3 P1）：开局物品带 owner 灭同名混淆 + 开场背包前后端对齐 + 同义动词（拾取/佩戴/吃掉…）不再静默丢物",
-  "抽屉无障碍闭环 + 导入性能/成本口径（清览/磐石 4 P1）：explore 右抽屉补 role=dialog/焦点陷阱/ESC 闭环；import 用真实 usage 记账 + globalContext 去冗余 + 分块并发解 300s 超时",
-  "建卡去重 + 预设守卫（青砚/工坊 P2）：apply-extraction 精确+繁简变体去重防重复卡；预设 api_config 深合并 + 未知 type 返 400 杜绝静默失败",
+  "填表主链路修复（墨白 2 P1）：loop 透传 chapterOrder 修复自动填表写入行 _src 恒为 ch?:batchmanual 断线灭章节溯源失效；全跳过不再误判 mislabeled 诱导破坏性重填，仅脏标记含幽灵 id 才提示清理",
+  "建卡别名去重 + 变体收敛（青砚 2 P1）：apply-extraction/autoCreate 把 aliases 纳入查重灭「炎帝/萧炎」双卡；isSimilarName 长名编辑距离收紧为 0 灭「青云宗/青云山」误并漏建",
+  "游戏动词闭环 + 轮次唯一（阿游 2 P1）：OP_MAP 补吞下/舍弃/解下/损毁/典当等同义动词 + 引擎增 unequip/destroy/skip 分支灭静默污染背包；GameState 加 @unique([sessionId,round]) 防并发重复轮次",
+  "焦点逃逸修复 + 导入并发/超时闭环 + ReDoS 纵深防御（清览/磐石/工坊 7 P1/P2）：三页 inert 上移顶栏灭焦点逃逸；commit 并发限流 + parse 全局 280s deadline 优雅 partial + B 路并入并发 + totalTokens 口径统一；forbidden-checker/预设 regex 复用 ReDoS 防护前移 422",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.74",
+    date: "2026-08-04",
+    title: "会员股东 Round 11 复验闭环：填表主链路溯源修复 + 建卡别名去重/变体收敛 + 游戏动词闭环与轮次唯一 + 抽屉焦点逃逸修复 + 导入并发/超时/口径闭环 + 正则 ReDoS 纵深防御（tsc 零错误）",
+    sections: [
+      {
+        label: "填表主链路修复（墨白 2 P1）",
+        items: [
+          "loop.ts 调 babyloreFill 透传 chapterOrder，修复 Round10 引入的自动填表写入行 _src 恒为 ch?:batchmanual 断线（灭章节溯源名存实亡 + 同名异源弱告警因解析不到章节永不触发）；babyloreFillAll 全跳过判定收窄——仅当脏标记含 DB 找不到正文章节的幽灵 id 才判 all_skipped_mislabeled 并提示清理，正常已校验章节全跳过判 all_clean 不诱导破坏性重填；fill.ops 测试断言同步修正",
+        ],
+      },
+      {
+        label: "建卡别名去重与变体收敛（青砚 2 P1）",
+        items: [
+          "apply-extraction findExactDuplicate + entity-auto-creator autoCreateEntities 把已有角色 aliases 与新建实体 aliases 摊平进查重候选集，灭「炎帝」（alias 萧炎）与「萧炎」双卡；isSimilarName 长名合并阈值由 levenshtein<=1 收紧为等于 0（先繁简归一），灭「青云宗/青云山」「玄铁剑/玄铁刀」类语义不同实体误并漏建；DetectedEntity 类型增可选 aliases 字段支撑批内去重；确认仅作用于建卡去重路径，不触达 matchNameStrict/recall 匹配语义（Round8/9/10 OOC/召回修复无回流）",
+        ],
+      },
+      {
+        label: "游戏动词闭环与轮次唯一（阿游 2 P1）",
+        items: [
+          "OP_MAP 扩充同义动词（吞下/服下→consume、舍弃/抛弃/遗弃/遗失/失落→discard、解下/卸下/脱下→unequip、典当/抵押→skip、损毁/摧毁/弄坏→destroy），game-engine applyItemChanges 增 unequip/destroy/skip 分支，收窄原 else→gain 兜底（仅获得类动词兜底、其余未知动词安全跳过不再默认 +1 污染背包）；schema GameState 加 @unique([sessionId,round]) 防并发/重试写重复轮次快照致对账歧义，已 db push + generate",
+        ],
+      },
+      {
+        label: "抽屉焦点逃逸修复（清览 P1）",
+        items: [
+          "explore / workspace / game 三页抽屉的 inert 由仅覆盖中栏上移到顶栏 header/toolbar 及同级交互条，窄屏 aria-modal 打开时顶栏按钮不再被 Tab/读屏访问，灭模态焦点逃逸；对话框本身不参与 inert 焦点陷阱仍生效",
+        ],
+      },
+      {
+        label: "导入并发/超时/口径闭环（磐石 4 P1）",
+        items: [
+          "commit 的 char/lore 两路 merge 由裸 Promise.all 改为共用 4 路限流池 MERGE_LIMIT，封顶并发灭超大导入打爆 LLM 提供方；parse 加全局 deadline 280s，到时优雅中断剩余批次、已完成块如实上链为 partial（skippedChunks 标记）不丢全部结果；B 路世界提取由串行尾部改为与 A 路分块同池并发；mergeOneBatch 在 provider 不返 total_tokens 时回退 prompt+completion 求和，与 parse 口径统一灭监控 totalTokens 失真",
+        ],
+      },
+      {
+        label: "正则 ReDoS 纵深防御（工坊 2 P2）",
+        items: [
+          "forbidden-checker parseRegexPattern 编译后复用 isLikelyUnsafeRegex 做 ReDoS 预判，命中抛友好错误并被扫描过程捕获为 info 提示跳过、不崩溃；预设 regex apply 入口前移 isLikelyUnsafeRegex 校验，不安全正则直接返 422 拦截不写库；两项均为纵深防御（当前无活跃用户输入触发路径）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.73",
     date: "2026-08-04",

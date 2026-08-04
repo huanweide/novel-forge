@@ -161,7 +161,9 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
 
   let babylore: FillResult = { ok: false, operations: 0, applied: 0, error: "" };
   try {
-    const fillRes = await babyloreFill(projectId, content, { projectLlmConfig });
+    // P1-①（墨白）：透传已解构的 nodeOrder，使 fill.ts 写入行的 _src 形如 ch3:batchmanual（章节段非空），
+    // 修复「溯源主链路断线」（此前漏传导致 _src 恒为 ch?:batchmanual）。
+    const fillRes = await babyloreFill(projectId, content, { projectLlmConfig, chapterOrder: nodeOrder });
     babylore = {
       ok: fillRes.ok,
       operations: fillRes.operations,

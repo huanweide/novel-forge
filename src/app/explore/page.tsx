@@ -522,7 +522,7 @@ export default function ExplorePage() {
   return (
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {/* ── 顶栏 ── */}
-      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-md">
+      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-md" inert={leftDrawerOpen || rightDrawerOpen}>
         <div className="max-w-full mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -622,7 +622,9 @@ export default function ExplorePage() {
       </header>
 
       {/* ── 11 步探讨进度条 ── */}
-      <StepProgress currentStep={currentStep} onStepChange={handleStepChange} />
+      <div inert={leftDrawerOpen || rightDrawerOpen}>
+        <StepProgress currentStep={currentStep} onStepChange={handleStepChange} />
+      </div>
 
       {/* ── 三栏布局 ── */}
       <div className="flex" style={{ height: "calc(100vh - 57px)" }}>

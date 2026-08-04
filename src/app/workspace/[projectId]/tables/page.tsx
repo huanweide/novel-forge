@@ -317,7 +317,7 @@ export default function TablesPage() {
                   )}
                 </div>
               )}
-              {fillAllResult.fillErrorMeta?.kind === "all_skipped_mislabeled" && (
+              {fillAllResult.fillErrorMeta?.kind === "all_skipped_mislabeled" && !fillAllResult.ok && (
                 <button onClick={clearDirtyAndRefill} disabled={busy} className="mt-2 btn-primary text-xs py-1.5 px-3 rounded-xl disabled:opacity-50">清理脏标记并重填</button>
               )}
               <div className="mt-1 opacity-70">执行时间：{fillAllResult.at}</div>

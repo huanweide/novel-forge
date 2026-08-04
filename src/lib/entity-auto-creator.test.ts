@@ -19,4 +19,13 @@ describe("isSimilarName —— 短名繁简去重", () => {
   it("长名编辑距离≤1 仍判重复（青龙镇/青龍镇）", () => {
     expect(isSimilarName("青龙镇", "青龍镇")).toBe(true);
   });
+
+  it("P1-2 长名编辑距离1 语义不同不误并（青云宗/青云山 → false）", () => {
+    expect(isSimilarName("青云宗", "青云山")).toBe(false);
+    expect(isSimilarName("青云山", "青云宗")).toBe(false);
+  });
+
+  it("P1-2 长名编辑距离1 其他语义不同实体不误并（剑/刀）", () => {
+    expect(isSimilarName("玄铁剑", "玄铁刀")).toBe(false);
+  });
 });

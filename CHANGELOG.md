@@ -2,6 +2,18 @@
 
 ---
 
+## v0.46.74 — 2026-08-04
+**会员股东 Round 11 复验闭环：填表主链路溯源修复 + 建卡别名去重/变体收敛 + 游戏动词闭环与轮次唯一 + 抽屉焦点逃逸修复 + 导入并发/超时/口径闭环 + 正则 ReDoS 纵深防御（tsc 零错误）**
+
+- 填表主链路修复（墨白 2 P1）：loop 透传 chapterOrder 修复自动填表写入行 _src 恒为 ch?:batchmanual 断线；全跳过不再误判 mislabeled 诱导破坏性重填，仅脏标记含幽灵 id 才提示清理
+- 建卡别名去重与变体收敛（青砚 2 P1）：apply-extraction/autoCreate 把 aliases 纳入查重灭「炎帝/萧炎」双卡；isSimilarName 长名编辑距离收紧为 0 灭「青云宗/青云山」误并漏建
+- 游戏动词闭环与轮次唯一（阿游 2 P1）：OP_MAP 补吞下/舍弃/解下/损毁/典当等同义动词 + 引擎增 unequip/destroy/skip 分支灭静默污染背包；GameState 加 @unique([sessionId,round]) 防并发重复轮次
+- 抽屉焦点逃逸修复（清览 P1）：三页 inert 上移顶栏灭窄屏 aria-modal 顶栏焦点逃逸
+- 导入并发/超时/口径闭环（磐石 4 P1）：commit 并发限流 + parse 全局 280s deadline 优雅 partial + B 路并入并发 + totalTokens 口径统一
+- 正则 ReDoS 纵深防御（工坊 2 P2）：forbidden-checker/预设 regex 复用 ReDoS 防护前移 422 拦截
+
+---
+
 ## v0.46.73 — 2026-08-04
 **会员股东 Round 10 复验闭环：填表完整性（单章自检/skippedOps/同名异体告警/行级溯源/清脏标记）+ 游戏归属与前后端对齐 + 抽屉无障碍闭环 + 导入真实记账与并发 + 建卡去重/预设守卫（tsc 零错误）**
 

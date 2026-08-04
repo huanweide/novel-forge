@@ -845,6 +845,7 @@ export default function WorkspacePage() {
     <ErrorBoundary name="工作台">
     <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
       <OnboardingModal />
+      <div inert={leftDrawerOpen || rightDrawerOpen}>
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
@@ -857,8 +858,9 @@ export default function WorkspacePage() {
         onOpenExport={() => setShowExportDialog(true)}
         onBackup={() => setShowBackupDialog(true)}
       />
+      </div>
 
-      <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2" inert={leftDrawerOpen || rightDrawerOpen}>
         <button onClick={() => setLeftDrawerOpen(o => !o)} className="lg:hidden text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="切换大纲栏（窄屏）">
           <Icon name="book" size={13} /> 大纲
         </button>

@@ -49,7 +49,7 @@ vi.mock("fs", () => {
 });
 
 import { prisma } from "@/lib/prisma";
-import { babyloreFill, babyloreFillAll } from "@/core/babylore/fill";
+import { babyloreFill, babyloreFillAll, markChapterFilled } from "@/core/babylore/fill";
 
 function makeTable() {
   return {
@@ -166,17 +166,17 @@ describe("P1-1 babyloreFillAll 汇总态真实反映成败", () => {
     expect(r.error).toContain("1/2");
   });
 
-  it("全部章节被跳过（全空/旧版误标脏标记）→ ok:false 且带 warning 摘要（P1-1 防静默假完成）", async () => {
+  it("全部章节已填并被跳过（正常干净态，无幽灵 id）→ 判 ok、不误标脏标记、不诱导重填（P1-② 修复）", async () => {
     mockFetch(JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "全填地点" } }] }));
-    await babyloreFillAll("proj-x"); // 先填满，持久化已填标记
-    const r = await babyloreFillAll("proj-x"); // 再跑，应全部跳过
+    await babyloreFillAll("proj-cleanskip"); // 先填满，持久化已填标记
+    const r = await babyloreFillAll("proj-cleanskip"); // 再跑，应全部跳过（干净态）
     expect(r.processed).toBe(0);
     expect(r.skipped).toBe(2);
     expect(r.applied).toBe(0);
-    // Round8 P1-1：全跳过且无任何 applied 必须 ok:false，不得掩盖脏标记。
-    expect(r.ok).toBe(false);
-    expect(r.error).toContain("跳过");
-    expect(r.error).toContain("脏标记");
+    // P1-②：全部跳过节点均为真实已校验章节 → 判 ok，不误标脏标记、不诱导破坏性重填。
+    expect(r.ok).toBe(true);
+    expect(r.error).toBeFalsy();
+    expect((r as any).fillErrorMeta?.kind).toBe("all_clean");
   });
 });
 
@@ -210,20 +210,20 @@ describe("P1-A/P1-D 全跳过 error 结构化 + 脏标记清除", () => {
     expect(r2.skipped).toBe(0);
   });
 
-  it("全 skipped（旧版误标脏标记）→ ok:false、error 含 nodeIds、fillErrorMeta 携带跳过节点", async () => {
+  it("含幽灵脏标记 id（DB 无对应正文章节）→ 仅此时判 all_skipped_mislabeled、UI 显示清理按钮（P1-② 精确误标）", async () => {
     mockFetch(JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "全填地点" } }] }));
-    await babyloreFillAll("proj-p1a-mis"); // 先填满，持久化已填标记
-    const r = await babyloreFillAll("proj-p1a-mis"); // 再跑，应全部跳过（疑似误标）
-    expect(r.ok).toBe(false);
+    await babyloreFillAll("proj-p1a-mis"); // 先填满 c1/c2，持久化已填标记
+    // 注入一个 DB 中不存在的「幽灵脏标记 id」（模拟旧版残留/误标），c1/c2 仍为真实已校验章节
+    markChapterFilled("proj-p1a-mis", "ghost-999");
+    const r = await babyloreFillAll("proj-p1a-mis"); // 再跑：c1/c2 跳过（干净）+ 幽灵 id
     expect(r.processed).toBe(0);
-    expect(r.skipped).toBe(2);
+    expect(r.skipped).toBe(2); // c1/c2 仍被干净跳过，不被幽灵 id 计入
     expect(r.applied).toBe(0);
-    // 仍能区分语义：error 含「脏标记」与具体 nodeIds
+    // 仅当存在幽灵 id 才判误标，诱导清理重填
+    expect(r.ok).toBe(false);
     expect(r.error).toContain("脏标记");
-    expect(r.error).toContain("c1");
-    expect(r.error).toContain("c2");
+    expect(r.error).toContain("ghost-999");
     expect((r as any).fillErrorMeta).toMatchObject({ kind: "all_skipped_mislabeled", processed: 0, skipped: 2 });
-    expect((r as any).fillErrorMeta.nodeIds).toEqual(expect.arrayContaining(["c1", "c2"]));
   });
 
   it("P1-D 脏标记清除：成功落地的节点被标为已填，二次运行直接进入 clean 跳过而非重填", async () => {

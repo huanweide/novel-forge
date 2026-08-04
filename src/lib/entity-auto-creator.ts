@@ -4,8 +4,9 @@
  * 1.3 数据反哺：本地蒸馏检测到的新实体（置信度 ≥ 0.7）
  * 自动写入 CharacterCard（角色）或 LorebookEntry（物品/地点/功法/材料）。
  *
- * 查重：大小写不敏感对比已有角色名 + 世界书标题；v0.46.63 增加相似度去重
- * （编辑距离 ≤ 1 + 长度相近，灭掉「青龙镇/青龍镇」这类繁简/错别字变体重复入库）。
+ * 查重：大小写不敏感对比已有角色名 + 世界书标题 + 角色别名（P1-1 别名归一）；
+ * v0.46.63 增加相似度去重（繁简/错别字变体，如「青龙镇/青龍镇」）。
+ * v0.46.74 收紧：长名仅当繁简归一后编辑距离 0 才并（P1-2，编辑距离 1 一律不并，避免误并漏建）。
  */
 
 import { prisma } from "@/lib/prisma";
@@ -107,16 +108,21 @@ function levenshtein(a: string, b: string): number {
  *  - 长名（≥3 字）编辑距离 ≤ 1 → 是（灭繁简/错别字，如 青龙镇/青龍镇、李尘/李麈）
  */
 export function isSimilarName(a: string, b: string): boolean {
-  const x = a.trim().toLowerCase();
-  const y = b.trim().toLowerCase();
+  // P1-2：繁简归一在比对前统一完成（青龍镇→青龙镇），使后续仅依赖编辑距离判定，
+  // 不改动匹配链路（matchNameStrict/matchKeyword/recall）。
+  const x = normalizeTraditional(a.trim().toLowerCase());
+  const y = normalizeTraditional(b.trim().toLowerCase());
   if (!x || !y) return false;
   if (x === y) return true;
   if (Math.abs(x.length - y.length) > 2) return false;
-  // 短名（≤2 字）：仅做繁简归一化去重，不引入编辑距离，避免「白云/白衣」被误并。
+  // 短名（≤2 字）：归一化后仍不同即视为不同实体，不引入编辑距离，
+  // 避免「白云/白衣」「叶凡/叶帆」被误并。
   if (x.length <= 2 || y.length <= 2) {
-    return normalizeTraditional(x) === normalizeTraditional(y);
+    return false;
   }
-  return levenshtein(x, y) <= 1;
+  // 长名（≥3 字）：仅当繁简/大小写归一后「完全一致（编辑距离 = 0）」才判同类合并；
+  // 编辑距离 1（如「青云宗/青云山」「剑/刀」类语义不同的实体）一律不并，避免误并漏建。
+  return levenshtein(x, y) === 0;
 }
 
 // ─── 主函数 ──────────────────────────────────────────────────
@@ -138,11 +144,11 @@ export async function autoCreateEntities(
 ): Promise<AutoCreateResult> {
   if (newEntities.length === 0) return { created: [], skipped: [] };
 
-  // ── 查重：一次性拉取所有已有角色名 + 世界书标题 ──
+  // ── 查重：一次性拉取所有已有角色名 + 世界书标题（+ 角色别名，P1-1 别名归一）──
   const [existingChars, existingLore] = await Promise.all([
     prisma.characterCard.findMany({
       where: { projectId },
-      select: { name: true },
+      select: { name: true, aliases: true },
     }),
     prisma.lorebookEntry.findMany({
       where: { projectId },
@@ -150,13 +156,25 @@ export async function autoCreateEntities(
     }),
   ]);
 
+  // 摊平已有角色别名（P1-1：别名维度去重）
+  const existingCharAliases: string[] = [];
+  for (const c of existingChars) {
+    if (Array.isArray(c.aliases)) {
+      for (const al of c.aliases as string[]) {
+        if (typeof al === "string" && al.trim()) existingCharAliases.push(al);
+      }
+    }
+  }
+
   const existingNames = new Set([
     ...existingChars.map((c) => c.name.toLowerCase()),
+    ...existingCharAliases.map((a) => a.toLowerCase()),
     ...existingLore.map((l) => l.title.toLowerCase()),
   ]);
-  // 相似度比对用的原始名单（保留原始大小写，仅用于变体判定）
+  // 相似度比对用的原始名单（保留原始大小写，仅用于变体判定；并入别名）
   const existingNameList = [
     ...existingChars.map((c) => c.name),
+    ...existingCharAliases,
     ...existingLore.map((l) => l.title),
   ];
 
@@ -178,9 +196,17 @@ export async function autoCreateEntities(
       skipped.push(name);
       continue;
     }
-    // 标记为已存在，避免同一批次内的重复
+    // 标记为已存在，避免同一批次内的重复（主名 + 别名）
     existingNames.add(name.toLowerCase());
     existingNameList.push(name);
+    if (Array.isArray(entity.aliases)) {
+      for (const al of entity.aliases as string[]) {
+        if (typeof al === "string" && al.trim()) {
+          existingNames.add(al.toLowerCase());
+          existingNameList.push(al);
+        }
+      }
+    }
 
     try {
       if (entity.type === "character") {

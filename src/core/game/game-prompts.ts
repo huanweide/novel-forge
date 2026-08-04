@@ -21,7 +21,7 @@ const OP_MAP: Record<string, string> = {
   "消耗": "consume",
   "装备": "equip",
   "丢弃": "discard",
-  // 同义词覆盖（阿游 N3）：避免模型用同义动词导致透传到 applyItemChanges 后静默丢物
+  // 同义词覆盖（阿游 N3 / P1-1）：避免模型用同义动词导致透传到 applyItemChanges 后静默丢物或反向加物
   // 获得类
   "拾取": "gain",
   "捡到": "gain",
@@ -29,12 +29,22 @@ const OP_MAP: Record<string, string> = {
   "获取": "gain",
   "拾起": "gain",
   "拿": "gain",
+  "得到": "gain",
+  "收下": "gain",
+  "赢得": "gain",
+  "缴获": "gain",
+  "收到": "gain",
+  "得手": "gain",
+  "到手": "gain",
   // 消耗类
   "使用": "consume",
   "服用": "consume",
   "吃掉": "consume",
   "饮用": "consume",
   "吞": "consume",
+  "吞下": "consume",
+  "服下": "consume",
+  "咽下": "consume",
   // 装备类
   "佩戴": "equip",
   "穿上": "equip",
@@ -44,6 +54,27 @@ const OP_MAP: Record<string, string> = {
   "扔掉": "discard",
   "弃置": "discard",
   "抛": "discard",
+  "舍弃": "discard",
+  "抛弃": "discard",
+  "遗弃": "discard",
+  "遗失": "discard",
+  "失落": "discard",
+  "丢失": "discard",
+  // 卸下类（阿游 P1-1：引擎新增 unequip 分支，仅清 equipped 标记，不删物品）
+  "解下": "unequip",
+  "卸下": "unequip",
+  "脱下": "unequip",
+  "褪下": "unequip",
+  // 流转/出售类（阿游 P1-1：safe skip，不改动背包，引擎直接 no-op 跳过）
+  "典当": "skip",
+  "抵押": "skip",
+  "典押": "skip",
+  // 损毁类（阿游 P1-1：引擎新增 destroy 分支，从背包移除该物品）
+  "损毁": "destroy",
+  "摧毁": "destroy",
+  "弄坏": "destroy",
+  "毁坏": "destroy",
+  "粉碎": "destroy",
 };
 
 // 中文数字表（与选项解析共用）——用于物品数量「二/三」等中文数字解析。

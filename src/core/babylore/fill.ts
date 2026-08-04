@@ -43,8 +43,8 @@ export interface SkippedOp {
 }
 
 export interface FillErrorMeta {
-  /** 全跳过语义细分：no_dirty=真无脏数据；all_skipped_mislabeled=疑似旧版误标脏标记；partial_failed=部分失败；no_applied=零落地 */
-  kind: "no_dirty" | "all_skipped_mislabeled" | "partial_failed" | "no_applied";
+  /** 全跳过语义细分：no_dirty=真无脏数据；all_skipped_mislabeled=含幽灵脏标记（DB 找不到对应章节）疑似误标；all_clean=全部跳过节点均为真实已校验章节的干净态（不诱导重填）；partial_failed=部分失败；no_applied=零落地 */
+  kind: "no_dirty" | "all_skipped_mislabeled" | "all_clean" | "partial_failed" | "no_applied";
   processed: number;
   applied: number;
   skipped: number;
@@ -605,10 +605,21 @@ export async function babyloreFillAll(
     error = "无待填数据（本轮未检测到任何脏标记）";
     fillErrorMeta = { kind: "no_dirty", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
   } else if (processed === 0 && skipped > 0) {
-    // P1-A（墨白）：全部节点被跳过——疑似旧版误标脏标记。携带 nodeIds + 计数，供 UI/诊断区分真无脏 vs 误标。
-    ok = false;
-    error = `全部 ${skipped} 个节点被跳过（疑似旧版误标脏标记），建议清理脏标记后重试；跳过节点=[${skippedNodeIds.join(", ")}]`;
-    fillErrorMeta = { kind: "all_skipped_mislabeled", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
+    // P1-②（墨白）：全部节点被跳过——区分「真·误标脏标记」与「正常干净态」。
+    // 干净态误判会诱导 UI 弹「清理脏标记并重填」对**已校验章节**重跑 LLM（破坏性重填）。
+    // 仅当「已填集合」里存在 DB 中找不到对应正文章节的「幽灵 id」时才判 mislabeled（真误标）；
+    // 若所有跳过节点均为真实已校验章节，则判 all_clean（ok），不诱导重填。
+    const validNodeIds = new Set(nodes.map((n) => n.id));
+    const ghostIds = [...filledSet].filter((id) => !validNodeIds.has(id));
+    if (ghostIds.length > 0) {
+      ok = false;
+      error = `全部 ${skipped} 个节点被跳过，其中发现 ${ghostIds.length} 个「脏标记幽灵 id」（DB 中找不到对应正文章节）=[${ghostIds.join(", ")}]，建议清理脏标记后重试`;
+      fillErrorMeta = { kind: "all_skipped_mislabeled", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
+    } else {
+      // 全部跳过节点均为真实已校验章节 → 干净态，判 ok，不诱导重填。
+      ok = true;
+      fillErrorMeta = { kind: "all_clean", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
+    }
   } else if (failedChapters > 0) {
     ok = false;
     error = `有 ${failedChapters}/${processed} 个章节填表失败，未全部完成（已落 ${applied} 条事实），请检查 LLM 配置/网络后重试`;

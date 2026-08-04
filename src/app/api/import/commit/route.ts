@@ -38,6 +38,28 @@ function chunkPairs<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
+// ─── P1-1：merge 批并发限流（4 路信号量）───
+// 与 parse 的 CONCURRENCY=4 池口径统一，杜绝超大导入一次性放飞数十个 merge 请求打爆 LLM 提供方。
+// 注：BATCH_SIZE=4 是「每批条目数」，MERGE_LIMIT 才是「同时飞行的批数」上限。
+function pLimit(concurrency: number) {
+  let active = 0;
+  const queue: Array<() => void> = [];
+  const next = () => {
+    if (active >= concurrency || queue.length === 0) return;
+    active++;
+    const job = queue.shift()!;
+    job();
+  };
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      queue.push(() => {
+        fn().then(resolve, reject).finally(() => { active--; next(); });
+      });
+      next();
+    });
+}
+const MERGE_LIMIT = pLimit(4); // 共享信号量：char 与 lore 两路合计并发 ≤4
+
 async function mergeOneBatch(
   pairs: MergePair[],
   globalContext: string,
@@ -105,12 +127,16 @@ ${pairsText}
     if (!r.ok) return null;
     const data = await r.json().catch(() => null);
     const usage = (data as any)?.usage;
+    // P1-4：totalTokens 缺失时回退为 prompt+completion 求和（与 parse 口径一致），
+    // 不再归零——否则 monitor 的 llmUsage.totalTokens 会被拉低/归零、成本失真。
+    const promptTokens = usage?.prompt_tokens ?? usage?.promptTokens ?? 0;
+    const completionTokens = usage?.completion_tokens ?? usage?.completionTokens ?? 0;
     recordLlmCall({
       model,
       role: "assistant",
-      promptTokens: usage?.prompt_tokens ?? usage?.promptTokens ?? 0,
-      completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
-      totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
+      promptTokens,
+      completionTokens,
+      totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? (promptTokens + completionTokens),
       baseURL,
     });
     const raw = data?.choices?.[0]?.message?.content;
@@ -431,7 +457,7 @@ export async function POST(request: Request) {
         if (charMergePairs.length > 0) {
           send({ type: "progress", stage: "chars-merge", message: `Flash 分批合并角色... 0/${charTotalBatches} 批 (共${charMergePairs.length}个)`, batch: 0, totalBatches: charTotalBatches, done: 0 });
           charAiResults = await Promise.all(charBatches.map(async (batch, idx) => {
-            const aiResult = await mergeOneBatch(batch, globalContext, "char", batch.map(p => p.name));
+            const aiResult = await MERGE_LIMIT(() => mergeOneBatch(batch, globalContext, "char", batch.map(p => p.name)));
             send({ type: "progress", stage: "chars-merge", message: `第${idx + 1}/${charTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
             return aiResult;
           }));
@@ -489,7 +515,7 @@ export async function POST(request: Request) {
         if (loreMergePairs.length > 0) {
           send({ type: "progress", stage: "lore-merge", message: `Flash 分批合并词条... 0/${loreTotalBatches} 批 (共${loreMergePairs.length}个)`, batch: 0, totalBatches: loreTotalBatches, done: 0 });
           loreAiResults = await Promise.all(loreBatches.map(async (batch, idx) => {
-            const aiResult = await mergeOneBatch(batch, globalContext, "lore", batch.map(p => p.name));
+            const aiResult = await MERGE_LIMIT(() => mergeOneBatch(batch, globalContext, "lore", batch.map(p => p.name)));
             send({ type: "progress", stage: "lore-merge", message: `第${idx + 1}/${loreTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
             return aiResult;
           }));

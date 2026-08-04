@@ -1,4 +1,6 @@
 import { jsonError } from "@/lib/api-error";
+import { jsonError as apiJsonError } from "@/lib/api";
+import { isLikelyUnsafeRegex } from "@/core/post-process/regex";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -162,6 +164,19 @@ export async function POST(
     } else if (preset.type === "regex") {
       // 正则后处理预设：合并 rules 到项目级 postProcessingRules，按 name 去重
       const incoming: any[] = Array.isArray(content.rules) ? content.rules : [];
+      // P2-② 前移校验：预设 regex 属外部/用户可控来源，apply 落库前先做 ReDoS 预判，
+      // 命中即返回 422 拦截，避免写入后到生成热路径才由 applyRegexRules 执行期失败。
+      // 工具内置安全正则（如删除思维链 <think>…）会被判为安全而正常放行。
+      for (const r of incoming) {
+        if (!r.pattern || typeof r.pattern !== "string") continue;
+        const unsafe = isLikelyUnsafeRegex(r.pattern, r.flags || "g");
+        if (unsafe) {
+          return apiJsonError(
+            `预设正则规则「${r.name || "(未命名规则)"}」存在灾难性回溯风险，已拒绝（${unsafe}），套用已中止`,
+            422,
+          );
+        }
+      }
       const project = await prisma.project.findUnique({ where: { id: projectId } });
       const existing: any[] = Array.isArray((project as any)?.postProcessingRules)
         ? ((project as any).postProcessingRules as any[])
