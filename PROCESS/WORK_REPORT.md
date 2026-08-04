@@ -1921,3 +1921,28 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 - 无 Prisma schema 变更：P1-F 用 rows JSON 列加 _src/_ts 字段，免 prisma generate（避免 Round9 工坊 Agent 漏 generate 的复发）。
 - 已真实验证：tsc 零错误；130 项 vitest 全过；6 股东改动全在授权范围无越界；commit+push 完成（远端按既有规则旁路 branch protection）。
 - 未验证（明示）：真机交互（填表单章自检/清脏标记按钮点击、游戏开场背包对账实测、explore 右抽屉读屏/ESC、import 并发与超大书分块超时实测、apply-extraction 真实去重、预设未知 type 返 400 前端提示）仍待用户本地实跑。下一轮复验重点：确认本轮 11 P1 无回流 + 挖新坑。
+
+# Round 11 实现报告（v0.46.74）—— 费曼式沉淀
+
+## 干了什么
+- 续 maxloop 协议第 11 轮：6 股东 Agent 并行只读复验 v0.46.73（Round 10 修复），确认 Round 10 的 11 P1 全回归通过，新挖 11 个 P1（零 P0）+ 工坊 2 P2。Chair 派 6 Agent 并行实现（各限定文件），统一 tsc 零错误 + 144 vitest 全过 + 双 changelog 升 v0.46.74 + 代理 push。
+
+## 为什么这么做（底层原理）
+- 终止条件=「全员无 P0/P1」。Round 10 修的填表溯源/建卡去重/游戏动词闭环/抽屉焦点/导入并发，都是「修好了主链路、但边界与并发封顶没收口」的半成品——例如溯源节点顺序漏传致每行 _src 恒为 ch?:batchmanual（无法回溯真实章节）；建卡别名摊平没纳入索引致炎帝（alias 萧炎）/萧炎双卡；游戏未知动词默认 gain 又把非获得类动作污染背包。不把边界收口，下一轮复验仍反复挖同类 P1，循环永不终止。
+- 干净态判定错是「bool 语义过宽」：babyloreFillAll 把「全部节点被跳过」一律判 all_skipped_mislabeled（诱导用户去清理/重填），但跳过可能是「真的没脏数据」而非误标。诱导重填会制造无谓写入甚至放大脏标记，必须区分「真无脏 all_clean」与「幽灵 id 误标 all_skipped_mislabeled」。
+
+## 用了什么方法 / 效果
+- 墨白：loop.ts 调 babyloreFill 透传 chapterOrder: nodeOrder（修复 _src 恒 ch?:batchmanual 断线，使形如 ch3:batchmanual）；fill.ts babyloreFillAll 全跳过判定重写——FillErrorMeta.kind 联合类型新增 all_clean，仅当 skipped 节点含 DB 找不到正文章节的幽灵 id 才判 all_skipped_mislabeled（ok:false 诱导清理），否则 all_clean（ok:true 不诱导）；tables 页清理按钮显示条件改为 `... && !fillAllResult.ok`。补 fill.ops.test.ts（注入 ghost-999 幽灵脏标记 id 才判 mislabeled）。
+- 青砚：entity-auto-creator 的 findExactDuplicate 把角色主名+别名摊平进 variantNames 并建 aliasToCharId 索引，autoCreateEntities 拉取角色 aliases 并入 existingNames，命中别名即复用既有实体（灭炎帝/萧炎双卡）；isSimilarName 长名（≥3字）由 levenshtein<=1 收紧为 ===0（先繁简归一），灭青云宗/青云山误并、保留青龙镇/青龍镇繁简合并。Grep 确认 isSimilarName 仅用于建卡去重路径，不触达 matchNameStrict/recall（无回流）。
+- 阿游：game-prompts OP_MAP 扩充同义动词（吞下/服下→consume、舍弃/遗弃/丢失→discard、解下/脱下→unequip、典当/抵押→skip、损毁/摧毁→destroy、得到/收下/赢得→gain）；game-engine.applyItemChanges 新增 unequip(equipped:false)/destroy(数量递减归零移除)/skip(no-op) 分支，收窄原 else→gain 兜底（未知动词 console.warn+安全跳过，不再默认 +1 污染背包）；prisma schema GameState 由 @@index([sessionId, round]) 升级为 @@unique([sessionId, round]) + db push + generate（防并发重复轮次）。
+- 清览：explore/workspace/game 三页抽屉 inert 由仅覆盖中栏上移到顶栏——header 加 inert={左或右抽屉开}、StepProgress/Toolbar/次级栏包 inert div；对话框本身不 inert，焦点陷阱仍生效（灭抽屉开时 Tab 仍可逃到顶栏链接）。
+- 磐石：commit 新增模块级 pLimit(4) 限流（char/lore 两路 Promise.all 改经 MERGE_LIMIT 放飞，合计并发≤4）；parse 加 PARSE_DEADLINE_MS=280_000 + pastDeadline()，worker 取块前检测、到时 deadlineHit 优雅中断，已完成块聚合为 status:partial + 新增 skippedChunks 上链（不丢全部结果）；抽出 runWorldExtraction()，分块 A 路 4 路 worker 与 B 路经 Promise.all 并行拉起（灭 B 路串行尾延迟）；mergeOneBatch 的 totalTokens 回退逻辑统一为 usage?.total_tokens ?? usage?.totalTokens ?? (prompt+completion)，与 parse 对齐灭监控失真。
+- 工坊（P2 纵深防御）：forbidden-checker 编译成功后复用 isLikelyUnsafeRegex 做 ReDoS 预判，命中抛友好错误被扫描 try/catch 捕获为 info 提示跳过不崩溃；预设 regex apply 入口前移 isLikelyUnsafeRegex 校验，命中即 return apiJsonError(...,422) 拦截不写库（用 @/lib/api 的 jsonError 别名避免与 @/lib/api-error 同名冲突）。
+- Chair 修复 tsc 错误：青砚 Agent 在 entity-auto-creator 引用 entity.aliases 但 DetectedEntity 类型无此字段→在 src/lib/entity-detector.ts 接口新增 aliases?: string[]（可选，让批内别名去重真生效）。
+- 验证：vitest 144 passed（9 文件：match 28 / fill.ops 12 / game-prompts 39 / regex 23 / game-engine 17 / trigger 5 / utils 8 / entity-auto-creator 6 / fill.selfcheck 6）；SAFE_DELETE_DISABLE=1 npx tsc --noEmit → EXIT:0；双 changelog 同 commit + 代理 push b5901aa..6a85c02。
+
+## 关键取舍 / 诚实边界
+- Trust but verify 落实（又抓到真错）：6 Agent 回报完成，Chair 读 git diff 确认 17 改 + 1 新建报告目录全在授权范围（changelog/MEMORY 零越界）；统一跑 tsc 抓到 2 个真错误——entity-auto-creator.ts(202,30)/(203,31) Property aliases does not exist on type DetectedEntity（青砚 Agent 漏改类型定义）。Chair 在 entity-detector.ts 加 aliases?: string[] 修复 → tsc 零错误；再跑 144 vitest 全过方采信。
+- Prisma schema 变更已 db push + generate：阿游 Agent 改 GameState 唯一约束后主动跑 prisma db push --accept-data-loss + prisma generate，Chair 确认 src/generated/prisma 客户端已生成，避免 Round9 工坊 Agent 漏 generate 的 TS2353 复发。
+- 已真实验证：tsc 零错误；144 项 vitest 全过；GameState @unique 已 db push 建约束；6 股东改动全在授权范围无越界；commit+push 完成。
+- 未验证（明示）：真机交互（填表章节溯源/清脏按钮、游戏 unequip/destroy 分支、抽屉顶栏焦点读屏、import 280s deadline 超大书 partial、apply-extraction 别名去重真路径、预设 regex 422 拦截、GameState 唯一约束并发重试）仍待用户本地实跑。下一步复验重点：确认本轮 11 P1 无回流 + 挖新坑。
