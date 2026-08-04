@@ -1,16 +1,60 @@
 "use client";
 
 /**
- * 简单星空粒子背景
+ * 游戏模式星空粒子背景 + 检测爆发粒子
  *
- * 纯 CSS + 极少 JS，不依赖任何第三方库
- * 暗紫色调，缓慢飘浮，安静不喧宾夺主
+ * 暗紫色调，缓慢飘浮，安静不喧宾夺主；
+ * 通过 ref.emitBurst() 在「发现新实体」时触发一团向外迸发的粒子。
  */
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
-export default function GameParticles() {
+export interface GameParticlesHandle {
+  emitBurst: (opts?: { x?: number; y?: number; color?: string; count?: number }) => void;
+}
+
+interface BurstParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+}
+interface Burst {
+  color: string;
+  particles: BurstParticle[];
+}
+
+const GameParticles = forwardRef<GameParticlesHandle>((_, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const burstsRef = useRef<Burst[]>([]);
+
+  useImperativeHandle(ref, () => ({
+    emitBurst: (opts) => {
+      const canvas = canvasRef.current;
+      const w = canvas?.width ?? window.innerWidth;
+      const h = canvas?.height ?? window.innerHeight;
+      const x = opts?.x ?? w * (0.3 + Math.random() * 0.4);
+      const y = opts?.y ?? h * (0.3 + Math.random() * 0.4);
+      const color = opts?.color || "#a78bfa";
+      const n = opts?.count ?? 18;
+      const particles: BurstParticle[] = [];
+      for (let i = 0; i < n; i++) {
+        const ang = (Math.PI * 2 * i) / n + Math.random() * 0.4;
+        const sp = 1.6 + Math.random() * 2.6;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp,
+          life: 1,
+        });
+      }
+      burstsRef.current.push({ color, particles });
+      // 限制同时存在的爆发数量，避免堆积
+      if (burstsRef.current.length > 14) burstsRef.current.shift();
+    },
+  }), []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,6 +98,7 @@ export default function GameParticles() {
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // 背景星空
       for (const p of particles) {
         p.x += p.speedX;
         p.y += p.speedY;
@@ -72,6 +117,29 @@ export default function GameParticles() {
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(139, 92, 246, ${p.alpha})`; // violet-500
         ctx.fill();
+      }
+
+      // 检测爆发粒子
+      const bursts = burstsRef.current;
+      for (let bi = bursts.length - 1; bi >= 0; bi--) {
+        const b = bursts[bi];
+        let alive = false;
+        for (const pt of b.particles) {
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.vy += 0.02; // 轻微重力
+          pt.life -= 0.014;
+          if (pt.life > 0) {
+            alive = true;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 2.4 * pt.life + 0.6, 0, Math.PI * 2);
+            ctx.globalAlpha = Math.max(0, pt.life);
+            ctx.fillStyle = b.color;
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+        if (!alive) bursts.splice(bi, 1);
       }
 
       animId = requestAnimationFrame(animate);
@@ -93,4 +161,8 @@ export default function GameParticles() {
       aria-hidden="true"
     />
   );
-}
+});
+
+GameParticles.displayName = "GameParticles";
+
+export default GameParticles;

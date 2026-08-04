@@ -47,6 +47,7 @@ export function CenterPanel({
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
   const [outlineDraft, setOutlineDraft] = useState("");
+  const [outlineExpanded, setOutlineExpanded] = useState(false);
 
   // FE-N6 世界时间草稿：同步选中节点，失焦时回写库
   const [wtDraft, setWtDraft] = useState(worldTime || "");
@@ -232,10 +233,25 @@ export function CenterPanel({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div onClick={() => { setOutlineDraft(selectedNode.outline || ""); setEditingOutline(true); }}
-                    className="flex-1 text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] cursor-pointer italic">
-                    {selectedNode.outline || "点击设置本节点大纲..."}
-                  </div>
+                  {/* 章纲折叠按钮：默认收起，点击展开（章纲较长不常驻显示） */}
+                  <button
+                    type="button"
+                    onClick={() => setOutlineExpanded((v) => !v)}
+                    className="shrink-0 text-xs px-1.5 py-0.5 rounded border border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] transition-colors flex items-center gap-1"
+                    title="展开 / 收起本章大纲"
+                  >
+                    <span className="text-[9px] leading-none">{outlineExpanded ? "▾" : "▸"}</span>
+                    章纲{selectedNode.outline ? "·已设" : ""}
+                  </button>
+                  {/* 展开时显示大纲文本（点击进入编辑） */}
+                  {outlineExpanded && (
+                    <div
+                      onClick={() => { setOutlineDraft(selectedNode.outline || ""); setEditingOutline(true); }}
+                      className="flex-1 min-w-0 text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] cursor-pointer italic truncate"
+                    >
+                      {selectedNode.outline || "点击设置本节点大纲..."}
+                    </div>
+                  )}
                   {!isGenerating && (
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       {chapterOutlineStatus === "generating" ? (

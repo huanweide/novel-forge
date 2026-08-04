@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter } from "next/navigation";
 import GameCanvas from "@/components/game/GameCanvas";
-import GameParticles from "@/components/game/GameParticles";
+import GameParticles, { type GameParticlesHandle } from "@/components/game/GameParticles";
 import GameOutlineEditor from "@/components/game/GameOutlineEditor";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
@@ -118,6 +118,30 @@ export default function GamePage() {
   useFocusTrap(rightDrawerRef, rightDrawerOpen, () => setRightDrawerOpen(false));
   const streamRef = useRef<AbortController | null>(null);
 
+  // ── v0.46.78 新增：自动推进 / 检测粒子 / 构思开头 ──
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const autoAdvanceRef = useRef(false);
+  const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const statusRef = useRef(state.status);
+  const particlesRef = useRef<GameParticlesHandle>(null);
+  const discoveryIdRef = useRef(0);
+  const [discoveries, setDiscoveries] = useState<Array<{ id: number; label: string; color: string }>>([]);
+  const [concept, setConcept] = useState<string | null>(null);
+  const [conceptLoading, setConceptLoading] = useState(false);
+  const [conceptError, setConceptError] = useState<string | null>(null);
+
+  // 同步最新 status 给 setTimeout 回调读取（避免自动推进闭包读到旧值）
+  useEffect(() => {
+    statusRef.current = state.status;
+  }, [state.status]);
+
+  // 卸载时清理自动推进定时器
+  useEffect(() => {
+    return () => {
+      if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
+    };
+  }, []);
+
   // ── 初始化 ──────────────────────────────────────────────
   const initGame = useCallback(async () => {
     setState((s) => ({ ...s, status: "loading", error: null }));
@@ -149,13 +173,49 @@ export default function GamePage() {
   useEffect(() => { initGame(); }, [initGame]);
 
   // ── 开始游戏 ────────────────────────────────────────────
-  const handleStart = async () => {
+  // 检测新实体时：触发粒子爆发 + 顶部「发现」提示
+  const fireDiscoveries = (list: Array<{ name: string; type?: string; color?: string }> | undefined) => {
+    if (!list || list.length === 0) return;
+    for (const ne of list) {
+      const color = ne.color || "#a78bfa";
+      particlesRef.current?.emitBurst({ color });
+      const id = ++discoveryIdRef.current;
+      const typeLabel = ne.type === "角色" ? "角色" : ne.type === "势力" ? "势力" : ne.type === "物品" ? "物品" : ne.type === "地点" ? "地点" : "实体";
+      const label = `${typeLabel}·${ne.name}`;
+      setDiscoveries((prev) => [...prev, { id, label, color }]);
+      setTimeout(() => {
+        setDiscoveries((prev) => prev.filter((d) => d.id !== id));
+      }, 3000);
+    }
+  };
+
+  // 构思开头：调用后端生成开场构思
+  const handleConcept = async () => {
+    setConceptLoading(true);
+    setConceptError(null);
+    try {
+      const res = await fetch("/api/game/concept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, nodeId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "构思失败");
+      setConcept(data.concept);
+    } catch (err: any) {
+      setConceptError(err.message || "构思失败");
+    } finally {
+      setConceptLoading(false);
+    }
+  };
+
+  const handleStart = async (conceptText?: string) => {
     setState((s) => ({ ...s, status: "generating", error: null }));
     try {
       const res = await fetch("/api/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, nodeId }),
+        body: JSON.stringify({ projectId, nodeId, concept: conceptText || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "启动失败");
@@ -177,6 +237,10 @@ export default function GamePage() {
       setTurns([
         { round: 1, playerAction: "开始游戏", narrative: data.narrative },
       ]);
+
+      // 开场即检测到的实体也来一波粒子
+      fireDiscoveries(data.newEntities);
+      setConcept(null);
     } catch (err: any) {
       setState((s) => ({ ...s, status: "ready", error: err.message }));
     }
@@ -318,6 +382,19 @@ export default function GamePage() {
         },
       ]);
 
+      // 检测本回合新实体：粒子爆发 + 发现提示
+      fireDiscoveries(doneData.newEntities);
+
+      // 自动推进：开启时，本轮结束后延迟触发下一轮「自动推进剧情」
+      if (autoAdvanceRef.current) {
+        if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
+        autoTimerRef.current = setTimeout(() => {
+          if (autoAdvanceRef.current && statusRef.current === "playing" && state.sessionId) {
+            handleAction("custom", "自动推进剧情");
+          }
+        }, 1400);
+      }
+
       setCustomInput("");
     } catch (err: any) {
       // 用户停止/断网：后端可能已提交该轮，与后端权威态对账，避免前后端轮次/背包永久错位（阿游 P0-2）
@@ -338,6 +415,10 @@ export default function GamePage() {
   // 再解锁为 playing，避免用户在对账在途时抢发行动放大竞态（阿游 P0-1 前端侧）。
   const handleStop = async () => {
     streamRef.current?.abort();
+    // 停止生成即暂停自动推进循环
+    if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
+    autoAdvanceRef.current = false;
+    setAutoAdvance(false);
     await reconcileWithBackend();
     setState((s) => ({ ...s, status: "playing" }));
   };
@@ -392,7 +473,43 @@ export default function GamePage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--nv-void)] font-sans text-[var(--nv-text-secondary)]">
-      <GameParticles />
+      <GameParticles ref={particlesRef} />
+
+      {/* 顶部进度条：开场 / 每轮生成 / 导出时显示（v0.46.78） */}
+      {(state.status === "generating" || state.status === "ending") && (
+        <div className="fixed left-0 right-0 top-0 z-[60] h-1 bg-[var(--nv-surface-2)]">
+          <div className="nf-progress-indeterminate h-full w-1/3 rounded-r bg-gradient-to-r from-[var(--nv-creative)] to-[var(--nv-accent)]" />
+        </div>
+      )}
+
+      {/* 导出覆盖层：收束并写入正文时（v0.46.78） */}
+      {state.status === "ending" && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[var(--nv-void)]/70 backdrop-blur-sm">
+          <div className="surface-floating flex flex-col items-center gap-4 rounded-2xl px-12 py-14">
+            <Icon name="loader" size={36} className="animate-spin text-[var(--nv-creative)]" />
+            <p className="text-base text-[var(--nv-text-secondary)]">正在收束并导出本章正文…</p>
+            <div className="h-1 w-48 overflow-hidden rounded bg-[var(--nv-surface-2)]">
+              <div className="nf-progress-indeterminate h-full w-1/3 rounded bg-[var(--nv-creative)]" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 检测发现提示层（v0.46.78） */}
+      {discoveries.length > 0 && (
+        <div className="pointer-events-none fixed left-1/2 top-20 z-40 flex -translate-x-1/2 flex-col items-center gap-2">
+          {discoveries.map((d) => (
+            <div
+              key={d.id}
+              className="nf-discovery-pill flex items-center gap-1.5 rounded-full border bg-[var(--nv-surface-1)]/90 px-3 py-1 text-xs font-medium shadow-lg backdrop-blur-sm"
+              style={{ borderColor: d.color, color: d.color }}
+            >
+              <Icon name="sparkles" size={12} />
+              发现：{d.label}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ═══ 首次教程（v0.46.58） ═══ */}
       {showTutorial && (
@@ -657,11 +774,21 @@ export default function GamePage() {
               回退
             </button>
             <button
-              onClick={() => handleAction("custom", "自动推进剧情")}
+              onClick={() => {
+                const next = !autoAdvance;
+                setAutoAdvance(next);
+                autoAdvanceRef.current = next;
+                if (!next && autoTimerRef.current) clearTimeout(autoTimerRef.current);
+              }}
               disabled={state.status !== "playing"}
-              className="w-full rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] py-1.5 text-xs font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+              className={`w-full rounded-lg border py-1.5 text-xs font-medium transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${
+                autoAdvance
+                  ? "border-[var(--nv-creative)] bg-[var(--nv-creative-soft)] text-[var(--nv-creative)]"
+                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)]"
+              }`}
+              title="开启后每轮结束自动推进剧情；点停止生成即暂停"
             >
-              自动推进
+              {autoAdvance ? "● 自动推进中" : "自动推进"}
             </button>
           </div>
         </aside>
@@ -682,12 +809,56 @@ export default function GamePage() {
                 <p className="mb-8 text-sm text-[var(--nv-text-tertiary)]">
                   AI 将以互动方式与你共同创作本章正文
                 </p>
-                <button
-                  onClick={handleStart}
-                  className="btn-creative rounded-xl px-10 py-3 text-lg font-medium text-[var(--nv-text-primary)] shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
-                >
-                  开始游戏
-                </button>
+                <div className="flex flex-col items-center gap-3">
+                  <button
+                    onClick={() => handleStart()}
+                    className="btn-creative rounded-xl px-10 py-3 text-lg font-medium text-[var(--nv-text-primary)] shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
+                  >
+                    开始游戏
+                  </button>
+                  {state.status === "ready" && (
+                    <button
+                      onClick={handleConcept}
+                      disabled={conceptLoading}
+                      className="flex items-center gap-1.5 rounded-xl border border-[var(--nv-border-2)] px-6 py-2 text-sm font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative)] hover:text-[var(--nv-creative)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Icon name="lightbulb" size={14} />
+                      {conceptLoading ? "构思中…" : "构思开头"}
+                    </button>
+                  )}
+                </div>
+
+                {/* 构思结果卡片 */}
+                {concept && (
+                  <div className="mt-6 w-full max-w-md rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-4 text-left">
+                    <p className="mb-1.5 text-xs font-medium text-[var(--nv-text-primary)]">AI 构思的开场</p>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--nv-text-secondary)]">{concept}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleStart(concept)}
+                        className="rounded-lg bg-[var(--nv-creative)] px-4 py-1.5 text-xs font-medium text-[var(--nv-text-primary)] transition-all hover:brightness-110 active:scale-95"
+                      >
+                        采用此构思开场
+                      </button>
+                      <button
+                        onClick={handleConcept}
+                        disabled={conceptLoading}
+                        className="rounded-lg border border-[var(--nv-border-2)] px-4 py-1.5 text-xs font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:opacity-50"
+                      >
+                        重新构思
+                      </button>
+                      <button
+                        onClick={() => { setConcept(null); handleStart(); }}
+                        className="rounded-lg border border-[var(--nv-border-2)] px-4 py-1.5 text-xs font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
+                      >
+                        不用，直接开始
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {conceptError && (
+                  <p className="mt-3 text-sm text-[var(--nv-danger)]">{conceptError}</p>
+                )}
                 {state.status === "ended" && (
                   <div className="mt-4">
                     <button

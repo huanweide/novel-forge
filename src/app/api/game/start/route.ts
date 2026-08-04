@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { projectId, nodeId } = await req.json();
+    const { projectId, nodeId, concept } = await req.json();
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
     }
@@ -62,13 +62,18 @@ export async function POST(req: Request) {
         ? `【开始游戏】根据章纲，为本章写一个开场。从"${node.outline.slice(0, 80)}..."开始，生成精彩的入场叙事。记住在叙事结束后给出 3-4 个编号选项。`
         : `【开始游戏】为本章写一个精彩的开场。描述场景、氛围和角色的初始状态，然后给出 3-4 个编号选项。`;
 
+    // v0.46.78：若玩家采用了 AI 构思的开场，则将其作为参考融入叙事（自然融入，不照抄）
+    const finalUserPrompt = concept
+      ? `${userPrompt}\n\n【构思参考】玩家已采用以下开场构思，请据此展开本章开场叙事，自然融入而非照抄原文：${concept}`
+      : userPrompt;
+
     // 4. 调用 LLM
     const llmConfig = await getEffectiveConfig();
     const client = createLLMClient(llmConfig);
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
-      { role: "user" as const, content: userPrompt },
+      { role: "user" as const, content: finalUserPrompt },
     ];
 
     const stream = client.chatStream({

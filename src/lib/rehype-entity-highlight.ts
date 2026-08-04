@@ -83,7 +83,7 @@ function splitTextNode(
           (r.entity.type === "lorebook" && r.entity.category
             ? ` entity-cat-${r.entity.category}`
             : ""),
-        style: `color:${r.entity.color};font-weight:600;`,
+        style: `color:${r.entity.color};`,
         title: `${typeLabel}：${r.entity.name}`,
         "aria-label": `${typeLabel}：${r.entity.name}`,
         "data-entity-name": r.entity.name,

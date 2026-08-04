@@ -188,60 +188,6 @@ export function MarkdownViewer({ content, projectId, isStreaming = false }: Mark
       {isStreaming && (
         <span className="inline-block w-2 h-4 bg-[var(--nv-primary)] ml-0.5 animate-pulse align-middle" />
       )}
-
-      {/* 实体图例（只在有实体且有高亮时显示） */}
-      {!isStreaming && loaded && entityMap.size > 0 && (
-        <EntityLegend entityMap={entityMap} />
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════
-// 实体颜色图例
-// ═══════════════════════════════════════════
-
-const LEGEND_ITEMS: Array<{ label: string; color: string; match: (e: EntityHighlight) => boolean }> = [
-  { label: "角色", color: "#5B9BD5", match: (e) => e.type === "character" },
-  { label: "势力", color: "#70AD47", match: (e) => e.category === "faction" },
-  { label: "物品", color: "#D4A017", match: (e) => e.category === "item" },
-  { label: "地点", color: "#C55A11", match: (e) => e.category === "geography" },
-  { label: "世界观", color: "#9B59B6", match: (e) => e.category === "magic_system" },
-  { label: "功法", color: "#D64545", match: (e) => e.category === "technique" },
-];
-
-function EntityLegend({ entityMap }: { entityMap: Map<string, EntityHighlight> }) {
-  // 统计各类型的实体数量
-  const usedTypes = new Set<string>();
-  const counts: Record<string, number> = {};
-
-  for (const entity of entityMap.values()) {
-    let key = "";
-    for (const item of LEGEND_ITEMS) {
-      if (item.match(entity)) { key = item.label; break; }
-    }
-    if (!key) key = "其他";
-    usedTypes.add(key);
-    counts[key] = (counts[key] || 0) + 1;
-  }
-
-  const active = LEGEND_ITEMS.filter((item) => usedTypes.has(item.label));
-
-  if (active.length === 0) return null;
-
-  return (
-    <div className="mt-6 pt-4 border-t border-[var(--nv-border-2)] flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--nv-text-muted)]">
-      <span className="text-[var(--nv-text-muted)]">图例：</span>
-      {active.map((item) => (
-        <span key={item.label} className="inline-flex items-center gap-1">
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-sm"
-            style={{ backgroundColor: item.color }}
-          />
-          {item.label}
-          <span className="text-[var(--nv-text-muted)]">({counts[item.label] || 0})</span>
-        </span>
-      ))}
     </div>
   );
 }

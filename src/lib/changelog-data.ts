@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.77";
+export const LATEST_VERSION = "v0.46.78";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "N1 推理模型游戏空正文闭环：deepseek-v4-flash 先吐思考链(reasoning_content)吃光 800 预算，game/start 与 game/action 返回空叙事 → LLM 客户端层新增推理模型最低输出预算保护(resolveMaxTokens，命中 v4-flash 等强制 max_tokens 不低于 2500)，三处游戏端点字面量抬到 2500",
-  "readStream 现把 reasoning_content 的 token 计入 completionTokens，流式用量计数与最终 usage 一致，灭监测面板少算推理消耗",
-  "真机复测(dev:3001 真实 DeepSeek)：game/start 返回 narrative 619 字 + 4 选项 + 建 session；game/action SSE 返回 game_done.narrative 653 字 + 4 选项，均非零、叙事连贯，N1 闭环",
-  "非推理模型不受影响仍按各自小预算运行；本轮仅补丁级正确性修复，未引入新功能",
+  "语法高亮改为仅颜色区分：删除 globals.css 非颜色区分块（差异化下划线 + 前导形状标记），rehype 去除加粗，仅保留颜色；并删除正文下方按类计数的实体图例（EntityLegend），章节名下方不再显示统计词条",
+  "章纲默认折叠：编辑器大纲区改为默认收起的「章纲·已设」按钮，点击才展开文本/编辑，生成与抽卡控制常驻可见，长章纲不再常驻占屏",
+  "游戏模式检测粒子与高亮回归：GameParticles 重构为 forwardRef 暴露 emitBurst，每轮检测到新实体即触发粒子爆发 + 顶部「发现：角色·名」浮动提示（开场与回合均触发），修回此前丢失的反馈手感",
+  "游戏模式进度条 + 构思开头 + 自动推进开关：载入/每轮生成/导出均显示顶部进度条与导出覆盖层；就绪界面新增「构思开头」按钮与新 /api/game/concept 后端，可预览并「采用此构思开场」带入 start；自动推进升级为可点开关，开启后每轮自动续推、停止生成即暂停",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.78",
+    date: "2026-08-04",
+    title: "会员股东 Round 12 收尾 UI 批量修复增强：语法高亮仅颜色 + 去词条统计、章纲默认折叠、游戏模式检测粒子/高亮回归 + 进度条 + 构思开头前置 + 自动推进开关（tsc 零错误）",
+    sections: [
+      {
+        label: "语法高亮仅颜色区分 + 去词条统计（用户反馈）",
+        items: [
+          "globals.css 删除「非颜色区分线索」整块（11 类差异化下划线 + ::before 前导形状标记），rehype-entity-highlight 去除 font-weight:600，实体高亮回到只用颜色区分，无前缀、无下划线",
+          "MarkdownViewer 删除正文下方 EntityLegend（按角色/势力/物品/地点/世界观/功法分类计数），章节名下方不再显示统计词条，仅保留纯渲染高亮",
+        ],
+      },
+      {
+        label: "章纲默认折叠（用户反馈）",
+        items: [
+          "CenterPanel 大纲区改为默认收起的「章纲·已设」按钮，点击才展开大纲文本并进入编辑；轻量章纲/抽卡分镜等生成控制保持常驻可见，长章纲不再常驻占屏",
+        ],
+      },
+      {
+        label: "游戏模式检测粒子与高亮回归（用户反馈）",
+        items: [
+          "GameParticles 重构为 forwardRef 暴露 emitBurst(x,y,color,count)，内部新增爆发粒子系统（向外迸发 + 轻微重力衰减）；游戏页 handleStart/handleAction 在检测到新实体时调用触发",
+          "新增顶部「发现：角色·名 / 势力·名 / 物品·名」浮动提示层（nf-discovery-pill 动画，3 秒淡出），与粒子同步出现，修回此前丢失的检测反馈手感",
+        ],
+      },
+      {
+        label: "游戏模式进度条 + 构思开头 + 自动推进（用户反馈）",
+        items: [
+          "载入/每轮生成(generating)/导出(ending)均显示顶部 indeterminate 进度条；导出额外弹出「正在收束并导出本章正文」覆盖层，缓解载入慢的焦虑",
+          "就绪界面新增「构思开头」按钮 + 新接口 /api/game/concept（LLM 基于项目/角色/世界书生成 2-4 句开场构思与建议起始行动），可预览并「采用此构思开场」带入 /api/game/start（start 路由新增 concept 入参并融入开场提示词）；支持重新构思/不用直接开始",
+          "自动推进按钮升级为可点开关：开启后每轮结束延迟 1.4s 自动触发「自动推进剧情」，停止生成即暂停并清空定时器；用 autoAdvanceRef/statusRef 避免闭包读到旧状态导致死循环",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.77",
     date: "2026-08-04",
