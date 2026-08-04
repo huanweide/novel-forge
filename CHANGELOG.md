@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.81 — 2026-08-04
+**实体高亮固定色 + 表头图例 + 正文点击跳转设定界面：角色醒目橙 + 世界书各分类高对比固定色，配色单一来源收敛（tsc 零错误）**
+
+- 角色卡固定醒目橙（#F97316），世界书各分类升级为高对比固定色（势力绿/物品金/地点天蓝/法术紫/功法红/生灵粉/文化青/历史靛/法则琥珀/货币柠檬绿/自定义灰）；固定色单一来源收敛到「src/core/entity-highlighter.ts」的 CHARACTER_COLOR / LORE_COLORS，API route、正文高亮 span、表头图例三者共用，消除此前 API 复制硬编码导致的配色漂移
+- 表头图例：正文上方新增固定色图例行（角色 + 世界书各分类，色块 + 中文标签），一眼看懂每种颜色代表哪类实体，与「本章实体」彩色徽章互补（徽章是本章实际涉及、图例是全局色卡分配）
+- 正文点击跳转：高亮 span 现带 data-entity-id 并 role=button / tabIndex 可聚焦，MarkdownViewer 新增 onEntityClick 容器层事件代理，点击正文内被高亮实体名即打开其设定界面（角色→角色编辑器、世界书→世界书编辑器），复用 CenterPanel 既有的 onEditCharacter / onEditLore；globals.css 统一 hover / focus 浅底高亮（去旧角色蓝硬编码）
+- 颜色引擎补 id 透传：EntityHighlight / EntityRaw / EntityMatch 加 id 字段，buildEntityMapFromData 与 findEntitiesInText 透传 id，rehype 插件把 id 写入 span 的 data-entity-id，支撑点击跳转；固定色纯展示不引入额外状态，与「不需要别的」约束一致
+
+---
+
 ## v0.46.80 — 2026-08-04
 **顶部栏导入入口去重：删除冗余「导入设定」按钮，保留「导入书稿」（弹窗内可切设定/章节/快速模式）（tsc 零错误）**
 

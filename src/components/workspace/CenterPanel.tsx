@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { Icon } from "@/components/ui/icons";
+import { ENTITY_LEGEND } from "@/core/entity-highlighter";
 import { Modal } from "@/components/ui/Modal";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
@@ -328,6 +329,15 @@ export function CenterPanel({
                     {selectedNode.title}
                   </h1>
                 )}
+                {/* 固定色图例：角色 / 世界书各分类的标注色说明（v0.46.81） */}
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-4 text-[10px] text-[var(--nv-text-tertiary)]">
+                  {ENTITY_LEGEND.map((it) => (
+                    <span key={it.key} className="inline-flex items-center gap-1">
+                      <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: it.color }} aria-hidden="true" />
+                      {it.label}
+                    </span>
+                  ))}
+                </div>
                 {/* 章节实体彩色徽章：一眼看到本章涉及哪些角色 / 世界书 */}
                 {chapterEntities.length > 0 && (
                   <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
@@ -344,7 +354,15 @@ export function CenterPanel({
                     ))}
                   </div>
                 )}
-                <MarkdownViewer content={displayContent} projectId={projectId} isStreaming={isGenerating} />
+                <MarkdownViewer
+                  content={displayContent}
+                  projectId={projectId}
+                  isStreaming={isGenerating}
+                  onEntityClick={(id, type) => {
+                    if (type === "character") onEditCharacter?.(id);
+                    else onEditLore?.(id);
+                  }}
+                />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-[var(--nv-text-tertiary)] text-sm">

@@ -22,6 +22,8 @@ interface MarkdownViewerProps {
   content: string;
   projectId: string;
   isStreaming?: boolean;
+  /** 点击正文内高亮实体时的回调（id, type）——用于跳转到设定界面 */
+  onEntityClick?: (id: string, type: "character" | "lorebook") => void;
 }
 
 // ═══════════════════════════════════════════
@@ -138,7 +140,18 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
 // 组件主体
 // ═══════════════════════════════════════════
 
-export function MarkdownViewer({ content, projectId, isStreaming = false }: MarkdownViewerProps) {
+export function MarkdownViewer({ content, projectId, isStreaming = false, onEntityClick }: MarkdownViewerProps) {
+
+  // 正文点击代理：在容器层捕获高亮 span 的点击，交给 onEntityClick 跳转设定界面
+  const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onEntityClick) return;
+    const target = e.target as HTMLElement;
+    const el = target.closest("[data-entity-id]") as HTMLElement | null;
+    if (!el) return;
+    const id = el.getAttribute("data-entity-id");
+    const type = el.getAttribute("data-entity-type") as "character" | "lorebook" | null;
+    if (id && type) onEntityClick(id, type);
+  };
   const [entityMap, setEntityMap] = useState<Map<string, EntityHighlight>>(new Map());
   const [loaded, setLoaded] = useState(false);
 
@@ -175,7 +188,7 @@ export function MarkdownViewer({ content, projectId, isStreaming = false }: Mark
   }
 
   return (
-    <div className="markdown-body">
+    <div className="markdown-body" onClick={handleBodyClick}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}

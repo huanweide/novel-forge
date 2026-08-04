@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
+import { CHARACTER_COLOR, LORE_COLORS } from "@/core/entity-highlighter";
 
 export async function GET(request: Request) {
   try {
@@ -36,13 +37,8 @@ export async function GET(request: Request) {
       category?: string;
     }> = [];
 
-    const CHARACTER_COLOR = "#5B9BD5";
-    const LORE_COLORS: Record<string, string> = {
-      faction: "#70AD47", item: "#D4A017", geography: "#C55A11",
-      magic_system: "#9B59B6", technique: "#D64545", creature: "#C77D9F",
-      culture: "#5DA89B", history: "#7B8CC4", law: "#D4952A",
-      currency: "#8CAD45", custom: "#8B8B8B",
-    };
+    // 固定色单一来源：复用 @/core/entity-highlighter 顶部导出的 CHARACTER_COLOR / LORE_COLORS
+    // （服务端 import 纯常量模块，不触发浏览器逻辑；与正文高亮、表头图例配色一致）
 
     // 角色（含别名，指向同一 id，便于章节内实体徽章跳转详情）
     for (const c of characters) {

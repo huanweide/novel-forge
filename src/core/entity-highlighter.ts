@@ -2,27 +2,32 @@
  * 实体颜色高亮引擎（客户端安全——不导入 prisma）
  *
  * 通过 API 获取项目实体数据，构建 实体名 → {类型, 颜色} 映射表。
+ *
+ * 颜色为「按分类固定色」，单一来源在此文件：
+ *   - CHARACTER_COLOR    角色卡固定色（醒目橙）
+ *   - LORE_COLORS        世界书各分类固定色（高对比、暗背景醒目）
+ * API route、正文高亮 span、表头图例三者共用，避免配色漂移。
  */
 
 // ═══════════════════════════════════════════
-// 颜色表
+// 颜色表（固定色 · 单一来源）
 // ═══════════════════════════════════════════
 
-export const CHARACTER_COLOR = "#5B9BD5"; // 🔵 柔蓝 — 水墨远山，不刺眼
+export const CHARACTER_COLOR = "#F97316"; // 🟠 鲜橙 — 角色卡固定标注色，醒目且暗背景对比达标
 
-/** 词条分类 → 颜色（低饱和度，暗色背景适配） */
+/** 词条分类 → 颜色（高对比、暗色背景醒目，彼此区分度高） */
 export const LORE_COLORS: Record<string, string> = {
-  faction:      "#70AD47", // 🟢 苔绿 — 沉稳不跳脱
-  item:         "#D4A017", // 🟡 暗金 — 低调显贵重
-  geography:    "#C55A11", // 🟠 赭石 — 大地感
-  magic_system: "#9B59B6", // 🟣 淡紫 — 神秘不过分
-  technique:    "#D64545", // 🔴 暗红 — 功法标识
-  creature:     "#C77D9F", // 🩷 灰粉 — 柔和生物感
-  culture:      "#5DA89B", // 🩵 灰青 — 文化底蕴
-  history:      "#7B8CC4", // 🔷 灰蓝 — 历史沉淀
-  law:          "#D4952A", // 🟠 古铜 — 法则庄重
-  currency:     "#8CAD45", // 🟢 灰绿 — 货币雅致
-  custom:       "#8B8B8B", // ⚫ 中灰 — 自定义低调
+  faction:      "#22C55E", // 🟢 鲜绿 — 势力
+  item:         "#FACC15", // 🟡 亮金 — 物品
+  geography:    "#38BDF8", // 🔵 天蓝 — 地点
+  magic_system: "#A855F7", // 🟣 紫   — 法术体系
+  technique:    "#EF4444", // 🔴 红   — 功法
+  creature:     "#EC4899", // 🩷 粉   — 生灵
+  culture:      "#14B8A6", // 🩵 青   — 文化
+  history:      "#818CF8", // 🔷 靛   — 历史
+  law:          "#F59E0B", // 🟠 琥珀 — 法则
+  currency:     "#BEF264", // 🟢 柠檬绿 — 货币
+  custom:       "#9CA3AF", // ⚫ 灰   — 自定义
 };
 
 // ═══════════════════════════════════════════
@@ -34,6 +39,8 @@ export interface EntityHighlight {
   color: string;
   type: "character" | "lorebook";
   category?: string;
+  /** 实体 id（来自 API，用于正文点击跳转设定界面） */
+  id?: string;
 }
 
 /** API 返回的实体原始数据 */
@@ -42,6 +49,8 @@ interface EntityRaw {
   type: "character" | "lorebook";
   color: string;
   category?: string;
+  /** 实体 id（用于点击跳转） */
+  id?: string;
   /** 别名列表（Q3：一并入 map，使别名也能高亮） */
   aliases?: string[];
 }
@@ -60,10 +69,10 @@ export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHig
   // 第一遍：角色（含别名）
   for (const e of data) {
     if (e.type === "character") {
-      map.set(e.name, { name: e.name, color: e.color, type: "character" });
+      map.set(e.name, { name: e.name, color: e.color, type: "character", id: e.id });
       for (const al of e.aliases || []) {
         if (al && !map.has(al)) {
-          map.set(al, { name: al, color: e.color, type: "character" });
+          map.set(al, { name: al, color: e.color, type: "character", id: e.id });
         }
       }
     }
@@ -72,10 +81,10 @@ export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHig
   // 第二遍：词条 title（覆盖同名角色；含别名）
   for (const e of data) {
     if (e.type === "lorebook") {
-      map.set(e.name, { name: e.name, color: e.color, type: "lorebook", category: e.category });
+      map.set(e.name, { name: e.name, color: e.color, type: "lorebook", category: e.category, id: e.id });
       for (const al of e.aliases || []) {
         if (al && !map.has(al)) {
-          map.set(al, { name: al, color: e.color, type: "lorebook", category: e.category });
+          map.set(al, { name: al, color: e.color, type: "lorebook", category: e.category, id: e.id });
         }
       }
     }
@@ -133,6 +142,8 @@ export interface EntityMatch {
   color: string;
   type: "character" | "lorebook";
   category?: string;
+  /** 实体 id（用于正文点击跳转） */
+  id?: string;
   start: number;
   end: number;
 }
@@ -214,7 +225,7 @@ export function findEntitiesInText(
     }
     if (!passesBoundary) continue;
     const entity = byName.get(c.name)!;
-    matches.push({ name: c.name, color: entity.color, type: entity.type, category: entity.category, start: c.idx, end: c.end });
+    matches.push({ name: c.name, color: entity.color, type: entity.type, category: entity.category, id: entity.id, start: c.idx, end: c.end });
     for (let i = c.idx; i < c.end; i++) occupied[i] = true;
   }
 
@@ -222,3 +233,24 @@ export function findEntitiesInText(
   matches.sort((a, b) => a.start - b.start);
   return matches;
 }
+
+// ═══════════════════════════════════════════
+// 固定色图例（表头颜色说明：角色 + 世界书各分类）
+// 单一来源——API、正文高亮、图例三处共用上面的常量
+// ═══════════════════════════════════════════
+
+/** 表头图例条目：{ 语义键, 中文标签, 固定色 } */
+export const ENTITY_LEGEND: Array<{ key: string; label: string; color: string }> = [
+  { key: "character", label: "角色", color: CHARACTER_COLOR },
+  { key: "faction", label: "势力", color: LORE_COLORS.faction },
+  { key: "item", label: "物品", color: LORE_COLORS.item },
+  { key: "geography", label: "地点", color: LORE_COLORS.geography },
+  { key: "magic_system", label: "法术", color: LORE_COLORS.magic_system },
+  { key: "technique", label: "功法", color: LORE_COLORS.technique },
+  { key: "creature", label: "生灵", color: LORE_COLORS.creature },
+  { key: "culture", label: "文化", color: LORE_COLORS.culture },
+  { key: "history", label: "历史", color: LORE_COLORS.history },
+  { key: "law", label: "法则", color: LORE_COLORS.law },
+  { key: "currency", label: "货币", color: LORE_COLORS.currency },
+  { key: "custom", label: "自定义", color: LORE_COLORS.custom },
+];

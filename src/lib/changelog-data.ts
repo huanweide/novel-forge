@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.80";
+export const LATEST_VERSION = "v0.46.81";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "顶部栏导入入口去重：删除「导入设定」按钮，仅保留「导入书稿」——两者都打开同一个 ImportWizard 弹窗（仅 initialMode 不同），弹窗内可自由切换「章节正文 / 设定文本 / 快速导入」，删一个不丢能力",
-  "纸舟星海静态化：停止绕圈巡游（orbitSpeed=0，删除每帧分离避让 O(n^2) 与逐帧旋转/摇晃/入场坠落），船水平固定、仅随波浪轻浮贴合水面，相机一次缓动后静止",
-  "降低密度：3D 船数封顶 12 艘（作品再多只渲染 12 艘，下方按钮列表仍全量可点击进入），减少 Draw Call 降卡顿",
-  "均匀分散：改用向日葵（黄金角）螺旋分布，半径随 sqrt(i) 增大、Z 拉伸 0.6→0.85，船阵均匀散开不聚堆",
+  "实体高亮改固定醒目色：角色卡固定橙（#F97316），世界书各分类高对比固定色（势力绿/物品金/地点蓝/法术紫/功法红/生灵粉/文化青/历史靛/法则琥珀/货币柠檬绿/自定义灰），配色单一来源收敛到 entity-highlighter 常量，正文高亮 / API / 图例三处一致",
+  "正文上方新增固定色表头图例：角色 + 世界书各分类的色块 + 中文标签，一眼看懂颜色对应哪类实体，与「本章实体」彩色徽章互补",
+  "正文内点击高亮实体名即可跳转设定界面：高亮词带 data-entity-id，点击角色打开角色编辑器、点击世界书打开世界书编辑器（复用既有 onEditCharacter / onEditLore），支持键盘聚焦回车",
+  "颜色引擎补 id 透传：EntityHighlight / EntityRaw / EntityMatch 加 id，rehype 写入 data-entity-id；globals.css 统一 hover / focus 浅底高亮，去旧角色蓝硬编码",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.81",
+    date: "2026-08-04",
+    title: "实体高亮固定色 + 表头图例 + 正文点击跳转设定界面：角色醒目橙 + 世界书各分类高对比固定色，配色单一来源收敛，tsc 零错误",
+    sections: [
+      {
+        label: "实体固定色高亮 + 表头图例 + 正文点击跳设定（用户反馈）",
+        items: [
+          "角色卡固定醒目橙（#F97316），世界书各分类升级为高对比固定色（势力绿/物品金/地点天蓝/法术紫/功法红/生灵粉/文化青/历史靛/法则琥珀/货币柠檬绿/自定义灰）；固定色单一来源收敛到「src/core/entity-highlighter.ts」的 CHARACTER_COLOR / LORE_COLORS，API route、正文高亮 span、表头图例三者共用，消除此前 API 复制硬编码导致的配色漂移",
+          "表头图例：正文上方新增固定色图例行（角色 + 世界书各分类，色块 + 中文标签），一眼看懂每种颜色代表哪类实体，与「本章实体」彩色徽章互补（徽章是本章实际涉及、图例是全局色卡分配）",
+          "正文点击跳转：高亮 span 现带 data-entity-id 并 role=button / tabIndex 可聚焦，MarkdownViewer 新增 onEntityClick 容器层事件代理，点击正文内被高亮实体名即打开其设定界面（角色→角色编辑器、世界书→世界书编辑器），复用 CenterPanel 既有的 onEditCharacter / onEditLore；globals.css 统一 hover / focus 浅底高亮（去旧角色蓝硬编码）",
+          "颜色引擎补 id 透传：EntityHighlight / EntityRaw / EntityMatch 加 id 字段，buildEntityMapFromData 与 findEntitiesInText 透传 id，rehype 插件把 id 写入 span 的 data-entity-id，支撑点击跳转；固定色纯展示不引入额外状态，与「不需要别的」约束一致",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.80",
     date: "2026-08-04",

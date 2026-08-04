@@ -49,7 +49,7 @@ function findEntityRanges(
   return matches.map((m) => ({
     start: m.start,
     end: m.end,
-    entity: { name: m.name, color: m.color, type: m.type, category: m.category },
+    entity: { name: m.name, color: m.color, type: m.type, category: m.category, id: m.id },
   }));
 }
 
@@ -88,7 +88,10 @@ function splitTextNode(
         "aria-label": `${typeLabel}：${r.entity.name}`,
         "data-entity-name": r.entity.name,
         "data-entity-type": r.entity.type,
+        ...(r.entity.id ? { "data-entity-id": r.entity.id } : {}),
         ...(r.entity.category ? { "data-entity-category": r.entity.category } : {}),
+        role: "button",
+        tabIndex: 0,
       },
       children: [{ type: "text", value: r.entity.name }],
     });
