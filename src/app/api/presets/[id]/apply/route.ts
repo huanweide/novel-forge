@@ -5,6 +5,44 @@ import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 60;
 
+// N5：llmConfig 子键白名单——取「运行期实际消费的键 ∪ LLMConfig 接口规范键 ∪ 内置预设已知键」并集，
+// 仅这些键允许进入 llmConfig，未知键一律丢弃，避免预设 content 摊平污染配置。
+const LLM_CONFIG_KEYS: ReadonlySet<string> = new Set([
+  // 运行期 buildProjectOverrides 及生成端点实际读取的键
+  "model", "baseUrl", "baseURL", "apiKey",
+  "temperature", "defaultTemperature", "topP", "defaultTopP",
+  "writerModel", "extractorModel", "povType",
+  "dimensions", "styleTemplateId", "customStyleNotes", "customForbiddenPatterns",
+  // LLMConfig 接口规范键
+  "architectModel", "reviewerModel", "summarizeModel",
+  "maxTokensPerRequest", "contextWindowSize", "fallbackModels",
+  // 内置 api_config 示范预设使用的简写键（语义等同 maxTokensPerRequest）
+  "maxTokens",
+]);
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+// 按白名单逐层深合并：对象型子键递归合并，标量/数组直接覆盖，未知键丢弃。
+function deepMergeLLMConfig(
+  current: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...current };
+  for (const key of Object.keys(incoming)) {
+    if (!LLM_CONFIG_KEYS.has(key)) continue; // 剔除非配置键，杜绝污染
+    const inc = incoming[key];
+    const cur = current[key];
+    if (isPlainObject(inc) && isPlainObject(cur)) {
+      result[key] = deepMergeLLMConfig(cur, inc); // 仅对象型子键逐层深合并
+    } else {
+      result[key] = inc; // 标量/数组直接覆盖
+    }
+  }
+  return result;
+}
+
 // POST /api/presets/[id]/apply  { projectId }
 // 把预设内容落到项目：
 //   表格模板 → 建 LoreTable；文风 → 建/改 StyleCard；
@@ -175,15 +213,19 @@ export async function POST(
         }
       }
     } else if (preset.type === "api_config") {
-      // API 参数预设：合并到项目 llmConfig（覆盖温度/topP/模型模板等）
+      // API 参数预设：按白名单逐层深合并到项目 llmConfig（N5：仅已知子键、对象型子键深合并、剔除未知键）
       const project = await prisma.project.findUnique({ where: { id: projectId } });
       const current = ((project as any)?.llmConfig || {}) as Record<string, unknown>;
-      const merged = { ...current, ...content };
+      const incoming = (isPlainObject(content) ? content : {}) as Record<string, unknown>;
+      const merged = deepMergeLLMConfig(current, incoming);
       await prisma.project.update({
         where: { id: projectId },
         data: { llmConfig: merged as any },
       });
       created.push({ kind: "api_config", name: `API参数:${(content.model || content.temperature) ?? "覆盖"}` });
+    } else {
+      // N6：未知/新版本 type 穿透所有分支，杜绝静默 no-op 仍写 appliedPresets/downloads
+      return NextResponse.json({ error: "未知预设类型" }, { status: 400 });
     }
 
     // —— F5：记录已应用预设到 project.appliedPresets（配置中心追踪/移除用）——

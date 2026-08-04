@@ -252,3 +252,42 @@ describe("P1-A/P1-D 全跳过 error 结构化 + 脏标记清除", () => {
     expect(second.failed).toBe(1);
   });
 });
+
+// ─── P1-C 汇总 skippedOps（丢失的写入与 warning 绑定）───
+describe("P1-C 汇总 skippedOps（丢失的写入与 warning 绑定）", () => {
+  it("含无效 update 的章节 → fillAllResult.skippedOps 非空且 reason 与 warning 文本一致", async () => {
+    let call = 0;
+    (globalThis as any).fetch = vi.fn(async () => {
+      call++;
+      const content =
+        call === 1
+          ? JSON.stringify({ operations: [{ table: "geo", op: "update", match: { col: "不存在列", val: "x" }, values: {} }] })
+          : JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "落地名" } }] });
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }),
+      };
+    });
+    const r = await babyloreFillAll("proj-p1c-skip");
+    expect((r as any).skippedOps?.length ?? 0).toBeGreaterThanOrEqual(1);
+    const s = (r as any).skippedOps[0];
+    expect(s.table).toBe("地点");
+    // skippedOps 与 warning 绑定一一对应：warning 文本包含同一 reason 关键字
+    expect(s.reason).toContain("不存在列");
+    expect((r.warnings || []).join("")).toContain("不存在列");
+  });
+});
+
+// ─── P1-F 写入行附加 _src/_ts 溯源 ───
+describe("P1-F 写入行附加 _src/_ts 溯源", () => {
+  it("insert → 落库 rows 含 _src(ch?:batch?) 与 _ts(ISO 时间)", async () => {
+    mockFetch(JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "新地点" } }] }));
+    await babyloreFill("proj-p1f", CHAPTER);
+    const written = updateCalls[0].data.rows as any[];
+    const row = written.find((r: any) => r.name === "新地点");
+    expect(row).toBeTruthy();
+    expect(row._src).toMatch(/^ch\?:batch/);
+    expect(typeof row._ts).toBe("string");
+    expect(row._ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});

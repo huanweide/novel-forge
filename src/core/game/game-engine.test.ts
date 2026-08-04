@@ -71,6 +71,22 @@ describe("applyItemChanges —— 按 name+owner 隔离（阿游 P1）", () => {
     expect(zh?.quantity).toBe(1);
     expect(res.find((i: any) => i.owner === "李尘")?.quantity).toBe(1);
   });
+
+  it("未知动词默认当 gain 处理（不静默丢物，阿游 N3）", () => {
+    const res = applyItemChanges([], [{ operation: "拾取", name: "龙髓石", quantity: 2 }], 1);
+    expect(res.length).toBe(1);
+    expect(res[0].name).toBe("龙髓石");
+    expect(res[0].quantity).toBe(2);
+  });
+
+  it("出售/交换类安全跳过、不入库（阿游 N3）", () => {
+    const res = applyItemChanges(
+      [{ name: "宝物", quantity: 1, owner: "主角" } as any],
+      [{ operation: "出售", name: "宝物", quantity: 1, owner: "主角" }],
+      1
+    );
+    expect(res.length).toBe(1); // 未新增也未移除（出售不计入背包）
+  });
 });
 
 // ─── P0-2：abort 后对账回拉使轮次/背包与后端权威态一致 ──────────

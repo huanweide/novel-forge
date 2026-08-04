@@ -42,6 +42,7 @@ async function mergeOneBatch(
   pairs: MergePair[],
   globalContext: string,
   type: "char" | "lore",
+  batchNames?: string[],
 ): Promise<Record<string, unknown>[] | null> {
   const settings = await getSettings();
   const baseURL = settings.baseUrl;
@@ -55,10 +56,14 @@ async function mergeOneBatch(
   ).join("\n\n---\n\n");
 
   const isChar = type === "char";
+  // F3：拼接本批聚焦名称清单（邻近名称），与紧凑全局名索引互补，降低逐批冗余同时不丢本批上下文
+  const batchFocus = Array.isArray(batchNames) && batchNames.length > 0
+    ? `\n\n【本批聚焦合并对象】${batchNames.join("、")}`
+    : "";
   const prompt = `合并以下${pairs.length}对${isChar ? "角色卡" : "世界书词条"}。核心理念：**求同存异**。
 
 【全局上下文——所有扩展必须基于此】
-${globalContext}
+${globalContext}${batchFocus}
 
 【合并对象】
 ${pairsText}
@@ -247,38 +252,34 @@ function buildGlobalContext(
   allLore: { title: string; category: string; content: string }[],
   style: { styleDescription?: string; povType?: string; narrativeDistance?: string } | null,
 ): string {
-  const charList = allChars.slice(0, 50).map(c => {
-    const p = typeof c.personality === "object" && c.personality !== null && !Array.isArray(c.personality)
-      ? (c.personality as Record<string, unknown>).dominant || ""
-      : Array.isArray(c.personality) ? (c.personality as string[]).join("、") : "";
-    const a = typeof c.appearance === "object" && c.appearance !== null
-      ? [ (c.appearance as Record<string, unknown>).hair, (c.appearance as Record<string, unknown>).attire ].filter(Boolean).join("，")
-      : "";
-    return `${c.name}(${c.role})${p ? " 性格:" + String(p).slice(0, 30) : ""}${a ? " 外貌:" + a : ""}`;
-  }).join("\n");
-
-  const loreList = allLore.slice(0, 30).map(l =>
-    `[${l.title}](${l.category}) ${l.content.slice(0, 80)}`
-  ).join("\n");
+  // F3：全局上下文改为「紧凑名索引」——仅列 名称+角色/类别 并去重，去掉原性格/外貌/正文细节。
+  // 体积从上千字符/批 降到仅名称；且覆盖全部角色/词条（不再 slice(0,50/30) 截断 → 修复后段上下文丢失）。
+  // 逐批重复发送的仍是同一份小体积名索引；批次聚焦清单由 mergeOneBatch 按本批名称单独拼接。
+  const seenChar = new Set<string>();
+  const charNames = allChars
+    .map(c => `${c.name}(${c.role || "supporting"})`)
+    .filter(n => { const k = n.toLowerCase(); if (seenChar.has(k)) return false; seenChar.add(k); return true; });
+  const seenLore = new Set<string>();
+  const loreNames = allLore
+    .map(l => `[${l.title}](${l.category || "custom"})`)
+    .filter(n => { const k = n.toLowerCase(); if (seenLore.has(k)) return false; seenLore.add(k); return true; });
 
   const styleText = style
     ? `文风: ${style.styleDescription?.slice(0, 80) || ""} | POV: ${style.povType || ""} | 叙事距离: ${style.narrativeDistance || ""}`
     : "（未设定）";
 
-  return `【作品全局上下文——你的所有扩展必须基于此】
+  return `【作品全局上下文——角色/词条名索引（仅列名称，供合并时排查重名与区分度，不含正文细节）】
 
 作品：${project.name}
 类型：${project.genre.join("、")}
 总纲：${project.synopsis?.slice(0, 200) || "（无）"}
+风格：${styleText}
 
-=== 已有角色（${allChars.length}人）===
-${charList || "（暂无）"}
+=== 全部已有角色（${charNames.length}人）===
+${charNames.join("、") || "（暂无）"}
 
-=== 世界书词条（${allLore.length}条）===
-${loreList || "（暂无）"}
-
-=== 风格卡 ===
-${styleText}`;
+=== 全部世界书词条（${loreNames.length}条）===
+${loreNames.join("、") || "（暂无）"}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -430,7 +431,7 @@ export async function POST(request: Request) {
         if (charMergePairs.length > 0) {
           send({ type: "progress", stage: "chars-merge", message: `Flash 分批合并角色... 0/${charTotalBatches} 批 (共${charMergePairs.length}个)`, batch: 0, totalBatches: charTotalBatches, done: 0 });
           charAiResults = await Promise.all(charBatches.map(async (batch, idx) => {
-            const aiResult = await mergeOneBatch(batch, globalContext, "char");
+            const aiResult = await mergeOneBatch(batch, globalContext, "char", batch.map(p => p.name));
             send({ type: "progress", stage: "chars-merge", message: `第${idx + 1}/${charTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
             return aiResult;
           }));
@@ -488,7 +489,7 @@ export async function POST(request: Request) {
         if (loreMergePairs.length > 0) {
           send({ type: "progress", stage: "lore-merge", message: `Flash 分批合并词条... 0/${loreTotalBatches} 批 (共${loreMergePairs.length}个)`, batch: 0, totalBatches: loreTotalBatches, done: 0 });
           loreAiResults = await Promise.all(loreBatches.map(async (batch, idx) => {
-            const aiResult = await mergeOneBatch(batch, globalContext, "lore");
+            const aiResult = await mergeOneBatch(batch, globalContext, "lore", batch.map(p => p.name));
             send({ type: "progress", stage: "lore-merge", message: `第${idx + 1}/${loreTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
             return aiResult;
           }));

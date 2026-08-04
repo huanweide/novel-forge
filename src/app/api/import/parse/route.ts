@@ -236,9 +236,11 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
 
       const data = await res.json().catch(() => null);
       const raw = data?.choices?.[0]?.message?.content || "";
-      // 监控记账：每次（成功）Flash 调用都记账
-      const promptTokens = countTokens(systemPrompt + "\n" + userPrompt);
-      const completionTokens = countTokens(raw);
+      // F2：监控记账优先用供应商真实 usage（prompt/completion tokens），缺失才退回 tokenizer 估算，
+      // 与 import/commit mergeOneBatch 的真实 usage 口径统一，避免中文分词估算偏差导致成本失真。
+      const usage = (data as any)?.usage;
+      const promptTokens = usage?.prompt_tokens ?? usage?.promptTokens ?? countTokens(systemPrompt + "\n" + userPrompt);
+      const completionTokens = usage?.completion_tokens ?? usage?.completionTokens ?? countTokens(raw);
       recordLlmCall({ model: cfg.model, role: "import_parse", promptTokens, completionTokens, totalTokens: promptTokens + completionTokens, baseURL: cfg.baseURL });
       if (!raw || raw.trim().length < 20) return { raw: "", error: `${cfg.label} 返回空内容`, sec: parseFloat(sec) };
       return { raw, sec: parseFloat(sec) };
@@ -370,25 +372,45 @@ ${chunkText}
           await new Promise(r => setTimeout(r, 100));
 
           let totalChars = 0;
-          for (let ci = 0; ci < chunks.length; ci++) {
-            const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
-            send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
+          // F4：限流并发解析各块（4 路 Promise.all 池），压短总耗时避免超 maxDuration(300s) 被强杀。
+          // 逐块进度按完成顺序回报（不丢块、不重复）；最终按块序聚合，保证角色/词条完整。
+          const CONCURRENCY = 4;
+          const chunkResults: Record<number, Record<string, unknown>[]> = {};
+          let doneCount = 0;
+          let nextIdx = 0;
+          const workers: Promise<void>[] = [];
+          const workerCount = Math.min(CONCURRENCY, chunks.length);
+          for (let w = 0; w < workerCount; w++) {
+            workers.push((async () => {
+              while (nextIdx < chunks.length) {
+                const ci = nextIdx++;
+                const chunkInfo = `[第${ci + 1}/${chunks.length}块]`;
+                send({ type: "progress", stage: `chunk-${ci}`, message: `📡 第${ci + 1}/${chunks.length}块分析中...`, pct: 5 + Math.round((ci / chunks.length) * 75) });
 
-            const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 32768);
-            if (res.error) {
-              failedChunks++;
-              send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
-              continue;
-            }
-            try {
-              const p = parseJSON(res.raw);
-              const pc = Array.isArray(p.characters) ? p.characters.map(normChar).filter(c => c.name) : [];
-              chars.push(...pc);
-              totalChars += pc.length;
-            } catch (e) {
-              failedChunks++;
-              send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块JSON解析失败`, pct: 5 + Math.round(((ci + 1) / chunks.length) * 75) });
-            }
+                const res = await callFlash(dsConfigA, charSystemPrompt, buildCharPrompt(chunks[ci], chunkInfo), 32768);
+                if (res.error) {
+                  failedChunks++;
+                  send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块失败: ${res.error}`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
+                } else {
+                  try {
+                    const p = parseJSON(res.raw);
+                    const pc = Array.isArray(p.characters) ? p.characters.map(normChar).filter(c => c.name) : [];
+                    chunkResults[ci] = pc;
+                    totalChars += pc.length;
+                    send({ type: "progress", stage: `chunk-${ci}-ok`, message: `✅ 第${ci + 1}块完成 · ${pc.length}角色`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
+                  } catch (e) {
+                    failedChunks++;
+                    send({ type: "progress", stage: `chunk-${ci}-err`, message: `⚠️ 第${ci + 1}块JSON解析失败`, pct: 5 + Math.round(((doneCount + 1) / chunks.length) * 75) });
+                  }
+                }
+                doneCount++;
+              }
+            })());
+          }
+          await Promise.all(workers);
+          // 按块序聚合，确保不丢块、不重复
+          for (let ci = 0; ci < chunks.length; ci++) {
+            if (chunkResults[ci]) chars.push(...chunkResults[ci]);
           }
           send({ type: "progress", stage: "chunk-done", message: `✅ 分块完成 · ${totalChars}角色 · ${chunks.length}块`, pct: 85 });
         } else {

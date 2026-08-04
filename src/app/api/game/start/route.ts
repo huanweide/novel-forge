@@ -104,14 +104,15 @@ export async function POST(req: Request) {
       firstSeenRound: 1,
     }));
 
-    // 处理初始物品
+    // 处理初始物品（阿游 N1：写入 owner 与可携带的 category，与 processGameTurn / reconcile 对齐）
     const initialItems: any[] = [];
     for (const change of parsed.itemChanges) {
       if (change.operation === "gain") {
         initialItems.push({
           name: change.name,
           quantity: change.quantity,
-          category: "other",
+          category: change.category || "other",
+          owner: change.owner || "主角",
           source: "开场获得",
           acquiredRound: 1,
         });
@@ -149,6 +150,7 @@ export async function POST(req: Request) {
       options: finalOptions,
       newEntities: entities,
       itemChanges: parsed.itemChanges,
+      items: initialItems,
       plotProgress: parsed.plotProgress > 0 ? parsed.plotProgress : 5,
       totalWords: wordCount,
       currentRound: 1,

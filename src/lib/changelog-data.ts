@@ -25,18 +25,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.72";
+export const LATEST_VERSION = "v0.46.73";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "数字关键词边界守卫（青砚 P1）：含数字≥3字关键词（「2049年」）加数字边界，灭「12049年」误命中——公式/纪年不再被相邻数字延长串误伤",
-  "abort 语义彻底干净（阿游 P1）：流式 abort 不再被误判为 LLM 调用失败，用户停止=优雅放弃本轮，不污染回放/对账",
-  "填表死循环消除 + 正则回归修复（墨白/工坊 P1）：全跳过 error 结构化区分真无脏/误标 + 脏标记清除灭无限重填；正则 `?` 量词误杀合法可选组（如 (https?://)?）的 Round8 回归已修复",
-  "流式成本可见 + 导入幂等落库（磐石/清览/工坊 P1）：流式加 stream_options 真实 token 记账 + 默认模型进定价表成本可见；DB 锁陈旧清理灭崩溃孤儿锁；移动抽屉补对话框无障碍 + 导入并发 DB 唯一约束幂等",
+  "填表完整性闭环（墨白 4 P1）：单章填表跑归属自检 + 单 op 失败可追溯 skippedOps + 表内同名异体弱告警 + 行级溯源 _src/_ts + 清脏标记出口 API，灭软静默丢数据与无限重填残留",
+  "游戏归属/前后端对齐/主线一致（阿游 3 P1）：开局物品带 owner 灭同名混淆 + 开场背包前后端对齐 + 同义动词（拾取/佩戴/吃掉…）不再静默丢物",
+  "抽屉无障碍闭环 + 导入性能/成本口径（清览/磐石 4 P1）：explore 右抽屉补 role=dialog/焦点陷阱/ESC 闭环；import 用真实 usage 记账 + globalContext 去冗余 + 分块并发解 300s 超时",
+  "建卡去重 + 预设守卫（青砚/工坊 P2）：apply-extraction 精确+繁简变体去重防重复卡；预设 api_config 深合并 + 未知 type 返 400 杜绝静默失败",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.73",
+    date: "2026-08-04",
+    title: "会员股东 Round 10 复验闭环：填表完整性（单章自检/skippedOps/同名异体告警/行级溯源/清脏标记）+ 游戏归属与前后端对齐 + 抽屉无障碍闭环 + 导入真实记账与并发 + 建卡去重/预设守卫（tsc 零错误）",
+    sections: [
+      {
+        label: "填表完整性闭环（墨白 4 P1）",
+        items: [
+          "babyloreFill 落库后跑 selfCheckFill 回传归属/跨表 issues（单章填表主链路补自检，灭写章自动填表零错名缺失）；applyOps 收集 skippedOps:{op,reason,table} 使单 op 失败可追溯不静默丢数据；selfCheckFill 增补表内同名异源弱告警（不静默合并撞名不同实体）；写入行附 _src（章节+批次）与 _ts 溯源（rows 为 JSON 列，不改 schema）；新增 /api/babylore/clear-filled 清脏标记出口 + tables 页展示 fillErrorMeta",
+        ],
+      },
+      {
+        label: "游戏归属/前后端对齐/主线一致（阿游 3 P1）",
+        items: [
+          "开局 initialItems 写入 owner（与 processGameTurn 对齐）灭同名物品混淆；开局响应补 items 且前端 handleStart 用后端权威背包预建，开场即前后端一致不必等首次 abort 对账；OP_MAP 扩展同义动词（拾取/佩戴/吃掉/丢掉…）且未知动词 console.warn 默认当 gain，灭叙事有物背包无记录",
+        ],
+      },
+      {
+        label: "抽屉无障碍闭环（清览 P1）",
+        items: [
+          "explore 右抽屉（已采纳面板）补 ref={rightDrawerRef}+role=dialog+aria-modal+aria-labelledby+sr-only 标题，与左抽屉对齐，焦点陷阱/ESC 真正生效，闭环 Round9 漏修的最后一抽屉",
+        ],
+      },
+      {
+        label: "导入真实记账 + 去冗余 + 并发（磐石 3 P1）",
+        items: [
+          "import/parse 成功分支改用供应商真实 data.usage 记账（缺失退回分词估算），与 commit/mergeOneBatch 口径统一；buildGlobalContext 仅名称索引去细节、mergeOneBatch 拼本批聚焦清单，灭大世界逐批重复发送 30 万+ token 冗余与后段丢失；分块解析改 4 路限流并发、按完成顺序回报 SSE 进度，解超大书超 300s 被强杀；monitor since 改动态生成",
+        ],
+      },
+      {
+        label: "建卡去重（青砚 P2）",
+        items: [
+          "apply-extraction 建角色卡/词条前先 findFirst 精确查重并复用 isSimilarName 做繁简/错字变体去重，灭重复角色卡污染三卡召回与 OOC 上下文",
+        ],
+      },
+      {
+        label: "预设守卫（工坊 P2）",
+        items: [
+          "预设 apply 的 api_config 由整体摊平改按 llmConfig 子键白名单逐层深合并、剔除非配置键，灭污染；未知 type 改返 400 杜绝静默 no-op 仍写 appliedPresets/downloads，提升预设套用可信度",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.72",
     date: "2026-08-04",

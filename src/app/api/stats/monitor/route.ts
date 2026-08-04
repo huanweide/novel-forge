@@ -95,7 +95,7 @@ export async function GET(request: Request) {
       }),
     ]);
     const llmUsage = {
-      since: "2026-08-02",
+      since: usageMonthStart.toISOString().slice(0, 10),
       totalCalls: llmAgg._count,
       totalPromptTokens: llmAgg._sum.promptTokens || 0,
       totalCompletionTokens: llmAgg._sum.completionTokens || 0,

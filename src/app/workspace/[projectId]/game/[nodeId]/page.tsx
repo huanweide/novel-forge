@@ -171,7 +171,7 @@ export default function GamePage() {
         lastNarrative: data.narrative,
         options: data.options || [],
         entities: data.newEntities || [],
-        items: [],
+        items: data.items ?? [],
       }));
 
       setTurns([

@@ -31,6 +31,15 @@ export interface FillResult {
   applied: number;
   error?: string;
   warnings?: string[]; // 疑似错误地名/名称提示
+  /** P1-B（墨白）：落库后跑 selfCheckFill 的疑似问题（地名/空值/跨表/表内异体），供 UI/诊断 */
+  selfCheckIssues?: SelfCheckIssue[];
+}
+
+/** P1-C（墨白）：被跳过的无效 op（丢失的写入），与 warning 一一对应 */
+export interface SkippedOp {
+  op: any;
+  reason: string;
+  table: string;
 }
 
 export interface FillErrorMeta {
@@ -54,6 +63,8 @@ export interface FillAllResult {
   error?: string;
   /** P1-A（墨白）：全跳过分支携带结构化元数据，便于 UI/诊断区分「真无脏」与「旧版误标脏标记」 */
   fillErrorMeta?: FillErrorMeta;
+  /** P1-C（墨白）：各章被跳过的无效 op（丢失的写入），与 warning 绑定一一对应 */
+  skippedOps?: SkippedOp[];
   warnings: string[]; // 各章疑似错误地名
   selfCheck: SelfCheckResult;
 }
@@ -94,6 +105,24 @@ export function markChapterFilled(projectId: string, nodeId: string) {
   set.add(nodeId);
   m[projectId] = Array.from(set);
   saveFilled(m);
+}
+
+/** P2-①（墨白）：清理「已填」脏标记（全清或单章），供 UI「清理脏标记并重填」出口。返回清除条目数。 */
+export function clearFilledChapters(projectId: string, nodeId?: string): number {
+  const m = loadFilled();
+  const list = m[projectId];
+  if (!list || list.length === 0) return 0;
+  if (nodeId) {
+    const before = list.length;
+    m[projectId] = list.filter((id) => id !== nodeId);
+    if (m[projectId].length === 0) delete m[projectId];
+    saveFilled(m);
+    return before - (m[projectId]?.length ?? 0);
+  }
+  const cleared = list.length;
+  delete m[projectId];
+  saveFilled(m);
+  return cleared;
 }
 
 // ─── 工具 ──────────────────────────────────────────────────
@@ -186,10 +215,11 @@ async function runFillForText(
   tables: TableDef[],
   llm: LlmCreds,
   tableKeys?: string[],
-): Promise<{ ok: boolean; operations: number; applied: number; warnings: string[]; error?: string }> {
+  srcLabel?: string,
+): Promise<{ ok: boolean; operations: number; applied: number; warnings: string[]; skippedOps: SkippedOp[]; error?: string }> {
   const filteredTables = tableKeys && tableKeys.length ? tables.filter((t) => tableKeys.includes(t.key)) : tables;
   if (filteredTables.length === 0) {
-    return { ok: false, operations: 0, applied: 0, warnings: [], error: "没有匹配的表格" };
+    return { ok: false, operations: 0, applied: 0, warnings: [], skippedOps: [], error: "没有匹配的表格" };
   }
 
   const tablesText = buildTablesText(filteredTables);
@@ -240,7 +270,7 @@ ${chapterText.slice(0, 12000)}
         lastErr = "模型未返回任何有效操作";
         if (attempt < 3) continue;
       }
-      const r = await applyOps(filteredTables, ops, chapterText);
+      const r = await applyOps(filteredTables, ops, srcLabel || "ch?:batch?");
       const warnings = [...r.warnings, ...buildWarnings(r.appliedNames, chapterText)];
       // P0-3：以「实际落地数 applied」为完成门槛——空 ops / 全失效 ops 的章节
       // 须视为失败（ok:false），使其可重试而非被永久标记「已填」（防重复机制反噬）。
@@ -261,6 +291,7 @@ ${chapterText.slice(0, 12000)}
         operations: ops.length,
         applied: r.applied,
         warnings,
+        skippedOps: r.skippedOps,
         error: r.applied > 0 ? undefined : lastErr || "未落地任何事实",
       };
     } catch (e) {
@@ -268,18 +299,20 @@ ${chapterText.slice(0, 12000)}
       if (attempt < 3) continue;
     }
   }
-  return { ok: false, operations: 0, applied: 0, warnings: [], error: lastErr };
+  return { ok: false, operations: 0, applied: 0, warnings: [], skippedOps: [], error: lastErr };
 }
 
 async function applyOps(
   tables: TableDef[],
   ops: LoreTableOp[],
-  _chapterText: string,
-): Promise<{ applied: number; appliedNames: { table: string; value: string }[]; warnings: string[] }> {
+  srcLabel: string,
+): Promise<{ applied: number; appliedNames: { table: string; value: string }[]; warnings: string[]; skippedOps: SkippedOp[] }> {
   const byKey = new Map(tables.map((t) => [t.key, t]));
   let applied = 0;
   const appliedNames: { table: string; value: string }[] = [];
   const warnings: string[] = [];
+  const skippedOps: SkippedOp[] = [];
+  const now = new Date().toISOString();
 
   for (const op of ops) {
     const t = byKey.get(op.table);
@@ -298,12 +331,13 @@ async function applyOps(
           ? rows.findIndex((r: any) => String(r[idCol] ?? "").toLowerCase() === String(newVal).toLowerCase())
           : -1;
       if (existingIdx >= 0) {
-        rows[existingIdx] = { ...rows[existingIdx], ...(op.values || {}) };
+        // P1-F（墨白）：去重合并时同步刷新溯源标记（最后写入来源）
+        rows[existingIdx] = { ...rows[existingIdx], ...(op.values || {}), _src: srcLabel, _ts: now };
         applied++;
         if (newVal != null) appliedNames.push({ table: t.name, value: String(newVal) });
       } else {
         const maxId = rows.reduce((m: number, r: any) => Math.max(m, Number(r.row_id) || 0), 0);
-        const row: any = { row_id: maxId + 1, ...(op.values || {}) };
+        const row: any = { row_id: maxId + 1, ...(op.values || {}), _src: srcLabel, _ts: now };
         rows.push(row);
         applied++;
         if (newVal != null) appliedNames.push({ table: t.name, value: String(newVal) });
@@ -315,12 +349,14 @@ async function applyOps(
       // 破坏防重复/零错名。此处无效则跳过该 op，不落库、不插伪行（P1-①）。
       if (!col || !cols.some((c) => c.key === col)) {
         warnings.push(`表「${t.name}」update 缺少有效 match 列「${String(col || "")}」，已跳过该操作（不插伪行）`);
+        skippedOps.push({ op, reason: `update 缺少有效 match 列「${String(col || "")}」`, table: t.name });
         continue;
       }
       // 大小写不敏感匹配（与 insert 去重一致），避免「青龙镇」/「青龙鎮」因字形/大小写漏匹配（墨白 F5）
       const idx = rows.findIndex((r: any) => String(r[col] ?? "").toLowerCase() === String(val ?? "").toLowerCase());
       if (idx >= 0) {
-        rows[idx] = { ...rows[idx], ...(op.values || {}) };
+        // P1-F（墨白）：命中即刷新溯源标记
+        rows[idx] = { ...rows[idx], ...(op.values || {}), _src: srcLabel, _ts: now };
         applied++;
         const uv = (op.values || {})[idCol] ?? val;
         if (uv != null) appliedNames.push({ table: t.name, value: String(uv) });
@@ -329,10 +365,11 @@ async function applyOps(
         // 直接新建会造「伪行」（身份列空缺/撞名），故记 warning 并跳过，不静默插伪行。
         if (col !== idCol) {
           warnings.push(`表「${t.name}」update 按「${String(col)}」未命中任何行，且该列非身份列，已跳过（不静默新建伪行）`);
+          skippedOps.push({ op, reason: `update 按「${String(col)}」未命中且该列非身份列`, table: t.name });
           continue;
         }
         const maxId = rows.reduce((m: number, r: any) => Math.max(m, Number(r.row_id) || 0), 0);
-        rows.push({ row_id: maxId + 1, [col]: val, ...(op.values || {}) });
+        rows.push({ row_id: maxId + 1, [col]: val, ...(op.values || {}), _src: srcLabel, _ts: now });
         applied++;
         if (val != null) appliedNames.push({ table: t.name, value: String(val) });
       }
@@ -343,6 +380,7 @@ async function applyOps(
       // 此处无效则整体跳过该 op，不删除任何行（P1-①）。
       if (!col || !cols.some((c) => c.key === col)) {
         warnings.push(`表「${t.name}」delete 缺少有效 match 列「${String(col || "")}」，已跳过该操作（不删除任何行）`);
+        skippedOps.push({ op, reason: `delete 缺少有效 match 列「${String(col || "")}」`, table: t.name });
         continue;
       }
       const before = rows.length;
@@ -355,7 +393,7 @@ async function applyOps(
 
     await prisma.loreTable.update({ where: { id: t.id }, data: { rows } });
   }
-  return { applied, appliedNames, warnings };
+  return { applied, appliedNames, warnings, skippedOps };
 }
 
 /** 填后自检：被填名称若未出现在正文中，疑似错误地名/名称 */
@@ -381,7 +419,7 @@ function buildWarnings(appliedNames: { table: string; value: string }[], chapter
 export async function babyloreFill(
   projectId: string,
   chapterText: string,
-  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null },
+  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null; chapterOrder?: number; batchId?: string },
 ): Promise<FillResult> {
   // 空内容守卫（P2-④）：正文为空则不触发 LLM 填表，避免空跑/误插空行。
   // safeFillAfterWriting 经本入口调用，故一并覆盖，无需重复判断。
@@ -424,13 +462,17 @@ export async function babyloreFill(
   }));
 
   const llm: LlmCreds = { baseURL, apiKey, model };
-  const r = await runFillForText(chapterText, tables, llm, options?.tableKeys);
+  const srcLabel = `ch${options?.chapterOrder ?? "?"}:batch${options?.batchId ?? "manual"}`;
+  const r = await runFillForText(chapterText, tables, llm, options?.tableKeys, srcLabel);
+  // P1-B（墨白）：落库后跑 selfCheckFill，把疑似问题（地名/空值/跨表/表内异体）合并进结果，供 UI/诊断。
+  const selfCheck = await selfCheckFill(projectId);
   return {
     ok: r.ok,
     operations: r.operations,
     applied: r.applied,
     error: r.error,
     warnings: r.warnings,
+    selfCheckIssues: selfCheck.issues,
   };
 }
 
@@ -508,6 +550,8 @@ export async function babyloreFillAll(
   let applied = 0;
   let failedChapters = 0; // 未达 Round6 完成门槛（ok && applied>0）的章节数
   const warnings: string[] = [];
+  const allSkippedOps: SkippedOp[] = []; // P1-C：汇总各章被跳过的无效 op
+  const runBatch = String(Date.now()); // 本轮一键填表批次号，写入行 _src 溯源
   const skippedNodeIds: string[] = []; // P1-A：被跳过（疑似误标）的节点 ID，供全跳过 error 携带
 
   for (const ch of chapters) {
@@ -524,11 +568,13 @@ export async function babyloreFillAll(
       }
       continue;
     }
-    const r = await runFillForText(ch.content || "", tables, llm, options?.tableKeys);
+    const srcLabel = `ch${ch.order}:batch${runBatch}`;
+    const r = await runFillForText(ch.content || "", tables, llm, options?.tableKeys, srcLabel);
     processed++;
     operations += r.operations;
     applied += r.applied;
     for (const w of r.warnings) warnings.push(`第${ch.order}章《${ch.title || "未命名"}》：${w}`);
+    for (const s of r.skippedOps) allSkippedOps.push(s);
     // 仅成功章计入已填集合——失败章必须留待重试，否则被永久标记跳过（磐石 P0 修复）。
     // P0-3：门槛由 r.ok 提升为 r.ok && r.applied>0，空 ops/全失效章不标已填，留待重试。
     if (r.ok && r.applied > 0) {
@@ -582,6 +628,7 @@ export async function babyloreFillAll(
     applied,
     error,
     fillErrorMeta,
+    skippedOps: allSkippedOps,
     warnings,
     selfCheck,
   };
@@ -640,6 +687,35 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
         const cat = t.category || "custom";
         if (!catValueSet.has(cat)) catValueSet.set(cat, new Set());
         catValueSet.get(cat)!.add(sl);
+      }
+    }
+    // P1-E（墨白）：表内同名异源弱告警 —— 同表内相同身份列值出现在 ≥2 行、
+    // 且来源章节（_src 中的 ch 序号）不同 → 疑似异体被分别落行、未被静默合并，提示人工核对。
+    // 不动 insert/update 去重逻辑（避免回归），仅“报告”不“自动合并”。
+    {
+      const nameSrc = new Map<string, { orders: Set<string>; hits: any[] }>();
+      for (const r of rows) {
+        const v = r[idCol];
+        if (v == null || String(v).trim() === "") continue;
+        const sl = String(v).trim().toLowerCase();
+        const src = typeof r._src === "string" ? r._src : "";
+        const order = src.startsWith("ch") ? src.split(":")[0] : src || "?";
+        if (!nameSrc.has(sl)) nameSrc.set(sl, { orders: new Set(), hits: [] });
+        const e = nameSrc.get(sl)!;
+        e.orders.add(order);
+        e.hits.push(r);
+      }
+      for (const [val, info] of nameSrc) {
+        if (info.hits.length >= 2 && info.orders.size >= 2) {
+          for (const r of info.hits) {
+            issues.push({
+              table: t.name,
+              row: r.row_id ?? "?",
+              value: val,
+              issue: "表内同名疑似异体，未静默合并，请人工核对",
+            });
+          }
+        }
       }
     }
   }

@@ -7,6 +7,7 @@
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
+import { isSimilarName } from "@/lib/entity-auto-creator";
 import { NextResponse } from "next/server";
 
 export const maxDuration = 60;
@@ -47,6 +48,49 @@ export async function POST(request: Request) {
     const { projectId, nodeId, chapterTitle, selected } = await request.json() as ApplyRequest;
     if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
+    // ── G4+G5 查重支持数据 ──
+    // G5 变体比对用：一次性拉取项目已有角色名 + 世界书标题（繁简/错别字归一在 isSimilarName 内）
+    let variantNames: string[] = [];
+    try {
+      const [ec, el] = await Promise.all([
+        prisma.characterCard.findMany({ where: { projectId }, select: { name: true } }),
+        prisma.lorebookEntry.findMany({ where: { projectId }, select: { title: true } }),
+      ]);
+      variantNames = [...ec.map((c) => c.name), ...el.map((l) => l.title)];
+    } catch {
+      variantNames = []; // 查重数据拉取失败：后续逐条放行建卡
+    }
+
+    /** G4 精确去重：大小写不敏感匹配已有角色名/世界书标题，返回类型与 id */
+    async function findExactDuplicate(
+      name: string,
+    ): Promise<{ kind: "character" | "lore"; id: string } | null> {
+      try {
+        const char = await prisma.characterCard.findFirst({
+          where: { projectId, name: { equals: name, mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (char) return { kind: "character", id: char.id };
+        const lore = await prisma.lorebookEntry.findFirst({
+          where: { projectId, title: { equals: name, mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (lore) return { kind: "lore", id: lore.id };
+        return null;
+      } catch {
+        return null; // 查重异常放行
+      }
+    }
+
+    /** G5 变体去重：与已有名称构成繁简/错别字变体（如「青龙镇」vs「青龍镇」「青龙填」） */
+    function isVariantDuplicate(name: string): boolean {
+      try {
+        return variantNames.some((n) => isSimilarName(n, name));
+      } catch {
+        return false; // 查重异常放行
+      }
+    }
+
     const results: string[] = [];
     let charsCreated = 0, charsUpdated = 0;
     let loreCreated = 0, loreUpdated = 0;
@@ -62,6 +106,34 @@ export async function POST(request: Request) {
       if (c.suggestion === "ignore") continue;
 
       if (c.suggestion === "create" && c.isNew) {
+        // ── G4+G5 去重：已存在同名（精确/变体）则跳过新建、复用已有记录 ──
+        const exact = await findExactDuplicate(c.name);
+        if (exact?.kind === "character") {
+          // 复用已有角色卡，按需追加经历 timeline
+          if (c.experience) {
+            const existing = await prisma.characterCard.findUnique({
+              where: { id: exact.id },
+              select: { timeline: true },
+            });
+            const timeline = (existing?.timeline || []) as any[];
+            timeline.push({ chapter: chapterTitle, type: "出场", event: c.experience });
+            await prisma.characterCard.update({
+              where: { id: exact.id },
+              data: { timeline: timeline as any },
+            });
+          }
+          results.push(`角色「${c.name}」已存在（复用，跳过重复建卡）`);
+          continue;
+        }
+        if (exact?.kind === "lore") {
+          // 该名称已作为世界书条目存在，避免重复建角色卡
+          results.push(`角色「${c.name}」与世界书条目重名（跳过重复建卡）`);
+          continue;
+        }
+        if (isVariantDuplicate(c.name)) {
+          results.push(`角色「${c.name}」似已存在繁简/变体（跳过重复建卡）`);
+          continue;
+        }
         // 新建角色卡
         await prisma.characterCard.create({
           data: {
@@ -74,6 +146,7 @@ export async function POST(request: Request) {
             currentStatus: "alive",
           },
         });
+        variantNames.push(c.name); // 批次内去重
         charsCreated++;
         results.push(`新建角色「${c.name}」`);
       } else if (c.suggestion === "update" && c.existingCardId) {
@@ -127,6 +200,16 @@ export async function POST(request: Request) {
         if ((item as any).parent) keys.push((item as any).parent);
 
         if (item.suggestion === "create" && item.isNew) {
+          // ── G4+G5 去重：已存在同名（精确/变体）则跳过新建、复用已有记录 ──
+          const exact = await findExactDuplicate(item.name);
+          if (exact) {
+            results.push(`新建${group.label}「${item.name}」已存在同名（跳过重复建卡）`);
+            continue;
+          }
+          if (isVariantDuplicate(item.name)) {
+            results.push(`新建${group.label}「${item.name}」似已存在繁简/变体（跳过重复建卡）`);
+            continue;
+          }
           await prisma.lorebookEntry.create({
             data: {
               projectId,
@@ -137,6 +220,7 @@ export async function POST(request: Request) {
               enabled: true,
             },
           });
+          variantNames.push(item.name); // 批次内去重
           loreCreated++;
           results.push(`新建${group.label}「${item.name}」→ 世界书`);
         } else if (item.suggestion === "update" && item.existingEntryId) {

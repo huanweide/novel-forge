@@ -78,6 +78,35 @@ export function applyItemChanges(
           updatedItems[idx] = { ...updatedItems[idx], quantity: q };
         }
       }
+    } else {
+      // 阿游 N3：未知动词兜底。
+      // 「出售/交换」类属正常流转（已从背包移除或换出），安全跳过、不入库——不属于丢物。
+      // 其余真正未知动词：无提示丢物风险，告警并默认当 gain 处理，保证叙事有物、背包有记录。
+      const SAFE_SKIP = new Set(["出售", "售卖", "交换", "交易"]);
+      if (SAFE_SKIP.has(change.operation)) {
+        console.warn(`[applyItemChanges] 已知流转操作「${change.operation}」跳过入库（不计入背包）：${change.name}`);
+      } else {
+        console.warn(
+          `[applyItemChanges] 未知操作「${change.operation}」，无映射→默认按 gain 处理以避免静默丢物：${change.name}`
+        );
+        const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+        if (idx >= 0) {
+          updatedItems[idx] = {
+            ...updatedItems[idx],
+            quantity: updatedItems[idx].quantity + (change.quantity || 1),
+            owner: updatedItems[idx].owner || owner,
+          };
+        } else {
+          updatedItems.push({
+            name: change.name,
+            quantity: change.quantity || 1,
+            category: "other",
+            source: `第${round}轮获得`,
+            acquiredRound: round,
+            owner,
+          });
+        }
+      }
     }
   }
   return updatedItems;

@@ -179,6 +179,23 @@ export default function TablesPage() {
     } finally { setBusy(false); }
   };
 
+  // P2-①（墨白）：当全跳过分支判定为「旧版误标脏标记」时，提供「清理脏标记并重填」出口。
+  const clearDirtyAndRefill = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/babylore/clear-filled`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const d = await res.json();
+      if (res.ok && d.ok) {
+        toastSuccess(`已清理 ${d.cleared} 条脏标记，开始重填…`);
+        await runFillAll();
+      } else toastError(d.error || "清理脏标记失败");
+    } finally { setBusy(false); }
+  };
+
   const updateCell = (t: LoreTableT, rowId: number, col: string, val: string) => {
     setTables((ts) => ts.map((x) => x.id === t.id ? {
       ...x,
@@ -291,6 +308,17 @@ export default function TablesPage() {
                     </ul>
                   )}
                 </div>
+              )}
+              {fillAllResult.fillErrorMeta && (
+                <div className="mt-2 text-[var(--nv-text-muted)]">
+                  诊断类型：{fillAllResult.fillErrorMeta.kind} · 跳过节点 {fillAllResult.fillErrorMeta.nodeIds?.length || 0} 个
+                  {(fillAllResult.fillErrorMeta.nodeIds?.length || 0) > 0 && (
+                    <span className="ml-1 font-mono text-[10px]">[{fillAllResult.fillErrorMeta.nodeIds.join(", ")}]</span>
+                  )}
+                </div>
+              )}
+              {fillAllResult.fillErrorMeta?.kind === "all_skipped_mislabeled" && (
+                <button onClick={clearDirtyAndRefill} disabled={busy} className="mt-2 btn-primary text-xs py-1.5 px-3 rounded-xl disabled:opacity-50">清理脏标记并重填</button>
               )}
               <div className="mt-1 opacity-70">执行时间：{fillAllResult.at}</div>
             </div>

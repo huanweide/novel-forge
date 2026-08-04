@@ -683,7 +683,15 @@ export default function ExplorePage() {
         </main>
 
         {/* 右栏：已采纳 */}
-        <aside className={`w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-72 lg:translate-x-0 lg:transition-none`}>
+        <aside
+          ref={rightDrawerRef}
+          tabIndex={-1}
+          role={rightDrawerOpen ? "dialog" : undefined}
+          aria-modal={rightDrawerOpen ? "true" : undefined}
+          aria-labelledby={rightDrawerOpen ? rightDrawerTitleId : undefined}
+          className={`w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-72 lg:translate-x-0 lg:transition-none`}
+        >
+          <h2 id={rightDrawerTitleId} className="sr-only">已采纳</h2>
           <AdoptedContentPanel
             adopted={adopted}
             onRemove={(id) =>

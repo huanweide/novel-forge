@@ -167,6 +167,7 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
       operations: fillRes.operations,
       applied: fillRes.applied,
       error: fillRes.error || "",
+      selfCheckIssues: fillRes.selfCheckIssues,
     };
   } catch (e) {
     babylore = {

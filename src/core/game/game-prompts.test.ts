@@ -84,6 +84,42 @@ describe("parseGameOutput —— 操作中文→英文归一化（阿游 P0）",
   });
 });
 
+// 验证游戏模式「同义动词归一化」（阿游 N3）：模型常用同义词，应映射为对应英文枚举，
+// 避免透传到 applyItemChanges 后四个分支无一命中、物品被静默丢弃。
+describe("parseGameOutput —— 同义动词归一化（阿游 N3）", () => {
+  const cases: Array<{ ci: string; op: string }> = [
+    { ci: "CI|拾取|龙髓石|1", op: "gain" },
+    { ci: "CI|捡到|金币|5", op: "gain" },
+    { ci: "CI|取得|钥匙|1", op: "gain" },
+    { ci: "CI|获取|符纸|3", op: "gain" },
+    { ci: "CI|拾起|玉佩|1", op: "gain" },
+    { ci: "CI|使用|药水|1", op: "consume" },
+    { ci: "CI|服用|丹药|1", op: "consume" },
+    { ci: "CI|吃掉|干粮|1", op: "consume" },
+    { ci: "CI|饮用|泉水|1", op: "consume" },
+    { ci: "CI|佩戴|戒指|1", op: "equip" },
+    { ci: "CI|穿上|铠甲|1", op: "equip" },
+    { ci: "CI|丢掉|破靴|1", op: "discard" },
+    { ci: "CI|扔掉|烂绳|1", op: "discard" },
+    { ci: "CI|弃置|废铁|1", op: "discard" },
+  ];
+
+  for (const { ci, op } of cases) {
+    it(`解析 ${ci} → operation=${op}`, () => {
+      const r = parseGameOutput(`叙事。\n===角色物品变动===\n${ci}\n===新实体===\n`);
+      expect(r.itemChanges.length).toBe(1);
+      expect(r.itemChanges[0].operation).toBe(op);
+    });
+  }
+
+  it("带归属者的同义动词仍正常解析（CI|拾取|灵剑|1|李尘 → gain + 李尘）", () => {
+    const r = parseGameOutput(`叙事。\n===角色物品变动===\nCI|拾取|灵剑|1|李尘\n===新实体===\n`);
+    expect(r.itemChanges.length).toBe(1);
+    expect(r.itemChanges[0].operation).toBe("gain");
+    expect(r.itemChanges[0].owner).toBe("李尘");
+  });
+});
+
 // 验证游戏模式「中文复合数字解析」：十二/二十/一百零五 等不应落默认 1（阿游 P1）。
 describe("parseGameOutput —— 中文复合数字（阿游 P1）", () => {
   const cases: Array<[string, number]> = [

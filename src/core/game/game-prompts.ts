@@ -16,10 +16,34 @@ import { ACTION_LABELS } from "./types";
 // 前端(page.tsx)、开局路由(start/route.ts) 全部用英文枚举 gain/consume/equip/discard
 // 比较。此处统一把中文操作映射为英文枚举，是唯一需要改动的地方（无需四处改比较逻辑）。
 const OP_MAP: Record<string, string> = {
+  // 基础操作（与引擎 game-engine.ts / 前端 page.tsx 的英文枚举一致）
   "获得": "gain",
   "消耗": "consume",
   "装备": "equip",
   "丢弃": "discard",
+  // 同义词覆盖（阿游 N3）：避免模型用同义动词导致透传到 applyItemChanges 后静默丢物
+  // 获得类
+  "拾取": "gain",
+  "捡到": "gain",
+  "取得": "gain",
+  "获取": "gain",
+  "拾起": "gain",
+  "拿": "gain",
+  // 消耗类
+  "使用": "consume",
+  "服用": "consume",
+  "吃掉": "consume",
+  "饮用": "consume",
+  "吞": "consume",
+  // 装备类
+  "佩戴": "equip",
+  "穿上": "equip",
+  "戴": "equip",
+  // 丢弃类
+  "丢掉": "discard",
+  "扔掉": "discard",
+  "弃置": "discard",
+  "抛": "discard",
 };
 
 // 中文数字表（与选项解析共用）——用于物品数量「二/三」等中文数字解析。
@@ -240,13 +264,13 @@ export function parseGameOutput(rawOutput: string): {
   narrative: string;
   options: Array<{ index: number; text: string }>;
   newEntities: Array<{ name: string; type: string; description: string }>;
-  itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string }>;
+  itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string; category?: string }>;
   plotProgress: number;
 } {
   let narrative = rawOutput;
   const options: Array<{ index: number; text: string }> = [];
   const newEntities: Array<{ name: string; type: string; description: string }> = [];
-  const itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string }> = [];
+  const itemChanges: Array<{ operation: string; name: string; quantity: number; owner?: string; category?: string }> = [];
   let plotProgress = -1;
 
   // ── 提取选项（阿游 P1-1 重写）──
