@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjectStore } from "@/store";
 import { invalidateQueries } from "@/hooks/useApi";
@@ -35,6 +35,7 @@ import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { useShortcut } from "@/components/ShortcutProvider";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export default function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -118,6 +119,13 @@ export default function WorkspacePage() {
   // 窄屏左右栏抽屉开合（桌面端由 lg: 断点复位为内联，此状态仅在 <lg 生效）
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  // 无障碍：窄屏模态抽屉（此处为 div 实现）的焦点陷阱（仅抽屉打开时激活，桌面常驻侧栏不受影响）
+  const leftDrawerRef = useRef<HTMLDivElement>(null);
+  const rightDrawerRef = useRef<HTMLDivElement>(null);
+  const leftDrawerTitleId = useId();
+  const rightDrawerTitleId = useId();
+  useFocusTrap(leftDrawerRef, leftDrawerOpen, () => setLeftDrawerOpen(false));
+  useFocusTrap(rightDrawerRef, rightDrawerOpen, () => setRightDrawerOpen(false));
   // FE-N5：桌面端左栏折叠（[ 触发）
   const [leftCollapsed, setLeftCollapsed] = useState(false);
 
@@ -872,10 +880,18 @@ export default function WorkspacePage() {
         const sel = window.getSelection()?.toString()?.trim();
         if (sel && sel.length > 0) setSelectedText(sel);
       }}>
-        <div className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] h-full transition-transform duration-200
+        <div
+          ref={leftDrawerRef}
+          tabIndex={-1}
+          role={leftDrawerOpen ? "dialog" : undefined}
+          aria-modal={leftDrawerOpen ? "true" : undefined}
+          aria-labelledby={leftDrawerOpen ? leftDrawerTitleId : undefined}
+          className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] h-full transition-transform duration-200
           ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"}
           lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none
-          ${leftCollapsed ? "lg:hidden" : ""}`}>
+          ${leftCollapsed ? "lg:hidden" : ""}`}
+        >
+          <h2 id={leftDrawerTitleId} className="sr-only">大纲栏</h2>
         <ErrorBoundary name="大纲">
         <LeftPanel activeTab={leftPanel} onTabChange={setLeftPanel}
           selectedNode={selectedNode} onSelectNode={handleSelectNode}
@@ -892,7 +908,7 @@ export default function WorkspacePage() {
 
         {/* 中间列：正文 + 分析面板 */}
         <ErrorBoundary name="编辑器">
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden" inert={leftDrawerOpen || rightDrawerOpen}>
           <CenterPanel selectedNode={selectedNode} worldTime={selectedNode?.worldTime ?? null} onWorldTimeBlur={handleSaveWorldTime} streamContent={streamContent}
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
@@ -1012,9 +1028,17 @@ export default function WorkspacePage() {
         </ErrorBoundary>
 
         {rightPanelOpen && (
-          <div className={`fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] h-full transition-transform duration-200
+          <div
+            ref={rightDrawerRef}
+            tabIndex={-1}
+            role={rightDrawerOpen ? "dialog" : undefined}
+            aria-modal={rightDrawerOpen ? "true" : undefined}
+            aria-labelledby={rightDrawerOpen ? rightDrawerTitleId : undefined}
+            className={`fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] h-full transition-transform duration-200
             ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"}
-            lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}>
+            lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}
+          >
+            <h2 id={rightDrawerTitleId} className="sr-only">侧栏</h2>
           <ErrorBoundary name="侧栏">
         <RightPanel selectedNode={selectedNode}
             onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}

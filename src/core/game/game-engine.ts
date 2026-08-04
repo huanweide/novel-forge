@@ -287,7 +287,9 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
       }
     }
   } catch (err: any) {
-    yield { type: "error", error: `LLM 调用失败：${err.message}` };
+    // 用户主动停止（abort）不是失败：优雅放弃本轮，不污染回放/对账
+    if (err?.name === "AbortError" || signal?.aborted) return;
+    yield { type: "error", error: `LLM 调用失败：${err?.message ?? err}` };
     return;
   }
 

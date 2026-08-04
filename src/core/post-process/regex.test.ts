@@ -63,6 +63,28 @@ describe("isLikelyUnsafeRegex", () => {
     expect(isLikelyUnsafeRegex("(?:colou?r)", "")).toBeNull();
     expect(isLikelyUnsafeRegex("(a)?b", "g")).toBeNull();
   });
+
+  // N1 修复（Round 8 回归）：? 不再列入 repeated，合法可选组应放行
+  it("放行合法可选组 (https?://)?", () => {
+    expect(isLikelyUnsafeRegex("(https?://)?", "g")).toBeNull();
+  });
+
+  it("放行合法可选组 (a+)?", () => {
+    expect(isLikelyUnsafeRegex("(a+)?", "g")).toBeNull();
+  });
+
+  it("放行合法可选组 (a?)?", () => {
+    expect(isLikelyUnsafeRegex("(a?)?", "g")).toBeNull();
+  });
+
+  // 保留既有拦截用例：真 ReDoS (a?)+ / (a?)* 仍须拦截
+  it("仍拦截 (a?)+ 灾难性回溯", () => {
+    expect(isLikelyUnsafeRegex("(a?)+", "g")).not.toBeNull();
+  });
+
+  it("仍拦截 (a?)* 灾难性回溯", () => {
+    expect(isLikelyUnsafeRegex("(a?)*", "")).not.toBeNull();
+  });
 });
 
 describe("applyRegexRules ReDoS 防护", () => {

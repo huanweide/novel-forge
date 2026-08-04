@@ -313,6 +313,14 @@ export async function POST(request: Request) {
 
   // 并发幂等锁：基于 DB 唯一约束（ImportCommitLock），跨实例有效，替代进程内存 Map。
   // 持锁状态由「锁行是否存在」判定，移除 TTL 旁路；长事务并发的第二个请求触发 P2002 冲突 → 409 跳过。
+  // N3 修复：进程在持锁期间崩溃会残留永久锁 → 后续提交永远 409。此处先清理 15 分钟前的陈旧锁，
+  // 仅删除 stale（createdAt 早于阈值）的锁行，不影响仍在进行的正常并发锁（其锁较新，保留 → 仍 409）。
+  const STALE_LOCK_MS = 15 * 60 * 1000; // 15 分钟
+  const staleThreshold = new Date(Date.now() - STALE_LOCK_MS);
+  await prisma.importCommitLock.deleteMany({
+    where: { projectId: pid, nodeId: COMMIT_LOCK_NODE, createdAt: { lt: staleThreshold } },
+  }).catch(() => {});
+
   let lockAcquired = false;
   try {
     await prisma.importCommitLock.create({ data: { projectId: pid, nodeId: COMMIT_LOCK_NODE } });

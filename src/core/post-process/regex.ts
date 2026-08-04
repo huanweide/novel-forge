@@ -72,8 +72,10 @@ export function isLikelyUnsafeRegex(pattern: string, flags = ""): string | null 
         if (top.hasAlternation) parent.hasAlternation = true;
       }
       const next = pattern[i + 1];
-      // 重复量词：* + { ? 均纳入嵌套检测；? 可选量词纳入后，(a?)+/(a?)* 类灾难性回溯可被拦截
-      const repeated = next === "*" || next === "+" || next === "{" || next === "?";
+      // 重复量词（组外紧跟）：* + { 纳入嵌套量词检测。
+      // 注意：? 不在此列——可选量词本身非灾难性，误列入会误杀 (https?://)?、(a+)? 等合法可选组；
+      // 真 ReDoS 如 (a?)+ 由组内 ? 设 hasQuantInside + 组外 * / + / { 触发，无需把 ? 列入 repeated。
+      const repeated = next === "*" || next === "+" || next === "{";
       if (top && repeated) {
         // 嵌套量词（组内含量词）或被重复组内含重叠交替，均可能触发灾难性回溯
         if (top.hasQuantInside) {

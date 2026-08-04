@@ -28,6 +28,8 @@ interface ImportSourceMeta {
 }
 
 export async function POST(request: Request) {
+  // N2 修复：导入来源稳定标识，需在外层声明（catch 块也要用，try 内 const 不可见）
+  let importSourceKey: string | null = null;
   try {
     const bundle = await request.json();
     const p = bundle?.project;
@@ -46,22 +48,22 @@ export async function POST(request: Request) {
     // 原始项目 id（来自备份），作为幂等去重键的一部分；缺失则无法去重，按新建处理
     const origId = typeof p.id === "string" && p.id ? p.id : null;
 
+    // N2 修复：导入来源稳定标识，写入 Project.importSource（DB 唯一约束）。
+    // 并发重复导入同一备份 → 唯一冲突 P2002 → 外层捕获后返回已存在项目（幂等）。
+    // origId 缺失则无法去重，importSource 置 null（Postgres 多 null 不冲突），按新建处理。
+    importSourceKey = origId ? `${IMPORT_SOURCE}:${origId}` : null;
+
     // ── 幂等去重已移入 $transaction 内（见下方事务开头），避免并发重导入竞态重复 ──
 
     // 在事务内创建项目本体 + 全部子表；任一失败自动回滚，不留孤儿
     // P1-③：显式放宽交互事务超时（默认仅 5s），避免大备份串行 await 整段回滚
     // P1-④：幂等查重移入事务内（SQLite 写事务串行化），并发相同备份不再重复 insert
     const importResult = await prisma.$transaction(async (tx) => {
-      // 幂等去重：相同 {projectId, source} 已导入过，则直接返回已存在项目，避免成倍复制
-      // 移入事务内以杜绝并发重导入的 TOCTOU 竞态（Round6 仅靠事务外串行读判断）
-      if (origId) {
-        const existing = await tx.project.findFirst({
-          where: {
-            AND: [
-              { buildConfig: { path: ["importSource", "projectId"], equals: origId } },
-              { buildConfig: { path: ["importSource", "source"], equals: IMPORT_SOURCE } },
-            ],
-          },
+      // 幂等去重：相同 importSource 已导入过，则直接返回已存在项目，避免成倍复制
+      // N2 修复：改用 Project.importSource 唯一字段查询（与 DB 唯一约束一致），移入事务内以杜绝并发重导入的 TOCTOU 竞态
+      if (importSourceKey) {
+        const existing = await tx.project.findUnique({
+          where: { importSource: importSourceKey },
           select: { id: true },
         });
         if (existing) return { pid: existing.id, idempotent: true };
@@ -74,11 +76,14 @@ export async function POST(request: Request) {
         "storylines", "styleCards", "loreTables", "rules",
       ]);
       projData.name = (projData.name || "导入的项目") + "（导入）";
-      // 记录导入来源，供幂等去重（不改动业务字段语义）
+      // 记录导入来源，供幂等去重（不改动业务字段语义）。
+      // N2 修复：同时写入 buildConfig.importSource（保留既有追踪语义）与顶层 importSource（DB 唯一约束，并发幂等）。
       projData.buildConfig = {
         ...(typeof p.buildConfig === "object" && p.buildConfig ? p.buildConfig : {}),
         importSource: { projectId: origId, source: IMPORT_SOURCE, name: p.name || "", at: Date.now() },
       };
+      // importSource 顶层字段：唯一约束幂等键；origId 缺失时为 null（多 null 不冲突，按新建处理）
+      projData.importSource = importSourceKey;
 
       const created = await tx.project.create({ data: projData as any });
       const pid = created.id;
@@ -190,6 +195,23 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, id: importResult.pid, idempotent: importResult.idempotent });
   } catch (err) {
+    // N2 修复：并发重复导入同一备份时，事务内查重存在 TOCTOU 窗口（READ COMMITTED 下两事务可能同时通过查重），
+    // 此时 tx.project.create 写入 importSource 触发 Postgres 唯一约束冲突（P2002）。
+    // 捕获后查回已存在项目，按幂等返回（200 + idempotent:true），与事务内查重路径语义一致。
+    const code = (err as any)?.code;
+    if (code === "P2002" && importSourceKey) {
+      try {
+        const existing = await prisma.project.findUnique({
+          where: { importSource: importSourceKey },
+          select: { id: true },
+        });
+        if (existing) {
+          return NextResponse.json({ success: true, id: existing.id, idempotent: true });
+        }
+      } catch (lookupErr) {
+        console.error("[import] P2002 后查回已存在项目失败:", lookupErr instanceof Error ? lookupErr.message : String(lookupErr));
+      }
+    }
     // P1-①：事务已自动 rollback，此处不再留孤儿；仅报错返回
     console.error("[import] 还原失败（已回滚）:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(

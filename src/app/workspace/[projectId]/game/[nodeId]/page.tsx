@@ -10,7 +10,7 @@
  * 禁止 emoji、统一用 <Icon> 组件。
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter } from "next/navigation";
 import GameCanvas from "@/components/game/GameCanvas";
 import GameParticles from "@/components/game/GameParticles";
@@ -18,6 +18,7 @@ import GameOutlineEditor from "@/components/game/GameOutlineEditor";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
 import { reconcileFromSummary, applyFrontendItemChanges } from "@/core/game/reconcile";
 
@@ -108,6 +109,13 @@ export default function GamePage() {
   const [lorebook, setLorebook] = useState<any[]>([]);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  // 无障碍：窄屏模态抽屉的焦点陷阱（仅抽屉打开时激活，桌面常驻侧栏不受影响）
+  const leftDrawerRef = useRef<HTMLElement>(null);
+  const rightDrawerRef = useRef<HTMLElement>(null);
+  const leftDrawerTitleId = useId();
+  const rightDrawerTitleId = useId();
+  useFocusTrap(leftDrawerRef, leftDrawerOpen, () => setLeftDrawerOpen(false));
+  useFocusTrap(rightDrawerRef, rightDrawerOpen, () => setRightDrawerOpen(false));
   const streamRef = useRef<AbortController | null>(null);
 
   // ── 初始化 ──────────────────────────────────────────────
@@ -495,7 +503,15 @@ export default function GamePage() {
       {/* ═══ 主体三栏 ═══ */}
       <div className="relative z-10 flex flex-1 overflow-hidden">
         {/* 左侧栏 */}
-        <aside className={`flex w-52 shrink-0 flex-col border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-52 lg:translate-x-0 lg:transition-none`}>
+        <aside
+          ref={leftDrawerRef}
+          tabIndex={-1}
+          role={leftDrawerOpen ? "dialog" : undefined}
+          aria-modal={leftDrawerOpen ? "true" : undefined}
+          aria-labelledby={leftDrawerOpen ? leftDrawerTitleId : undefined}
+          className={`flex w-52 shrink-0 flex-col border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-52 lg:translate-x-0 lg:transition-none`}
+        >
+          <h2 id={leftDrawerTitleId} className="sr-only">游戏侧栏</h2>
           <div className="flex border-b border-[var(--nv-border-2)]">
             {LEFT_TABS.map(({ key, label, icon }) => (
               <button
@@ -651,7 +667,7 @@ export default function GamePage() {
         </aside>
 
         {/* 主画布 */}
-        <main className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden" inert={leftDrawerOpen || rightDrawerOpen}>
           {showStartScreen ? (
             /* 开始界面 */
             <div className="flex flex-1 items-center justify-center p-6">
@@ -726,7 +742,15 @@ export default function GamePage() {
         </main>
 
         {/* 右侧信息面板 */}
-        <aside className={`flex w-64 shrink-0 flex-col border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none`}>
+        <aside
+          ref={rightDrawerRef}
+          tabIndex={-1}
+          role={rightDrawerOpen ? "dialog" : undefined}
+          aria-modal={rightDrawerOpen ? "true" : undefined}
+          aria-labelledby={rightDrawerOpen ? rightDrawerTitleId : undefined}
+          className={`flex w-64 shrink-0 flex-col border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none`}
+        >
+          <h2 id={rightDrawerTitleId} className="sr-only">游戏信息面板</h2>
           <div className="flex border-b border-[var(--nv-border-2)]">
             {RIGHT_TABS.map(({ key, label, icon }) => (
               <button

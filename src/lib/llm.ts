@@ -191,6 +191,8 @@ interface ModelPrice {
 
 const MODEL_PRICING: ModelPrice[] = [
   { match: "deepseek-chat", input: 0.14, output: 0.28, label: "DeepSeek Chat" },
+  // 默认硅基流动模型 deepseek-ai/DeepSeek-V4-Flash（AppSettings 默认）。价格为估算值，以官方为准。
+  { match: "deepseek-v4-flash", input: 0.14, output: 0.28, label: "DeepSeek V4 Flash（估算价，以官方为准）" },
   { match: "deepseek-reasoner", input: 0.55, output: 2.19, label: "DeepSeek Reasoner" },
   { match: "deepseek-v3", input: 0.27, output: 1.1, label: "DeepSeek V3" },
   { match: "deepseek-v2", input: 0.27, output: 1.1, label: "DeepSeek V2" },

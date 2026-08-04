@@ -238,6 +238,7 @@ async function establishStream(
     top_p: request.topP ?? config.defaultTopP,
     max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
     stream: true,
+    stream_options: { include_usage: true },
     ...(request.thinking ? { thinking: request.thinking } : {}),
   };
 

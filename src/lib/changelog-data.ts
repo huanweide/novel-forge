@@ -25,18 +25,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.71";
+export const LATEST_VERSION = "v0.46.72";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "OOC/召回死代码接线（青砚 P0）：删无调用 findCharacterByName 死代码，matchLoreEntries 接收 tables 并补表格关键列值进 knownNames，灭「李星云剑法」内 3字 lorebook key 误召回——Round7 修复落到真路径",
-  "游戏 abort 透传彻底化（阿游 P1）：chatStream 透传 AbortSignal，停止后 LLM 真正中断不丢 token；空流跳过 $transaction 提交幻影空轮次",
-  "填表假完成修复（墨白 P1）：babyloreFillAll 全跳过真返 ok:false 掩脏标记，灭静默假完成",
-  "幂等锁跨实例 + 弹窗无障碍（磐石/清览 P1）：commit 幂等锁改 DB 唯一约束 ImportCommitLock（跨实例有效）替进程 Map；import_parse 失败 Flash 记账；buildLoreSample 中段分块覆盖；toast Confirm/Prompt + CommandPalette 补 role=dialog/焦点陷阱；regex 补 (a?)+ 量词 + import 外键剥离 + 事务内幂等",
+  "数字关键词边界守卫（青砚 P1）：含数字≥3字关键词（「2049年」）加数字边界，灭「12049年」误命中——公式/纪年不再被相邻数字延长串误伤",
+  "abort 语义彻底干净（阿游 P1）：流式 abort 不再被误判为 LLM 调用失败，用户停止=优雅放弃本轮，不污染回放/对账",
+  "填表死循环消除 + 正则回归修复（墨白/工坊 P1）：全跳过 error 结构化区分真无脏/误标 + 脏标记清除灭无限重填；正则 `?` 量词误杀合法可选组（如 (https?://)?）的 Round8 回归已修复",
+  "流式成本可见 + 导入幂等落库（磐石/清览/工坊 P1）：流式加 stream_options 真实 token 记账 + 默认模型进定价表成本可见；DB 锁陈旧清理灭崩溃孤儿锁；移动抽屉补对话框无障碍 + 导入并发 DB 唯一约束幂等",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.72",
+    date: "2026-08-04",
+    title: "会员股东 Round 9 复验闭环：数字边界守卫 + abort 语义干净 + 填表死循环消除 + 流式成本可见 + 移动抽屉无障碍 + 正则回归修复/导入幂等落库（tsc 零错误）",
+    sections: [
+      {
+        label: "数字关键词边界守卫（青砚 P1）",
+        items: [
+          "matchKeyword 对含数字且非纯数字的关键词（如「2049年」「第3章」）加数字边界守卫：命中位置首/末字符是数字且紧邻也是数字（数字串被延长）则跳过，灭「2049年」误命中「12049年」；纯数字与无数字关键词行为不变",
+        ],
+      },
+      {
+        label: "abort 语义彻底干净（阿游 P1）",
+        items: [
+          "game-engine 消费 chatStream 的 catch 区分 AbortError：用户主动停止不再被误判为「LLM 调用失败」，优雅放弃本轮、不污染回放/对账；信号透传链路（engine→chatStream→client fetch）保持正确",
+        ],
+      },
+      {
+        label: "填表死循环消除（墨白 P1）",
+        items: [
+          "babyloreFillAll 全跳过 error 结构化：携带 {processed,applied,skipped,failed,nodeIds} 并区分「无待填数据」vs「疑似旧版误标脏标记」；每个已评估节点（applied 成功或 clean 跳过）清除脏标记，灭「全 clean 跳过→ok:false→UI 一直显示有更新→无限重填」死循环",
+        ],
+      },
+      {
+        label: "流式成本可见 + 崩溃孤儿锁清理（磐石 P1）",
+        items: [
+          "establishStream 加 stream_options:{include_usage:true}，流式末段返回真实 usage，token 不再恒 0；MODEL_PRICING 增补 deepseek-v4-flash（估算价），默认硅基流动模型成本可见不再全 $0；commit 幂等锁获取前先删 15 分钟以上陈旧锁，灭进程崩溃永久孤儿锁",
+        ],
+      },
+      {
+        label: "移动抽屉无障碍（清览 P1）",
+        items: [
+          "workspace/explore/game 三页窄屏模态抽屉（left/right aside/div）补 role=dialog + aria-modal + aria-labelledby + 焦点陷阱（复用 use-focus-trap）+ ESC 全局关 + 背景 inert，键盘/读屏焦点不再逃逸到背景",
+        ],
+      },
+      {
+        label: "正则回归修复 + 导入幂等落库（工坊 P1）",
+        items: [
+          "regex.ts 把 `?` 移出 repeated 集（内层 `?` 仍经 hasQuantInside 捕获 (a?)+ 类真 ReDoS），修复 Round8 误杀合法可选组（(https?://)?/(a+)? 被当 ReDoS 静默丢弃）的回归；Project 加 importSource @unique + 导入并发 P2002 幂等返回已存在项目，落库到 DB 唯一约束",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.71",
     date: "2026-08-04",

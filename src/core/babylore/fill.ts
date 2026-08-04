@@ -33,6 +33,17 @@ export interface FillResult {
   warnings?: string[]; // 疑似错误地名/名称提示
 }
 
+export interface FillErrorMeta {
+  /** 全跳过语义细分：no_dirty=真无脏数据；all_skipped_mislabeled=疑似旧版误标脏标记；partial_failed=部分失败；no_applied=零落地 */
+  kind: "no_dirty" | "all_skipped_mislabeled" | "partial_failed" | "no_applied";
+  processed: number;
+  applied: number;
+  skipped: number;
+  failed: number;
+  /** 被跳过（疑似误标）的节点 ID 列表，供 UI/诊断精确区分「真无脏」与「误标」 */
+  nodeIds: string[];
+}
+
 export interface FillAllResult {
   ok: boolean;
   failed: number; // 未达完成门槛（ok && applied>0）的章节数，供前端呈现「部分失败/可重试」
@@ -41,6 +52,8 @@ export interface FillAllResult {
   operations: number;
   applied: number;
   error?: string;
+  /** P1-A（墨白）：全跳过分支携带结构化元数据，便于 UI/诊断区分「真无脏」与「旧版误标脏标记」 */
+  fillErrorMeta?: FillErrorMeta;
   warnings: string[]; // 各章疑似错误地名
   selfCheck: SelfCheckResult;
 }
@@ -495,10 +508,20 @@ export async function babyloreFillAll(
   let applied = 0;
   let failedChapters = 0; // 未达 Round6 完成门槛（ok && applied>0）的章节数
   const warnings: string[] = [];
+  const skippedNodeIds: string[] = []; // P1-A：被跳过（疑似误标）的节点 ID，供全跳过 error 携带
 
   for (const ch of chapters) {
     if (filledSet.has(ch.id)) {
+      // P1-D（墨白）：该节点已在「已填」集合 → 视为脏标记已清除的干净节点。
+      // 复用现有 markChapterFilled 清除路径再次确认（幂等：已存在则直接 return），确保下一轮不再将其当脏重填，
+      // 杜绝「全 clean 跳过 → ok:false → UI 一直显示有更新 → 无限重填」死循环。
       skipped++;
+      skippedNodeIds.push(ch.id);
+      try {
+        markChapterFilled(projectId, ch.id);
+      } catch {
+        /* 标记失败不影响主流程 */
+      }
       continue;
     }
     const r = await runFillForText(ch.content || "", tables, llm, options?.tableKeys);
@@ -509,6 +532,7 @@ export async function babyloreFillAll(
     // 仅成功章计入已填集合——失败章必须留待重试，否则被永久标记跳过（磐石 P0 修复）。
     // P0-3：门槛由 r.ok 提升为 r.ok && r.applied>0，空 ops/全失效章不标已填，留待重试。
     if (r.ok && r.applied > 0) {
+      // P1-D（墨白）：成功落地即清除该节点脏标记（已填=干净），下一轮不再重填（复用现有 markChapterFilled 路径）。
       filledSet.add(ch.id);
       // 增量落盘：每填完一章即持久化，避免中途超时/崩溃丢失全部进度（磐石 P0 防丢进度）
       filledMap[projectId] = Array.from(filledSet);
@@ -521,27 +545,32 @@ export async function babyloreFillAll(
 
   const selfCheck = await selfCheckFill(projectId);
 
-  // P1-1：babyloreFillAll 不得恒返回 ok:true（静默假完成）。
-  // 与 Round6 的完成门槛 ok && applied>0 保持一致：仅在确有章节成功落地、且没有任何章节失败时为真；
-  // 任一章失败（failedChapters>0）或零落地（applied=0）均判失败并带 error 摘要，促使上游重试而非误判已完成。
+  // P1-A/P1-D（墨白）：babyloreFillAll 不得恒返回 ok:true（静默假完成），且全跳过分支须区分两种语义：
+  //  - processed===0 且 skipped===0：本轮确实没有任何脏数据（无待填节点）；
+  //  - processed===0 但 skipped>0：全部节点被跳过，疑似旧版误标脏标记 → 携带 nodeIds 供诊断。
+  // 与 Round6 完成门槛 ok && applied>0 保持一致：任一章失败或零落地均判失败并带 error 摘要，促使重试而非误判完成。
   let ok = true;
   let error: string | undefined;
+  let fillErrorMeta: FillErrorMeta | undefined;
+
   if (processed === 0 && skipped === 0) {
-    // 项目既无已填也无待填章节（无正文或表格为空），属异常，报失败避免静默空跑。
+    // 本轮确实没有任何脏数据（无正文章节 / 无待填节点）→ 明确区分，避免与「误标」混淆。
     ok = false;
-    error = "没有可填表的章节（项目无正文章节或暂无结构化表格）";
+    error = "无待填数据（本轮未检测到任何脏标记）";
+    fillErrorMeta = { kind: "no_dirty", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
   } else if (processed === 0 && skipped > 0) {
-    // P1-1（Round 8）：全跳过即 ok:true 会掩盖旧版误标脏标记 / 全空残留，
-    // 重演 Round6/7 已消灭的“静默假完成”。全跳过且无任何 applied 时判失败并带 warning，
-    // 与 Round6 完成门槛 ok && applied>0 一致，迫使上游复核已填标记真实性而非误判成功。
+    // P1-A（墨白）：全部节点被跳过——疑似旧版误标脏标记。携带 nodeIds + 计数，供 UI/诊断区分真无脏 vs 误标。
     ok = false;
-    error = `全部 ${skipped} 个章节被跳过（已填标记存在但本次无事实落地 applied=0）：可能是旧版误标脏标记或数据缺失，请核对已填标记真实性后再重试`;
+    error = `全部 ${skipped} 个节点被跳过（疑似旧版误标脏标记），建议清理脏标记后重试；跳过节点=[${skippedNodeIds.join(", ")}]`;
+    fillErrorMeta = { kind: "all_skipped_mislabeled", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
   } else if (failedChapters > 0) {
     ok = false;
     error = `有 ${failedChapters}/${processed} 个章节填表失败，未全部完成（已落 ${applied} 条事实），请检查 LLM 配置/网络后重试`;
+    fillErrorMeta = { kind: "partial_failed", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
   } else if (applied === 0) {
     ok = false;
     error = `已处理 ${processed} 章但均未落地任何事实（applied=0），请检查 LLM 返回内容`;
+    fillErrorMeta = { kind: "no_applied", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
   }
 
   return {
@@ -552,6 +581,7 @@ export async function babyloreFillAll(
     operations,
     applied,
     error,
+    fillErrorMeta,
     warnings,
     selfCheck,
   };

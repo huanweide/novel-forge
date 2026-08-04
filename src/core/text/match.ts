@@ -52,7 +52,29 @@ export function matchKeyword(text: string, keyword: string): boolean {
   // 纯数字关键词（如「1949」「2049」）：无论长度都走下方词边界判定，
   // 否则「2049」会误命中「120499」这类包含子串的数字串（R-F4 数字子串误伤）。
   const isPureDigit = /^[0-9]+$/.test(needle);
-  if (len >= 3 && !isPureDigit) return true;
+  if (len >= 3 && !isPureDigit) {
+    // 含数字关键词（如「2049年」「第3章」）：若数字串被相邻数字延长（"2049" 命中 "12049"），
+    // 需做数字边界判定，否则数字子串误伤。
+    if (/[0-9]/.test(needle)) {
+      let idx = hay.indexOf(needle);
+      while (idx >= 0) {
+        const before = idx > 0 ? hay[idx - 1] : "";
+        const after = idx + len < hay.length ? hay[idx + len] : "";
+        const beforeNum = before !== "" && /[0-9]/.test(before);
+        const afterNum = after !== "" && /[0-9]/.test(after);
+        const firstIsDigit = /[0-9]/.test(needle[0]);
+        const lastIsDigit = /[0-9]/.test(needle[len - 1]);
+        // 首字符是数字且紧前也是数字（或末字符是数字且紧后也是数字）→ 数字串被延长，非独立年份/编号，跳过该位置
+        if ((firstIsDigit && beforeNum) || (lastIsDigit && afterNum)) {
+          idx = hay.indexOf(needle, idx + 1);
+          continue;
+        }
+        return true;
+      }
+      return false;
+    }
+    return true;
+  }
 
   // 长度 2：逐位置检查，只要有一处满足「至少一侧是真实词边界」即视为命中。
   // 中文词：相邻非汉字即边界；非中文词：仅在空白/标点/中文相邻处为边界（灭 "AI" 命中 "waitAI"）。

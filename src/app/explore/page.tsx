@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
 import Link from "next/link";
 import { BuildConfigPanel } from "@/components/explore/BuildConfigPanel";
 import { AdoptedContentPanel } from "@/components/explore/AdoptedContentPanel";
@@ -18,6 +18,7 @@ import type {
 } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS } from "@/core/explore/types";
 import { toastError, toastCreated, toastWarning } from "@/components/ui/toast";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export default function ExplorePage() {
   const [config, setConfig] = useState<BuildConfig>(DEFAULT_BUILD_CONFIG);
@@ -36,6 +37,13 @@ export default function ExplorePage() {
   const [showConfig, setShowConfig] = useState(true);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  // 无障碍：窄屏模态抽屉的焦点陷阱（仅抽屉打开时激活，桌面常驻侧栏不受影响）
+  const leftDrawerRef = useRef<HTMLElement>(null);
+  const rightDrawerRef = useRef<HTMLElement>(null);
+  const leftDrawerTitleId = useId();
+  const rightDrawerTitleId = useId();
+  useFocusTrap(leftDrawerRef, leftDrawerOpen, () => setLeftDrawerOpen(false));
+  useFocusTrap(rightDrawerRef, rightDrawerOpen, () => setRightDrawerOpen(false));
   const [adoptStatus, setAdoptStatus] = useState<Record<string, string>>({});
   const [allCards, setAllCards] = useState<Record<string, AdoptCard[]>>({});
   const [generatingAll, setGeneratingAll] = useState(false);
@@ -620,13 +628,21 @@ export default function ExplorePage() {
       <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
         {/* 左栏：构建配置 */}
         {(showConfig || leftDrawerOpen) && (
-          <aside className={`w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}>
+          <aside
+            ref={leftDrawerRef}
+            tabIndex={-1}
+            role={leftDrawerOpen ? "dialog" : undefined}
+            aria-modal={leftDrawerOpen ? "true" : undefined}
+            aria-labelledby={leftDrawerOpen ? leftDrawerTitleId : undefined}
+            className={`w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}
+          >
+            <h2 id={leftDrawerTitleId} className="sr-only">构建配置</h2>
             <BuildConfigPanel config={config} onChange={setConfig} />
           </aside>
         )}
 
         {/* 中栏 */}
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0" inert={leftDrawerOpen || rightDrawerOpen}>
           {mode === "outline" ? (
             <OutlinePanel
               outlineText={outlineText}

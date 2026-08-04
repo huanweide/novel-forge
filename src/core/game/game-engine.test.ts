@@ -242,6 +242,39 @@ describe("abort 信号透传（阿游 P0-1）", () => {
     expect(captured[0].signal).toBe(controller.signal);
   });
 
+  it("流式期 abort（chatStream 抛 AbortError）不产 error 事件、不提交，正常结束（停止≠失败）", async () => {
+    (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
+    (prisma.gameState.findMany as any).mockResolvedValue(baseSession.states);
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p", name: "书" });
+    (prisma.storyNode.findUnique as any).mockResolvedValue({ id: "n", title: "章", content: "" });
+    (prisma.characterCard.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findFirst as any).mockResolvedValue(null);
+    const txCalls: any[] = [];
+    (prisma.$transaction as any).mockImplementation(async (ops: any) => { txCalls.push(ops); return []; });
+    (getEffectiveConfig as any).mockResolvedValue({ writerModel: "m" });
+    // 模拟底层 reader.read() 在用户点「停止」时抛出 AbortError
+    const abortErr = new Error("The operation was aborted");
+    abortErr.name = "AbortError";
+    (createLLMClient as any).mockReturnValue({
+      chatStream: async function* () {
+        yield { content: "半截叙事" };
+        throw abortErr;
+      },
+    });
+
+    const controller = new AbortController();
+    const gen = processGameTurn(
+      { sessionId: "s1", actionType: "custom", actionText: "行动" },
+      controller.signal
+    );
+    const events: any[] = [];
+    for await (const e of gen) { events.push(e); }
+
+    expect(txCalls.length).toBe(0); // 丢弃本轮
+    expect(events.some((e) => e.type === "error")).toBe(false); // 不污染回放/对账
+  });
+
   it("空流（0 chunk）不提交（P1-2）：$transaction 调用 0 次且 yield error 事件，灭幻影空轮次", async () => {
     (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
     (prisma.gameState.findMany as any).mockResolvedValue(baseSession.states);
