@@ -1835,3 +1835,37 @@ Round 7 是 maxloop 第 7 轮：6 股东只读复验 Round 6 修复并挖新坑�
 - Chair 亲自 tsc 零错误，关键经验：6 个 L2 Agent 并行各自跑 tsc 时互相看到对方正在写的文件，报出「预存错误」假象；Chair 等所有写入完成后统一跑 tsc 得真实 EXIT:0。证明并行 Agent 的自测不可单独信，必须 Chair 统一门禁。
 - abort 选「透传 signal + 提交前判 aborted 丢弃」而非「后端回滚」：游戏需保留已生成内容，丢弃本轮+前端对账比回滚更符合叙事连续。
 - 已真实验证：tsc 零错误；多文件 vitest 过；6 股东改动全在授权范围、无越界；commit+push 完成。未验证（明示）：真机交互（abort 实测对账/锁并发/弹窗读屏/正则 ReDoS 实战）仍待用户本地实跑。
+
+---
+
+# Round 8 实现报告（v0.46.71）—— 费曼式沉淀
+
+## 干了什么
+Round 8 复验 Round 7（v0.46.70）修复并挖新坑，修掉 **1 个 P0 + 8 个 P1**：
+- 青砚 P0：Round7 的 OOC 修复修在了 `findCharacterByName` 死代码上（全仓无生产调用方），运行态 OOC 文本检测实际缺失；且生产召回路径 `matchLoreEntries` 的 `knownNames` 不含表格列值，3字 lorebook key 作表值长名前缀时不吞并→误触发召回。本轮回填：删死代码、让生产路径 `matchLoreEntries` 接收 `tables` 并补表格关键列值进 `knownNames`，使「李星云剑法」内「李星云」被吞并不误召回。
+- 阿游 P1：chatStream 未透传 abort（停止后 LLM 仍生成丢 token）+ 空流跳过 abort 检查提交幻影空轮次→均修复（透传 signal + 空流守卫）。
+- 墨白 P1：babyloreFillAll 全跳过仍 ok:true 掩脏标记→改真返 ok:false。
+- 磐石 P1：commit 幂等锁是进程内存 Map（跨实例失效）→改 DB 唯一约束（ImportCommitLock，跨实例有效）；import_parse 失败 Flash 不记账→补 recordLlmCall；buildLoreSample 中段永不进 LLM→改头+4段均匀中段窗口。
+- 清览 P1：toast Confirm/Prompt 与 CommandPalette 手写模态无 role/焦点陷阱→补 role=dialog+aria-modal+焦点陷阱。
+- 工坊 P1：regex 漏 (a?)+ 重叠可选量词→补 ? 量词检测；import 部分 parentId/branchId 未剥离致外键悬空→剥离重映射；幂等查重在事务外→移入 $transaction 内。
+
+## 为什么这么做
+- 死代码比 bug 更隐蔽：Round7 的 OOC 修复「看起来修了」但修在无人调用的函数上，单测也只测该函数，造成「假绿」。真生产路径（recall 召回）的 knownNames 缺口仍在。补丁必须落到真调用链，否则是自欺。
+- 进程内存锁在多实例部署下等于没锁：原先 projectId→Map 的锁只在单进程有效，Vercel/多副本下并发请求各自进程，双写照旧。DB 唯一约束是跨实例唯一真相源。
+- chatStream 不传 signal，abort 只停了前端读取，后端 LLM 仍在跑——等于「挂了电话但对方还在说」，token 白烧且可能写脏。
+
+## 用了什么方法 / 效果
+- 青砚：删 `findCharacterByName` 死代码（含删除再导出）；`matchLoreEntries` 新增 `tables` 形参 + `collectTableKnownNames` 把表格关键列值（≥2字）并入 knownNames；生产链 orchestrator/context-loader/pre-processor/pipeline/types/preview-context 加载并透传 `loreTables`。补 trigger.test.ts + match.test.ts（26 项）。
+- 阿游：game-engine processGameTurn 透传 signal 到 chatStream；client.ts 给 LLMRequest 加 signal + AbortSignal.any 合并超时转发 fetch；空流（0 chunk）守卫 return 跳过 $transaction。补 game-engine.test.ts（38 项）。
+- 墨白：babyloreFillAll 全跳过分支 ok:true→ok:false 带 error 摘要。补 fill.ops.test.ts（13 项）。
+- 磐石：schema 新增 ImportCommitLock（projectId+nodeId 唯一约束）+ prisma generate + db push 建表；commit 改 DB 唯一约束 P2002→409；parse 失败 Flash 补 recordLlmCall；buildLoreSample 头+4段中段+尾采样。
+- 清览：toast Confirm/Prompt + CommandPalette 补 role=dialog+aria-modal+aria-labelledby+焦点陷阱（复用既有 use-focus-trap）。
+- 工坊：regex 补 ? 量词嵌套检测（(a?)+ 被拦）；import 创建 storyNode 剥离 parentId/branchId、pass2 按旧→新映射回填、悬空置 null；幂等查重移入 $transaction 内。补 regex.test.ts（18 项）。
+- 验证：vitest 多文件全过（trigger 26 / game 38 / babylore 13 / regex 18）；SAFE_DELETE_DISABLE=1 npx tsc --noEmit → EXIT:0（Chair 亲自跑，再次揭穿磐石 Agent 并行报 trigger.test.ts「3 错误」假象）；双 changelog 同 commit（修 VERSIONS 头条误吃 v0.46.70 头导致的 TS1128 坑）+ 代理 push `dc0cbb0..bb2b86a`。
+
+## 关键取舍 / 诚实边界
+- 踩坑实录：双 changelog 升版时 VERSIONS 头条 Edit 的 old_string 只覆盖到 `sections: [`，把 v0.46.70 条目头吃掉→无头残缺对象→tsc 报 TS1128/TS1005。修复=补回 v0.46.70 的 `{ version/date/title/sections: [` 头，复跑 tsc 零错误。教训已写入 MEMORY 工程铁律。
+- 工程铁律强化：Chair 统一 tsc 门禁不可省——并行 L2 Agent 各自跑 tsc 必现竞态假象，单 Agent 自测不可信。
+- Prisma 7 建表用 `npx prisma db push`（勿 --skip-generate，该 flag 不存在会打印帮助而失败）。
+- 已真实验证：tsc 零错误；多文件 vitest 过；schema 新增 ImportCommitLock 已 db push 建表；6 股东改动全在授权范围无越界；commit+push 完成。
+- 未验证（明示）：真机交互（OOC/召回真路径是否真不误触发、abort 真中断 LLM/chatStream 透传实测、锁跨实例并发、弹窗读屏、正则 ReDoS 实战）仍待用户本地实跑。
