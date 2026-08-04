@@ -11,6 +11,12 @@
  */
 import { config } from "dotenv";
 import { Client } from "pg";
+import { existsSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import net from "net";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 config(); // 读取项目根目录 .env
 
@@ -77,6 +83,35 @@ if (envKey && envModel) {
   warn("未设 LLM_API_KEY / LLM_MODEL 环境变量。应用启动后请到「设置」页填入 Key 与模型（DB AppSettings 优先级最高）。");
   warn("没有有效的 Key，所有 AI 生成都会失败——这是“完全不能用”的最常见原因。");
 }
+// ── 3. Prisma client ──────────────────────────────────────
+const prismaClientPath = join(__dirname, "..", "src", "generated", "prisma", "client.ts");
+if (!existsSync(prismaClientPath)) {
+  fail("Prisma client 未生成——dev server 能起但所有 API 会挂。修复：SAFE_DELETE_DISABLE=1 npx prisma generate");
+} else {
+  pass("Prisma client 已生成（src/generated/prisma）");
+}
+
+// ── 4. 端口 3001 ──────────────────────────────────────────
+const PORT = 3001;
+await new Promise((resolve) => {
+  const tester = net
+    .createServer()
+    .once("error", (e) => {
+      if (e.code === "EADDRINUSE") {
+        warn(`端口 ${PORT} 已被占用——若非本应用请先释放（可能是上一个 dev 进程未退出）。`);
+      } else {
+        warn(`端口 ${PORT} 检测异常：${e.code}`);
+      }
+      resolve();
+    })
+    .once("listening", () => {
+      tester.close();
+      pass(`端口 ${PORT} 空闲`);
+      resolve();
+    })
+    .listen(PORT);
+});
+
 console.log("");
 
 if (ok) {

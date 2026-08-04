@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.87 — 2026-08-04
+**部署自检加固（P0-3）：doctor 补 Prisma client 生成检查 + 端口 3001 占用检测；全面自查 tsc/vitest/API/build 全绿（tsc 零错误）**
+
+- doctor 脚本新增 Prisma client 生成检查：检测 src/generated/prisma/client.ts 是否存在，未生成时 fail 并提示修复命令——直击已知坑（safe-delete 拦截 prisma generate，dev server 看似能起但所有 API 报 Cannot find module）
+- doctor 新增端口 3001 占用检测：启动前用 net.createServer 探测，被占时 warn，避免端口冲突启动失败
+- 修正 Prisma 7 client 检查路径（client.ts 非 index.js），doctor 实测自检通过
+- 全面自查：tsc 零错误、vitest 190/190 全绿、API health/projects/settings 全 200、npm run build 通过；用户提过的问题代码层全部修复；部署站 health 404+projects 500 为 Vercel 侧，代码已就绪
+
+---
+
 ## v0.46.86 — 2026-08-04
 **删 UI 噪声（马斯克优化计划 P3·先减法后乘法）：顶栏导出/更多下拉收敛 + 右栏监测三面板默认折叠 + 左栏5→3 tab（更多▾收故事线/规则）+ 后处理提取常显其余收高级▾（tsc 零错误）**
 

@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.86";
+export const LATEST_VERSION = "v0.46.87";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "顶栏收敛：9 个按钮压到 7 个可见（零删功能）——「导出文件」与「复制全文」合并进「导出▾」下拉，「自动化」「工具箱」收进「更多▾」下拉；文风/大纲/摘要/导入书稿/备份包常显",
-  "右栏监测默认折叠：监测 tab 内「叙事能量曲线 / 生成延迟 / 节点监测」三面板改为可点开折叠区块，默认全收起，折叠时不挂载子组件（打开才 fetch），省首屏请求与渲染",
-  "左栏 5→3 tab：大纲 / 角色 / 世界 常显，低频的「故事线」「规则」收进「更多▾」（activeTab 落在隐藏 tab 时「更多」高亮），功能零丢失",
-  "后处理去过载：5 个 tab 的「章节提取」常显，「废词检测 / 逻辑自查 / 本地蒸馏 / 审校」4 个高级分析收进「高级▾」第二行（默认折叠，有问题时高级入口显红点角标）；内联双行展开规避 overflow-hidden 裁切",
+  "部署自检加固（P0-3）：doctor 脚本新增 Prisma client 生成检查——直击已知坑「safe-delete 拦截 prisma generate 导致 dev 能起但 API 全挂」，未生成时明确提示修复命令",
+  "doctor 新增端口 3001 占用检测——启动前发现旧 dev 进程未退出，避免端口冲突；修正 Prisma 7 client 路径（client.ts 非 index.js），自检准确不误报",
+  "全面自查：tsc 零错误 + vitest 190/190 全绿 + API health/projects/settings 全 200 + 生产构建通过——用户提过的问题代码层全部修复，无回归",
+  "部署站诊断：health 404 + projects 500 为 Vercel 侧问题（未重新部署最新代码 + Neon DB 额度耗尽），代码已就绪（build 通过 + postinstall prisma generate），待用户侧修复",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.87",
+    date: "2026-08-04",
+    title: "部署自检加固（P0-3）：doctor 补 Prisma client 生成检查 + 端口 3001 占用检测；全面自查 tsc/vitest/API/build 全绿（tsc 零错误）",
+    sections: [
+      {
+        label: "部署自检加固（P0-3·doctor 补全）",
+        items: [
+          "doctor 脚本新增 Prisma client 生成检查：检测 src/generated/prisma/client.ts 是否存在，未生成时 fail 并提示「SAFE_DELETE_DISABLE=1 npx prisma generate」——直击已知坑（safe-delete 拦截 prisma generate，dev server 看似能起但所有 API 报 Cannot find module）",
+          "doctor 新增端口 3001 占用检测：启动前用 net.createServer 探测端口，被占时 warn（可能是上一个 dev 进程未退出），避免端口冲突启动失败",
+          "修正 Prisma 7 client 检查路径：Prisma 7 generator 输出 client.ts（非旧版 index.js），原检查误报已修；doctor 实测自检通过",
+          "全面自查结果：tsc 零错误、vitest 190/190 全绿、/api/health+projects+settings 全 200、npm run build 通过；用户提过的问题（船建模/首页卡片/船黑/UI按钮/7项UI反馈/P3噪声）代码层全部修复；部署站 health 404+projects 500 为 Vercel 侧（未重新部署+Neon额度），代码已就绪",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.86",
     date: "2026-08-04",
