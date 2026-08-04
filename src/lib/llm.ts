@@ -251,6 +251,10 @@ export interface LlmCallLogInput {
   baseURL?: string | null;
   isFallback?: boolean;
   projectId?: string | null;
+  /** 单次调用总耗时（毫秒）——生成延迟硬指标数据源 */
+  durationMs?: number | null;
+  /** 首 token 延迟 / TTFB（毫秒）——流式场景为到首个正文 token 的时间 */
+  firstTokenMs?: number | null;
 }
 
 /**
@@ -271,6 +275,8 @@ export function recordLlmCall(input: LlmCallLogInput): void {
         estimatedCost: cost.cost,
         baseURL: input.baseURL ?? null,
         isFallback: input.isFallback ?? false,
+        durationMs: input.durationMs ?? null,
+        firstTokenMs: input.firstTokenMs ?? null,
       },
     })
     .catch(() => {

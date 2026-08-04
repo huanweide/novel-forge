@@ -9,6 +9,7 @@ import { RelationshipGraph } from "./RelationshipGraph";
 import { AIChatBar } from "./AIChatBar";
 import { MonitorPanel } from "./MonitorPanel";
 import { NarrativeEnergyPanel } from "./NarrativeEnergyPanel";
+import { GenerationLatencyPanel } from "./GenerationLatencyPanel";
 import { StatRow } from "./SharedUI";
 import type { StoryNodeData } from "./types";
 import { useProjectStore } from "@/store";
@@ -150,6 +151,7 @@ export function RightPanel(props: RightPanelProps) {
         {topTab === "monitor" && (
           <div className="flex-1 overflow-y-auto">
             <NarrativeEnergyPanel projectId={project.id} />
+            <GenerationLatencyPanel />
             <MonitorPanel projectId={project.id} nodeId={selectedNode?.id} />
           </div>
         )}

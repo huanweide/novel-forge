@@ -2114,3 +2114,29 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 ### 诚实边界（反自欺）
 - **已真实验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误（确认 `computeNarrativeEnergy`/`diagnose` 字段与 `ChapterSummary.eventImportances`/`keyEvents` + `StoryNode.order/type` schema 逐行对齐）；双 changelog 升 v0.46.84（`src/lib/changelog-data.ts` + 根 `CHANGELOG.md` 同 commit）；API 路由、`NarrativeEnergyPanel` 的 SVG 几何（x/y 映射、峰谷标注条件 `valley.index !== peak.index` 防重叠）经源码通读复核。
 - **未验证（必须明示）**：① 真实数据下曲线形状与诊断建议是否合理——需作者拿真实项目（多章有摘要 + 认真标了 S/A/B/C 事件）打开监测 tab 目测。沙箱无现成章节数据，未实跑渲染。② 能量公式权重（1.0/0.7/0.4/0.15/0.05 + NORM=3）是"先粗粒度"的经验值，作者若觉得某章能量明显偏高/偏低，权重是后续可调参数。③ SVG 在 w-80（320px）窄栏里的视觉拥挤度——需本地浏览器目测，必要时再调 viewBox/字号。
+
+---
+
+## v0.46.85 — 生成延迟硬指标（马斯克优化计划 P2·把延迟写进门禁）
+
+### 干了什么
+给作者一个「生成延迟」硬指标：在右侧「监测」tab（叙事能量曲线之下、字数统计之上）新增面板，显示每次真实生成的**首 token 延迟 P95**（流式到第一个字）、**总延迟 P95**（端到端 95 分位）、**输出吞吐 token/s**、**样本数**，并把**本地推理（Ollama）vs 云端 API** 的总延迟 P95 做成横向对比条。一旦总延迟 P95 超过 2000ms，整块红色警示「超过两秒就是失败」——直接把马斯克的原话写成门禁。
+
+### 为什么这么做（第一性原理）
+马斯克计划书 P2 原话：「生成延迟当硬指标 / 超过两秒就是失败 / 把延迟写进门禁」。我前面做了 P0 本地推理整合（把推理搬回本机 GPU），但「本地到底比云端快多少」一直是玄学——没有数据。这个面板就是把玄学变成可观测硬指标：作者一眼看出该不该升级 GPU、该不该切本地。同时延迟本身就是体验硬指标，和 P1 叙事能量曲线、P0 伏笔收束率一起，构成「可机检连贯性 + 性能」闭环。
+
+### 方法 / 工具 / 效果（对比过什么）
+- **零新增表（先减法）**：项目早就有 `LlmCallLog` 表记每次 LLM 调用的 token 与成本，但**缺延迟字段**。我直接给它加 `durationMs`（总耗时）/ `firstTokenMs`（首 token 延迟）两可空字段，`prisma db push + generate` 落库。对比过「新建一张独立的延迟表」——选了复用，因为既有的记账入口 `recordLlmCall` 是所有生成调用的单点，加两个字段零侵入、零新机制。
+- **计时埋点（零 LLM、零副作用）**：在 `src/core/llm/client.ts` 两处成功返回时计时——`chat`（非流式）测**端到端总耗时**（含重试/故障转移全链路，这才是用户真实等待）；`chatStream`（流式）给 `readStream` 新增 `onFirstToken` 回调，在**第一个正文 token 到达**时记 TTFB。计时值经 `recordLlmCall` 落库，全程 `fire-and-forget` + `try-catch` 容错——**绝不阻塞生成主流程**，落库失败静默忽略。
+- **聚合 API**：`GET /api/generation-metrics`（force-dynamic）从 `LlmCallLog` 取最近 300 条**成功**调用（`role` 不以 `fail:` 前缀、`durationMs` 非空，剔除重试/失败记账避免失真），算首 token/总延迟的中位 P95 均值、整体输出吞吐、按 Base URL 含 `localhost/11434` 分本地/云端对比，返回 `overThreshold` 供面板标红。分位数用通用 `quantile` 线性插值。
+- **面板**：`GenerationLatencyPanel.tsx` 仿 `MonitorPanel` 的 fetch + loading/error/empty 风格，用 `zap`/`alert` 图标，阈值红条 + 本地/云端对比条，窄栏（w-80）自适应；挂 `RightPanel` 监测 tab。
+
+### 关键取舍
+- **复用 LlmCallLog vs 新表**：选复用。代价是 `LlmCallLog.projectId` 当前基本落库为 `null`（client 调用 `recordLlmCall` 没传 projectId），所以面板**全量统计不按项目分**。这其实合理——延迟是「你的生成体验」全局指标，作者通常单项目用；且我没为这个顺手改所有调用点传 projectId（那是范围蔓延，留给后续）。
+- **首 token 延迟仅流式有**：非流式（如摘要、总结类 `chat`）没有「首 token」概念，记 `null` 不污染统计；总延迟反映所有调用。作者最在意的**流式正文生成**恰好有首 token 指标，精准对齐痛点。
+- **阈值 2000ms 硬编码为常量** `LATENCY_THRESHOLD_MS`：便于后续按机型/网络调整；目前如实反映马斯克「两秒铁律」。
+- **计时含重试全链路**：端到端用户体验，而非单次网络往返——更接近「用户实际等了多久」，也暴露故障转移的隐藏成本。
+
+### 诚实边界（反自欺）
+- **已真实验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误；`schema` 加字段后 `db push + generate` 成功（`LlmCallLog` 现已含 `durationMs`/`firstTokenMs` 类型）；`client.ts` 计时逻辑（chat start/streamStart/firstTokenMs 闭包共享）与 `recordLlmCall` 写入字段逐行对齐；双 changelog 升 v0.46.85（`changelog-data.ts` + 根 `CHANGELOG.md` 同 commit）；API 的 `where` 过滤（`role.not.startsWith("fail:")` + `durationMs.not.null`）经源码通读复核。
+- **未验证（必须明示）**：① 真实数据下 P95/吞吐/本地vs云端数值是否合理——沙箱无任何生成记录，未实跑渲染（面板空状态已写引导文案）。② 阈值 2000ms 是否一刀切过严：长文流式生成可能 >2s 但作者可接受，留待你本地目测调常量。③ 面板窄栏（320px）下多卡布局拥挤度需浏览器目测。④ `projectId` 落库为 null 导致无法按项目分延迟——当前全量，若你后续想要分项目，需给 client 各调用点补传 projectId（已知范围，未做）。

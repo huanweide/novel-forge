@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.84";
+export const LATEST_VERSION = "v0.46.85";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "叙事能量曲线：监测 tab 顶部新增「叙事能量曲线」面板，以 SVG 折线图展示各章叙事张力（能量）随章节起伏，自动标注峰值/谷值章节，并给节奏诊断（虎头蛇尾 / 张力过平 / 连续走低 / 平缓平台）",
-  "能量计算零新字段：复用 ChapterSummary 既有 eventImportances（S/A/B/C 四级事件分层）+ keyEvents 密度，确定性加权归一能量（raw = 1.0*S + 0.7*A + 0.4*B + 0.15*C + 0.05*keyEvents，再 /3 截断到 0-1），按 StoryNode.order 排章节序，免 LLM、零成本",
-  "新增 GET /api/narrative-energy?projectId=xxx 路由（只读聚合，无副作用），核心 computeNarrativeEnergy(@/core/narrative-energy) 含峰谷/方差/连续下降/平台检测，整段 try-catch 容错返回空结构",
-  "叙事物理引擎雏形：把叙事张力当守恒量，作者可一眼看出哪章该加冲突、哪章该缓冲；首末趋势 + 峰谷落差 + 连续走低段落诊断，对应马斯克计划书 P1「叙事能量曲线（先粗粒度）」",
+  "生成延迟硬指标：监测 tab 新增「生成延迟」面板，显示首 token 延迟 P95、总延迟 P95、输出吞吐、本地推理 vs 云端 API 延迟对比；总延迟 P95 超过 2 秒阈值（马斯克铁律「超过两秒就是失败」）即红色警示",
+  "零新增表零 LLM：复用既有 LlmCallLog 表加 durationMs/firstTokenMs 两字段，在 LLM 客户端 chat（端到端总耗时）与 chatStream（到首个正文 token 的 TTFB）成功返回时经 recordLlmCall 计时落库，fire-and-forget 容错，不阻塞生成主链路",
+  "新增 GET /api/generation-metrics 路由：从真实生成计时聚合延迟分布，过滤 fail: 重试记账避免失真，按本地（localhost/11434）vs 云端分组对比 P95，呼应马斯克计划 P2「把延迟写进门禁」",
+  "生成延迟面板直接验证 P0 本地推理整合收益：本地推理走本机 GPU 零网络往返，云端走 DeepSeek/硅基流动 API，作者一眼看出该不该升级 GPU 或切本地——把延迟从玄学变成可观测硬指标",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.85",
+    date: "2026-08-04",
+    title: "生成延迟硬指标（P2）：LlmCallLog 加 durationMs/firstTokenMs 计时埋点 + GET /api/generation-metrics 延迟聚合 + 生成延迟面板（本地vs云端对比 + 2s 阈值标红）（tsc 零错误）",
+    sections: [
+      {
+        label: "生成延迟硬指标（马斯克优化计划 P2·把延迟写进门禁）",
+        items: [
+          "监测 tab 新增「生成延迟」面板（GenerationLatencyPanel）：展示首 token 延迟 P95（流式到首个字）、总延迟 P95（端到端 95 分位）、输出吞吐 token/s、样本数，并在总延迟 P95 > 2000ms 时红色警示「超过两秒就是失败」（马斯克原话铁律）；本地推理（Ollama）vs 云端 API 总延迟 P95 横向对比条形，作者一眼看出本地是否更快",
+          "零新增 schema 主表：复用既有 LlmCallLog 加 durationMs（总耗时）/firstTokenMs（首 token 延迟）两可空字段，PRISMA_DISABLE_SAFE_DELETE=1 npx prisma db push + generate；在 src/core/llm/client.ts 的 chat（成功返回测端到端总耗时，含重试/故障转移）与 chatStream（readStream 新增 onFirstToken 回调测到首个正文 token 的 TTFB）埋点，经 src/lib/llm.ts 的 recordLlmCall 落库，全程 fire-and-forget try-catch 容错，绝不阻塞生成主流程",
+          "新增 GET /api/generation-metrics 路由（force-dynamic）：从 LlmCallLog 聚合最近 300 条成功调用（role 不以 fail: 前缀、durationMs 非空，剔除重试/失败记账避免失真），算首 token/总延迟的中位 P95 均值、整体输出吞吐、按 Base URL 含 localhost/11434 分本地/云端对比；返回 overThreshold 标志（P95 总延迟 > 2000ms），供面板标红",
+          "该指标直接验证 P0 本地推理整合收益：本地推理走本机 GPU 零网络往返、云端走 API 受代理/限流影响，作者拿到真实延迟分布即可量化「本地推理到底值不值」；呼应马斯克计划 P2「生成延迟当硬指标 / 把延迟写进门禁」，与 P0 本地推理、P1 叙事能量曲线形成可机检连贯性 + 性能闭环",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.84",
     date: "2026-08-04",

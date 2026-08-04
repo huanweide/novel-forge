@@ -599,6 +599,8 @@ model LlmCallLog {
   estimatedCost   Float    @default(0) // 估算成本（美元），按内置价格表计算
   baseURL         String? // 实际调用 Base URL（故障转移溯源）
   isFallback      Boolean  @default(false) // 是否经故障转移备用模型完成
+  durationMs      Int?     // 单次 LLM 调用总耗时（毫秒）——生成延迟硬指标数据源
+  firstTokenMs    Int?     // 首 token 延迟 / TTFB（毫秒），流式场景记录到首个正文 token 的时间
 
   @@index([createdAt])
   @@index([projectId])

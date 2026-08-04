@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.85 — 2026-08-04
+**生成延迟硬指标（P2）：LlmCallLog 加 durationMs/firstTokenMs 计时埋点 + GET /api/generation-metrics 延迟聚合 + 生成延迟面板（本地vs云端对比 + 2s 阈值标红）（tsc 零错误）**
+
+- 生成延迟硬指标：监测 tab 新增「生成延迟」面板（GenerationLatencyPanel），展示首 token 延迟 P95、总延迟 P95、输出吞吐 token/s、样本数，总延迟 P95 > 2000ms 时红色警示「超过两秒就是失败」（马斯克原话铁律）；本地推理（Ollama）vs 云端 API 总延迟 P95 横向对比条形
+- 零新增 schema 主表：复用既有 LlmCallLog 加 durationMs（总耗时）/firstTokenMs（首 token 延迟）两可空字段，db push + generate；在 src/core/llm/client.ts 的 chat（端到端总耗时）与 chatStream（readStream 新增 onFirstToken 回调测到首个正文 token 的 TTFB）埋点，经 src/lib/llm.ts 的 recordLlmCall 落库，fire-and-forget try-catch 容错，绝不阻塞生成主流程
+- 新增 GET /api/generation-metrics 路由（force-dynamic）：聚合最近 300 条成功调用（role 不以 fail: 前缀、durationMs 非空，剔除重试/失败记账避免失真），算首 token/总延迟中位 P95 均值、整体输出吞吐、按 Base URL 含 localhost/11434 分本地/云端对比，返回 overThreshold 标志供面板标红
+- 直接验证 P0 本地推理整合收益：本地推理走本机 GPU 零网络往返、云端走 API 受代理/限流影响，作者拿到真实延迟分布即可量化「本地推理到底值不值」，把延迟从玄学变成可观测硬指标
+
+---
+
 ## v0.46.84 — 2026-08-04
 **叙事能量曲线（叙事物理引擎雏形·P1）：ChapterSummary 事件分层确定性加权能量 + SVG 折线峰谷标注 + 节奏诊断（tsc 零错误）**
 

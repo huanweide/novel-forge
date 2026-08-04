@@ -301,6 +301,7 @@ async function establishStream(
 async function* readStream(
   response: Response,
   onUsage?: (u: { promptTokens: number; completionTokens: number; totalTokens: number }) => void,
+  onFirstToken?: () => void,
 ): AsyncGenerator<{ type: "token" | "done"; content: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("无法获取响应流");
@@ -348,6 +349,7 @@ async function* readStream(
 
           if (delta?.content) {
               completionTokens++;
+              if (onFirstToken) onFirstToken(); // 首个正文 token 到达——记录首 token 延迟
               yield {
                 type: "token" as const,
                 content: delta.content,
@@ -390,6 +392,7 @@ export function createLLMClient(config: LLMConfig) {
     async chat(request: Omit<LLMRequest, "stream">): Promise<LLMResponse> {
       const chain = buildChain(config, request.model);
       let lastError: Error | null = null;
+      const start = Date.now(); // 端到端计时起点（含重试/故障转移）
 
       for (const target of chain) {
         let attempt = 0;
@@ -405,6 +408,7 @@ export function createLLMClient(config: LLMConfig) {
               totalTokens: res.value.usage.totalTokens,
               baseURL: target.baseURL,
               isFallback: target !== chain[0],
+              durationMs: Date.now() - start, // 生成延迟：端到端总耗时
             });
             return res.value;
           }
@@ -434,6 +438,8 @@ export function createLLMClient(config: LLMConfig) {
     async *chatStream(request: Omit<LLMRequest, "stream">) {
       const chain = buildChain(config, request.model);
       let lastError: Error | null = null;
+      const streamStart = Date.now(); // 流式计时起点
+      let firstTokenMs: number | null = null; // 首个正文 token 延迟（闭包共享给 onUsage）
 
       for (const target of chain) {
         let attempt = 0;
@@ -442,16 +448,23 @@ export function createLLMClient(config: LLMConfig) {
           const est = await establishStream(target, request, config);
           if (est.ok) {
             // 一旦进入 token 流就不再重试 / 切换，避免重复输出
-            yield* readStream(est.response, (u) =>
-              recordLlmCall({
-                model: target.model,
-                role: request.role,
-                promptTokens: u.promptTokens,
-                completionTokens: u.completionTokens,
-                totalTokens: u.totalTokens,
-                baseURL: target.baseURL,
-                isFallback: target !== chain[0],
-              }),
+            yield* readStream(
+              est.response,
+              (u) =>
+                recordLlmCall({
+                  model: target.model,
+                  role: request.role,
+                  promptTokens: u.promptTokens,
+                  completionTokens: u.completionTokens,
+                  totalTokens: u.totalTokens,
+                  baseURL: target.baseURL,
+                  isFallback: target !== chain[0],
+                  durationMs: Date.now() - streamStart, // 流式总耗时（到 [DONE]）
+                  firstTokenMs, // 首 token 延迟（onFirstToken 已设置）
+                }),
+              () => {
+                if (firstTokenMs === null) firstTokenMs = Date.now() - streamStart;
+              },
             );
             return;
           }
