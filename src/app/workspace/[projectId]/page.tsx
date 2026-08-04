@@ -849,7 +849,7 @@ export default function WorkspacePage() {
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
-        onImportSettings={() => { setImportWizardMode("settings"); setShowImportWizard(true); }} onImportChapters={() => { setImportWizardMode("chapters"); setShowImportWizard(true); }}
+        onImportChapters={() => { setImportWizardMode("chapters"); setShowImportWizard(true); }}
         onEditStyle={() => setShowStyleEditor(true)}
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}

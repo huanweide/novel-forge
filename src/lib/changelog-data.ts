@@ -25,18 +25,32 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.79";
+export const LATEST_VERSION = "v0.46.80";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "顶部栏导入入口去重：删除「导入设定」按钮，仅保留「导入书稿」——两者都打开同一个 ImportWizard 弹窗（仅 initialMode 不同），弹窗内可自由切换「章节正文 / 设定文本 / 快速导入」，删一个不丢能力",
   "纸舟星海静态化：停止绕圈巡游（orbitSpeed=0，删除每帧分离避让 O(n^2) 与逐帧旋转/摇晃/入场坠落），船水平固定、仅随波浪轻浮贴合水面，相机一次缓动后静止",
   "降低密度：3D 船数封顶 12 艘（作品再多只渲染 12 艘，下方按钮列表仍全量可点击进入），减少 Draw Call 降卡顿",
   "均匀分散：改用向日葵（黄金角）螺旋分布，半径随 sqrt(i) 增大、Z 拉伸 0.6→0.85，船阵均匀散开不聚堆",
-  "减卡顿：渲染像素比上限 1.75→1.5 削减海面着色器开销；底部说明由「水面随机巡游」改为「星海静泊」",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.80",
+    date: "2026-08-04",
+    title: "顶部栏导入入口去重：删除冗余「导入设定」按钮，保留「导入书稿」（弹窗内可切设定/章节/快速模式）（tsc 零错误）",
+    sections: [
+      {
+        label: "导入入口去重（用户反馈）",
+        items: [
+          "删除顶部栏「导入设定」按钮，仅保留「导入书稿」：二者均打开同一个 ImportWizard 弹窗，仅 initialMode 预选不同（settings / chapters），弹窗内「导入类型」选择器可自由切换「章节正文 / 设定文本 / 快速导入」，删一个不丢能力",
+          "清理接线：Toolbar 移除 onImportSettings prop 与对应按钮；workspace 页移除 onImportSettings 处理器，统一走 onImportChapters（默认 chapters 模式，设定模式在弹窗内选择）；刷新后顶部栏少一个重复入口",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.79",
     date: "2026-08-04",
