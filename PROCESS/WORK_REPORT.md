@@ -1869,3 +1869,31 @@ Round 8 复验 Round 7（v0.46.70）修复并挖新坑，修掉 **1 个 P0 + 8 �
 - Prisma 7 建表用 `npx prisma db push`（勿 --skip-generate，该 flag 不存在会打印帮助而失败）。
 - 已真实验证：tsc 零错误；多文件 vitest 过；schema 新增 ImportCommitLock 已 db push 建表；6 股东改动全在授权范围无越界；commit+push 完成。
 - 未验证（明示）：真机交互（OOC/召回真路径是否真不误触发、abort 真中断 LLM/chatStream 透传实测、锁跨实例并发、弹窗读屏、正则 ReDoS 实战）仍待用户本地实跑。
+
+---
+
+# Round 9 实现报告（v0.46.72）—— 费曼式沉淀
+
+## 干了什么
+Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿游/墨白/磐石/清览/工坊）只读复验 v0.46.71，确认上一轮 P0 已闭合（本轮零 P0），但挖出 10 个 P1（含 2 个 Round 8 引入的回归）。Chair 派 6 Agent 并行实现，统一 tsc 零错误后升版 v0.46.72、双 changelog、提交并代理推送。修的 10 项：数字关键词边界守卫、abort 语义干净、填表死循环消除、流式成本可见、崩溃孤儿锁清理、移动抽屉无障碍、正则回归修复、导入并发幂等落库。
+
+## 为什么这么做
+- 数字边界是「边界规则覆盖不全」的漏网：Round 6 给纯数字关键词加了边界守卫（灭「2049」误命中「120499」），但「含数字的非纯数字关键词」（如「2049年」「第3章」）走了 `len>=3 直命中` 分支、绕过边界，于是「2049年」仍误命中「12049年」。凡是「长度够了就直命中」的捷径，只要关键词里混了数字，就必须补数字边界。
+- abort 不当失败是「异常类型没细分」：流式读取对 `reader.read()` 抛的 AbortError 没接住，冒泡到调用方被当成「LLM 调用失败」。用户主动停止和真的调用失败是两种语义，必须在 catch 里用 `err.name==="AbortError"` 区分——否则「停止」会被记成「错误」，污染回放对账。
+- 填表死循环是「状态只标不消」：填表给节点打「脏标记」表示待填，但评估/跳过后没清除，下一轮又把同一批当脏、又全跳过、又返回「有更新」，UI 永远提示。任何「标记待处理」的机制都必须有「处理完即清除」的出口，否则是无限循环。
+- 正则误杀是「启发式过宽」：Round 8 把 `?` 也当成嵌套量词触发符，结果 `(https?://)?` 这种合法可选组被当 ReDoS 静默丢弃。真 ReDoS 的判定应只数「组内有量词 + 组外紧跟量词」，`?` 作为可选量词本身无害，要排除。
+
+## 用了什么方法 / 效果
+- 青砚：matchKeyword 对含数字且非纯数字关键词加数字边界守卫（命中位置首/末是数字且紧邻也是数字→跳过）。补 match.test.ts 至 28 项（含「2049年」不命中「12049年」、命中「到了2049年」）。
+- 阿游：game-engine 消费 chatStream 的 catch 区分 AbortError→优雅 return（不发 error、不提交）。补 game-engine.test.ts 至 15 项（abort 不产 error 事件）。
+- 墨白：babyloreFillAll 全跳过 error 结构化（带 processed/applied/skipped/failed/nodeIds，区分「无待填」vs「误标」）；每个已评估节点清除脏标记灭死循环。补 fill.ops.test.ts 至 10 项（含二次不重填）。
+- 磐石：client.ts establishStream 加 `stream_options:{include_usage:true}`（流式 token 真实记账）；llm.ts MODEL_PRICING 增补 deepseek-v4-flash（默认模型成本可见）；import/commit 获取锁前删 15 分钟以上陈旧锁（灭崩溃孤儿锁）。
+- 清览：workspace/explore/game 三页窄屏模态抽屉（aside/div）补 role=dialog+aria-modal+aria-labelledby+焦点陷阱（复用 use-focus-trap）+ESC+背景 inert。
+- 工坊：regex.ts 把 `?` 移出 repeated 集（内层 `?` 仍经 hasQuantInside 捕获真 ReDoS）；Project 加 importSource @unique + 导入并发 P2002 幂等返回已存在项目。补 regex.test.ts 至 23 项（(https?://)?/(a+)? 安全、(a?)+ 仍拦）。
+- 验证：vitest 82 passed（regex 23 / match 28 / game-engine 15 / babylore 16）；SAFE_DELETE_DISABLE=1 npx tsc --noEmit → EXIT:0；双 changelog 同 commit + 代理 push `8c82195..7814d03`。
+
+## 关键取舍 / 诚实边界
+- 踩坑实录（工坊 Agent 空返回）：该 Agent 静默返回，git 却显示 schema+route 已改，留下 4 个真 tsc 错误——①`importSourceKey` 在 try 内用 const 声明，catch 块作用域看不到（TS2552）；②只 db push 没 `prisma generate`，TS 类型里没有 importSource 字段（TS2353）。Chair 亲自读 diff + 跑 tsc 才发现，修复=把声明提到 try 外以 `let` + 补 `prisma generate`。教训：L2 Agent 回报「完成」不可轻信，空返回更要逐行核对。
+- 工程铁律强化：Prisma 7 新增字段后必须 `prisma generate`（db push 只更库不更客户端）；Chair 统一 tsc 门禁不可省。
+- 已真实验证：tsc 零错误；82 项 vitest 全过；Project.importSource @unique 已 db push 建约束；6 股东改动全在授权范围无越界；commit+push 完成。
+- 未验证（明示）：真机交互（abort 真中断/chatStream 透传/锁跨实例并发实测/弹窗读屏/正则 ReDoS 实战/默认模型真实定价）仍待用户本地实跑。墨白 P1-B/C/E/F（填表跨表校验/单 op 静默丢/行级同名合并）留 Round 10。
