@@ -178,7 +178,8 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
   }
 
   // 写章自动填表成功后，复用 fill.ts 的防重复标记，使一键 fill-all 真正跳过已填章节（墨白 F1）
-  if (babylore.ok && nodeId) {
+  // P0-3：门槛由 babylore.ok 提升为 ok && applied>0，空 ops/全失效章不标已填，留待重试。
+  if (babylore.ok && babylore.applied > 0 && nodeId) {
     try {
       markChapterFilled(projectId, nodeId);
     } catch {

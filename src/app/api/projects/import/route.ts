@@ -15,9 +15,19 @@ function strip<T extends Record<string, any>>(o: T, keys: string[]): Record<stri
 // POST /api/projects/import —— 从 .nfproject 备份包导入为新项目（id 全部重映射）
 // body：备份 JSON；可选 include：["characters","lorebook","chapters","branches","storylines","style","tables","rules"]
 // v0.46.58：支持只导入选中的设定（未列出的部分跳过）。
+// P1-①：整段包裹 $transaction（失败自动 rollback，不留孤儿项目/半吊子记录）；
+//       按 {projectId, source} 幂等去重，重复导入同一 .nfproject 返回已存在项目、不再成倍复制。
+
+const IMPORT_SOURCE = "nfproject";
+
+interface ImportSourceMeta {
+  projectId: string;
+  source: string;
+  name: string;
+  at: number;
+}
+
 export async function POST(request: Request) {
-  // P2-②：记录已建部分，失败时不崩、可回溯已写入的内容（事务回滚列为后续）
-  let built: Record<string, number> | null = null;
   try {
     const bundle = await request.json();
     const p = bundle?.project;
@@ -33,119 +43,137 @@ export async function POST(request: Request) {
       : null; // null = 全量
     const want = (key: string) => (include === null || include.has(key));
 
-    // 1. 项目本体
-    const projData = strip(p, [
-      "id", "createdAt", "updatedAt", "deletedAt",
-      "characters", "lorebookEntries", "storyNodes", "storyBranches",
-      "storylines", "styleCards", "loreTables", "rules",
-    ]);
-    projData.name = (projData.name || "导入的项目") + "（导入）";
+    // 原始项目 id（来自备份），作为幂等去重键的一部分；缺失则无法去重，按新建处理
+    const origId = typeof p.id === "string" && p.id ? p.id : null;
 
-    const created = await prisma.project.create({ data: projData as any });
-    const newPid = created.id;
-
-    // P2-②：记录已建部分，失败时不崩、可回溯已写入的内容（事务回滚列为后续）
-    built = { project: 1, branches: 0, chapters: 0, lorebook: 0, characters: 0, storylines: 0, style: 0, tables: 0, rules: 0 };
-
-    // 2. 故事分支（id 重映射）
-    const branchMap: Record<string, string> = {};
-    if (want("branches")) {
-      for (const b of p.storyBranches || []) {
-        const cb = await prisma.storyBranch.create({
-          data: { ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId"]), projectId: newPid } as any,
-        });
-        branchMap[b.id] = cb.id;
-        built.branches++;
+    // ── 幂等去重：相同 {projectId, source} 已导入过，则直接返回已存在项目，避免成倍复制 ──
+    if (origId) {
+      const existing = await prisma.project.findFirst({
+        where: {
+          AND: [
+            { buildConfig: { path: ["importSource", "projectId"], equals: origId } },
+            { buildConfig: { path: ["importSource", "source"], equals: IMPORT_SOURCE } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        return NextResponse.json({ success: true, id: existing.id, idempotent: true });
       }
     }
 
-    // 3. 章节节点 pass1 创建（不带 parent/branch），pass2 回填 parentId/branchId
-    const nodeMap: Record<string, string> = {};
-    if (want("chapters")) {
-      for (const n of p.storyNodes || []) {
-        const cn = await prisma.storyNode.create({
-          data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid, revisionCount: 0 } as any,
-        });
-        nodeMap[n.id] = cn.id;
-        built.chapters++;
-      }
-      for (const n of p.storyNodes || []) {
-        const upd: Record<string, any> = {};
-        if (n.parentId && nodeMap[n.parentId]) upd.parentId = nodeMap[n.parentId];
-        if (n.branchId && branchMap[n.branchId]) upd.branchId = branchMap[n.branchId];
-        if (Object.keys(upd).length) {
-          await prisma.storyNode.update({ where: { id: nodeMap[n.id] }, data: upd });
+    // 在事务内创建项目本体 + 全部子表；任一失败自动回滚，不留孤儿
+    const newPid = await prisma.$transaction(async (tx) => {
+      // 1. 项目本体
+      const projData = strip(p, [
+        "id", "createdAt", "updatedAt", "deletedAt",
+        "characters", "lorebookEntries", "storyNodes", "storyBranches",
+        "storylines", "styleCards", "loreTables", "rules",
+      ]);
+      projData.name = (projData.name || "导入的项目") + "（导入）";
+      // 记录导入来源，供幂等去重（不改动业务字段语义）
+      projData.buildConfig = {
+        ...(typeof p.buildConfig === "object" && p.buildConfig ? p.buildConfig : {}),
+        importSource: { projectId: origId, source: IMPORT_SOURCE, name: p.name || "", at: Date.now() },
+      };
+
+      const created = await tx.project.create({ data: projData as any });
+      const pid = created.id;
+
+      // 2. 故事分支（id 重映射）
+      const branchMap: Record<string, string> = {};
+      if (want("branches")) {
+        for (const b of p.storyBranches || []) {
+          const cb = await tx.storyBranch.create({
+            data: { ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId"]), projectId: pid } as any,
+          });
+          branchMap[b.id] = cb.id;
         }
       }
-    }
 
-    // 4. 世界书词条（parentId / relatedEntryIds 重映射）
-    const loreMap: Record<string, string> = {};
-    if (want("lorebook")) {
-      for (const l of p.lorebookEntries || []) {
-        const cl = await prisma.lorebookEntry.create({
-          data: { ...strip(l, ["id", "projectId", "createdAt", "updatedAt", "parentId", "relatedEntryIds"]), projectId: newPid } as any,
-        });
-        loreMap[l.id] = cl.id;
-        built.lorebook++;
-      }
-      for (const l of p.lorebookEntries || []) {
-        const upd: Record<string, any> = {};
-        if (l.parentId && loreMap[l.parentId]) upd.parentId = loreMap[l.parentId];
-        if (Array.isArray(l.relatedEntryIds)) {
-          const remapped = (l.relatedEntryIds as string[]).map((rid) => loreMap[rid]).filter(Boolean);
-          if (remapped.length) upd.relatedEntryIds = remapped;
+      // 3. 章节节点 pass1 创建（不带 parent/branch），pass2 回填 parentId/branchId
+      const nodeMap: Record<string, string> = {};
+      if (want("chapters")) {
+        for (const n of p.storyNodes || []) {
+          const cn = await tx.storyNode.create({
+            data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid, revisionCount: 0 } as any,
+          });
+          nodeMap[n.id] = cn.id;
         }
-        if (Object.keys(upd).length) {
-          await prisma.lorebookEntry.update({ where: { id: loreMap[l.id] }, data: upd });
+        for (const n of p.storyNodes || []) {
+          const upd: Record<string, any> = {};
+          if (n.parentId && nodeMap[n.parentId]) upd.parentId = nodeMap[n.parentId];
+          if (n.branchId && branchMap[n.branchId]) upd.branchId = branchMap[n.branchId];
+          if (Object.keys(upd).length) {
+            await tx.storyNode.update({ where: { id: nodeMap[n.id] }, data: upd });
+          }
         }
       }
-    }
 
-    // 5. 其余扁平子表
-    if (want("characters")) {
-      for (const c of p.characters || []) {
-        await prisma.characterCard.create({
-          data: {
-            ...strip(c, ["id", "projectId", "createdAt", "updatedAt"]),
-            relationships: normalizeRelationships((c as any).relationships),
-            projectId: newPid,
-          } as any,
-        });
-        built.characters++;
+      // 4. 世界书词条（parentId / relatedEntryIds 重映射）
+      const loreMap: Record<string, string> = {};
+      if (want("lorebook")) {
+        for (const l of p.lorebookEntries || []) {
+          const cl = await tx.lorebookEntry.create({
+            data: { ...strip(l, ["id", "projectId", "createdAt", "updatedAt", "parentId", "relatedEntryIds"]), projectId: pid } as any,
+          });
+          loreMap[l.id] = cl.id;
+        }
+        for (const l of p.lorebookEntries || []) {
+          const upd: Record<string, any> = {};
+          if (l.parentId && loreMap[l.parentId]) upd.parentId = loreMap[l.parentId];
+          if (Array.isArray(l.relatedEntryIds)) {
+            const remapped = (l.relatedEntryIds as string[]).map((rid) => loreMap[rid]).filter(Boolean);
+            if (remapped.length) upd.relatedEntryIds = remapped;
+          }
+          if (Object.keys(upd).length) {
+            await tx.lorebookEntry.update({ where: { id: loreMap[l.id] }, data: upd });
+          }
+        }
       }
-    }
-    if (want("storylines")) {
-      for (const s of p.storylines || []) {
-        await prisma.storyline.create({ data: { ...strip(s, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
-        built.storylines++;
+
+      // 5. 其余扁平子表
+      if (want("characters")) {
+        for (const c of p.characters || []) {
+          await tx.characterCard.create({
+            data: {
+              ...strip(c, ["id", "projectId", "createdAt", "updatedAt"]),
+              relationships: normalizeRelationships((c as any).relationships),
+              projectId: pid,
+            } as any,
+          });
+        }
       }
-    }
-    if (want("style")) {
-      for (const sc of p.styleCards || []) {
-        await prisma.styleCard.create({ data: { ...strip(sc, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
-        built.style++;
+      if (want("storylines")) {
+        for (const s of p.storylines || []) {
+          await tx.storyline.create({ data: { ...strip(s, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        }
       }
-    }
-    if (want("tables")) {
-      for (const lt of p.loreTables || []) {
-        await prisma.loreTable.create({ data: { ...strip(lt, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
-        built.tables++;
+      if (want("style")) {
+        for (const sc of p.styleCards || []) {
+          await tx.styleCard.create({ data: { ...strip(sc, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        }
       }
-    }
-    if (want("rules")) {
-      for (const r of p.rules || []) {
-        await prisma.rule.create({ data: { ...strip(r, ["id", "projectId", "createdAt", "updatedAt"]), projectId: newPid } as any });
-        built.rules++;
+      if (want("tables")) {
+        for (const lt of p.loreTables || []) {
+          await tx.loreTable.create({ data: { ...strip(lt, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        }
       }
-    }
+      if (want("rules")) {
+        for (const r of p.rules || []) {
+          await tx.rule.create({ data: { ...strip(r, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        }
+      }
+
+      return pid;
+    });
 
     return NextResponse.json({ success: true, id: newPid });
   } catch (err) {
-    // P2-②：失败不崩、保留已建部分计数供排查（事务回滚列为后续）
-    console.error("[import] 还原失败:", err instanceof Error ? err.message : String(err));
+    // P1-①：事务已自动 rollback，此处不再留孤儿；仅报错返回
+    console.error("[import] 还原失败（已回滚）:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : String(err), built },
+      { success: false, error: err instanceof Error ? err.message : String(err) },
       { status: 500 },
     );
   }

@@ -56,7 +56,16 @@ interface ParseResult {
   extractedCharacters: ExtractedChar[];
   extractedLoreEntries: ExtractedLore[];
   extractedStyle: ExtractedStyle;
-  meta: { chapterCount: number; characterCount: number; loreCount: number; volumeMode: boolean };
+  status?: "completed" | "partial" | "failed";
+  meta: {
+    chapterCount?: number;
+    characterCount?: number;
+    loreCount?: number;
+    volumeMode?: boolean;
+    worldFailed?: boolean;
+    failedChunks?: number;
+    estimatedTotal?: number;
+  };
 }
 
 type Step = "input" | "parsing" | "preview" | "committing" | "done";
@@ -372,12 +381,33 @@ export function ImportWizard({
               setSelectedChapters(new Set((event.detectedChapters || []).map((_: unknown, i: number) => i)));
               setSelectedChars(new Set((event.extractedCharacters || []).map((_: unknown, i: number) => i)));
               setSelectedLore(new Set((event.extractedLoreEntries || []).map((_: unknown, i: number) => i)));
+
+              // P1-2：消费 status / worldFailed，partial/failed 不再一律显示「✅完成」
+              const status = (event.status as string) || "completed";
+              const meta = (event.meta || {}) as { worldFailed?: boolean; failedChunks?: number };
+              const isFailed = status === "failed";
+              const isPartial = status === "partial" || meta.worldFailed === true;
+              const charLen = (event.extractedCharacters || []).length;
+              const loreLen = (event.extractedLoreEntries || []).length;
+              const completeMsg = isFailed
+                ? `⚠️ 提取失败（${status}）：${charLen}角色 ${loreLen}词条，数据可能缺失，请重试`
+                : isPartial
+                  ? `⚠️ 部分提取失败（${status}）：${charLen}角色 ${loreLen}词条${meta.worldFailed ? " · 世界书可能不完整" : ""}`
+                  : `✅ 完成！提取了${charLen}个角色，${loreLen}个词条`;
+
               setProgressSteps((prev) => [...prev, {
-                stage: "complete",
-                message: `✅ 完成！提取了${(event.extractedCharacters || []).length}个角色，${(event.extractedLoreEntries || []).length}个词条`,
+                stage: isFailed ? "failed" : "complete",
+                message: completeMsg,
                 time: new Date().toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai" }),
               }]);
-              setTimeout(() => setStep("preview"), 500);
+
+              if (isFailed) {
+                // failed：阻断进入预览，提示用户重试
+                setError(completeMsg);
+                setStep("input");
+              } else {
+                setTimeout(() => setStep("preview"), 500);
+              }
             } else if (event.type === "error") {
               sessionStorage.removeItem("nf-import-task-" + projectId);
               setError(event.message || "分析失败");
@@ -821,6 +851,14 @@ export function ImportWizard({
           {step === "preview" && result && (
             <div className="space-y-5">
               <p className="text-xs text-[var(--nv-text-muted)] -mb-3">勾选要导入的项 → 点「确认选中」写入数据库。已写入的会自动移出列表。未确认的可以保留或手动移除。</p>
+
+              {/* P1-2：世界书/文风提取失败警示横幅 */}
+              {result.status === "partial" || result.meta?.worldFailed ? (
+                <div className="p-3 rounded-lg bg-warning/30 border border-warning/50 text-sm text-warning flex items-start gap-2">
+                  <Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0 mt-0.5" />
+                  <span>世界书 / 文风提取可能不完整（状态：{result.status || "partial"}）。缺失的设定已静默跳过，建议补充资料后重新导入，或手动补全。</span>
+                </div>
+              ) : null}
 
               {/* 概要 */}
               <div className="grid grid-cols-4 gap-3">

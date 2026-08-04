@@ -328,7 +328,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
   // ── 渲染 ──
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+    <Modal open onClose={onClose} bare ariaLabel="文风与质量控制" panelClassName="w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <h2 className="text-lg font-semibold"><Icon name="palette" size={15} className="inline-block align-text-bottom shrink-0" /> 文风与质量控制</h2>

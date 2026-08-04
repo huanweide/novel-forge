@@ -28,13 +28,46 @@ const CN_NUM: Record<string, number> = {
   "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
 };
 
-// 解析物品数量：支持阿拉伯数字与常见中文数字；无法解析给默认 1 并告警（阿游 P2）。
+// 解析复合中文数字（十/百进位，支持零占位）：十二=12、二十=20、一百零五=105。
+// 仅由 零~九、十、百 组成才识别，其余字符视为非法返回 null（交由上层默认 1）。
+function parseCnCompound(s: string): number | null {
+  if (!s) return null;
+  const d: Record<string, number> = {
+    零: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5,
+    六: 6, 七: 7, 八: 8, 九: 9,
+  };
+  let section = 0; // 已结算的百位/十位累计
+  let current = 0; // 当前待乘的单位数字
+  let hasAny = false;
+  for (const ch of s) {
+    if (d[ch] != null) {
+      current = d[ch];
+      hasAny = true;
+    } else if (ch === "十") {
+      // 十/二十/十二：十前无数字视为 1（"十"=10）
+      section += (current === 0 && !hasAny ? 1 : current) * 10;
+      current = 0;
+      hasAny = true;
+    } else if (ch === "百") {
+      section += (current === 0 && !hasAny ? 1 : current) * 100;
+      current = 0;
+      hasAny = true;
+    } else {
+      return null; // 含非法字符，不入复合解析
+    }
+  }
+  return hasAny ? section + current : null;
+}
+
+// 解析物品数量：支持阿拉伯数字、单字中文数字与复合中文数字；无法解析给默认 1 并告警（阿游 P1）。
 function parseGameQuantity(raw?: string): number {
   if (!raw) return 1;
   const s = raw.trim();
   if (s === "") return 1;
   if (/^\d+$/.test(s)) return parseInt(s, 10);
   if (CN_NUM[s] != null) return CN_NUM[s];
+  const cn = parseCnCompound(s);
+  if (cn != null) return cn;
   console.warn(`[parseGameOutput] 无法解析物品数量「${s}」，默认按 1 处理`);
   return 1;
 }

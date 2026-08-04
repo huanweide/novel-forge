@@ -14,7 +14,9 @@ import { THREE_CARD_BOUNDARIES } from "@/core/settings";
 
 export const maxDuration = 300;
 
-const CHUNK_SIZE = 30; // 每块最多30个角色
+const CHUNK_SIZE = 30; // 每块最多30个角色（仅作分块触发参考）
+const CHUNK_CHAR_BUDGET = 16000; // 单块文本字符预算：超过即强制分块，避免大长文单路超模型上下文（P1-3）
+const CHUNK_OVERLAP = 300;       // 块间重叠字符，保留上下文连续性（P1-3）
 
 // ─── JSON 修复 + 解析 ──────────────────────────────
 
@@ -132,15 +134,27 @@ function findCharBlocks(text: string): Array<{ start: number; end: number; heade
   return blocks;
 }
 
-/** 将角色范围分成每 CHUNK_SIZE 个一块的文本片段 */
-function chunkText(text: string, blocks: ReturnType<typeof findCharBlocks>): string[] {
+/**
+ * 按字符预算分块：无论是否有编号行，都尽量在段落边界（\n\n 或 \n）切分，
+ * 并在块尾保留 CHUNK_OVERLAP 字符重叠，避免句子被切断、上下文断裂（P1-3）。
+ * 解决原「只看编号行数」导致大段未编号长文单路全量发送超上下文的问题。
+ */
+function chunkByBudget(text: string, budget: number, overlap: number): string[] {
+  if (text.length <= budget) return [text];
   const chunks: string[] = [];
-  for (let i = 0; i < blocks.length; i += CHUNK_SIZE) {
-    const startBlock = blocks[i];
-    const endIdx = i + CHUNK_SIZE < blocks.length ? blocks[i + CHUNK_SIZE].start : text.length;
-    // 包含这个块之前的少量上下文
-    const ctxStart = Math.max(0, startBlock.start - 50);
-    chunks.push(text.slice(ctxStart, endIdx));
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + budget, text.length);
+    if (end < text.length) {
+      // 回退到最近的段落边界，避免从句中切断
+      const slice = text.slice(start, end);
+      const dbl = slice.lastIndexOf("\n\n");
+      const sgl = slice.lastIndexOf("\n");
+      const cut = dbl > budget * 0.5 ? dbl : sgl > budget * 0.5 ? sgl : budget;
+      end = start + cut;
+    }
+    chunks.push(text.slice(start, end));
+    start = Math.max(end - overlap, start + 1); // 重叠推进，保证前进避免死循环
   }
   return chunks;
 }
@@ -149,33 +163,60 @@ function chunkText(text: string, blocks: ReturnType<typeof findCharBlocks>): str
 
 interface CallConfig { baseURL: string; apiKey: string; model: string; label: string; }
 
+// ─── P1-1：callFlash 加固 —— 原实现无超时无重试，上游挂死则 SSE 永久卡到平台强杀 ───
+const CALLFLASH_TIMEOUT_MS = 60_000; // 单次 Flash 调用最长等待（毫秒），防止上游挂死
+const CALLFLASH_MAX_RETRIES = 2;     // 最多额外重试 2 次（总计 ≤3 次）
+
 async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: string, maxTokens: number): Promise<{ raw: string; error?: string; sec: number }> {
   if (!cfg.apiKey || cfg.apiKey.length < 10) {
     return { raw: "", error: `${cfg.label}: API Key 未配置`, sec: 0 };
   }
 
-  const t0 = Date.now();
-  try {
-    const url = cfg.baseURL.endsWith("/v1") ? `${cfg.baseURL}/chat/completions` : `${cfg.baseURL}/v1/chat/completions`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
-      body: JSON.stringify({ model: cfg.model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], temperature: 0.1, max_tokens: maxTokens, stream: false }),
-    });
+  const url = cfg.baseURL.endsWith("/v1") ? `${cfg.baseURL}/chat/completions` : `${cfg.baseURL}/v1/chat/completions`;
+  let lastErr = "";
 
-    const sec = ((Date.now() - t0) / 1000).toFixed(1);
-    if (!res.ok) { const eb = await res.text().catch(() => ""); return { raw: "", error: `${cfg.label} HTTP ${res.status}: ${eb.slice(0, 200)}`, sec: parseFloat(sec) }; }
-    const data = await res.json().catch(() => null);
-    const raw = data?.choices?.[0]?.message?.content || "";
-    // 监控盲区修复：import_parse 的每次 Flash 调用都记账（P0 第6处盲区）。
-    const promptTokens = countTokens(systemPrompt + "\n" + userPrompt);
-    const completionTokens = countTokens(raw);
-    recordLlmCall({ model: cfg.model, role: "import_parse", promptTokens, completionTokens, totalTokens: promptTokens + completionTokens, baseURL: cfg.baseURL });
-    if (!raw || raw.trim().length < 20) return { raw: "", error: `${cfg.label} 返回空内容`, sec: parseFloat(sec) };
-    return { raw, sec: parseFloat(sec) };
-  } catch (e) {
-    return { raw: "", error: `${cfg.label} ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`, sec: ((Date.now() - t0) / 1000).toFixed(1) as any };
+  for (let attempt = 0; attempt <= CALLFLASH_MAX_RETRIES; attempt++) {
+    const t0 = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CALLFLASH_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
+        body: JSON.stringify({ model: cfg.model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], temperature: 0.1, max_tokens: maxTokens, stream: false }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const sec = ((Date.now() - t0) / 1000).toFixed(1);
+
+      if (!res.ok) {
+        const eb = await res.text().catch(() => "");
+        lastErr = `${cfg.label} HTTP ${res.status}: ${eb.slice(0, 200)}`;
+        // 4xx 鉴权/配置错误不可重试，直接失败；5xx/429 进入重试
+        if (res.status >= 400 && res.status < 500) return { raw: "", error: lastErr, sec: parseFloat(sec) };
+        if (attempt < CALLFLASH_MAX_RETRIES) continue;
+        return { raw: "", error: lastErr, sec: parseFloat(sec) };
+      }
+
+      const data = await res.json().catch(() => null);
+      const raw = data?.choices?.[0]?.message?.content || "";
+      // 监控记账：每次（成功）Flash 调用都记账
+      const promptTokens = countTokens(systemPrompt + "\n" + userPrompt);
+      const completionTokens = countTokens(raw);
+      recordLlmCall({ model: cfg.model, role: "import_parse", promptTokens, completionTokens, totalTokens: promptTokens + completionTokens, baseURL: cfg.baseURL });
+      if (!raw || raw.trim().length < 20) return { raw: "", error: `${cfg.label} 返回空内容`, sec: parseFloat(sec) };
+      return { raw, sec: parseFloat(sec) };
+    } catch (e) {
+      clearTimeout(timer);
+      const isAbort = e instanceof Error && e.name === "AbortError";
+      const sec = ((Date.now() - t0) / 1000).toFixed(1);
+      lastErr = `${cfg.label} ${isAbort ? `超时(${CALLFLASH_TIMEOUT_MS / 1000}s)` : (e instanceof Error ? e.message : String(e))}`.slice(0, 200);
+      if (attempt < CALLFLASH_MAX_RETRIES) continue; // 网络错误/超时重试
+      return { raw: "", error: lastErr, sec: parseFloat(sec) as any };
+    }
   }
+  return { raw: "", error: lastErr || `${cfg.label} 重试耗尽`, sec: 0 };
 }
 
 // ═══════════════════════════════════════════════
@@ -241,7 +282,8 @@ export async function POST(request: Request) {
         send({ type: "progress", stage: "scan", message: `🔍 正则预扫描: ~${estimatedCount}个角色编号行`, pct: 4 });
 
         // ── 分块决策 ──
-        const needsChunking = estimatedCount > CHUNK_SIZE;
+        // 触发条件：编号角色 > CHUNK_SIZE，或全文长度超过单块字符预算（大长文/未编号长文强制分块，P1-3）
+        const needsChunking = estimatedCount > CHUNK_SIZE || text.length > CHUNK_CHAR_BUDGET;
 
         // ── 人物提取Prompt模板 ──
         const charSystemPrompt = "角色提取器。编号→人名→全字段提取：外貌、性格、能力、关系、对话风格，每个字段都填满。只输出JSON。";
@@ -284,8 +326,8 @@ ${chunkText}
         let worldFailed = false; // P1：B路世界设定/文风提取失败独立标记
 
         if (needsChunking && !isCharOnly) {
-          // 分块模式：文本切成每CHUNK_SIZE个角色一块
-          const chunks = chunkText(text, charBlocks);
+          // 分块模式：按字符预算分块（保留重叠），不再纯按编号行数（P1-3）
+          const chunks = chunkByBudget(text, CHUNK_CHAR_BUDGET, CHUNK_OVERLAP);
           totalChunks = chunks.length;
           send({ type: "progress", stage: "chunk", message: `📦 分${chunks.length}块处理 · 每块≤${CHUNK_SIZE}个角色`, pct: 5 });
           await new Promise(r => setTimeout(r, 100));

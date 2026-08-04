@@ -26,6 +26,16 @@ export function matchLoreEntries(
 ): { entry: LorebookEntry; triggerKeyword: string; matchScore: number }[] {
   const results: Map<string, { entry: LorebookEntry; triggerKeyword: string; matchScore: number }> = new Map();
 
+  // Round6 P0-1：候选关键词集合（已知更长名优先吞并短名），供 matchNameStrict 最长匹配使用。
+  const knownNames: string[] = [];
+  for (const entry of entries) {
+    if (!entry.enabled) continue;
+    for (const key of entry.keys) {
+      const k = (key || "").trim();
+      if (k) knownNames.push(k);
+    }
+  }
+
   for (const entry of entries) {
     if (!entry.enabled) continue;
 
@@ -34,7 +44,7 @@ export function matchLoreEntries(
     for (const key of entry.keys) {
       const k = (key || "").trim();
       if (!k) continue;
-      if (matchNameStrict(text, k)) hitKeys.push(k);
+      if (matchNameStrict(text, k, { knownNames })) hitKeys.push(k);
     }
     if (hitKeys.length === 0) continue;
 
@@ -62,11 +72,17 @@ export function findCharacterByName(
 ): string[] {
   const found: string[] = [];
 
+  // Round6 P0-1：候选角色名/别名集合（已知更长名优先吞并短名），避免 OOC 因最长匹配误判。
+  const knownNames: string[] = [];
+  for (const c of characters) {
+    knownNames.push(c.name, ...c.aliases);
+  }
+
   for (const char of characters) {
     const names = [char.name, ...char.aliases];
     for (const name of names) {
       // 改用词边界匹配（matchKeyword），避免「阿游」暴力子串误命中「阿克游说」这类 OOC 假阳性。
-      if (matchNameStrict(text, name)) {
+      if (matchNameStrict(text, name, { knownNames })) {
         found.push(char.id);
         break;
       }

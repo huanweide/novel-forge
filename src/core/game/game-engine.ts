@@ -14,6 +14,75 @@ import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { buildGameSystemPrompt, buildActionPrompt, parseGameOutput } from "./game-prompts";
 import type { GameActionInput, GameTurnOutput, GameSessionContext, GameEntity, GameItem, GameOption, GameSessionSummary } from "./types";
 
+// 物品变动输入（含可选 owner，用于背包按 name+owner 隔离，阿游 P1）。
+interface ItemChangeRequest {
+  operation: string;
+  name: string;
+  quantity?: number;
+  owner?: string;
+}
+
+const DEFAULT_OWNER = "主角";
+
+// 按 (name, owner) 二元组应用背包变动，保证主角与 NPC 同名物品互不干扰（阿游 P1）。
+// 纯函数：深拷贝每一项再修改，绝不改动入参（便于单测与并发安全）。
+export function applyItemChanges(
+  prevItems: GameItem[],
+  changes: ItemChangeRequest[],
+  round: number
+): GameItem[] {
+  let updatedItems: GameItem[] = prevItems.map((i) => ({ ...i }));
+  const matches = (i: GameItem, name: string, owner: string) =>
+    i.name === name && (i.owner || DEFAULT_OWNER) === owner;
+
+  for (const change of changes) {
+    const owner = change.owner || DEFAULT_OWNER;
+    if (change.operation === "gain") {
+      const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+      if (idx >= 0) {
+        updatedItems[idx] = {
+          ...updatedItems[idx],
+          quantity: updatedItems[idx].quantity + (change.quantity || 1),
+          owner: updatedItems[idx].owner || owner,
+        };
+      } else {
+        updatedItems.push({
+          name: change.name,
+          quantity: change.quantity || 1,
+          category: "other",
+          source: `第${round}轮获得`,
+          acquiredRound: round,
+          owner,
+        });
+      }
+    } else if (change.operation === "consume") {
+      const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+      if (idx >= 0) {
+        const q = updatedItems[idx].quantity - (change.quantity || 1);
+        if (q <= 0) {
+          updatedItems.splice(idx, 1);
+        } else {
+          updatedItems[idx] = { ...updatedItems[idx], quantity: q };
+        }
+      }
+    } else if (change.operation === "equip") {
+      const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+      if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], equipped: true };
+    } else if (change.operation === "discard") {
+      const idx = updatedItems.findIndex((i) => matches(i, change.name, owner));
+      if (idx >= 0) {
+        const q = updatedItems[idx].quantity - (change.quantity || 1);
+        if (q <= 0) {
+          updatedItems.splice(idx, 1);
+        } else {
+          updatedItems[idx] = { ...updatedItems[idx], quantity: q };
+        }
+      }
+    }
+  }
+  return updatedItems;
+}
+
 // ─── 会话管理 ──────────────────────────────────────────────────
 
 /** 创建或恢复游戏会话 */
@@ -226,49 +295,13 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
     ];
   }
 
-  // 6. 更新背包和实体
-  const prevItems = ctx.items;
-  let updatedItems = [...prevItems];
-  for (const change of parsed.itemChanges) {
-    if (change.operation === "gain") {
-      const owner = (change as any).owner || "主角";
-      const existing = updatedItems.find((i) => i.name === change.name);
-      if (existing) {
-        existing.quantity += change.quantity || 1;
-        if (!existing.owner) existing.owner = owner;
-      } else {
-        updatedItems.push({
-          name: change.name,
-          quantity: change.quantity || 1,
-          category: "other",
-          source: `第${session.currentRound + 1}轮获得`,
-          acquiredRound: session.currentRound + 1,
-          owner,
-        });
-      }
-    } else if (change.operation === "consume") {
-      const existing = updatedItems.find((i) => i.name === change.name);
-      if (existing) {
-        existing.quantity -= change.quantity || 1;
-        if (existing.quantity <= 0) {
-          updatedItems = updatedItems.filter((i) => i.name !== change.name);
-        }
-      }
-    } else if (change.operation === "equip") {
-      // 装备：标记该物品为已装备（阿游 P0-3 修复）
-      const existing = updatedItems.find((i) => i.name === change.name);
-      if (existing) existing.equipped = true;
-    } else if (change.operation === "discard") {
-      // 丢弃：等同消耗，减到 0 即从背包移除（阿游 P0-3 修复）
-      const existing = updatedItems.find((i) => i.name === change.name);
-      if (existing) {
-        existing.quantity -= change.quantity || 1;
-        if (existing.quantity <= 0) {
-          updatedItems = updatedItems.filter((i) => i.name !== change.name);
-        }
-      }
-    }
-  }
+  // 6. 更新背包和实体（按 name+owner 隔离，阿游 P1）
+  const newRound = session.currentRound + 1;
+  const updatedItems = applyItemChanges(
+    ctx.items,
+    parsed.itemChanges as ItemChangeRequest[],
+    newRound
+  );
 
   // 合并实体
   const existingEntities = ctx.entities;
@@ -291,11 +324,13 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
   }
 
   // 7. 持久化本轮状态
-  const newRound = session.currentRound + 1;
   const newTotalWords = session.totalWords + wordCount;
   const finalProgress = parsed.plotProgress > 0 ? parsed.plotProgress : session.plotProgress;
 
   // 7→8 两步写包进事务：避免「gameState 已落库、session 未更新」之间断流留下孤儿态（阿游 P0-2）。
+  // 提交时机：仅在解析成功、即将产出 game_done 的这一步提交；流式 token 阶段不落库，
+  // 故不存在「流式中间提前提交」。若用户停止/断网，后端已提交的权威态由前端 abort 后
+  // GET /api/game/state 对账回拉覆盖（reconcileFromSummary），自愈前后端错位。
   await prisma.$transaction([
     prisma.gameState.create({
       data: {

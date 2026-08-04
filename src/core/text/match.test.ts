@@ -78,8 +78,9 @@ describe("matchNameStrict —— 角色名/OOC 召回专用", () => {
     expect(matchNameStrict("叶帆", "叶凡")).toBe(false); // 错字（非繁简）不匹配
   });
 
-  it("3字「李星云」：前缀复合词不命中、句尾/独立命中（P1 修复）", () => {
-    expect(matchNameStrict("李星云剑法", "李星云")).toBe(false); // 紧后「剑」CJK → 前缀，拒
+  it("3字「李星云」：直接子串命中（撤销 Round5 前缀守卫，修复常规行文漏检）", () => {
+    expect(matchNameStrict("李星云剑法", "李星云")).toBe(true); // 无 knownNames → 直接命中
+    expect(matchNameStrict("李星云看见", "李星云")).toBe(true); // 常规行文命中
     expect(matchNameStrict("李星云。", "李星云")).toBe(true); // 紧后标点
     expect(matchNameStrict("李星云", "李星云")).toBe(true); // 文末
   });
@@ -91,6 +92,23 @@ describe("matchNameStrict —— 角色名/OOC 召回专用", () => {
 
   it("4字「星云剑法」：文末命中", () => {
     expect(matchNameStrict("李星云剑法", "星云剑法")).toBe(true); // 后接文末
+  });
+});
+
+describe("最长匹配优先", () => {
+  it("已知更长名时，3字名被吞并 → false", () => {
+    expect(
+      matchNameStrict("李星云剑法", "李星云", { knownNames: ["李星云剑法", "李星云"] }),
+    ).toBe(false);
+  });
+  it("紧后CJK但拼不出更长已知名 → true", () => {
+    expect(matchNameStrict("李星云看见", "李星云", { knownNames: ["李星云"] })).toBe(true);
+  });
+  it("2字回归：无 knownNames 直接子串", () => {
+    expect(matchNameStrict("叶凡怒喝", "叶凡")).toBe(true);
+  });
+  it("1字守卫：紧后CJK不命中", () => {
+    expect(matchNameStrict("李星云", "李")).toBe(false);
   });
 });
 

@@ -98,3 +98,57 @@ describe("selfCheckFill —— 跨表同名检测（A-2 修复验证）", () => 
     expect(hit).toBeDefined();
   });
 });
+
+// ─── P1 归表错误检测：唯一名写错表（如人名写进 geo 表）───
+// 思路：建一张 geo 类表，写入一个仅属于它的唯一名（疑似人物名），同时建一张有值的 characters 类表；
+// 验证 selfCheckFill 将其标为「疑似写错表（归表错误）」。测试结束删除临时表。
+describe("selfCheckFill —— 唯一名写错表（P1 归表错误检测）", () => {
+  const WRONG_TABLE_VAL = "归表校验物张三"; // 仅落在 geo 表的唯一名（疑似人物）
+  const REAL_CHAR = "归表校验物李四"; // 正确落在 characters 表的名（不应被误报）
+  const createdIds: string[] = [];
+
+  beforeAll(async () => {
+    const geo = await prisma.loreTable.create({
+      data: {
+        projectId: PROJECT_ID,
+        key: "selftest_geo_wrong",
+        name: "自检geo表",
+        note: "自检测试临时表",
+        category: "geo",
+        columns: [{ key: "name", label: "名称", type: "text" }],
+        rows: [{ row_id: 1, name: WRONG_TABLE_VAL }],
+      },
+    });
+    const chars = await prisma.loreTable.create({
+      data: {
+        projectId: PROJECT_ID,
+        key: "selftest_char_wrong",
+        name: "自检人物表",
+        note: "自检测试临时表",
+        category: "characters",
+        columns: [{ key: "name", label: "名称", type: "text" }],
+        rows: [{ row_id: 1, name: REAL_CHAR }],
+      },
+    });
+    createdIds.push(geo.id, chars.id);
+  });
+
+  afterAll(async () => {
+    for (const id of createdIds) {
+      await prisma.loreTable.delete({ where: { id } }).catch(() => {});
+    }
+  });
+
+  it("人名写进 geo 表应被报归表错误", async () => {
+    const r = await selfCheckFill(PROJECT_ID);
+    expect(r.crossTableIssues).toBeGreaterThanOrEqual(1);
+    const hit = r.issues.find((i) => i.value === WRONG_TABLE_VAL && i.issue.includes("写错表"));
+    expect(hit).toBeDefined();
+  });
+
+  it("正确落在 characters 表的名不应被误报写错表", async () => {
+    const r = await selfCheckFill(PROJECT_ID);
+    const falseHit = r.issues.find((i) => i.value === REAL_CHAR && i.issue.includes("写错表"));
+    expect(falseHit).toBeUndefined();
+  });
+});

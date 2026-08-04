@@ -81,12 +81,20 @@ export function matchKeyword(text: string, keyword: string): boolean {
  *  - 2字 (len===2, CJK)：直接子串命中（P0 修复）。中文无空格，2字名（叶凡/萧炎/林动）几乎
  *    总被 CJK 前后包围，任何边界约束都会令最常见名长全漏检（OOC/召回失效）。纯错字由
  *    includes 前置检查排除（如「叶凡」不会命中「叶帆」）。
- *  - 3字及以上 (len>=3, CJK)：走「前缀守卫」——仅当匹配处「紧后字符非 CJK」（句尾/标点/文末）
- *    才命中；若紧后是 CJK 说明是更长词的前缀（如「李星云」+「剑法」），拒绝（P1 修复）。
- *    不检查前导字符，避免误杀句首合法名。
+ *  - 3字及以上 (len>=3, CJK)：走「最长匹配优先」——直接子串命中（任一侧边界即可），
+ *    撤销 Round5 的前缀守卫（该守卫要求紧后非CJK，致「李星云看见」「碎玉轩内」等常规行文全漏检，
+ *    波及 recall/trigger）。仅在「命中位置紧后 CJK、且能从该位置拼出 knownNames 中更长的已知名」
+ *    时，视为被更长名吞并而跳过（灭「李星云剑法」误命中「李星云」）。
  *  - 纯数字 / 非 CJK 2字：完全沿用 matchKeyword 行为（含纯数字边界、英文2字两侧边界），无回归。
+ *
+ * @param options.knownNames 候选实体名集合（含同上下文更长名）。3字+ 命中位置若恰是其中更长的已知名前缀，
+ *        则该短匹配被吞并（return false）；否则正常命中。不传则不启用吞并保护。
  */
-export function matchNameStrict(text: string, keyword: string): boolean {
+export function matchNameStrict(
+  text: string,
+  keyword: string,
+  options?: { knownNames?: string[] },
+): boolean {
   if (!keyword || !text) return false;
   const hay = text.toLowerCase();
   const needle = keyword.toLowerCase();
@@ -118,16 +126,31 @@ export function matchNameStrict(text: string, keyword: string): boolean {
   if (!base) return false;
 
   if (len >= 3 && keywordIsCjk) {
-    // P1 修复：前缀守卫——「李星云」+「剑法」这类前缀复合词不应误命中。
-    // 任一处匹配满足「紧后字符非 CJK」（句尾/标点/文末）即视为合法名命中。
+    // Round6 P0-1：最长匹配优先——撤销 Round5 的前缀守卫，3字+ 直接子串命中（修复常规行文漏检）。
+    // 仅在「命中位置紧后 CJK，且该位置恰可拼出 knownNames 中更长的已知名」时才被吞并（return false）。
+    const known = options?.knownNames;
     let idx = hay.indexOf(needle);
     while (idx >= 0) {
       const afterIdx = idx + len;
       const after = afterIdx < hay.length ? hay[afterIdx] : "";
-      if (after === "" || !isCjkChar(after)) return base; // 紧后非CJK → 命中
+      if (after === "" || !isCjkChar(after)) return true; // 紧后非CJK（边界/文末）→ 命中
+      // 紧后是 CJK：检查是否被更长的已知名吞并（取最长匹配，任一处更长名成立即吞并）。
+      if (known && known.length) {
+        let swallowed = false;
+        for (const n of known) {
+          const nl = n.toLowerCase();
+          if (nl.length > needle.length && hay.startsWith(nl, idx)) {
+            swallowed = true; // 命中位置恰是更长名前缀 → 被吞并
+            break;
+          }
+        }
+        if (!swallowed) return true; // 紧后CJK但拼不出更长名 → 正常命中（如「李星云看见」）
+      } else {
+        return true; // 无 knownNames → 直接命中
+      }
       idx = hay.indexOf(needle, idx + 1);
     }
-    return false; // 所有匹配都紧接 CJK（纯前缀）→ 拒绝
+    return false; // 所有匹配位置都被更长名吞并
   }
 
   return base;

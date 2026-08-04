@@ -30,11 +30,29 @@ export function recallContext(
   const text = contextText || "";
   const items: RecallItem[] = [];
 
+  // Round6 P0-1：候选实体名集合（已知更长名优先吞并短名），供 matchNameStrict 最长匹配使用。
+  const knownNames: string[] = [];
+  for (const e of lorebook) {
+    if (e.enabled === false) continue;
+    for (const k of e.keys || []) if (k) knownNames.push(k);
+  }
+  for (const t of tables) {
+    const rows: any[] = t.rows || [];
+    const cols: any[] = t.columns || [];
+    const keyCols = cols.length ? cols.map((c) => c.key) : TABLE_KEY_COLS;
+    for (const r of rows) {
+      for (const kc of keyCols) {
+        const v = r[kc];
+        if (v && typeof v === "string" && v.length >= 2) knownNames.push(v);
+      }
+    }
+  }
+
   // 1) 世界书：绿灯机制——enabled 且任一关键词「真实命中」上下文
   for (const e of lorebook) {
     if (e.enabled === false) continue;
     const keys: string[] = e.keys || [];
-    const hitKeys = keys.filter((k) => k && matchNameStrict(text, k));
+    const hitKeys = keys.filter((k) => k && matchNameStrict(text, k, { knownNames }));
     if (hitKeys.length === 0) continue;
     // 最长匹配优先：被更长命中关键词包含的短词剔除（如「青龙」被「青龙镇」包含）
     const kept = dedupSubstring(hitKeys);
@@ -51,7 +69,7 @@ export function recallContext(
       const hitKeys: string[] = [];
       for (const kc of keyCols) {
         const v = r[kc];
-        if (v && typeof v === "string" && v.length >= 2 && matchNameStrict(text, v)) {
+        if (v && typeof v === "string" && v.length >= 2 && matchNameStrict(text, v, { knownNames })) {
           hitKeys.push(v);
         }
       }

@@ -186,7 +186,9 @@ export function findEntitiesInText(
   for (const c of candidates) {
     if (occupied.slice(c.idx, c.end).some(Boolean)) continue;
     const prevChar = text[c.idx - 1];
-    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''「」『』（）【】《》\-\—与和跟同及等把被给向对由的]/.test(prevChar);
+    // 头边界字符集：空白/标点/省略号/间隔号 + 连词 + 常见介词（在/于/为/从/到/让/使/叫…），
+    // 补全介词后「在萧炎」「于萧炎」等前置场景也能高亮 2字名（Round6 P1）。
+    const isHeadBoundary = !prevChar || /[\s，。！？、；：""''「」『』（）【】《》\-\—……·与和跟同及等把被给向对由的在於为从到让使叫,.!?]/.test(prevChar);
     // 头边界必查（防片段误当实体）；尾边界对 2 字名放宽，3 字及以上不查边界（清览 P1）。
     const passesBoundary = c.name.length >= 3 ? true : isHeadBoundary;
     if (!passesBoundary) continue;

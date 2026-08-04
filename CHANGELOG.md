@@ -2,6 +2,18 @@
 
 ---
 
+## v0.46.69 — 2026-08-04
+**会员股东 Round 6 实现：3字+名最长匹配优先 + 游戏流式中断自愈 + 填表空章节静默丢数据 + 连词/介词高亮 + 中文复合数字 + 背包owner隔离 + import事务幂等 + 正则ReDoS防护 + Modal无障碍（tsc 零错误）**
+
+- 3字+角色名最长匹配优先（青砚 P0-1）：matchNameStrict 3字+ 名撤销 Round5 前缀守卫改最长匹配优先，直接子串命中、仅当紧后 CJK 且能拼出 knownNames 更长名时被吞并，灭「李星云剑法」误命中；中文常规行文（李星云看见/碎玉轩内）恢复命中、世界书召回断裂修复；recall/trigger 传入候选实体名集合
+- 游戏流式中断前后端自愈（阿游 P0-2）：新增 GET /api/game/state 权威对账 + reconcile，abort/断网后前端整体覆盖轮次/背包，灭前后端永久错位
+- 填表空章节静默丢数据（墨白 P0-3）：完成门槛 ok→ok&&applied>0，空 ops/全失效章不标已填、可重试，灭防重复反噬的静默丢数据；update 非身份列未命中告警跳过不建伪行；跨表唯一名写错表告警
+- 中文复合数字 + 背包 owner 隔离（阿游 P1）：parseGameQuantity 支持十二/一百零五等复合数字；背包变动按 (name,owner) 二元组隔离同名物品
+- 导入/正则工程加固（工坊/磐石 P1）：import 包 $transaction 失败回滚不留孤儿 + projectId+source 幂等去重；regex 加 isLikelyUnsafeRegex 防 ReDoS 挂死；callFlash 60s 超时+重试；ImportWizard 消费 status/worldFailed；commit 加幂等锁；分块改字符预算
+- 连词高亮 + Modal 无障碍（青砚/清览 P1）：entity-highlighter 补介词边界灭「在萧炎」不高亮；Modal 加 labelledBy/ariaLabel，9 调用点补语义名灭 WCAG 4.1.2 缺口
+
+---
+
 ## v0.46.68 — 2026-08-04
 **会员股东 Round 5 实现：游戏物品变动归一化落库 + 角色名2字匹配回归 + 填表伪行/游戏回退错位 + 导入失败标记闭环 + 弹窗滚动/连词高亮（tsc 零错误）**
 

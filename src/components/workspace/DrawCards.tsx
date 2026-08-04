@@ -166,7 +166,7 @@ export function DrawCards({
   };
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+    <Modal open onClose={onClose} bare ariaLabel={`抽卡模式——「${nodeTitle}」`} panelClassName="w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>

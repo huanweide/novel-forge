@@ -14,6 +14,10 @@ import { normalizeRelationships } from "@/lib/relations";
 
 export const maxDuration = 300;
 
+// ─── P1-4：并发 commit 幂等锁 —— 同一 projectId 禁止并发执行，防双击/重试导致重复写库 ───
+const commitLocks = new Map<string, number>(); // projectId -> 加锁时间戳
+const COMMIT_LOCK_TTL = 300_000; // 锁最长持有 300s，超时自动视为失效，避免异常遗留死锁
+
 // ═══════════════════════════════════════════════════════════════
 // AI 合并引擎 —— 模型分批并行（每批4个，N批并发）
 // ═══════════════════════════════════════════════════════════════
@@ -297,6 +301,14 @@ export async function POST(request: Request) {
   const updateSynopsis = body.updateSynopsis !== false;
 
   if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
+
+  // 并发幂等锁：同一 projectId 正在提交则拒绝（409），防重复写入
+  const pid = projectId as string;
+  const lockedAt = commitLocks.get(pid);
+  if (lockedAt && Date.now() - lockedAt <= COMMIT_LOCK_TTL) {
+    return NextResponse.json({ error: "该项目正在导入中，请等待上一次提交完成（避免重复写入）" }, { status: 409 });
+  }
+  commitLocks.set(pid, Date.now());
   if (chapters.length === 0 && characters.length === 0 && loreEntries.length === 0)
     return NextResponse.json({ error: "没有任何要导入的数据" }, { status: 400 });
 
@@ -646,6 +658,7 @@ export async function POST(request: Request) {
         send({ type: "error", message: err instanceof Error ? err.message : "导入失败" });
       } finally {
         controller.close();
+        commitLocks.delete(pid); // 释放幂等锁
       }
     },
   });

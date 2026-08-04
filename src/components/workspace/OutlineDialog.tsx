@@ -49,7 +49,7 @@ export function OutlineDialog({
   ];
 
   return (
-    <Modal open onClose={handleClose} bare panelClassName="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <Modal open onClose={handleClose} bare ariaLabel="AI 生成大纲" panelClassName="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
       <div className="flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>

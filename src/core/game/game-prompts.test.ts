@@ -83,3 +83,35 @@ describe("parseGameOutput —— 操作中文→英文归一化（阿游 P0）",
     expect(r.itemChanges[0].operation).toBe("出售");
   });
 });
+
+// 验证游戏模式「中文复合数字解析」：十二/二十/一百零五 等不应落默认 1（阿游 P1）。
+describe("parseGameOutput —— 中文复合数字（阿游 P1）", () => {
+  const cases: Array<[string, number]> = [
+    ["十二", 12],
+    ["二十", 20],
+    ["三十", 30],
+    ["十一", 11],
+    ["二十五", 25],
+    ["九十九", 99],
+    ["一百", 100],
+    ["一百零五", 105],
+    ["一百二十", 120],
+    ["十", 10],
+    ["两", 2],
+  ];
+
+  for (const [cn, num] of cases) {
+    it(`CI|获得|丹药|${cn} → quantity=${num}`, () => {
+      const r = parseGameOutput(`叙事。\n===角色物品变动===\nCI|获得|丹药|${cn}\n===新实体===\n`);
+      expect(r.itemChanges.length).toBe(1);
+      expect(r.itemChanges[0].operation).toBe("gain");
+      expect(r.itemChanges[0].quantity).toBe(num);
+    });
+  }
+
+  it("无法解析的串（英文混合/乱码）默认按 1 处理", () => {
+    const r = parseGameOutput(`叙事。\n===角色物品变动===\nCI|获得|丹药|abc\n===新实体===\n`);
+    expect(r.itemChanges.length).toBe(1);
+    expect(r.itemChanges[0].quantity).toBe(1);
+  });
+});

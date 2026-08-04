@@ -25,18 +25,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.68";
+export const LATEST_VERSION = "v0.46.69";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "游戏物品变动全部修复（阿游 P0）：CI| 中文操作（获得/消耗/装备/丢弃）归一化为英文枚举，修复获得/消耗/装备/丢弃全部落库失败——背包更新、世界卡联动、开场入包一并恢复，tsc 零错误",
-  "角色名 2字匹配回归修正（青砚 P0）：matchNameStrict 的 2字名从 Round4 两侧闭边界改回任一侧边界命中，修复叶凡/萧炎等最常见角色名在 OOC 与召回中全漏检（修正 Round4 过度收紧的回归）",
-  "填表伪行 + 游戏回退错位（墨白/阿游 P1）：填表缺 match 静默插入带脏键 undefined 伪行已灭；游戏回退后前端用后端重算 summary 整体覆盖 totalWords/items，灭字数虚高与背包残留",
-  "导入失败标记闭环 + 弹窗/高亮（磐石/清览 P1）：import 非分块路径与 B路世界提取失败纳入标记，不再谎报 completed；弹窗长内容可滚动、2字名连词后（如「与炎帝」）正常高亮",
+  "3字+角色名最长匹配优先（青砚 P0-1）：撤销 Round5 前缀守卫改最长匹配优先，中文常规行文（李星云看见/碎玉轩内）恢复命中、世界书召回不再断裂；靠 knownNames 吞并灭「李星云剑法」误命中「李星云」",
+  "游戏流式中断自愈（阿游 P0-2）：新增 GET /api/game/state 权威对账 + reconcile，abort/断网后前端整体覆盖轮次/背包，灭前后端永久错位",
+  "填表空章节静默丢数据（墨白 P0-3）：完成门槛 ok→ok&&applied>0，空 ops/全失效章不标已填、可重试，灭防重复反噬的静默丢数据",
+  "全透镜 P1 收口：连词/介词高亮、中文复合数字、背包 owner 隔离、import 事务回滚幂等、正则 ReDoS 防护、Modal aria-label 无障碍、ImportWizard 消费导入状态、commit 幂等锁、分块字符预算",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.69",
+    date: "2026-08-04",
+    title: "会员股东 Round 6 实现：3字+名最长匹配优先 + 游戏流式中断自愈 + 填表空章节静默丢数据 + 连词/介词高亮 + 中文复合数字 + 背包owner隔离 + import事务幂等 + 正则ReDoS防护 + Modal无障碍（tsc 零错误）",
+    sections: [
+      {
+        label: "3字+角色名最长匹配优先（青砚 P0-1）",
+        items: [
+          "matchNameStrict 3字+ 名撤销 Round5 前缀守卫，改最长匹配优先：直接子串命中（任一侧边界），仅当命中位置紧后 CJK 且能从该处拼出 knownNames 中更长已知名时才被吞并（灭「李星云剑法」误命中「李星云」）；中文常规行文（李星云看见/碎玉轩内）恢复命中，recall/trigger 召回世界书不再断裂；recall.ts/trigger.ts 最小适配传入候选实体名集合",
+        ],
+      },
+      {
+        label: "游戏流式中断前后端自愈（阿游 P0-2）",
+        items: [
+          "新增 GET /api/game/state 返回后端权威 summary；page.tsx 在 abort/停止/断网后调用 reconcile 整体覆盖 currentRound/totalWords/items/plotProgress/entities/narrative/options，灭流式中断致前后端轮次/背包永久错位；game-engine 事务提交时机加注释固化",
+        ],
+      },
+      {
+        label: "填表空章节静默丢数据（墨白 P0-3）",
+        items: [
+          "safeFillAfterWriting 完成门槛由 babylore.ok 提升为 ok && applied>0；空 ops/全失效 ops 章节不再永久标已填，返回 ok:false 留待重试，灭防重复机制反噬的静默数据缺口；update 未命中且非身份列时告警跳过不静默建伪行；跨表校验新增唯一名写错表告警",
+        ],
+      },
+      {
+        label: "中文复合数字 + 背包 owner 隔离（阿游 P1）",
+        items: [
+          "parseGameQuantity 支持中文复合数字（十二=12/一百零五=105/二十五=25），灭数量失真；背包变动按 (name, owner) 二元组匹配，主角与 NPC 同名物品隔离、世界卡同步",
+        ],
+      },
+      {
+        label: "导入/正则工程加固（工坊/磐石 P1）",
+        items: [
+          "import/route.ts 整段包 $transaction，失败 rollback 不留孤儿项目/半吊子记录；按 projectId+source 幂等去重，重复导入不再成倍复制；regex.ts 新增 isLikelyUnsafeRegex 静态防护（嵌套量词/超大 {n}/超长 pattern），恶意正则拒跳过不挂死生成热路径；import/parse callFlash 加 60s 超时+≤2 重试；ImportWizard 消费 status/worldFailed 提示部分失败；commit/route 加 projectId 级幂等锁；分块改字符预算(16000/块+重叠)",
+        ],
+      },
+      {
+        label: "连词高亮 + Modal 无障碍（青砚/清览 P1）",
+        items: [
+          "entity-highlighter 头边界补介词（在/于/为/从/到/让/使/叫…）+ 省略号/间隔号，灭「在萧炎」不高亮；Modal 新增 labelledBy/ariaLabel，9 个调用点补语义名，灭 bare 弹窗 WCAG 4.1.2 缺口",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.68",
     date: "2026-08-04",

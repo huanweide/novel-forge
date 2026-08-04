@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionSummary } from "@/core/game/game-engine";
 
 // DELETE /api/game/state?sessionId=...&round=N
 // 删除第 N 轮及之后所有 gameState，并回滚 session 的 currentRound/totalWords/plotProgress 到 N-1 状态，
@@ -55,6 +56,52 @@ export async function DELETE(req: NextRequest) {
       options: (last?.options as unknown as any[]) || [],
     };
     return NextResponse.json({ ok: true, rolledBackTo: currentRound, summary });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+  }
+}
+
+// GET /api/game/state?sessionId=...
+// 返回后端权威会话摘要，供前端在 abort/停止/断网后对账回拉整体覆盖（阿游 P0-2）。
+// 取全量 summary（currentRound/totalWords/plotProgress/items/entities/narrative/options/turns），
+// 保证前端轮次与背包与后端一致。
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const sessionId = searchParams.get("sessionId");
+  if (!sessionId) {
+    return NextResponse.json({ ok: false, error: "缺少 sessionId" }, { status: 400 });
+  }
+  try {
+    const session = await prisma.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) {
+      return NextResponse.json({
+        ok: true,
+        summary: {
+          currentRound: 0,
+          totalWords: 0,
+          plotProgress: 0,
+          items: [],
+          entities: [],
+          narrative: "",
+          options: [],
+          turns: [],
+        },
+      });
+    }
+    const summary = await getSessionSummary(sessionId);
+    return NextResponse.json({
+      ok: true,
+      summary: {
+        currentRound: summary.currentRound,
+        totalWords: summary.totalWords,
+        plotProgress: summary.plotProgress,
+        items: summary.items,
+        entities: summary.entities,
+        narrative: summary.allNarrative,
+        options: summary.lastOptions,
+        turns: summary.turns,
+      },
+    });
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }

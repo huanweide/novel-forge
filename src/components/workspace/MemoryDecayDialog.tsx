@@ -89,7 +89,7 @@ export function MemoryDecayDialog({
   };
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="w-[460px] max-w-[92vw] max-h-[88vh] overflow-y-auto">
+    <Modal open onClose={onClose} bare ariaLabel="记忆衰减" panelClassName="w-[460px] max-w-[92vw] max-h-[88vh] overflow-y-auto">
       <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-5 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">

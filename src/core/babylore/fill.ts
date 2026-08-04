@@ -228,6 +228,11 @@ ${chapterText.slice(0, 12000)}
       }
       const r = await applyOps(filteredTables, ops, chapterText);
       const warnings = [...r.warnings, ...buildWarnings(r.appliedNames, chapterText)];
+      // P0-3：以「实际落地数 applied」为完成门槛——空 ops / 全失效 ops 的章节
+      // 须视为失败（ok:false），使其可重试而非被永久标记「已填」（防重复机制反噬）。
+      if (r.applied === 0) {
+        warnings.push(`本章未落地任何事实（ops=${ops.length}）：${lastErr || "空 ops 或全失效"}，将标记为未填以便重试`);
+      }
       const usage = (data as any)?.usage;
       recordLlmCall({
         model: llm.model,
@@ -237,7 +242,13 @@ ${chapterText.slice(0, 12000)}
         totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
         baseURL: llm.baseURL,
       });
-      return { ok: true, operations: ops.length, applied: r.applied, warnings };
+      return {
+        ok: r.applied > 0,
+        operations: ops.length,
+        applied: r.applied,
+        warnings,
+        error: r.applied > 0 ? undefined : lastErr || "未落地任何事实",
+      };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       if (attempt < 3) continue;
@@ -300,6 +311,12 @@ async function applyOps(
         const uv = (op.values || {})[idCol] ?? val;
         if (uv != null) appliedNames.push({ table: t.name, value: String(uv) });
       } else {
+        // P1：update 按 match 列未命中任何行。若 match 列非身份列，则无有效身份，
+        // 直接新建会造「伪行」（身份列空缺/撞名），故记 warning 并跳过，不静默插伪行。
+        if (col !== idCol) {
+          warnings.push(`表「${t.name}」update 按「${String(col)}」未命中任何行，且该列非身份列，已跳过（不静默新建伪行）`);
+          continue;
+        }
         const maxId = rows.reduce((m: number, r: any) => Math.max(m, Number(r.row_id) || 0), 0);
         rows.push({ row_id: maxId + 1, [col]: val, ...(op.values || {}) });
         applied++;
@@ -486,7 +503,8 @@ export async function babyloreFillAll(
     applied += r.applied;
     for (const w of r.warnings) warnings.push(`第${ch.order}章《${ch.title || "未命名"}》：${w}`);
     // 仅成功章计入已填集合——失败章必须留待重试，否则被永久标记跳过（磐石 P0 修复）。
-    if (r.ok) {
+    // P0-3：门槛由 r.ok 提升为 r.ok && r.applied>0，空 ops/全失效章不标已填，留待重试。
+    if (r.ok && r.applied > 0) {
       filledSet.add(ch.id);
       // 增量落盘：每填完一章即持久化，避免中途超时/崩溃丢失全部进度（磐石 P0 防丢进度）
       filledMap[projectId] = Array.from(filledSet);
@@ -527,11 +545,15 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
 
   // 跨表同名归属校验（F3）：先收集「每个身份列值在哪些表、哪些类别出现」。
   const valueTables = new Map<string, { tables: string[]; categories: Set<string> }>();
+  // P1：归表错误检测需要「项目全部类别」与「各类别已有身份值集合」。
+  const projectCategories = new Set<string>();
+  const catValueSet = new Map<string, Set<string>>();
 
   for (const t of dbTables) {
     const rows = (t.rows as any[]) || [];
     const idCol = getIdentityCol({ columns: t.columns as any[] });
     const seenInTable = new Set<string>();
+    projectCategories.add(t.category || "custom");
     for (const r of rows) {
       const v = r[idCol];
       if (v == null || String(v).trim() === "") {
@@ -552,12 +574,28 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
         const e = valueTables.get(sl)!;
         e.tables.push(t.name);
         e.categories.add(t.category || "custom");
+        // 累计各类别已有身份值（供唯一名归表校验判断「其它类别表是否有值」）
+        const cat = t.category || "custom";
+        if (!catValueSet.has(cat)) catValueSet.set(cat, new Set());
+        catValueSet.get(cat)!.add(sl);
       }
     }
   }
 
   // 跨表同名：同一名称值出现在 ≥2 个不同表 → 归属待确认（自动填表可能把人名写进地点表等）。
   // 不论是否跨类别都报（P1-②）：原逻辑强约束 categories.size>=2，导致两张同类别(custom)表互错填不报警。
+  // 类别分组：geo 类与 entity 类互相不应共享唯一名（写错表提示）
+  const GEO_LIKE = new Set([
+    "geo", "location", "place", "places", "building", "buildings", "map", "scene", "scenes",
+  ]);
+  const ENTITY_LIKE = new Set([
+    "characters", "character", "person", "people", "org", "organization",
+    "item", "items", "skill", "skills", "relation", "relations", "event", "events",
+    "creature", "creatures",
+  ]);
+  const groupOf = (cat: string): "geo" | "entity" | "other" =>
+    GEO_LIKE.has(cat) ? "geo" : ENTITY_LIKE.has(cat) ? "entity" : "other";
+
   for (const [val, info] of valueTables) {
     const distinct = Array.from(new Set(info.tables));
     if (distinct.length >= 2) {
@@ -569,6 +607,26 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
         : `跨类别同名(归属待确认)：与表「${others}」类别不同却共享同名「${val}」`;
       for (const tname of distinct) {
         issues.push({ table: tname, row: "跨表", value: val, issue: detail });
+      }
+    } else {
+      // P1：唯一名（仅落单表）却落在「非预期表」——归表错误漏报修复。
+      // 仅当唯一名落在 geo 类表、且项目同时存在有值的 entity 类表时告警（典型：人名写进 geo 表）。
+      // 单向判定以避免「人物本就在人物表却因项目含 geo 表被误报」。
+      const onlyCat = Array.from(info.categories)[0];
+      const g = groupOf(onlyCat);
+      if (g === "geo" && projectCategories.size >= 2) {
+        const conflict = Array.from(projectCategories)
+          .filter((c) => c !== onlyCat)
+          .some((c) => groupOf(c) === "entity" && (catValueSet.get(c)?.size || 0) > 0);
+        if (conflict) {
+          crossTableIssues++;
+          issues.push({
+            table: distinct[0],
+            row: "归表",
+            value: val,
+            issue: `唯一名「${val}」仅落在「${onlyCat}」类表，但项目同时含人物/组织等表，疑似写错表（归表错误，请核对）`,
+          });
+        }
       }
     }
   }

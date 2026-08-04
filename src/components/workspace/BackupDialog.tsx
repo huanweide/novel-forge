@@ -56,7 +56,7 @@ export function BackupDialog({
   };
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-md max-h-[88vh] overflow-y-auto">
+    <Modal open onClose={onClose} bare ariaLabel="导出备份包" panelClassName="max-w-md max-h-[88vh] overflow-y-auto">
       <div className="p-5">
         <div className="mb-1 flex items-start justify-between">
           <div>

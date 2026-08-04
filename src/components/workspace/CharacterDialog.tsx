@@ -237,6 +237,7 @@ export function CharacterDialog({
       open
       onClose={onClose}
       bare
+      ariaLabel={isEdit ? `编辑角色：${character?.name ?? ""}` : "创建新角色"}
       panelClassName={isEdit ? "w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" : "max-w-md"}
       showClose
     >

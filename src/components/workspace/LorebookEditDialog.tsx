@@ -80,7 +80,7 @@ export function LorebookEditDialog({
   };
 
   return (
-    <Modal open onClose={onClose} panelClassName="max-w-md">
+    <Modal open onClose={onClose} ariaLabel={`编辑词条：${entry.title}`} panelClassName="max-w-md">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">编辑词条：{entry.title}</h3>
         <div className="flex items-center gap-2">

@@ -21,7 +21,7 @@
  *   </Modal>
  */
 
-import React, { useEffect, useRef, type ReactNode } from "react";
+import React, { useEffect, useId, useRef, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
@@ -53,6 +53,8 @@ export function Modal({
   showClose = false,
   bare = false,
   panelClassName = "",
+  labelledBy,
+  ariaLabel,
 }: {
   open: boolean;
   onClose: () => void;
@@ -71,8 +73,17 @@ export function Modal({
   bare?: boolean;
   /** 追加/覆盖面板宽度与布局类（如 max-w-2xl / w-[480px] / flex flex-col） */
   panelClassName?: string;
+  /**
+   * 无障碍：当面板无 title/header 字符串（多为 bare 弹窗）时，为 role="dialog" 提供可访问名称。
+   * - labelledBy：引用面板内标题元素（如 <h2 id> / <h3 id>）的 id，使读屏播报与可见标题一致（优先）。
+   * - ariaLabel：调用方直接传入的语义名称（无可见标题元素时使用）。
+   * 二者均缺时读屏仅报「对话框」，故关键 bare 弹窗应至少传其一。
+   */
+  labelledBy?: string;
+  ariaLabel?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   useFocusTrap(panelRef, open, onClose);
 
   useEffect(() => {
@@ -93,6 +104,15 @@ export function Modal({
 
   const hasHeader = !!(title || icon || description || header);
 
+  // 决定 role=dialog 的可访问名称（WCAG 4.1.2）：
+  // - 有 title：用 id 关联可见标题（最准确）
+  // - header 为字符串：直接作 aria-label
+  // - 其余（多为 bare 弹窗）：优先 labelledBy（引用可见标题 id），其次 ariaLabel
+  const dialogLabelledBy =
+    title ? titleId : typeof header === "string" ? undefined : labelledBy;
+  const dialogAriaLabel =
+    title ? undefined : typeof header === "string" ? header : ariaLabel;
+
   // bare 模式把高度/滚动完全交给 panelClassName，避免与弹窗内部「头部固定 + 内容滚动」布局冲突；
   // 非 bare 模式保留默认 max-h + 整体滚动。
   const panelBase = bare
@@ -109,7 +129,8 @@ export function Modal({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label={title ?? (typeof header === "string" ? header : undefined)}
+        aria-labelledby={dialogLabelledBy}
+        aria-label={dialogAriaLabel}
         className={`${panelBase} ${hasHeader ? SIZE_MAP[size] : ""} ${panelClassName}`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -124,7 +145,7 @@ export function Modal({
                 </div>
               ) : null}
               <div className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">{title}</h3>
+                <h3 id={titleId} className="text-base font-semibold text-[var(--nv-text-primary)]">{title}</h3>
                 {description ? (
                   <p className="mt-1.5 text-sm leading-relaxed text-[var(--nv-text-secondary)]">{description}</p>
                 ) : null}

@@ -19,6 +19,7 @@ import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
+import { reconcileFromSummary } from "@/core/game/reconcile";
 
 // ─── 类型 ─────────────────────────────────────────────────────
 
@@ -173,6 +174,33 @@ export default function GamePage() {
     }
   };
 
+  // ── 对账：abort/停止后用后端权威态整体覆盖（阿游 P0-2）────────
+  const reconcileWithBackend = useCallback(async () => {
+    const sid = state.sessionId;
+    if (!sid) return;
+    try {
+      const res = await fetch(
+        `/api/game/state?sessionId=${encodeURIComponent(sid)}`,
+        { method: "GET" }
+      );
+      const data = await res.json().catch(() => null);
+      if (data?.ok && data?.summary) {
+        const rc = reconcileFromSummary(data.summary);
+        const { turns: rcTurns, ...rcState } = rc;
+        setTurns(rcTurns);
+        setState((s) => ({
+          ...s,
+          ...rcState,
+          status: "playing",
+          error: null,
+          lastNarrative: "",
+        }));
+      }
+    } catch {
+      // 对账失败不阻断交互，导出前建议刷新
+    }
+  }, [state.sessionId]);
+
   // ── 执行行动 ────────────────────────────────────────────
   const handleAction = async (
     actionType: string,
@@ -253,12 +281,14 @@ export default function GamePage() {
         }
       }
 
-      // 更新背包
+      // 更新背包（按 name+owner 隔离，阿游 P1；防止同名物品跨角色互扣）
       let updatedItems = [...state.items];
       for (const change of doneData.itemChanges || []) {
+        const owner = change.owner || "主角";
+        const match = (i: GameItem) =>
+          i.name === change.name && (i.owner || "主角") === owner;
         if (change.operation === "gain") {
-          const owner = change.owner || "主角";
-          const existing = updatedItems.find((i) => i.name === change.name);
+          const existing = updatedItems.find(match);
           if (existing) {
             existing.quantity += change.quantity || 1;
             if (!existing.owner) existing.owner = owner;
@@ -273,22 +303,22 @@ export default function GamePage() {
             });
           }
         } else if (change.operation === "consume") {
-          const existing = updatedItems.find((i) => i.name === change.name);
+          const existing = updatedItems.find(match);
           if (existing) {
             existing.quantity -= change.quantity || 1;
             if (existing.quantity <= 0) {
-              updatedItems = updatedItems.filter((i) => i.name !== change.name);
+              updatedItems = updatedItems.filter((i) => !match(i));
             }
           }
         } else if (change.operation === "equip") {
-          const existing = updatedItems.find((i) => i.name === change.name);
+          const existing = updatedItems.find(match);
           if (existing) existing.equipped = true;
         } else if (change.operation === "discard") {
-          const existing = updatedItems.find((i) => i.name === change.name);
+          const existing = updatedItems.find(match);
           if (existing) {
             existing.quantity -= change.quantity || 1;
             if (existing.quantity <= 0) {
-              updatedItems = updatedItems.filter((i) => i.name !== change.name);
+              updatedItems = updatedItems.filter((i) => !match(i));
             }
           }
         }
@@ -318,11 +348,14 @@ export default function GamePage() {
 
       setCustomInput("");
     } catch (err: any) {
-      if (err.name !== "AbortError") {
+      // 用户停止/断网：后端可能已提交该轮，与后端权威态对账，避免前后端轮次/背包永久错位（阿游 P0-2）
+      await reconcileWithBackend();
+      // 非主动停止（如真正异常）保留错误提示
+      if (err?.name !== "AbortError") {
         setState((s) => ({
           ...s,
           status: "playing",
-          error: err.message || "行动失败",
+          error: err?.message || "行动失败",
         }));
       }
     }
