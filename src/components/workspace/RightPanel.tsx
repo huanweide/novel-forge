@@ -8,6 +8,7 @@ import { ForeshadowingPanel } from "./ForeshadowingPanel";
 import { RelationshipGraph } from "./RelationshipGraph";
 import { AIChatBar } from "./AIChatBar";
 import { MonitorPanel } from "./MonitorPanel";
+import { NarrativeEnergyPanel } from "./NarrativeEnergyPanel";
 import { StatRow } from "./SharedUI";
 import type { StoryNodeData } from "./types";
 import { useProjectStore } from "@/store";
@@ -148,6 +149,7 @@ export function RightPanel(props: RightPanelProps) {
         {/* ── 监测 tab ── */}
         {topTab === "monitor" && (
           <div className="flex-1 overflow-y-auto">
+            <NarrativeEnergyPanel projectId={project.id} />
             <MonitorPanel projectId={project.id} nodeId={selectedNode?.id} />
           </div>
         )}

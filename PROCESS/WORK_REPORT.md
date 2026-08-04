@@ -2050,3 +2050,67 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 ### 诚实边界（反自欺）
 - **已真实验证**：tsc 零错误；schema `db push`+`generate` 成功（新字段 TS 可见）；两条计入路径 import 与 `.catch` 调用逐行确认；update 路由文件存在且含 `regenerateHint` 分支；面板 `textarea`/`saveHint`/`regenHint` 三处接线确认；双 changelog + commit `2467b44` + 代理 push 完成（git log 复核 HEAD=2467b44、工作树 clean）。
 - **未验证（必须明示）**：① AI 默认生成方向的**质量**（是否真贴合缝合怪节奏、是否对写作有用）需作者本地实跑几章看；② 伏笔被「缝合怪」消费、在后续章节**真实收束**的剧情效果，依赖真实 LLM 生成与长线写作，沙箱无法穷举；③ 面板 editable 交互（toast、重生成 loading、即时刷新）需用户本地浏览器目测。代码层（字段、生成器、接线、路由、面板控件）已通过 tsc 与源码阅读验证，但"方向好不好用、伏笔收不收得漂亮"这一步靠真实创作验证，留待用户验收。
+
+---
+
+## v0.46.83 — 伏笔收束率指标 + 本地推理垂直整合（Ollama）· 马斯克优化计划书 P0 落地
+
+### 干了什么（一句话）
+把上一轮「伏笔后续发展思路」之后、马斯克视角优化计划书里承诺最高杠杆的两件事直接做出来了：① 给伏笔一个**可量化的收束率指标**（线头收没收得住一眼可见）；② 把推理**垂直整合到作者本机 GPU**（Ollama，零 API 费用），不再被云端托管推理卡脖子。
+
+### 为什么这么做（第一性原理）
+- **真瓶颈不是"写不写得出来"，而是"收不收得住"**：LLM 永远能往下写，但长篇小说最容易烂尾的是"前面埋了一堆钩子，后面全忘了"。所以给作者一个客观指标——收束率 =（已回收 + 0.5×部分回收）÷ 活跃伏笔——比"感觉好像没收住"强得多。
+- **白痴指数（Musk 发明：一件东西的成本 ÷ 它该有的最低成本）最高的环节，是 DeepSeek API 托管推理**：你每发一次请求都付钱给第三方，而这笔钱大约是你自购一张 GPU 自己跑模型成本的 ~9 倍。把推理收回到作者自己的机器，是计划书里杠杆最高的单项优化；云端 API 保留作兜底，不强制。
+- **六人格诊断环是协调税**：这是流程层面的洞见（本轮没动代码，是计划书里的判断），但落到代码上我们坚持"加功能不增仪式"——收束检测是确定性的、零外部调用，不引入新的人格/新的一轮诊断。
+
+### 方法 / 工具与效果
+**1. 伏笔收束率检测（核心：`src/core/foreshadowing.ts`）**
+- 新增 `detectPayoffs(projectId)` 与 `computePayoffStats(projectId)`。关键设计——**零新 schema 字段**：既有的五状态机（`pending`/`detected`/`partially_fulfilled`/`fulfilled`/`voided`）+ `fulfillmentRatio` 已经齐备，缺的只是"自动检测"这一步。
+- **语义种子（命名≠理解）**：不是去翻数据库里"角色卡""世界书"的 UUID（那叫 `entityIds`，是一串机器编号，跨表解析既脆弱又耦合重），而是从伏笔自己的文字里抽"种子"——就像你记笔记时划重点词。具体两步：① 从 `closureConditions`（作者/AI 设定的"闭环条件"，比如"主角用断剑劈开石门"）取精确短语；② 用正则从 `description` 里抠连续中文片段（`[一-龥]{3,}`，即三个字以上的中文词，避开"一把""发现"这种高频噪声）。
+- **确定性命中（不调 LLM）**：拿这些种子去扫"该伏笔埋设时间之后"写的所有章节摘要（`ChapterSummary`），做纯字符串 `includes` 匹配。规则像考试判分：闭环条件任一条命中、或描述短语命中 ≥2 条 → 判"已回收"（100%）；只命中 1 条且还埋着 → "部分回收"（50%）；一条都不中 → 维持原状（**绝不把已回收降级**）。回写 `status`/`fulfillmentRatio`/`fulfilledAt`。
+- **为什么不用 LLM 做检测**：可单测、零超时、零费用、永不依赖网络。代价是精度取决于作者写的描述和闭环条件质量——但这是个写作工具，作者本来就该把"我希望这伏笔怎么收"写清楚，工具只是帮他对账。
+- 新增 `POST /api/foreshadowing/detect`（幂等、异常返回 `ok:false` 不抛 500）；`list` 路由附只读 `payoffStats`（首屏即见，不强制点检测）；面板顶部加收束率进度条 +「重新检测」按钮。
+
+**2. 本地推理垂直整合（核心：`src/lib/llm.ts` + `src/app/settings/page.tsx`）**
+- LLM 客户端本就走 OpenAI 兼容的 `/chat/completions`（上次探查已确认），所以 Ollama 这种本地服务**代码层零改动**就能用——只要告诉它"地址在哪、模型叫啥"。
+- 设置页 `PROVIDERS` 加 `local`（Ollama）一键预设，选中即填默认 Base URL `http://localhost:11434/v1`，并展示输入框与"无需 API Key"提示。
+- `POST /api/settings/test` 对 `provider==="local"` **放行无 Key**（Ollama 忽略空 Bearer）；`getSettings` 加本地分支：provider 是 local 时免 Key，直接用 `db.llmBaseUrl` + `db.llmModel` 构建配置；`PROVIDER_BASE_URLS` 补 `local` 兜底；`PUT /api/settings` 接受空 `llmApiKey` 落库。
+
+**3. 验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误（确认 `extractSeeds`/`detectPayoffs`/`computePayoffStats` 字段与 `PendingCommitment`/`ChapterSummary` schema 逐行对齐）；双 changelog 升 v0.46.83（`src/lib/changelog-data.ts` + 根 `CHANGELOG.md` 同 commit）；commit `0f024cc` + 代理 push `huanweide/novel-forge main`（git log 复核 HEAD=0f024cc、工作树 clean）。
+
+### 关键取舍
+- **确定性字符串命中 vs LLM 语义判断**：选了确定性——可单测、零成本、永不超时。代价：作者没写清描述/闭环条件时，检测会偏保守（宁可漏判也不误判已回收）。这是"工具做对账、判断归作者"的取舍。
+- **语义种子 vs 跨表 `entityIds`**：选了语义种子——避免脆弱的 UUID 跨表解析（角色卡/世界书换 id 或改名就崩）。代价：角色改名不会自动让旧伏笔"感知"到，但写作里伏笔本就以"情节"为单位，不是以"角色 id"为单位，更合理。
+- **本地推理保留云端兜底**：不强制本机 GPU——作者没装 Ollama 或模型太大跑不动，随时切回 DeepSeek/SiliconFlow。代价是设置页多一个选项、测试路由多一个分支判断。
+- **收束检测不写进"生成主链路"**：只在面板点「重新检测」或读 list 时跑，绝不阻塞写作。这是优先级：正文生成 > 收束对账。
+
+### 诚实边界（反自欺）
+- **已真实验证**：tsc 零错误；`PendingCommitment`/`ChapterSummary` 字段名（description/closureConditions/fulfillmentRatio/fulfilledAt/detectedAt/keyEvents 等）逐行核对 schema；`detectPayoffs` 命中规则与 `computePayoffStats` 聚合公式经源码通读复核；本地推理四条改动（PROVIDERS/defaultBaseUrl/getSettings 分支/test 放行/PUT 空 Key）逻辑闭环；双 changelog + commit `0f024cc` + 代理 push 完成（git log 复核 HEAD=0f024cc、工作树 clean）。
+- **未验证（必须明示）**：① 收束检测**真实命中准确率**——需作者拿真实项目（有埋设伏笔 + 后续章节摘要）点「重新检测」，看状态回写是否对；沙箱无现成章节数据，未实跑 detect。② 本地推理**连通性**——沙箱未装 Ollama、无本机 GPU，无法真连；`testLLMConnection` 对 local 走 11434/v1 的逻辑是源码推演正确，未实连验证。③ 面板进度条 /「重新检测」按钮 / 设置页 local 预设交互——需用户本地浏览器目测。代码层（字段、检测函数、路由、面板控件、设置页分支）已通过 tsc 与源码阅读验证，但"收束率准不准、本机跑得通不通"这两步靠真实环境验收，留待用户。
+
+---
+
+## v0.46.84 — 叙事能量曲线（叙事物理引擎雏形 · 马斯克优化计划 P1）
+
+### 干了什么
+给作者一条「叙事能量曲线」：在右侧「监测」tab 顶部，用 SVG 折线图画出每一章的叙事张力（能量）随章节的起伏，自动标出哪章是峰值（高潮）、哪章是谷值（平淡），并给一段节奏诊断（比如「虎头蛇尾」「张力过平」「连续三章走低可能读者流失」）。对应马斯克计划书 P1「叙事能量曲线（先粗粒度）」。
+
+### 为什么这么做（第一性原理）
+马斯克的第一性原理：真问题不是「写不写得出」，而是「写出来的东西张力有没有起伏、读者会不会在中段流失」。把叙事张力当成一种守恒量——有高峰就得有缓冲，长期平铺或一路下滑都是失衡。作者自己写的时候很难同时看见全局的起伏，工具的价值就是把这条隐藏曲线显形，让他一眼知道「第 7 章该加冲突、第 12 章该缓冲」。
+
+### 方法 / 工具 / 效果（对比过什么）
+- **零新字段**：直接复用既有 `ChapterSummary.eventImportances`——它本来就有 S/A/B/C 四级事件分层（S=最重要的大事件，C=次要）。能量 = 确定性加权 `raw = 1.0*S + 0.7*A + 0.4*B + 0.15*C + 0.05*keyEvents`，再 `/3.0` 截断到 `[0,1]`。权重是我按"事件重要性递减"拍的：一个 S 级事件约等于一个满格高潮，普通过场章靠 keyEvents 撑到 0.3-0.5。
+- **确定性、免 LLM**：和上一轮伏笔收束率同一思路——可单测、零成本、永不超时。对比过"用 LLM 给每章打张力分"：那个准但慢、贵、依赖网络，对一个每次写作都要看的面板不划算，所以选了粗粒度确定性启发式（计划书也明确"先粗粒度"）。
+- **章节排序**：拉 `StoryNode`（type=chapter）的 `order` 字段做章节顺序映射；`ChapterSummary` 按 `chapterId` 去重（一章多次生成摘要取最新），匹配不到 StoryNode 顺序的章节用 `createdAt` 兜底排最后。
+- **诊断算法**：峰谷 argmax/argmin + 能量方差；首末趋势检测虎头蛇尾（末章比首章低 0.2 以上）；峰谷落差检测张力过平（<0.15）或起落强烈（>0.5）；扫描连续下降段（≥3 章且累计降幅>0.4）提示读者流失；扫描≥4 章平缓平台提示打破单调。
+- **产出文件**：核心 `src/core/narrative-energy.ts`（`computeNarrativeEnergy` + `diagnose`，整段 try-catch 容错返回空结构）；API `src/app/api/narrative-energy/route.ts`（GET，`force-dynamic`，缺 projectId 返 400）；面板 `src/components/workspace/NarrativeEnergyPanel.tsx`（SVG 折线 + 峰谷空心圈标注 + 诊断文案，仿 MonitorPanel 风格 fetch）；挂接 `RightPanel.tsx` 的 `monitor` tab 顶部（`MonitorPanel` 之上）。
+
+### 关键取舍
+- **固定 NORM=3 截断 vs 动态归一化**：选了固定上限。动态归一会把所有曲线都"拉满"到 0-1，丢失"绝对张力高低"的感知；固定上限让作者能横向比"这章到底够不够炸"。代价是不同事件密度的作品绝对数值不可比——但相对起伏（哪章高哪章低）才是作者要的，可接受。
+- **确定性加权 vs LLM 打分**：选了确定性（同伏笔收束率的逻辑）。代价是精度依赖作者是否认真填了 S/A/B/C 事件分层——但他本来就该在摘要里标出大事件，工具只是帮他对账起伏。
+- **不写进生成主链路**：同伏笔收束率，只在监测 tab 看、不阻塞写作。
+- **面板挂监测 tab 顶部**：叙事能量是"全局节奏视图"，比字数/Token 更靠上，作者一开监测就能先看到起伏；同时保留 MonitorPanel 原有全部模块。
+
+### 诚实边界（反自欺）
+- **已真实验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误（确认 `computeNarrativeEnergy`/`diagnose` 字段与 `ChapterSummary.eventImportances`/`keyEvents` + `StoryNode.order/type` schema 逐行对齐）；双 changelog 升 v0.46.84（`src/lib/changelog-data.ts` + 根 `CHANGELOG.md` 同 commit）；API 路由、`NarrativeEnergyPanel` 的 SVG 几何（x/y 映射、峰谷标注条件 `valley.index !== peak.index` 防重叠）经源码通读复核。
+- **未验证（必须明示）**：① 真实数据下曲线形状与诊断建议是否合理——需作者拿真实项目（多章有摘要 + 认真标了 S/A/B/C 事件）打开监测 tab 目测。沙箱无现成章节数据，未实跑渲染。② 能量公式权重（1.0/0.7/0.4/0.15/0.05 + NORM=3）是"先粗粒度"的经验值，作者若觉得某章能量明显偏高/偏低，权重是后续可调参数。③ SVG 在 w-80（320px）窄栏里的视觉拥挤度——需本地浏览器目测，必要时再调 viewBox/字号。

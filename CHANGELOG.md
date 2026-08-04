@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.84 — 2026-08-04
+**叙事能量曲线（叙事物理引擎雏形·P1）：ChapterSummary 事件分层确定性加权能量 + SVG 折线峰谷标注 + 节奏诊断（tsc 零错误）**
+
+- 叙事能量曲线：监测 tab 顶部新增「叙事能量曲线」面板，SVG 折线图展示各章叙事能量（张力）随章节起伏，自动空心圈标注峰值（accent 色）/谷值（success 色）章节并附能量数值；概览卡显示均值 / 峰值章 / 谷值章
+- 能量计算零新 schema 字段：复用 ChapterSummary 既有 eventImportances（S/A/B/C 四级事件分层）+ keyEvents 密度，确定性加权 raw = 1.0*S + 0.7*A + 0.4*B + 0.15*C + 0.05*keyEvents，再 /3.0 截断到 [0,1]；按 StoryNode.order 排章节序（缺失顺序按 createdAt 兜底），一章多条摘要取最新
+- 节奏诊断：computeNarrativeEnergy(@/core/narrative-energy) 含峰谷定位、能量方差、首末趋势（虎头蛇尾）、峰谷落差（张力过平 <0.15 / 起落强烈 >0.5）、连续下降段（≥3 章且累计降幅 >0.4 提示流失风险）、平缓平台（≥4 章张力不动提示打破单调），输出 1-3 条可操作建议
+- 新增 GET /api/narrative-energy?projectId=xxx 路由（force-dynamic，只读聚合无副作用，缺 projectId 返 400）；NarrativeEnergyPanel 仿 MonitorPanel 风格 fetch 渲染，空数据给引导文案；整段 try-catch 容错不阻断监测 tab
+
+---
+
 ## v0.46.83 — 2026-08-04
 **伏笔收束率指标（确定性语义种子检测，复用五状态机）+ 本地推理垂直整合（Ollama 免 Key 一键预设）（tsc 零错误）**
 

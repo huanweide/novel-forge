@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.83";
+export const LATEST_VERSION = "v0.46.84";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "伏笔收束率指标：伏笔面板顶部新增收束率进度条（已回收 / 活跃伏笔），点「重新检测」扫描埋设点之后的章节摘要，用语义种子确定性回写每条伏笔的回收/部分回收状态，从此线头收没收得住一眼可见",
-  "收束检测零新字段：复用既有五状态机（pending/detected/partially_fulfilled/fulfilled/voided）+ fulfillmentRatio，新增 detectPayoffs / computePayoffStats（@/core/foreshadowing），种子取「描述中文短语 + closureConditions 闭环条件」，免跨表解析角色卡/世界书 UUID",
-  "本地推理垂直整合：设置页新增「本地推理 (Ollama)」一键预设（默认 Base URL http://localhost:11434/v1），测试连接放行无 Key，getSettings 本地分支免 Key，LLM 客户端本就 OpenAI 兼容零改动——本机 GPU 跑模型，零 API 费用",
-  "新增 POST /api/foreshadowing/detect 路由触发收束检测，list 路由附只读 payoffStats；本地推理经 settings/test 放行 + /api/settings 保存空 Key 落库，dev 端口 3001 不变",
+  "叙事能量曲线：监测 tab 顶部新增「叙事能量曲线」面板，以 SVG 折线图展示各章叙事张力（能量）随章节起伏，自动标注峰值/谷值章节，并给节奏诊断（虎头蛇尾 / 张力过平 / 连续走低 / 平缓平台）",
+  "能量计算零新字段：复用 ChapterSummary 既有 eventImportances（S/A/B/C 四级事件分层）+ keyEvents 密度，确定性加权归一能量（raw = 1.0*S + 0.7*A + 0.4*B + 0.15*C + 0.05*keyEvents，再 /3 截断到 0-1），按 StoryNode.order 排章节序，免 LLM、零成本",
+  "新增 GET /api/narrative-energy?projectId=xxx 路由（只读聚合，无副作用），核心 computeNarrativeEnergy(@/core/narrative-energy) 含峰谷/方差/连续下降/平台检测，整段 try-catch 容错返回空结构",
+  "叙事物理引擎雏形：把叙事张力当守恒量，作者可一眼看出哪章该加冲突、哪章该缓冲；首末趋势 + 峰谷落差 + 连续走低段落诊断，对应马斯克计划书 P1「叙事能量曲线（先粗粒度）」",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.84",
+    date: "2026-08-04",
+    title: "叙事能量曲线（叙事物理引擎雏形·P1）：ChapterSummary 事件分层确定性加权能量 + SVG 折线峰谷标注 + 节奏诊断（tsc 零错误）",
+    sections: [
+      {
+        label: "叙事能量曲线（马斯克优化计划 P1·先粗粒度）",
+        items: [
+          "监测 tab 顶部新增「叙事能量曲线」面板：SVG 折线图展示各章叙事能量（张力）随章节变化，自动以空心圈标注峰值（accent 色）与谷值（success 色）章节并附能量数值；概览卡显示均值 / 峰值章 / 谷值章",
+          "能量计算零新增 schema 字段：复用 ChapterSummary 既有 eventImportances（S/A/B/C 四级事件分层）+ keyEvents 密度，确定性加权 raw = 1.0*S + 0.7*A + 0.4*B + 0.15*C + 0.05*keyEvents，再 /3.0 截断到 [0,1] 得 energy；按 StoryNode.order 排章节序（缺失 StoryNode 顺序的章节按 createdAt 兜底），一章多条摘要取最新",
+          "节奏诊断：computeNarrativeEnergy(@/core/narrative-energy) 含峰谷定位、能量方差、首末趋势（虎头蛇尾检测）、峰谷落差（张力过平 <0.15 / 起落强烈 >0.5）、连续下降段（≥3 章且累计降幅 >0.4 提示读者流失风险）、平缓平台（≥4 章张力不动提示打破单调），给作者 1-3 条可操作建议",
+          "新增 GET /api/narrative-energy?projectId=xxx 路由（force-dynamic，只读聚合无副作用，缺 projectId 返 400，异常核心兜底返空结构）；NarrativeEnergyPanel 仿 MonitorPanel 风格 fetch 渲染，空数据给出引导文案；整段 try-catch 容错，任何异常不阻断监测 tab 其余模块",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.83",
     date: "2026-08-04",
