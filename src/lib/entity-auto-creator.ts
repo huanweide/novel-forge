@@ -11,6 +11,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { DetectedEntity } from "./entity-detector";
+import { isCompleteEntityName } from "./entity-detector";
 
 // ─── 类型定义 ────────────────────────────────────────────────
 
@@ -184,6 +185,12 @@ export async function autoCreateEntities(
   for (const entity of newEntities) {
     const name = entity.name.trim();
     if (!name || name.length < 2) continue;
+    // Q1：兜底过滤句子碎片（含功能词/标点/超长/末字非名词性 CJK），
+    // 即使上游蒸馏/提取返回片段，也不写入世界书污染数据。
+    if (!isCompleteEntityName(name)) {
+      skipped.push(name);
+      continue;
+    }
 
     // 去重：精确（大小写不敏感）
     if (existingNames.has(name.toLowerCase())) {

@@ -137,10 +137,12 @@ export function matchNameStrict(
     return false;
   }
 
-  // 2字 CJK：直接子串命中（P0 修复），不依赖 matchKeyword 的边界判定，
-  // 否则中文无空格场景下「叶凡」夹在 CJK 间会全漏检。纯错字由 includes 前置排除。
+  // 2字 CJK：Round4 铁律——直接子串命中、不吞并。
+  // 中文无空格，常见 2字名（叶凡/萧炎/林动）几乎总被 CJK 前后包围，任何吞并约束都会令最常见名长全漏检（OOC/召回失效）。
+  // 已知名覆盖吞并只适用于 3字+（见下分支）。纯错字由 includes 前置检查排除（如「叶凡」不会命中「叶帆」）。
+  // 注：L1 报告 Q2 曾误判「2字分支无吞并」为缺陷，实为 Round4 既定铁律；trigger.test.ts 的「2字无吞并」回归用例已权威锁定此行为。
   if (len === 2 && keywordIsCjk) {
-    return true;
+    return true; // 直接命中，保召回
   }
 
   // 长度 ≥3（及非 CJK 2字/纯数字）：先走共享 matchKeyword（含纯数字边界、英文2字两侧边界、≥3 直命中）。
@@ -156,17 +158,25 @@ export function matchNameStrict(
       const afterIdx = idx + len;
       const after = afterIdx < hay.length ? hay[afterIdx] : "";
       if (after === "" || !isCjkChar(after)) return true; // 紧后非CJK（边界/文末）→ 命中
-      // 紧后是 CJK：检查是否被更长的已知名吞并（取最长匹配，任一处更长名成立即吞并）。
+      // 紧后是 CJK：检查是否被更长的已知名「覆盖区间」吞并（灭「星云剑」在「李星云剑法」误命中）。
+      // 覆盖判定：存在 nl∈knownNames, nl.length>needle.length,
+      //   s=hay.indexOf(nl), e=s+nl.length, s<=idx && e>=idx+needle.length → 吞并。
+      // 相比 Round6 的「前缀同起点」(hay.startsWith(nl, idx))，覆盖区间能正确处理
+      // 长名并非以短名为前缀的情形（如「李星云剑法」包含「星云剑」但起点不同）。
       if (known && known.length) {
         let swallowed = false;
         for (const n of known) {
           const nl = n.toLowerCase();
-          if (nl.length > needle.length && hay.startsWith(nl, idx)) {
-            swallowed = true; // 命中位置恰是更长名前缀 → 被吞并
+          if (nl.length <= needle.length) continue;
+          const s = hay.indexOf(nl);
+          if (s < 0) continue;
+          const e = s + nl.length;
+          if (s <= idx && e >= idx + needle.length) {
+            swallowed = true; // 命中区间被更长已知名完全覆盖 → 被吞并
             break;
           }
         }
-        if (!swallowed) return true; // 紧后CJK但拼不出更长名 → 正常命中（如「李星云看见」）
+        if (!swallowed) return true; // 紧后CJK但无更长名覆盖 → 正常命中（如「李星云看见」）
       } else {
         return true; // 无 knownNames → 直接命中
       }

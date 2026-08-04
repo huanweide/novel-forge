@@ -241,7 +241,7 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
       const usage = (data as any)?.usage;
       const promptTokens = usage?.prompt_tokens ?? usage?.promptTokens ?? countTokens(systemPrompt + "\n" + userPrompt);
       const completionTokens = usage?.completion_tokens ?? usage?.completionTokens ?? countTokens(raw);
-      recordLlmCall({ model: cfg.model, role: "import_parse", promptTokens, completionTokens, totalTokens: promptTokens + completionTokens, baseURL: cfg.baseURL });
+      recordLlmCall({ model: cfg.model, role: "import_parse", promptTokens, completionTokens, totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? (promptTokens + completionTokens), baseURL: cfg.baseURL });
       if (!raw || raw.trim().length < 20) return { raw: "", error: `${cfg.label} 返回空内容`, sec: parseFloat(sec) };
       return { raw, sec: parseFloat(sec) };
     } catch (e) {

@@ -2,6 +2,17 @@
 
 ---
 
+## v0.46.75 — 2026-08-04
+**会员股东 Round 12 复验闭环：分支备份导入 P0 修复 + 填表透传溯源与跨表防错放 + 三卡检索去污染与匹配词边界 + 游戏动词闭环与轮次幂等 + 导入 deadline/口径闭环 + 监测面板按项目成本 + a11y 闭环（tsc 零错误）**
+
+- 分支备份导入 P0 闭环（工坊 G1+W1）：原 strip 删必填 forkPointNodeId 致含 storyBranches 的 .nfproject 备份导入整库回滚零创建 → 占位 nodeMap 重映射闭合；parentBranchId 重映射灭悬空、选择性导入 lostForks 提示、事务超时 60s→120s
+- 填表透传溯源与跨表防错放（墨白 M1+M2）：continue/refine 透传 nodeOrder/nodeId 修复 _src 恒 ch?:batchmanual 断章节溯源；写入前校验人物实体不匹配地理表则报错不写错灭错放（萧薰儿落妃嫔居住建筑表）
+- 三卡检索去污染与匹配词边界（青砚 Q1+Q2+Q3）：实体抽取过滤句子碎片（右手拇指/核桃壳在他指）灭 47/49 碎片污染世界书；matchNameStrict 3字+ 覆盖区间吞并修中段嵌入（李星云剑法误命中李星云），2字分支保持不吞并保召回；entity-detector 填 aliases 复活去重、高亮补 2字尾边界与非颜色线索
+- 游戏动词闭环与轮次幂等（阿游 A1-A4）：GameState upsert 幂等抗 P2002、前端镜像补 unequip/destroy/skip、ItemChange.operation 扩 7 值；OP_MAP 同义动词大扩 + 开局建世界卡 + owner 去重
+- 导入 deadline/口径闭环 + 监测面板按项目成本 + a11y（磐石 P_a/P_b/P_c + 用户#16 + 清览 L1）：commit 全局 deadline 270s 优雅 partial、totalTokens 口径统一；monitor/route 按 projectId 分组聚合本月 llmCallLog，MonitorPanel 新增 AI 成本卡片（调用次数/token/费用/占比）闭合用户#16；a11y 补 aria-label 与暗色高亮
+
+---
+
 ## v0.46.74 — 2026-08-04
 **会员股东 Round 11 复验闭环：填表主链路溯源修复 + 建卡别名去重/变体收敛 + 游戏动词闭环与轮次唯一 + 抽屉焦点逃逸修复 + 导入并发/超时/口径闭环 + 正则 ReDoS 纵深防御（tsc 零错误）**
 

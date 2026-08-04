@@ -155,6 +155,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
+            aria-label={projectId ? "搜索章节、角色、世界书、规则或执行操作" : "搜索操作或页面跳转"}
             placeholder={projectId ? "搜索章节 / 角色 / 世界书 / 规则，或执行操作…" : "搜索操作 / 页面跳转…"}
             className="flex-1 bg-transparent outline-none text-sm text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-muted)]"
           />

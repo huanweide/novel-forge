@@ -109,6 +109,37 @@ export async function GET(request: Request) {
       })),
     };
 
+    // P_a/P_c：按 projectId 分组聚合（本月）——使监测面板可展示「当前项目」与「全局」两档 token/费用。
+    // 复用既有 llmCallLog（填表路径现也已带 projectId 落库），按 projectId 分组求和 estimatedCost。
+    const [projectAgg, projectByProject] = await Promise.all([
+      prisma.llmCallLog.aggregate({
+        where: { createdAt: { gte: usageMonthStart }, projectId },
+        _sum: { promptTokens: true, completionTokens: true, totalTokens: true, estimatedCost: true },
+        _count: true,
+      }),
+      prisma.llmCallLog.groupBy({
+        by: ["projectId"],
+        where: { createdAt: { gte: usageMonthStart } },
+        _sum: { totalTokens: true, estimatedCost: true, promptTokens: true, completionTokens: true },
+        _count: true,
+        orderBy: { _sum: { totalTokens: "desc" } },
+      }),
+    ]);
+    const projectLlm = {
+      since: usageMonthStart.toISOString().slice(0, 10),
+      totalCalls: projectAgg._count,
+      totalPromptTokens: projectAgg._sum.promptTokens || 0,
+      totalCompletionTokens: projectAgg._sum.completionTokens || 0,
+      totalTokens: projectAgg._sum.totalTokens || 0,
+      totalCost: projectAgg._sum.estimatedCost || 0,
+      byProject: projectByProject.map((g: { projectId: string | null; _count: number; _sum: { totalTokens?: number | null; estimatedCost?: number | null } }) => ({
+        projectId: g.projectId,
+        calls: g._count,
+        tokens: g._sum.totalTokens || 0,
+        cost: g._sum.estimatedCost || 0,
+      })),
+    };
+
     return NextResponse.json({
       totalWords,
       totalChapters,
@@ -139,6 +170,7 @@ export async function GET(request: Request) {
       },
       dailyWords,
       llmUsage,
+      projectLlm,
     });
   } catch (err) {
     return jsonError(err);

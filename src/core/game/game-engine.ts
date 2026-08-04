@@ -412,11 +412,27 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
   // 提交时机：仅在解析成功、即将产出 game_done 的这一步提交；流式 token 阶段不落库，
   // 故不存在「流式中间提前提交」。若用户停止/断网，后端已提交的权威态由前端 abort 后
   // GET /api/game/state 对账回拉覆盖（reconcileFromSummary），自愈前后端错位。
+  // Round12 A1：gameState 现已落库 @@unique([sessionId, round])（schema.prisma:376），
+  // 并发/重试写入同 round 会抛 P2002。改用 upsert：存在则更新、不存在则创建，幂等且不抛错，
+  // 与下方 gameSession.update 同处一事务，保持原子性、不留孤儿态。
   await prisma.$transaction([
-    prisma.gameState.create({
-      data: {
+    prisma.gameState.upsert({
+      where: { sessionId_round: { sessionId: session.id, round: newRound } },
+      create: {
         sessionId: session.id,
         round: newRound,
+        playerAction:
+          input.selectedOption != null
+            ? `选择选项${input.selectedOption}${selectedOptionText ? `：${selectedOptionText}` : ""}`
+            : (input.actionText || ACTION_TYPE_LABELS[input.actionType] || "自定义行动"),
+        narrative: parsed.narrative,
+        options: finalOptions as any,
+        entities: allEntities as any,
+        items: updatedItems as any,
+        plotProgress: finalProgress,
+        wordCount,
+      },
+      update: {
         playerAction:
           input.selectedOption != null
             ? `选择选项${input.selectedOption}${selectedOptionText ? `：${selectedOptionText}` : ""}`
@@ -455,12 +471,18 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
  * 世界卡物品联动：确保某物品在世界书中有对应 item 类词条。
  * 已有则保留；无则补充创建（记录归属），使背包物品与世界卡双向打通。
  */
-async function ensureItemLorebook(projectId: string, itemName: string, owner: string) {
+// 世界卡物品联动：确保某物品在世界书中有对应 item 类词条。
+// 已有则保留；无则补充创建（记录归属），使背包物品与世界卡双向打通。
+// Round12 A4b：去重维度加 owner——主角与同名 NPC 物品各建独立词条，避免共用世界卡丢失归属。
+export async function ensureItemLorebook(projectId: string, itemName: string, owner: string) {
   if (!itemName || itemName.length < 2) return;
-  const existing = await prisma.lorebookEntry.findFirst({
+  const candidates = await prisma.lorebookEntry.findMany({
     where: { projectId, category: "item", title: itemName },
   });
-  if (existing) return;
+  // 仅在「同 title 且同归属 owner」的词条缺失时才新建，否则保留已有（归属已被该 owner 占用）。
+  const ownerTag = `归属：${owner}`;
+  const owned = candidates.find((e) => (e.content || "").includes(ownerTag));
+  if (owned) return;
   await prisma.lorebookEntry.create({
     data: {
       projectId,

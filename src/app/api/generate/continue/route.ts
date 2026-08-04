@@ -240,7 +240,15 @@ ${lastParagraphs}
           }
 
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
-          const babylore = await safeFillAfterWriting({ projectId, content: fullContent, send, projectLlmConfig: projLlm as Record<string, unknown> | null });
+          // M1（墨白 Round12）：透传 nextNode.order/nodeId，使写入行 _src 形如 ch{n}:batchmanual（章节段非空），与 write 路径一致。
+          const babylore = await safeFillAfterWriting({
+            projectId,
+            content: fullContent,
+            send,
+            nodeOrder: (nextNode as any).order,
+            nodeId: nextNode.id,
+            projectLlmConfig: projLlm as Record<string, unknown> | null,
+          });
 
           send({
             type: "done", content: "",

@@ -66,7 +66,7 @@ export async function POST(request: Request) {
           where: { importSource: importSourceKey },
           select: { id: true },
         });
-        if (existing) return { pid: existing.id, idempotent: true };
+        if (existing) return { pid: existing.id, idempotent: true, lostForks: [] as string[] };
       }
 
       // 1. 项目本体
@@ -88,22 +88,44 @@ export async function POST(request: Request) {
       const created = await tx.project.create({ data: projData as any });
       const pid = created.id;
 
-      // 2. 故事分支（id 重映射；forkPointNodeId 暂存，待节点 pass 后回填重映射）
+      // 1.5 nodeMap 提前声明：分支创建时需引用（forkPointNodeId 占位），章节 pass 复用
+      const nodeMap: Record<string, string> = {};
+
+      // 2. 故事分支（id 重映射；forkPointNodeId 占位，待节点 pass 后回填重映射）
       const branchMap: Record<string, string> = {};
       const branchForkMap: Record<string, string> = {};
+      const branchParentMap: Record<string, string | null> = {};
+      const lostForks: string[] = [];
       if (want("branches")) {
+        // Pass 1：创建全部分支。forkPointNodeId 为 required String 无默认值，必须给占位值，
+        // 否则 Prisma 抛 Missing required value → 事务整体回滚 → 备份静默失败（G1 修复）。
+        // 占位取 重映射节点id ?? 旧节点id ?? ""；parentBranchId 一并 strip，Pass 2 重映射（W1 修复悬空）。
         for (const b of p.storyBranches || []) {
-          // P1-①：先缓存旧分叉点节点 id，待 nodeMap 建立后再重映射，避免分叉关系丢失
           branchForkMap[b.id] = b.forkPointNodeId;
+          branchParentMap[b.id] = b.parentBranchId ?? null;
           const cb = await tx.storyBranch.create({
-            data: { ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId"]), projectId: pid } as any,
+            data: {
+              ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId", "parentBranchId"]),
+              projectId: pid,
+              forkPointNodeId: nodeMap[b.forkPointNodeId] ?? b.forkPointNodeId ?? "",
+            } as any,
           });
           branchMap[b.id] = cb.id;
+        }
+        // Pass 2：parentBranchId 重映射（此时 branchMap 已全部就绪，可跨序引用旧 id）
+        for (const b of p.storyBranches || []) {
+          const oldParent = branchParentMap[b.id];
+          const newParent = oldParent ? (branchMap[oldParent] ?? null) : null;
+          if (newParent) {
+            await tx.storyBranch.update({
+              where: { id: branchMap[b.id] },
+              data: { parentBranchId: newParent } as any,
+            });
+          }
         }
       }
 
       // 3. 章节节点 pass1 创建（不带 parent/branch），pass2 回填 parentId/branchId
-      const nodeMap: Record<string, string> = {};
       if (want("chapters")) {
         for (const n of p.storyNodes || []) {
           const cn = await tx.storyNode.create({
@@ -123,14 +145,25 @@ export async function POST(request: Request) {
 
       // 3.5 回填分支分叉点 forkPointNodeId（旧节点 id → 新节点 id 重映射）
       // P1-①：分支在节点之前创建，此处 nodeMap 已就绪，恢复分叉关系拓扑
+      // W1 修复：选择性仅导入 branches（未导入 chapters）时 nodeMap 为空，forkPoint 会静默丢失；
+      //         改为显式标注丢失分支并将 forkPointNodeId 置 ""（不再保留悬空旧 id），回执给出提示。
       if (want("branches") && Object.keys(branchForkMap).length) {
         for (const b of p.storyBranches || []) {
           const oldFork = branchForkMap[b.id];
-          if (oldFork && nodeMap[oldFork] && branchMap[b.id]) {
-            await tx.storyBranch.update({
-              where: { id: branchMap[b.id] },
-              data: { forkPointNodeId: nodeMap[oldFork] } as any,
-            });
+          if (oldFork && branchMap[b.id]) {
+            if (nodeMap[oldFork]) {
+              await tx.storyBranch.update({
+                where: { id: branchMap[b.id] },
+                data: { forkPointNodeId: nodeMap[oldFork] } as any,
+              });
+            } else {
+              // 分叉点节点未被导入（未随章节一并导入，或备份缺失）→ 标注丢失，不静默丢弃
+              lostForks.push(b.id);
+              await tx.storyBranch.update({
+                where: { id: branchMap[b.id] },
+                data: { forkPointNodeId: "" } as any,
+              });
+            }
           }
         }
       }
@@ -190,10 +223,14 @@ export async function POST(request: Request) {
         }
       }
 
-      return { pid, idempotent: false };
-    }, { timeout: 60000 });
+      return { pid, idempotent: false, lostForks };
+    }, { timeout: 120000 });
 
-    return NextResponse.json({ success: true, id: importResult.pid, idempotent: importResult.idempotent });
+    // W1 修复：选择性仅导入 branches 时，分叉点可能因未导入章节而丢失，回执标注提示（不静默丢）
+    const warnings = (importResult.lostForks && importResult.lostForks.length)
+      ? `已导入，但 ${importResult.lostForks.length} 个分支的分叉点节点未随章节导入而丢失（分叉点需随章节一并导入）`
+      : undefined;
+    return NextResponse.json({ success: true, id: importResult.pid, idempotent: importResult.idempotent, warnings });
   } catch (err) {
     // N2 修复：并发重复导入同一备份时，事务内查重存在 TOCTOU 窗口（READ COMMITTED 下两事务可能同时通过查重），
     // 此时 tx.project.create 写入 importSource 触发 Postgres 唯一约束冲突（P2002）。

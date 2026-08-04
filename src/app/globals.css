@@ -799,6 +799,56 @@
 }
 
 /* ═══════════════════════════════════════════
+   实体高亮 · 非颜色区分线索（Q3 青览 B4 / WCAG 1.4.1）
+   仅靠色相不足以区分 11 类实体，叠加「差异化下划线 + 前导标记形状」，
+   使色盲/灰度下仍能判别类别（title/aria 另含文字标签）。
+   ═══════════════════════════════════════════ */
+.markdown-body .entity-highlight {
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+  padding-left: 9px;
+  position: relative;
+}
+/* 前导小标记：形状随类别变化（非颜色线索） */
+.markdown-body .entity-highlight::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateY(-50%);
+  background: currentColor;
+}
+/* 角色：实心圆点 + 实线下划线 */
+.markdown-body .entity-highlight.entity-character::before { border-radius: 50%; }
+.markdown-body .entity-highlight.entity-character { text-decoration-style: solid; }
+/* 词条分类：差异化下划线样式 + 前导标记形状 */
+.markdown-body .entity-cat-faction     { text-decoration-style: solid; }
+.markdown-body .entity-cat-faction::before { border-radius: 50%; }
+.markdown-body .entity-cat-item        { text-decoration-style: dotted; }
+.markdown-body .entity-cat-item::before { border-radius: 0; }                 /* 方块 */
+.markdown-body .entity-cat-geography   { text-decoration-style: dashed; }
+.markdown-body .entity-cat-geography::before { border-radius: 1px; transform: translateY(-50%) rotate(45deg); } /* 菱形 */
+.markdown-body .entity-cat-magic_system { text-decoration-style: double; }
+.markdown-body .entity-cat-magic_system::before { background: transparent; border: 1.5px solid currentColor; border-radius: 50%; } /* 圆环 */
+.markdown-body .entity-cat-technique   { text-decoration-style: wavy; }
+.markdown-body .entity-cat-technique::before { border-radius: 50%; width: 4px; height: 4px; }
+.markdown-body .entity-cat-creature    { text-decoration-style: dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.markdown-body .entity-cat-creature::before { border-radius: 0; transform: translateY(-50%) rotate(45deg); }
+.markdown-body .entity-cat-culture     { text-decoration-style: dashed; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.markdown-body .entity-cat-culture::before { background: transparent; border: 1.5px solid currentColor; }
+.markdown-body .entity-cat-history     { text-decoration-style: solid; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.markdown-body .entity-cat-history::before { border-radius: 50% 50% 0 0; }
+.markdown-body .entity-cat-law         { text-decoration-style: double; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.markdown-body .entity-cat-law::before { width: 0; height: 0; background: transparent; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid currentColor; } /* 三角 */
+.markdown-body .entity-cat-currency    { text-decoration-style: wavy; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.markdown-body .entity-cat-currency::before { border-radius: 1px; transform: translateY(-50%) rotate(45deg); background: transparent; border: 1.5px solid currentColor; }
+.markdown-body .entity-cat-custom      { text-decoration-style: dotted; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.markdown-body .entity-cat-custom::before { border-radius: 50%; background: transparent; border: 1.5px dashed currentColor; }
+
+/* ═══════════════════════════════════════════
    prefers-reduced-motion
    ═══════════════════════════════════════════ */
 
@@ -1272,9 +1322,20 @@ html.azure .btn-primary { color: #04201F; }
     background-color: var(--nv-abyss);
     color: var(--nv-text-primary);
   }
+  /* 暗色下 hover/选中态：Firefox/Chromium 原生下拉项高亮（B5） */
+  select option:hover,
+  select option:checked {
+    background-color: var(--nv-primary);
+    color: #fff;
+  }
   :root.light select option,
   :root.light select optgroup {
     background-color: #fff;
     color: #1A1C22;
+  }
+  :root.light select option:hover,
+  :root.light select option:checked {
+    background-color: var(--nv-primary);
+    color: #fff;
   }
 }

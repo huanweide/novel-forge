@@ -79,6 +79,25 @@ export function applyFrontendItemChanges(
       if (idx >= 0) {
         items = items.map((i, k) => (k === idx ? { ...i, equipped: true } : i));
       }
+    } else if (change.operation === "unequip") {
+      // 与后端 game-engine.ts:71-74 对齐：仅清 equipped 标记，物品仍在背包（不删）。
+      const idx = items.findIndex(match);
+      if (idx >= 0) {
+        items = items.map((i, k) => (k === idx ? { ...i, equipped: false } : i));
+      }
+    } else if (change.operation === "destroy") {
+      // 与后端 game-engine.ts:85-95 对齐：数量递减，归零即从背包移除（splice）。
+      const idx = items.findIndex(match);
+      if (idx >= 0) {
+        const q = items[idx].quantity - (change.quantity || 1);
+        items =
+          q <= 0
+            ? items.filter((_, k) => k !== idx)
+            : items.map((i, k) => (k === idx ? { ...i, quantity: q } : i));
+      }
+    } else if (change.operation === "skip") {
+      // 与后端 game-engine.ts:96-98 对齐：流转/出售类，安全跳过，不改动背包。
+      // no-op
     }
   }
   return items;

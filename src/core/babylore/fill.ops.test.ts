@@ -49,7 +49,7 @@ vi.mock("fs", () => {
 });
 
 import { prisma } from "@/lib/prisma";
-import { babyloreFill, babyloreFillAll, markChapterFilled } from "@/core/babylore/fill";
+import { babyloreFill, babyloreFillAll, markChapterFilled, inferEntityType, tableGroupOf } from "@/core/babylore/fill";
 
 function makeTable() {
   return {
@@ -289,5 +289,49 @@ describe("P1-F 写入行附加 _src/_ts 溯源", () => {
     expect(row._src).toMatch(/^ch\?:batch/);
     expect(typeof row._ts).toBe("string");
     expect(row._ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+// ─── M2（墨白 Round12）填表跨表类型校验：人物不可落地点/建筑表 ───
+describe("M2 实体类型推断（纯函数）", () => {
+  it("正文中以『说/道/笑』作谓语 → 推断为人物", () => {
+    expect(inferEntityType("萧薰儿", "萧薰儿说道：今日入宫。")).toBe("character");
+    expect(inferEntityType("萧薰儿", "「快走」，萧薰儿笑道。")).toBe("character");
+  });
+  it("地名/未在正文作人物谓语 → 保守返回 unknown（不误杀合法地点写入）", () => {
+    expect(inferEntityType("青龙镇", "少年踏入青龙镇外。")).toBe("unknown");
+    expect(inferEntityType("新地点", "第一章 青龙镇外，少年踏入江湖。")).toBe("unknown");
+  });
+  it("表类别归类：place/building 归 geo，person/characters 归 entity", () => {
+    expect(tableGroupOf("place")).toBe("geo");
+    expect(tableGroupOf("building")).toBe("geo");
+    expect(tableGroupOf("person")).toBe("entity");
+    expect(tableGroupOf("custom")).toBe("other");
+  });
+});
+
+describe("M2 人物落地点表 → 报错不写错", () => {
+  it("人物名写入 geo 表 → 跳过写库、warning 含『类型不匹配』、crossTable issue 并入自检", async () => {
+    mockFetch(
+      JSON.stringify({
+        operations: [{ table: "geo", op: "insert", values: { name: "萧薰儿" } }],
+      }),
+    );
+    const r = await babyloreFill("proj-m2", "萧薰儿说道：今日入宫，踏入碎玉轩。");
+    // 不静默污染：geo 表未被写入该行
+    const written = updateCalls[0]?.data?.rows as any[] | undefined;
+    expect(written?.some((row: any) => row.name === "萧薰儿")).toBeFalsy();
+    // 仍须在结果中暴露类型不匹配（报错不写错）
+    expect((r.warnings || []).join("")).toContain("类型不匹配");
+    expect((r.selfCheckIssues || []).some((i) => i.value === "萧薰儿" && i.issue.includes("类型不匹配"))).toBe(true);
+  });
+
+  it("合法地点名写入 geo 表 → 正常落地、不受影响", async () => {
+    mockFetch(JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "碎玉轩" } }] }));
+    const r = await babyloreFill("proj-m2-ok", "碎玉轩是妃嫔居所，少年走近碎玉轩。");
+    expect(r.applied).toBe(1);
+    expect(r.ok).toBe(true);
+    const written = updateCalls[0].data.rows as any[];
+    expect(written.some((row: any) => row.name === "碎玉轩")).toBe(true);
   });
 });

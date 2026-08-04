@@ -77,10 +77,10 @@ describe("parseGameOutput —— 操作中文→英文归一化（阿游 P0）",
     expect(r.itemChanges.length).toBe(0);
   });
 
-  it("未知操作保留原值（如 CI|出售|宝物|1 → operation=出售）", () => {
-    const r = parseGameOutput(`叙事。\n===角色物品变动===\nCI|出售|宝物|1\n===新实体===\n`);
+  it("未知操作保留原值（如 CI|熔化|宝物|1 → operation=熔化）", () => {
+    const r = parseGameOutput(`叙事。\n===角色物品变动===\nCI|熔化|宝物|1\n===新实体===\n`);
     expect(r.itemChanges.length).toBe(1);
-    expect(r.itemChanges[0].operation).toBe("出售");
+    expect(r.itemChanges[0].operation).toBe("熔化");
   });
 });
 
@@ -150,4 +150,38 @@ describe("parseGameOutput —— 中文复合数字（阿游 P1）", () => {
     expect(r.itemChanges.length).toBe(1);
     expect(r.itemChanges[0].quantity).toBe(1);
   });
+});
+
+// 验证游戏模式「Round12 A4 同义动词补全」：消费/卸下/损毁/流转类同义词归一，消告警且不污染背包。
+describe("parseGameOutput —— Round12 A4 同义动词补全", () => {
+  const cases: Array<{ ci: string; op: string }> = [
+    { ci: "CI|吃|馒头|1", op: "consume" },
+    { ci: "CI|喝|泉水|1", op: "consume" },
+    { ci: "CI|食|干粮|1", op: "consume" },
+    { ci: "CI|进食|肉脯|1", op: "consume" },
+    { ci: "CI|吸|烟|1", op: "consume" },
+    { ci: "CI|饮|酒|1", op: "consume" },
+    { ci: "CI|摘下|面具|1", op: "unequip" },
+    { ci: "CI|摘掉|头盔|1", op: "unequip" },
+    { ci: "CI|除下|手套|1", op: "unequip" },
+    { ci: "CI|破坏|木门|1", op: "destroy" },
+    { ci: "CI|砸碎|花瓶|1", op: "destroy" },
+    { ci: "CI|摔碎|玉佩|1", op: "destroy" },
+    { ci: "CI|烧毁|书信|1", op: "destroy" },
+    { ci: "CI|焚毁|卷轴|1", op: "destroy" },
+    { ci: "CI|炸毁|营寨|1", op: "destroy" },
+    { ci: "CI|出售|宝物|1", op: "skip" },
+    { ci: "CI|售卖|灵药|1", op: "skip" },
+    { ci: "CI|卖出|旧剑|1", op: "skip" },
+    { ci: "CI|交换|情报|1", op: "skip" },
+    { ci: "CI|交易|货物|1", op: "skip" },
+  ];
+
+  for (const { ci, op } of cases) {
+    it(`解析 ${ci} → operation=${op}`, () => {
+      const r = parseGameOutput(`叙事。\n===角色物品变动===\n${ci}\n===新实体===\n`);
+      expect(r.itemChanges.length).toBe(1);
+      expect(r.itemChanges[0].operation).toBe(op);
+    });
+  }
 });

@@ -51,6 +51,8 @@ export interface FillErrorMeta {
   failed: number;
   /** 被跳过（疑似误标）的节点 ID 列表，供 UI/诊断精确区分「真无脏」与「误标」 */
   nodeIds: string[];
+  /** M2（墨白 Round12）：本轮因「实体类型↔表类别不匹配」被跳过、未落库的错写条数（报错不写错） */
+  crossTableSkips?: number;
 }
 
 export interface FillAllResult {
@@ -156,6 +158,81 @@ function getIdentityCol(t: { columns?: any[] }): string {
   return keys[0] || "name";
 }
 
+/**
+ * M2（墨白 Round12）：实体类型 ↔ 表类别 约束，防止「人物落建筑表」等跨表错放。
+ *
+ * 设计原则（优先「报错不写错」避免数据污染）：
+ *  - 表类别可靠来源是 LoreTable.category（person|place|item|attribute|timeline|custom），
+ *    据此把表归为「地理/建筑类（geo）」或非地理类。
+ *  - 实体类型用启发式推断：依据其在正文中的角色词（主语 + 说/想/看/道…）判定为「人物」。
+ *    仅当高置信度判定为人物、且目标表为地理/建筑类时，才算「类型不匹配」。
+ *  - 判定逻辑抽成纯函数以便单测；不匹配时不写入，改为上报 cross-table issue。
+ */
+
+export type InferredEntityType = "character" | "geo" | "unknown";
+
+/** 表类别 → 地理/建筑类分组（与 selfCheckFill 的 GEO_LIKE 对齐） */
+export const GEO_CATEGORIES = new Set<string>([
+  "geo", "location", "place", "places", "building", "buildings", "map", "scene", "scenes",
+]);
+
+/** 人物/组织类表类别（实体类，不应被写入地理表；也不应承担地理实体） */
+export const ENTITY_CATEGORIES = new Set<string>([
+  "person", "characters", "character", "people", "org", "organization",
+  "item", "items", "skill", "skills", "relation", "relations", "event", "events",
+  "creature", "creatures",
+]);
+
+/** 表类别归类 */
+export function tableGroupOf(category: string | undefined): "geo" | "entity" | "other" {
+  const c = (category || "custom").toLowerCase();
+  if (GEO_CATEGORIES.has(c)) return "geo";
+  if (ENTITY_CATEGORIES.has(c)) return "entity";
+  return "other";
+}
+
+/** 人物行为动词/标记：出现在实体名之后即强烈暗示该实体是「人物」 */
+const CHARACTER_VERBS = [
+  "说", "道", "笑", "问", "喊", "叫", "低声", "心想", "想", "看", "望", "走", "转", "点头",
+  "摇头", "皱眉", "眯", "叹", "沉吟", "轻声", "冷笑", "怒", "回道", "心道", "喊道", "笑道",
+  "叫道", "低语", "喃喃", "凝视", "转身", "应道", "答道", "默然", "缓缓",
+];
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * 启发式推断实体是否为「人物」：基于其在正文中的角色词（主语 + 说话/动作谓语）。
+ * 仅在高置信度命中时才返回 "character"；其余一律返回 "unknown"（保守，避免误杀合法地点写入）。
+ * 纯函数，便于单测。
+ */
+export function inferEntityType(name: string, text: string): InferredEntityType {
+  if (!name || !text) return "unknown";
+  const n = name.trim();
+  if (n.length < 2) return "unknown";
+  const e = escapeRegExp(n);
+  // 1) 实体名后紧跟人物行为动词（「名说道」「名笑道」「名皱眉」等）→ 人物
+  for (const v of CHARACTER_VERBS) {
+    if (new RegExp(`${e}${v}`).test(text)) return "character";
+  }
+  // 2) 引号式对话：「……」，名说/名道（名在引号后）→ 典型小说写法
+  if (new RegExp(`[”"』][^”"』]{0,12}?${e}(说|道|笑|问|喊|叫)`).test(text)) return "character";
+  // 3) 谓语式动作：名「看了/望向/走向/转身/皱起/眯起/点了点头/摇了摇头」→ 人物
+  if (new RegExp(`${e}(看了|望向|走向|转身|皱起|眯起|点了点头|摇了摇头|轻声道|冷笑道)`).test(text)) return "character";
+  return "unknown";
+}
+
+/** 组装一条「类型不匹配」跨表 issue（复用 SelfCheckIssue 上报结构） */
+function makeTypeMismatchIssue(tableName: string, entityName: string, tableCategory: string): SelfCheckIssue {
+  return {
+    table: tableName,
+    row: "跨表",
+    value: entityName,
+    issue: `类型不匹配：实体「${entityName}」(人物) 试图写入「${tableName}」(${tableCategory})，已跳过写错表`,
+  };
+}
+
 /** 组装给 LLM 的表格文本：权威名录（已有名称）+ 全量样例行（截断保护） */
 function buildTablesText(tables: TableDef[]): string {
   return tables
@@ -216,10 +293,11 @@ async function runFillForText(
   llm: LlmCreds,
   tableKeys?: string[],
   srcLabel?: string,
-): Promise<{ ok: boolean; operations: number; applied: number; warnings: string[]; skippedOps: SkippedOp[]; error?: string }> {
+  projectId?: string,
+): Promise<{ ok: boolean; operations: number; applied: number; warnings: string[]; skippedOps: SkippedOp[]; crossTableIssues: SelfCheckIssue[]; error?: string }> {
   const filteredTables = tableKeys && tableKeys.length ? tables.filter((t) => tableKeys.includes(t.key)) : tables;
   if (filteredTables.length === 0) {
-    return { ok: false, operations: 0, applied: 0, warnings: [], skippedOps: [], error: "没有匹配的表格" };
+    return { ok: false, operations: 0, applied: 0, warnings: [], skippedOps: [], crossTableIssues: [], error: "没有匹配的表格" };
   }
 
   const tablesText = buildTablesText(filteredTables);
@@ -270,7 +348,7 @@ ${chapterText.slice(0, 12000)}
         lastErr = "模型未返回任何有效操作";
         if (attempt < 3) continue;
       }
-      const r = await applyOps(filteredTables, ops, srcLabel || "ch?:batch?");
+      const r = await applyOps(filteredTables, ops, srcLabel || "ch?:batch?", chapterText);
       const warnings = [...r.warnings, ...buildWarnings(r.appliedNames, chapterText)];
       // P0-3：以「实际落地数 applied」为完成门槛——空 ops / 全失效 ops 的章节
       // 须视为失败（ok:false），使其可重试而非被永久标记「已填」（防重复机制反噬）。
@@ -285,6 +363,7 @@ ${chapterText.slice(0, 12000)}
         completionTokens: usage?.completion_tokens ?? usage?.completionTokens ?? 0,
         totalTokens: usage?.total_tokens ?? usage?.totalTokens ?? 0,
         baseURL: llm.baseURL,
+        projectId: projectId ?? null,
       });
       return {
         ok: r.applied > 0,
@@ -292,6 +371,7 @@ ${chapterText.slice(0, 12000)}
         applied: r.applied,
         warnings,
         skippedOps: r.skippedOps,
+        crossTableIssues: r.crossTableIssues,
         error: r.applied > 0 ? undefined : lastErr || "未落地任何事实",
       };
     } catch (e) {
@@ -299,19 +379,21 @@ ${chapterText.slice(0, 12000)}
       if (attempt < 3) continue;
     }
   }
-  return { ok: false, operations: 0, applied: 0, warnings: [], skippedOps: [], error: lastErr };
+  return { ok: false, operations: 0, applied: 0, warnings: [], skippedOps: [], crossTableIssues: [], error: lastErr };
 }
 
 async function applyOps(
   tables: TableDef[],
   ops: LoreTableOp[],
   srcLabel: string,
-): Promise<{ applied: number; appliedNames: { table: string; value: string }[]; warnings: string[]; skippedOps: SkippedOp[] }> {
+  chapterText?: string,
+): Promise<{ applied: number; appliedNames: { table: string; value: string }[]; warnings: string[]; skippedOps: SkippedOp[]; crossTableIssues: SelfCheckIssue[] }> {
   const byKey = new Map(tables.map((t) => [t.key, t]));
   let applied = 0;
   const appliedNames: { table: string; value: string }[] = [];
   const warnings: string[] = [];
   const skippedOps: SkippedOp[] = [];
+  const crossTableIssues: SelfCheckIssue[] = [];
   const now = new Date().toISOString();
 
   for (const op of ops) {
@@ -322,6 +404,24 @@ async function applyOps(
     // 灭「一键填表每章整体覆盖写回、静默丢失前序章」的缺陷（墨白 P0-1）。
     const rows: any[] = Array.isArray(t.rows) ? t.rows : (t.rows = []);
     const idCol = getIdentityCol(t);
+
+    // M2（墨白 Round12）：写入前校验「实体推断类型 ↔ 目标表类别」。
+    // 目标表为地理/建筑类（geo）却要写入一个高置信度「人物」实体 → 类型不匹配，
+    // 不静默写错表，改为跳过并上报 cross-table issue（报错不写错，避免数据污染）。
+    const opAny = op as any;
+    const entityName =
+      (op.op === "insert" ? (opAny.values || {})[idCol] : opAny.match?.val) ?? (opAny.values || {})[idCol];
+    if (
+      entityName != null &&
+      inferEntityType(String(entityName), chapterText || "") === "character" &&
+      tableGroupOf(t.category) === "geo"
+    ) {
+      const issue = makeTypeMismatchIssue(t.name, String(entityName), t.category || "custom");
+      warnings.push(`${t.name}：${issue.issue}`);
+      skippedOps.push({ op, reason: issue.issue, table: t.name });
+      crossTableIssues.push(issue);
+      continue; // 不写入，报错不写错
+    }
 
     if (op.op === "insert") {
       const newVal = (op.values || {})[idCol];
@@ -393,7 +493,7 @@ async function applyOps(
 
     await prisma.loreTable.update({ where: { id: t.id }, data: { rows } });
   }
-  return { applied, appliedNames, warnings, skippedOps };
+  return { applied, appliedNames, warnings, skippedOps, crossTableIssues };
 }
 
 /** 填后自检：被填名称若未出现在正文中，疑似错误地名/名称 */
@@ -463,16 +563,19 @@ export async function babyloreFill(
 
   const llm: LlmCreds = { baseURL, apiKey, model };
   const srcLabel = `ch${options?.chapterOrder ?? "?"}:batch${options?.batchId ?? "manual"}`;
-  const r = await runFillForText(chapterText, tables, llm, options?.tableKeys, srcLabel);
+  const r = await runFillForText(chapterText, tables, llm, options?.tableKeys, srcLabel, projectId);
   // P1-B（墨白）：落库后跑 selfCheckFill，把疑似问题（地名/空值/跨表/表内异体）合并进结果，供 UI/诊断。
   const selfCheck = await selfCheckFill(projectId);
+  // M2（墨白 Round12）：把「类型不匹配」跨表 issue 并入自检结果（复用 SelfCheckIssue 上报结构），
+  // 使填表/微调/续写/一键填表的结果都能在 UI/诊断里体现「报错不写错」。
+  const selfCheckIssues = [...selfCheck.issues, ...r.crossTableIssues];
   return {
     ok: r.ok,
     operations: r.operations,
     applied: r.applied,
     error: r.error,
     warnings: r.warnings,
-    selfCheckIssues: selfCheck.issues,
+    selfCheckIssues,
   };
 }
 
@@ -551,6 +654,7 @@ export async function babyloreFillAll(
   let failedChapters = 0; // 未达 Round6 完成门槛（ok && applied>0）的章节数
   const warnings: string[] = [];
   const allSkippedOps: SkippedOp[] = []; // P1-C：汇总各章被跳过的无效 op
+  const allCrossTableIssues: SelfCheckIssue[] = []; // M2（墨白 Round12）：汇总各章「类型不匹配」跨表 issue
   const runBatch = String(Date.now()); // 本轮一键填表批次号，写入行 _src 溯源
   const skippedNodeIds: string[] = []; // P1-A：被跳过（疑似误标）的节点 ID，供全跳过 error 携带
 
@@ -569,12 +673,13 @@ export async function babyloreFillAll(
       continue;
     }
     const srcLabel = `ch${ch.order}:batch${runBatch}`;
-    const r = await runFillForText(ch.content || "", tables, llm, options?.tableKeys, srcLabel);
+    const r = await runFillForText(ch.content || "", tables, llm, options?.tableKeys, srcLabel, projectId);
     processed++;
     operations += r.operations;
     applied += r.applied;
     for (const w of r.warnings) warnings.push(`第${ch.order}章《${ch.title || "未命名"}》：${w}`);
     for (const s of r.skippedOps) allSkippedOps.push(s);
+    for (const c of r.crossTableIssues) allCrossTableIssues.push(c);
     // 仅成功章计入已填集合——失败章必须留待重试，否则被永久标记跳过（磐石 P0 修复）。
     // P0-3：门槛由 r.ok 提升为 r.ok && r.applied>0，空 ops/全失效章不标已填，留待重试。
     if (r.ok && r.applied > 0) {
@@ -589,7 +694,13 @@ export async function babyloreFillAll(
     }
   }
 
-  const selfCheck = await selfCheckFill(projectId);
+  const selfCheckRaw = await selfCheckFill(projectId);
+  // M2（墨白 Round12）：把各章「类型不匹配」跨表 issue 并入自检结果（已跳过的错写不会落库，故此处补报而非自检自然发现）。
+  const selfCheck: SelfCheckResult = {
+    ...selfCheckRaw,
+    crossTableIssues: selfCheckRaw.crossTableIssues + allCrossTableIssues.length,
+    issues: [...selfCheckRaw.issues, ...allCrossTableIssues].slice(0, 200),
+  };
 
   // P1-A/P1-D（墨白）：babyloreFillAll 不得恒返回 ok:true（静默假完成），且全跳过分支须区分两种语义：
   //  - processed===0 且 skipped===0：本轮确实没有任何脏数据（无待填节点）；
@@ -629,6 +740,9 @@ export async function babyloreFillAll(
     error = `已处理 ${processed} 章但均未落地任何事实（applied=0），请检查 LLM 返回内容`;
     fillErrorMeta = { kind: "no_applied", processed, applied, skipped, failed: failedChapters, nodeIds: skippedNodeIds };
   }
+
+  // M2（墨白 Round12）：把「类型不匹配跳过条数」并入结构化诊断，便于 UI/诊断区分普通失败与报错不写错。
+  if (fillErrorMeta) fillErrorMeta.crossTableSkips = allCrossTableIssues.length;
 
   return {
     ok,

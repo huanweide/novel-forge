@@ -64,9 +64,18 @@ export interface GameItem {
 // ─── 物品变动记录 ─────────────────────────────────────────────
 
 export interface ItemChange {
-  operation: "gain" | "consume" | "equip" | "discard";
+  // 7 值：与引擎 applyItemChanges / 前端 applyFrontendItemChanges 实际分支完全对齐（阿游 Round12 B2 修类型谎言）
+  operation:
+    | "gain"      // 获得
+    | "consume"   // 消耗
+    | "equip"     // 装备
+    | "discard"   // 丢弃
+    | "unequip"   // 脱下/解下（仅清 equipped，不删物品）
+    | "destroy"   // 损毁（数量递减，归零移除）
+    | "skip";     // 流转/出售（安全跳过，不入库）
   name: string;
   quantity?: number;
+  owner?: string; // 归属者（与背包 name+owner 隔离对齐，阿游 P1）
 }
 
 // ─── 游戏选项（下一轮）─────────────────────────────────────────

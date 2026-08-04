@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/prisma", () => ({
     prisma: {
     gameSession: { findUnique: vi.fn(), update: vi.fn() },
-    gameState: { findMany: vi.fn(), create: vi.fn() },
+    gameState: { findMany: vi.fn(), create: vi.fn(), update: vi.fn(), upsert: vi.fn() },
     project: { findUnique: vi.fn() },
     storyNode: { findUnique: vi.fn() },
     characterCard: { findMany: vi.fn() },
@@ -344,6 +344,35 @@ describe("applyFrontendItemChanges —— 不可变更新（阿游 P1-1）", () 
     // 原数组未被污染
     expect(items[0].quantity).toBe(2);
     expect(items[1].quantity).toBe(1);
+  });
+
+  // Round12 A2：补齐 unequip / destroy / skip 三分支，与后端 applyItemChanges 对齐
+  it("unequip 仅清 equipped 标记、不移除物品", () => {
+    const items: any[] = [{ name: "长剑", quantity: 1, category: "equipment", source: "s", acquiredRound: 1, owner: "主角", equipped: true }];
+    const res = applyFrontendItemChanges(items, [{ operation: "unequip", name: "长剑", owner: "主角" }], 2);
+    expect(res.length).toBe(1);
+    expect(res[0].equipped).toBe(false);
+    expect(res[0].quantity).toBe(1);
+    expect(items[0].equipped).toBe(true); // 原对象不变
+  });
+
+  it("destroy 数量递减、归零即从背包移除（splice）", () => {
+    const items: any[] = [{ name: "花瓶", quantity: 1, category: "other", source: "s", acquiredRound: 1, owner: "主角" }];
+    const res = applyFrontendItemChanges(items, [{ operation: "destroy", name: "花瓶", quantity: 1, owner: "主角" }], 2);
+    expect(res.find((i: any) => i.name === "花瓶")).toBeUndefined();
+  });
+
+  it("destroy 数量未归零时仅递减、不移除", () => {
+    const items: any[] = [{ name: "木板", quantity: 3, category: "other", source: "s", acquiredRound: 1, owner: "主角" }];
+    const res = applyFrontendItemChanges(items, [{ operation: "destroy", name: "木板", quantity: 2, owner: "主角" }], 2);
+    expect(res.find((i: any) => i.name === "木板")?.quantity).toBe(1);
+  });
+
+  it("skip 安全跳过、不改动背包", () => {
+    const items: any[] = [{ name: "宝物", quantity: 1, category: "other", source: "s", acquiredRound: 1, owner: "主角" }];
+    const res = applyFrontendItemChanges(items, [{ operation: "skip", name: "宝物", quantity: 1, owner: "主角" }], 2);
+    expect(res.length).toBe(1);
+    expect(res[0].quantity).toBe(1);
   });
 });
 

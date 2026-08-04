@@ -215,7 +215,13 @@ export async function POST(request: Request) {
       activeLoreCount: promptContext.triggeredLore.length,
       totalPromptTokens: budget.used || countTokens(JSON.stringify(breakdown)),
       contextWindowSize,
-      usagePercent: ((budget.used || 0) / contextWindowSize * 100).toFixed(1),
+      // P_c：usage% 自洽——分母用真实上下文窗口，分子用 budget.used（已含全部区块+writing_task），
+      // 并夹取 [0,100] 且防分母为 0，避免误报 100%+ / 负值 / NaN。
+      usagePercent: (() => {
+        const denom = contextWindowSize > 0 ? contextWindowSize : budget.total || 1;
+        const pct = ((budget.used || 0) / denom) * 100;
+        return Math.max(0, Math.min(100, pct)).toFixed(1);
+      })(),
       // ── 模板注入验证 ──
       templateInjection: {
         templateId: templateId || "未选择",

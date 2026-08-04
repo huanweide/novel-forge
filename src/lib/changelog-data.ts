@@ -25,18 +25,55 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.74";
+export const LATEST_VERSION = "v0.46.75";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "填表主链路修复（墨白 2 P1）：loop 透传 chapterOrder 修复自动填表写入行 _src 恒为 ch?:batchmanual 断线灭章节溯源失效；全跳过不再误判 mislabeled 诱导破坏性重填，仅脏标记含幽灵 id 才提示清理",
-  "建卡别名去重 + 变体收敛（青砚 2 P1）：apply-extraction/autoCreate 把 aliases 纳入查重灭「炎帝/萧炎」双卡；isSimilarName 长名编辑距离收紧为 0 灭「青云宗/青云山」误并漏建",
-  "游戏动词闭环 + 轮次唯一（阿游 2 P1）：OP_MAP 补吞下/舍弃/解下/损毁/典当等同义动词 + 引擎增 unequip/destroy/skip 分支灭静默污染背包；GameState 加 @unique([sessionId,round]) 防并发重复轮次",
-  "焦点逃逸修复 + 导入并发/超时闭环 + ReDoS 纵深防御（清览/磐石/工坊 7 P1/P2）：三页 inert 上移顶栏灭焦点逃逸；commit 并发限流 + parse 全局 280s deadline 优雅 partial + B 路并入并发 + totalTokens 口径统一；forbidden-checker/预设 regex 复用 ReDoS 防护前移 422",
+  "分支备份导入 P0 闭环（工坊 G1+W1）：原 strip 删必填 forkPointNodeId 致含 storyBranches 的 .nfproject 备份导入整库回滚零创建 → 占位 nodeMap 重映射闭合；parentBranchId 重映射灭悬空、选择性导入 lostForks 提示、事务超时 60s→120s",
+  "填表透传溯源与跨表防错放（墨白 M1+M2）：continue/refine 透传 nodeOrder/nodeId 修复 _src 恒 ch?:batchmanual 断章节溯源；写入前校验人物实体不匹配地理表则报错不写错灭错放（萧薰儿落妃嫔居住建筑表）",
+  "三卡检索去污染与匹配词边界（青砚 Q1+Q2+Q3）：实体抽取过滤句子碎片（右手拇指/核桃壳在他指）灭 47/49 碎片污染世界书；matchNameStrict 3字+ 覆盖区间吞并修中段嵌入（李星云剑法误命中李星云），2字分支保持不吞并保召回；entity-detector 填 aliases 复活去重、高亮补 2字尾边界与非颜色线索",
+  "游戏动词闭环与轮次幂等 + 监测面板按项目成本 + a11y（阿游 A1-A4 + 磐石 P_a/P_b/P_c + 用户#16 + 清览 L1）：GameState upsert 幂等抗 P2002、前端镜像补 unequip/destroy/skip、ItemChange.operation 扩 7 值；OP_MAP 同义动词大扩 + 开局建世界卡；commit 全局 deadline 270s 优雅 partial、totalTokens 口径统一；监测面板新增 AI 成本（当前项目·本月）卡片闭环用户#16；a11y 补 aria-label 与暗色高亮",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.75",
+    date: "2026-08-04",
+    title: "会员股东 Round 12 复验闭环：分支备份导入 P0 修复 + 填表透传溯源与跨表防错放 + 三卡检索去污染与匹配词边界 + 游戏动词闭环与轮次幂等 + 导入 deadline/口径闭环 + 监测面板按项目成本 + a11y 闭环（tsc 零错误）",
+    sections: [
+      {
+        label: "分支备份导入 P0 闭环（工坊 G1 + W1）",
+        items: [
+          "projects/import 原 strip 删除必填 forkPointNodeId 致含 storyBranches 的 .nfproject 备份导入整体失败、事务回滚零创建 → 改为占位 nodeMap[old] ?? old ?? 空串，待章节 pass 后 step 3.5 回填重映射彻底闭合 P0；parentBranchId 重映射灭悬空、选择性导入 forkPoint 静默丢失改为 lostForks 提示、事务超时 60s→120s",
+        ],
+      },
+      {
+        label: "填表透传溯源与跨表防错放（墨白 M1 + M2）",
+        items: [
+          "continue/refine 透传 nextNode.order/nodeId 与 currentNode.order/nodeId 给 safeFillAfterWriting，写入行 _src 由 ch?:batchmanual 修正为 ch{n}:batchmanual 闭合章节溯源；填表写入前校验人物实体不匹配地理表则报错不写错（灭角色萧薰儿落妃嫔居住建筑表类跨表错放），crossTableIssues/skippedOps 贯穿 babyloreFill/babyloreFillAll 汇总进自检与诊断；顺带 projectId 接入 recordLlmCall 灭成本面板失明",
+        ],
+      },
+      {
+        label: "三卡检索去污染与匹配词边界（青砚 Q1 + Q2 + Q3）",
+        items: [
+          "实体抽取蒸馏分段过滤含功能词/标点/超长候选灭句子碎片（右手拇指/核桃壳在他指）建卡污染世界书；matchNameStrict 3字+ 覆盖区间吞并修中段嵌入（灭李星云剑法误命中李星云），2字分支保持不吞并保召回（Round4 铁律，trigger.test 回归锁定）；entity-detector 填 aliases 复活去重、entity-highlighter 补 2字尾边界与非颜色线索、buildEntityMapFromData 入 aliases",
+        ],
+      },
+      {
+        label: "游戏动词闭环与轮次幂等（阿游 A1 + A2 + A3 + A4）",
+        items: [
+          "GameState 轮次写入改 upsert（sessionId_round 幂等抗 P2002 并发失败）；reconcile 前端镜像补 unequip/destroy/skip 三分支与后端 applyItemChanges 对齐；ItemChange.operation 扩为 7 值诚实类型；OP_MAP 补消费/卸下/损毁/流转同义词（消告警不污染数据），ensureItemLorebook 加 owner 维度去重并 export，start 开场 gain 物品也建世界卡",
+        ],
+      },
+      {
+        label: "导入 deadline/口径闭环 + 监测面板按项目成本 + a11y（磐石 P_a/P_b/P_c + 用户#16 + 清览 L1）",
+        items: [
+          "commit 加 COMMIT_DEADLINE_MS=270_000 全局 deadline，到点停放飞、未放飞批留 null 走 ruleMerge 兜底报 partial 与 parse 口径一致；parse totalTokens 改 usage.total_tokens ?? usage.totalTokens ?? prompt+completion 统一；monitor/route 按 projectId 分组聚合本月 llmCallLog，MonitorPanel 新增 AI 成本卡片（调用次数/token 总量/估算花费/占全局比）闭合用户#16；a11y 补 CommandPalette/toast aria-label、暗色 select option 高亮、三页抽屉遮罩 aria-hidden、卡片 truncate 补 title",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.74",
     date: "2026-08-04",

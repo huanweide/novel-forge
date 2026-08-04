@@ -29,6 +29,15 @@ interface MonitorData {
     totalCost: number; // 美元
     byModel: { model: string; calls: number; tokens: number; cost: number }[];
   };
+  projectLlm?: {
+    since: string;
+    totalCalls: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalTokens: number;
+    totalCost: number;
+    byProject: { projectId: string | null; calls: number; tokens: number; cost: number }[];
+  };
 }
 
 export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?: string }) {
@@ -124,6 +133,28 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
           <div className="text-[10px] text-[var(--nv-text-tertiary)] mt-1.5 leading-relaxed">暂无记录——自 {data.llmUsage.since} 起，每次 AI 调用会在此累计（含重试 / 故障转移的真实 token 与估算花费）。</div>
         )}
       </div>
+
+      {/* AI 成本（当前项目 · 本月）—— P_c：按 projectId 聚合，与全局并列展示 */}
+      {data.projectLlm && (
+        <div className="p-3 border-b border-[var(--nv-border-2)]">
+          <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="coins" size={11} /> AI 成本（当前项目 · 本月）</div>
+          <div className="grid grid-cols-2 gap-2">
+            <StatBlock label="调用次数" value={fmt(data.projectLlm.totalCalls)} color="text-[var(--nv-text-primary)]" />
+            <StatBlock label="Token 总量" value={fmt(data.projectLlm.totalTokens)} color="text-[var(--nv-primary)]" />
+            <StatBlock
+              label="估算花费"
+              value={data.projectLlm.totalCalls > 0 && data.projectLlm.totalCost > 0 ? `¥${(data.projectLlm.totalCost * RMB_RATE).toFixed(2)}` : "单价未知"}
+              color="text-[var(--nv-accent)]"
+              sub={data.projectLlm.totalCalls > 0 && data.projectLlm.totalCost > 0 ? `≈ $${data.projectLlm.totalCost.toFixed(4)}` : "模型不在价格表"}
+            />
+            <StatBlock
+              label="占全局比"
+              value={data.llmUsage.totalTokens > 0 ? `${((data.projectLlm.totalTokens / data.llmUsage.totalTokens) * 100).toFixed(1)}%` : "—"}
+              color="text-[var(--nv-text-secondary)]"
+            />
+          </div>
+        </div>
+      )}
 
       {/* 章节分布 */}
       <div className="p-3 border-b border-[var(--nv-border-2)]">

@@ -291,6 +291,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </div>
             <input
               autoFocus
+              aria-label={promptState.opts.title}
               value={promptValue}
               onChange={(e) => setPromptValue(e.target.value)}
               onKeyDown={(e) => {

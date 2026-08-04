@@ -842,7 +842,7 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: `rgb(${c[0] * 255},${c[1] * 255},${c[2] * 255})`, boxShadow: `0 0 8px rgb(${c[0] * 255},${c[1] * 255},${c[2] * 255})` }}
                 />
-                <span className="max-w-[140px] truncate">{p.name}</span>
+                <span className="max-w-[140px] truncate" title={p.name}>{p.name}</span>
                 <span className="text-[10px] text-[var(--nv-text-muted)] opacity-70">{TYPE_POETIC[tp]}</span>
               </button>
             );

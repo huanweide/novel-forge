@@ -42,6 +42,8 @@ interface EntityRaw {
   type: "character" | "lorebook";
   color: string;
   category?: string;
+  /** 别名列表（Q3：一并入 map，使别名也能高亮） */
+  aliases?: string[];
 }
 
 // ═══════════════════════════════════════════
@@ -55,17 +57,27 @@ interface EntityRaw {
 export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHighlight> {
   const map = new Map<string, EntityHighlight>();
 
-  // 第一遍：角色
+  // 第一遍：角色（含别名）
   for (const e of data) {
     if (e.type === "character") {
       map.set(e.name, { name: e.name, color: e.color, type: "character" });
+      for (const al of e.aliases || []) {
+        if (al && !map.has(al)) {
+          map.set(al, { name: al, color: e.color, type: "character" });
+        }
+      }
     }
   }
 
-  // 第二遍：词条 title（覆盖同名角色）
+  // 第二遍：词条 title（覆盖同名角色；含别名）
   for (const e of data) {
     if (e.type === "lorebook") {
       map.set(e.name, { name: e.name, color: e.color, type: "lorebook", category: e.category });
+      for (const al of e.aliases || []) {
+        if (al && !map.has(al)) {
+          map.set(al, { name: al, color: e.color, type: "lorebook", category: e.category });
+        }
+      }
     }
   }
 
@@ -189,8 +201,17 @@ export function findEntitiesInText(
     // 头边界字符集：空白/标点/省略号/间隔号 + 连词 + 常见介词（在/于/为/从/到/让/使/叫…），
     // 补全介词后「在萧炎」「于萧炎」等前置场景也能高亮 2字名（Round6 P1）。
     const isHeadBoundary = !prevChar || /[\s，。！？、；：""''「」『』（）【】《》\-\—……·与和跟同及等把被给向对由的在於为从到让使叫,.!?]/.test(prevChar);
-    // 头边界必查（防片段误当实体）；尾边界对 2 字名放宽，3 字及以上不查边界（清览 P1）。
-    const passesBoundary = c.name.length >= 3 ? true : isHeadBoundary;
+    // 头边界必查（防片段误当实体）；3 字及以上不查边界（清览 P1）。
+    // 2 字名（如「王林」）：除头边界外，额外校验尾边界——尾处字符为边界或非 CJK 汉字才匹配，
+    // 否则「王林」会在「王林海」中被误亮（Q3 青览 B3）。
+    let passesBoundary: boolean;
+    if (c.name.length >= 3) {
+      passesBoundary = true;
+    } else {
+      const tailChar = text[c.end];
+      const tailOk = !tailChar || !/[一-鿿]/.test(tailChar); // 尾处为边界（文末/非CJK）才放行
+      passesBoundary = isHeadBoundary && tailOk;
+    }
     if (!passesBoundary) continue;
     const entity = byName.get(c.name)!;
     matches.push({ name: c.name, color: entity.color, type: entity.type, category: entity.category, start: c.idx, end: c.end });

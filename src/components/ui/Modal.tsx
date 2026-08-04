@@ -113,6 +113,19 @@ export function Modal({
   const dialogAriaLabel =
     title ? undefined : typeof header === "string" ? header : ariaLabel;
 
+  // B6：bare 弹窗若既无可见标题关联也无 aria-label，则 a11y 审计会报「对话框无可访问名」。
+  // 仅在 dev 下告警（防护缺口提示，不强制报错，避免影响生产构建）。
+  if (
+    process.env.NODE_ENV !== "production" &&
+    bare &&
+    !dialogLabelledBy &&
+    !dialogAriaLabel
+  ) {
+    console.warn(
+      "[Modal] bare Modal 缺少可访问名：请通过 title / labelledBy / ariaLabel 提供 aria-label，以满足 WCAG 4.1.2。"
+    );
+  }
+
   // bare 模式把高度/滚动完全交给 panelClassName，避免与弹窗内部「头部固定 + 内容滚动」布局冲突；
   // 非 bare 模式保留默认 max-h + 整体滚动。
   const panelBase = bare

@@ -139,6 +139,87 @@ const ABSTRACT_NOUNS = new Set([
 /** 合并排除集合 */
 const EXCLUDE_SET = new Set([...BODY_PARTS, ...COMMON_NOUNS, ...ABSTRACT_NOUNS]);
 
+// ─── 句子碎片过滤器（Q1：防本地蒸馏/LLM 提取把分句当实体） ──────────
+//
+// 蒸馏兜底分段或 LLM 提取偶尔会返回句子片段（如「右手拇指」「核桃壳在他指」
+// 「他六岁那年练功」），这些不是专有名词，入世界书会污染并反向注入上下文。
+// 以下集合用于判别「候选名是否像一个完整实体名」。
+
+/** 功能词 / 谓语 / 介词 / 代词 / 助词 / 连词 —— 命中即视为句子碎片（非独立实体名） */
+const FRAGMENT_FUNCTIONAL = new Set([
+  "的", "了", "着", "在", "把", "被", "说", "想", "看", "喝", "吃", "走", "回",
+  "来", "去", "吗", "呢", "啊", "吧", "是", "有", "就", "都", "而", "及", "与",
+  "或", "这", "那", "他", "她", "它", "我", "你", "们", "个", "些", "又", "再",
+  "很", "太", "也", "将", "已", "正", "才", "等", "让", "给", "向", "对", "由",
+  "从", "到", "跟", "同", "过", "自己", "什么", "怎么", "没有", "但是", "因为",
+  "所以", "如果", "然后", "现在", "今天", "明天", "昨天", "时候", "地方", "东西",
+  "这个", "那个", "一个", "他们", "她们", "我们", "你们", "已经", "还是", "只是",
+  "就是", "可以", "知道", "觉得", "感觉", "忽然", "突然", "最后", "开始", "结束",
+  "事情", "面前", "背后", "旁边", "里面", "外面", "上面", "下面", "身上", "手里",
+  "眼前", "轻轻", "缓缓", "默默", "静静",
+]);
+
+/** 末字为动词 / 介词 / 功能词 → 非名词性，视为碎片 */
+const FRAGMENT_END_CHARS = new Set([
+  "的", "了", "着", "在", "把", "被", "说", "想", "看", "喝", "吃", "走", "回",
+  "来", "去", "吗", "呢", "啊", "吧", "是", "有", "就", "都", "而", "及", "与",
+  "或", "这", "那", "又", "再", "很", "太", "也", "将", "已", "正", "才", "等",
+  "让", "给", "向", "对", "由", "从", "到", "跟", "同", "过",
+]);
+
+/** 身体部位 / 泛化短语片段（多字）——命中即视为碎片（如「右手」「拇指」） */
+const FRAGMENT_BODY_TERMS = new Set([
+  "右手", "左手", "双手", "拇指", "手指", "手掌", "拳头", "手臂", "膝盖", "脚掌",
+  "脚踝", "手肘", "肩膀", "后背", "胸前", "额头", "下巴", "脖子", "手腕", "指尖",
+  "身体", "心头", "手中", "手里", "眼中", "嘴边", "脸颊", "耳畔", "发梢", "衣角",
+]);
+
+/** 实体名典型结尾（专有名词后缀）—— 长名(≥5字)必须以之一结尾，否则视为可疑碎片 */
+const ENTITY_END_SUFFIXES = new Set([
+  "剑", "刀", "镜", "鼎", "塔", "印", "旗", "幡", "珠", "环", "镯", "簪", "鞭",
+  "戟", "枪", "棍", "斧", "锤", "扇", "琴", "箫", "铃", "炉", "山", "河", "海",
+  "湖", "城", "镇", "村", "宗", "门", "派", "殿", "阁", "洞", "府", "宫", "域",
+  "界", "草", "花", "果", "叶", "根", "藤", "石", "木", "玉", "晶", "矿", "铁",
+  "铜", "银", "金", "骨", "皮", "血", "髓", "液", "露", "芝", "参", "诀", "经",
+  "典", "功", "法", "术", "引", "咒", "拳", "掌", "指", "腿", "步", "遁", "变",
+  "化", "丹", "丸", "散", "膏", "粉", "图",
+]);
+
+/**
+ * 判断候选名是否像一个「完整实体名」（而非句子碎片）。
+ * 用于蒸馏/提取兜底，过滤掉会被写入世界书的碎片。
+ *
+ * 返回 false（视为碎片，应丢弃）的情形：
+ *  - 长度 < 2 或 > 8（超长明显是分句）
+ *  - 含句内标点
+ *  - 含功能词 / 谓语 / 介词（的/了/着/在/把/被/说/想…）
+ *  - 含身体部位 / 泛化短语片段（右手/拇指…）
+ *  - 末字非 CJK 汉字，或末字为动词/介词/功能词（非名词性）
+ *  - 长度 ≥5 且末字不是已知实体后缀（不像专有名词短语）
+ */
+export function isCompleteEntityName(name: string): boolean {
+  if (!name || name.length < 2) return false;
+  if (name.length > 8) return false;
+  // 含句内标点 → 碎片
+  if (/[，。！？、；：…—·（）《》【】“”‘’]/.test(name)) return false;
+  // 含功能词 / 谓语 / 介词 → 句子碎片
+  for (const w of FRAGMENT_FUNCTIONAL) {
+    if (name.includes(w)) return false;
+  }
+  // 含身体部位 / 泛化短语片段
+  for (const w of FRAGMENT_BODY_TERMS) {
+    if (name.includes(w)) return false;
+  }
+  const last = name[name.length - 1];
+  // 末字必须为 CJK 汉字
+  if (!/[一-鿿]/.test(last)) return false;
+  // 末字非名词性（动词/介词/功能词）
+  if (FRAGMENT_END_CHARS.has(last)) return false;
+  // 长名须以实体后缀结尾，整体像专有名词短语
+  if (name.length >= 5 && !ENTITY_END_SUFFIXES.has(last)) return false;
+  return true;
+}
+
 // ─── 归属推断 ────────────────────────────────────────────────
 
 interface OwnershipCandidate {
@@ -280,11 +361,14 @@ export function detectEntities(text: string, options: DetectEntitiesOptions = {}
 
   // 构建已知实体 name→type 映射
   const knownTypeMap = new Map<string, EntityType>();
+  // name → aliases（Q3：push 实体时回填别名，使批内/跨批别名去重生效）
+  const knownAliasMap = new Map<string, string[]>();
   for (const ke of knownEntities) {
     knownTypeMap.set(ke.name, ke.type);
     for (const alias of ke.aliases || []) {
       knownTypeMap.set(alias, ke.type);
     }
+    if (ke.aliases && ke.aliases.length) knownAliasMap.set(ke.name, ke.aliases);
   }
 
   // 记录已检测位置，防重复
@@ -321,6 +405,7 @@ export function detectEntities(text: string, options: DetectEntitiesOptions = {}
           confidence: isKnown ? 0.98 : 0.75,
           isKnown,
           matchedBy: description,
+          aliases: knownAliasMap.get(name),
         });
       }
     }
@@ -346,6 +431,7 @@ export function detectEntities(text: string, options: DetectEntitiesOptions = {}
         confidence: 0.98,
         isKnown: true,
         matchedBy: "已知角色词典",
+        aliases: knownAliasMap.get(name),
       });
     }
   }
@@ -370,6 +456,7 @@ export function detectEntities(text: string, options: DetectEntitiesOptions = {}
         confidence: 0.98,
         isKnown: true,
         matchedBy: "已知地点词典",
+        aliases: knownAliasMap.get(loc),
       });
     }
   }
@@ -445,5 +532,8 @@ export function detectEntities(text: string, options: DetectEntitiesOptions = {}
  * 用于自动创建 CharacterCard / LorebookEntry
  */
 export function extractNewEntities(result: EntityDetectionResult): DetectedEntity[] {
-  return result.entities.filter((e) => !e.isKnown && e.confidence >= 0.7);
+  // Q1：过滤句子碎片（含功能词/标点/超长/末字非名词性 CJK 的候选），避免污染世界书
+  return result.entities.filter(
+    (e) => !e.isKnown && e.confidence >= 0.7 && isCompleteEntityName(e.name),
+  );
 }

@@ -5,7 +5,7 @@
 import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
-import { resetGameSession } from "@/core/game/game-engine";
+import { resetGameSession, ensureItemLorebook } from "@/core/game/game-engine";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { buildGameSystemPrompt, parseGameOutput } from "@/core/game/game-prompts";
 import { prisma } from "@/lib/prisma";
@@ -117,6 +117,11 @@ export async function POST(req: Request) {
           acquiredRound: 1,
         });
       }
+    }
+
+    // 6.5 世界卡物品联动：开场 gain 的物品同样补世界书词条（与 processGameTurn:401-405 一致，Round12 A4c）
+    for (const item of initialItems) {
+      await ensureItemLorebook(session.projectId, item.name, item.owner || "主角");
     }
 
     // 7. 保存第一轮状态

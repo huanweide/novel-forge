@@ -706,7 +706,7 @@ export default function ExplorePage() {
         </aside>
         {/* 窄屏抽屉遮罩 */}
         {(leftDrawerOpen || rightDrawerOpen) && (
-          <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
+          <div aria-hidden="true" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
         )}
       </div>
     </div>

@@ -95,6 +95,34 @@ describe("matchNameStrict —— 角色名/OOC 召回专用", () => {
   });
 });
 
+describe("matchNameStrict —— Q2 覆盖式吞并（仅 3字+ 生效，2字保召回）", () => {
+  it("2字「云山」在「青云山」仍直接命中（2字不吞并，Round4 铁律）", () => {
+    expect(matchNameStrict("青云山", "云山", { knownNames: ["青云山", "云山"] })).toBe(true);
+  });
+
+  it("2字「云山」独立出现（无更长名覆盖）命中 → true", () => {
+    expect(matchNameStrict("云山耸立", "云山", { knownNames: ["青云山", "云山"] })).toBe(true);
+    expect(matchNameStrict("云山", "云山", { knownNames: ["青云山", "云山"] })).toBe(true);
+  });
+
+  it("2字「叶凡」常见名不被吞并（无更长已知名覆盖）→ true", () => {
+    expect(matchNameStrict("叶凡怒喝", "叶凡", { knownNames: ["叶凡"] })).toBe(true);
+    expect(matchNameStrict("他喊叶凡", "叶凡", { knownNames: ["萧炎", "叶凡"] })).toBe(true);
+  });
+
+  it("3字「星云剑」在「李星云剑法」被覆盖吞并 → false（起点不同也能吞并）", () => {
+    expect(matchNameStrict("李星云剑法", "星云剑", { knownNames: ["李星云剑法", "星云剑"] })).toBe(false);
+  });
+
+  it("3字「星云剑」在「李星云剑看见」无更长名覆盖 → true", () => {
+    expect(matchNameStrict("李星云剑看见", "星云剑", { knownNames: ["星云剑"] })).toBe(true);
+  });
+
+  it("2字「云山」在「青云山脉」仍直接命中（2字不吞并）", () => {
+    expect(matchNameStrict("青云山脉", "云山", { knownNames: ["青云山脉", "云山"] })).toBe(true);
+  });
+});
+
 describe("最长匹配优先", () => {
   it("已知更长名时，3字名被吞并 → false", () => {
     expect(

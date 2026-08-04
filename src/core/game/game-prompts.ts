@@ -45,6 +45,13 @@ const OP_MAP: Record<string, string> = {
   "吞下": "consume",
   "服下": "consume",
   "咽下": "consume",
+  // 消耗类同义词扩展（Round12 A4：消告警噪音且不污染数据）
+  "吃": "consume",
+  "喝": "consume",
+  "食": "consume",
+  "进食": "consume",
+  "吸": "consume",
+  "饮": "consume",
   // 装备类
   "佩戴": "equip",
   "穿上": "equip",
@@ -65,16 +72,33 @@ const OP_MAP: Record<string, string> = {
   "卸下": "unequip",
   "脱下": "unequip",
   "褪下": "unequip",
+  // 卸下类同义词扩展（Round12 A4）
+  "摘下": "unequip",
+  "摘掉": "unequip",
+  "除下": "unequip",
   // 流转/出售类（阿游 P1-1：safe skip，不改动背包，引擎直接 no-op 跳过）
   "典当": "skip",
   "抵押": "skip",
   "典押": "skip",
+  // 流转/出售类同义词扩展（Round12 A4：归入 SAFE_SKIP 兜底，不写背包）
+  "出售": "skip",
+  "售卖": "skip",
+  "卖出": "skip",
+  "交换": "skip",
+  "交易": "skip",
   // 损毁类（阿游 P1-1：引擎新增 destroy 分支，从背包移除该物品）
   "损毁": "destroy",
   "摧毁": "destroy",
   "弄坏": "destroy",
   "毁坏": "destroy",
   "粉碎": "destroy",
+  // 损毁类同义词扩展（Round12 A4）
+  "破坏": "destroy",
+  "砸碎": "destroy",
+  "摔碎": "destroy",
+  "烧毁": "destroy",
+  "焚毁": "destroy",
+  "炸毁": "destroy",
 };
 
 // 中文数字表（与选项解析共用）——用于物品数量「二/三」等中文数字解析。

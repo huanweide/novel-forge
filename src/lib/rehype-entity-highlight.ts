@@ -20,6 +20,24 @@ interface HastNode {
 /** 需要跳过的标签——里面的文本不高亮（v0.46.58：加 h1-h6 标题与引用块，章头不显示高亮标记） */
 const SKIP_TAGS = new Set(["code", "pre", "a", "script", "style", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"]);
 
+/** 分类中文标签（用于 title/aria 非颜色线索，WCAG 1.4.1） */
+function categoryLabel(category?: string): string {
+  const labels: Record<string, string> = {
+    faction: "势力",
+    item: "物品",
+    geography: "地点",
+    magic_system: "法术体系",
+    technique: "功法",
+    creature: "生灵",
+    culture: "文化",
+    history: "历史",
+    law: "法则",
+    currency: "货币",
+    custom: "自定义",
+  };
+  return (category && labels[category]) || "词条";
+}
+
 /**
  * 在文本中查找所有实体匹配位置（委托给共享 findEntitiesInText）。
  */
@@ -55,12 +73,19 @@ function splitTextNode(
       nodes.push({ type: "text", value: text.slice(cursor, r.start) });
     }
     // 实体 span
+    const typeLabel = r.entity.type === "character" ? "角色" : categoryLabel(r.entity.category);
     nodes.push({
       type: "element",
       tagName: "span",
       properties: {
-        className: `entity-highlight entity-${r.entity.type}`,
+        className:
+          `entity-highlight entity-${r.entity.type}` +
+          (r.entity.type === "lorebook" && r.entity.category
+            ? ` entity-cat-${r.entity.category}`
+            : ""),
         style: `color:${r.entity.color};font-weight:600;`,
+        title: `${typeLabel}：${r.entity.name}`,
+        "aria-label": `${typeLabel}：${r.entity.name}`,
         "data-entity-name": r.entity.name,
         "data-entity-type": r.entity.type,
         ...(r.entity.category ? { "data-entity-category": r.entity.category } : {}),

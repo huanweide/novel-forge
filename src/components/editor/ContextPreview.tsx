@@ -124,7 +124,9 @@ export function ContextPreview({
     { key: "authorNote", label: "作者指令", icon: "✍️", data: breakdown.authorNote },
   ];
 
-  const totalTokens = sections.reduce((sum, s) => sum + s.data.tokens, 0);
+  // P_c：usage% 自洽——顶栏总 Token 与 usagePercent 同源（均来自 budget.used / 上下文窗口），
+  // 故由 usagePercent 反推，避免「分区块求和(7区)」与百分比分子(全量)口径不一致导致的数字对不上。
+  const totalTokens = Math.round((Number(usagePercent) / 100) * contextWindowSize);
 
   return (
     <div className="space-y-3">

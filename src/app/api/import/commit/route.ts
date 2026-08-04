@@ -367,6 +367,13 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
+      // P_a：commit 全局 deadline——避免 300s 平台强杀整段丢弃导入结果（与 parse 的 PARSE_DEADLINE 口径一致）。
+      // 到点即停止放飞新批；已放飞批次照常落库；未放飞批次降级 ruleMerge（事务 else 分支兜底）；SSE 回报 partial。
+      const COMMIT_DEADLINE_MS = 270_000; // 留 30s 余量给 maxDuration(300s) 与收尾事务
+      const commitDeadline = Date.now() + COMMIT_DEADLINE_MS;
+      let deadlineHit = false;
+      const pastDeadline = () => Date.now() > commitDeadline;
+
       try {
         const project = await prisma.project.findUnique({ where: { id: projectId as string } });
         if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
@@ -378,6 +385,40 @@ export async function POST(request: Request) {
           prisma.styleCard.findFirst({ where: { projectId: projectId as string }, orderBy: { updatedAt: "desc" } }),
         ]);
         const globalContext = buildGlobalContext(project, allExistingChars, allExistingLore, existingStyle);
+
+        // P_a：受全局 deadline 约束的分批并行 AI 合并；到点停止放飞新批，未放飞批次结果留 null → 事务内走 ruleMerge 兜底。
+        const runMergeBatches = async (
+          batches: MergePair[][],
+          type: "char" | "lore",
+        ): Promise<(Record<string, unknown>[] | null)[]> => {
+          const results: (Record<string, unknown>[] | null)[] = new Array(batches.length).fill(null);
+          if (batches.length === 0) return results;
+          const total = batches.length;
+          let nextIdx = 0;
+          const workerCount = Math.min(4, total); // 与 MERGE_LIMIT 并发上限一致，避免一次性放飞全部批次
+          const workers: Promise<void>[] = [];
+          const stage = type === "char" ? "chars-merge" : "lore-merge";
+          const unit = type === "char" ? "角色" : "词条";
+          for (let w = 0; w < workerCount; w++) {
+            workers.push((async () => {
+              while (true) {
+                if (pastDeadline()) {
+                  deadlineHit = true;
+                  send({ type: "progress", stage, message: `⏱️ 全局 deadline 到点，停止放飞新批，未放飞批次降级规则合并`, pct: 90 });
+                  break;
+                }
+                const ci = nextIdx++;
+                if (ci >= total) break;
+                const batch = batches[ci];
+                const aiResult = await MERGE_LIMIT(() => mergeOneBatch(batch, globalContext, type, batch.map(p => p.name)));
+                results[ci] = aiResult;
+                send({ type: "progress", stage, message: `第${ci + 1}/${total}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}${unit})`, batch: ci + 1, totalBatches: total, done: ci + 1 });
+              }
+            })());
+          }
+          await Promise.all(workers);
+          return results;
+        };
 
         const created = { volumes: 0, chapters: 0, characters: 0, loreEntries: 0, styleCard: false, charMerged: 0, loreMerged: 0 };
 
@@ -450,17 +491,13 @@ export async function POST(request: Request) {
           }
         }
 
-        // 角色合并：分批并行 AI（网络，事务外；仅算结果，不落库）
+        // 角色合并：分批并行 AI（网络，事务外；仅算结果，不落库；受全局 deadline 约束，P_a）
         const charTotalBatches = Math.ceil(charMergePairs.length / BATCH_SIZE);
         const charBatches = charMergePairs.length > 0 ? chunkPairs(charMergePairs, BATCH_SIZE) : [];
         let charAiResults: (Record<string, unknown>[] | null)[] = [];
         if (charMergePairs.length > 0) {
           send({ type: "progress", stage: "chars-merge", message: `Flash 分批合并角色... 0/${charTotalBatches} 批 (共${charMergePairs.length}个)`, batch: 0, totalBatches: charTotalBatches, done: 0 });
-          charAiResults = await Promise.all(charBatches.map(async (batch, idx) => {
-            const aiResult = await MERGE_LIMIT(() => mergeOneBatch(batch, globalContext, "char", batch.map(p => p.name)));
-            send({ type: "progress", stage: "chars-merge", message: `第${idx + 1}/${charTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
-            return aiResult;
-          }));
+          charAiResults = await runMergeBatches(charBatches, "char");
         }
         created.charMerged = charMergePairs.length;
 
@@ -508,17 +545,13 @@ export async function POST(request: Request) {
           }
         }
 
-        // 词条合并：分批并行 AI（网络，事务外；仅算结果，不落库）
+        // 词条合并：分批并行 AI（网络，事务外；仅算结果，不落库；受全局 deadline 约束，P_a）
         const loreTotalBatches = Math.ceil(loreMergePairs.length / BATCH_SIZE);
         const loreBatches = loreMergePairs.length > 0 ? chunkPairs(loreMergePairs, BATCH_SIZE) : [];
         let loreAiResults: (Record<string, unknown>[] | null)[] = [];
         if (loreMergePairs.length > 0) {
           send({ type: "progress", stage: "lore-merge", message: `Flash 分批合并词条... 0/${loreTotalBatches} 批 (共${loreMergePairs.length}个)`, batch: 0, totalBatches: loreTotalBatches, done: 0 });
-          loreAiResults = await Promise.all(loreBatches.map(async (batch, idx) => {
-            const aiResult = await MERGE_LIMIT(() => mergeOneBatch(batch, globalContext, "lore", batch.map(p => p.name)));
-            send({ type: "progress", stage: "lore-merge", message: `第${idx + 1}/${loreTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
-            return aiResult;
-          }));
+          loreAiResults = await runMergeBatches(loreBatches, "lore");
         }
         created.loreMerged = loreMergePairs.length;
 
@@ -662,8 +695,9 @@ export async function POST(request: Request) {
         const totalChars = created.characters;
         send({
           type: "done",
+          status: deadlineHit ? "partial" : "completed",
           created,
-          message: `✅ 导入完成：${created.volumes}卷 ${created.chapters}章 ${totalChars}角色 ${created.loreEntries}词条${created.styleCard ? " +文风卡" : ""}（含${created.charMerged}个AI合并 +${created.loreMerged}个词条合并）`,
+          message: `✅ 导入完成：${created.volumes}卷 ${created.chapters}章 ${totalChars}角色 ${created.loreEntries}词条${created.styleCard ? " +文风卡" : ""}（含${created.charMerged}个AI合并 +${created.loreMerged}个词条合并）${deadlineHit ? " · ⏱️ 全局 deadline 截断，未放飞批次已降级规则合并" : ""}`,
         });
 
         syncGlobalPrompt(projectId).catch(() => {});
