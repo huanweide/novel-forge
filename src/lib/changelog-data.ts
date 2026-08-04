@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.76";
+export const LATEST_VERSION = "v0.46.77";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "Q1 碎片过滤补强（魔王复测回流）：isCompleteEntityName 漏网「显得像一根/潮之后裸露/车铃/手指骨/玻璃门/社区中心门」等句子碎片，实测真实 lorebook 漏进 91 条 [自动发现] 占位 → 扩充谓语/描述字拦截集 + 新增日常器物前缀(车/玻/璃)与常见名词短语(手指/社区/中心/本子/封皮/玻璃/位于)判定，83 条代表碎片全拦、真实专名(龙渊/中南海/乌坦城)零误杀",
-  "分支备份导入 P0 闭环（工坊 G1+W1）：原 strip 删必填 forkPointNodeId 致含 storyBranches 的 .nfproject 备份导入整库回滚零创建 → 占位 nodeMap 重映射闭合；parentBranchId 重映射灭悬空、选择性导入 lostForks 提示、事务超时 60s→120s",
-  "填表透传溯源与跨表防错放（墨白 M1+M2）：continue/refine 透传 nodeOrder/nodeId 修复 _src 恒 ch?:batchmanual 断章节溯源；写入前校验人物实体不匹配地理表则报错不写错灭错放",
-  "游戏动词闭环与轮次幂等 + 监测面板按项目成本 + a11y（阿游 A1-A4 + 磐石 P_a/P_b/P_c + 用户#16 + 清览 L1）：GameState upsert 幂等抗 P2002、ItemChange.operation 扩 7 值、OP_MAP 大扩；commit deadline 270s 优雅 partial；监测面板新增 AI 成本卡片闭环用户#16；a11y 补 aria-label 与暗色高亮",
+  "N1 推理模型游戏空正文闭环：deepseek-v4-flash 先吐思考链(reasoning_content)吃光 800 预算，game/start 与 game/action 返回空叙事 → LLM 客户端层新增推理模型最低输出预算保护(resolveMaxTokens，命中 v4-flash 等强制 max_tokens 不低于 2500)，三处游戏端点字面量抬到 2500",
+  "readStream 现把 reasoning_content 的 token 计入 completionTokens，流式用量计数与最终 usage 一致，灭监测面板少算推理消耗",
+  "真机复测(dev:3001 真实 DeepSeek)：game/start 返回 narrative 619 字 + 4 选项 + 建 session；game/action SSE 返回 game_done.narrative 653 字 + 4 选项，均非零、叙事连贯，N1 闭环",
+  "非推理模型不受影响仍按各自小预算运行；本轮仅补丁级正确性修复，未引入新功能",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.77",
+    date: "2026-08-04",
+    title: "会员股东 Round 12 魔王系统 N1 修复：推理模型(deepseek-v4-flash)游戏端点空正文闭环 + 全局输出预算保护（tsc 零错误，真机游戏 start/action 复测非空）",
+    sections: [
+      {
+        label: "N1 推理模型游戏空正文闭环（魔王系统修复）",
+        items: [
+          "根因：deepseek-v4-flash 是推理模型，先吐思考链(reasoning_content)且与正文共用 max_tokens 预算；game/start、game/action(processGameTurn)、章尾收束三处预算仅 800/800/400，全部预算被思考链吃光导致正文 content 为空，游戏开局与回合返回空叙事（Round 12 e2e 复测 N1 实锤：max_tokens=800→content 0，max_tokens=2000→content 461）",
+          "修复：LLM 客户端层新增推理模型最低输出预算保护 resolveMaxTokens——命中推理模型正则(含 v4-flash/reasoner/thinking/o1 等)时 max_tokens 强制不低于 2500，非推理模型保持原设定；三处游戏端点字面量同时抬到 2500 做防御纵深",
+          "配套：readStream 现把 reasoning_content 的 token 计入 completionTokens，使流式用量计数与最终 usage 一致，灭监测面板少算推理消耗",
+          "真机复测(dev:3001 真实 DeepSeek)：game/start 返回 narrative 619 字 + 4 选项 + 建 session(世界卡联动跑通)；game/action SSE 返回 game_done.narrative 653 字 + 4 选项；均非零、叙事连贯，N1 闭环",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.76",
     date: "2026-08-04",

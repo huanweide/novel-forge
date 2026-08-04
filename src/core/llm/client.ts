@@ -71,6 +71,25 @@ export interface LLMResponse {
 
 export type LLMClient = ReturnType<typeof createLLMClient>;
 
+// ─── 推理模型输出预算保护（N1 修复）──────────────────────
+/**
+ * 推理模型（如 deepseek-v4-flash / deepseek-reasoner / o1 等）会在输出里先吐一段
+ * 思考链（reasoning_content），它和正文共用 max_tokens 预算。若预算太小（如 800），
+ * 全部预算会被思考链吃光，正文 content 直接为空（Round 12 e2e 复测 N1 实锤）。
+ *
+ * 这里对已知推理模型强制一个最低输出预算，保证「思考 + 正文」都有空间。
+ * 非推理模型不受影响，仍按各自设定的小预算运行（短回复、分类等）。
+ */
+const REASONING_MODEL_RE = /reason|r1|thinking|o1|o3|o4|qwq|z1|v4-flash|deepseek-v4/i;
+const REASONING_MIN_MAX_TOKENS = 2500;
+function resolveMaxTokens(model: string, requested: number | undefined, fallback: number): number {
+  const base = requested ?? fallback;
+  if (REASONING_MODEL_RE.test(model) && base < REASONING_MIN_MAX_TOKENS) {
+    return REASONING_MIN_MAX_TOKENS;
+  }
+  return base;
+}
+
 // ─── 重试 / 故障转移 基础设施 ──────────────────────────────
 
 /** 单次调用最大尝试次数（含首次）。故障转移链长度由 fallbackModels 决定 */
@@ -135,7 +154,7 @@ async function attemptChat(
     messages: request.messages,
     temperature: request.temperature ?? config.defaultTemperature,
     top_p: request.topP ?? config.defaultTopP,
-    max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
+    max_tokens: resolveMaxTokens(target.model, request.maxTokens, config.maxTokensPerRequest),
     stream: false,
     ...(request.thinking ? { thinking: request.thinking } : {}),
   };
@@ -236,7 +255,7 @@ async function establishStream(
     messages: request.messages,
     temperature: request.temperature ?? config.defaultTemperature,
     top_p: request.topP ?? config.defaultTopP,
-    max_tokens: request.maxTokens ?? config.maxTokensPerRequest,
+    max_tokens: resolveMaxTokens(target.model, request.maxTokens, config.maxTokensPerRequest),
     stream: true,
     stream_options: { include_usage: true },
     ...(request.thinking ? { thinking: request.thinking } : {}),
@@ -316,18 +335,25 @@ async function* readStream(
           return;
         }
 
-        try {
-          const data = JSON.parse(dataStr);
-          const delta = data.choices?.[0]?.delta;
+          try {
+            const data = JSON.parse(dataStr);
+            const delta = data.choices?.[0]?.delta;
+
+          // 推理模型把思考链放在 delta.reasoning_content，它同样占用 max_tokens
+          // 预算与 completion_tokens 计数。这里把 reasoning token 也计入 completionTokens，
+          // 保证流式用量计数与最终 usage 一致（N1 配套修正，否则监测面板少算推理消耗）。
+          if (delta?.reasoning_content) {
+            completionTokens++;
+          }
 
           if (delta?.content) {
-            completionTokens++;
-            yield {
-              type: "token" as const,
-              content: delta.content,
-              usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
-            };
-          }
+              completionTokens++;
+              yield {
+                type: "token" as const,
+                content: delta.content,
+                usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
+              };
+            }
 
           if (data.usage) {
             promptTokens = data.usage.prompt_tokens;

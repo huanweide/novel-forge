@@ -75,7 +75,9 @@ export async function POST(req: Request) {
       model: llmConfig.writerModel,
       messages,
       temperature: 0.85,
-      maxTokens: 800,
+      // N1 修复：deepseek-v4-flash 等推理模型会先吐思考链（reasoning_content），
+      // 吃掉 max_tokens 预算。这里给足 2500，保证「思考 + 正文」都有空间。
+      maxTokens: 2500,
     });
 
     // 5. 流式收集（非 SSE，直接收集完整响应）

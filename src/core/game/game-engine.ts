@@ -329,7 +329,8 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
       model: llmConfig.writerModel,
       messages,
       temperature: 0.85,
-      maxTokens: 800,
+      // N1 修复：推理模型思考链吃预算，抬到 2500 保证正文非空（与 game/start 对齐）
+      maxTokens: 2500,
       signal, // 阿游 P1-1：把前端透传的 abort 信号转发到底层 fetch，停止后 LLM 真正中断、灭 token 浪费
     });
     for await (const chunk of stream) {
@@ -589,7 +590,8 @@ export async function endGameAndExport(sessionId: string): Promise<{
       model: llmConfig.writerModel,
       messages,
       temperature: 0.8,
-      maxTokens: 400,
+      // N1 修复：章尾收束段在推理模型下 400 预算会全被思考链吃光，抬到 2500
+      maxTokens: 2500,
     });
     for await (const chunk of stream) {
       if (chunk.content) {

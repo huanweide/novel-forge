@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.77 — 2026-08-04
+**会员股东 Round 12 魔王系统 N1 修复：推理模型(deepseek-v4-flash)游戏端点空正文闭环 + 全局输出预算保护（tsc 零错误，真机游戏 start/action 复测非空）**
+
+- N1 根因：deepseek-v4-flash 是推理模型，先吐思考链(reasoning_content)且与正文共用 max_tokens 预算；game/start、game/action(processGameTurn)、章尾收束三处预算仅 800/800/400，全部预算被思考链吃光导致正文 content 为空，游戏开局与回合返回空叙事（Round 12 e2e 复测 N1 实锤：max_tokens=800→content 0，max_tokens=2000→content 461）
+- 客户端层推理模型最低输出预算保护：resolveMaxTokens 命中推理模型正则(含 v4-flash/reasoner/thinking/o1 等)时 max_tokens 强制不低于 2500，非推理模型保持原设定；三处游戏端点字面量同时抬到 2500 做防御纵深
+- readStream 现把 reasoning_content 的 token 计入 completionTokens，流式用量计数与最终 usage 一致，灭监测面板少算推理消耗
+- 真机复测(dev:3001 真实 DeepSeek)：game/start 返回 narrative 619 字 + 4 选项 + 建 session(世界卡联动跑通)；game/action SSE 返回 game_done.narrative 653 字 + 4 选项；均非零、叙事连贯，N1 闭环
+
+---
+
 ## v0.46.76 — 2026-08-04
 **会员股东 Round 12 魔王复测回流补丁：Q1 碎片过滤补强（tsc 零错误）**
 
