@@ -8,10 +8,14 @@ import { classifyError } from "@/lib/api-error";
 export async function POST(request: Request) {
   try {
     const { provider, apiKey, baseUrl, model } = await request.json();
-    if (!provider || !apiKey) {
+    // 本地推理（Ollama）无需 API Key，仅校验 provider 与 baseUrl
+    if (!provider) {
+      return NextResponse.json({ ok: false, error: "缺少 provider" }, { status: 400 });
+    }
+    if (provider !== "local" && !apiKey) {
       return NextResponse.json({ ok: false, error: "缺少 provider 或 apiKey" }, { status: 400 });
     }
-    const result = await testLLMConnection(provider, apiKey, baseUrl, model);
+    const result = await testLLMConnection(provider, provider === "local" ? "" : apiKey, baseUrl, model);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ ok: false, error: classifyError(err).error }, { status: 500 });

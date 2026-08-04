@@ -34,8 +34,19 @@ interface GroupData {
   items: ForeshadowItem[];
 }
 
+interface PayoffStats {
+  total: number;
+  active: number;
+  fulfilled: number;
+  partial: number;
+  voided: number;
+  payoffRate: number;
+  avgFulfillmentRatio: number;
+}
+
 interface ForeshadowData {
   total: number;
+  payoffStats?: PayoffStats;
   groups: Record<string, GroupData>;
 }
 
@@ -77,6 +88,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   const [editHints, setEditHints] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string>("");
+  const [detecting, setDetecting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,6 +188,34 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
     }
   };
 
+  // 重新检测收束率：POST 后再拉取最新列表（失败也刷新当前状态）
+  const runDetect = async () => {
+    setDetecting(true);
+    try {
+      const res = await fetch("/api/foreshadowing/detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      showToast("已刷新收束率");
+    } catch (err) {
+      showToast(`检测失败：${String(err)}`);
+    } finally {
+      try {
+        const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`);
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch {
+        /* ignore */
+      }
+      setDetecting(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">加载伏笔数据...</div>;
   }
@@ -204,7 +244,41 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
       )}
       {/* 顶部统计 */}
       <div className="px-3 py-2 border-b border-[var(--nv-border-2)] text-[10px] text-[var(--nv-text-tertiary)]">
-        共 {data.total} 条伏笔 · {data.groups.pending?.count || 0} 待回收
+        <div className="flex items-center justify-between gap-2">
+          <span>共 {data.total} 条伏笔 · {data.groups.pending?.count || 0} 待回收</span>
+          <button
+            onClick={runDetect}
+            disabled={detecting}
+            title="扫描埋设点之后的章节，回写收束状态"
+            className="flex items-center gap-1 rounded border border-[var(--nv-border-2)] px-2 py-0.5 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)] disabled:opacity-50"
+          >
+            <Icon name="refresh" size={10} className={detecting ? "animate-spin" : ""} />
+            {detecting ? "检测中…" : "重新检测"}
+          </button>
+        </div>
+
+        {/* 收束率进度条 */}
+        {data.payoffStats && (
+          <div className="mt-1.5">
+            <div className="flex items-center justify-between">
+              <span>收束率</span>
+              <span className="text-[var(--nv-accent)] font-medium">
+                {Math.round((data.payoffStats.payoffRate || 0) * 100)}%
+              </span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--nv-surface-3)]">
+              <div
+                className="h-full rounded-full bg-[var(--nv-accent)] transition-all duration-500"
+                style={{ width: `${Math.round((data.payoffStats.payoffRate || 0) * 100)}%` }}
+              />
+            </div>
+            <div className="mt-0.5 flex items-center gap-2 text-[9px] text-[var(--nv-text-tertiary)]">
+              <span>已回收 {data.payoffStats.fulfilled}</span>
+              <span>部分 {data.payoffStats.partial}</span>
+              <span>活跃 {data.payoffStats.active}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 分组列表 */}

@@ -25,18 +25,43 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.82";
+export const LATEST_VERSION = "v0.46.83";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "伏笔面板新增可编辑「后续发展思路」：展开任意伏笔可看到 AI 依现有剧情推演的发展方向（基于缝合怪多线推进原则），作者可直接手填自己的判断，或点「AI 重生成」让模型按最新剧情重新推演，作为写作参考指示而非约束",
-  "伏笔模型新增 developmentHint 字段并落库：PendingCommitment 加 developmentHint 列，作者手填与 AI 生成的方向都持久化，刷新面板后保留，不复写原有埋设/回收状态机",
-  "自动生成接入两条伏笔计入路径：正文后处理的本地蒸馏检测到伏笔（post-processor）与拆书抽取计入的伏笔（apply-extraction）在创建后异步 fire-and-forget 调 enrichForeshadow 落库，不阻塞正文生成、失败静默",
-  "新增 POST /api/foreshadowing/update 路由：支持手填 developmentHint / 描述 / 状态 / 优先级，以及 regenerateHint 触发 LLM 重生成；面板「保存方向」「AI 重生成」按钮调此路由并即时本地刷新",
+  "伏笔收束率指标：伏笔面板顶部新增收束率进度条（已回收 / 活跃伏笔），点「重新检测」扫描埋设点之后的章节摘要，用语义种子确定性回写每条伏笔的回收/部分回收状态，从此线头收没收得住一眼可见",
+  "收束检测零新字段：复用既有五状态机（pending/detected/partially_fulfilled/fulfilled/voided）+ fulfillmentRatio，新增 detectPayoffs / computePayoffStats（@/core/foreshadowing），种子取「描述中文短语 + closureConditions 闭环条件」，免跨表解析角色卡/世界书 UUID",
+  "本地推理垂直整合：设置页新增「本地推理 (Ollama)」一键预设（默认 Base URL http://localhost:11434/v1），测试连接放行无 Key，getSettings 本地分支免 Key，LLM 客户端本就 OpenAI 兼容零改动——本机 GPU 跑模型，零 API 费用",
+  "新增 POST /api/foreshadowing/detect 路由触发收束检测，list 路由附只读 payoffStats；本地推理经 settings/test 放行 + /api/settings 保存空 Key 落库，dev 端口 3001 不变",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.83",
+    date: "2026-08-04",
+    title: "伏笔收束率指标（确定性语义种子检测，复用五状态机）+ 本地推理垂直整合（Ollama 免 Key 一键预设）（tsc 零错误）",
+    sections: [
+      {
+        label: "伏笔收束率指标（马斯克优化计划 P0）",
+        items: [
+          "伏笔面板顶部新增收束率进度条：实时展示 payoffRate = (已回收 + 0.5*部分回收) / 活跃伏笔，以及已回收/部分/活跃计数；点「重新检测」POST /api/foreshadowing/detect，扫描该伏笔 detectedAt 之后写入的全部章节摘要，用语义种子确定性回写 status / fulfillmentRatio / fulfilledAt",
+          "检测零新 schema 字段：复用既有五状态机（pending/detected/partially_fulfilled/fulfilled/voided）+ fulfillmentRatio，新增 detectPayoffs（回写）/ computePayoffStats（只读聚合）于 @/core/foreshadowing.ts；种子取「描述里连续中文短语(≥3字) + closureConditions 闭环条件」，命中规则为闭环条件任一命中或描述短语命中≥2 → 已回收，仅命中 1 且仍埋设中 → 部分回收，未命中维持原状（绝不降级已回收）",
+          "免跨表脆弱解析：故意不依赖 entityIds（UUID，跨 CharacterCard/LorebookEntry 易错），改用语义种子做字符串命中，可单测、零外部 LLM 调用、永不超时；list 路由附只读 payoffStats，面板首屏即见收束率无需手动触发",
+          "新增 POST /api/foreshadowing/detect 路由（幂等、可重复调用、异常返回 ok:false 不抛 500）；整段 detectPayoffs / computePayoffStats try-catch 容错，任何异常返回零值统计，绝不阻断调用方主流程",
+        ],
+      },
+      {
+        label: "本地推理垂直整合（马斯克优化计划 P0·白痴指数最高环节）",
+        items: [
+          "设置页新增「本地推理 (Ollama)」一键预设：选中即填默认 Base URL http://localhost:11434/v1，并展示 Base URL 输入框（本机 Ollama 地址）与「本地推理无需 API Key」提示；模型名留空则提示须填（如 qwen2.5:7b）",
+          "测试连接放行无 Key：POST /api/settings/test 对 provider===local 跳过 apiKey 校验（baseUrl 必填），testLLMConnection 走 OpenAI 兼容 /chat/completions，Ollama 忽略空 Bearer；保存路由 PUT /api/settings 接受空 llmApiKey 落库",
+          "getSettings 本地分支：llmProvider===local 时免 Key，直接用 db.llmBaseUrl + db.llmModel 构建配置（Base URL / 模型名缺失则明确报错），PROVIDER_BASE_URLS 补 local 兜底；LLM 客户端本就 OpenAI 兼容，生成链路零改动即可本机 GPU 跑模型，零 API 费用",
+          "白痴指数视角：此前 DeepSeek API 托管推理占整链路成本 ~9x（自购 GPU 算力的倍数），本地推理把这笔外部依赖收回到作者自己的机器，是马斯克计划书中杠杆最高的单项优化；保留云端 API 作兜底，不强制",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.82",
     date: "2026-08-04",

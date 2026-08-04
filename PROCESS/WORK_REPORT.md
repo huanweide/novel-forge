@@ -2016,3 +2016,37 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 ### 诚实边界（反自欺）
 - **已真实验证**：tsc 零错误；id 透传链路（类型→build→scan→rehype span data 属性）逐层代码已读确认；双 changelog + commit + 代理 push 完成；单一来源改造消除了 API 与前端配色不一致的可能。
 - **未验证（必须明示）**：固定色的实际观感、表头图例排版、以及"点正文高亮词跳转到设定卡片"的真实交互，**需用户本地浏览器验收**（沙箱无 Chromium/显示，无法实跑点击与目测）。代码层（颜色常量、id 注入、span 属性、点击代理逻辑、图例渲染）已通过 tsc 类型检查与 SSR 渲染自动验证，但"点了能不能正确打开对应卡片"这一步依赖真实浏览器事件，留待用户验收。
+
+## v0.46.82 — 伏笔「后续发展思路」可编辑 + AI 自动推演方向落库（重点）
+
+### 干了什么
+给伏笔系统加了一个**可编辑的「后续发展思路」字段**：作者能在伏笔面板里自己写方向，也能一键让 AI 根据现有剧情和「缝合怪」多线推进原则自动推演出一段参考方向。伏笔被计入时（写作中自动埋设 / 拆书抽取），系统会**后台静默**生成这段方向并写进数据库；之后作者在面板里随时可改、可重生成。
+
+同时澄清了一个定位问题：伏笔**独立存在、不塞进世界卡**——它挂在整个项目维度（`PendingCommitment` 模型），是个"写作参谋"，而且能被「缝合怪」（多线剧情推进引擎）拿去在后续章节里兑现、收束，呼应了用户的原始设想。
+
+### 为什么这么做（底层原理）
+- 用户原始三段诉求：① 伏笔能检测到，但**不该放世界卡**（世界卡是设定百科，放进去会污染设定）；② 伏笔应作为**独立写作参考**；③ 伏笔能被「缝合怪」消费、在未来剧情节奏里**收束体现**。落点是要一个"伏笔后续发展思路"——作者可手填，默认由 LLM 依现有剧情给大致方向，作为重要参考指示。
+  - 类比：伏笔像你在书里埋的"钩子"（比如第一章提了把生锈的钥匙，没说干嘛用）。「后续发展思路」就是你在备忘录里记的一句"这把钥匙估计第 20 章开老宅密室用"——可以自己写，也可以让 AI 帮你先猜一个，之后真写到那章时当参谋。它不进正文、不进设定百科，只是你自己的写作便签。
+- 「缝合怪」多线推进原则（主线 / 个人线 / 事件线按不同速率推进，已铺设的伏笔按权重逐步兑现，避免烂尾）是生成方向的"世界观约束"——AI 推演方向时不是瞎编，而是带着这套节奏感来给建议，所以方向更贴你会怎么写。
+  - 类比：让 AI 推演方向，等于请一个读过你前 5 章的编剧助理，按"你平时的铺线习惯"帮你猜后面怎么收，而不是凭空编。
+
+### 方法 / 工具与效果
+- **数据层**：`prisma/schema.prisma` 的 `PendingCommitment` 模型加 `developmentHint String?`（可空，旧伏笔无此字段也不报错）。改完跑 `PRISMA_DISABLE_SAFE_DELETE=1 npx prisma db push`（272ms 同步成功）+ `npx prisma generate`（生成到 `src/generated/prisma`，否则 TS 看不到新字段）。
+- **生成器（核心）**：新建 `src/core/foreshadowing.ts`，导出 `enrichForeshadow(projectId, commitmentId): Promise<string|null>`。逻辑——拉该伏笔 + 拉项目（name/synopsis/toneKeywords/genre）+ 最近 5 条章节摘要脉络；用 `getEffectiveConfig()` 拿 LLM 配置、`createLLMClient(config)` 建客户端；`client.chat({ model: config.summarizeModel, temperature:0.6, topP:0.9, maxTokens:220 })`，系统提示注入「缝合怪多线推进原则」、用户提示含伏笔描述+涉及实体+项目背景+近期脉络；生成 ≤150 字写 `developmentHint`；整段 `try/catch` 失败返回 `null`（**容错不阻断主流程**）。
+- **两条计入路径 fire-and-forget 接入**：
+  - `src/core/pipeline/post-processor.ts`（写作后处理「伏笔自动处理」段）：伏笔 created 后 `enrichForeshadow(projectId, created.id).catch(()=>{})`。
+  - `src/app/api/agent/apply-extraction/route.ts`（拆书抽取计入）：同上 `.catch(()=>{})`。
+  - 用 `.catch(()=>{})` 而非 `await`——**不阻塞**写作/抽取主流程，生成慢或失败也不影响伏笔已落库。
+- **更新路由**：新建 `src/app/api/foreshadowing/update/route.ts`，POST 收 `{ id, projectId?, developmentHint?, description?, status?, priority?, regenerateHint? }`。`regenerateHint` 为真→调 `enrichForeshadow`，失败 502，成功回 `{ ok, developmentHint }`；否则按非空字段更新 `developmentHint/description/status/priority`，缺字段返 400。
+- **面板可编辑区**：`src/components/workspace/ForeshadowingPanel.tsx` 伏笔展开区加「后续发展思路」块——`<textarea>` 绑定（手填优先、否则展示 AI 生成的）+「保存方向」按钮（`PATCH` 写 `developmentHint`）+「AI 重生成」按钮（`regenerateHint` 走生成器）+ 顶部 toast 提示。保存/重生成成功即时本地刷新，失败有 toast 报错。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误（确认 `getEffectiveConfig()` 返回 `LLMConfig` 与 `createLLMClient` 期望完全匹配，`summarizeModel` 字段存在）；双 changelog 升 v0.46.82（`src/lib/changelog-data.ts` LATEST_VERSION + 4 条 CHANGELOG_BRIEF + VERSIONS 头条，保留 v0.46.81 完整头；根 `CHANGELOG.md` 同 commit）；commit `2467b44` + 代理 push `huanweide/novel-forge main`。
+
+### 关键取舍
+- **可空字段 + 容错生成**：`developmentHint` 可空，生成器整段 try/catch 返 null、计入路径 `.catch` 静默——宁可"没方向"也不让"生成失败"拖垮写作主链路。这是优先级取舍：伏笔落库 > 方向生成。
+- **fire-and-forget 而非 await**：生成是"附带参谋"，不该让用户等。代价是生成有秒级延迟、面板初次展开可能暂时为空，但体验更顺。
+- **方向可改可重生成**：作者主权优先——AI 给的是"参考指示"不是"定稿"，手填覆盖 AI、随时重生成。呼应"作为重要参考指示"的措辞。
+- **不进世界卡**：严格落实用户立场，伏笔留在 `PendingCommitment`（项目维度），世界卡（lorebook）保持纯设定，互不污染。
+
+### 诚实边界（反自欺）
+- **已真实验证**：tsc 零错误；schema `db push`+`generate` 成功（新字段 TS 可见）；两条计入路径 import 与 `.catch` 调用逐行确认；update 路由文件存在且含 `regenerateHint` 分支；面板 `textarea`/`saveHint`/`regenHint` 三处接线确认；双 changelog + commit `2467b44` + 代理 push 完成（git log 复核 HEAD=2467b44、工作树 clean）。
+- **未验证（必须明示）**：① AI 默认生成方向的**质量**（是否真贴合缝合怪节奏、是否对写作有用）需作者本地实跑几章看；② 伏笔被「缝合怪」消费、在后续章节**真实收束**的剧情效果，依赖真实 LLM 生成与长线写作，沙箱无法穷举；③ 面板 editable 交互（toast、重生成 loading、即时刷新）需用户本地浏览器目测。代码层（字段、生成器、接线、路由、面板控件）已通过 tsc 与源码阅读验证，但"方向好不好用、伏笔收不收得漂亮"这一步靠真实创作验证，留待用户验收。

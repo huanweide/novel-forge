@@ -2,6 +2,16 @@
 
 ---
 
+## v0.46.83 — 2026-08-04
+**伏笔收束率指标（确定性语义种子检测，复用五状态机）+ 本地推理垂直整合（Ollama 免 Key 一键预设）（tsc 零错误）**
+
+- 伏笔收束率指标：伏笔面板顶部新增收束率进度条（payoffRate = (已回收 + 0.5*部分回收) / 活跃伏笔）与「重新检测」按钮；POST /api/foreshadowing/detect 扫描埋设点之后的章节摘要，用语义种子确定性回写 status / fulfillmentRatio / fulfilledAt，线头收没收得住一眼可见
+- 检测零新 schema 字段：复用五状态机 + fulfillmentRatio，新增 detectPayoffs（回写）/ computePayoffStats（只读聚合）于 @/core/foreshadowing.ts；种子取「描述中文短语(≥3字) + closureConditions 闭环条件」，命中规则为闭环条件任一命中或描述短语≥2 → 已回收，仅 1 且仍埋设 → 部分回收，未命中维持原状（绝不降级已回收）；免跨表解析角色卡/世界书 UUID，可单测、零 LLM 调用、永不超时
+- 本地推理垂直整合：设置页新增「本地推理 (Ollama)」一键预设（默认 Base URL http://localhost:11434/v1），测试连接放行无 Key，getSettings 本地分支免 Key，LLM 客户端本就 OpenAI 兼容零改动——本机 GPU 跑模型，零 API 费用；白痴指数视角下这是杠杆最高的单项优化（此前 DeepSeek 托管推理占外部成本 ~9x）
+- 新增 POST /api/foreshadowing/detect 路由（幂等、异常 ok:false 不抛 500）；list 路由附只读 payoffStats；PUT /api/settings 接受空 llmApiKey 落库；dev 端口 3001 不变
+
+---
+
 ## v0.46.82 — 2026-08-04
 **伏笔后续发展思路：面板可编辑 + AI 依缝合怪多线原则自动推演方向并落库，新增 update 路由（tsc 零错误）**
 

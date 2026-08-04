@@ -98,3 +98,240 @@ export async function enrichForeshadow(
     return null;
   }
 }
+
+// ═══════════════════════════════════════════
+// 伏笔收束率（P0 · 马斯克计划书）
+//
+// 真问题不是「会不会写不出」（LLM 永远能写），而是「写出来的线头收没收得住」。
+// 给作者一个可量化的收束率指标：已回收 / (活跃伏笔总数)。
+//
+// 设计原则（第一性原理）：
+//  - 不依赖新增 schema 字段——五状态机（pending/detected/partially_fulfilled/
+//    fulfilled/voided）+ fulfillmentRatio 已齐备，缺的只是「自动检测」这一步。
+//  - 不跨表解析 CharacterCard/LorebookEntry（entityIds 是 UUID，脆弱且耦合重）。
+//    改用语义种子：description 的中文短语 + closureConditions 闭环条件，确定性
+//    字符串命中，可单测、零外部调用、永不超时。
+//  - detectPayoffs 会回写 status/fulfillmentRatio/fulfilledAt；computePayoffStats
+//    是纯只读聚合，供列表接口随时展示、无需触发检测。
+// ═══════════════════════════════════════════
+
+export interface PayoffStats {
+  total: number; // 全部伏笔（含已废弃）
+  active: number; // 活跃伏笔 = total - voided
+  fulfilled: number; // 已回收
+  partial: number; // 部分回收
+  voided: number; // 已废弃
+  payoffRate: number; // 收束率 = (fulfilled + 0.5*partial) / active  [0,1]
+  avgFulfillmentRatio: number; // 平均兑现度 [0,1]
+}
+
+interface Seeds {
+  closure: string[]; // 闭环条件（作者/AI 设定的精确标记，最高精度）
+  phrases: string[]; // 描述里抽出的中文短语种子
+}
+
+/**
+ * 从一条伏笔抽语义种子。
+ *  - closureConditions：支持字符串数组 / 含 text 字段的对象数组 / 纯字符串。
+ *  - description：用正则抽出连续中文片段（长度≥3），过滤掉极通用的 2 字组合噪声。
+ */
+function extractSeeds(commit: {
+  description?: string | null;
+  closureConditions?: unknown;
+}): Seeds {
+  const closure: string[] = [];
+  const cc = commit.closureConditions;
+  if (Array.isArray(cc)) {
+    for (const item of cc) {
+      if (typeof item === "string" && item.trim()) closure.push(item.trim());
+      else if (item && typeof item === "object" && "text" in item) {
+        const t = (item as { text?: unknown }).text;
+        if (typeof t === "string" && t.trim()) closure.push(t.trim());
+      }
+    }
+  } else if (typeof cc === "string" && cc.trim()) {
+    closure.push(cc.trim());
+  }
+
+  const desc = typeof commit.description === "string" ? commit.description : "";
+  // 连续中文，长度≥3（避免「一把/发现」等高频 2 字噪声）
+  const phrases = (desc.match(/[一-龥]{3,}/g) || []).filter(Boolean);
+
+  return {
+    closure: [...new Set(closure)],
+    phrases: [...new Set(phrases)],
+  };
+}
+
+/**
+ * 检测并回写伏笔收束状态（有副作用）。
+ * 扫描该伏笔 detectedAt(或 createdAt) 之后写入的全部章节摘要，用语义种子做命中：
+ *  - closureConditions 任一命中，或 description 短语命中≥2  → fulfilled / 1.0
+ *  - description 短语仅命中 1 且当前仍 pending/detected        → partially_fulfilled / 0.5
+ *  - 未命中 → 维持原状（绝不把已 fulfilled 降级）。
+ * 整段 try/catch，任何异常返回零值统计，绝不抛错阻断调用方。
+ */
+export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
+  try {
+    const commitments = await prisma.pendingCommitment.findMany({
+      where: { projectId },
+      select: {
+        id: true,
+        status: true,
+        description: true,
+        closureConditions: true,
+        fulfillmentRatio: true,
+        fulfilledAt: true,
+        detectedAt: true,
+        createdAt: true,
+      },
+    });
+
+    const summaries = await prisma.chapterSummary.findMany({
+      where: { projectId },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true, summary: true, keyEvents: true },
+    });
+
+    const updates: Promise<unknown>[] = [];
+    let fulfilled = 0;
+    let partial = 0;
+    let voided = 0;
+    let ratioSum = 0;
+
+    for (const c of commitments) {
+      if (c.status === "voided") {
+        voided++;
+        ratioSum += c.fulfillmentRatio || 0;
+        continue;
+      }
+
+      const { closure, phrases } = extractSeeds(c);
+      const anchor = c.detectedAt || c.createdAt;
+      const later = summaries.filter((s) => s.createdAt > anchor);
+      const haystack = later
+        .map((s) => {
+          const events = Array.isArray(s.keyEvents)
+            ? (s.keyEvents as string[]).join("\n")
+            : "";
+          return `${s.summary || ""}\n${events}`;
+        })
+        .join("\n");
+
+      let matchedClosure = 0;
+      for (const seed of closure) {
+        if (seed && haystack.includes(seed)) matchedClosure++;
+      }
+      let matchedPhrase = 0;
+      for (const seed of phrases) {
+        if (seed && haystack.includes(seed)) matchedPhrase++;
+      }
+
+      let newStatus = c.status;
+      let newRatio = c.fulfillmentRatio || 0;
+
+      if (matchedClosure > 0 || matchedPhrase >= 2) {
+        newStatus = "fulfilled";
+        newRatio = 1;
+      } else if (
+        matchedPhrase === 1 &&
+        (c.status === "pending" || c.status === "detected")
+      ) {
+        newStatus = "partially_fulfilled";
+        newRatio = 0.5;
+      }
+
+      const statusChanged = newStatus !== c.status;
+      const ratioChanged = newRatio !== c.fulfillmentRatio;
+
+      if (statusChanged || ratioChanged) {
+        updates.push(
+          prisma.pendingCommitment.update({
+            where: { id: c.id },
+            data: {
+              status: newStatus,
+              fulfillmentRatio: newRatio,
+              ...(newStatus === "fulfilled" && !c.fulfilledAt
+                ? { fulfilledAt: new Date() }
+                : {}),
+            },
+          }),
+        );
+      }
+
+      if (newStatus === "fulfilled") fulfilled++;
+      else if (newStatus === "partially_fulfilled") partial++;
+      ratioSum += newRatio;
+    }
+
+    if (updates.length) await Promise.all(updates);
+
+    const active = commitments.length - voided;
+    const payoffRate = active > 0 ? (fulfilled + 0.5 * partial) / active : 0;
+    return {
+      total: commitments.length,
+      active,
+      fulfilled,
+      partial,
+      voided,
+      payoffRate,
+      avgFulfillmentRatio: commitments.length ? ratioSum / commitments.length : 0,
+    };
+  } catch {
+    return {
+      total: 0,
+      active: 0,
+      fulfilled: 0,
+      partial: 0,
+      voided: 0,
+      payoffRate: 0,
+      avgFulfillmentRatio: 0,
+    };
+  }
+}
+
+/**
+ * 只读聚合当前收束率（无副作用）。供列表接口随时展示，无需触发检测。
+ */
+export async function computePayoffStats(projectId: string): Promise<PayoffStats> {
+  try {
+    const commitments = await prisma.pendingCommitment.findMany({
+      where: { projectId },
+      select: { status: true, fulfillmentRatio: true },
+    });
+
+    let fulfilled = 0;
+    let partial = 0;
+    let voided = 0;
+    let ratioSum = 0;
+
+    for (const c of commitments) {
+      if (c.status === "voided") voided++;
+      else if (c.status === "fulfilled") fulfilled++;
+      else if (c.status === "partially_fulfilled") partial++;
+      ratioSum += c.fulfillmentRatio || 0;
+    }
+
+    const active = commitments.length - voided;
+    const payoffRate = active > 0 ? (fulfilled + 0.5 * partial) / active : 0;
+    return {
+      total: commitments.length,
+      active,
+      fulfilled,
+      partial,
+      voided,
+      payoffRate,
+      avgFulfillmentRatio: commitments.length ? ratioSum / commitments.length : 0,
+    };
+  } catch {
+    return {
+      total: 0,
+      active: 0,
+      fulfilled: 0,
+      partial: 0,
+      voided: 0,
+      payoffRate: 0,
+      avgFulfillmentRatio: 0,
+    };
+  }
+}

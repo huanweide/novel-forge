@@ -17,6 +17,7 @@ export const PROVIDER_BASE_URLS: Record<string, string> = {
   siliconflow: "https://api.siliconflow.cn/v1",
   deepseek: "https://api.deepseek.com",
   groq: "https://api.groq.com/openai/v1",
+  local: "http://localhost:11434/v1",
 };
 
 // ─── 各提供商默认模型（未显式配置时使用，避免「模型未配置」硬报错）───
@@ -72,6 +73,18 @@ export async function getSettings(): Promise<LLMSettings> {
 
   try {
     const db = await prisma.appSettings.findUnique({ where: { id: "default" } });
+
+    // 本地推理（Ollama 等 OpenAI 兼容服务）：无需 API Key，靠 Base URL + 模型名即可
+    if (db?.llmProvider === "local") {
+      const baseUrl = db.llmBaseUrl;
+      if (!baseUrl) throw new Error("本地推理需填写 Base URL（如 http://localhost:11434/v1）");
+      const model = db.llmModel;
+      if (!model) throw new Error("本地推理需填写模型名（如 qwen2.5:7b，可在 Ollama 中 pull）");
+      cachedSettings = { provider: "local", apiKey: "", model, baseUrl };
+      cacheTimestamp = now;
+      return cachedSettings;
+    }
+
     if (db?.llmApiKey) {
       const provider = db.llmProvider;
       if (!provider) throw new Error("LLM 提供商未配置——请在设置页面选择提供商");

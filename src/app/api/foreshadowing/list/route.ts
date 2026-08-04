@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
+import { computePayoffStats } from "@/core/foreshadowing";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -37,8 +38,11 @@ export async function GET(request: Request) {
       (c) => c.status === "voided",
     );
 
+    const payoffStats = await computePayoffStats(projectId);
+
     return NextResponse.json({
       total: commitments.length,
+      payoffStats,
       groups: {
         pending: { label: "⏳ 埋设中", count: pending.length, items: pending },
         partial: { label: "🔄 部分回收", count: partial.length, items: partial },

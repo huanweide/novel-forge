@@ -7,11 +7,20 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { loadCustomBannedWords, saveCustomBannedWords, DEFAULT_BANNED_WORDS } from "@/lib/banned-words";
 import { useShortcutHelp } from "@/components/ShortcutProvider";
 
-const PROVIDERS = [
+interface ProviderDef {
+  key: string;
+  name: string;
+  defaultModel: string;
+  desc: string;
+  defaultBaseUrl?: string;
+}
+
+const PROVIDERS: ProviderDef[] = [
   { key: "siliconflow", name: "硅基流动 (SiliconFlow)", defaultModel: "deepseek-ai/DeepSeek-V4-Flash", desc: "国产，便宜，DeepSeek V4 全系" },
   { key: "deepseek", name: "DeepSeek 官方", defaultModel: "deepseek-v4-flash", desc: "DeepSeek 官方 API，兼容 OpenAI 格式" },
   { key: "openai", name: "OpenAI", defaultModel: "gpt-4o", desc: "GPT-4o / GPT-4.1 系列" },
   { key: "groq", name: "Groq", defaultModel: "llama-3.3-70b-versatile", desc: "极速推理，开源模型" },
+  { key: "local", name: "本地推理 (Ollama)", defaultModel: "", desc: "本机 GPU 跑模型，零 API 费用，需先装 Ollama", defaultBaseUrl: "http://localhost:11434/v1" },
   { key: "custom", name: "自定义 (OpenAI 兼容)", defaultModel: "", desc: "任何兼容 OpenAI API 的服务" },
 ];
 
@@ -105,13 +114,14 @@ export default function SettingsPage() {
     setProvider(key);
     const def = PROVIDERS.find((p) => p.key === key);
     if (def?.defaultModel && !model) setModel(def.defaultModel);
+    if (def?.defaultBaseUrl && !baseUrl) setBaseUrl(def.defaultBaseUrl);
     setTestResult(null);
-    if (apiKey.trim() || hasExistingKey) fetchModels({ provider: key });
+    if (key !== "local" && (apiKey.trim() || hasExistingKey)) fetchModels({ provider: key });
   }
 
   async function handleTest(keyArg?: string) {
     const key = (keyArg ?? apiKey).trim();
-    if (!key && !hasExistingKey) {
+    if (provider !== "local" && !key && !hasExistingKey) {
       setTestResult({ ok: false, error: "请先填入 API Key" });
       return;
     }
@@ -139,7 +149,7 @@ export default function SettingsPage() {
 
   async function handleSave() {
     const key = apiKey.trim();
-    if (!key) {
+    if (provider !== "local" && !key) {
       setStatusMsg("请填入 API Key");
       return;
     }
@@ -151,19 +161,19 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           llmProvider: provider,
-          llmApiKey: key,
+          llmApiKey: provider === "local" ? (key || undefined) : key,
           llmModel: model || undefined,
           llmBaseUrl: baseUrl || undefined,
         }),
       });
       if (res.ok) {
         setStatusMsg("✅ 设置已保存");
-        setHasExistingKey(true);
+        setHasExistingKey(!!key);
         setApiKey("");
         // 保存后自动连接验证
         await handleTest(key);
-        // 用刚保存的 Key 刷新模型列表
-        fetchModels({ provider, apiKey: key });
+        // 用刚保存的 Key 刷新模型列表（本地推理跳过检索）
+        if (provider !== "local") fetchModels({ provider, apiKey: key });
       } else {
         const d = await res.json().catch(() => ({}));
         setStatusMsg(`❌ 保存失败：${d.error || "未知错误"}`);
@@ -277,6 +287,9 @@ export default function SettingsPage() {
               <span className="text-xs text-success/80 ml-2 font-normal">（已保存 <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 留空则不修改）</span>
             )}
           </label>
+          {provider === "local" && (
+            <p className="text-xs text-[var(--nv-text-muted)] -mt-1 mb-3">本地推理无需 API Key，填好上方 Ollama Base URL 与模型名即可。</p>
+          )}
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <input
@@ -298,7 +311,7 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={() => handleTest()}
-              disabled={testing || (!apiKey.trim() && !hasExistingKey)}
+              disabled={testing || (provider !== "local" && !apiKey.trim() && !hasExistingKey)}
               className="btn-ghost px-5 py-3 rounded-xl text-sm font-medium shrink-0 disabled:opacity-40"
             >
               {testing ? (
@@ -357,7 +370,7 @@ export default function SettingsPage() {
             </datalist>
             <button
               onClick={() => fetchModels()}
-              disabled={modelsLoading || (!apiKey.trim() && !hasExistingKey)}
+              disabled={modelsLoading || provider === "local" || (!apiKey.trim() && !hasExistingKey)}
               className="btn-ghost px-5 py-3 rounded-xl text-sm font-medium shrink-0 disabled:opacity-40"
             >
               {modelsLoading ? (
@@ -375,20 +388,26 @@ export default function SettingsPage() {
           </p>
         </section>
 
-        {/* 自定义 Base URL */}
-        {provider === "custom" && (
+        {/* 自定义 / 本地 Base URL */}
+        {provider === "custom" || provider === "local" ? (
           <section>
-            <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">API Base URL</label>
+            <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+              {provider === "local" ? "Ollama Base URL" : "API Base URL"}
+            </label>
             <input
               type="text"
               className="input-glass w-full rounded-xl px-4 py-3 text-sm font-mono"
-              placeholder="https://your-api.com/v1"
+              placeholder={provider === "local" ? "http://localhost:11434/v1" : "https://your-api.com/v1"}
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
             />
-            <p className="text-xs text-[var(--nv-text-muted)] mt-2">只需填到 /v1 即可，会自动拼接 /chat/completions</p>
+            <p className="text-xs text-[var(--nv-text-muted)] mt-2">
+              {provider === "local"
+                ? "本机 Ollama 默认地址；确保已运行 ollama serve 且已 pull 模型。只需填到 /v1，会自动拼接 /chat/completions。"
+                : "只需填到 /v1 即可，会自动拼接 /chat/completions"}
+            </p>
           </section>
-        )}
+        ) : null}
 
         {/* FE-N7 违禁词预检词库 */}
         <section>
