@@ -1897,3 +1897,27 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 - 工程铁律强化：Prisma 7 新增字段后必须 `prisma generate`（db push 只更库不更客户端）；Chair 统一 tsc 门禁不可省。
 - 已真实验证：tsc 零错误；82 项 vitest 全过；Project.importSource @unique 已 db push 建约束；6 股东改动全在授权范围无越界；commit+push 完成。
 - 未验证（明示）：真机交互（abort 真中断/chatStream 透传/锁跨实例并发实测/弹窗读屏/正则 ReDoS 实战/默认模型真实定价）仍待用户本地实跑。墨白 P1-B/C/E/F（填表跨表校验/单 op 静默丢/行级同名合并）留 Round 10。
+
+# Round 10 实现报告（v0.46.73）—— 费曼式沉淀
+
+## 干了什么
+- 续 maxloop 协议第 10 轮：6 股东 Agent 并行只读复验 v0.46.72（Round 9 修复），确认 5 透镜回归通过、仅清览 explore 右抽屉未闭环（重判 P1）；新挖 11 个 P1（零 P0）。Chair 派 6 Agent 并行实现，统一 tsc 零错误 + 130 vitest 全过 + 双 changelog 升 v0.46.73 + 代理 push。
+
+## 为什么这么做（底层原理）
+- 终止条件=「全员无 P0/P1」。Round 9 虽修 10 P1，但墨白 P1-B/C/E/F（填表完整性）被递延、清览漏修一抽屉、阿游/磐石有未覆盖盲区——不收口就永远不满足终止条件，故必须再一轮。
+- 填表是产品数据底座：单章不跑自检（B）会让「人物写进地点表」长期不被发现；单 op 失败静默丢（C）直接违「不丢数据」原则；同名合并（E）与不可回溯（F）破坏归属可信度。游戏 owner 丢失（N1）让背包按 (name,owner) 隔离失效；开场背包错位（N2）是前后端不一致残留；同义动词丢物（N3）割裂叙事与背包。
+
+## 用了什么方法 / 效果
+- 墨白：babyloreFill 落库后跑 selfCheckFill 回传 issues（单章自检）；applyOps 收集 skippedOps:{op,reason,table}（单 op 失败可追溯）；selfCheckFill 加表内同名异源弱告警（不静默合并）；写入行附 _src(章节+批次)/_ts（行级溯源，rows 为 JSON 列不改 schema）；新增 /api/babylore/clear-filled 清脏标记出口 + tables 页展示 fillErrorMeta。补 fill.ops.test.ts 至 12 项。
+- 阿游：开局 initialItems 写 owner（与 processGameTurn 对齐）；开局响应补 items + 前端 handleStart 用后端权威背包预建（开场即前后端一致，不必等首次 abort 对账）；OP_MAP 扩展同义动词（拾取/佩戴/吃掉/丢掉…）且未知动词默认当 gain（不再静默丢物）。补 game-engine.test.ts 至 17 项、game-prompts.test.ts 至 39 项。
+- 清览：explore 右抽屉补 ref={rightDrawerRef}+role=dialog+aria-modal+aria-labelledby+sr-only 标题，与左抽屉对齐，焦点陷阱/ESC 真正生效，闭环 Round9 漏修的最后一抽屉。
+- 磐石：import/parse 成功分支改用供应商真实 data.usage 记账（缺失退回分词估算），与 commit/mergeOneBatch 口径统一；buildGlobalContext 仅名称索引去细节、mergeOneBatch 拼本批聚焦清单（灭大世界逐批 30 万+ token 冗余）；分块解析改 4 路限流并发、按完成顺序回报 SSE 进度（解超大书超 300s 强杀）；monitor since 改动态生成。
+- 青砚（P2 bonus）：apply-extraction 建卡前 findFirst 精确查重 + 复用 isSimilarName 繁简/变体去重，灭重复卡。
+- 工坊（P2 bonus）：预设 apply 的 api_config 由整体摊平改按 llmConfig 子键白名单逐层深合并（灭污染）；未知 type 改返 400（杜绝静默 no-op 仍写 appliedPresets/downloads）。
+- 验证：vitest 130 passed（7 文件：match 28 / regex 23 / game-engine 17 / game-prompts 39 / fill.ops 12 / fill.selfcheck 6 / trigger 5）；SAFE_DELETE_DISABLE=1 npx tsc --noEmit → EXIT:0；双 changelog 同 commit + 代理 push `c824cd2..899a480`。
+
+## 关键取舍 / 诚实边界
+- Trust but verify 落实：6 Agent 全部返回「tsc 零错误」，Chair 仍读 git diff 确认改动全在授权文件（16 改 + 2 新增：clear-filled 路由、round-10 报告），changelog/version/MEMORY 零越界；再跑统一 tsc（TSC_EXIT=0）+ 130 vitest 全过，方采信。
+- 无 Prisma schema 变更：P1-F 用 rows JSON 列加 _src/_ts 字段，免 prisma generate（避免 Round9 工坊 Agent 漏 generate 的复发）。
+- 已真实验证：tsc 零错误；130 项 vitest 全过；6 股东改动全在授权范围无越界；commit+push 完成（远端按既有规则旁路 branch protection）。
+- 未验证（明示）：真机交互（填表单章自检/清脏标记按钮点击、游戏开场背包对账实测、explore 右抽屉读屏/ESC、import 并发与超大书分块超时实测、apply-extraction 真实去重、预设未知 type 返 400 前端提示）仍待用户本地实跑。下一轮复验重点：确认本轮 11 P1 无回流 + 挖新坑。
