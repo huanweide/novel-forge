@@ -1784,3 +1784,29 @@ Round 5 是 maxloop 会员股东循环第 5 轮：先让 6 位股东（墨白/�
 - 选解析层唯一归一化点而非改四处比较逻辑：最小改动面、零回归，符合 Round 4 独立函数隔离思路。
 - 单字关守卫从两侧闭边界改为紧后非CJK 前缀守卫：两侧闭边界会让单字角色名在中文里全漏检（与 2字同构问题），前缀守卫更实用（句尾/标点命中，词中末位可能误命中但单字角色名极罕见，危害小）。
 - 已真实验证：tsc 零错误；37 vitest 单测过；6 股东 Agent 改动逐文件核验在授权范围、无越界；commit+push 完成。未验证（明示）：真机交互（游戏流式/弹窗视觉/下拉对比度/导入失败 UI）仍待用户本地实跑；中文复合数字（十二/二十）解析未实现（按约束可选）。
+
+# Round 6 实现报告（v0.46.69）—— 费曼式沉淀
+
+## 干了什么
+Round 6 是 maxloop 会员股东循环第 6 轮：6 位股东先只读复验 Round 5 修复并挖新坑（L1），Chair 派 6 Agent 并行落地修复（L2），最后 tsc + 双 changelog + commit + push（L3）。本轮改 30 处源码、覆盖 3 个 P0 + 11 个 P1，tsc 零错误，单测：match 25 / game 30 / babylore 10 / regex 10 等全绿。
+
+## 为什么这么做（底层原理）
+- 3字名漏检（青砚 P0-1，Round5 回归）：Round5 给 3字+ 名加「紧后必须非中文」前缀守卫，但中文正文里 3字名后几乎总接中文（李星云看见），守卫永不成立 → 世界书召回与 OOC 常漏检。正解是「最长匹配优先」+ 候选实体集合吞并保护：短名命中位置若恰是更长已知名前缀才吞并（灭李星云剑法误命中），否则正常命中。
+- 流式中断错位（阿游 P0-2）：旧架构在 game_done 之前就提交轮次+背包，用户中途停止前端拿不到完成态 → 前后端永久错位。正解是「后端只在 game_done 提交 + 前端 abort 后拉 GET 权威态整体覆盖」自愈。
+- 空章节静默丢数据（墨白 P0-3）：完成门槛只看 r.ok，空 ops/全失效章节被标已填再不重试 → 防重复机制反噬成数据黑洞。正解是门槛加 applied>0，零应用即失败可重试。
+- 其余 P1：介词边界漏高亮、中文复合数字、背包同名互扣、import 无事务/幂等、正则 ReDoS、Modal 无 aria、ImportWizard 不消费状态、commit 无锁、分块只看行数——均为一致性与健壮性缺口。
+
+## 用了什么方法 / 效果
+- 青砚：match.ts matchNameStrict 3字+ 改最长匹配优先（新增 options.knownNames，紧后 CJK 且拼出更长已知名才吞并）；entity-highlighter 头边界补介词+省略号+间隔号。补 match.test.ts 最长匹配用例。
+- 阿游：新增 GET /api/game/state + reconcile.ts，page.tsx abort 后整体覆盖；game-prompts parseGameQuantity 支持中文复合数字；game-engine 背包按 (name,owner) 隔离。补 game-engine.test.ts。
+- 墨白：fill.ts/loop.ts 门槛 ok&&applied>0；update 非身份列未命中告警跳过；跨表唯一名写错表告警。补 fill.ops.test.ts。
+- 磐石：import/parse callFlash 加 60s 超时+≤2 重试；ImportWizard 消费 status/worldFailed；commit/route 加 projectId 幂等锁；分块改字符预算(16000/块+重叠)。
+- 工坊：import/route 包 $transaction 回滚 + projectId+source 幂等去重；regex.ts 加 isLikelyUnsafeRegex 防 ReDoS。补 regex.test.ts。
+- 清览：Modal 加 labelledBy/ariaLabel，9 个调用点补语义名。
+- 验证：vitest 多文件全过（match 25/game 30/babylore 10/regex 10）；SAFE_DELETE_DISABLE=1 npx tsc --noEmit → EXIT:0；commit（双 changelog 同 commit）+ 代理 push。
+
+## 关键取舍 / 诚实边界
+- Chair 审阅 diff 抓到无越界：全部 30 改动在授权范围（match/fill/game/import/regex/Modal 等），无 changelog/版本/MEMORY 被改；抽样复核青砚 P0-1（最长匹配优先逻辑）+ 墨白 P0-3（门槛）均正确。
+- 3字匹配选「最长匹配优先 + knownNames 吞并」而非回退 Round4 闭边界：闭边界会重演 2字全漏检，最长优先在保留召回能力的同时靠实体集合抑制误命中，是精度与召回的平衡点。
+- 选择「前端 abort 后拉 GET 对账」而非后端回滚：游戏状态需保留已生成内容，对账覆盖比回滚更符合叙事连续性，且复用 Round5 已有的 summary 通道零新增接口成本。
+- 已真实验证：tsc 零错误；多文件 vitest 单测过；6 股东 Agent 改动逐文件核验在授权范围、无越界；commit+push 完成。未验证（明示）：真机交互（游戏流式对账/弹窗无障碍读屏/导入部分失败 UI/ReDoS 实测恶意正则）仍待用户本地实跑。

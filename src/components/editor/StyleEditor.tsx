@@ -308,7 +308,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
   if (loading) {
     return (
-      <Modal open onClose={onClose} bare panelClassName="max-w-xs">
+      <Modal open onClose={onClose} bare ariaLabel="加载中文风" panelClassName="max-w-xs">
         <p className="bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-2xl p-6 text-[var(--nv-text-tertiary)]">加载中…</p>
       </Modal>
     );
@@ -316,7 +316,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
 
   if (loadError) {
     return (
-      <Modal open onClose={onClose} bare panelClassName="max-w-sm">
+      <Modal open onClose={onClose} bare ariaLabel="文风加载失败" panelClassName="max-w-sm">
         <div className="p-6 text-center">
           <p className="text-danger mb-3"><Icon name="alert" size={15} className="inline-block align-text-bottom shrink-0" /> {loadError}</p>
           <Button onClick={onClose}>关闭</Button>

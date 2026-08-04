@@ -176,9 +176,9 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
 
       {/* 编辑弹窗 */}
       {editingId && (
-        <Modal open onClose={() => setEditingId(null)} bare panelClassName="max-h-[85vh] w-full max-w-xl overflow-y-auto">
+        <Modal open onClose={() => setEditingId(null)} bare panelClassName="max-h-[85vh] w-full max-w-xl overflow-y-auto" labelledBy="storyline-edit-title">
           <div className="p-5">
-            <h3 className="mb-4 text-lg font-semibold text-[var(--nv-text-primary)]">编辑故事线</h3>
+            <h3 id="storyline-edit-title" className="mb-4 text-lg font-semibold text-[var(--nv-text-primary)]">编辑故事线</h3>
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-xs text-[var(--nv-text-tertiary)]">标题</label>

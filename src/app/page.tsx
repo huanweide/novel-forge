@@ -356,11 +356,11 @@ export default function Dashboard() {
         />
       )}
       {showChangelog && (
-        <Modal open onClose={() => setShowChangelog(false)} bare closeOnOverlay={false} panelClassName="max-w-md">
+        <Modal open onClose={() => setShowChangelog(false)} bare closeOnOverlay={false} panelClassName="max-w-md" labelledBy="changelog-modal-title">
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-1.5 h-5 rounded-full bg-primary/60" />
-              <h2 className="text-lg font-semibold text-foreground">更新公告 · {LATEST_VERSION}</h2>
+              <h2 id="changelog-modal-title" className="text-lg font-semibold text-foreground">更新公告 · {LATEST_VERSION}</h2>
             </div>
             <ul className="space-y-2.5 mb-5">
               {CHANGELOG_BRIEF.map((item, i) => (

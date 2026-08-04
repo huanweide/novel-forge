@@ -144,9 +144,9 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
 
       {/* 创建/编辑弹窗 */}
       {showForm && (
-        <Modal open onClose={() => setShowForm(false)} bare panelClassName="max-h-[85vh] w-full max-w-lg overflow-y-auto">
+        <Modal open onClose={() => setShowForm(false)} bare panelClassName="max-h-[85vh] w-full max-w-lg overflow-y-auto" labelledBy="rule-form-title">
           <div className="p-5">
-            <h3 className="mb-4 text-base font-semibold text-[var(--nv-text-primary)]">{editing ? "编辑规则" : "新建规则"}</h3>
+            <h3 id="rule-form-title" className="mb-4 text-base font-semibold text-[var(--nv-text-primary)]">{editing ? "编辑规则" : "新建规则"}</h3>
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-xs text-[var(--nv-text-tertiary)]">规则名称</label>

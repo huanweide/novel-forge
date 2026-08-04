@@ -31,13 +31,16 @@ export async function POST(req: Request) {
       };
 
       try {
-        const gen = processGameTurn({
-          sessionId,
-          actionType: (actionType || "custom") as GameActionType,
-          actionText: actionText || "自定义行动",
-          selectedOption,
-          targetItem,
-        });
+        const gen = processGameTurn(
+          {
+            sessionId,
+            actionType: (actionType || "custom") as GameActionType,
+            actionText: actionText || "自定义行动",
+            selectedOption,
+            targetItem,
+          },
+          req.signal
+        );
 
         for await (const event of gen) {
           write(event);

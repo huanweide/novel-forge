@@ -19,7 +19,7 @@ import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
-import { reconcileFromSummary } from "@/core/game/reconcile";
+import { reconcileFromSummary, applyFrontendItemChanges } from "@/core/game/reconcile";
 
 // ─── 类型 ─────────────────────────────────────────────────────
 
@@ -281,48 +281,12 @@ export default function GamePage() {
         }
       }
 
-      // 更新背包（按 name+owner 隔离，阿游 P1；防止同名物品跨角色互扣）
-      let updatedItems = [...state.items];
-      for (const change of doneData.itemChanges || []) {
-        const owner = change.owner || "主角";
-        const match = (i: GameItem) =>
-          i.name === change.name && (i.owner || "主角") === owner;
-        if (change.operation === "gain") {
-          const existing = updatedItems.find(match);
-          if (existing) {
-            existing.quantity += change.quantity || 1;
-            if (!existing.owner) existing.owner = owner;
-          } else {
-            updatedItems.push({
-              name: change.name,
-              quantity: change.quantity || 1,
-              category: "other",
-              source: `第${newRound}轮获得`,
-              acquiredRound: newRound,
-              owner,
-            });
-          }
-        } else if (change.operation === "consume") {
-          const existing = updatedItems.find(match);
-          if (existing) {
-            existing.quantity -= change.quantity || 1;
-            if (existing.quantity <= 0) {
-              updatedItems = updatedItems.filter((i) => !match(i));
-            }
-          }
-        } else if (change.operation === "equip") {
-          const existing = updatedItems.find(match);
-          if (existing) existing.equipped = true;
-        } else if (change.operation === "discard") {
-          const existing = updatedItems.find(match);
-          if (existing) {
-            existing.quantity -= change.quantity || 1;
-            if (existing.quantity <= 0) {
-              updatedItems = updatedItems.filter((i) => !match(i));
-            }
-          }
-        }
-      }
+      // 更新背包：纯函数不可变更新（阿游 P1-1，避免原地改写 state.items 内部对象破坏 React 不可变更新）
+      const updatedItems = applyFrontendItemChanges(
+        state.items,
+        doneData.itemChanges || [],
+        newRound
+      );
 
       setState((s) => ({
         ...s,
@@ -362,8 +326,11 @@ export default function GamePage() {
   };
 
   // ── 停止生成 ────────────────────────────────────────────
-  const handleStop = () => {
+  // abort 后等待后端权威态对账回拉（GET /api/game/state）覆盖前端，确保读到 abort 后的正确快照，
+  // 再解锁为 playing，避免用户在对账在途时抢发行动放大竞态（阿游 P0-1 前端侧）。
+  const handleStop = async () => {
     streamRef.current?.abort();
+    await reconcileWithBackend();
     setState((s) => ({ ...s, status: "playing" }));
   };
 
@@ -429,11 +396,12 @@ export default function GamePage() {
           }}
           bare
           panelClassName="max-w-lg"
+          labelledBy="game-tutorial-title"
         >
           <div className="p-6">
             <div className="mb-3 flex items-center gap-2">
               <Icon name="gamepad" size={22} className="text-[var(--nv-creative)]" />
-              <h2 className="text-lg font-bold text-[var(--nv-text-primary)]">游戏模式 · 跑团式互动创作</h2>
+              <h2 id="game-tutorial-title" className="text-lg font-bold text-[var(--nv-text-primary)]">游戏模式 · 跑团式互动创作</h2>
             </div>
             <div className="space-y-3 text-sm leading-relaxed text-[var(--nv-text-secondary)]">
               <p>

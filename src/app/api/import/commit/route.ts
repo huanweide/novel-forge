@@ -24,6 +24,7 @@ const COMMIT_LOCK_TTL = 300_000; // 锁最长持有 300s，超时自动视为失
 
 interface MergePair {
   name: string;
+  existingId: string;
   old: Record<string, unknown>;
   new: Record<string, unknown>;
 }
@@ -302,15 +303,19 @@ export async function POST(request: Request) {
 
   if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
-  // 并发幂等锁：同一 projectId 正在提交则拒绝（409），防重复写入
   const pid = projectId as string;
+
+  // P0 修复：空载荷校验必须在加锁「之前」——否则 400 提前返回会跳过 finally，
+  // 导致锁残留最长 300s，期间合法写入（含真实重试）被 409 阻塞，幂等锁反成拒绝服务。
+  if (chapters.length === 0 && characters.length === 0 && loreEntries.length === 0)
+    return NextResponse.json({ error: "没有任何要导入的数据" }, { status: 400 });
+
+  // 并发幂等锁：同一 projectId 正在提交则拒绝（409），防重复写入
   const lockedAt = commitLocks.get(pid);
   if (lockedAt && Date.now() - lockedAt <= COMMIT_LOCK_TTL) {
     return NextResponse.json({ error: "该项目正在导入中，请等待上一次提交完成（避免重复写入）" }, { status: 409 });
   }
   commitLocks.set(pid, Date.now());
-  if (chapters.length === 0 && characters.length === 0 && loreEntries.length === 0)
-    return NextResponse.json({ error: "没有任何要导入的数据" }, { status: 400 });
 
   const sse = new ReadableStream({
     async start(controller) {
@@ -333,45 +338,8 @@ export async function POST(request: Request) {
 
         const created = { volumes: 0, chapters: 0, characters: 0, loreEntries: 0, styleCard: false, charMerged: 0, loreMerged: 0 };
 
-        // ─── 1. 章节节点 ──────────────────────────
+        // ─── 1. 人物卡：内存查重 + AI 合并（仅计算，不写库；写库统一进整体事务）──
 
-        if (chapters.length > 0) {
-          send({ type: "progress", stage: "chapters", message: `写入章节... 0/${chapters.length}` });
-          const volumeMap = new Map<string, string>();
-          if (volumeMode) {
-            const seenVolumes = new Set<string>();
-            for (const ch of chapters) {
-              if (ch.volumeTitle && !seenVolumes.has(ch.volumeTitle)) {
-                seenVolumes.add(ch.volumeTitle);
-                const volNode = await prisma.storyNode.create({
-                  data: { projectId: projectId as string, parentId: null, type: "volume", title: ch.volumeTitle,
-                    order: seenVolumes.size - 1, status: "completed", wordCount: 0, activeCharacters: [], activeLoreIds: [] },
-                });
-                volumeMap.set(ch.volumeTitle, volNode.id);
-                created.volumes++;
-              }
-            }
-          }
-          for (let i = 0; i < chapters.length; i++) {
-            const ch = chapters[i];
-            await prisma.storyNode.create({
-              data: { projectId: projectId as string, parentId: volumeMode && ch.volumeTitle ? volumeMap.get(ch.volumeTitle) || null : null,
-                type: "chapter", title: ch.chapterTitle || `第${i + 1}章`, order: ch.order ?? i,
-                status: "completed", content: ch.content, outline: ch.content?.slice(0, 200) || null,
-                wordCount: ch.wordCount || ch.content?.length || 0, activeCharacters: [], activeLoreIds: [],
-                notes: "📥 从导入文本自动创建" },
-            });
-            created.chapters++;
-            if ((i + 1) % 5 === 0 || i === chapters.length - 1) {
-              send({ type: "progress", stage: "chapters", message: `写入章节... ${i + 1}/${chapters.length}` });
-            }
-          }
-          send({ type: "progress", stage: "chapters-done", message: `✅ 章节写入完成：${created.volumes}卷 ${created.chapters}章` });
-        }
-
-        // ─── 2. 人物卡：内存查重（复用已加载的 allExistingChars，0 次额外 DB 查询）──
-
-        // 构建查找映射
         const charByName = new Map<string, typeof allExistingChars[0]>();
         const charByAlias: { char: typeof allExistingChars[0]; aliasesLower: string[] }[] = [];
         for (const ec of allExistingChars) {
@@ -406,6 +374,7 @@ export async function POST(request: Request) {
           if (existing) {
             charMergePairs.push({
               name: String(char.name),
+              existingId: existing.id,
               old: {
                 aliases: existing.aliases, abilities: existing.abilities,
                 hiddenMotives: existing.hiddenMotives, relationships: existing.relationships,
@@ -438,73 +407,21 @@ export async function POST(request: Request) {
           }
         }
 
-        // 新卡直接批量写入
-        if (charNewData.length > 0) {
-          send({ type: "progress", stage: "chars-new", message: `写入新角色... ${charNewData.length}个` });
-          await prisma.characterCard.createMany({ data: charNewData as any });
-          created.characters = charNewData.length;
-        }
-
-        // 合并卡分批并行
+        // 角色合并：分批并行 AI（网络，事务外；仅算结果，不落库）
         const charTotalBatches = Math.ceil(charMergePairs.length / BATCH_SIZE);
+        const charBatches = charMergePairs.length > 0 ? chunkPairs(charMergePairs, BATCH_SIZE) : [];
+        let charAiResults: (Record<string, unknown>[] | null)[] = [];
         if (charMergePairs.length > 0) {
           send({ type: "progress", stage: "chars-merge", message: `Flash 分批合并角色... 0/${charTotalBatches} 批 (共${charMergePairs.length}个)`, batch: 0, totalBatches: charTotalBatches, done: 0 });
-
-          const charBatches = chunkPairs(charMergePairs, BATCH_SIZE);
-
-          const charBatchResults = await Promise.all(charBatches.map(async (batch, idx) => {
+          charAiResults = await Promise.all(charBatches.map(async (batch, idx) => {
             const aiResult = await mergeOneBatch(batch, globalContext, "char");
-            if (aiResult && aiResult.length === batch.length) {
-              // AI 合并成功 → 立即写入
-              for (let j = 0; j < batch.length; j++) {
-                const pair = batch[j];
-                const merged = aiResult[j];
-                const existing = await prisma.characterCard.findFirst({
-                  where: { projectId: projectId as string, name: { equals: pair.name, mode: "insensitive" } },
-                });
-                if (existing) {
-                  await prisma.characterCard.update({
-                    where: { id: existing.id },
-                    data: {
-                      ...merged,
-                      name: pair.name,
-                      projectId: undefined,
-                      relationships: normalizeRelationships((merged as any)?.relationships),
-                    } as any,
-                  });
-                }
-              }
-              send({ type: "progress", stage: "chars-merge", message: `第${idx+1}/${charTotalBatches}批 ✨AI合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
-              return { batch: idx + 1, aiMerged: true, count: batch.length };
-            } else {
-              // 回退规则合并
-              for (const pair of batch) {
-                const merged = ruleMergeChar(pair.old, pair.new);
-                const existing = await prisma.characterCard.findFirst({
-                  where: { projectId: projectId as string, name: { equals: pair.name, mode: "insensitive" } },
-                });
-                if (existing) {
-                  await prisma.characterCard.update({
-                    where: { id: existing.id },
-                    data: merged as any,
-                  });
-                }
-              }
-              send({ type: "progress", stage: "chars-merge", message: `第${idx+1}/${charTotalBatches}批 ⚙️规则合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
-              return { batch: idx + 1, aiMerged: false, count: batch.length };
-            }
+            send({ type: "progress", stage: "chars-merge", message: `第${idx + 1}/${charTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}角色)`, batch: idx + 1, totalBatches: charTotalBatches, done: idx + 1 });
+            return aiResult;
           }));
-
-          let charMergedDone = 0;
-          for (const r of charBatchResults) {
-            charMergedDone += r.count;
-          }
-          created.charMerged = charMergedDone;
         }
+        created.charMerged = charMergePairs.length;
 
-        created.characters += created.charMerged;
-
-        // ─── 3. 世界书词条：内存查重（一次批量查询替代逐个 findFirst）──
+        // ─── 2. 世界书词条：内存查重 + AI 合并（仅计算，不写库）──
 
         const allLoreForDedup = await prisma.lorebookEntry.findMany({
           where: { projectId: projectId as string },
@@ -529,6 +446,7 @@ export async function POST(request: Request) {
           if (existing) {
             loreMergePairs.push({
               name: String(entry.title),
+              existingId: existing.id,
               old: { content: existing.content, keys: existing.keys, category: existing.category },
               new: {
                 content: buildLoreContent(entry),
@@ -547,103 +465,156 @@ export async function POST(request: Request) {
           }
         }
 
-        // 新词条直接批量写入
-        if (loreNewData.length > 0) {
-          send({ type: "progress", stage: "lore-new", message: `写入新词条... ${loreNewData.length}个` });
-          await prisma.lorebookEntry.createMany({ data: loreNewData as any });
-          created.loreEntries = loreNewData.length;
-        }
-
-        // 合并词条分批并行
+        // 词条合并：分批并行 AI（网络，事务外；仅算结果，不落库）
         const loreTotalBatches = Math.ceil(loreMergePairs.length / BATCH_SIZE);
+        const loreBatches = loreMergePairs.length > 0 ? chunkPairs(loreMergePairs, BATCH_SIZE) : [];
+        let loreAiResults: (Record<string, unknown>[] | null)[] = [];
         if (loreMergePairs.length > 0) {
           send({ type: "progress", stage: "lore-merge", message: `Flash 分批合并词条... 0/${loreTotalBatches} 批 (共${loreMergePairs.length}个)`, batch: 0, totalBatches: loreTotalBatches, done: 0 });
-
-          const loreBatches = chunkPairs(loreMergePairs, BATCH_SIZE);
-
-          const loreBatchResults = await Promise.all(loreBatches.map(async (batch, idx) => {
+          loreAiResults = await Promise.all(loreBatches.map(async (batch, idx) => {
             const aiResult = await mergeOneBatch(batch, globalContext, "lore");
-            if (aiResult && aiResult.length === batch.length) {
-              for (let j = 0; j < batch.length; j++) {
-                const pair = batch[j];
-                const merged = aiResult[j];
-                const existing = await prisma.lorebookEntry.findFirst({
-                  where: { projectId: projectId as string, title: { equals: pair.name, mode: "insensitive" } },
-                });
-                if (existing) {
-                  await prisma.lorebookEntry.update({
-                    where: { id: existing.id },
-                    data: { content: String(merged.content || existing.content), keys: Array.isArray(merged.keys) ? merged.keys : existing.keys } as any,
-                  });
-                }
-              }
-              send({ type: "progress", stage: "lore-merge", message: `第${idx+1}/${loreTotalBatches}批 ✨AI合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
-              return { aiMerged: true, count: batch.length };
-            } else {
-              for (const pair of batch) {
-                const merged = ruleMergeLore(pair.old, pair.new);
-                const existing = await prisma.lorebookEntry.findFirst({
-                  where: { projectId: projectId as string, title: { equals: pair.name, mode: "insensitive" } },
-                });
-                if (existing) {
-                  await prisma.lorebookEntry.update({
-                    where: { id: existing.id },
-                    data: { content: merged.content as string, keys: merged.keys as string[] } as any,
-                  });
-                }
-              }
-              send({ type: "progress", stage: "lore-merge", message: `第${idx+1}/${loreTotalBatches}批 ⚙️规则合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
-              return { aiMerged: false, count: batch.length };
-            }
+            send({ type: "progress", stage: "lore-merge", message: `第${idx + 1}/${loreTotalBatches}批 ${aiResult ? "✨AI" : "⚙️规则"}合并 (${batch.length}词条)`, batch: idx + 1, totalBatches: loreTotalBatches, done: idx + 1 });
+            return aiResult;
           }));
-
-          let loreMergedDone = 0;
-          for (const r of loreBatchResults) {
-            loreMergedDone += r.count;
-          }
-          created.loreMerged = loreMergedDone;
         }
+        created.loreMerged = loreMergePairs.length;
 
-        created.loreEntries += created.loreMerged;
+        // ─── 3. 文风 + 总纲：先算好待写入内容 ───
 
-        // ─── 4. 文风卡 ──────────────────────────────────────────
-
-        if (style && Object.keys(style).length > 0) {
-          send({ type: "progress", stage: "style", message: "写入文风卡..." });
-          await prisma.styleCard.deleteMany({ where: { projectId: projectId as string } });
-          await prisma.styleCard.create({
-            data: {
-              projectId: projectId as string,
-              avgSentenceLength: (style.avgSentenceLength as number) || 25,
-              shortSentenceRatio: (style.shortSentenceRatio as number) || 0.3,
-              longSentenceRatio: (style.longSentenceRatio as number) || 0.15,
-              dialogueRatio: (style.dialogueRatio as number) || 0.35,
-              descriptionRatio: (style.descriptionRatio as number) || 0.25,
-              actionRatio: (style.actionRatio as number) || 0.25,
-              innerThoughtRatio: (style.innerThoughtRatio as number) || 0.15,
-              povType: String(style.povType || "third_person_limited"),
-              narrativeDistance: String(style.narrativeDistance || "medium"),
-              tonalMarkers: (style.tonalMarkers || {}) as any,
-              lexicalFeatures: (style.lexicalFeatures || {}) as any,
-              styleDescription: String(style.styleDescription || ""),
-              sampleText: String(style.sampleText || ""),
-              sourceChapterCount: chapters.length,
-            },
-          });
-          created.styleCard = true;
-        }
-
-        // ─── 5. 总纲 ──────────────────────────────────────────
-
+        const writeStyle = style && Object.keys(style).length > 0;
+        let synopsisText: string | null = null;
         if (updateSynopsis && chapters.length > 0) {
           const first = chapters[0].content;
           if (first && first.length > 100 && !project.synopsis) {
-            await prisma.project.update({
-              where: { id: projectId as string },
-              data: { synopsis: `导入文本开篇：${first.slice(0, 500).replace(/\n/g, " ")}...` },
-            });
+            synopsisText = `导入文本开篇：${first.slice(0, 500).replace(/\n/g, " ")}...`;
           }
         }
+
+        // ─── 4. 整体事务：原子写入全部阶段，失败整体回滚，不留孤儿写（P1 修复）───
+        send({ type: "progress", stage: "commit", message: "原子写入数据库（事务中）...", pct: 95 });
+        await prisma.$transaction(async (tx) => {
+          // 章节节点
+          if (chapters.length > 0) {
+            const volumeMap = new Map<string, string>();
+            if (volumeMode) {
+              const seenVolumes = new Set<string>();
+              for (const ch of chapters) {
+                if (ch.volumeTitle && !seenVolumes.has(ch.volumeTitle)) {
+                  seenVolumes.add(ch.volumeTitle);
+                  const volNode = await tx.storyNode.create({
+                    data: { projectId: projectId as string, parentId: null, type: "volume", title: ch.volumeTitle,
+                      order: seenVolumes.size - 1, status: "completed", wordCount: 0, activeCharacters: [], activeLoreIds: [] },
+                  });
+                  volumeMap.set(ch.volumeTitle, volNode.id);
+                  created.volumes++;
+                }
+              }
+            }
+            for (let i = 0; i < chapters.length; i++) {
+              const ch = chapters[i];
+              await tx.storyNode.create({
+                data: { projectId: projectId as string, parentId: volumeMode && ch.volumeTitle ? volumeMap.get(ch.volumeTitle) || null : null,
+                  type: "chapter", title: ch.chapterTitle || `第${i + 1}章`, order: ch.order ?? i,
+                  status: "completed", content: ch.content, outline: ch.content?.slice(0, 200) || null,
+                  wordCount: ch.wordCount || ch.content?.length || 0, activeCharacters: [], activeLoreIds: [],
+                  notes: "📥 从导入文本自动创建" },
+              });
+              created.chapters++;
+            }
+          }
+
+          // 新角色直接批量写入
+          if (charNewData.length > 0) {
+            await tx.characterCard.createMany({ data: charNewData as any });
+          }
+
+          // 角色合并写回（AI 成功用其合并结果，否则规则合并兜底）
+          for (let bi = 0; bi < charBatches.length; bi++) {
+            const batch = charBatches[bi];
+            const aiResult = charAiResults[bi];
+            for (let j = 0; j < batch.length; j++) {
+              const pair = batch[j];
+              if (aiResult && aiResult.length === batch.length) {
+                const merged = aiResult[j];
+                await tx.characterCard.update({
+                  where: { id: pair.existingId },
+                  data: {
+                    ...merged,
+                    name: pair.name,
+                    projectId: undefined,
+                    relationships: normalizeRelationships((merged as any)?.relationships),
+                  } as any,
+                });
+              } else {
+                const merged = ruleMergeChar(pair.old, pair.new);
+                await tx.characterCard.update({ where: { id: pair.existingId }, data: merged as any });
+              }
+            }
+          }
+
+          // 新词条直接批量写入
+          if (loreNewData.length > 0) {
+            await tx.lorebookEntry.createMany({ data: loreNewData as any });
+          }
+
+          // 词条合并写回
+          for (let bi = 0; bi < loreBatches.length; bi++) {
+            const batch = loreBatches[bi];
+            const aiResult = loreAiResults[bi];
+            for (let j = 0; j < batch.length; j++) {
+              const pair = batch[j];
+              if (aiResult && aiResult.length === batch.length) {
+                const merged = aiResult[j];
+                await tx.lorebookEntry.update({
+                  where: { id: pair.existingId },
+                  data: { content: String(merged.content || ""), keys: Array.isArray(merged.keys) ? merged.keys : [] } as any,
+                });
+              } else {
+                const merged = ruleMergeLore(pair.old, pair.new);
+                await tx.lorebookEntry.update({
+                  where: { id: pair.existingId },
+                  data: { content: merged.content as string, keys: merged.keys as string[] } as any,
+                });
+              }
+            }
+          }
+
+          // 文风卡
+          if (writeStyle) {
+            await tx.styleCard.deleteMany({ where: { projectId: projectId as string } });
+            await tx.styleCard.create({
+              data: {
+                projectId: projectId as string,
+                avgSentenceLength: (style.avgSentenceLength as number) || 25,
+                shortSentenceRatio: (style.shortSentenceRatio as number) || 0.3,
+                longSentenceRatio: (style.longSentenceRatio as number) || 0.15,
+                dialogueRatio: (style.dialogueRatio as number) || 0.35,
+                descriptionRatio: (style.descriptionRatio as number) || 0.25,
+                actionRatio: (style.actionRatio as number) || 0.25,
+                innerThoughtRatio: (style.innerThoughtRatio as number) || 0.15,
+                povType: String(style.povType || "third_person_limited"),
+                narrativeDistance: String(style.narrativeDistance || "medium"),
+                tonalMarkers: (style.tonalMarkers || {}) as any,
+                lexicalFeatures: (style.lexicalFeatures || {}) as any,
+                styleDescription: String(style.styleDescription || ""),
+                sampleText: String(style.sampleText || ""),
+                sourceChapterCount: chapters.length,
+              },
+            });
+            created.styleCard = true;
+          }
+
+          // 总纲
+          if (synopsisText) {
+            await tx.project.update({
+              where: { id: projectId as string },
+              data: { synopsis: synopsisText },
+            });
+          }
+        });
+
+        created.characters = charNewData.length + created.charMerged;
+        created.loreEntries = loreNewData.length + created.loreMerged;
 
         const totalChars = created.characters;
         send({

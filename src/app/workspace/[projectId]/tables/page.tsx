@@ -349,9 +349,9 @@ export default function TablesPage() {
       </main>
 
       {showCreate && (
-        <Modal open onClose={() => setShowCreate(false)} bare closeOnOverlay={false} panelClassName="max-w-md">
+        <Modal open onClose={() => setShowCreate(false)} bare closeOnOverlay={false} panelClassName="max-w-md" labelledBy="create-table-title">
           <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">新建结构化表格</h2>
+            <h2 id="create-table-title" className="text-lg font-semibold mb-4">新建结构化表格</h2>
             <div className="space-y-3">
               <input value={create.name} onChange={(e) => setCreate({ ...create, name: e.target.value })} placeholder="表名，如 妃嫔居住建筑表" className="input-glass w-full rounded-xl px-3 py-2 text-sm" />
               <input value={create.key} onChange={(e) => setCreate({ ...create, key: e.target.value })} placeholder="英文 key，如 woman_live" className="input-glass w-full rounded-xl px-3 py-2 text-sm" />

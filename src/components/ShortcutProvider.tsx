@@ -162,10 +162,10 @@ function ShortcutHelp({
   onClose: () => void;
 }) {
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-sm">
+    <Modal open onClose={onClose} bare panelClassName="max-w-sm" labelledBy="shortcut-modal-title">
       <div className="p-5">
         <div className="mb-3 flex items-start justify-between">
-          <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">键盘快捷键</h3>
+          <h3 id="shortcut-modal-title" className="text-base font-semibold text-[var(--nv-text-primary)]">键盘快捷键</h3>
           <button
             onClick={onClose}
             className="shrink-0 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]"

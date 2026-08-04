@@ -77,10 +77,10 @@ export function PreGenConfirm({
   };
 
   return (
-    <Modal open onClose={onCancel} bare panelClassName="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <Modal open onClose={onCancel} bare panelClassName="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" labelledBy="pregen-confirm-title">
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
+            <h2 id="pregen-confirm-title" className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
               <Icon name="clipboard" size={18} className="text-[var(--nv-primary)]" /> {title || "生成前确认——角色调度"}
             </h2>
             {storyInfo && <p className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">{storyInfo.storyPhase} · {storyInfo.sceneContext || "未确定场景"} · 「{storyInfo.chapterTitle}」</p>}

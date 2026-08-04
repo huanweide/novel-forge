@@ -15,6 +15,26 @@ describe("isLikelyUnsafeRegex", () => {
     expect(isLikelyUnsafeRegex("(x*)*y", "g")).not.toBeNull();
   });
 
+  it("拦截重叠交替类 ReDoS (a|aa)+$", () => {
+    expect(isLikelyUnsafeRegex("(a|aa)+$", "")).not.toBeNull();
+  });
+
+  it("拦截单字符交替 + 重复组 (a|b)+", () => {
+    expect(isLikelyUnsafeRegex("(a|b)+", "g")).not.toBeNull();
+  });
+
+  it("拦截 (x|y)+ 模式", () => {
+    expect(isLikelyUnsafeRegex("(x|y)+$", "")).not.toBeNull();
+  });
+
+  it("拦截 (a|[a-z])+$ 交替 + 字符类", () => {
+    expect(isLikelyUnsafeRegex("(a|[a-z])+$", "g")).not.toBeNull();
+  });
+
+  it("不误伤无重复量词的纯交替 (foo|bar)", () => {
+    expect(isLikelyUnsafeRegex("(foo|bar)", "")).toBeNull();
+  });
+
   it("拦截超大重复次数", () => {
     expect(isLikelyUnsafeRegex("a{999999}", "")).not.toBeNull();
   });

@@ -63,6 +63,7 @@ export async function POST(request: Request) {
     }
 
     // 在事务内创建项目本体 + 全部子表；任一失败自动回滚，不留孤儿
+    // P1-③：显式放宽交互事务超时（默认仅 5s），避免大备份串行 await 整段回滚
     const newPid = await prisma.$transaction(async (tx) => {
       // 1. 项目本体
       const projData = strip(p, [
@@ -80,10 +81,13 @@ export async function POST(request: Request) {
       const created = await tx.project.create({ data: projData as any });
       const pid = created.id;
 
-      // 2. 故事分支（id 重映射）
+      // 2. 故事分支（id 重映射；forkPointNodeId 暂存，待节点 pass 后回填重映射）
       const branchMap: Record<string, string> = {};
+      const branchForkMap: Record<string, string> = {};
       if (want("branches")) {
         for (const b of p.storyBranches || []) {
+          // P1-①：先缓存旧分叉点节点 id，待 nodeMap 建立后再重映射，避免分叉关系丢失
+          branchForkMap[b.id] = b.forkPointNodeId;
           const cb = await tx.storyBranch.create({
             data: { ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId"]), projectId: pid } as any,
           });
@@ -106,6 +110,20 @@ export async function POST(request: Request) {
           if (n.branchId && branchMap[n.branchId]) upd.branchId = branchMap[n.branchId];
           if (Object.keys(upd).length) {
             await tx.storyNode.update({ where: { id: nodeMap[n.id] }, data: upd });
+          }
+        }
+      }
+
+      // 3.5 回填分支分叉点 forkPointNodeId（旧节点 id → 新节点 id 重映射）
+      // P1-①：分支在节点之前创建，此处 nodeMap 已就绪，恢复分叉关系拓扑
+      if (want("branches") && Object.keys(branchForkMap).length) {
+        for (const b of p.storyBranches || []) {
+          const oldFork = branchForkMap[b.id];
+          if (oldFork && nodeMap[oldFork] && branchMap[b.id]) {
+            await tx.storyBranch.update({
+              where: { id: branchMap[b.id] },
+              data: { forkPointNodeId: nodeMap[oldFork] } as any,
+            });
           }
         }
       }
@@ -166,7 +184,7 @@ export async function POST(request: Request) {
       }
 
       return pid;
-    });
+    }, { timeout: 60000 });
 
     return NextResponse.json({ success: true, id: newPid });
   } catch (err) {

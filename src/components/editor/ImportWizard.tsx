@@ -545,10 +545,10 @@ export function ImportWizard({
   // ─── 渲染 ──────────────────────────────────────────────
 
   return (
-    <Modal open onClose={() => { if (step === "input" || step === "done") onClose(); }} bare panelClassName="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <Modal open onClose={() => { if (step === "input" || step === "done") onClose(); }} bare panelClassName="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" labelledBy="import-wizard-title">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
-          <h2 className="text-lg font-semibold">
+          <h2 id="import-wizard-title" className="text-lg font-semibold">
             <Icon name="download" size={15} className="inline-block align-text-bottom shrink-0" /> {step === "input" ? "导入文本" : step === "parsing" ? "AI 分析中..." : step === "preview" ? "预览确认" : step === "committing" ? "写入中..." : "导入完成"}
           </h2>
           <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"><Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" /></button>

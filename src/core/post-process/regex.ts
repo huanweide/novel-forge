@@ -31,7 +31,8 @@ export function isLikelyUnsafeRegex(pattern: string, flags = ""): string | null 
   }
 
   // 用栈跟踪分组，检测「组内含量词 + 组外紧跟重复量词」的嵌套量词结构
-  const stack: { hasQuantInside: boolean }[] = [];
+  // P1-②：同时跟踪组内交替，检测「重叠交替 + 重复组」类灾难性回溯
+  const stack: { hasQuantInside: boolean; hasAlternation: boolean }[] = [];
   let inClass = false;
   for (let i = 0; i < pattern.length; i++) {
     const ch = pattern[i];
@@ -50,11 +51,16 @@ export function isLikelyUnsafeRegex(pattern: string, flags = ""): string | null 
     if (ch === "(") {
       // 跳过 (?: (?= (?! (?<= (?<! 等非捕获/断言组标记，它们后面的 ? 不是重复量词
       if (pattern[i + 1] === "?") {
-        stack.push({ hasQuantInside: false });
+        stack.push({ hasQuantInside: false, hasAlternation: false });
         // 标记整个 ?... 已被消费，循环会 i++ 到下一组字符
         continue;
       }
-      stack.push({ hasQuantInside: false });
+      stack.push({ hasQuantInside: false, hasAlternation: false });
+      continue;
+    }
+    if (ch === "|") {
+      // 记录当前组内（栈顶）存在交替分支
+      if (stack.length) stack[stack.length - 1].hasAlternation = true;
       continue;
     }
     if (ch === ")") {
@@ -62,8 +68,14 @@ export function isLikelyUnsafeRegex(pattern: string, flags = ""): string | null 
       const next = pattern[i + 1];
       // 仅 * + { 视为重复量词（? 最多匹配一次，风险低，排除以避免误伤 (?:x)?）
       const repeated = next === "*" || next === "+" || next === "{";
-      if (top && top.hasQuantInside && repeated) {
-        return "检测到嵌套量词，存在灾难性回溯风险";
+      if (top && repeated) {
+        // 嵌套量词（组内含量词）或被重复组内含重叠交替，均可能触发灾难性回溯
+        if (top.hasQuantInside) {
+          return "检测到嵌套量词，存在灾难性回溯风险";
+        }
+        if (top.hasAlternation) {
+          return "检测到重复组内含交替（重叠分支），存在灾难性回溯风险";
+        }
       }
       continue;
     }

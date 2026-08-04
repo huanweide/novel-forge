@@ -14,6 +14,12 @@ vi.mock("@/lib/prisma", () => ({
         return { id: args.where.id, ...(args.data || {}) };
       }),
     },
+    storyNode: {
+      findMany: vi.fn(async () => [
+        { id: "c1", order: 1, title: "第一章", content: CHAPTER },
+        { id: "c2", order: 2, title: "第二章", content: "第二章 少年远行，踏入江湖。" },
+      ]),
+    },
   },
 }));
 
@@ -26,7 +32,23 @@ vi.mock("@/core/llm/client", () => ({
   buildProjectOverrides: vi.fn(() => ({})),
 }));
 
-import { babyloreFill } from "@/core/babylore/fill";
+// mock 文件系统，隔离「已填标记」持久化（.runtime/babylore-filled.json），避免跨测试串味
+vi.mock("fs", () => {
+  const store: Record<string, string> = {};
+  const mocked = {
+    readFileSync: vi.fn((p: string) => {
+      if (store[p] !== undefined) return store[p];
+      throw new Error("ENOENT");
+    }),
+    writeFileSync: vi.fn((p: string, d: string) => {
+      store[p] = d;
+    }),
+    mkdirSync: vi.fn(),
+  };
+  return { ...mocked, default: mocked };
+});
+
+import { babyloreFill, babyloreFillAll } from "@/core/babylore/fill";
 
 function makeTable() {
   return {
@@ -106,5 +128,50 @@ describe("P1-1 update 未命中且非身份列 → 不静默建伪行", () => {
     expect(updateCalls.length).toBe(1);
     const written = updateCalls[0].data.rows as any[];
     expect(written.some((row: any) => row.name === "新角色")).toBe(true);
+  });
+});
+
+// ─── P1-1 babyloreFillAll 不得恒返回 ok:true（静默假完成）───
+// 验证汇总态真实反映各章 applied/ok：全章失败 → ok:false；部分失败 → ok:false；
+// 全部已填跳过 → ok:true（正常无需重试）。
+describe("P1-1 babyloreFillAll 汇总态真实反映成败", () => {
+  it("全章填表失败（空 ops）→ 返回 ok:false、failed=章数、带 error（非静默假完成）", async () => {
+    mockFetch(JSON.stringify({ operations: [] }));
+    const r = await babyloreFillAll("proj-x");
+    expect(r.ok).toBe(false);
+    expect(r.applied).toBe(0);
+    expect(r.processed).toBe(2);
+    expect(r.failed).toBe(2);
+    expect(r.error).toBeTruthy();
+  });
+
+  it("有章成功、有章失败 → 仍 ok:false 且暴露失败章数", async () => {
+    let call = 0;
+    (globalThis as any).fetch = vi.fn(async () => {
+      call++;
+      const content =
+        call === 1
+          ? JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "真地点" } }] })
+          : JSON.stringify({ operations: [] });
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }),
+      };
+    });
+    const r = await babyloreFillAll("proj-x");
+    expect(r.failed).toBe(1);
+    expect(r.applied).toBe(1);
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain("1/2");
+  });
+
+  it("全部章节已填（跳过）→ ok:true 且 applied:0（正常无需重试，非假完成）", async () => {
+    mockFetch(JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "全填地点" } }] }));
+    await babyloreFillAll("proj-x"); // 先填满，持久化已填标记
+    const r = await babyloreFillAll("proj-x"); // 再跑，应全部跳过
+    expect(r.ok).toBe(true);
+    expect(r.processed).toBe(0);
+    expect(r.skipped).toBe(2);
+    expect(r.applied).toBe(0);
   });
 });

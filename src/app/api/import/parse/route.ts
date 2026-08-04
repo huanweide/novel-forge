@@ -159,6 +159,25 @@ function chunkByBudget(text: string, budget: number, overlap: number): string[] 
   return chunks;
 }
 
+/**
+ * P1 修复：世界/文风提取长文覆盖。
+ * 分块模式下原实现只喂 `text.slice(0, 16000)`，>16k 字的长篇后段设定永不进入 LLM。
+ * 改为头/中/尾三段采样拼接：头 16k +（长文）中段 14k + 尾 14k，确保后段设定也被抽取，
+ * 而非仅靠 worldFailed 静默缺失。仍标注 worldCoverage="sampled" 供前端提示「非全文」。
+ */
+function buildLoreSample(text: string): string {
+  const HEAD = CHUNK_CHAR_BUDGET; // 16000
+  const SEG = 14000;
+  if (text.length <= HEAD) return text;
+  const parts: string[] = [text.slice(0, HEAD)];
+  if (text.length > HEAD * 2) {
+    const mid = Math.floor(text.length / 2);
+    parts.push(text.slice(mid - SEG / 2, mid + SEG / 2));
+  }
+  parts.push(text.slice(Math.max(HEAD, text.length - SEG)));
+  return parts.join("\n\n【…中部内容已采样，仅抽取首尾与中段设定…】\n\n");
+}
+
 // ─── API 调用 ──────────────────────────────────
 
 interface CallConfig { baseURL: string; apiKey: string; model: string; label: string; }
@@ -385,9 +404,9 @@ ${chunkText}
 
         // B路：世界设定+文风——分块模式也执行（独立调用，不跳过）
         if (!isCharOnly) {
-          // 分块模式：用全文前16000字做世界+风格提取；非分块模式用完整文本
-          const loreText = needsChunking ? text.slice(0, 16000) : text;
-          const chunkNote = needsChunking ? "(基于文本前16000字)" : "";
+          // 分块模式：长文按头/中/尾采样覆盖后段设定；非分块模式用完整文本（P1 修复）
+          const loreText = needsChunking ? buildLoreSample(text) : text;
+          const chunkNote = needsChunking ? "(长文已按头/中/尾采样抽取)" : "";
 
           const lorePrompt = `从设定文本中提取世界设定词条和写作风格。${chunkNote}
 
@@ -448,7 +467,7 @@ ${loreText}
           extractedCharacters: finalChars,
           extractedLoreEntries: finalLore,
           extractedStyle: style,
-          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, worldFailed, chunked: needsChunking },
+          meta: { importMode, chapterCount: 0, characterCount: finalChars.length, loreCount: finalLore.length, inputTokens: countTokens(text), rawCharCount: text.length, modelUsed: model, extractTimeSeconds: parseFloat(totalSec), totalTimeSeconds: parseFloat(totalSec), estimatedTotal: estimatedCount, failedChunks, worldFailed, chunked: needsChunking, worldCoverage: needsChunking ? "sampled" : "full" },
         });
         if (taskId) {
           void prisma.importTask.update({ where: { id: taskId }, data: { status: importStatus, progress: 100, result: { characters: finalChars, lore: finalLore, style, failedChunks, worldFailed } as any } }).catch(() => {});

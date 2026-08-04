@@ -2,9 +2,14 @@ import { describe, it, expect, vi } from "vitest";
 
 // 模拟服务端依赖，使 game-engine 的纯逻辑可在单测中导入
 vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    gameSession: { findUnique: vi.fn() },
-    gameState: { findMany: vi.fn() },
+    prisma: {
+    gameSession: { findUnique: vi.fn(), update: vi.fn() },
+    gameState: { findMany: vi.fn(), create: vi.fn() },
+    project: { findUnique: vi.fn() },
+    storyNode: { findUnique: vi.fn() },
+    characterCard: { findMany: vi.fn() },
+    lorebookEntry: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -14,8 +19,9 @@ vi.mock("@/core/llm/client", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
-import { getSessionSummary, applyItemChanges } from "./game-engine";
-import { reconcileFromSummary } from "./reconcile";
+import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { getSessionSummary, applyItemChanges, processGameTurn } from "./game-engine";
+import { reconcileFromSummary, applyFrontendItemChanges } from "./reconcile";
 
 // ─── P1：背包变动按 name+owner 隔离 ───────────────────────────
 describe("applyItemChanges —— 按 name+owner 隔离（阿游 P1）", () => {
@@ -136,5 +142,159 @@ describe("abort 后对账回拉（阿游 P0-2）", () => {
     expect(frontend.items.length).toBe(2);
     expect(frontend.items.map((i: any) => i.owner).sort()).toEqual(["主角", "李尘"]);
     expect(frontend.turns.length).toBe(2);
+  });
+});
+
+// ─── P0-1：abort 信号透传 —— 停止后不提交本轮，对账读到 abort 前权威态 ──
+describe("abort 信号透传（阿游 P0-1）", () => {
+  const baseSession = {
+    id: "s1",
+    projectId: "p",
+    nodeId: "n",
+    status: "active",
+    currentRound: 1,
+    totalWords: 10,
+    maxWords: 3000,
+    plotProgress: 0,
+    states: [
+      { round: 1, narrative: "x", playerAction: "a", options: [], entities: [], items: [], wordCount: 10 },
+    ],
+  };
+
+  it("signal 已 abort 时 processGameTurn 不调用 $transaction（丢弃本轮）", async () => {
+    (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
+    (prisma.gameState.findMany as any).mockResolvedValue(baseSession.states);
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p", name: "书" });
+    (prisma.storyNode.findUnique as any).mockResolvedValue({ id: "n", title: "章", content: "" });
+    (prisma.characterCard.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findMany as any).mockResolvedValue([]);
+    const txCalls: any[] = [];
+    (prisma.$transaction as any).mockImplementation(async (ops: any) => { txCalls.push(ops); return []; });
+    (getEffectiveConfig as any).mockResolvedValue({ writerModel: "m" });
+    (createLLMClient as any).mockReturnValue({
+      chatStream: async function* () { yield { content: "测试叙事" }; },
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+    const gen = processGameTurn(
+      { sessionId: "s1", actionType: "custom", actionText: "行动" },
+      controller.signal
+    );
+    for await (const _ of gen) { /* 排空生成器 */ }
+
+    expect(txCalls.length).toBe(0);
+  });
+
+  it("signal 未 abort 时正常提交（回归保护）", async () => {
+    (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
+    (prisma.gameState.findMany as any).mockResolvedValue(baseSession.states);
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p", name: "书" });
+    (prisma.storyNode.findUnique as any).mockResolvedValue({ id: "n", title: "章", content: "" });
+    (prisma.characterCard.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findFirst as any).mockResolvedValue(null);
+    const txCalls: any[] = [];
+    (prisma.$transaction as any).mockImplementation(async (ops: any) => { txCalls.push(ops); return []; });
+    (getEffectiveConfig as any).mockResolvedValue({ writerModel: "m" });
+    (createLLMClient as any).mockReturnValue({
+      chatStream: async function* () { yield { content: "测试叙事" }; },
+    });
+
+    const gen = processGameTurn(
+      { sessionId: "s1", actionType: "custom", actionText: "行动" }
+    );
+    for await (const _ of gen) { /* 排空 */ }
+
+    expect(txCalls.length).toBe(1);
+  });
+
+  it("abort 后对账：getSessionSummary 读到 abort 前权威态（currentRound 仍为 1，未推进）", async () => {
+    (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
+    const summary = await getSessionSummary("s1");
+    expect(summary.currentRound).toBe(1);
+  });
+});
+
+// ─── P1-1：前端不可变背包更新（applyFrontendItemChanges）──────────
+describe("applyFrontendItemChanges —— 不可变更新（阿游 P1-1）", () => {
+  const prev: any[] = [
+    { name: "怀表", quantity: 2, category: "other", source: "s", acquiredRound: 1, owner: "主角" },
+  ];
+
+  it("gain 后返回新数组，且原 state.items 内部对象未被原地改写", () => {
+    const clone = prev.map((i) => ({ ...i }));
+    const res = applyFrontendItemChanges(clone, [{ operation: "gain", name: "怀表", quantity: 3, owner: "主角" }], 2);
+    expect(res).not.toBe(clone);
+    expect(res[0]).not.toBe(clone[0]);
+    expect(res[0].quantity).toBe(5);
+    // 原对象保持不变
+    expect(clone[0].quantity).toBe(2);
+  });
+
+  it("consume 跨 owner 隔离：消耗李尘怀表不动主角怀表", () => {
+    const items: any[] = [
+      { name: "怀表", quantity: 2, category: "other", source: "s", acquiredRound: 1, owner: "主角" },
+      { name: "怀表", quantity: 1, category: "other", source: "s", acquiredRound: 1, owner: "李尘" },
+    ];
+    const res = applyFrontendItemChanges(items, [{ operation: "consume", name: "怀表", quantity: 1, owner: "李尘" }], 2);
+    expect(res.find((i: any) => i.owner === "李尘")).toBeUndefined();
+    expect(res.find((i: any) => i.owner === "主角")?.quantity).toBe(2);
+    // 原数组未被污染
+    expect(items[0].quantity).toBe(2);
+    expect(items[1].quantity).toBe(1);
+  });
+});
+
+// ─── P1-2：getSessionSummary 实体按 name 去重 ────────────────────
+describe("getSessionSummary —— 实体跨轮去重（阿游 P1-2）", () => {
+  it("同一实体在多轮出现只保留末轮快照，不重复累积", async () => {
+    const states = [
+      {
+        round: 1,
+        narrative: "a",
+        playerAction: "a",
+        options: [],
+        entities: [{ name: "李尘", type: "角色", description: "旧", firstSeenRound: 1 }],
+        items: [],
+        wordCount: 5,
+      },
+      {
+        round: 2,
+        narrative: "b",
+        playerAction: "b",
+        options: [],
+        entities: [
+          { name: "李尘", type: "角色", description: "新", firstSeenRound: 2 },
+          { name: "王五", type: "角色", description: "w", firstSeenRound: 2 },
+        ],
+        items: [],
+        wordCount: 5,
+      },
+      {
+        round: 3,
+        narrative: "c",
+        playerAction: "c",
+        options: [],
+        entities: [{ name: "李尘", type: "角色", description: "最新", firstSeenRound: 3 }],
+        items: [],
+        wordCount: 5,
+      },
+    ];
+    (prisma.gameSession.findUnique as any).mockResolvedValue({
+      id: "s2",
+      projectId: "p",
+      nodeId: "n",
+      status: "active",
+      currentRound: 3,
+      totalWords: 15,
+      maxWords: 3000,
+      plotProgress: 0,
+      states,
+    });
+    const summary = await getSessionSummary("s2");
+    expect(summary.entities.length).toBe(2);
+    const li = summary.entities.find((e) => e.name === "李尘");
+    expect(li?.description).toBe("最新"); // 取末轮
   });
 });

@@ -414,11 +414,12 @@ export function CenterPanel({
     {showRevisions && selectedNode && (
       <Modal open={showRevisions} onClose={() => setShowRevisions(false)} bare
         panelClassName="w-[760px] max-w-[94vw] max-h-[88vh] flex flex-col"
-        closeOnOverlay={false}>
+        closeOnOverlay={false}
+        labelledBy="revisions-modal-title">
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--nv-border-2)] shrink-0">
           <div className="flex items-center gap-2">
             <Icon name="history" size={16} className="text-[var(--nv-primary)]" />
-            <h3 className="text-sm font-semibold text-[var(--nv-text-primary)]">历史版本 · {selectedNode.title}</h3>
+            <h3 id="revisions-modal-title" className="text-sm font-semibold text-[var(--nv-text-primary)]">历史版本 · {selectedNode.title}</h3>
           </div>
           <button onClick={() => setShowRevisions(false)} aria-label="关闭"
             className="rounded-lg p-1.5 text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors">

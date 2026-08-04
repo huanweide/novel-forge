@@ -2,6 +2,18 @@
 
 ---
 
+## v0.46.70 — 2026-08-04
+**会员股东 Round 7 实现：abort 信号透传自愈 + 幂等锁空载荷 DoS 修复 + OOC 词条误报回归 + 填表假完成/不可变更新 + 导入分叉重映射/正则重叠交替/事务超时 + 19 处弹窗 aria（tsc 零错误）**
+
+- abort 信号透传自愈（阿游 P0）：game-engine processGameTurn 收 AbortSignal，提交前 aborted 则不提交轮次/背包；前端停止后拉 GET summary 读权威态，灭流式中断前后端重新错位
+- 幂等锁空载荷 DoS 修复（磐石 P0）：commit 空载荷校验移到加锁前，400 提前返回不再阻塞合法写入
+- OOC 词条误报回归（青砚 P1）：trigger knownNames 补章节词条/技能/功法长名，灭「李星云剑法」内 3字角色名误报 OOC
+- 填表假完成 + 游戏健壮性（墨白/阿游 P1）：babyloreFillAll 失败真返 ok:false；前端背包不可变更新 + entities 去重
+- 导入/正则工程加固（工坊/磐石 P1）：forkPoint 重映射恢复分叉；交互事务 timeout 60s；regex 防 (a|aa)+ 重叠交替；world 长文三段采样；commit 整体事务
+- 弹窗无障碍补全（清览 P1）：19 处裸弹窗补 aria 关联（StyleEditor 两状态 + 17 处标题关联）
+
+---
+
 ## v0.46.69 — 2026-08-04
 **会员股东 Round 6 实现：3字+名最长匹配优先 + 游戏流式中断自愈 + 填表空章节静默丢数据 + 连词/介词高亮 + 中文复合数字 + 背包owner隔离 + import事务幂等 + 正则ReDoS防护 + Modal无障碍（tsc 零错误）**
 

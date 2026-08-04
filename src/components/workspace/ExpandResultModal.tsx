@@ -61,10 +61,10 @@ export function ExpandResultModal({
 
       {/* 扩展结果弹窗 */}
       {result && (
-        <Modal open onClose={onClose} bare panelClassName="w-[480px] max-h-[80vh] flex flex-col overflow-hidden">
+        <Modal open onClose={onClose} bare panelClassName="w-[480px] max-h-[80vh] flex flex-col overflow-hidden" labelledBy="expand-result-title">
             {/* 头部 */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-1)]">
-              <h3 className="text-base font-bold text-[var(--nv-text-primary)]">
+              <h3 id="expand-result-title" className="text-base font-bold text-[var(--nv-text-primary)]">
                 {result.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-[var(--nv-success)]" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
               </h3>
               <button onClick={onClose} className="text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] text-lg leading-none"><Icon name="x" size={12} className="align-middle" /></button>

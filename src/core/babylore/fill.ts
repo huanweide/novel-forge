@@ -35,6 +35,7 @@ export interface FillResult {
 
 export interface FillAllResult {
   ok: boolean;
+  failed: number; // 未达完成门槛（ok && applied>0）的章节数，供前端呈现「部分失败/可重试」
   processed: number; // 实际填表章节数
   skipped: number; // 因已填而跳过的章节数（防重复）
   operations: number;
@@ -434,6 +435,7 @@ export async function babyloreFillAll(
   } catch (e) {
     return {
       ok: false,
+      failed: 0,
       processed: 0,
       skipped: 0,
       operations: 0,
@@ -463,6 +465,7 @@ export async function babyloreFillAll(
   if (dbTables.length === 0) {
     return {
       ok: false,
+      failed: 0,
       processed: 0,
       skipped: 0,
       operations: 0,
@@ -490,6 +493,7 @@ export async function babyloreFillAll(
   let skipped = 0;
   let operations = 0;
   let applied = 0;
+  let failedChapters = 0; // 未达 Round6 完成门槛（ok && applied>0）的章节数
   const warnings: string[] = [];
 
   for (const ch of chapters) {
@@ -509,17 +513,42 @@ export async function babyloreFillAll(
       // 增量落盘：每填完一章即持久化，避免中途超时/崩溃丢失全部进度（磐石 P0 防丢进度）
       filledMap[projectId] = Array.from(filledSet);
       saveFilled(filledMap);
+    } else {
+      // 该章未达完成门槛，计入失败章，留待重试（P1-1：不得静默吞掉）。
+      failedChapters++;
     }
   }
 
   const selfCheck = await selfCheckFill(projectId);
 
+  // P1-1：babyloreFillAll 不得恒返回 ok:true（静默假完成）。
+  // 与 Round6 的完成门槛 ok && applied>0 保持一致：仅在确有章节成功落地、且没有任何章节失败时为真；
+  // 任一章失败（failedChapters>0）或零落地（applied=0）均判失败并带 error 摘要，促使上游重试而非误判已完成。
+  let ok = true;
+  let error: string | undefined;
+  if (processed === 0 && skipped === 0) {
+    // 项目既无已填也无待填章节（无正文或表格为空），属异常，报失败避免静默空跑。
+    ok = false;
+    error = "没有可填表的章节（项目无正文章节或暂无结构化表格）";
+  } else if (processed === 0 && skipped > 0) {
+    // 全部章节已填，属正常无需重试，视为成功（非静默假完成）。
+    ok = true;
+  } else if (failedChapters > 0) {
+    ok = false;
+    error = `有 ${failedChapters}/${processed} 个章节填表失败，未全部完成（已落 ${applied} 条事实），请检查 LLM 配置/网络后重试`;
+  } else if (applied === 0) {
+    ok = false;
+    error = `已处理 ${processed} 章但均未落地任何事实（applied=0），请检查 LLM 返回内容`;
+  }
+
   return {
-    ok: true,
+    ok,
+    failed: failedChapters,
     processed,
     skipped,
     operations,
     applied,
+    error,
     warnings,
     selfCheck,
   };

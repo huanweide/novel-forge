@@ -80,11 +80,11 @@ export function AutomationSettingsDialog({
   };
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+    <Modal open onClose={onClose} bare panelClassName="max-w-lg max-h-[90vh] flex flex-col overflow-hidden" labelledBy="automation-settings-title">
       <div className="flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
+            <h2 id="automation-settings-title" className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
               <Icon name="bot" size={18} className="text-[var(--nv-creative)]" /> 自动化填表设置
             </h2>
             <p className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">《{projectName}》</p>

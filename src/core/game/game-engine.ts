@@ -123,7 +123,14 @@ export async function getSessionSummary(sessionId: string): Promise<GameSessionS
   if (!session) throw new Error(`游戏会话 ${sessionId} 不存在`);
 
   const allNarrative = session.states.map((s) => s.narrative).filter(Boolean).join("\n\n");
-  const entities = session.states.flatMap((s) => (s.entities as unknown as any[]) || []) as GameEntity[];
+  // 合并实体并按 name 去重（取末轮快照，阿游 P1-2），避免跨轮重复累积导致实体面板数据膨胀。
+  const entityMap = new Map<string, GameEntity>();
+  for (const s of session.states) {
+    for (const e of (s.entities as unknown as any[]) || []) {
+      if (e?.name) entityMap.set(e.name, e as GameEntity);
+    }
+  }
+  const entities = Array.from(entityMap.values());
   const items = session.states.length > 0
     ? ((session.states[session.states.length - 1].items as unknown as any[]) || []) as GameItem[]
     : [];
@@ -213,7 +220,7 @@ async function loadGameContext(projectId: string, nodeId: string, session: any):
  * 处理一个游戏回合——流式版本
  * 返回一个 AsyncGenerator，逐 token 产出 SSE 事件
  */
-export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
+export async function* processGameTurn(input: GameActionInput, signal?: AbortSignal): AsyncGenerator<{
   type: string;
   content?: string;
   narrative?: string;
@@ -271,6 +278,8 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
       maxTokens: 800,
     });
     for await (const chunk of stream) {
+      // 流式期用户停止：abort 信号透传进来后立即放弃本轮，停止消费并准备丢弃提交（阿游 P0-1）
+      if (signal?.aborted) return;
       if (chunk.content) {
         fullResponse += chunk.content;
         yield { type: "token", content: chunk.content };
@@ -315,6 +324,13 @@ export async function* processGameTurn(input: GameActionInput): AsyncGenerator<{
       firstSeenRound: session.currentRound + 1,
     })),
   ];
+
+  // 持久化前最终核对 abort：若用户已在流式期停止（signal 透传，阿游 P0-1），
+  // 此处丢弃本轮——不提交 gameState/session，不创建孤儿世界卡词条，与「停止=放弃本轮」语义一致，
+  // 后端权威态停在 N，前端 abort 后 GET /api/game/state 对账读到 N，前后端不再错位。
+  if (signal?.aborted) {
+    return;
+  }
 
   // 6.5 世界卡物品联动：游戏新获得的物品，若无对应 item 类世界书词条则自动补充（保留已有物品词条）
   for (const change of parsed.itemChanges) {

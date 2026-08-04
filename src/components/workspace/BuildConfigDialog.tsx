@@ -59,10 +59,10 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
   const filteredTags = STYLE_TAGS.filter((t) => t.includes(tagSearch.trim()));
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh] overflow-y-auto" closeOnOverlay={false}>
+    <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh] overflow-y-auto" closeOnOverlay={false} labelledBy="build-config-title">
       <div className="p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+          <h2 id="build-config-title" className="text-lg font-semibold flex items-center gap-2">
             <Icon name="settings" size={18} className="text-[var(--nv-primary)]" /> 项目设定
           </h2>
             <button onClick={onClose} className="btn-ghost rounded-lg p-1.5">

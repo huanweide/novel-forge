@@ -477,9 +477,9 @@ export default function Workshop() {
       </main>
 
       {showUpload && (
-        <Modal open onClose={() => setShowUpload(false)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+        <Modal open onClose={() => setShowUpload(false)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto" labelledBy="upload-preset-title">
           <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">上传预设</h2>
+          <h2 id="upload-preset-title" className="text-lg font-semibold mb-4">上传预设</h2>
 
           {/* AI 丰满预设：选好类型 → 大白话描述 → AI 自动填满下面字段 → 审阅后发布 */}
           <div className="rounded-xl border border-dashed border-[var(--nv-primary)]/40 bg-[var(--nv-primary)]/5 p-3 space-y-2 mb-4">

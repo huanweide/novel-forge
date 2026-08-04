@@ -25,18 +25,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.69";
+export const LATEST_VERSION = "v0.46.70";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "3字+角色名最长匹配优先（青砚 P0-1）：撤销 Round5 前缀守卫改最长匹配优先，中文常规行文（李星云看见/碎玉轩内）恢复命中、世界书召回不再断裂；靠 knownNames 吞并灭「李星云剑法」误命中「李星云」",
-  "游戏流式中断自愈（阿游 P0-2）：新增 GET /api/game/state 权威对账 + reconcile，abort/断网后前端整体覆盖轮次/背包，灭前后端永久错位",
-  "填表空章节静默丢数据（墨白 P0-3）：完成门槛 ok→ok&&applied>0，空 ops/全失效章不标已填、可重试，灭防重复反噬的静默丢数据",
-  "全透镜 P1 收口：连词/介词高亮、中文复合数字、背包 owner 隔离、import 事务回滚幂等、正则 ReDoS 防护、Modal aria-label 无障碍、ImportWizard 消费导入状态、commit 幂等锁、分块字符预算",
+  "abort 信号透传自愈（阿游 P0）：game-engine processGameTurn 收 AbortSignal，提交前若 aborted 则不提交轮次/背包；前端停止后拉 GET summary 读权威态，灭流式中断前后端重新错位",
+  "幂等锁空载荷 DoS 修复（磐石 P0）：commit 空载荷校验移到加锁前，400 提前返回不再阻塞合法写入，灭锁变拒绝服务",
+  "OOC 词条误报回归（青砚 P1）：trigger knownNames 补章节词条/技能/功法长名，灭「李星云剑法」内 3字角色名误报 OOC",
+  "全透镜 P1 收口：babyloreFillAll 失败真返 ok:false、前端不可变更新+entities 去重、world 长文分块采样、commit 整体事务、19 处弹窗 aria 关联、forkPoint 重映射、正则重叠交替 (a|aa)+ 防护、交互事务超时 60s",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.70",
+    date: "2026-08-04",
+    title: "会员股东 Round 7 实现：abort 信号透传自愈 + 幂等锁空载荷 DoS 修复 + OOC 词条误报回归 + 填表假完成/不可变更新 + 导入分叉重映射/正则重叠交替/事务超时 + 19 处弹窗 aria（tsc 零错误）",
+    sections: [
+      {
+        label: "abort 信号透传自愈（阿游 P0）",
+        items: [
+          "game-engine processGameTurn 增 signal 形参，流式循环与 $transaction 提交前 if(signal.aborted) return 丢弃本轮；action/route 透传 req.signal；前端 handleStop 改 async，abort 后 await reconcileWithBackend 读权威态整体覆盖，灭流式中断前后端重新错位（Round6 P0-2 想灭的故障重现）",
+        ],
+      },
+      {
+        label: "幂等锁空载荷 DoS 修复（磐石 P0）",
+        items: [
+          "commit/route 空载荷校验（chapters/characters/loreEntries 全空→400）移到 commitLocks.set 之前，400 提前返回不再经过锁；合法写入不被 300s 阻塞；finally 释放作兜底",
+        ],
+      },
+      {
+        label: "OOC 词条误报回归（青砚 P1）",
+        items: [
+          "trigger.findCharacterByName 新增 extraKnownNames，把同章节词条/技能/功法/地点等长名候选并入 knownNames；matchNameStrict 原支持 knownNames 更长名前缀吞并，现「李星云剑法」内「李星云」被吞并不误报 OOC，「李星云看见」仍正常",
+        ],
+      },
+      {
+        label: "填表假完成 + 游戏健壮性（墨白/阿游 P1）",
+        items: [
+          "babyloreFillAll 汇总各章 applied/ok，任一章失败或 applied=0 返回 ok:false（不恒 true），灭静默假完成；前端背包更新改纯函数不可变写法（reconcile.applyFrontendItemChanges），entities 跨轮 flatMap 按 name 去重",
+        ],
+      },
+      {
+        label: "导入/正则工程加固（工坊/磐石 P1）",
+        items: [
+          "import/route 分支创建缓存旧 forkPointNodeId 并回填重映射，恢复分叉拓扑；交互事务显式 timeout:60000，大备份不再被 5s 默认超时回滚；regex isLikelyUnsafeRegex 增补重叠交替检测（(a|aa)+/(a|b)+ 均拦）；parse world/文风改头中尾三段采样拼接（>32k 取中段），长文后段设定进入 LLM；commit 多步写包 $transaction 整体回滚",
+        ],
+      },
+      {
+        label: "弹窗无障碍补全（清览 P1）",
+        items: [
+          "Grep 全项目裸弹窗，19 处补 aria 关联：StyleEditor loading/error 用 ariaLabel；17 处带可见标题弹窗补 labelledBy + 标题加 id（更新公告/上传预设/新建表格/游戏教程/历史版本/项目设定/快捷键/自动化/批量导入/导入/扩展结果/生成前确认/配置中心/规则/故事线/工具箱）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.69",
     date: "2026-08-04",

@@ -25,11 +25,11 @@ export function ToolboxDialog({ items, onClose }: { items: ToolboxItem[]; onClos
   const categories: ToolboxCategory[] = ["write", "generate", "analyze"];
 
   return (
-    <Modal open onClose={onClose} bare panelClassName="max-h-[85vh] w-full max-w-3xl overflow-y-auto">
+    <Modal open onClose={onClose} bare panelClassName="max-h-[85vh] w-full max-w-3xl overflow-y-auto" labelledBy="toolbox-dialog-title">
       <div className="p-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">工具箱</h3>
+            <h3 id="toolbox-dialog-title" className="text-base font-semibold text-[var(--nv-text-primary)]">工具箱</h3>
             <p className="mt-0.5 text-xs text-[var(--nv-text-tertiary)]">
               把分散在各处的写作能力收拢到一处，按用途快速找到入口。
             </p>
