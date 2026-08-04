@@ -560,7 +560,7 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
       }
     })();
     if (!renderer) return;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setClearColor(0x0a2a55, 1);
     mount.appendChild(renderer.domElement);
     const cv = renderer.domElement;
@@ -582,9 +582,12 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(72, 46, 140, 90), seaMat);
     sea.rotation.x = -Math.PI / 2; scene.add(sea);
 
+    // 静态星海：限制 3D 船数降低密度与卡顿；向日葵(phyllotaxis)分布均匀散开、互不重叠
+    const MAX_BOATS = 12;
+    const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // ≈2.39996 黄金角
+    const shown = list.slice(0, MAX_BOATS);
     const boats: Boat[] = [];
-    const N = list.length;
-    list.forEach((p, i) => {
+    shown.forEach((p, i) => {
       const type = boatTypeFor(p.genre);
       const hullColor = boatHullColor(type, i);
       const scale = clamp(0.95 + (p.targetWordCount ?? 60000) / 110000, 0.95, 1.9);
@@ -603,13 +606,17 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
       group.scale.setScalar(scale);
       scene.add(group);
 
-      // 每艘船独立巡游轨道（半径/角速度各异，但有界不远漂）
-      const orbitR = 3.4 + (i % 4) * 1.15;
-      const orbitSpeed = (0.045 + (i % 3) * 0.028) * (i % 2 === 0 ? 1 : -1);
+      // 静态布局：向日葵螺旋（半径随 sqrt(i) 增大、角度按黄金角递增）→ 天然均匀分散、不会聚堆
+      // orbitSpeed=0 → 不再绕圈巡游；basePos 返回固定锚点，renderOnce 只随波浪轻浮、不水平移动
+      const orbitR = 4.2 + Math.sqrt(i) * 1.7;
+      const orbitPhase = i * GOLDEN;
+      const orbitSpeed = 0;
+      // 船头朝外（指向圆心反方向），静态摆放更有「停泊」感
+      group.rotation.y = -orbitPhase;
       boats.push({
         id: p.id, name: p.name, type, hullColor, tier, group, bowLocal: built.bowLocal,
-        scale, bright, bornAt: i * 0.35, landed: false, phase: Math.random() * Math.PI * 2,
-        orbitR, orbitSpeed, orbitPhase: i * 0.95, avoidX: 0, avoidZ: 0, draft, hullH: built.hullH,
+        scale, bright, bornAt: 0, landed: true, phase: Math.random() * Math.PI * 2,
+        orbitR, orbitSpeed, orbitPhase, avoidX: 0, avoidZ: 0, draft, hullH: built.hullH,
       });
     });
 
@@ -674,68 +681,24 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
     let running = false;
     const lookTarget = new THREE.Vector3(0, 0.4, -1);
 
-    // 巡游基准位置（椭圆轨道，XZ 有界）
+    // 静态星海基准位置：orbitSpeed=0 → ang 恒定，船水平不再移动；仅随波浪轻浮
     const basePos = (b: Boat, t: number): [number, number] => {
       const ang = b.orbitPhase + t * b.orbitSpeed;
-      return [Math.cos(ang) * b.orbitR, Math.sin(ang) * b.orbitR * 0.6];
-    };
-    // 避让（boids-lite 分离）：避免穿模，保持相守不远
-    const separate = (t: number) => {
-      const MIN = 2.6;
-      for (const b of boats) {
-        const [bx, bz] = basePos(b, t);
-        let ox = 0, oz = 0;
-        for (const o of boats) {
-          if (o === b) continue;
-          const [ox2, oz2] = basePos(o, t);
-          const dx = bx + b.avoidX - (ox2 + o.avoidX);
-          const dz = bz + b.avoidZ - (oz2 + o.avoidZ);
-          const d = Math.hypot(dx, dz);
-          if (d < MIN && d > 1e-3) {
-            const push = (MIN - d) / MIN;
-            ox += (dx / d) * push * 1.4;
-            oz += (dz / d) * push * 1.4;
-          }
-        }
-        b.avoidX += (clamp(ox, -3.5, 3.5) - b.avoidX) * 0.08;
-        b.avoidZ += (clamp(oz, -3.5, 3.5) - b.avoidZ) * 0.08;
-      }
+      return [Math.cos(ang) * b.orbitR, Math.sin(ang) * b.orbitR * 0.85];
     };
 
     const renderOnce = () => {
       const t = clock.getElapsedTime();
       seaMat.uniforms.uTime.value = t;
 
-      separate(t);
-
       boats.forEach((b) => {
         const [bx, bz] = basePos(b, t);
         const px = bx + b.avoidX;
         const pz = bz + b.avoidZ;
-        // 抬升船体：让吃水线落在船高下 1/3，不再半沉
+        // 抬升船体：让吃水线落在船高下 1/3；静态停泊——水平固定，仅随波浪轻浮贴合水面
         const rise = (0.5 - b.draft) * b.hullH * b.scale;
-        let y;
-        if (!b.landed) {
-          const p = clamp((t - b.bornAt) / 1.2, 0, 1);
-          const ease = 1 - Math.pow(1 - p, 3);
-          y = THREE.MathUtils.lerp(12, seaH(px, pz, t) + rise, ease);
-          if (p >= 1) { b.landed = true; b.landAt = t; }
-        } else {
-          y = seaH(px, pz, t) + rise;
-          if (b.landAt != null) {
-            const dt = t - b.landAt;
-            if (dt < 0.6) y += Math.max(0, Math.sin(dt * 9)) * 0.12 * (1 - dt / 0.6);
-          }
-        }
+        const y = seaH(px, pz, t) + rise;
         b.group.position.set(px, y, pz);
-        // 船头朝运动切向（绕圈巡游自然转向，船头局部 +X）
-        const ang = b.orbitPhase + t * b.orbitSpeed;
-        const vx = -Math.sin(ang) * b.orbitR * b.orbitSpeed;
-        const vz = Math.cos(ang) * b.orbitR * 0.6 * b.orbitSpeed;
-        b.group.rotation.y = Math.atan2(-vz, vx);
-        b.group.rotation.z = Math.sin(t * 0.8 + b.phase) * 0.08;
-        b.group.rotation.x = Math.cos(t * 0.6 + b.phase) * 0.05;
-        b.group.scale.setScalar(b.scale);
       });
 
       // 真灯分配：最近/最活跃 ≤8 艘
@@ -818,7 +781,7 @@ export default function PaperBoats({ projects }: { projects: PaperProject[] }) {
           </div>
         )}
         <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px] text-[var(--nv-text-muted)] tracking-wide">
-          水面随机巡游 · 拖拽旋转视角 · 滚轮缩放 · 点击纸船进入写作区
+          星海静泊 · 拖拽旋转视角 · 滚轮缩放 · 点击纸船进入写作区
         </div>
       </div>
 
