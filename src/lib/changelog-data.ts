@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.75";
+export const LATEST_VERSION = "v0.46.76";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "Q1 碎片过滤补强（魔王复测回流）：isCompleteEntityName 漏网「显得像一根/潮之后裸露/车铃/手指骨/玻璃门/社区中心门」等句子碎片，实测真实 lorebook 漏进 91 条 [自动发现] 占位 → 扩充谓语/描述字拦截集 + 新增日常器物前缀(车/玻/璃)与常见名词短语(手指/社区/中心/本子/封皮/玻璃/位于)判定，83 条代表碎片全拦、真实专名(龙渊/中南海/乌坦城)零误杀",
   "分支备份导入 P0 闭环（工坊 G1+W1）：原 strip 删必填 forkPointNodeId 致含 storyBranches 的 .nfproject 备份导入整库回滚零创建 → 占位 nodeMap 重映射闭合；parentBranchId 重映射灭悬空、选择性导入 lostForks 提示、事务超时 60s→120s",
-  "填表透传溯源与跨表防错放（墨白 M1+M2）：continue/refine 透传 nodeOrder/nodeId 修复 _src 恒 ch?:batchmanual 断章节溯源；写入前校验人物实体不匹配地理表则报错不写错灭错放（萧薰儿落妃嫔居住建筑表）",
-  "三卡检索去污染与匹配词边界（青砚 Q1+Q2+Q3）：实体抽取过滤句子碎片（右手拇指/核桃壳在他指）灭 47/49 碎片污染世界书；matchNameStrict 3字+ 覆盖区间吞并修中段嵌入（李星云剑法误命中李星云），2字分支保持不吞并保召回；entity-detector 填 aliases 复活去重、高亮补 2字尾边界与非颜色线索",
-  "游戏动词闭环与轮次幂等 + 监测面板按项目成本 + a11y（阿游 A1-A4 + 磐石 P_a/P_b/P_c + 用户#16 + 清览 L1）：GameState upsert 幂等抗 P2002、前端镜像补 unequip/destroy/skip、ItemChange.operation 扩 7 值；OP_MAP 同义动词大扩 + 开局建世界卡；commit 全局 deadline 270s 优雅 partial、totalTokens 口径统一；监测面板新增 AI 成本（当前项目·本月）卡片闭环用户#16；a11y 补 aria-label 与暗色高亮",
+  "填表透传溯源与跨表防错放（墨白 M1+M2）：continue/refine 透传 nodeOrder/nodeId 修复 _src 恒 ch?:batchmanual 断章节溯源；写入前校验人物实体不匹配地理表则报错不写错灭错放",
+  "游戏动词闭环与轮次幂等 + 监测面板按项目成本 + a11y（阿游 A1-A4 + 磐石 P_a/P_b/P_c + 用户#16 + 清览 L1）：GameState upsert 幂等抗 P2002、ItemChange.operation 扩 7 值、OP_MAP 大扩；commit deadline 270s 优雅 partial；监测面板新增 AI 成本卡片闭环用户#16；a11y 补 aria-label 与暗色高亮",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.76",
+    date: "2026-08-04",
+    title: "会员股东 Round 12 魔王复测回流补丁：Q1 碎片过滤补强（isCompleteEntityName 漏网闭环，tsc 零错误，回归测试全绿）",
+    sections: [
+      {
+        label: "Q1 碎片过滤补强（青砚，魔王复测回流）",
+        items: [
+          "e2e 复测发现 isCompleteEntityName 对「以实体后缀结尾但不含功能/身体词」的碎片仍漏过滤（显得像一根/潮之后裸露/地名像一根/车铃），测试项目真实 lorebook 实测漏进 91 条 [自动发现] 占位碎片",
+          "补强：FRAGMENT_FUNCTIONAL 扩充谓语/描述/感知/指代字（像/显/似/裸/得/用/号/潮/退/醒/剪/搁/斜/进/泡/记/住/顿/隔/刺/撬/打/问/远/处/拉/第/推）；新增 FRAGMENT_COMMON_PREFIX（≤3字且首字为日常器物：车/桌/门/窗/玻/璃…）灭车铃/玻璃门；新增 FRAGMENT_COMMON_PHRASES（手指/社区/中心/本子/封皮/玻璃/位于）灭手指骨/社区中心门/本子封皮/龙渊两只手指/位于新城",
+          "刻意不收之/地/比/亮/朝/甲/曲等会误杀真实专名的字（龙陨之地含之、比干含比、孔明之亮）；83 条代表碎片全拦、真实专名（龙渊/中南海/乌坦城/叶凌云）零误杀；entity-detector.test.ts 新增魔王回流回归测试锁定",
+          "清理测试项目 91 条 [自动发现] 占位碎片（召回净化已排除出 prompt，清理仅为去 clutter）；过滤器强化后新漏网已闭合",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.75",
     date: "2026-08-04",
