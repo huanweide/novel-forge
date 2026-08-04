@@ -1,0 +1,33 @@
+{
+  "format": "nfproject",
+  "version": 1,
+  "include": ["chapters", "branches"],
+  "project": {
+    "id": "orig-branch-proj-001",
+    "name": "测试分支备份",
+    "description": "Round12 P0 复测专用备份",
+    "genre": ["玄幻"],
+    "targetWordCount": 100000,
+    "synopsis": "主线与分支线测试",
+    "toneKeywords": ["热血"],
+    "globalPrompt": "",
+    "authorNote": "",
+    "llmConfig": {},
+    "postProcessingRules": [],
+    "buildConfig": {},
+    "appliedPresets": [],
+    "autoFillEnabled": true,
+    "fillFrequency": 3,
+    "skipLatestChapter": true,
+    "contextKeepChapters": 4,
+    "storyNodes": [
+      { "id": "node-1", "type": "chapter", "title": "第一章 起始", "order": 1, "content": "这是第一章正文。" },
+      { "id": "node-2", "type": "chapter", "title": "第二章·主线", "order": 2, "parentId": "node-1", "content": "主线第二章。" },
+      { "id": "node-3", "type": "chapter", "title": "第二章·分支", "order": 2, "parentId": "node-1", "content": "分支第二章。" }
+    ],
+    "storyBranches": [
+      { "id": "branch-1", "name": "主线分支", "description": "默认主线", "forkPointNodeId": "node-1", "isActive": true },
+      { "id": "branch-2", "name": "暗线分支", "description": "从主线分叉", "forkPointNodeId": "node-3", "parentBranchId": "branch-1", "isActive": true }
+    ]
+  }
+}

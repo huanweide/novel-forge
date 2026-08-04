@@ -1,0 +1,22 @@
+data: {"type":"babylore_recall","items":[{"source":"table","title":"人物表","content":"名称:林惊羽，身份:，描述:拔出腰间长剑，冷笑道：‘区区鼠辈，也敢拦我？’转身走向青石镇外的断魂崖。","score":3},{"source":"table","title":"人物表","content":"名称:苏沐雪，身份:，描述:轻声道：‘师兄，此去凶险，务必小心。’","score":3},{"source":"table","title":"地点表","content":"名称:断魂崖，描述:崖下翻涌的云雾。","score":3}]}
+
+data: {"type":"forbidden_scan_start","content":""}
+
+data: {"type":"forbidden_scan_v3","content":"✅ 废词检测全部通过","passed":true,"qualityScore":100,"matches":[],"totalMatches":0}
+
+data: {"type":"quality_score_start","content":""}
+
+data: {"type":"quality_score","content":"六维质量全部达标，文本质量优秀","overallScore":100,"grade":"A","dimensions":[{"name":"废词率","key":"wasteWordRate","score":100,"issues":[]},{"name":"展示vs讲述比","key":"showVsTell","score":100,"issues":[]},{"name":"视角一致性","key":"povConsistency","score":100,"issues":[]},{"name":"句式多样性","key":"sentenceVariety","score":100,"issues":[]},{"name":"对话自然度","key":"dialogueNaturalness","score":100,"issues":[]},{"name":"主语多样性","key":"subjectDiversity","score":100,"issues":[]}],"passed":true}
+
+data: {"type":"distill_local_start","content":""}
+
+data: {"type":"distill_local_done","stats":{"totalElapsedMs":1,"entityCount":0,"stateChangeCount":0,"foreshadowCount":0,"consistencyIssueCount":0},"stateChanges":[],"foreshadowEvents":[],"consistencyIssues":[],"newEntities":[]}
+
+data: {"type":"logic_check_start","content":""}
+
+data: {"type":"logic_check_done","content":"✅ 逻辑自查通过","passed":true,"issues":[]}
+
+data: {"type":"babylore_fill","skipped":true,"reason":"frequency","frequency":3,"nextChapter":1}
+
+data: {"type":"done","content":"","nodeId":"be0174eb-8ea8-4eb5-b631-881f1bfb7d8b","status":"completed","mode":"refine","wordCount":0,"usage":{"completionTokens":0,"totalTokens":0},"babylore":{"ok":false,"operations":0,"applied":0,"error":"每 3 章填一次，本张不填"}}
+

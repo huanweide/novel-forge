@@ -1,0 +1,1920 @@
+data: {"type":"babylore_recall","items":[{"source":"table","title":"人物表","content":"名称:林惊羽，身份:，描述:拔出腰间长剑，冷笑道：‘区区鼠辈，也敢拦我？’转身走向青石镇外的断魂崖。","score":3},{"source":"table","title":"人物表","content":"名称:苏沐雪，身份:，描述:轻声道：‘师兄，此去凶险，务必小心。’","score":3},{"source":"table","title":"地点表","content":"名称:青石镇，描述:其外有断魂崖。","score":3},{"source":"table","title":"地点表","content":"名称:断魂崖，描述:崖下翻涌的云雾。","score":3}]}
+
+data: {"type":"token","content":"【"}
+
+data: {"type":"token","content":"剧情"}
+
+data: {"type":"token","content":"校准"}
+
+data: {"type":"token","content":" H"}
+
+data: {"type":"token","content":"UD"}
+
+data: {"type":"token","content":"】\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"时间"}
+
+data: {"type":"token","content":" |"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"夜晚"}
+
+data: {"type":"token","content":" |"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"魂"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"·"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"口"}
+
+data: {"type":"token","content":" |"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"浓"}
+
+data: {"type":"token","content":"雾"}
+
+data: {"type":"token","content":"无"}
+
+data: {"type":"token","content":"风"}
+
+data: {"type":"token","content":"\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"修为"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"炼"}
+
+data: {"type":"token","content":"气"}
+
+data: {"type":"token","content":"五"}
+
+data: {"type":"token","content":"层"}
+
+data: {"type":"token","content":"\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"进度"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"灵力"}
+
+data: {"type":"token","content":"约"}
+
+data: {"type":"token","content":"七"}
+
+data: {"type":"token","content":"成"}
+
+data: {"type":"token","content":" -"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"无"}
+
+data: {"type":"token","content":"瓶颈"}
+
+data: {"type":"token","content":"\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"状态"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"额"}
+
+data: {"type":"token","content":"角"}
+
+data: {"type":"token","content":"擦"}
+
+data: {"type":"token","content":"伤"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"气血"}
+
+data: {"type":"token","content":"平稳"}
+
+data: {"type":"token","content":" |"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"夜"}
+
+data: {"type":"token","content":"探"}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"魂"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"女主"}
+
+data: {"type":"token","content":" Bond"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"8"}
+
+data: {"type":"token","content":"/"}
+
+data: {"type":"token","content":"29"}
+
+data: {"type":"token","content":" -"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"阶段"}
+
+data: {"type":"token","content":"I"}
+
+data: {"type":"token","content":" ("}
+
+data: {"type":"token","content":"同"}
+
+data: {"type":"token","content":"门"}
+
+data: {"type":"token","content":"之"}
+
+data: {"type":"token","content":"谊"}
+
+data: {"type":"token","content":")\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"状态"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"正常"}
+
+data: {"type":"token","content":"累积"}
+
+data: {"type":"token","content":"\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"本章"}
+
+data: {"type":"token","content":"封"}
+
+data: {"type":"token","content":"顶"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" Bond"}
+
+data: {"type":"token","content":" +"}
+
+data: {"type":"token","content":"1"}
+
+data: {"type":"token","content":" ("}
+
+data: {"type":"token","content":"T"}
+
+data: {"type":"token","content":"ier"}
+
+data: {"type":"token","content":" C"}
+
+data: {"type":"token","content":")"}
+
+data: {"type":"token","content":" ——"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"同"}
+
+data: {"type":"token","content":"门"}
+
+data: {"type":"token","content":"信任"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"不含"}
+
+data: {"type":"token","content":"私人"}
+
+data: {"type":"token","content":"情感"}
+
+data: {"type":"token","content":"推进"}
+
+data: {"type":"token","content":"\n"}
+
+data: {"type":"token","content":"  "}
+
+data: {"type":"token","content":"禁忌"}
+
+data: {"type":"token","content":":"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"阶段"}
+
+data: {"type":"token","content":"I"}
+
+data: {"type":"token","content":"禁止"}
+
+data: {"type":"token","content":"肢体"}
+
+data: {"type":"token","content":"亲近"}
+
+data: {"type":"token","content":" /"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"禁止"}
+
+data: {"type":"token","content":"N"}
+
+data: {"type":"token","content":"TR"}
+
+data: {"type":"token","content":" /"}
+
+data: {"type":"token","content":" "}
+
+data: {"type":"token","content":"禁止"}
+
+data: {"type":"token","content":"降"}
+
+data: {"type":"token","content":"智"}
+
+data: {"type":"token","content":"\n\n"}
+
+data: {"type":"token","content":"---\n\n"}
+
+data: {"type":"token","content":"剑"}
+
+data: {"type":"token","content":"尖"}
+
+data: {"type":"token","content":"在地"}
+
+data: {"type":"token","content":"面"}
+
+data: {"type":"token","content":"青"}
+
+data: {"type":"token","content":"石"}
+
+data: {"type":"token","content":"上"}
+
+data: {"type":"token","content":"拖"}
+
+data: {"type":"token","content":"出一道"}
+
+data: {"type":"token","content":"白"}
+
+data: {"type":"token","content":"痕"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"林"}
+
+data: {"type":"token","content":"惊"}
+
+data: {"type":"token","content":"羽"}
+
+data: {"type":"token","content":"没有"}
+
+data: {"type":"token","content":"回头"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"但"}
+
+data: {"type":"token","content":"听得"}
+
+data: {"type":"token","content":"见"}
+
+data: {"type":"token","content":"身后"}
+
+data: {"type":"token","content":"那道"}
+
+data: {"type":"token","content":"呼吸"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"苏"}
+
+data: {"type":"token","content":"沐"}
+
+data: {"type":"token","content":"雪的"}
+
+data: {"type":"token","content":"呼吸"}
+
+data: {"type":"token","content":"压在"}
+
+data: {"type":"token","content":"临界"}
+
+data: {"type":"token","content":"点上"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"细"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"跟"}
+
+data: {"type":"token","content":"一根"}
+
+data: {"type":"token","content":"将"}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"未"}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"琴"}
+
+data: {"type":"token","content":"弦"}
+
+data: {"type":"token","content":"似的"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"下"}
+
+data: {"type":"token","content":"翻"}
+
+data: {"type":"token","content":"涌"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"云雾"}
+
+data: {"type":"token","content":"卷"}
+
+data: {"type":"token","content":"上来"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"夹"}
+
+data: {"type":"token","content":"着"}
+
+data: {"type":"token","content":"草木"}
+
+data: {"type":"token","content":"腐烂"}
+
+data: {"type":"token","content":"后的"}
+
+data: {"type":"token","content":"甜"}
+
+data: {"type":"token","content":"腥"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"灌"}
+
+data: {"type":"token","content":"进"}
+
+data: {"type":"token","content":"袖"}
+
+data: {"type":"token","content":"口"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"凉"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"人"}
+
+data: {"type":"token","content":"骨头"}
+
+data: {"type":"token","content":"缝"}
+
+data: {"type":"token","content":"发"}
+
+data: {"type":"token","content":"紧"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"他"}
+
+data: {"type":"token","content":"倒"}
+
+data: {"type":"token","content":"提"}
+
+data: {"type":"token","content":"长剑"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"一步步"}
+
+data: {"type":"token","content":"走到"}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"魂"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"边缘"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"裂"}
+
+data: {"type":"token","content":"口"}
+
+data: {"type":"token","content":"处的"}
+
+data: {"type":"token","content":"碎石"}
+
+data: {"type":"token","content":"上"}
+
+data: {"type":"token","content":"嵌"}
+
+data: {"type":"token","content":"着"}
+
+data: {"type":"token","content":"几"}
+
+data: {"type":"token","content":"片"}
+
+data: {"type":"token","content":"断裂"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"鳞"}
+
+data: {"type":"token","content":"甲"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"铁"}
+
+data: {"type":"token","content":"青色"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"边"}
+
+data: {"type":"token","content":"沿"}
+
+data: {"type":"token","content":"还"}
+
+data: {"type":"token","content":"沾"}
+
+data: {"type":"token","content":"着"}
+
+data: {"type":"token","content":"半"}
+
+data: {"type":"token","content":"凝固"}
+
+data: {"type":"token","content":"的黑"}
+
+data: {"type":"token","content":"液"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"三"}
+
+data: {"type":"token","content":"具"}
+
+data: {"type":"token","content":"尸体"}
+
+data: {"type":"token","content":"横"}
+
+data: {"type":"token","content":"在不"}
+
+data: {"type":"token","content":"远处"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"四肢"}
+
+data: {"type":"token","content":"扭曲"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"像是"}
+
+data: {"type":"token","content":"被"}
+
+data: {"type":"token","content":"从"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"底"}
+
+data: {"type":"token","content":"硬"}
+
+data: {"type":"token","content":"生生"}
+
+data: {"type":"token","content":"甩"}
+
+data: {"type":"token","content":"上"}
+
+data: {"type":"token","content":"来的"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"脖颈"}
+
+data: {"type":"token","content":"处"}
+
+data: {"type":"token","content":"骨头"}
+
+data: {"type":"token","content":"碎"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"干净"}
+
+data: {"type":"token","content":"利"}
+
+data: {"type":"token","content":"落"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"一击"}
+
+data: {"type":"token","content":"毙"}
+
+data: {"type":"token","content":"命"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"区区"}
+
+data: {"type":"token","content":"鼠"}
+
+data: {"type":"token","content":"辈"}
+
+data: {"type":"token","content":"。”\n\n"}
+
+data: {"type":"token","content":"他又"}
+
+data: {"type":"token","content":"说"}
+
+data: {"type":"token","content":"了一遍"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"像"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"品"}
+
+data: {"type":"token","content":"这四个"}
+
+data: {"type":"token","content":"字"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"舌尖"}
+
+data: {"type":"token","content":"的重量"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"语气"}
+
+data: {"type":"token","content":"松散"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"近乎"}
+
+data: {"type":"token","content":"敷衍"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"但"}
+
+data: {"type":"token","content":"握"}
+
+data: {"type":"token","content":"剑"}
+
+data: {"type":"token","content":"的五"}
+
+data: {"type":"token","content":"根"}
+
+data: {"type":"token","content":"指"}
+
+data: {"type":"token","content":"节"}
+
+data: {"type":"token","content":"泛"}
+
+data: {"type":"token","content":"白"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"风"}
+
+data: {"type":"token","content":"停了"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"下的"}
+
+data: {"type":"token","content":"云雾"}
+
+data: {"type":"token","content":"忽然"}
+
+data: {"type":"token","content":"凝"}
+
+data: {"type":"token","content":"滞"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"不再"}
+
+data: {"type":"token","content":"翻滚"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"不再"}
+
+data: {"type":"token","content":"流动"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"像"}
+
+data: {"type":"token","content":"一口"}
+
+data: {"type":"token","content":"深"}
+
+data: {"type":"token","content":"井"}
+
+data: {"type":"token","content":"里"}
+
+data: {"type":"token","content":"塞"}
+
+data: {"type":"token","content":"满了"}
+
+data: {"type":"token","content":"浸"}
+
+data: {"type":"token","content":"水的"}
+
+data: {"type":"token","content":"棉"}
+
+data: {"type":"token","content":"絮"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"雾"}
+
+data: {"type":"token","content":"海"}
+
+data: {"type":"token","content":"深处"}
+
+data: {"type":"token","content":"有"}
+
+data: {"type":"token","content":"东西"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"呼吸"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"极"}
+
+data: {"type":"token","content":"慢"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"极"}
+
+data: {"type":"token","content":"沉"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"每"}
+
+data: {"type":"token","content":"吸"}
+
+data: {"type":"token","content":"一口气"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"壁"}
+
+data: {"type":"token","content":"石"}
+
+data: {"type":"token","content":"缝"}
+
+data: {"type":"token","content":"里"}
+
+data: {"type":"token","content":"就"}
+
+data: {"type":"token","content":"渗出"}
+
+data: {"type":"token","content":"细"}
+
+data: {"type":"token","content":"碎的"}
+
+data: {"type":"token","content":"沙"}
+
+data: {"type":"token","content":"沙"}
+
+data: {"type":"token","content":"声"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"如同"}
+
+data: {"type":"token","content":"蛇"}
+
+data: {"type":"token","content":"鳞"}
+
+data: {"type":"token","content":"剐"}
+
+data: {"type":"token","content":"过"}
+
+data: {"type":"token","content":"砂"}
+
+data: {"type":"token","content":"砾"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"林"}
+
+data: {"type":"token","content":"惊"}
+
+data: {"type":"token","content":"羽"}
+
+data: {"type":"token","content":"眯"}
+
+data: {"type":"token","content":"起"}
+
+data: {"type":"token","content":"眼"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"灵气"}
+
+data: {"type":"token","content":"浓度"}
+
+data: {"type":"token","content":"降到"}
+
+data: {"type":"token","content":"谷"}
+
+data: {"type":"token","content":"底"}
+
+data: {"type":"token","content":"的那一刻"}
+
+data: {"type":"token","content":"捕捉"}
+
+data: {"type":"token","content":"到了"}
+
+data: {"type":"token","content":"位置"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"下"}
+
+data: {"type":"token","content":"三十"}
+
+data: {"type":"token","content":"丈"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"偏"}
+
+data: {"type":"token","content":"右侧"}
+
+data: {"type":"token","content":"石"}
+
+data: {"type":"token","content":"壁"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"凹陷"}
+
+data: {"type":"token","content":"处"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"青"}
+
+data: {"type":"token","content":"石"}
+
+data: {"type":"token","content":"镇"}
+
+data: {"type":"token","content":"那个"}
+
+data: {"type":"token","content":"瞎"}
+
+data: {"type":"token","content":"了一只"}
+
+data: {"type":"token","content":"眼"}
+
+data: {"type":"token","content":"的老"}
+
+data: {"type":"token","content":"猎"}
+
+data: {"type":"token","content":"户"}
+
+data: {"type":"token","content":"说过"}
+
+data: {"type":"token","content":"："}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"魂"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"底下"}
+
+data: {"type":"token","content":"有些"}
+
+data: {"type":"token","content":"东西"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"不是"}
+
+data: {"type":"token","content":"咱"}
+
+data: {"type":"token","content":"能"}
+
+data: {"type":"token","content":"惹"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"后"}
+
+data: {"type":"token","content":"生"}
+
+data: {"type":"token","content":"莫"}
+
+data: {"type":"token","content":"沾"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"他现在"}
+
+data: {"type":"token","content":"很想"}
+
+data: {"type":"token","content":"找到"}
+
+data: {"type":"token","content":"那个"}
+
+data: {"type":"token","content":"老"}
+
+data: {"type":"token","content":"猎"}
+
+data: {"type":"token","content":"户"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"当面"}
+
+data: {"type":"token","content":"拱"}
+
+data: {"type":"token","content":"个"}
+
+data: {"type":"token","content":"手"}
+
+data: {"type":"token","content":"说"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"您"}
+
+data: {"type":"token","content":"老"}
+
+data: {"type":"token","content":"讲"}
+
+data: {"type":"token","content":"得太"}
+
+data: {"type":"token","content":"对了"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"苏"}
+
+data: {"type":"token","content":"沐"}
+
+data: {"type":"token","content":"雪的"}
+
+data: {"type":"token","content":"指尖"}
+
+data: {"type":"token","content":"攥"}
+
+data: {"type":"token","content":"住"}
+
+data: {"type":"token","content":"袖"}
+
+data: {"type":"token","content":"口"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"指"}
+
+data: {"type":"token","content":"骨"}
+
+data: {"type":"token","content":"发"}
+
+data: {"type":"token","content":"白"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"师兄"}
+
+data: {"type":"token","content":"——”\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"留"}
+
+data: {"type":"token","content":"在这"}
+
+data: {"type":"token","content":"。”\n\n"}
+
+data: {"type":"token","content":"林"}
+
+data: {"type":"token","content":"惊"}
+
+data: {"type":"token","content":"羽"}
+
+data: {"type":"token","content":"回头"}
+
+data: {"type":"token","content":"看她"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"嘴角"}
+
+data: {"type":"token","content":"还"}
+
+data: {"type":"token","content":"挂着"}
+
+data: {"type":"token","content":"那"}
+
+data: {"type":"token","content":"截"}
+
+data: {"type":"token","content":"没收"}
+
+data: {"type":"token","content":"干净"}
+
+data: {"type":"token","content":"的笑"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"眼底"}
+
+data: {"type":"token","content":"却没有"}
+
+data: {"type":"token","content":"半点"}
+
+data: {"type":"token","content":"温度"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"月光"}
+
+data: {"type":"token","content":"把"}
+
+data: {"type":"token","content":"侧"}
+
+data: {"type":"token","content":"脸"}
+
+data: {"type":"token","content":"照"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"棱"}
+
+data: {"type":"token","content":"角"}
+
+data: {"type":"token","content":"分明"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"额"}
+
+data: {"type":"token","content":"角"}
+
+data: {"type":"token","content":"一道"}
+
+data: {"type":"token","content":"新"}
+
+data: {"type":"token","content":"添"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"擦"}
+
+data: {"type":"token","content":"伤"}
+
+data: {"type":"token","content":"渗"}
+
+data: {"type":"token","content":"着"}
+
+data: {"type":"token","content":"血"}
+
+data: {"type":"token","content":"珠"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"若"}
+
+data: {"type":"token","content":"一"}
+
+data: {"type":"token","content":"炷"}
+
+data: {"type":"token","content":"香"}
+
+data: {"type":"token","content":"后"}
+
+data: {"type":"token","content":"我没"}
+
+data: {"type":"token","content":"上来"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"你"}
+
+data: {"type":"token","content":"回"}
+
+data: {"type":"token","content":"镇上"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"把那"}
+
+data: {"type":"token","content":"封信"}
+
+data: {"type":"token","content":"交给"}
+
+data: {"type":"token","content":"秦"}
+
+data: {"type":"token","content":"掌柜"}
+
+data: {"type":"token","content":"。”\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"可是"}
+
+data: {"type":"token","content":"——”\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"说了"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"不是"}
+
+data: {"type":"token","content":"商量"}
+
+data: {"type":"token","content":"。”\n\n"}
+
+data: {"type":"token","content":"他"}
+
+data: {"type":"token","content":"抬"}
+
+data: {"type":"token","content":"了"}
+
+data: {"type":"token","content":"抬"}
+
+data: {"type":"token","content":"手里"}
+
+data: {"type":"token","content":"那"}
+
+data: {"type":"token","content":"柄"}
+
+data: {"type":"token","content":"长剑"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"剑"}
+
+data: {"type":"token","content":"身在"}
+
+data: {"type":"token","content":"月光"}
+
+data: {"type":"token","content":"下"}
+
+data: {"type":"token","content":"泛起"}
+
+data: {"type":"token","content":"一层"}
+
+data: {"type":"token","content":"暗"}
+
+data: {"type":"token","content":"青光"}
+
+data: {"type":"token","content":"棱"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"几"}
+
+data: {"type":"token","content":"粒"}
+
+data: {"type":"token","content":"碎石"}
+
+data: {"type":"token","content":"被"}
+
+data: {"type":"token","content":"鞋"}
+
+data: {"type":"token","content":"沿"}
+
+data: {"type":"token","content":"蹭"}
+
+data: {"type":"token","content":"落"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"坠"}
+
+data: {"type":"token","content":"入"}
+
+data: {"type":"token","content":"云雾"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"过了"}
+
+data: {"type":"token","content":"好"}
+
+data: {"type":"token","content":"一阵"}
+
+data: {"type":"token","content":"才"}
+
+data: {"type":"token","content":"传"}
+
+data: {"type":"token","content":"回"}
+
+data: {"type":"token","content":"一声"}
+
+data: {"type":"token","content":"闷"}
+
+data: {"type":"token","content":"响"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"深"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"不像"}
+
+data: {"type":"token","content":"话"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"然后"}
+
+data: {"type":"token","content":"他"}
+
+data: {"type":"token","content":"踏"}
+
+data: {"type":"token","content":"出去"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"身影"}
+
+data: {"type":"token","content":"没"}
+
+data: {"type":"token","content":"入"}
+
+data: {"type":"token","content":"那片"}
+
+data: {"type":"token","content":"粘"}
+
+data: {"type":"token","content":"稠"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"雾"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"像"}
+
+data: {"type":"token","content":"一"}
+
+data: {"type":"token","content":"柄"}
+
+data: {"type":"token","content":"刀"}
+
+data: {"type":"token","content":"没"}
+
+data: {"type":"token","content":"入"}
+
+data: {"type":"token","content":"水"}
+
+data: {"type":"token","content":"银"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"苏"}
+
+data: {"type":"token","content":"沐"}
+
+data: {"type":"token","content":"雪"}
+
+data: {"type":"token","content":"在原地"}
+
+data: {"type":"token","content":"站"}
+
+data: {"type":"token","content":"了很久"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"指"}
+
+data: {"type":"token","content":"骨"}
+
+data: {"type":"token","content":"一根"}
+
+data: {"type":"token","content":"根"}
+
+data: {"type":"token","content":"松开"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"她没有"}
+
+data: {"type":"token","content":"跟"}
+
+data: {"type":"token","content":"上去"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"她"}
+
+data: {"type":"token","content":"太"}
+
+data: {"type":"token","content":"清楚"}
+
+data: {"type":"token","content":"自己的"}
+
+data: {"type":"token","content":"修为"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"连"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"口"}
+
+data: {"type":"token","content":"这道"}
+
+data: {"type":"token","content":"煞"}
+
+data: {"type":"token","content":"风"}
+
+data: {"type":"token","content":"都"}
+
+data: {"type":"token","content":"穿"}
+
+data: {"type":"token","content":"不过"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"她"}
+
+data: {"type":"token","content":"也没有"}
+
+data: {"type":"token","content":"离开"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"夜"}
+
+data: {"type":"token","content":"风"}
+
+data: {"type":"token","content":"卷"}
+
+data: {"type":"token","content":"起"}
+
+data: {"type":"token","content":"她的"}
+
+data: {"type":"token","content":"裙"}
+
+data: {"type":"token","content":"摆"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"她"}
+
+data: {"type":"token","content":"蹲"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"尸体"}
+
+data: {"type":"token","content":"旁"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"忍着"}
+
+data: {"type":"token","content":"腥"}
+
+data: {"type":"token","content":"味"}
+
+data: {"type":"token","content":"翻开"}
+
+data: {"type":"token","content":"领"}
+
+data: {"type":"token","content":"口"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"摸"}
+
+data: {"type":"token","content":"出一"}
+
+data: {"type":"token","content":"块"}
+
+data: {"type":"token","content":"铁"}
+
+data: {"type":"token","content":"铸"}
+
+data: {"type":"token","content":"令牌"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"巴掌"}
+
+data: {"type":"token","content":"大"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"正面"}
+
+data: {"type":"token","content":"刻"}
+
+data: {"type":"token","content":"着一个"}
+
+data: {"type":"token","content":"狰狞"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"獠"}
+
+data: {"type":"token","content":"牙"}
+
+data: {"type":"token","content":"纹"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"指尖"}
+
+data: {"type":"token","content":"微微"}
+
+data: {"type":"token","content":"一顿"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"“"}
+
+data: {"type":"token","content":"黑"}
+
+data: {"type":"token","content":"齿"}
+
+data: {"type":"token","content":"寨"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"暗"}
+
+data: {"type":"token","content":"哨"}
+
+data: {"type":"token","content":"。”\n\n"}
+
+data: {"type":"token","content":"三"}
+
+data: {"type":"token","content":"具"}
+
+data: {"type":"token","content":"尸体"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"三"}
+
+data: {"type":"token","content":"块"}
+
+data: {"type":"token","content":"令牌"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"把"}
+
+data: {"type":"token","content":"暗"}
+
+data: {"type":"token","content":"桩"}
+
+data: {"type":"token","content":"钉"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"断"}
+
+data: {"type":"token","content":"魂"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"口的"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"至少"}
+
+data: {"type":"token","content":"是"}
+
+data: {"type":"token","content":"炼"}
+
+data: {"type":"token","content":"气"}
+
+data: {"type":"token","content":"七"}
+
+data: {"type":"token","content":"层的"}
+
+data: {"type":"token","content":"刀"}
+
+data: {"type":"token","content":"手"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"而"}
+
+data: {"type":"token","content":"能让"}
+
+data: {"type":"token","content":"炼"}
+
+data: {"type":"token","content":"气"}
+
+data: {"type":"token","content":"七"}
+
+data: {"type":"token","content":"层"}
+
+data: {"type":"token","content":"当场"}
+
+data: {"type":"token","content":"毙"}
+
+data: {"type":"token","content":"命"}
+
+data: {"type":"token","content":"的东西"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"绝"}
+
+data: {"type":"token","content":"不只是"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"底"}
+
+data: {"type":"token","content":"的老"}
+
+data: {"type":"token","content":"妖"}
+
+data: {"type":"token","content":"物"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"哐"}
+
+data: {"type":"token","content":"当"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"令牌"}
+
+data: {"type":"token","content":"从"}
+
+data: {"type":"token","content":"她"}
+
+data: {"type":"token","content":"掌"}
+
+data: {"type":"token","content":"中"}
+
+data: {"type":"token","content":"滑"}
+
+data: {"type":"token","content":"落"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"砸"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"碎石"}
+
+data: {"type":"token","content":"上"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"下"}
+
+data: {"type":"token","content":"传来"}
+
+data: {"type":"token","content":"第一"}
+
+data: {"type":"token","content":"声"}
+
+data: {"type":"token","content":"闷"}
+
+data: {"type":"token","content":"雷"}
+
+data: {"type":"token","content":"般的"}
+
+data: {"type":"token","content":"震"}
+
+data: {"type":"token","content":"响"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"紧接着"}
+
+data: {"type":"token","content":"一道"}
+
+data: {"type":"token","content":"极"}
+
+data: {"type":"token","content":"细"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"剑"}
+
+data: {"type":"token","content":"鸣"}
+
+data: {"type":"token","content":"刺"}
+
+data: {"type":"token","content":"穿"}
+
+data: {"type":"token","content":"雾"}
+
+data: {"type":"token","content":"海"}
+
+data: {"type":"token","content":"——"}
+
+data: {"type":"token","content":"带着"}
+
+data: {"type":"token","content":"压抑"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"暴"}
+
+data: {"type":"token","content":"怒"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"盘旋"}
+
+data: {"type":"token","content":"回"}
+
+data: {"type":"token","content":"响"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"撞"}
+
+data: {"type":"token","content":"得"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"壁"}
+
+data: {"type":"token","content":"嗡嗡"}
+
+data: {"type":"token","content":"颤抖"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"苏"}
+
+data: {"type":"token","content":"沐"}
+
+data: {"type":"token","content":"雪"}
+
+data: {"type":"token","content":"朝"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"边"}
+
+data: {"type":"token","content":"迈"}
+
+data: {"type":"token","content":"了"}
+
+data: {"type":"token","content":"半步"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"又"}
+
+data: {"type":"token","content":"硬"}
+
+data: {"type":"token","content":"生生"}
+
+data: {"type":"token","content":"停"}
+
+data: {"type":"token","content":"住"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"她从"}
+
+data: {"type":"token","content":"袖"}
+
+data: {"type":"token","content":"中"}
+
+data: {"type":"token","content":"摸"}
+
+data: {"type":"token","content":"出一"}
+
+data: {"type":"token","content":"截"}
+
+data: {"type":"token","content":"火"}
+
+data: {"type":"token","content":"折"}
+
+data: {"type":"token","content":"子"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"擦"}
+
+data: {"type":"token","content":"亮"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"微"}
+
+data: {"type":"token","content":"弱的"}
+
+data: {"type":"token","content":"火光"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"夜"}
+
+data: {"type":"token","content":"风"}
+
+data: {"type":"token","content":"里"}
+
+data: {"type":"token","content":"剧烈"}
+
+data: {"type":"token","content":"晃动"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"映"}
+
+data: {"type":"token","content":"出"}
+
+data: {"type":"token","content":"她"}
+
+data: {"type":"token","content":"眼底"}
+
+data: {"type":"token","content":"隐约"}
+
+data: {"type":"token","content":"的"}
+
+data: {"type":"token","content":"湿润"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"token","content":"她没有"}
+
+data: {"type":"token","content":"哭"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"只是"}
+
+data: {"type":"token","content":"把那"}
+
+data: {"type":"token","content":"簇"}
+
+data: {"type":"token","content":"火"}
+
+data: {"type":"token","content":"插"}
+
+data: {"type":"token","content":"进"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"边"}
+
+data: {"type":"token","content":"石"}
+
+data: {"type":"token","content":"缝"}
+
+data: {"type":"token","content":"中"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"用"}
+
+data: {"type":"token","content":"碎石"}
+
+data: {"type":"token","content":"压"}
+
+data: {"type":"token","content":"稳"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"火"}
+
+data: {"type":"token","content":"苗"}
+
+data: {"type":"token","content":"安静"}
+
+data: {"type":"token","content":"地"}
+
+data: {"type":"token","content":"燃烧"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"照亮"}
+
+data: {"type":"token","content":"三"}
+
+data: {"type":"token","content":"具"}
+
+data: {"type":"token","content":"尸"}
+
+data: {"type":"token","content":"体的"}
+
+data: {"type":"token","content":"轮廓"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"照"}
+
+data: {"type":"token","content":"向"}
+
+data: {"type":"token","content":"雾"}
+
+data: {"type":"token","content":"海中"}
+
+data: {"type":"token","content":"翻"}
+
+data: {"type":"token","content":"涌"}
+
+data: {"type":"token","content":"不"}
+
+data: {"type":"token","content":"息的"}
+
+data: {"type":"token","content":"暗"}
+
+data: {"type":"token","content":"影"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"崖"}
+
+data: {"type":"token","content":"下"}
+
+data: {"type":"token","content":"又"}
+
+data: {"type":"token","content":"传来"}
+
+data: {"type":"token","content":"一声"}
+
+data: {"type":"token","content":"震"}
+
+data: {"type":"token","content":"响"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"比"}
+
+data: {"type":"token","content":"刚才"}
+
+data: {"type":"token","content":"更低"}
+
+data: {"type":"token","content":"、"}
+
+data: {"type":"token","content":"更"}
+
+data: {"type":"token","content":"沉"}
+
+data: {"type":"token","content":"。\n\n"}
+
+data: {"type":"token","content":"像"}
+
+data: {"type":"token","content":"什么东西"}
+
+data: {"type":"token","content":"，"}
+
+data: {"type":"token","content":"在"}
+
+data: {"type":"token","content":"黑暗"}
+
+data: {"type":"token","content":"里"}
+
+data: {"type":"token","content":"被"}
+
+data: {"type":"token","content":"一寸"}
+
+data: {"type":"token","content":"一寸"}
+
+data: {"type":"token","content":"碾"}
+
+data: {"type":"token","content":"碎"}
+
+data: {"type":"token","content":"。"}
+
+data: {"type":"forbidden_scan_start","content":""}
+
+data: {"type":"forbidden_scan_v3","content":"❌ 1处必须修改","passed":false,"qualityScore":95,"fuzzyDensity":0.3333333333333333,"bySeverity":{"error":1,"warning":0,"info":0},"byCategory":{"exact_word":0,"sentence_pattern":1,"body_template":0,"fuzzy_word":0,"ai_frequent":0},"matches":[{"pattern":"/没有.{1,30}只是/u","category":"sentence_pattern","isRegex":true,"index":1232,"context":"…夜风里剧烈晃动，映出她眼底隐约的湿润。她没有哭，只是把那簇火插进崖边石缝中，用碎石压稳。 …","severity":"error","suggestion":"直接陈述事实"}],"totalMatches":1}
+
+data: {"type":"quality_score_start","content":""}
+
+data: {"type":"quality_score","content":"3 个质量问题，评级 B。重点改善：展示vs讲述比","overallScore":84,"grade":"B","dimensions":[{"name":"废词率","key":"wasteWordRate","score":93,"issues":["1 个严重禁用词","发现「/没有.{1,30}只是/u」→ 直接陈述事实"]},{"name":"展示vs讲述比","key":"showVsTell","score":29,"issues":["展示比例仅 29%（建议 ≥ 30%），叙述偏多——多用动作和感官替代直接说明"]},{"name":"视角一致性","key":"povConsistency","score":100,"issues":[]},{"name":"句式多样性","key":"sentenceVariety","score":100,"issues":[]},{"name":"对话自然度","key":"dialogueNaturalness","score":100,"issues":[]},{"name":"主语多样性","key":"subjectDiversity","score":100,"issues":[]}],"passed":true}
+
+data: {"type":"review_start","content":""}
+
+data: {"type":"review_issue","content":"","severity":"major","location":null,"suggestion":null}
+
+data: {"type":"review_result","content":"审校未通过，请查看问题列表","passed":false,"issues":[{"type":"logic_flaw","severity":"major","description":"","location":null,"suggestion":null}]}
+
+data: {"type":"distill_local_start","content":""}
+
+data: {"type":"distill_local_done","stats":{"totalElapsedMs":1,"entityCount":38,"stateChangeCount":0,"foreshadowCount":0,"consistencyIssueCount":0},"stateChanges":[],"foreshadowEvents":[],"consistencyIssues":[],"newEntities":[{"name":"在地面青石","type":"material","position":211,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"吸压在临界","type":"location","position":251,"confidence":0.75,"isKnown":false,"matchedBy":"地点：苍云山脉、落霞城、星辰宗"},{"name":"细得跟一根","type":"material","position":259,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"未断的琴","type":"artifact","position":266,"confidence":0.75,"isKnown":false,"matchedBy":"法宝兵器：青云剑、玄天印、镇魂铃"},{"name":"夹着草木","type":"material","position":285,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"凉得人骨","type":"material","position":301,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"倒提长剑","type":"artifact","position":313,"confidence":0.75,"isKnown":false,"matchedBy":"法宝兵器：青云剑、玄天印、镇魂铃"},{"name":"一步步","type":"technique","position":318,"confidence":0.75,"isKnown":false,"matchedBy":"功法武技：星辰诀、九天剑法、缩地步"},{"name":"口处的碎石","type":"material","position":332,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"凝固的黑液","type":"material","position":358,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"脖颈处骨","type":"material","position":394,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"但握剑","type":"artifact","position":453,"confidence":0.75,"isKnown":false,"matchedBy":"法宝兵器：青云剑、玄天印、镇魂铃"},{"name":"但握剑的五根指","type":"technique","position":453,"confidence":0.75,"isKnown":false,"matchedBy":"功法武技：星辰诀、九天剑法、缩地步"},{"name":"握剑的五根","type":"material","position":454,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"},{"name":"崖壁石","type":"material","position":529,"confidence":0.75,"isKnown":false,"matchedBy":"材料：寒冰草、聚灵石、千年灵芝"}]}
+
+data: {"type":"entity_auto_create_start","content":"发现 38 个新实体，正在自动创建..."}
+
+data: {"type":"entity_auto_created","content":"自动创建了 15 个实体","created":[{"type":"lorebook","id":"b14796f3-21f5-428d-a176-973f121ee78b","name":"凉得人骨","category":"item"},{"type":"lorebook","id":"7c377459-7a4b-4c8e-9c43-cd103a76a2a6","name":"倒提长剑","category":"item"},{"type":"lorebook","id":"88c0b5d4-7a2a-4814-aa3e-9673523c7526","name":"一步步","category":"technique"},{"type":"lorebook","id":"486ee2a5-6624-4786-8ff7-489609aeef3f","name":"脖颈处骨","category":"item"},{"type":"lorebook","id":"aabdf24a-6377-4af3-ad83-f417400fa60c","name":"但握剑","category":"item"},{"type":"lorebook","id":"7369d90c-7c71-414e-97d0-e389608e9ec8","name":"崖壁石","category":"item"},{"type":"lorebook","id":"bcaf09f1-64b2-40ee-b7e0-62c9181f2a74","name":"偏右侧石","category":"item"},{"type":"lorebook","id":"3a6cd732-96fd-431c-9247-5d89aedf2d34","name":"几粒碎石","category":"item"},{"type":"lorebook","id":"920e3583-06e3-4c50-bb1f-a66a3e3b64df","name":"像一柄刀","category":"item"},{"type":"lorebook","id":"f22606a3-7916-46ad-91ba-be104971c946","name":"刀没入水银","category":"item"},{"type":"lorebook","id":"3f6e06b7-4b31-431a-98d0-4e784f07f0dc","name":"指骨一根根","category":"item"},{"type":"lorebook","id":"e696ccb8-8d32-4327-961c-760ee3297e83","name":"摸出一块铁","category":"item"},{"type":"lorebook","id":"c92bfd6c-3803-4469-a79c-01ec6493a0d9","name":"鸣刺穿雾海","category":"geography"},{"type":"lorebook","id":"44ec0a4b-59a9-4b4d-acd6-dd35c5910242","name":"插进崖边石","category":"item"},{"type":"lorebook","id":"971f83d3-0b97-40d2-b1a6-e893f617cd77","name":"用碎石","category":"item"}]}
+
+data: {"type":"entity_auto_skip","content":"23 个实体因重复跳过：在地面青石、吸压在临界、细得跟一根、未断的琴、夹着草木、口处的碎石、凝固的黑液、但握剑的五根指、握剑的五根、青石镇、苏沐雪的指、擦伤渗着血、渗着血珠、你回镇、那封信交给秦掌、那柄长剑、苏沐雪在原、七层的刀、令牌从她掌、砸在碎石、极细的剑、朝崖边迈了半步、照向雾海"}
+
+data: {"type":"summarize_start","content":""}
+
+data: {"type":"summarize_done","summary":"","keyEvents":[]}
+
+data: {"type":"classify_done","content":"规则分类完成：S级0条 A级0条 B级0条","stats":{"sTier":0,"aTier":0,"bTier":0}}
+
+data: {"type":"logic_check_start","content":""}
+
+data: {"type":"logic_check_done","content":"✅ 逻辑自查通过","passed":true,"issues":[]}
+
+data: {"type":"babylore_fill","ok":true,"operations":4,"applied":4,"error":"","selfCheckIssues":[{"table":"地点表","row":"归表","value":"青石镇","issue":"唯一名「青石镇」仅落在「geo」类表，但项目同时含人物/组织等表，疑似写错表（归表错误，请核对）"},{"table":"地点表","row":"归表","value":"断魂崖","issue":"唯一名「断魂崖」仅落在「geo」类表，但项目同时含人物/组织等表，疑似写错表（归表错误，请核对）"}]}
+
+data: {"type":"done","content":"","nodeId":"0bcb5207-d1aa-4e0c-a97c-25db4ede40fa","title":"第一章 风起（续）","order":1,"status":"reviewing","nextAction":"已自动创建并完成「第一章 风起（续）」，可继续续写","babylore":{"ok":true,"operations":4,"applied":4,"error":"","selfCheckIssues":[{"table":"地点表","row":"归表","value":"青石镇","issue":"唯一名「青石镇」仅落在「geo」类表，但项目同时含人物/组织等表，疑似写错表（归表错误，请核对）"},{"table":"地点表","row":"归表","value":"断魂崖","issue":"唯一名「断魂崖」仅落在「geo」类表，但项目同时含人物/组织等表，疑似写错表（归表错误，请核对）"}]}}
+

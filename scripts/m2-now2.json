@@ -1,0 +1,1 @@
+{"ok":false,"operations":1,"applied":0,"error":"未落地任何事实","warnings":["表「妃嫔居住建筑表」update 缺少有效 match 列「name」，已跳过该操作（不插伪行）","本章未落地任何事实（ops=1）：空 ops 或全失效，将标记为未填以便重试"],"selfCheckIssues":[{"table":"妃嫔居住建筑表","row":1,"value":"","issue":"关键列空值（缺少名称）"}]}

@@ -7,6 +7,7 @@
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
+import { enrichForeshadow } from "@/core/foreshadowing";
 import { isSimilarName } from "@/lib/entity-auto-creator";
 import { NextResponse } from "next/server";
 
@@ -284,7 +285,7 @@ export async function POST(request: Request) {
     for (const f of selected.foreshadowings || []) {
       if (f.suggestion === "ignore") continue;
       if (f.suggestion === "create" && f.isNew) {
-        await prisma.pendingCommitment.create({
+        const created = await prisma.pendingCommitment.create({
           data: {
             projectId,
             description: f.description,
@@ -296,6 +297,8 @@ export async function POST(request: Request) {
           },
         });
         foreshadowingsCreated++;
+        // 异步生成伏笔后续发展思路（不阻塞抽取，失败静默）
+        enrichForeshadow(projectId, created.id).catch(() => {});
         results.push(`新建伏笔「${f.description.slice(0, 30)}…」`);
       } else if (f.suggestion === "update" && f.existingId) {
         await prisma.pendingCommitment.update({

@@ -24,6 +24,7 @@ interface ForeshadowItem {
   expiryChapter?: number;
   chapterNumber?: number;
   fulfilledChapterId?: string;
+  developmentHint?: string;
   createdAt: string;
 }
 
@@ -73,6 +74,9 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   const [error, setError] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(["voided"]));
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [editHints, setEditHints] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +109,73 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
     });
   };
 
+  // 本地更新某条伏笔的字段（保存/重生成后刷新面板）
+  const patchItem = (targetId: string, patch: Partial<ForeshadowItem>) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const groups: Record<string, GroupData> = {};
+      for (const key of Object.keys(prev.groups)) {
+        groups[key] = {
+          ...prev.groups[key],
+          items: prev.groups[key].items.map((it) =>
+            it.id === targetId ? { ...it, ...patch } : it,
+          ),
+        };
+      }
+      return { ...prev, groups };
+    });
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2400);
+  };
+
+  const saveHint = async (item: ForeshadowItem) => {
+    const text = editHints[item.id] ?? item.developmentHint ?? "";
+    try {
+      const res = await fetch("/api/foreshadowing/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, developmentHint: text }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      patchItem(item.id, { developmentHint: text });
+      setEditHints((p) => {
+        const next = { ...p };
+        delete next[item.id];
+        return next;
+      });
+      showToast("已保存后续发展思路");
+    } catch (err) {
+      showToast(`保存失败：${String(err)}`);
+    }
+  };
+
+  const regenHint = async (item: ForeshadowItem) => {
+    setBusyId(item.id);
+    try {
+      const res = await fetch("/api/foreshadowing/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, projectId, regenerateHint: true }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.developmentHint) throw new Error(json.error || `HTTP ${res.status}`);
+      patchItem(item.id, { developmentHint: json.developmentHint });
+      setEditHints((p) => {
+        const next = { ...p };
+        delete next[item.id];
+        return next;
+      });
+      showToast("已生成新的发展思路");
+    } catch (err) {
+      showToast(`生成失败：${String(err)}`);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   if (loading) {
     return <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">加载伏笔数据...</div>;
   }
@@ -126,6 +197,11 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex flex-col h-full">
+      {toast && (
+        <div className="sticky top-0 z-10 mx-2 mt-2 rounded bg-[var(--nv-surface-3)] px-2 py-1 text-center text-[10px] text-[var(--nv-accent)]">
+          {toast}
+        </div>
+      )}
       {/* 顶部统计 */}
       <div className="px-3 py-2 border-b border-[var(--nv-border-2)] text-[10px] text-[var(--nv-text-tertiary)]">
         共 {data.total} 条伏笔 · {data.groups.pending?.count || 0} 待回收
@@ -187,18 +263,54 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
 
                         {/* 展开详情 */}
                         {isExpanded && (
-                          <div className="mt-1 ml-4 p-2 rounded bg-[var(--nv-surface-2)] text-[10px] text-[var(--nv-text-tertiary)] space-y-0.5">
-                            {item.expiryChapter && (
-                              <p>预计回收章：第 {item.expiryChapter} 章</p>
-                            )}
-                            {item.chapterNumber && (
-                              <p>关联章：第 {item.chapterNumber} 章</p>
-                            )}
-                            {item.fulfilledChapterId && (
-                              <p>已回收于：章节 {item.fulfilledChapterId.slice(0, 8)}...</p>
-                            )}
-                            <p>创建时间：{new Date(item.createdAt).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })}</p>
-                          </div>
+                          <>
+                            <div className="mt-1 ml-4 p-2 rounded bg-[var(--nv-surface-2)] text-[10px] text-[var(--nv-text-tertiary)] space-y-0.5">
+                              {item.expiryChapter && (
+                                <p>预计回收章：第 {item.expiryChapter} 章</p>
+                              )}
+                              {item.chapterNumber && (
+                                <p>关联章：第 {item.chapterNumber} 章</p>
+                              )}
+                              {item.fulfilledChapterId && (
+                                <p>已回收于：章节 {item.fulfilledChapterId.slice(0, 8)}...</p>
+                              )}
+                              <p>创建时间：{new Date(item.createdAt).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })}</p>
+                            </div>
+
+                            {/* 后续发展思路 编辑区 */}
+                            <div className="mt-1 ml-4 p-2 rounded bg-[var(--nv-surface-2)] space-y-1">
+                              <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-secondary)]">
+                                <Icon name="lightbulb" size={11} className="text-[var(--nv-accent)]" />
+                                <span>后续发展思路</span>
+                                <span className="text-[var(--nv-text-tertiary)]">· 写作参考可改</span>
+                              </div>
+                              <textarea
+                                value={editHints[item.id] ?? item.developmentHint ?? ""}
+                                onChange={(e) =>
+                                  setEditHints((p) => ({ ...p, [item.id]: e.target.value }))
+                                }
+                                placeholder="AI 会依现有剧情推演方向，也可自己写…"
+                                rows={3}
+                                className="w-full resize-none rounded border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-2 py-1 text-[11px] leading-relaxed text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:border-[var(--nv-accent)] focus:outline-none"
+                              />
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => saveHint(item)}
+                                  disabled={busyId === item.id}
+                                  className="flex items-center gap-1 rounded border border-[var(--nv-accent)] px-2 py-1 text-[10px] text-[var(--nv-accent)] hover:bg-[var(--nv-surface-3)] disabled:opacity-50"
+                                >
+                                  <Icon name="pencil" size={10} /> 保存方向
+                                </button>
+                                <button
+                                  onClick={() => regenHint(item)}
+                                  disabled={busyId === item.id}
+                                  className="flex items-center gap-1 rounded bg-[var(--nv-surface-3)] px-2 py-1 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-4)] disabled:opacity-50"
+                                >
+                                  <Icon name="sparkles" size={10} /> {busyId === item.id ? "生成中…" : "AI 重生成"}
+                                </button>
+                              </div>
+                            </div>
+                          </>
                         )}
                       </div>
                     );

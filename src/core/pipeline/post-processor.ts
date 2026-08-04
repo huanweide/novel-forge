@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { enrichForeshadow } from "@/core/foreshadowing";
 import { scanForbiddenWordsEnhanced, type ForbiddenMatch } from "@/lib/forbidden-checker";
 import { runLocalDistillation } from "@/lib/distillation-runner";
 import { autoCreateEntities } from "@/lib/entity-auto-creator";
@@ -309,6 +310,8 @@ export async function runPostGenerationPipeline(
               },
             });
             createdCommitments.push(created.id);
+            // 异步生成伏笔后续发展思路（不阻塞主流程，失败静默）
+            enrichForeshadow(projectId, created.id).catch(() => {});
           } else if (fe.type === "recovered" && fe.matchedForeshadowId) {
             // 回收已有伏笔
             const existing = await prisma.pendingCommitment.findUnique({ where: { id: fe.matchedForeshadowId } });

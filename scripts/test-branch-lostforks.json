@@ -1,0 +1,13 @@
+{
+  "format": "nfproject",
+  "version": 1,
+  "include": ["branches"],
+  "project": {
+    "id": "orig-branch-proj-lost-001",
+    "name": "仅导入分支测试",
+    "genre": ["玄幻"],
+    "storyBranches": [
+      { "id": "branch-x", "name": "悬空分支", "description": "分叉点节点未随章节导入", "forkPointNodeId": "node-missing", "isActive": true }
+    ]
+  }
+}

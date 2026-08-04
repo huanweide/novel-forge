@@ -1,0 +1,13 @@
+{
+  "format": "nfproject",
+  "project": {
+    "id": "src-proj-lostforks-002",
+    "name": "分叉丢失测试源",
+    "genre": ["测试"],
+    "storyBranches": [
+      { "id": "B1", "forkPointNodeId": "N1", "parentBranchId": null, "name": "主线" },
+      { "id": "B2", "forkPointNodeId": "N2", "parentBranchId": "B1", "name": "支线A" },
+      { "id": "B3", "forkPointNodeId": "N3", "parentBranchId": "B2", "name": "支线B" }
+    ]
+  }
+}

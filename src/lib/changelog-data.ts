@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.81";
+export const LATEST_VERSION = "v0.46.82";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "实体高亮改固定醒目色：角色卡固定橙（#F97316），世界书各分类高对比固定色（势力绿/物品金/地点蓝/法术紫/功法红/生灵粉/文化青/历史靛/法则琥珀/货币柠檬绿/自定义灰），配色单一来源收敛到 entity-highlighter 常量，正文高亮 / API / 图例三处一致",
-  "正文上方新增固定色表头图例：角色 + 世界书各分类的色块 + 中文标签，一眼看懂颜色对应哪类实体，与「本章实体」彩色徽章互补",
-  "正文内点击高亮实体名即可跳转设定界面：高亮词带 data-entity-id，点击角色打开角色编辑器、点击世界书打开世界书编辑器（复用既有 onEditCharacter / onEditLore），支持键盘聚焦回车",
-  "颜色引擎补 id 透传：EntityHighlight / EntityRaw / EntityMatch 加 id，rehype 写入 data-entity-id；globals.css 统一 hover / focus 浅底高亮，去旧角色蓝硬编码",
+  "伏笔面板新增可编辑「后续发展思路」：展开任意伏笔可看到 AI 依现有剧情推演的发展方向（基于缝合怪多线推进原则），作者可直接手填自己的判断，或点「AI 重生成」让模型按最新剧情重新推演，作为写作参考指示而非约束",
+  "伏笔模型新增 developmentHint 字段并落库：PendingCommitment 加 developmentHint 列，作者手填与 AI 生成的方向都持久化，刷新面板后保留，不复写原有埋设/回收状态机",
+  "自动生成接入两条伏笔计入路径：正文后处理的本地蒸馏检测到伏笔（post-processor）与拆书抽取计入的伏笔（apply-extraction）在创建后异步 fire-and-forget 调 enrichForeshadow 落库，不阻塞正文生成、失败静默",
+  "新增 POST /api/foreshadowing/update 路由：支持手填 developmentHint / 描述 / 状态 / 优先级，以及 regenerateHint 触发 LLM 重生成；面板「保存方向」「AI 重生成」按钮调此路由并即时本地刷新",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.82",
+    date: "2026-08-04",
+    title: "伏笔后续发展思路：面板可编辑 + AI 依缝合怪多线原则自动推演方向并落库，新增 update 路由（tsc 零错误）",
+    sections: [
+      {
+        label: "伏笔后续发展思路（用户反馈）",
+        items: [
+          "伏笔面板新增可编辑「后续发展思路」区：展开任意伏笔即见 AI 依现有剧情（缝合怪多线推进原则：主线/个人线/事件线多速率兑现）推演的 2-4 句方向，作为写作参考指示；作者可手填自己的判断，或点「AI 重生成」让模型按最新剧情重新推演",
+          "PendingCommitment 模型新增 developmentHint 字段并落库：作者手填与 AI 生成的方向都持久化，刷新面板后保留，不复写原有埋设/检测/回收/废弃状态机",
+          "自动生成接入两条伏笔计入路径：正文后处理本地蒸馏检出的伏笔（post-processor）与拆书抽取计入的伏笔（apply-extraction）在创建后异步 fire-and-forget 调 enrichForeshadow 落库，不阻塞正文生成、LLM 异常静默回退",
+          "新增 POST /api/foreshadowing/update 路由：支持手填 developmentHint / 描述 / 状态 / 优先级，以及 regenerateHint 触发 LLM 重生成；面板「保存方向」「AI 重生成」按钮调此路由并即时本地刷新；开发强调「只给方向不替作者写正文，贴合已有剧情不凭空开新线」",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.81",
     date: "2026-08-04",
