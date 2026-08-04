@@ -22,6 +22,8 @@ export interface GenerationData {
   pendingCommitments?: any[];
   pendingItems?: any[];
   storylines?: any[];
+  /** 结构化表格（LoreTable）——供触发词匹配吞并更长名候选，避免3字 lorebook key 在表值前缀内误召回 */
+  loreTables?: Array<{ name: string; columns: any[]; rows: any[] }>;
 }
 
 // ─── 预处理 ───────────────────────────────────────────────

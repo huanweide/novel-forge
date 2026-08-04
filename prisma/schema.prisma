@@ -489,6 +489,20 @@ model ImportTask {
   @@index([projectId])
 }
 
+// ─── 导入提交幂等锁 (Import Commit Lock) ───────────────
+// 替代进程内存 Map：基于 (projectId, nodeId) 唯一约束实现跨实例幂等。
+// commit 为项目级提交，nodeId 用占位键；并发提交同一项目触发 P2002 唯一冲突 → 视为重复跳过（409）。
+
+model ImportCommitLock {
+  id        String   @id @default(uuid())
+  projectId String
+  nodeId    String   @default("__commit__") // 锁粒度键；项目级提交用占位，未来可按节点细化
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, nodeId])
+  @@index([projectId])
+}
+
 // ─── 待兑现事项追踪 (Pending Item) ──────────────────────
 
 model PendingItem {

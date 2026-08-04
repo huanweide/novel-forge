@@ -25,18 +25,61 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.70";
+export const LATEST_VERSION = "v0.46.71";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "abort 信号透传自愈（阿游 P0）：game-engine processGameTurn 收 AbortSignal，提交前若 aborted 则不提交轮次/背包；前端停止后拉 GET summary 读权威态，灭流式中断前后端重新错位",
-  "幂等锁空载荷 DoS 修复（磐石 P0）：commit 空载荷校验移到加锁前，400 提前返回不再阻塞合法写入，灭锁变拒绝服务",
-  "OOC 词条误报回归（青砚 P1）：trigger knownNames 补章节词条/技能/功法长名，灭「李星云剑法」内 3字角色名误报 OOC",
-  "全透镜 P1 收口：babyloreFillAll 失败真返 ok:false、前端不可变更新+entities 去重、world 长文分块采样、commit 整体事务、19 处弹窗 aria 关联、forkPoint 重映射、正则重叠交替 (a|aa)+ 防护、交互事务超时 60s",
+  "OOC/召回死代码接线（青砚 P0）：删无调用 findCharacterByName 死代码，matchLoreEntries 接收 tables 并补表格关键列值进 knownNames，灭「李星云剑法」内 3字 lorebook key 误召回——Round7 修复落到真路径",
+  "游戏 abort 透传彻底化（阿游 P1）：chatStream 透传 AbortSignal，停止后 LLM 真正中断不丢 token；空流跳过 $transaction 提交幻影空轮次",
+  "填表假完成修复（墨白 P1）：babyloreFillAll 全跳过真返 ok:false 掩脏标记，灭静默假完成",
+  "幂等锁跨实例 + 弹窗无障碍（磐石/清览 P1）：commit 幂等锁改 DB 唯一约束 ImportCommitLock（跨实例有效）替进程 Map；import_parse 失败 Flash 记账；buildLoreSample 中段分块覆盖；toast Confirm/Prompt + CommandPalette 补 role=dialog/焦点陷阱；regex 补 (a?)+ 量词 + import 外键剥离 + 事务内幂等",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.71",
+    date: "2026-08-04",
+    title: "会员股东 Round 8 实现：OOC/召回死代码接线 + 游戏abort透传彻底化 + 填表假完成修复 + 幂等锁跨实例/弹窗无障碍（tsc 零错误）",
+    sections: [
+      {
+        label: "OOC/召回死代码接线（青砚 P0）",
+        items: [
+          "删无生产调用方的 findCharacterByName 死代码（误导 Round7 修复未接线）；matchLoreEntries 新增 tables 形参，collectTableKnownNames 把表格关键列值（≥2字，name/title/place 等）并入 knownNames；3字 lorebook key 恰为更长表值前缀时被吞并，灭「李星云剑法」内「李星云」误召回——Round7 修复落到真生产路径",
+        ],
+      },
+      {
+        label: "游戏 abort 透传彻底化（阿游 P1）",
+        items: [
+          "processGameTurn 把 AbortSignal 透传到 chatStream（client.ts 用 AbortSignal.any 合并超时转发 fetch），停止后 LLM 真正中断不再丢 token；空流（0 chunk）新增守卫跳过 $transaction，不提交幻影空轮次",
+        ],
+      },
+      {
+        label: "填表假完成修复（墨白 P1）",
+        items: [
+          "babyloreFillAll 全跳过分支由 ok:true 改为 ok:false 带 error 摘要（注明全部跳过、applied=0、疑似旧版误标脏标记），与 Round6 ok&&applied>0 门槛一致，灭静默假完成",
+        ],
+      },
+      {
+        label: "幂等锁跨实例 + 监控/采样（磐石 P1）",
+        items: [
+          "commit 幂等锁由进程内存 Map 改 DB 唯一约束（ImportCommitLock.projectId+nodeId），跨实例有效，P2002 冲突返 409 跳过，finally 释放；import_parse 失败 Flash 调用补 recordLlmCall（fail:import_parse，token 0）与 client.ts 口径一致；buildLoreSample 改头+最多4段均匀中段窗口+尾采样，覆盖长文中段",
+        ],
+      },
+      {
+        label: "弹窗无障碍补全（清览 P1）",
+        items: [
+          "toast Confirm/Prompt 与 CommandPalette 补 role=dialog + aria-modal + aria-labelledby + 焦点陷阱（ESC 全局可关、Tab 循环），灭读屏报不出名与键盘可逃逸——Round7 Modal 收敛漏掉的 2 处手写模态",
+        ],
+      },
+      {
+        label: "正则/导入工程加固（工坊 P1）",
+        items: [
+          "regex isLikelyUnsafeRegex 补 ? 量词嵌套检测，覆盖 (a?)+/(a?)* 类 catastrophic backtracking；import 创建 storyNode 时剥离 parentId/branchId、pass2 按旧→新映射回填、悬空置 null，灭外键悬空；幂等查重由事务外移入 $transaction 内防并发重复",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.70",
     date: "2026-08-04",

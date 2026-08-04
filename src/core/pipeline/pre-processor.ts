@@ -180,5 +180,6 @@ export function buildGenerationContext(params: {
     pendingCommitments,
     pendingItems,
     tieredMemory,
+    loreTables: data.loreTables as any,
   });
 }

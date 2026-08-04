@@ -11,8 +11,9 @@
  * Provider 未挂载时 confirmDialog/promptDialog 退化为原生 confirm/prompt（安全网）。
  */
 
-import React, { useState, useCallback, useEffect, type ReactNode } from "react";
+import React, { useState, useCallback, useEffect, useId, useRef, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -131,6 +132,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [promptValue, setPromptValue] = useState("");
 
+  const confirmPanelRef = useRef<HTMLDivElement>(null);
+  const promptPanelRef = useRef<HTMLDivElement>(null);
+  const confirmTitleId = useId();
+  const promptTitleId = useId();
+
+  const closeConfirm = useCallback((result: boolean) => {
+    setConfirmState((s) => {
+      if (s) s.resolve(result);
+      return null;
+    });
+  }, []);
+  const closePrompt = useCallback((value: string | null) => {
+    setPromptState((s) => {
+      if (s) s.resolve(value);
+      return null;
+    });
+  }, []);
+
+  // 焦点陷阱：打开时聚焦首个可交互元素、Tab 循环、ESC 关闭、关闭后返还焦点
+  useFocusTrap(confirmPanelRef, !!confirmState, () => closeConfirm(false));
+  useFocusTrap(promptPanelRef, !!promptState, () => closePrompt(null));
+
   const showToast = useCallback((t: ToastItem) => {
     setToasts((prev) => [...prev, t]);
     window.setTimeout(() => {
@@ -205,7 +228,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {/* Confirm 对话框 */}
       {confirmState ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="surface-floating w-full max-w-sm animate-spring rounded-2xl p-6">
+          <div
+            ref={confirmPanelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={confirmTitleId}
+            className="surface-floating w-full max-w-sm animate-spring rounded-2xl p-6"
+          >
             <div className="flex items-start gap-3">
               <Icon
                 name="alert"
@@ -213,7 +243,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 className={`mt-0.5 shrink-0 ${confirmState.opts.danger ? "text-danger" : "text-warning"}`}
               />
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">{confirmState.opts.title}</h3>
+                <h3 id={confirmTitleId} className="text-base font-semibold text-[var(--nv-text-primary)]">{confirmState.opts.title}</h3>
                 {confirmState.opts.description ? (
                   <p className="mt-1.5 text-sm leading-relaxed text-[var(--nv-text-tertiary)]">{confirmState.opts.description}</p>
                 ) : null}
@@ -221,21 +251,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </div>
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => {
-                  const r = confirmState.resolve;
-                  setConfirmState(null);
-                  r(false);
-                }}
+                onClick={() => closeConfirm(false)}
                 className="btn-ghost flex-1 rounded-xl py-2.5 text-sm font-medium"
               >
                 {confirmState.opts.cancelText ?? "取消"}
               </button>
               <button
-                onClick={() => {
-                  const r = confirmState.resolve;
-                  setConfirmState(null);
-                  r(true);
-                }}
+                onClick={() => closeConfirm(true)}
                 className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-[var(--nv-text-primary)] ${
                   confirmState.opts.danger ? "btn-danger" : "btn-primary"
                 }`}
@@ -250,11 +272,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {/* Prompt 对话框（替代原生 prompt） */}
       {promptState ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="surface-floating w-full max-w-sm animate-spring rounded-2xl p-6">
+          <div
+            ref={promptPanelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={promptTitleId}
+            className="surface-floating w-full max-w-sm animate-spring rounded-2xl p-6"
+          >
             <div className="flex items-start gap-3">
               <Icon name="sparkles" size={20} className="mt-0.5 shrink-0 text-[var(--nv-primary)]" />
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">{promptState.opts.title}</h3>
+                <h3 id={promptTitleId} className="text-base font-semibold text-[var(--nv-text-primary)]">{promptState.opts.title}</h3>
                 {promptState.opts.description ? (
                   <p className="mt-1.5 text-sm leading-relaxed text-[var(--nv-text-tertiary)]">{promptState.opts.description}</p>
                 ) : null}
@@ -266,9 +295,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               onChange={(e) => setPromptValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  const r = promptState.resolve;
-                  setPromptState(null);
-                  r(promptValue.trim() || null);
+                  closePrompt(promptValue.trim() || null);
                 }
               }}
               placeholder={promptState.opts.placeholder}
@@ -276,21 +303,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             />
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => {
-                  const r = promptState.resolve;
-                  setPromptState(null);
-                  r(null);
-                }}
+                onClick={() => closePrompt(null)}
                 className="btn-ghost flex-1 rounded-xl py-2.5 text-sm font-medium"
               >
                 {promptState.opts.cancelText ?? "取消"}
               </button>
               <button
-                onClick={() => {
-                  const r = promptState.resolve;
-                  setPromptState(null);
-                  r(promptValue.trim() || null);
-                }}
+                onClick={() => closePrompt(promptValue.trim() || null)}
                 className="btn-primary flex-1 rounded-xl py-2.5 text-sm font-semibold text-[var(--nv-text-primary)]"
               >
                 {promptState.opts.confirmText ?? "确定"}

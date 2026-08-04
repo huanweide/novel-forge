@@ -214,6 +214,58 @@ describe("abort 信号透传（阿游 P0-1）", () => {
     const summary = await getSessionSummary("s1");
     expect(summary.currentRound).toBe(1);
   });
+
+  it("abort 透传（P1-1）：chatStream 调用携带 signal，底层 fetch 可被真正中断", async () => {
+    (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
+    (prisma.gameState.findMany as any).mockResolvedValue(baseSession.states);
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p", name: "书" });
+    (prisma.storyNode.findUnique as any).mockResolvedValue({ id: "n", title: "章", content: "" });
+    (prisma.characterCard.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findFirst as any).mockResolvedValue(null);
+    (prisma.$transaction as any).mockImplementation(async (ops: any) => { return []; });
+    (getEffectiveConfig as any).mockResolvedValue({ writerModel: "m" });
+
+    const captured: any[] = [];
+    (createLLMClient as any).mockReturnValue({
+      chatStream: async function* (req: any) { captured.push(req); yield { content: "测试叙事" }; },
+    });
+
+    const controller = new AbortController();
+    const gen = processGameTurn(
+      { sessionId: "s1", actionType: "custom", actionText: "行动" },
+      controller.signal
+    );
+    for await (const _ of gen) { /* 排空生成器 */ }
+
+    expect(captured.length).toBe(1);
+    expect(captured[0].signal).toBe(controller.signal);
+  });
+
+  it("空流（0 chunk）不提交（P1-2）：$transaction 调用 0 次且 yield error 事件，灭幻影空轮次", async () => {
+    (prisma.gameSession.findUnique as any).mockResolvedValue(baseSession);
+    (prisma.gameState.findMany as any).mockResolvedValue(baseSession.states);
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p", name: "书" });
+    (prisma.storyNode.findUnique as any).mockResolvedValue({ id: "n", title: "章", content: "" });
+    (prisma.characterCard.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findMany as any).mockResolvedValue([]);
+    (prisma.lorebookEntry.findFirst as any).mockResolvedValue(null);
+    const txCalls: any[] = [];
+    (prisma.$transaction as any).mockImplementation(async (ops: any) => { txCalls.push(ops); return []; });
+    (getEffectiveConfig as any).mockResolvedValue({ writerModel: "m" });
+    (createLLMClient as any).mockReturnValue({
+      chatStream: async function* () { /* 0 chunks，空流 */ },
+    });
+
+    const gen = processGameTurn(
+      { sessionId: "s1", actionType: "custom", actionText: "行动" }
+    );
+    const events: any[] = [];
+    for await (const e of gen) { events.push(e); }
+
+    expect(txCalls.length).toBe(0);
+    expect(events.some((e) => e.type === "error")).toBe(true);
+  });
 });
 
 // ─── P1-1：前端不可变背包更新（applyFrontendItemChanges）──────────

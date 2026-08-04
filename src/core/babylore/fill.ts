@@ -531,8 +531,11 @@ export async function babyloreFillAll(
     ok = false;
     error = "没有可填表的章节（项目无正文章节或暂无结构化表格）";
   } else if (processed === 0 && skipped > 0) {
-    // 全部章节已填，属正常无需重试，视为成功（非静默假完成）。
-    ok = true;
+    // P1-1（Round 8）：全跳过即 ok:true 会掩盖旧版误标脏标记 / 全空残留，
+    // 重演 Round6/7 已消灭的“静默假完成”。全跳过且无任何 applied 时判失败并带 warning，
+    // 与 Round6 完成门槛 ok && applied>0 一致，迫使上游复核已填标记真实性而非误判成功。
+    ok = false;
+    error = `全部 ${skipped} 个章节被跳过（已填标记存在但本次无事实落地 applied=0）：可能是旧版误标脏标记或数据缺失，请核对已填标记真实性后再重试`;
   } else if (failedChapters > 0) {
     ok = false;
     error = `有 ${failedChapters}/${processed} 个章节填表失败，未全部完成（已落 ${applied} 条事实），请检查 LLM 配置/网络后重试`;

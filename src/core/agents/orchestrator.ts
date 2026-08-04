@@ -574,8 +574,10 @@ export function buildPromptContext(params: {
   tieredMemory?: TieredMemory;       // S/A/B 三级分级记忆——classifyEvents 输出
   styleCard?: Record<string, unknown> | null;
   authorNote?: string;
+  /** 结构化表格（LoreTable）——Round8 P0：供 matchLoreEntries 吞并更长名候选，灭3字 lorebook key 在表值前缀内误召回 */
+  loreTables?: Array<{ name: string; columns: any[]; rows: any[] }>;
 }): PromptContext {
-  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], tieredMemory, styleCard, authorNote } = params;
+  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], tieredMemory, styleCard, authorNote, loreTables } = params;
 
   // 主角极简卡
   const protagonist = characters.find((c) => c.role === "protagonist") || characters[0];
@@ -605,7 +607,7 @@ export function buildPromptContext(params: {
   const forcedLore = activeLore.filter((e) => (e.depth ?? 3) <= 2);
   const triggerableLore = activeLore.filter((e) => (e.depth ?? 3) >= 3);
 
-  const triggeredLore = matchLoreEntries(recentText, triggerableLore, 8).map((t) => ({
+  const triggeredLore = matchLoreEntries(recentText, triggerableLore, 8, loreTables).map((t) => ({
     entry: t.entry,
     triggerKeyword: t.triggerKeyword,
     matchScore: t.matchScore,

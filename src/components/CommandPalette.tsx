@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/icons";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type Item = {
   id: string;
@@ -28,6 +29,10 @@ export function CommandPalette() {
   const [items, setItems] = useState<Item[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // 焦点陷阱：打开时聚焦首个可交互元素、Tab 循环、ESC（无论焦点在哪）关闭、关闭后返还焦点
+  useFocusTrap(panelRef, open, () => setOpen(false));
 
   // 全局快捷键 Cmd/Ctrl+K，或外部派发事件打开（顶栏按钮）
   useEffect(() => {
@@ -135,6 +140,11 @@ export function CommandPalette() {
       onClick={() => setOpen(false)}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="命令面板"
         className="surface-floating w-[640px] max-w-[94vw] rounded-2xl shadow-2xl overflow-hidden animate-spring"
         onClick={(e) => e.stopPropagation()}
       >

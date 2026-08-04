@@ -65,9 +65,15 @@ export function isLikelyUnsafeRegex(pattern: string, flags = ""): string | null 
     }
     if (ch === ")") {
       const top = stack.pop();
+      // 将内层组的内容量词/交替向上冒泡到父组：((a?))+ 等嵌套结构才能被外层重复检测捕获
+      if (top && stack.length) {
+        const parent = stack[stack.length - 1];
+        if (top.hasQuantInside) parent.hasQuantInside = true;
+        if (top.hasAlternation) parent.hasAlternation = true;
+      }
       const next = pattern[i + 1];
-      // 仅 * + { 视为重复量词（? 最多匹配一次，风险低，排除以避免误伤 (?:x)?）
-      const repeated = next === "*" || next === "+" || next === "{";
+      // 重复量词：* + { ? 均纳入嵌套检测；? 可选量词纳入后，(a?)+/(a?)* 类灾难性回溯可被拦截
+      const repeated = next === "*" || next === "+" || next === "{" || next === "?";
       if (top && repeated) {
         // 嵌套量词（组内含量词）或被重复组内含重叠交替，均可能触发灾难性回溯
         if (top.hasQuantInside) {
@@ -76,6 +82,13 @@ export function isLikelyUnsafeRegex(pattern: string, flags = ""): string | null 
         if (top.hasAlternation) {
           return "检测到重复组内含交替（重叠分支），存在灾难性回溯风险";
         }
+      }
+      continue;
+    }
+    if (ch === "?") {
+      // 组内可选量词纳入“含量词”判定：紧跟在 ( 之后的 ? 是 (?: (?= (?<= 等组的修饰符，非内容量词，须排除
+      if (stack.length && pattern[i - 1] !== "(") {
+        stack[stack.length - 1].hasQuantInside = true;
       }
       continue;
     }

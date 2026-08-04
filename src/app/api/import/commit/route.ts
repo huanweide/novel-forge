@@ -7,6 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { getSettings, recordLlmCall } from "@/lib/llm";
@@ -14,9 +15,9 @@ import { normalizeRelationships } from "@/lib/relations";
 
 export const maxDuration = 300;
 
-// ─── P1-4：并发 commit 幂等锁 —— 同一 projectId 禁止并发执行，防双击/重试导致重复写库 ───
-const commitLocks = new Map<string, number>(); // projectId -> 加锁时间戳
-const COMMIT_LOCK_TTL = 300_000; // 锁最长持有 300s，超时自动视为失效，避免异常遗留死锁
+// ─── P1-1：并发 commit 幂等锁 —— 基于 DB 唯一约束（ImportCommitLock.projectId+nodeId），跨实例有效 ───
+// 替代原进程内存 Map（多实例/长事务并发会双写）。并发第二个请求触发 P2002 唯一冲突 → 视为重复提交，跳过（409）。
+const COMMIT_LOCK_NODE = "__commit__"; // 项目级提交占位键；未来可细化到具体 nodeId
 
 // ═══════════════════════════════════════════════════════════════
 // AI 合并引擎 —— 模型分批并行（每批4个，N批并发）
@@ -310,12 +311,19 @@ export async function POST(request: Request) {
   if (chapters.length === 0 && characters.length === 0 && loreEntries.length === 0)
     return NextResponse.json({ error: "没有任何要导入的数据" }, { status: 400 });
 
-  // 并发幂等锁：同一 projectId 正在提交则拒绝（409），防重复写入
-  const lockedAt = commitLocks.get(pid);
-  if (lockedAt && Date.now() - lockedAt <= COMMIT_LOCK_TTL) {
-    return NextResponse.json({ error: "该项目正在导入中，请等待上一次提交完成（避免重复写入）" }, { status: 409 });
+  // 并发幂等锁：基于 DB 唯一约束（ImportCommitLock），跨实例有效，替代进程内存 Map。
+  // 持锁状态由「锁行是否存在」判定，移除 TTL 旁路；长事务并发的第二个请求触发 P2002 冲突 → 409 跳过。
+  let lockAcquired = false;
+  try {
+    await prisma.importCommitLock.create({ data: { projectId: pid, nodeId: COMMIT_LOCK_NODE } });
+    lockAcquired = true;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ error: "该项目正在导入中，请等待上一次提交完成（避免重复写入）" }, { status: 409 });
+    }
+    // 非冲突型 DB 异常（如锁表暂不可用）：放行但告警，避免误阻塞正常导入
+    console.warn(`[import/commit] 幂等锁获取失败（非冲突）：${e instanceof Error ? e.message : e}`);
   }
-  commitLocks.set(pid, Date.now());
 
   const sse = new ReadableStream({
     async start(controller) {
@@ -629,7 +637,12 @@ export async function POST(request: Request) {
         send({ type: "error", message: err instanceof Error ? err.message : "导入失败" });
       } finally {
         controller.close();
-        commitLocks.delete(pid); // 释放幂等锁
+        // 释放幂等锁：删除锁行即视为解锁（进程被杀则依赖部署侧重启/清理，不再用 TTL 兜底）
+        if (lockAcquired) {
+          await prisma.importCommitLock.deleteMany({
+            where: { projectId: pid, nodeId: COMMIT_LOCK_NODE },
+          }).catch(() => {});
+        }
       }
     },
   });

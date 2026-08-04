@@ -11,6 +11,33 @@
 import type { LorebookEntry } from "@/core/types";
 import { scoreKeyword, dedupSubstring, matchNameStrict } from "@/core/text/match";
 
+// 表格行的"关键列"——这些列的值出现在上下文里即视为命中召回（与 recall.ts 对齐）
+const TABLE_KEY_COLS = ["name", "title", "key", "live", "place", "building", "type", "status"];
+
+/**
+ * 从结构化表格收集"已知长名"候选集合：表格关键列值（≥2字）作为已知更长名，
+ * 供 matchNameStrict 的最长匹配吞并逻辑使用（3字 lorebook key 在更长表值内被吞并、不误召回）。
+ * 与 recall.ts 的 TABLE_KEY_COLS / 收集逻辑保持一致。
+ */
+function collectTableKnownNames(
+  tables?: Array<{ name: string; columns: any[]; rows: any[] }>,
+): string[] {
+  const names: string[] = [];
+  if (!tables || !tables.length) return names;
+  for (const t of tables) {
+    const rows: any[] = t.rows || [];
+    const cols: any[] = t.columns || [];
+    const keyCols = cols.length ? cols.map((c) => c.key) : TABLE_KEY_COLS;
+    for (const r of rows) {
+      for (const kc of keyCols) {
+        const v = r[kc];
+        if (v && typeof v === "string" && v.length >= 2) names.push(v);
+      }
+    }
+  }
+  return names;
+}
+
 /**
  * 扫描文本中的触发词，返回命中的所有世界书词条
  *
@@ -22,11 +49,15 @@ import { scoreKeyword, dedupSubstring, matchNameStrict } from "@/core/text/match
 export function matchLoreEntries(
   text: string,
   entries: LorebookEntry[],
-  maxResults = 10
+  maxResults = 10,
+  tables?: Array<{ name: string; columns: any[]; rows: any[] }>
 ): { entry: LorebookEntry; triggerKeyword: string; matchScore: number }[] {
   const results: Map<string, { entry: LorebookEntry; triggerKeyword: string; matchScore: number }> = new Map();
 
   // Round6 P0-1：候选关键词集合（已知更长名优先吞并短名），供 matchNameStrict 最长匹配使用。
+  // Round8 P0：在 lorebook keys 基础上补入表格关键列值（特别是长名/3字列值），
+  // 使 3字 lorebook key 恰为更长表值前缀时被吞并、不误触发召回
+  // （如 lorebook「李星云」不会在「李星云剑法」这种表值内被误召回）。
   const knownNames: string[] = [];
   for (const entry of entries) {
     if (!entry.enabled) continue;
@@ -34,6 +65,9 @@ export function matchLoreEntries(
       const k = (key || "").trim();
       if (k) knownNames.push(k);
     }
+  }
+  for (const n of collectTableKnownNames(tables)) {
+    knownNames.push(n);
   }
 
   for (const entry of entries) {
@@ -63,44 +97,3 @@ export function matchLoreEntries(
     .slice(0, maxResults);
 }
 
-/**
- * 根据角色别名查找角色卡（用于OOC检查时快速匹配）
- *
- * @param extraKnownNames 同章节的「更长名候选集合」——词条 keys、技能/功法/地点等长实体名。
- *        Round7 P1：并入该集合后，3字角色名若恰为更长词条（如「李星云」⊂「李星云剑法」）的前缀，
- *        会被 matchNameStrict 的最长匹配吞并逻辑识别为「属于更长名的一部分」而不误报 OOC。
- *        不传则仅含角色名/别名（Round6 行为，可能回归误报）。
- */
-export function findCharacterByName(
-  text: string,
-  characters: { id: string; name: string; aliases: string[] }[],
-  extraKnownNames?: string[]
-): string[] {
-  const found: string[] = [];
-
-  // Round6 P0-1：候选角色名/别名集合（已知更长名优先吞并短名），避免 OOC 因最长匹配误判。
-  // Round7 P1：再并入同章节词条/技能/功法/地点等长名候选，使 3字角色名在更长词条内被吞并、不误报。
-  const knownNames: string[] = [];
-  for (const c of characters) {
-    knownNames.push(c.name, ...c.aliases);
-  }
-  if (extraKnownNames) {
-    for (const n of extraKnownNames) {
-      const t = (n || "").trim();
-      if (t) knownNames.push(t);
-    }
-  }
-
-  for (const char of characters) {
-    const names = [char.name, ...char.aliases];
-    for (const name of names) {
-      // 改用词边界匹配（matchKeyword），避免「阿游」暴力子串误命中「阿克游说」这类 OOC 假阳性。
-      if (matchNameStrict(text, name, { knownNames })) {
-        found.push(char.id);
-        break;
-      }
-    }
-  }
-
-  return found;
-}

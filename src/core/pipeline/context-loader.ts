@@ -27,7 +27,7 @@ export async function loadGenerationContext(
   summaryTake = 3,
 ): Promise<GenerationData> {
 
-  const [project, currentNode, allNodes, characters, loreEntries, summariesRaw, storyBeatsRaw, styleCard, pendingCommitmentsRaw, pendingItemsRaw, storylinesRaw] =
+  const [project, currentNode, allNodes, characters, loreEntries, summariesRaw, storyBeatsRaw, styleCard, pendingCommitmentsRaw, pendingItemsRaw, storylinesRaw, loreTablesRaw] =
     await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
@@ -69,6 +69,10 @@ export async function loadGenerationContext(
       prisma.storyline.findMany({
         where: { projectId, status: "active" },
         orderBy: { type: "asc" },
+      }),
+      // 结构化表格（LoreTable）：供触发词匹配吞并更长名候选（Round8 P0）
+      prisma.loreTable.findMany({
+        where: { projectId },
       }),
     ]);
 
@@ -118,5 +122,6 @@ export async function loadGenerationContext(
     pendingCommitments: pendingCommitments as any,
     pendingItems: pendingItemsRaw as any,
     storylines: storylinesRaw as any,
+    loreTables: (loreTablesRaw || []) as any,
   };
 }

@@ -41,6 +41,8 @@ export interface LLMRequest {
   stream?: boolean;
   /** 推理模式：仅 DeepSeek 官方 API 支持，硅基流动等第三方不用传 */
   thinking?: { type: "enabled" | "disabled" };
+  /** 外部 AbortSignal（如用户停止生成）：与超时信号合并，真正中断底层 fetch，灭停止后仍在生成的 token 浪费 */
+  signal?: AbortSignal;
   /** OpenAI 兼容的工具定义 */
   tools?: Array<{
     type: "function";
@@ -239,6 +241,12 @@ async function establishStream(
     ...(request.thinking ? { thinking: request.thinking } : {}),
   };
 
+  // 合并超时信号与外部 signal：任一触发即中断 fetch（用户停止时真正停止生成，灭 token 浪费）。
+  const timeoutSignal = AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS);
+  const fetchSignal = request.signal
+    ? AbortSignal.any([timeoutSignal, request.signal])
+    : timeoutSignal;
+
   let response: Response;
   try {
     response = await fetch(`${target.baseURL}/chat/completions`, {
@@ -248,7 +256,7 @@ async function establishStream(
         Authorization: `Bearer ${target.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS),
+      signal: fetchSignal,
     });
   } catch (e) {
     if (e instanceof TypeError) {

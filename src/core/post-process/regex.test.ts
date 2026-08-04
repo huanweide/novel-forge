@@ -35,6 +35,18 @@ describe("isLikelyUnsafeRegex", () => {
     expect(isLikelyUnsafeRegex("(foo|bar)", "")).toBeNull();
   });
 
+  it("拦截 (a?)+ 类重叠可选 ReDoS", () => {
+    expect(isLikelyUnsafeRegex("(a?)+", "g")).not.toBeNull();
+  });
+
+  it("拦截 (a?)* 类重叠可选 ReDoS", () => {
+    expect(isLikelyUnsafeRegex("(a?)*", "")).not.toBeNull();
+  });
+
+  it("拦截 ((a?))+ 嵌套可选 ReDoS", () => {
+    expect(isLikelyUnsafeRegex("((a?))+", "g")).not.toBeNull();
+  });
+
   it("拦截超大重复次数", () => {
     expect(isLikelyUnsafeRegex("a{999999}", "")).not.toBeNull();
   });

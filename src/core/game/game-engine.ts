@@ -276,6 +276,7 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
       messages,
       temperature: 0.85,
       maxTokens: 800,
+      signal, // 阿游 P1-1：把前端透传的 abort 信号转发到底层 fetch，停止后 LLM 真正中断、灭 token 浪费
     });
     for await (const chunk of stream) {
       // 流式期用户停止：abort 信号透传进来后立即放弃本轮，停止消费并准备丢弃提交（阿游 P0-1）
@@ -287,6 +288,14 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
     }
   } catch (err: any) {
     yield { type: "error", error: `LLM 调用失败：${err.message}` };
+    return;
+  }
+
+  // 空流保护（阿游 P1-2）：若 LLM 返回 0 个 chunk，fullResponse 为空。
+  // 此时不解析、不提交，直接 return 跳过 $transaction，
+  // 避免产生「空叙事幻影轮次」污染回放——与 Round7 P0-2 自愈一致。
+  if (!fullResponse.trim()) {
+    yield { type: "error", error: "LLM 返回为空，本轮未提交" };
     return;
   }
 

@@ -2,6 +2,17 @@
 
 ---
 
+## v0.46.71 — 2026-08-04
+**会员股东 Round 8 实现：OOC/召回死代码接线 + 游戏abort透传彻底化 + 填表假完成修复 + 幂等锁跨实例/弹窗无障碍（tsc 零错误）**
+
+- OOC/召回死代码接线（青砚 P0）：删无调用 findCharacterByName 死代码，matchLoreEntries 接收 tables 并补表格关键列值进 knownNames，灭「李星云剑法」内 3字 lorebook key 误召回——Round7 修复落到真路径
+- 游戏 abort 透传彻底化（阿游 P1）：chatStream 透传 AbortSignal，停止后 LLM 真正中断不丢 token；空流跳过 $transaction 提交幻影空轮次
+- 填表假完成修复（墨白 P1）：babyloreFillAll 全跳过真返 ok:false 掩脏标记，灭静默假完成
+- 幂等锁跨实例 + 工程加固（磐石/工坊 P1）：commit 幂等锁改 DB 唯一约束 ImportCommitLock（跨实例有效）替进程 Map；import_parse 失败 Flash 记账；buildLoreSample 中段分块覆盖；regex 补 (a?)+ 量词检测；import 外键 parentId/branchId 剥离重映射 + 幂等查重移入事务内
+- 弹窗无障碍补全（清览 P1）：toast Confirm/Prompt 与 CommandPalette 补 role=dialog/aria-modal/焦点陷阱，灭读屏报不出名与键盘逃逸
+
+---
+
 ## v0.46.70 — 2026-08-04
 **会员股东 Round 7 实现：abort 信号透传自愈 + 幂等锁空载荷 DoS 修复 + OOC 词条误报回归 + 填表假完成/不可变更新 + 导入分叉重映射/正则重叠交替/事务超时 + 19 处弹窗 aria（tsc 零错误）**
 

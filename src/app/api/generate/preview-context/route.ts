@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const [project, currentNode, allNodes, characters, loreEntries, summaries] =
+    const [project, currentNode, allNodes, characters, loreEntries, summaries, loreTables] =
       await Promise.all([
         prisma.project.findUnique({ where: { id: projectId } }),
         prisma.storyNode.findUnique({ where: { id: nodeId } }),
@@ -40,6 +40,9 @@ export async function POST(request: Request) {
           where: { projectId },
           orderBy: { createdAt: "desc" },
           take: 5,
+        }),
+        prisma.loreTable.findMany({
+          where: { projectId },
         }),
       ]);
 
@@ -70,6 +73,7 @@ export async function POST(request: Request) {
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
       authorNote: effectiveAuthorNote,
+      loreTables: loreTables as any,
     });
 
     // ── 注入文风模板（与 write 路由保持一致）──

@@ -160,22 +160,32 @@ function chunkByBudget(text: string, budget: number, overlap: number): string[] 
 }
 
 /**
- * P1 修复：世界/文风提取长文覆盖。
- * 分块模式下原实现只喂 `text.slice(0, 16000)`，>16k 字的长篇后段设定永不进入 LLM。
- * 改为头/中/尾三段采样拼接：头 16k +（长文）中段 14k + 尾 14k，确保后段设定也被抽取，
- * 而非仅靠 worldFailed 静默缺失。仍标注 worldCoverage="sampled" 供前端提示「非全文」。
+ * P1-4 修复：世界/文风提取长文覆盖。
+ * 分块模式下原实现只喂 `text.slice(0, 16000)`，>16k 字的后段设定永不进 LLM；
+ * 且原「单点中段窗口」对 >32k 长文仍存在大块中段盲区（永不采样），仅标 partial 难以察觉。
+ * 改为：头 16k + 中段按长度均匀分 1~4 段采样（相邻重叠）+ 尾 14k，
+ * 覆盖长文中段，避免设定静默缺失。仍标注 worldCoverage="sampled" 供前端提示「非全文」。
  */
 function buildLoreSample(text: string): string {
-  const HEAD = CHUNK_CHAR_BUDGET; // 16000
-  const SEG = 14000;
+  const HEAD = CHUNK_CHAR_BUDGET; // 16000：头部窗口
+  const SEG = 14000;              // 单段采样窗口
+  const MID_CAP = 4;              // 中段最多采 4 段，控制总量在模型上下文内
   if (text.length <= HEAD) return text;
-  const parts: string[] = [text.slice(0, HEAD)];
-  if (text.length > HEAD * 2) {
-    const mid = Math.floor(text.length / 2);
-    parts.push(text.slice(mid - SEG / 2, mid + SEG / 2));
+
+  const parts: string[] = [text.slice(0, HEAD)]; // 头
+  const tailStart = Math.max(HEAD, text.length - SEG);
+  const midStart = HEAD;
+  const midEnd = tailStart;
+  const midLen = midEnd - midStart;
+  // 中段按均匀分段采样（保留相邻重叠），覆盖原单点窗口遗漏的长文中段
+  const numMid = Math.min(MID_CAP, Math.max(1, Math.floor(midLen / SEG)));
+  for (let i = 1; i <= numMid; i++) {
+    const center = midStart + (midLen * i) / (numMid + 1);
+    const start = Math.max(midStart, Math.min(Math.round(center - SEG / 2), midEnd - SEG));
+    parts.push(text.slice(start, start + SEG));
   }
-  parts.push(text.slice(Math.max(HEAD, text.length - SEG)));
-  return parts.join("\n\n【…中部内容已采样，仅抽取首尾与中段设定…】\n\n");
+  parts.push(text.slice(tailStart)); // 尾
+  return parts.join("\n\n【…分段采样，仅抽取各段设定，非全文…】\n\n");
 }
 
 // ─── API 调用 ──────────────────────────────────
@@ -193,6 +203,11 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
 
   const url = cfg.baseURL.endsWith("/v1") ? `${cfg.baseURL}/chat/completions` : `${cfg.baseURL}/v1/chat/completions`;
   let lastErr = "";
+
+  // P1-2：失败调用也记账（与 client.ts FAIL_ROLE_PREFIX 口径一致），避免成本看板盲区/成功率失真
+  const recordFail = () => {
+    recordLlmCall({ model: cfg.model, role: "fail:import_parse", promptTokens: 0, completionTokens: 0, totalTokens: 0, baseURL: cfg.baseURL });
+  };
 
   for (let attempt = 0; attempt <= CALLFLASH_MAX_RETRIES; attempt++) {
     const t0 = Date.now();
@@ -213,8 +228,9 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
         const eb = await res.text().catch(() => "");
         lastErr = `${cfg.label} HTTP ${res.status}: ${eb.slice(0, 200)}`;
         // 4xx 鉴权/配置错误不可重试，直接失败；5xx/429 进入重试
-        if (res.status >= 400 && res.status < 500) return { raw: "", error: lastErr, sec: parseFloat(sec) };
+        if (res.status >= 400 && res.status < 500) { recordFail(); return { raw: "", error: lastErr, sec: parseFloat(sec) }; }
         if (attempt < CALLFLASH_MAX_RETRIES) continue;
+        recordFail();
         return { raw: "", error: lastErr, sec: parseFloat(sec) };
       }
 
@@ -232,9 +248,11 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
       const sec = ((Date.now() - t0) / 1000).toFixed(1);
       lastErr = `${cfg.label} ${isAbort ? `超时(${CALLFLASH_TIMEOUT_MS / 1000}s)` : (e instanceof Error ? e.message : String(e))}`.slice(0, 200);
       if (attempt < CALLFLASH_MAX_RETRIES) continue; // 网络错误/超时重试
+      recordFail();
       return { raw: "", error: lastErr, sec: parseFloat(sec) as any };
     }
   }
+  recordFail();
   return { raw: "", error: lastErr || `${cfg.label} 重试耗尽`, sec: 0 };
 }
 

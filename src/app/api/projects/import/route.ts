@@ -46,25 +46,27 @@ export async function POST(request: Request) {
     // 原始项目 id（来自备份），作为幂等去重键的一部分；缺失则无法去重，按新建处理
     const origId = typeof p.id === "string" && p.id ? p.id : null;
 
-    // ── 幂等去重：相同 {projectId, source} 已导入过，则直接返回已存在项目，避免成倍复制 ──
-    if (origId) {
-      const existing = await prisma.project.findFirst({
-        where: {
-          AND: [
-            { buildConfig: { path: ["importSource", "projectId"], equals: origId } },
-            { buildConfig: { path: ["importSource", "source"], equals: IMPORT_SOURCE } },
-          ],
-        },
-        select: { id: true },
-      });
-      if (existing) {
-        return NextResponse.json({ success: true, id: existing.id, idempotent: true });
-      }
-    }
+    // ── 幂等去重已移入 $transaction 内（见下方事务开头），避免并发重导入竞态重复 ──
 
     // 在事务内创建项目本体 + 全部子表；任一失败自动回滚，不留孤儿
     // P1-③：显式放宽交互事务超时（默认仅 5s），避免大备份串行 await 整段回滚
-    const newPid = await prisma.$transaction(async (tx) => {
+    // P1-④：幂等查重移入事务内（SQLite 写事务串行化），并发相同备份不再重复 insert
+    const importResult = await prisma.$transaction(async (tx) => {
+      // 幂等去重：相同 {projectId, source} 已导入过，则直接返回已存在项目，避免成倍复制
+      // 移入事务内以杜绝并发重导入的 TOCTOU 竞态（Round6 仅靠事务外串行读判断）
+      if (origId) {
+        const existing = await tx.project.findFirst({
+          where: {
+            AND: [
+              { buildConfig: { path: ["importSource", "projectId"], equals: origId } },
+              { buildConfig: { path: ["importSource", "source"], equals: IMPORT_SOURCE } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (existing) return { pid: existing.id, idempotent: true };
+      }
+
       // 1. 项目本体
       const projData = strip(p, [
         "id", "createdAt", "updatedAt", "deletedAt",
@@ -100,7 +102,7 @@ export async function POST(request: Request) {
       if (want("chapters")) {
         for (const n of p.storyNodes || []) {
           const cn = await tx.storyNode.create({
-            data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid, revisionCount: 0 } as any,
+            data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt", "parentId", "branchId"]), projectId: pid, revisionCount: 0 } as any,
           });
           nodeMap[n.id] = cn.id;
         }
@@ -183,10 +185,10 @@ export async function POST(request: Request) {
         }
       }
 
-      return pid;
+      return { pid, idempotent: false };
     }, { timeout: 60000 });
 
-    return NextResponse.json({ success: true, id: newPid });
+    return NextResponse.json({ success: true, id: importResult.pid, idempotent: importResult.idempotent });
   } catch (err) {
     // P1-①：事务已自动 rollback，此处不再留孤儿；仅报错返回
     console.error("[import] 还原失败（已回滚）:", err instanceof Error ? err.message : String(err));

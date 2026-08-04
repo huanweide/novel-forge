@@ -165,13 +165,16 @@ describe("P1-1 babyloreFillAll 汇总态真实反映成败", () => {
     expect(r.error).toContain("1/2");
   });
 
-  it("全部章节已填（跳过）→ ok:true 且 applied:0（正常无需重试，非假完成）", async () => {
+  it("全部章节被跳过（全空/旧版误标脏标记）→ ok:false 且带 warning 摘要（P1-1 防静默假完成）", async () => {
     mockFetch(JSON.stringify({ operations: [{ table: "geo", op: "insert", values: { name: "全填地点" } }] }));
     await babyloreFillAll("proj-x"); // 先填满，持久化已填标记
     const r = await babyloreFillAll("proj-x"); // 再跑，应全部跳过
-    expect(r.ok).toBe(true);
     expect(r.processed).toBe(0);
     expect(r.skipped).toBe(2);
     expect(r.applied).toBe(0);
+    // Round8 P1-1：全跳过且无任何 applied 必须 ok:false，不得掩盖脏标记。
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain("跳过");
+    expect(r.error).toContain("脏标记");
   });
 });
