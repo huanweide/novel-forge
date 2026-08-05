@@ -4,9 +4,25 @@
 import { prisma } from "@/lib/prisma";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { analyzeQuality } from "@/lib/quality-analyzer";
+import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
 
-// 质量护栏阈值：与 analyzeQuality 的 passed 口径一致（overallScore >= 60 为达标）
-export const QUALITY_PASS_THRESHOLD = 60;
+// 共享阈值（单一真相源）：与 analyzeQuality 的 passed 口径一致
+export { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
+
+// 自动放行结构门槛（盲测实证驱动）：纯统计分数对劣质/短/重复文不可信（盲测假放行率 100%），
+// 自动/批量放行叠加「最小长度 + 机械重复检测」，分数仅作参考与看板。
+export const MIN_AUTO_CONFIRM_LENGTH = 150;
+
+// 机械重复检测：按句分割后 ≥5 句且去重唯一率 <60% 视为「同一句凑字数」
+function isMechanicalRepetition(text: string): boolean {
+  const sentences = text
+    .split(/[。！？!?；;]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 2);
+  if (sentences.length < 5) return false;
+  const uniqueRatio = new Set(sentences).size / sentences.length;
+  return uniqueRatio < 0.6;
+}
 
 export function gradeOf(score: number | null): string | null {
   if (score == null) return null;
@@ -43,6 +59,15 @@ export function evaluateConfirmEligibility(
   if (requirePassed) {
     if (!node.content || node.content.trim().length < 50) {
       return { eligible: false, score: null, grade: "?", reason: "正文为空或过短（少于50字）" };
+    }
+    // 盲测实证（scripts/agent-quality-blind-test.ts）：劣质/短/空文本对纯统计分 100% 过线（73~100分），
+    // 自动放行必须叠加结构门槛——最小长度 + 机械重复检测，分数仅作参考。
+    const text = node.content.trim();
+    if (text.length < MIN_AUTO_CONFIRM_LENGTH) {
+      return { eligible: false, score: null, grade: "?", reason: `正文过短（${text.length}字 < ${MIN_AUTO_CONFIRM_LENGTH}），不自动放行` };
+    }
+    if (isMechanicalRepetition(text)) {
+      return { eligible: false, score: null, grade: "?", reason: "机械重复（句子高度雷同），不自动放行" };
     }
     if (score == null && node.content) {
       try {

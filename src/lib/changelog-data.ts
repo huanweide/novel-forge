@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.96";
+export const LATEST_VERSION = "v0.46.97";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "手动确认补护栏+幂等（PATCH confirm）：空正文/过短(<50字) 422 拦截 + updateMany 条件更新，重复确认 409 不重复计数/追加（创造检验 P3/P7）",
-  "auto-confirm 审校联动：任一审校 passed=false（如逻辑自查 major 缺陷）不自动放行、交人工介入（创造检验 P2）",
-  "confirm-guard 非法分数拦截：NaN/Infinity 不采信回退本地重算，杜绝 NaN<60 恒 false 绕过拦截（代码审查 P1）；单测 8 个、全量 198 测试绿",
-  "done 事件状态同步 + CI 套件 DB 测试 skipIf：write done 前重查库态反映 auto-confirm 结果；fill.selfcheck 无 DATABASE_URL 自动跳过，CI 门禁不再必红",
+  "质量分闸门盲测证伪（scripts/agent-quality-blind-test.ts）：9 样本真实验证发现劣质/短/空文本对纯统计分 100% 过线（73~100分），证明「分数作唯一自动放行依据」不可信",
+  "自动放行结构门槛（confirm-guard）：最小 150 字 + 机械重复检测（句子去重唯一率<60%），盲测劣质样本全拦，分数降级为看板参考",
+  "阈值单一真相源：quality-thresholds.ts 共享 QUALITY_PASS_THRESHOLD，analyzer 硬编码 60 消除；batch-confirm 补 updateMany 条件更新幂等（TOCTOU）",
+  "单测新增结构门槛 2 用例共 10 个、全量 200 测试绿；round2/idempotency/batch-guard 三脚本回归全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.97",
+    date: "2026-08-05",
+    title: "质量分闸门盲测证伪 + 自动放行结构门槛 + 阈值单一真相源 + batch 幂等（Max Loop Round2，tsc 零错误 / 200 测试绿）",
+    sections: [
+      {
+        label: "闸门盲测证伪（scripts/agent-quality-blind-test.ts）",
+        items: [
+          "9 个多样本（优质长文/优质对话/平庸流水账/劣质重复短句/劣质空话/对话体/无标点长句/短文本/空文本）跑 analyzeQuality：劣质、短、空文本全部 ≥60 分过线（73~100 分），假放行率 100%——实证「纯统计正则分数测的是表面特征，不是内容质量」，分数不能作唯一自动放行依据",
+          "短文本（不足50字）与空文本均得 100 分——空正文拦截（50 字）是唯一有效防线，本已实现；非空劣质文需结构门槛兜底",
+        ],
+      },
+      {
+        label: "修复落地（全部验证全绿）",
+        items: [
+          "自动放行结构门槛（confirm-guard）：evaluateConfirmEligibility 在分数评估前叠加 MIN_AUTO_CONFIRM_LENGTH=150（正文 <150 字不自动放行）+ 机械重复检测（按句分割 ≥5 句且去重唯一率 <60% 判定「同一句凑字数」拦截）；盲测中所有劣质/短/空样本被拦，优质长文正常放行；分数降级为参考与看板",
+          "阈值单一真相源：新建 src/core/quality-thresholds.ts 导出 QUALITY_PASS_THRESHOLD=60，confirm-guard 与 quality-analyzer（消除内部硬编码 60）共同引用，消灭软分裂",
+          "batch-confirm 补幂等（updateMany 条件更新仅 pending_confirm 才终态，并发/重复确认 count=0 不重复计数/追加），TOCTOU 修复",
+          "单测新增结构门槛 2 用例（短正文即使满分也拦、机械重复 160 字拦）共 10 个，全量 200 测试绿；round2/idempotency/batch-guard 三验证脚本回归全绿；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.96",
     date: "2026-08-05",

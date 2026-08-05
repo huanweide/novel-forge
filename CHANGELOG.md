@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.97 — 2026-08-05
+**质量分闸门盲测证伪 + 自动放行结构门槛 + 阈值单一真相源 + batch 幂等（Max Loop Round2，tsc 零错误 / 200 测试绿）**
+
+- 闸门盲测证伪（scripts/agent-quality-blind-test.ts）：9 多样本跑 analyzeQuality，劣质/短/空文本全部 ≥60 分过线（73~100 分），假放行率 100%——纯统计正则测的是表面特征不是内容质量，分数不能作唯一自动放行依据；短文本与空文本都得 100 分，空正文拦截是唯一有效防线
+- 自动放行结构门槛（confirm-guard）：分数评估前叠加 MIN_AUTO_CONFIRM_LENGTH=150（<150 字不自动放行）+ 机械重复检测（≥5 句且去重唯一率 <60% 判「同一句凑字数」）；盲测劣质样本全拦、优质长文正常放行，分数降级为看板参考
+- 阈值单一真相源：新建 src/core/quality-thresholds.ts 共享 QUALITY_PASS_THRESHOLD，quality-analyzer 消除内部硬编码 60；batch-confirm 补 updateMany 条件更新幂等（TOCTOU 修复）
+- 单测新增结构门槛 2 用例共 10 个、全量 200 测试绿；round2/idempotency/batch-guard 三验证脚本回归全绿
+
 ## v0.46.96 — 2026-08-05
 **Max Loop Round2 审查修复：手动确认护栏+幂等 / auto-confirm 审校联动 / 非法分数拦截 / done 状态同步 / CI 套件可跑（tsc 零错误 / 198 测试绿）**
 

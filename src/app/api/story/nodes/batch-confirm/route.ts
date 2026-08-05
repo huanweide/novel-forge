@@ -78,8 +78,9 @@ export async function POST(request: Request) {
           fillMsg = `自动填表失败（不影响确认）: ${e instanceof Error ? e.message : "未知"}`;
         }
       }
-      await prisma.storyNode.update({
-        where: { id: node.id },
+      // 幂等：条件更新（仅 pending_confirm 才终态），并发/重复确认不重复计数/追加（Max Loop Round2）
+      const upd = await prisma.storyNode.updateMany({
+        where: { id: node.id, status: "pending_confirm" },
         data: {
           status: "confirmed",
           confirmedAt: now,
@@ -87,6 +88,10 @@ export async function POST(request: Request) {
           reviewLogs: [...prevLogs, { action: "confirm", fill: fillMsg, at: now.toISOString(), batch: true }],
         },
       });
+      if (upd.count === 0) {
+        blocked.push({ id: node.id, title: node.title, score: null, grade: "?", reason: "状态已变化，未重复确认" });
+        continue;
+      }
       confirmed.push({ id: node.id, title: node.title, score, grade: el.grade });
     }
 

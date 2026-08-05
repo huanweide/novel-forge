@@ -14,6 +14,7 @@
  */
 
 import { scanForbiddenWordsEnhanced, type ForbiddenMatch } from "./forbidden-checker";
+import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
 
 // ─── 类型 ─────────────────────────────────────────────────
 
@@ -460,7 +461,7 @@ export function analyzeQuality(
   let grade: QualityReport["grade"];
   if (overallScore >= 85) grade = "A";
   else if (overallScore >= 70) grade = "B";
-  else if (overallScore >= 60) grade = "C";
+  else if (overallScore >= QUALITY_PASS_THRESHOLD) grade = "C";
   else grade = "D";
 
   // 概述
@@ -475,7 +476,7 @@ export function analyzeQuality(
   return {
     overallScore,
     dimensions,
-    passed: overallScore >= 60,
+    passed: overallScore >= QUALITY_PASS_THRESHOLD,
     summary,
     grade,
   };

@@ -10,8 +10,8 @@ import {
 } from "./confirm-guard";
 
 const GOOD_TEXT =
-  "林澈站在灯塔下，想起父亲的话。海不会背叛，只会沉默。潮水漫过脚踝，他握紧口袋里生锈的钥匙，推开铁门，门后是通向海床的螺旋阶梯。灯光熄灭，阶梯尽头有人低声唤他的名字。";
-const LONG_TEXT = "长正文".repeat(30); // 90 字 > 50
+  "林澈站在灯塔下，想起父亲的话。海不会背叛，只会沉默。潮水漫过脚踝，他握紧口袋里生锈的钥匙，推开铁门，门后是通向海床的螺旋阶梯。灯光熄灭，阶梯尽头有人低声唤他的名字。远处传来汽笛声，他意识到自己已经站了很久。灯塔的灯光在水面上拖出一道长长的影子，像一条通往过去的桥。他松开手，钥匙落进水里，泛起一圈涟漪。既然门后是光，那就没有回头路可言。他迈开步子，走进那道门缝透出的温暖里。";
+const LONG_TEXT = "长正文".repeat(60); // 180 字，越过 150 结构门槛
 
 describe("gradeOf", () => {
   it("分级边界：null/A/85/B/70/C/60/D/59", () => {
@@ -56,6 +56,19 @@ describe("evaluateConfirmEligibility", () => {
     const r = evaluateConfirmEligibility({ content: GOOD_TEXT, qualityScore: NaN });
     expect(Number.isFinite(r.score)).toBe(true);
     expect(r.eligible).toBe(true);
+  });
+
+  it("结构门槛（盲测实证）：短正文(<150字)即使分数满分也不自动放行", () => {
+    const r = evaluateConfirmEligibility({ content: "他推开了门。门后是光。他走了进去。", qualityScore: 100 });
+    expect(r.eligible).toBe(false);
+    expect(r.reason).toMatch(/过短/);
+  });
+
+  it("结构门槛：机械重复（同一句凑字数≥150字）不自动放行", () => {
+    const rep = "他走了。".repeat(40); // 160 字：越过长度门槛后触发重复检测
+    const r = evaluateConfirmEligibility({ content: rep, qualityScore: 90 });
+    expect(r.eligible).toBe(false);
+    expect(r.reason).toMatch(/重复/);
   });
 });
 
