@@ -40,6 +40,9 @@ model Project {
   updatedAt DateTime @updatedAt
   deletedAt DateTime? @map("deleted_at") // 软删除（回收站）；非空=在回收站
 
+  // 马斯克确认流程：整本交付完成时间戳（null=未整体确认交付）
+  confirmedAt DateTime? @map("confirmed_at")
+
   // 导入来源标识，用于并发幂等（N2 修复）。Postgres 多 null 不冲突，存量数据安全。
   // 值为导入源的稳定标识（如 .nfproject 原始 projectId + source 组合 hash），相同备份重复导入触发唯一冲突 → 幂等返回已存在项目。
   importSource String? @unique
@@ -132,6 +135,9 @@ model StoryNode {
   title    String
   order    Int @default(0)
   status   String @default("outline_only") // ContentStatus
+
+  // 马斯克确认流程：确认定稿时间戳（null=未确认）
+  confirmedAt DateTime? @map("confirmed_at")
 
   // 内容
   outline   String?      // 大纲

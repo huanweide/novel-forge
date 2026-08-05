@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
 import { PostGenPanel } from "@/components/workspace/PostGenPanel";
+import { ChapterConfirmBar } from "@/components/workspace/ChapterConfirmBar";
 import { Toolbar } from "@/components/workspace/Toolbar";
 import { ToolboxDialog, type ToolboxItem } from "@/components/workspace/ToolboxDialog";
 import { ExportDialog } from "@/components/workspace/ExportDialog";
@@ -59,6 +60,10 @@ export default function WorkspacePage() {
   // ── 项目数据 ──────────────────────────────
   // FE-8：project 数据统一收口到 useProjectStore（loadProject 写入，面板直接读取），消除本地 project 与 store 并存
   const project = useProjectStore((s) => s.project);
+  // 马斯克确认流程：全书确认进度派生值
+  const chapterNodes = project?.storyNodes.filter((n) => n.type === "chapter" || n.type === "section" || n.type === "scene") || [];
+  const allConfirmed = chapterNodes.length > 0 && chapterNodes.every((n) => n.status === "confirmed");
+  const projectConfirmedAt = project?.confirmedAt || null;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
@@ -995,6 +1000,34 @@ export default function WorkspacePage() {
                   ))}
                 </ul>
               </div>
+            </div>
+          )}
+
+          {/* 马斯克确认流程常驻确认栏（贴正文下方） */}
+          {selectedNode && (
+            <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
+              <ChapterConfirmBar
+                projectId={project?.id || ""}
+                nodeId={selectedNode.id}
+                nodeStatus={selectedNode.status}
+                allConfirmed={allConfirmed}
+                projectConfirmedAt={projectConfirmedAt}
+                onAction={() => { void loadProject(); }}
+                onDiagnose={async () => {
+                  try {
+                    const res = await fetch(`/api/story/nodes/${selectedNode.id}/review`, { method: "POST" });
+                    const d = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                      setReviewResult({ passed: d.passed, issues: d.issues || [] });
+                      toastSuccess(`AI 诊断完成：综合 ${d.overallScore} 分（${d.grade} 级）`);
+                    } else {
+                      toastError(d.error || "诊断失败");
+                    }
+                  } catch (e) {
+                    toastError("诊断失败：" + (e instanceof Error ? e.message : "网络错误"));
+                  }
+                }}
+              />
             </div>
           )}
 

@@ -13,7 +13,7 @@ import {
   buildGenerationContext,
   runPostGenerationPipeline,
 } from "@/core/pipeline";
-import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
+import { buildRecallBlock } from "@/core/babylore/loop";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 import { applyRegexRules } from "@/core/post-process/regex";
 
@@ -299,17 +299,9 @@ export async function POST(request: Request) {
             return;
           }
 
-          // ── 宝宝流自动填表（正文 → 填表，闭合「正文→填表→召回→正文」写作闭环） ──
-          // 每章写完后自动用 DeepSeek 抽取结构化事实回填表格；失败不影响正文交付。
-          const babylore = await safeFillAfterWriting({
-            projectId,
-            content: fullContent,
-            send,
-            nodeOrder: (data.currentNode as any).order,
-            isLatestChapter,
-            nodeId,
-            projectLlmConfig: projLlm as Record<string, unknown> | null,
-          });
+          // ── 马斯克确认流程：自动填表已移至「确认通过」后触发（见 /api/story/nodes/[id] PATCH action=confirm）──
+          // 理由：未审视草稿不应污染下游记忆/设定库；填表是 confirm 的副作用，而非 write 的副作用。
+          // 生成仅落库（status=completed），待马斯克智能体逐章确认后才回填表格。
 
           // Token 用量
           send({
@@ -321,7 +313,6 @@ export async function POST(request: Request) {
               completionTokens: countTokens(fullContent),
               totalTokens: countTokens(fullContent),
             },
-            babylore,
           });
         } catch (err) {
           send({

@@ -32,6 +32,8 @@ export async function GET(request: Request) {
     const chapters = nodes.filter((n) => n.type === "chapter" || n.type === "section" || n.type === "scene");
     const totalWords = nodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);
     const completedChapters = chapters.filter((n) => n.status === "completed").length;
+    const pendingConfirmChapters = chapters.filter((n) => n.status === "pending_confirm").length;
+    const confirmedChapters = chapters.filter((n) => n.status === "confirmed").length;
     const totalChapters = chapters.length;
 
     // 当前章节
@@ -145,6 +147,12 @@ export async function GET(request: Request) {
       totalChapters,
       completedChapters,
       completionRate: totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0,
+      confirmStats: {
+        pending: pendingConfirmChapters,
+        confirmed: confirmedChapters,
+        total: totalChapters,
+        progress: totalChapters > 0 ? Math.round((confirmedChapters / totalChapters) * 100) : 0,
+      },
       currentChapter: currentNode ? {
         id: currentNode.id,
         title: currentNode.title,

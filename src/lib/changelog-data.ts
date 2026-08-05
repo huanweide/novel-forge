@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.88";
+export const LATEST_VERSION = "v0.46.89";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "填表闭环对齐计划（P1-2）：默认 fillFrequency 由每 3 章改为每章填（1）、skipLatestChapter 由跳过最新章改为当前章也填（false）——写一章即触发自动填表，闭环可见不再隐形",
-  "填表频率/跳过配置从 schema @default 与 loop.ts fallback 两处同步改为每章填；并对已有 24 个项目数据迁移为新默认，本地立即生效",
-  "填表/召回可观测性本就具备（前端 toast 已显示「已写入 N 行」「召回 N 条」）；此前因默认跳过最新章导致填表几乎不触发、前端静默，用户误判未工作——现已修复",
-  "保留可配性：项目仍可在设置里调回频率/跳过（防重 roll 污染），默认值仅改为对齐计划 P1-2 每章自动填表本意",
+  "马斯克确认流程（MCCS Round1）落地：由7人格专项会议+3观测智能体+Chair整合，maxloop迭代收敛出单一权威规格，决定所有确认按钮UI与计划流程",
+  "中栏确认栏4键状态机：提交确认→待确认→确认通过（自动填表）/打回重写（须填理由）/AI诊断；全部章节确认后可整本确认完成🚀",
+  "左栏大纲加确认态色标（待确认橙、已确认绿）；右栏监测加确认看板（待确认数/已确认数/整本进度条）；状态机复用既有 ContentStatus 扩展 pending_confirm/confirmed",
+  "最高杠杆修复：自动填表从写章后移至确认通过后才触发，未审视草稿不再污染设定库；AI诊断走纯本地六维质量分析零Token真实可用",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.89",
+    date: "2026-08-05",
+    title: "马斯克确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）",
+    sections: [
+      {
+        label: "马斯克确认流程（MCCS Round1·由专项会议决定）",
+        items: [
+          "由7人格专项会议（乔布斯/马斯克/PG/张雪峰/芒格/费曼/工坊）+3观测智能体（进度/质量/偏差）+Chair整合，maxloop迭代收敛出单一权威规格 musk-confirm-spec.md",
+          "5态状态机：outline_only→drafting→pending_confirm→confirmed→project_confirmed；ContentStatus 扩 pending_confirm/confirmed 两态，StoryNode/Project 各加 confirmedAt 时间戳",
+          "中栏确认栏 ChapterConfirmBar：4键（提交确认/确认通过/打回重写须填理由/AI诊断）+ 整本确认完成🚀；左栏 OutlineTree 加 pending_confirm 橙、confirmed 绿色标；右栏 MonitorPanel 加确认看板（待确认/已确认/进度条）",
+          "最高杠杆修复：自动填表 safeFillAfterWriting 从写章后移至确认通过后才触发，根治未审视草稿污染设定库；AI诊断走纯本地六维质量分析（零Token、不依赖代理）真实可用",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.88",
     date: "2026-08-05",

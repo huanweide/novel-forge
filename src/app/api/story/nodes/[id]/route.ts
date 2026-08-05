@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { snapshotRevision } from "@/lib/versions";
+import { safeFillAfterWriting } from "@/core/babylore/loop";
 
 // GET /api/story/nodes/[id]
 export async function GET(
@@ -121,6 +122,102 @@ export async function PUT(
         { status: 409 }
       );
     }
+    return jsonError(err);
+  }
+}
+
+// PATCH /api/story/nodes/[id] —— 马斯克确认流程动作（submit/confirm/reject/reopen/diagnose）
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const action = body.action as "submit" | "confirm" | "reject" | "reopen" | "diagnose" | undefined;
+    if (!action) return NextResponse.json({ error: "缺少 action" }, { status: 400 });
+
+    const node = await prisma.storyNode.findUnique({ where: { id } });
+    if (!node) return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+
+    const now = new Date();
+    const prevLogs: any[] = Array.isArray(node.reviewLogs) ? node.reviewLogs : [];
+    const pushLog = (entry: Record<string, unknown>) => [...prevLogs, { ...entry, at: now.toISOString() }];
+
+    let data: Record<string, unknown> = {};
+
+    switch (action) {
+      case "submit": {
+        if (node.status !== "completed" && node.status !== "drafting") {
+          return NextResponse.json({ error: `当前状态(${node.status})不可提交确认` }, { status: 409 });
+        }
+        data = { status: "pending_confirm", reviewLogs: pushLog({ action: "submit" }) };
+        break;
+      }
+      case "confirm": {
+        if (node.status !== "pending_confirm") {
+          return NextResponse.json({ error: `当前状态(${node.status})不可确认通过` }, { status: 409 });
+        }
+        // 确认副作用：触发自动填表（回填结构化表格 / 记忆）—— 这是 confirm 的副作用，而非 write 的副作用
+        let fillMsg = "（无正文，跳过填表）";
+        if (node.content && node.content.length > 0) {
+          try {
+            await safeFillAfterWriting({
+              projectId: node.projectId,
+              content: node.content,
+              send: undefined,
+              nodeOrder: node.order,
+              isLatestChapter: false,
+              nodeId: node.id,
+            });
+            fillMsg = "自动填表已执行";
+          } catch (e) {
+            fillMsg = `自动填表失败（不影响确认）: ${e instanceof Error ? e.message : "未知"}`;
+          }
+        }
+        data = {
+          status: "confirmed",
+          confirmedAt: now,
+          revisionCount: { increment: 1 },
+          reviewLogs: pushLog({ action: "confirm", fill: fillMsg }),
+        };
+        break;
+      }
+      case "reject": {
+        if (node.status !== "pending_confirm") {
+          return NextResponse.json({ error: `当前状态(${node.status})不可打回` }, { status: 409 });
+        }
+        const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : "（未填写理由）";
+        data = {
+          status: "completed",
+          revisionCount: { increment: 1 },
+          reviewLogs: pushLog({ action: "reject", reason }),
+        };
+        // 打回使整本回到未交付状态
+        await prisma.project.updateMany({ where: { id: node.projectId, confirmedAt: { not: null } }, data: { confirmedAt: null } });
+        break;
+      }
+      case "reopen": {
+        if (node.status !== "confirmed") {
+          return NextResponse.json({ error: `当前状态(${node.status})不可重开` }, { status: 409 });
+        }
+        data = { status: "completed", confirmedAt: null, reviewLogs: pushLog({ action: "reopen" }) };
+        // 重开使整本回到未交付状态
+        await prisma.project.updateMany({ where: { id: node.projectId, confirmedAt: { not: null } }, data: { confirmedAt: null } });
+        break;
+      }
+      case "diagnose": {
+        // 不改动状态，仅留痕（UI 打开 PostGenPanel 审校 Tab）
+        data = { reviewLogs: pushLog({ action: "diagnose" }) };
+        break;
+      }
+      default:
+        return NextResponse.json({ error: `未知 action: ${action}` }, { status: 400 });
+    }
+
+    const updated = await prisma.storyNode.update({ where: { id }, data });
+    return NextResponse.json(updated);
+  } catch (err) {
     return jsonError(err);
   }
 }

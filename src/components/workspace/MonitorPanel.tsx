@@ -15,6 +15,7 @@ interface MonitorData {
   totalChapters: number;
   completedChapters: number;
   completionRate: number;
+  confirmStats?: { pending: number; confirmed: number; total: number; progress: number };
   currentChapter: { id: string; title: string; wordCount: number; status: string } | null;
   tokens: { estimatedGenerated: number; estimatedPrompt: number; estimatedTotal: number; note: string };
   distribution: { avgWordsPerChapter: number; maxChapterWords: number; minChapterWords: number; chaptersWithContent: number };
@@ -92,6 +93,26 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
           <StatBlock label="均章字数" value={fmt(data.distribution.avgWordsPerChapter)} color="text-[var(--nv-text-secondary)]" />
         </div>
       </div>
+
+      {/* 马斯克确认流程看板 */}
+      {data.confirmStats && (
+        <div className="p-3 border-b border-[var(--nv-border-2)]">
+          <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="clipboard" size={11} /> 马斯克确认流程</div>
+          <div className="grid grid-cols-2 gap-2">
+            <StatBlock label="待确认" value={fmt(data.confirmStats.pending)} color={data.confirmStats.pending > 0 ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-secondary)]"} />
+            <StatBlock label="已确认定稿" value={fmt(data.confirmStats.confirmed)} color="text-[var(--nv-success)]" />
+          </div>
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-[10px] text-[var(--nv-text-tertiary)] mb-1">
+              <span>整本确认进度</span>
+              <span>{data.confirmStats.progress}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-[var(--nv-surface-3)] overflow-hidden">
+              <div className="h-full rounded-full bg-[var(--nv-success)] transition-all" style={{ width: `${data.confirmStats.progress}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Token 估算 */}
       <div className="p-3 border-b border-[var(--nv-border-2)]">

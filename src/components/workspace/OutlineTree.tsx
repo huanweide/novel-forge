@@ -24,8 +24,8 @@ export function NodeTreeItem({
   const isChapter = node.type === "chapter" || node.type === "section";
   const isChecked = selectedChapterIds?.has(node.id) || false;
   const typeIcon = node.type === "volume" ? "bookmarked" : node.type === "chapter" ? "book" : node.type === "section" ? "file" : "circle";
-  const statusIcon = node.status === "completed" ? "check" : node.status === "drafting" ? "pencil" : node.status === "reviewing" ? "alert" : "circle";
-  const statusColor = node.status === "completed" ? "text-[var(--nv-success)]" : node.status === "reviewing" ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)]";
+  const statusIcon = node.status === "completed" || node.status === "confirmed" ? "check" : node.status === "drafting" ? "pencil" : node.status === "pending_confirm" || node.status === "reviewing" ? "alert" : "circle";
+  const statusColor = node.status === "confirmed" ? "text-[var(--nv-success)]" : node.status === "pending_confirm" ? "text-[var(--nv-accent)]" : node.status === "completed" ? "text-[var(--nv-success)]" : node.status === "reviewing" ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)]";
 
   return (
     <div>

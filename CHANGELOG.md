@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.89 — 2026-08-05
+**马斯克确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）**
+
+- 由7人格专项会议（乔布斯/马斯克/PG/张雪峰/芒格/费曼/工坊）+3观测智能体（进度/质量/偏差）+Chair整合，maxloop迭代收敛出单一权威规格 musk-confirm-spec.md，决定所有确认按钮UI与计划流程
+- 5态状态机：outline_only→drafting→pending_confirm→confirmed→project_confirmed；ContentStatus 扩 pending_confirm/confirmed 两态，StoryNode/Project 各加 confirmedAt 时间戳
+- 中栏确认栏 ChapterConfirmBar：4键（提交确认/确认通过/打回重写须填理由/AI诊断）+ 整本确认完成🚀；左栏 OutlineTree 加 pending_confirm 橙、confirmed 绿色标；右栏 MonitorPanel 加确认看板（待确认/已确认/进度条）
+- 最高杠杆修复：自动填表 safeFillAfterWriting 从写章后移至确认通过后才触发，根治未审视草稿污染设定库；AI诊断走纯本地六维质量分析（零Token、不依赖代理）真实可用
+
 ## v0.46.88 — 2026-08-05
 **填表闭环对齐计划 P1-2：默认每章自动填表（fillFrequency 3→1、skipLatestChapter true→false）+ 已有项目数据迁移**
 

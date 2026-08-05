@@ -152,7 +152,9 @@ export type ContentStatus =
   | "completed"        // 已完成
   | "reviewing"        // 审校中
   | "rejected"         // 审校未通过
-  | "revised";         // 已修改
+  | "revised"          // 已修改
+  | "pending_confirm"  // 待马斯克确认（马斯克确认流程）
+  | "confirmed";       // 已确认定稿（触发下游填表/导出/时间线）
 
 /** 故事分支 —— 类似Git的分支概念 */
 export interface StoryBranch {
