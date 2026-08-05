@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.90 — 2026-08-05
+**确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ 马斯克智能体端到端验证 12 章全闭环（tsc 零错误）**
+
+- 根因：generate/write 后处理管线把生成后节点状态定为 reviewing（审校未过时），而确认栏仅认 completed/drafting，导致生成完的章节卡在 reviewing 且无任何确认按钮，流程死锁
+- 修复：post-processor.ts 生成后状态由 reviewing/completed 改为恒为 drafting（契合 Round1 规格「生成仅落 drafting、诊断是选项不是前置税」）；后处理六维质量审校仍写 reviewLogs/qualityScore 供 AI诊断展示，但不决定节点状态
+- 端到端验证：马斯克智能体真实建项目「火种：多行星文明备份计划」→ 真实 LLM 写 12 章（约 3.98 万字）→ 逐章提交确认/AI诊断/确认通过（触发自动填表）→ 第5章走打回重写闭环 → 整本确认完成🚀，全部按钮与状态机闭环通过
+- 运维注记：dev server 旧进程加载的 Prisma 客户端不含新增 confirmed_at 列会导致确认 503，重启加载新客户端即修复（非代码缺陷，属环境 stale client）
+
 ## v0.46.89 — 2026-08-05
 **马斯克确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）**
 

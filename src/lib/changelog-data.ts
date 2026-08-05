@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.89";
+export const LATEST_VERSION = "v0.46.90";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "马斯克确认流程（MCCS Round1）落地：由7人格专项会议+3观测智能体+Chair整合，maxloop迭代收敛出单一权威规格，决定所有确认按钮UI与计划流程",
-  "中栏确认栏4键状态机：提交确认→待确认→确认通过（自动填表）/打回重写（须填理由）/AI诊断；全部章节确认后可整本确认完成🚀",
-  "左栏大纲加确认态色标（待确认橙、已确认绿）；右栏监测加确认看板（待确认数/已确认数/整本进度条）；状态机复用既有 ContentStatus 扩展 pending_confirm/confirmed",
-  "最高杠杆修复：自动填表从写章后移至确认通过后才触发，未审视草稿不再污染设定库；AI诊断走纯本地六维质量分析零Token真实可用",
+  "确认流程断点修复：generate/write 写章后状态恒为 drafting，根治生成完章节卡 reviewing 死锁无确认按钮（契合 Round1 规格「生成仅落 drafting」）",
+  "后处理六维质量审校仍写 reviewLogs/qualityScore 供 AI诊断展示，但不再决定节点状态（诊断是选项不是前置税）",
+  "马斯克智能体端到端验证：真实建项目 + 真实 LLM 写 12 章（约 3.98 万字）+ 逐章确认（含第5章打回重写闭环）+ 整本确认完成🚀，全按钮闭环",
+  "运维注记：确认偶发 503 多为 dev 旧进程 stale Prisma 客户端（不含新增 confirmed_at 列），重启加载新客户端即修复",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.90",
+    date: "2026-08-05",
+    title: "确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ 马斯克智能体端到端验证 12 章全闭环（tsc 零错误）",
+    sections: [
+      {
+        label: "确认流程断点修复（MCCS Round1 验证中发现）",
+        items: [
+          "根因：generate/write 后处理管线把生成后节点状态定为 reviewing（审校未过时），而确认栏仅认 completed/drafting，导致生成完的章节卡在 reviewing 且无任何确认按钮，流程死锁",
+          "修复：post-processor.ts 生成后状态由 reviewing/completed 改为恒为 drafting（契合 Round1 规格「生成仅落 drafting、诊断是选项不是前置税」）；后处理六维质量审校仍写 reviewLogs/qualityScore 供 AI诊断展示，但不决定节点状态",
+          "端到端验证：马斯克智能体真实建项目「火种：多行星文明备份计划」→ 真实 LLM 写 12 章（约 3.98 万字）→ 逐章提交确认/AI诊断/确认通过（触发自动填表）→ 第5章走打回重写闭环 → 整本确认完成🚀，全部按钮与状态机闭环通过",
+          "运维注记：dev server 旧进程加载的 Prisma 客户端不含新增 confirmed_at 列会导致确认 503，重启加载新客户端即修复（非代码缺陷，属环境 stale client）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.89",
     date: "2026-08-05",
