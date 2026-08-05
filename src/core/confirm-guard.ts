@@ -118,6 +118,7 @@ export async function applyConfirm(node: {
         nodeOrder: node.order,
         isLatestChapter: false,
         nodeId: node.id,
+        source: "auto-confirm",
       });
       fillMsg = "自动填表已执行";
     } catch (e) {

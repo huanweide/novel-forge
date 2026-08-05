@@ -2,6 +2,13 @@
 
 ---
 
+## v0.46.98 — 2026-08-05
+**填表残词过滤 + _src 溯源增强（Max Loop Round3·创造检验 P4/P5，tsc 零错误 / 203 测试绿）**
+
+- 填表残词过滤（P4）：实证世界书冒「片空旷区域」类切词残留——extractKeyTerms 无残词过滤；修复加 BAD_PREFIX（量词/虚词/人称/方位词开头）与 BAD_SUFFIX（的/了/着/们结尾）过滤，宁缺勿滥；函数导出 + 3 单测（片空旷区域拦、林舟原保留、正常专有名词不受影响）
+- _src 溯源增强（P5）：safeFillAfterWriting 接受 source，srcLabel 追加来源段（ch{order}:batch{id}:auto-confirm/manual/batch）；applyConfirm/PATCH/batch-confirm 三入口分别标记，填表事实可追溯确认入口；fill.ops 溯源断言向后兼容
+- 全量 203 测试绿（新增残词过滤 3 用例）；tsc 零错误
+
 ## v0.46.97 — 2026-08-05
 **质量分闸门盲测证伪 + 自动放行结构门槛 + 阈值单一真相源 + batch 幂等（Max Loop Round2，tsc 零错误 / 200 测试绿）**
 

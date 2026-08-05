@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.97";
+export const LATEST_VERSION = "v0.46.98";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "质量分闸门盲测证伪（scripts/agent-quality-blind-test.ts）：9 样本真实验证发现劣质/短/空文本对纯统计分 100% 过线（73~100分），证明「分数作唯一自动放行依据」不可信",
-  "自动放行结构门槛（confirm-guard）：最小 150 字 + 机械重复检测（句子去重唯一率<60%），盲测劣质样本全拦，分数降级为看板参考",
-  "阈值单一真相源：quality-thresholds.ts 共享 QUALITY_PASS_THRESHOLD，analyzer 硬编码 60 消除；batch-confirm 补 updateMany 条件更新幂等（TOCTOU）",
-  "单测新增结构门槛 2 用例共 10 个、全量 200 测试绿；round2/idempotency/batch-guard 三脚本回归全绿",
+  "填表残词过滤（P4）：dissect 世界书关键词提取加量词/虚词/人称开头 + 的/了/着/们结尾过滤，「片空旷区域」类切词残留不再污染设定库；extractKeyTerms 导出 + 3 单测锁死",
+  "_src 溯源增强（P5）：填表行溯源追加确认来源段（ch0:batchmanual:auto-confirm / :manual / :batch），可追溯每个事实从哪个确认入口进表",
+  "source 透传链路：safeFillAfterWriting 接受 source，applyConfirm(auto-confirm)/PATCH(manual)/batch-confirm(batch) 三入口分别标记；fill.ops 溯源断言兼容",
+  "全量 203 测试绿（新增残词过滤 3 用例）；tsc 零错误；双 changelog 升 v0.46.98",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.98",
+    date: "2026-08-05",
+    title: "填表残词过滤 + _src 溯源增强（Max Loop Round3·创造检验 P4/P5，tsc 零错误 / 203 测试绿）",
+    sections: [
+      {
+        label: "填表残词过滤（P4）：世界书 keys 不再被切词残留污染",
+        items: [
+          "实证（创造检验）：自动填表后世界书冒出「片空旷区域」等 location 词条——extractKeyTerms 正则提取 2-6 字中文词当专有名词，无残词过滤，量词/虚词开头的切词片段被当关键词入库",
+          "修复：dissect/engine.ts 的 extractKeyTerms 加 BAD_PREFIX（片/个/只/块/这/那/有/在/是/被/让/我们/一个/一片…）与 BAD_SUFFIX（的/了/着/过/地/得/们结尾）过滤，宁缺勿滥；函数导出供单测，新增 3 用例（片空旷区域拦、林舟原保留、正常专有名词不受影响）",
+        ],
+      },
+      {
+        label: "_src 溯源增强（P5）：填表事实可追溯确认入口",
+        items: [
+          "实证（创造检验）：事实表行 _src 一律 ch0:batchmanual，无法区分事实来自自动确认/手动确认/批量确认",
+          "修复：safeFillAfterWriting 接受 source 参数，srcLabel 追加来源段（ch{order}:batch{id}:{source}）；applyConfirm 传 auto-confirm、PATCH 手动确认传 manual、batch-confirm 传 batch，三入口分别标记；fill.ops 溯源断言（^ch?:batch）向后兼容",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.97",
     date: "2026-08-05",

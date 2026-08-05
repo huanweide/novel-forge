@@ -519,7 +519,7 @@ function buildWarnings(appliedNames: { table: string; value: string }[], chapter
 export async function babyloreFill(
   projectId: string,
   chapterText: string,
-  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null; chapterOrder?: number; batchId?: string },
+  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null; chapterOrder?: number; batchId?: string; source?: string },
 ): Promise<FillResult> {
   // 空内容守卫（P2-④）：正文为空则不触发 LLM 填表，避免空跑/误插空行。
   // safeFillAfterWriting 经本入口调用，故一并覆盖，无需重复判断。
@@ -562,7 +562,7 @@ export async function babyloreFill(
   }));
 
   const llm: LlmCreds = { baseURL, apiKey, model };
-  const srcLabel = `ch${options?.chapterOrder ?? "?"}:batch${options?.batchId ?? "manual"}`;
+  const srcLabel = `ch${options?.chapterOrder ?? "?"}:batch${options?.batchId ?? "manual"}${options?.source ? ":" + options.source : ""}`;
   const r = await runFillForText(chapterText, tables, llm, options?.tableKeys, srcLabel, projectId);
   // P1-B（墨白）：落库后跑 selfCheckFill，把疑似问题（地名/空值/跨表/表内异体）合并进结果，供 UI/诊断。
   const selfCheck = await selfCheckFill(projectId);

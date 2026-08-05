@@ -72,6 +72,7 @@ export async function POST(request: Request) {
             nodeOrder: node.order,
             isLatestChapter: false,
             nodeId: node.id,
+            source: "batch",
           });
           fillMsg = "自动填表已执行";
         } catch (e) {

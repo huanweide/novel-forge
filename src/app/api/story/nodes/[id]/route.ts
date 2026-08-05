@@ -174,6 +174,7 @@ export async function PATCH(
               nodeOrder: node.order,
               isLatestChapter: false,
               nodeId: node.id,
+              source: "manual",
             });
             fillMsg = "自动填表已执行";
           } catch (e) {

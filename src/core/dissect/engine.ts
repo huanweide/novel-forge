@@ -1364,13 +1364,18 @@ function mapRoleName(raw: string): string {
 }
 
 /** 从维度文本中提取关键词作为触发词 */
-function extractKeyTerms(content: string): string[] {
+export function extractKeyTerms(content: string): string[] {
   // 提取2-6字的专有名词（中文大写字母开头的词组）
   const terms = content.match(/(?:[一-鿿]{2,6})(?=[：:，。、\n\s\-—（）\(\)])/g) || [];
+  // 残词过滤（Max Loop Round3·P4）：量词/虚词/人称/方位词开头的片段（如「片空旷区域」）、
+  // 以「的/了/着/过/地/得/们」结尾的片段，不是专有名词，不入世界书 keys（宁缺勿滥，避免污染设定库）
+  const BAD_PREFIX = /^(?:片|个|只|块|根|条|把|这|那|有|在|是|从|被|让|向|往|将|已|还|也|都|很|真|太|又|再|就|才|我|你|他|她|它|我们|你们|他们|一个|一片|一座|一位|一种|关于|对于|随着|通过|经过|因为|所以)/;
+  const BAD_SUFFIX = /(?:的|了|着|过|地|得|们)$/;
   // 去重 + 排序（按出现次数降序）
   const freq: Record<string, number> = {};
   for (const t of terms) {
     if (/^(本文|作者|内容|以下|上述|根据|可以|需要|注意|是否|这个|那个|什么|怎么|为什么|但是|所以|因为|如果|虽然)/.test(t)) continue;
+    if (BAD_PREFIX.test(t) || BAD_SUFFIX.test(t)) continue;
     freq[t] = (freq[t] || 0) + 1;
   }
   return Object.entries(freq)
