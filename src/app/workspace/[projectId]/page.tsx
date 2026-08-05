@@ -1073,6 +1073,7 @@ export default function WorkspacePage() {
                 allConfirmed={allConfirmed}
                 projectConfirmedAt={projectConfirmedAt}
                 autoConfirmEnabled={project?.autoConfirmEnabled ?? true}
+                autoDeliverEnabled={project?.autoDeliverEnabled ?? true}
                 onAction={() => { void loadProject(); }}
                 onDiagnose={async () => {
                   try {

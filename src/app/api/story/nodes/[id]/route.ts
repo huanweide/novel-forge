@@ -5,6 +5,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { snapshotRevision } from "@/lib/versions";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING, STATUS_PENDING_CONFIRM } from "@/core/story-status";
+import { maybeAutoDeliver } from "@/core/confirm-guard";
 
 // GET /api/story/nodes/[id]
 export async function GET(
@@ -223,6 +224,8 @@ export async function PATCH(
           /* 构造 URL 失败则跳过，不影响确认 */
         }
         const fresh = await prisma.storyNode.findUnique({ where: { id } });
+        // v1.1.0：手动确认刚定稿，尝试自动整本交付（fire-and-forget，红利不阻塞响应）
+        void maybeAutoDeliver(node.projectId).catch(() => {});
         return NextResponse.json(fresh);
       }
       case "reject": {

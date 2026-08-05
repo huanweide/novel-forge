@@ -45,6 +45,8 @@ model Project {
 
   // Round3：智能审阅模式（Auto-Confirm）总开关，默认开启——生成完合格章自动确认，人类降级为异常处理者
   autoConfirmEnabled Boolean @default(true)
+  // v1.1.0：全书智能交付自动执行开关，默认开启——全书章节全部定稿后自动完成整本交付，无需手动点「确认整本交付」
+  autoDeliverEnabled Boolean @default(true)
 
   // 导入来源标识，用于并发幂等（N2 修复）。Postgres 多 null 不冲突，存量数据安全。
   // 值为导入源的稳定标识（如 .nfproject 原始 projectId + source 组合 hash），相同备份重复导入触发唯一冲突 → 幂等返回已存在项目。

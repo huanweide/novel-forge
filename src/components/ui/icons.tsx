@@ -100,6 +100,8 @@ import {
   Landmark,
   Paperclip,
   History,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 /** 图标名称 → React 组件映射 */
@@ -190,6 +192,8 @@ const iconMap = {
   paperclip: Paperclip,
   square: Square,
   history: History,
+  chevronDown: ChevronDown,
+  chevronRight: ChevronRight,
 } as const;
 
 export type IconName = keyof typeof iconMap;

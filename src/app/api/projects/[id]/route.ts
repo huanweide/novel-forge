@@ -54,6 +54,8 @@ export async function PATCH(
         postProcessingRules: body.postProcessingRules,
         // Max Loop Round4·P8：智能审阅开关 API 写入入口（此前仅 DB/UI 可切，自动化/测试无法配置）
         autoConfirmEnabled: body.autoConfirmEnabled,
+        // v1.1.0：全书智能交付自动执行开关 API 写入入口
+        autoDeliverEnabled: body.autoDeliverEnabled,
       },
     });
     return NextResponse.json(updated);

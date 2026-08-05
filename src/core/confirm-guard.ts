@@ -6,7 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { analyzeQuality } from "@/lib/quality-analyzer";
 import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
-import { CONFIRMABLE_STATUSES } from "@/core/story-status";
+import { CONFIRMABLE_STATUSES, STATUS_CONFIRMED } from "@/core/story-status";
 
 // 共享阈值（单一真相源）：与 analyzeQuality 的 passed 口径一致
 export { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
@@ -160,5 +160,38 @@ export async function applyConfirm(node: {
     },
   });
   if (upd.count === 0) return "节点已确认（幂等跳过，未重复计数）";
+  // v1.1.0：节点刚定稿，尝试自动整本交付（仅当项目开启 autoDeliverEnabled 且全书章节均已 confirmed）。
+  // fire-and-forget：交付是确认后的红利，失败静默（不阻塞确认响应），用户手动点也能兜底。
+  void maybeAutoDeliver(node.projectId).catch(() => {});
   return fillMsg;
+}
+
+/**
+ * v1.1.0：自动整本交付判定。
+ * 当项目开启 autoDeliverEnabled 且尚未交付、且全书所有章节/小节/场景均已 confirmed 时，
+ * 自动置 Project.confirmedAt（等价于 POST /api/projects/[id]/confirm 成功路径）。
+ * 与 confirm 路由共用同样的节点类型口径（chapter/section/scene），单一真相。
+ * 全程只读 + 一次写入，失败返回 { delivered:false }，调用方可安全 fire-and-forget。
+ */
+export async function maybeAutoDeliver(projectId: string): Promise<{ delivered: boolean }> {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { autoDeliverEnabled: true, confirmedAt: true },
+    });
+    if (!project || !project.autoDeliverEnabled || project.confirmedAt) {
+      return { delivered: false };
+    }
+    const nodes = await prisma.storyNode.findMany({
+      where: { projectId, type: { in: ["chapter", "section", "scene"] } },
+      select: { status: true },
+    });
+    if (nodes.length === 0) return { delivered: false };
+    const hasUnconfirmed = nodes.some((n) => n.status !== STATUS_CONFIRMED);
+    if (hasUnconfirmed) return { delivered: false };
+    await prisma.project.update({ where: { id: projectId }, data: { confirmedAt: new Date() } });
+    return { delivered: true };
+  } catch {
+    return { delivered: false };
+  }
 }

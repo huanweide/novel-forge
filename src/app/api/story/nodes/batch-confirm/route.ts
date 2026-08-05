@@ -2,7 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
-import { evaluateConfirmEligibility } from "@/core/confirm-guard";
+import { evaluateConfirmEligibility, maybeAutoDeliver } from "@/core/confirm-guard";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 
 /**
@@ -108,6 +108,9 @@ export async function POST(request: Request) {
       }
       confirmed.push({ id: node.id, title: node.title, score, grade: el.grade });
     }
+
+    // v1.1.0：批量确认刚定稿若干章，尝试自动整本交付（fire-and-forget，红利不阻塞响应）
+    void maybeAutoDeliver(projectId).catch(() => {});
 
     return NextResponse.json({
       ok: true,

@@ -22,6 +22,7 @@ interface ChapterConfirmBarProps {
   allConfirmed: boolean;
   projectConfirmedAt: string | null;
   autoConfirmEnabled?: boolean;
+  autoDeliverEnabled?: boolean;  // v1.1.0：全书智能交付自动执行开关
   onAction: () => void;          // 动作成功后刷新（loadProject + 刷新 selectedNode）
   onDiagnose: () => void;        // 打开 PostGenPanel 审校 Tab
 }
@@ -46,7 +47,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function ChapterConfirmBar({
-  projectId, nodeId, nodeStatus, projectConfirmedAt, autoConfirmEnabled, onAction, onDiagnose,
+  projectId, nodeId, nodeStatus, projectConfirmedAt, autoConfirmEnabled, autoDeliverEnabled, onAction, onDiagnose,
 }: ChapterConfirmBarProps) {
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
@@ -57,8 +58,37 @@ export function ChapterConfirmBar({
     blocked: { title: string; score: number | null; grade: string | null; reason: string }[];
   } | null>(null);
   const [delivering, setDelivering] = useState(false);
+  // v1.1.0：全书交付区默认收起，减少常驻占用；自动交付开关本地态（兜底默认开）
+  const [deliverOpen, setDeliverOpen] = useState(false);
+  const [autoDeliver, setAutoDeliver] = useState(autoDeliverEnabled ?? true);
+  const [togglingDeliver, setTogglingDeliver] = useState(false);
 
   const isAutoMode = autoConfirmEnabled === true;
+
+  // v1.1.0：切换「全书智能交付自动执行」开关，落地到 Project.autoDeliverEnabled（PATCH /api/projects/[id]）
+  const toggleAutoDeliver = async (next: boolean) => {
+    setTogglingDeliver(true);
+    setAutoDeliver(next); // 乐观更新，先响应用户
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoDeliverEnabled: next }),
+      });
+      if (!res.ok) {
+        setAutoDeliver(!next); // 失败回滚
+        const d = await res.json().catch(() => ({}));
+        toastError(d.error || `切换自动交付失败（${res.status}）`);
+      } else if (next) {
+        toastInfo("已开启自动交付：全书章节全部定稿后将自动完成整本交付，无需手动点。");
+      }
+    } catch (err) {
+      setAutoDeliver(!next);
+      toastError("切换自动交付失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setTogglingDeliver(false);
+    }
+  };
 
   // IMP-005：默认开启「智能审阅（自动确认）」时，首次给一次性引导（localStorage 去重），
   // 避免新用户无感定稿、错过逐章审校。后续进入不再打扰。
@@ -139,8 +169,14 @@ export function ChapterConfirmBar({
         const blocked = d.blocked ?? [];
         setDeliverState({ confirmed, blocked });
         if (blocked.length === 0 && confirmed.length > 0) {
-          // 体验减法（Max Loop Round7）：扫描无拦截且本轮有放行 → 自动整本交付（点击 2 → 1）
-          await confirmProject();
+          // v1.1.0：扫描无拦截且本轮有放行 → 自动整本交付。
+          // 开启「自动交付」时服务端已在放行末章时自动置 confirmedAt，此处不再重复点；
+          // 仅在关闭开关（保守模式）时由客户端补一次确认整本交付（点击 2 → 1）。
+          if (!autoDeliver) {
+            await confirmProject();
+          } else {
+            onAction();
+          }
         } else {
           onAction();
         }
@@ -241,30 +277,59 @@ export function ChapterConfirmBar({
         </div>
       )}
 
-      {/* 一键智能交付全书（主入口） */}
+      {/* 全书智能交付区（v1.1.0：默认收起，减少常驻占用；折叠后仅留主扫描按钮 + 自动交付开关） */}
       <div className="mt-3 pt-3 border-t border-[var(--nv-border-2)]">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[11px] text-[var(--nv-text-secondary)]">全书一键智能交付：扫描所有未确认章，合格自动放行，仅拦截异常。</span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setDeliverOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
+          >
+            <Icon name={deliverOpen ? "chevronDown" : "chevronRight"} size={12} />
+            全书智能交付
+          </button>
+          <label className="flex items-center gap-1.5 text-[10px] text-[var(--nv-text-tertiary)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="accent-[var(--nv-primary)] h-3 w-3"
+              checked={autoDeliver}
+              disabled={togglingDeliver}
+              onChange={(e) => void toggleAutoDeliver(e.target.checked)}
+            />
+            自动交付
+          </label>
           <Button size="sm" className="btn-primary h-7 text-xs" disabled={delivering} onClick={smartDeliver}>
             {delivering ? "扫描中..." : "智能交付全书 🚀"}
           </Button>
         </div>
-        {deliverState && (
-          <div className="mt-2 space-y-1.5">
-            <div className="flex items-center gap-3 text-[11px]">
-              <span className="text-[var(--nv-success)] flex items-center gap-1"><Icon name="check" size={11} /> 自动放行 {deliverState.confirmed.length} 章</span>
-              {deliverState.blocked.length > 0 && (
-                <span className="text-[var(--nv-danger)] flex items-center gap-1"><Icon name="alert" size={11} /> 拦截 {deliverState.blocked.length} 章</span>
-              )}
-            </div>
-            {deliverState.blocked.length > 0 && (
-              <ul className="text-[10px] text-[var(--nv-text-secondary)] list-disc pl-4 space-y-0.5">
-                {deliverState.blocked.map((b, i) => (
-                  <li key={i}>{b.title}：{b.reason}</li>
-                ))}
-              </ul>
+        {deliverOpen && (
+          <div className="mt-2 space-y-2">
+            <p className="text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed">
+              扫描所有未确认章，合格自动放行，仅拦截异常。开启「自动交付」后，全书章节全部定稿将自动完成整本交付，无需手动点。
+            </p>
+            {deliverState && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-3 text-[11px]">
+                  <span className="text-[var(--nv-success)] flex items-center gap-1"><Icon name="check" size={11} /> 自动放行 {deliverState.confirmed.length} 章</span>
+                  {deliverState.blocked.length > 0 && (
+                    <span className="text-[var(--nv-danger)] flex items-center gap-1"><Icon name="alert" size={11} /> 拦截 {deliverState.blocked.length} 章</span>
+                  )}
+                </div>
+                {deliverState.blocked.length > 0 && (
+                  <ul className="text-[10px] text-[var(--nv-text-secondary)] list-disc pl-4 space-y-0.5">
+                    {deliverState.blocked.map((b, i) => (
+                      <li key={i}>{b.title}：{b.reason}</li>
+                    ))}
+                  </ul>
+                )}
+                {/* 保守模式（关闭自动交付）才暴露手动「确认整本交付」；自动模式下服务端已自动交付，按钮冗余收起 */}
+                {!autoDeliver && (
+                  <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy || (deliverState.blocked.length > 0)} onClick={confirmProject}>
+                    确认整本交付 🚀
+                  </Button>
+                )}
+              </div>
             )}
-            <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={confirmProject}>确认整本交付 🚀</Button>
           </div>
         )}
       </div>

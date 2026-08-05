@@ -31,6 +31,8 @@ export interface ProjectData {
   confirmedAt: string | null;
   /** Round3：智能审阅（auto-confirm）开关，默认开 */
   autoConfirmEnabled?: boolean;
+  /** v1.1.0：全书智能交付自动执行开关，默认开 */
+  autoDeliverEnabled?: boolean;
 }
 
 export interface CharacterData {

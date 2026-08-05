@@ -25,18 +25,43 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.0.4";
+export const LATEST_VERSION = "v1.1.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.0.4 泄漏护栏：补齐 entity-highlighter 两模块级 Map 容量上限，与 round-2 monitorCache 一并闭环",
-  "getEntityMap 的 cache 此前仅用 60s TTL 做命中判断却从不清过期、lastGoodMap 无任何淘汰，长期切换多项目会无限增长",
-  "新增 ENTITY_CACHE_MAX=256 容量上限 + LRU 删最旧；invalidateEntityCache 同时清 lastGoodMap 对应 key",
-  "质量门禁：tsc 零错误 + 211 单元测试全绿；MaxLoop round-15 同源泄漏闭环收口",
+  "v1.1.0 确认流程优化：全书交付区默认收起瘦身 + 新增「自动交付」开关",
+  "Project 新增 autoDeliverEnabled（默认开），全书章节均定稿后自动整本交付，无需手动点「确认整本交付」",
+  "自动交付钩子挂在 applyConfirm / 手动确认 / 批量确认三处漏斗，最后一章定稿即触发，幂等不重复交付",
+  "质量门禁：tsc 零错误 + 217 单元测试全绿（新增 maybeAutoDeliver 六分支单测锁定分支行为）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.1.0",
+    date: "2026-08-06",
+    title: "确认流程优化：全书交付区默认收起 + 新增「自动交付」开关（最后一章定稿自动整本交付）",
+    sections: [
+      {
+        label: "新增功能：全书智能交付自动执行",
+        items: [
+          "Project 新增 autoDeliverEnabled 开关（默认开）；全书章节（chapter/section/scene）全部达 confirmed 后自动置 confirmedAt，无需手动点「确认整本交付」",
+          "自动交付钩子挂在三处确认漏斗——applyConfirm（生成时自动确认/智能交付全书/游戏导出章）、node PATCH 手动确认、batch-confirm 批量确认，覆盖所有可能「最后一章定稿」的时机；写入幂等，重复命中不重复置时间戳",
+        ],
+      },
+      {
+        label: "体验减法：确认流程面板瘦身",
+        items: [
+          "全书一键智能交付区默认收起，仅留折叠入口 + 「智能交付全书」主按钮 + 「自动交付」开关，减少常驻占用",
+          "保守模式（关闭自动交付）才暴露手动「确认整本交付」按钮；自动模式下该按钮冗余收起，smartDeliver 不再重复触发交付（服务端已在放行末章时自动交付）",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿（新增 maybeAutoDeliver 六分支单测：关闭/已交付/有未确认/无章节/全部确认/异常，确定性锁死分支行为）"],
+      },
+    ],
+  },
   {
     version: "v1.0.4",
     date: "2026-08-06",
