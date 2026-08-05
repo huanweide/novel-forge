@@ -1045,6 +1045,7 @@ export default function WorkspacePage() {
                 nodeStatus={selectedNode.status}
                 allConfirmed={allConfirmed}
                 projectConfirmedAt={projectConfirmedAt}
+                autoConfirmEnabled={project?.autoConfirmEnabled ?? true}
                 onAction={() => { void loadProject(); }}
                 onDiagnose={async () => {
                   try {

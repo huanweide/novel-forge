@@ -15,7 +15,7 @@ interface MonitorData {
   totalChapters: number;
   completedChapters: number;
   completionRate: number;
-  confirmStats?: { pending: number; confirmed: number; total: number; progress: number };
+  confirmStats?: { pending: number; confirmed: number; total: number; progress: number; autoConfirmed?: number; autoRate?: number };
   currentChapter: { id: string; title: string; wordCount: number; status: string } | null;
   tokens: { estimatedGenerated: number; estimatedPrompt: number; estimatedTotal: number; note: string };
   distribution: { avgWordsPerChapter: number; maxChapterWords: number; minChapterWords: number; chaptersWithContent: number };
@@ -102,6 +102,12 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
             <StatBlock label="待确认" value={fmt(data.confirmStats.pending)} color={data.confirmStats.pending > 0 ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-secondary)]"} />
             <StatBlock label="已确认定稿" value={fmt(data.confirmStats.confirmed)} color="text-[var(--nv-success)]" />
           </div>
+          {typeof data.confirmStats.autoRate === "number" && data.confirmStats.confirmed > 0 && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <StatBlock label="智能自动放行" value={fmt(data.confirmStats.autoConfirmed ?? 0)} color="text-[var(--nv-primary)]" sub={`占比 ${data.confirmStats.autoRate}%`} />
+              <StatBlock label="人工确认" value={fmt(Math.max(0, data.confirmStats.confirmed - (data.confirmStats.autoConfirmed ?? 0)))} color="text-[var(--nv-text-secondary)]" sub="人工点选的章" />
+            </div>
+          )}
           <div className="mt-2">
             <div className="flex items-center justify-between text-[10px] text-[var(--nv-text-tertiary)] mb-1">
               <span>整本确认进度</span>

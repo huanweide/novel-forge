@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const [nodes, summaries, beats, commitments] = await Promise.all([
       prisma.storyNode.findMany({
         where: { projectId },
-        select: { id: true, title: true, type: true, status: true, wordCount: true, order: true, updatedAt: true },
+        select: { id: true, title: true, type: true, status: true, wordCount: true, order: true, updatedAt: true, reviewLogs: true },
         orderBy: { order: "asc" },
       }),
       prisma.chapterSummary.count({ where: { projectId } }),
@@ -35,6 +35,15 @@ export async function GET(request: Request) {
     const pendingConfirmChapters = chapters.filter((n) => n.status === "pending_confirm").length;
     const confirmedChapters = chapters.filter((n) => n.status === "confirmed").length;
     const totalChapters = chapters.length;
+
+    // 自动放行率：已确认章中由智能审阅（auto-confirm）自动审定的数量
+    const autoConfirmedChapters = chapters.filter(
+      (n) =>
+        n.status === "confirmed" &&
+        Array.isArray((n as any).reviewLogs) &&
+        (n as any).reviewLogs.some((l: any) => l && l.action === "auto-confirm"),
+    ).length;
+    const autoRate = confirmedChapters > 0 ? Math.round((autoConfirmedChapters / confirmedChapters) * 100) : 0;
 
     // 当前章节
     let currentNode: typeof nodes[0] | null = null;
@@ -152,6 +161,8 @@ export async function GET(request: Request) {
         confirmed: confirmedChapters,
         total: totalChapters,
         progress: totalChapters > 0 ? Math.round((confirmedChapters / totalChapters) * 100) : 0,
+        autoConfirmed: autoConfirmedChapters,
+        autoRate,
       },
       currentChapter: currentNode ? {
         id: currentNode.id,

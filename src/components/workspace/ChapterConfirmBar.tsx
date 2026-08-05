@@ -3,11 +3,11 @@
 /**
  * ChapterConfirmBar — 马斯克确认流程常驻确认栏
  *
- * 贴在中栏正文下方（PostGenPanel 同区），4 键状态机驱动：
- *   completed/drafting → [提交确认] [AI诊断]
- *   pending_confirm     → [确认通过] [打回重写(须填理由)] [AI诊断]
- *   confirmed          → [重开] + 已确认徽标
- * 另含项目级「整本确认完成」按钮（仅当全部章节 confirmed 且未整体交付时浮出）。
+ * 贴在中栏正文下方（PostGenPanel 同区）。
+ * 智能审阅模式（autoConfirmEnabled）：合格章由系统自动确认，人类从审批者降级为异常处理者——
+ *   故单章仅在「被系统拦截 / 用户主动人工接管」时展开 4 键，常态只显「系统自动判定」+ AI诊断 + 人工接管。
+ * 保守模式（开关关）：保留原逐章 4 键（提交/确认通过/打回/AI诊断/重开）。
+ * 新增「智能交付全书 🚀」主入口：一键扫描全书 → 合格自动放行 + 拦截清单 → 整本交付。
  */
 
 import { useState } from "react";
@@ -21,6 +21,7 @@ interface ChapterConfirmBarProps {
   nodeStatus: string;
   allConfirmed: boolean;
   projectConfirmedAt: string | null;
+  autoConfirmEnabled?: boolean;
   onAction: () => void;          // 动作成功后刷新（loadProject + 刷新 selectedNode）
   onDiagnose: () => void;        // 打开 PostGenPanel 审校 Tab
 }
@@ -45,11 +46,19 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function ChapterConfirmBar({
-  projectId, nodeId, nodeStatus, allConfirmed, projectConfirmedAt, onAction, onDiagnose,
+  projectId, nodeId, nodeStatus, allConfirmed, projectConfirmedAt, autoConfirmEnabled, onAction, onDiagnose,
 }: ChapterConfirmBarProps) {
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [reason, setReason] = useState("");
+  const [manualTakeover, setManualTakeover] = useState(false);
+  const [deliverState, setDeliverState] = useState<{
+    confirmed: { title: string; score: number | null; grade: string | null }[];
+    blocked: { title: string; score: number | null; grade: string | null; reason: string }[];
+  } | null>(null);
+  const [delivering, setDelivering] = useState(false);
+
+  const isAutoMode = autoConfirmEnabled === true;
 
   const call = async (action: string, extra?: Record<string, unknown>) => {
     setBusy(true);
@@ -77,12 +86,33 @@ export function ChapterConfirmBar({
     try {
       const res = await fetch(`/api/projects/${projectId}/confirm`, { method: "POST" });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { toastSuccess("整本确认完成 🚀 项目创作确认流程走通！"); onAction(); }
+      if (res.ok) { toastSuccess("整本确认完成 🚀 项目创作确认流程走通！"); setDeliverState(null); onAction(); }
       else if (res.status === 409) { toastError(d.error || "还有章节未确认"); }
       else { toastError(d.error || `操作失败（${res.status}）`); }
     } catch (err) {
       toastError("操作失败：" + (err instanceof Error ? err.message : "网络错误"));
     } finally { setBusy(false); }
+  };
+
+  // 一键智能交付全书：先扫描全书自动放行合格章，再展示拦截清单，最后整本交付
+  const smartDeliver = async () => {
+    setDelivering(true);
+    try {
+      const res = await fetch(`/api/story/nodes/auto-confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, requirePassed: true }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setDeliverState({ confirmed: d.confirmed ?? [], blocked: d.blocked ?? [] });
+        onAction();
+      } else {
+        toastError(d.error || "智能交付失败");
+      }
+    } catch (err) {
+      toastError("智能交付失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally { setDelivering(false); }
   };
 
   const isConfirmable = nodeStatus === "completed" || nodeStatus === "drafting";
@@ -96,25 +126,63 @@ export function ChapterConfirmBar({
           <Icon name="clipboard" size={13} className="text-[var(--nv-primary)]" />
           <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">马斯克确认流程</span>
           <StatusBadge status={nodeStatus} />
+          {isAutoMode && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--nv-primary)]/10 text-[var(--nv-primary)] font-medium">智能审阅</span>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {isConfirmable && (
+          {/* 智能审阅态：常态收敛人工按钮，仅拦截/接管时展开 */}
+          {isAutoMode && !isConfirmed && !manualTakeover && (
             <>
-              <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={() => call("submit")}>提交确认</Button>
+              <span className="text-[10px] text-[var(--nv-text-tertiary)] flex items-center gap-1">
+                <Icon name="alert" size={10} /> 系统自动判定，仅拦截异常
+              </span>
               <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => setManualTakeover(true)}>人工接管</Button>
             </>
           )}
-          {isPending && (
+          {isAutoMode && !isConfirmed && manualTakeover && (
             <>
-              <Button size="sm" className="h-7 text-xs bg-[var(--nv-success)] hover:bg-[var(--nv-success)]/90 text-white" disabled={busy} onClick={() => call("confirm")}>确认通过</Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--nv-danger)]/40 text-[var(--nv-danger)] hover:bg-[var(--nv-danger)]/10" disabled={busy} onClick={() => setShowReject((v) => !v)}>打回重写</Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+              {isConfirmable && (
+                <>
+                  <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={() => call("submit")}>提交确认</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                </>
+              )}
+              {isPending && (
+                <>
+                  <Button size="sm" className="h-7 text-xs bg-[var(--nv-success)] hover:bg-[var(--nv-success)]/90 text-white" disabled={busy} onClick={() => call("confirm")}>确认通过</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--nv-danger)]/40 text-[var(--nv-danger)] hover:bg-[var(--nv-danger)]/10" disabled={busy} onClick={() => setShowReject((v) => !v)}>打回重写</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                </>
+              )}
+              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => setManualTakeover(false)}>收起接管</Button>
+            </>
+          )}
+          {/* 保守模式（关智能审阅）：保留原逐章 4 键 */}
+          {!isAutoMode && (
+            <>
+              {isConfirmable && (
+                <>
+                  <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={() => call("submit")}>提交确认</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                </>
+              )}
+              {isPending && (
+                <>
+                  <Button size="sm" className="h-7 text-xs bg-[var(--nv-success)] hover:bg-[var(--nv-success)]/90 text-white" disabled={busy} onClick={() => call("confirm")}>确认通过</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--nv-danger)]/40 text-[var(--nv-danger)] hover:bg-[var(--nv-danger)]/10" disabled={busy} onClick={() => setShowReject((v) => !v)}>打回重写</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                </>
+              )}
             </>
           )}
           {isConfirmed && (
             <>
-              <span className="text-[10px] text-[var(--nv-success)] flex items-center gap-1"><Icon name="check" size={11} /> 定稿已锁定</span>
-              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => call("reopen")}>重开</Button>
+              <span className="text-[10px] text-[var(--nv-success)] flex items-center gap-1">
+                <Icon name="check" size={11} /> {isAutoMode ? "已自动定稿" : "定稿已锁定"}
+              </span>
+              <Button size="sm" variant="ghost" className="h-7 text-xs opacity-70" disabled={busy} onClick={() => call("reopen")}>重开</Button>
             </>
           )}
           {nodeStatus === "outline_only" && (
@@ -136,12 +204,34 @@ export function ChapterConfirmBar({
         </div>
       )}
 
-      {allConfirmed && !projectConfirmedAt && (
-        <div className="mt-3 pt-3 border-t border-[var(--nv-border-2)] flex items-center justify-between">
-          <span className="text-[11px] text-[var(--nv-text-secondary)]">全部章节已确认定稿，可整本交付。</span>
-          <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={confirmProject}>项目确认完成 🚀</Button>
+      {/* 一键智能交付全书（主入口） */}
+      <div className="mt-3 pt-3 border-t border-[var(--nv-border-2)]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] text-[var(--nv-text-secondary)]">全书一键智能交付：扫描所有未确认章，合格自动放行，仅拦截异常。</span>
+          <Button size="sm" className="btn-primary h-7 text-xs" disabled={delivering} onClick={smartDeliver}>
+            {delivering ? "扫描中..." : "智能交付全书 🚀"}
+          </Button>
         </div>
-      )}
+        {deliverState && (
+          <div className="mt-2 space-y-1.5">
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="text-[var(--nv-success)] flex items-center gap-1"><Icon name="check" size={11} /> 自动放行 {deliverState.confirmed.length} 章</span>
+              {deliverState.blocked.length > 0 && (
+                <span className="text-[var(--nv-danger)] flex items-center gap-1"><Icon name="alert" size={11} /> 拦截 {deliverState.blocked.length} 章</span>
+              )}
+            </div>
+            {deliverState.blocked.length > 0 && (
+              <ul className="text-[10px] text-[var(--nv-text-secondary)] list-disc pl-4 space-y-0.5">
+                {deliverState.blocked.map((b, i) => (
+                  <li key={i}>{b.title}：{b.reason}</li>
+                ))}
+              </ul>
+            )}
+            <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={confirmProject}>确认整本交付 🚀</Button>
+          </div>
+        )}
+      </div>
+
       {projectConfirmedAt && (
         <div className="mt-3 pt-3 border-t border-[var(--nv-border-2)] flex items-center gap-1 text-[11px] text-[var(--nv-success)]">
           <Icon name="check" size={12} /> 整本已确认交付（{new Date(projectConfirmedAt).toLocaleString("zh-CN")}）

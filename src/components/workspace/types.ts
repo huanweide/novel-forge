@@ -29,6 +29,8 @@ export interface ProjectData {
   buildConfig?: Record<string, unknown> | null;
   /** 马斯克确认流程：整本交付完成时间戳（null=未整体确认交付） */
   confirmedAt: string | null;
+  /** 马斯克 Round3：智能审阅（auto-confirm）开关，默认开 */
+  autoConfirmEnabled?: boolean;
 }
 
 export interface CharacterData {

@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.92";
+export const LATEST_VERSION = "v0.46.93";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "智能自动确认（马斯克 Round3 #1）：新增 POST /api/story/nodes/auto-confirm 端点 + 生成流水线 post-processor 挂载，项目开启后生成完合格章自动确认（含自动填表），人类从审批者降级为异常处理者",
-  "抽离共享质量护栏 src/core/confirm-guard.ts 单一阈值真相（QUALITY_PASS_THRESHOLD=60）：evaluateConfirmEligibility 空正文/过短优先拦截、qualityScore 非 null 采信省分析、null 回退本地 analyzeQuality 零 Token；applyConfirm 封装自动填表副作用 + confirmed 状态，批量确认/自动确认/流水线三处复用",
-  "Project 模型新增 autoConfirmEnabled 开关字段（默认 true），db push 同步数据库并自动填充已有项目；post-processor 生成完若开启且质量达标直接 confirmed（best-effort，失败降级 drafting 不阻塞落库），并推送 SSE auto_confirm 事件",
-  "端到端真机验证 scripts/musk-auto-confirm-verify.cjs 全绿：A/B 优质章实时 analyzer 86/A 自动放行、C 章正文过短拦截、最终态正确（VERIFY_PASS），护栏两条路径（实时分析 + 过短拦截）均覆盖",
+  "一键智能交付全书（马斯克 Round3 #518）：ChapterConfirmBar 新增「智能交付全书🚀」主入口，一键扫描全书自动放行合格章 + 展示拦截清单 + 整本交付，12章×4按钮压缩为1次扫描+1张清单",
+  "确认 UI 减法（马斯克 Round3 #516）：智能审阅态收敛人工4键为「系统自动判定+AI诊断+人工接管(折叠)」，合格章零点击；MonitorPanel 确认看板加「自动放行率」指标（autoRate，从 reviewLogs auto-confirm 标记统计）",
+  "真机生成验收（马斯克 Round3 #517）：重启 dev 修复 stale Prisma 客户端导致 auto-confirm 静默跳过的环境坑，真机生成一章→直接 confirmed+自动填表+auto-confirm 标记，人工零点击（VERIFY_PASS）",
+  "运维铁律重申：改 schema/新增字段后必须重启 dev 加载新 Prisma 客户端，否则 post-processor 的 select 新列查询抛错被 catch 吞掉、auto-confirm 静默不生效（非代码缺陷，属环境 stale client）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.93",
+    date: "2026-08-05",
+    title: "确认 UI 减法 + 一键智能交付全书 + 真机生成验收（马斯克 Round3 #516/#517/#518 全绿，tsc 零错误）",
+    sections: [
+      {
+        label: "一键智能交付全书（马斯克 Round3 #518）：12章×4按钮压缩为1次扫描+1张清单",
+        items: [
+          "ChapterConfirmBar 新增「智能交付全书🚀」主入口：调 POST /api/story/nodes/auto-confirm 扫描全书（合格自动放行、不合格进 blocked 附 reason），前端内联展示「自动放行 N 章 / 拦截 M 章」清单（列出被拦截章标题+原因），再一键 confirm 整本交付；保守模式（关智能审阅）用户同样可用此按钮批量自动放行合格章",
+          "后端链路复用既有 auto-confirm 端点 + projects/[id]/confirm 端点（均经 Round3 #1 真机验证），前端仅为组合调用；scripts/musk-smart-deliver-verify.cjs 验证全绿（VERIFY_PASS）：建3章→首扫放行 A/B 拦截 C(qualityScore=30)→首次整本交付 409(C未确认)→C改优质→二次扫描放行 C→二次整本交付 200 + confirmedAt 设置 + autoRate=100%",
+        ],
+      },
+      {
+        label: "确认 UI 减法（马斯克 Round3 #516）：智能审阅态收敛人工按钮 + 自动放行率看板",
+        items: [
+          "ChapterConfirmBar 接收 autoConfirmEnabled prop：智能审阅态下 drafting/pending_confirm 章常态只显「系统自动判定，仅拦截异常」+ AI诊断 + 人工接管(折叠展开原4键)，合格章零点击；confirmed 章显示「已自动定稿」、重开降级为不显眼小字；保守模式保持原逐章4键不变",
+          "MonitorPanel 确认看板加「自动放行率」指标：monitor 端点 confirmStats 新增 autoConfirmed(由智能审阅自动审定数) 与 autoRate(占比)，从 reviewLogs 的 auto-confirm 动作标记统计；看板并列展示「智能自动放行 / 人工确认」两档，让自动化收益可见",
+        ],
+      },
+      {
+        label: "真机生成验收（马斯克 Round3 #517）：重启 dev 修复 stale client，生成完零点击自动确认",
+        items: [
+          "初测 FAIL 根因：v0.46.92 加 autoConfirmEnabled 字段后未重启 dev，旧进程加载的 Prisma 客户端不含该列，post-processor 3.1段 select:{autoConfirmEnabled:true} 查询抛错被 catch 吞掉，auto-confirm 静默跳过（qualityScore=83 达标却停 drafting）；重启 dev 加载新客户端后即正常",
+          "重启后真机生成一章：SSE 收 auto_confirm 事件、节点最终 status=confirmed、reviewLogs 含 {action:auto-confirm, fill:自动填表已执行}——生成完直接自动确认+自动填表，人工零点击（VERIFY_PASS，scripts/musk-gen-autoconfirm-verify.cjs）",
+          "运维铁律重申：改 schema/新增字段后必须重启 dev（npm run dev，非 npm run dev -p 3001）加载新 Prisma 客户端，否则 post-processor 的 select 新列查询会因 stale client 抛错被 catch 吞掉、auto-confirm 静默不生效",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.92",
     date: "2026-08-05",

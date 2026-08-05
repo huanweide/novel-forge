@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.93 — 2026-08-05
+**确认 UI 减法 + 一键智能交付全书 + 真机生成验收（马斯克 Round3 #516/#517/#518 全绿，tsc 零错误）**
+
+- 一键智能交付全书（#518）：ChapterConfirmBar 新增「智能交付全书🚀」主入口，调 auto-confirm 扫描全书（合格自动放行、不合格进 blocked 附 reason）+ 内联展示放行/拦截清单 + 一键 confirm 整本交付；后端复用既有 auto-confirm 端点 + projects/[id]/confirm，scripts/musk-smart-deliver-verify.cjs 验证全绿（首扫放行 A/B 拦截 C→409→C改优质→二次放行→整本交付 200 + confirmedAt + autoRate=100%）
+- 确认 UI 减法（#516）：智能审阅态收敛人工4键为「系统自动判定+AI诊断+人工接管(折叠)」，合格章零点击；confirmed 章显「已自动定稿」、重开降级小字；保守模式保持原4键。MonitorPanel 确认看板加「自动放行率」指标（monitor 端点 confirmStats 新增 autoConfirmed/autoRate，从 reviewLogs auto-confirm 标记统计）
+- 真机生成验收（#517）：重启 dev 修复 stale Prisma 客户端导致 auto-confirm 静默跳过的环境坑（v0.46.92 加字段后未重启 dev，post-processor select 新列查询抛错被 catch 吞掉）；重启后真机生成一章→直接 confirmed+自动填表+auto-confirm 标记，人工零点击（VERIFY_PASS）
+- 运维铁律重申：改 schema/新增字段后必须重启 dev 加载新 Prisma 客户端，否则 post-processor 的 select 新列查询会因 stale client 抛错被 catch 吞掉、auto-confirm 静默不生效（非代码缺陷，属环境 stale client）
+
 ## v0.46.92 — 2026-08-05
 **智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）**
 
