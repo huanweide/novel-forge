@@ -97,11 +97,25 @@ export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHig
 // 获取（带内存缓存）
 // ═══════════════════════════════════════════
 
+const ENTITY_CACHE_MAX = 256; // 防长期切换多项目内存无限增长（与 round-2 monitorCache 同类护栏）
+
 const cache = new Map<string, { map: Map<string, EntityHighlight>; ts: number }>();
 const CACHE_TTL = 60_000; // 1 分钟
 
 // IMP-012：最近一次成功获取的实体映射，API 连续失败时降级复用，避免正文静默失色
 const lastGoodMap = new Map<string, Map<string, EntityHighlight>>();
+
+// 容量护栏：超上限删最旧（Map 插入顺序首元素），避免随项目数无限增长
+function evictIfNeeded() {
+  if (cache.size > ENTITY_CACHE_MAX) {
+    const oldest = cache.keys().next().value as string | undefined;
+    if (oldest) cache.delete(oldest);
+  }
+  if (lastGoodMap.size > ENTITY_CACHE_MAX) {
+    const oldest = lastGoodMap.keys().next().value as string | undefined;
+    if (oldest) lastGoodMap.delete(oldest);
+  }
+}
 
 /**
  * 通过 API 获取项目的实体高亮映射表。
@@ -138,6 +152,7 @@ export async function getEntityMap(projectId: string): Promise<Map<string, Entit
   if (map) {
     cache.set(projectId, { map, ts: Date.now() });
     lastGoodMap.set(projectId, map);
+    evictIfNeeded();
     return map;
   }
 
@@ -146,6 +161,7 @@ export async function getEntityMap(projectId: string): Promise<Map<string, Entit
   if (fallback) {
     console.warn("实体高亮 API 连续失败，降级使用上次缓存的映射");
     cache.set(projectId, { map: fallback, ts: Date.now() });
+    evictIfNeeded();
     return fallback;
   }
   return new Map();
@@ -153,6 +169,7 @@ export async function getEntityMap(projectId: string): Promise<Map<string, Entit
 
 export function invalidateEntityCache(projectId: string) {
   cache.delete(projectId);
+  lastGoodMap.delete(projectId);
 }
 
 /**

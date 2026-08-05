@@ -2,6 +2,15 @@
 
 ---
 
+## v1.0.4 — 2026-08-06
+**泄漏护栏：entity-highlighter 两模块级 Map 容量上限（与 round-2 monitorCache 一并闭环，MaxLoop round-15）**
+
+- `entity-highlighter.ts` 的 `cache`（`getEntityMap` 内存缓存）此前仅用 60s TTL 做命中判断、从不清过期条目；`lastGoodMap`（API 连续失败时降级复用）无任何 TTL/淘汰，随切换项目数无限增长——与 round-2 修复的 `monitorCache` 是同一无限增长反模式（仅发生在前端单 tab）
+- 新增 `ENTITY_CACHE_MAX=256` 容量上限 + `evictIfNeeded()` LRU 删最旧（`Map` 插入顺序首元素）；`invalidateEntityCache` 同时清 `lastGoodMap` 对应 key，避免脏映射残留
+- 质量门禁：tsc 零错误 + 211 单元测试全绿（`entity-highlighter.test.ts` 3 passed）；MaxLoop round-14 五透镜深度审计 + round-15 同源泄漏闭环收口，功能正确性/数据完整性/已知泄漏护栏全部闭环
+
+---
+
 ## v1.0.3 — 2026-08-06
 **数据完整性补丁：备份静默丢数据 + markdown 角色关系失效 + 大书导入事务超时（MaxLoop round-14 五透镜深度审计收口）**
 

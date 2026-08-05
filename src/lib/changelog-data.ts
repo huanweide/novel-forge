@@ -25,18 +25,33 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.0.3";
+export const LATEST_VERSION = "v1.0.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.0.3 数据完整性补丁：修复备份静默丢数据、markdown 角色关系失效、大书导入事务超时三条 P1",
-  "备份回执自描述：导出 .nfproject 时显式声明「不含游戏进度/版本历史/记忆摘要/伏笔追踪/待兑现事项」并在前端 BackupDialog 提示，杜绝静默丢失错觉",
-  "markdown 导入角色关系修复：toCharacterCreateParams 改用 targetName 对齐全系统契约，关系在世界书注入不再渲染成 ?(?)",
-  "大书导入事务护栏：import/commit 事务补 { timeout: 120000 }，与 projects/import 口径一致，数百章串行落库不再因 5s 默认上限整段回滚",
+  "v1.0.4 泄漏护栏：补齐 entity-highlighter 两模块级 Map 容量上限，与 round-2 monitorCache 一并闭环",
+  "getEntityMap 的 cache 此前仅用 60s TTL 做命中判断却从不清过期、lastGoodMap 无任何淘汰，长期切换多项目会无限增长",
+  "新增 ENTITY_CACHE_MAX=256 容量上限 + LRU 删最旧；invalidateEntityCache 同时清 lastGoodMap 对应 key",
+  "质量门禁：tsc 零错误 + 211 单元测试全绿；MaxLoop round-15 同源泄漏闭环收口",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.0.4",
+    date: "2026-08-06",
+    title: "泄漏护栏：entity-highlighter 两模块级 Map 容量上限（与 round-2 monitorCache 一并闭环）",
+    sections: [
+      {
+        label: "修复 P2：同源泄漏",
+        items: ["IMP-504 entity-highlighter.ts 的 cache 此前仅用 60s TTL 做命中判断却从不清过期、lastGoodMap 无任何淘汰，随切换项目数无限增长", "新增 ENTITY_CACHE_MAX=256 容量上限 + evictIfNeeded() LRU 删最旧（Map 插入顺序首元素），与 round-2 monitorCache 修复同构闭环", "invalidateEntityCache 同时清 lastGoodMap 对应 key，避免脏映射残留"],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 211 单元测试全绿（entity-highlighter.test.ts 3 passed）；MaxLoop round-15 同源泄漏闭环收口"],
+      },
+    ],
+  },
   {
     version: "v1.0.3",
     date: "2026-08-06",
