@@ -13,6 +13,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { Switch } from "@/components/ui/switch";
 import { toastSuccess, toastError, toastInfo } from "@/components/ui/toast";
 
 interface ChapterConfirmBarProps {
@@ -277,29 +278,37 @@ export function ChapterConfirmBar({
         </div>
       )}
 
-      {/* 全书智能交付区（v1.1.0：默认收起，减少常驻占用；折叠后仅留主扫描按钮 + 自动交付开关） */}
+      {/* 全书智能交付区（v1.1.0：默认收起；v1.1.1：开关改用统一 Toggle，标题与操作左右分离，避免折行拥挤） */}
       <div className="mt-3 pt-3 border-t border-[var(--nv-border-2)]">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setDeliverOpen((v) => !v)}
-            className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"
-          >
-            <Icon name={deliverOpen ? "chevronDown" : "chevronRight"} size={12} />
-            全书智能交付
-          </button>
-          <label className="flex items-center gap-1.5 text-[10px] text-[var(--nv-text-tertiary)] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              className="accent-[var(--nv-primary)] h-3 w-3"
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setDeliverOpen((v) => !v)}
+              className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] transition-colors"
+            >
+              <Icon name={deliverOpen ? "chevronDown" : "chevronRight"} size={12} />
+              全书智能交付
+            </button>
+            <Switch
               checked={autoDeliver}
+              onCheckedChange={(next) => void toggleAutoDeliver(next)}
               disabled={togglingDeliver}
-              onChange={(e) => void toggleAutoDeliver(e.target.checked)}
+              label="自动交付"
+              size="sm"
+              id="auto-deliver-switch"
             />
-            自动交付
-          </label>
-          <Button size="sm" className="btn-primary h-7 text-xs" disabled={delivering} onClick={smartDeliver}>
-            {delivering ? "扫描中..." : "智能交付全书 🚀"}
+          </div>
+          <Button size="sm" className="btn-primary h-7 text-xs gap-1" disabled={delivering} onClick={smartDeliver}>
+            {delivering ? (
+              <>
+                <Icon name="loader" size={12} className="animate-spin" /> 扫描中...
+              </>
+            ) : (
+              <>
+                智能交付全书 <Icon name="rocket" size={12} />
+              </>
+            )}
           </Button>
         </div>
         {deliverOpen && (
@@ -324,8 +333,8 @@ export function ChapterConfirmBar({
                 )}
                 {/* 保守模式（关闭自动交付）才暴露手动「确认整本交付」；自动模式下服务端已自动交付，按钮冗余收起 */}
                 {!autoDeliver && (
-                  <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy || (deliverState.blocked.length > 0)} onClick={confirmProject}>
-                    确认整本交付 🚀
+                  <Button size="sm" className="btn-primary h-7 text-xs gap-1" disabled={busy || (deliverState.blocked.length > 0)} onClick={confirmProject}>
+                    确认整本交付 <Icon name="rocket" size={12} />
                   </Button>
                 )}
               </div>

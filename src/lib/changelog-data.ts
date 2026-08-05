@@ -25,18 +25,44 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.1.0";
+export const LATEST_VERSION = "v1.1.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.1.0 确认流程优化：全书交付区默认收起瘦身 + 新增「自动交付」开关",
-  "Project 新增 autoDeliverEnabled（默认开），全书章节均定稿后自动整本交付，无需手动点「确认整本交付」",
-  "自动交付钩子挂在 applyConfirm / 手动确认 / 批量确认三处漏斗，最后一章定稿即触发，幂等不重复交付",
-  "质量门禁：tsc 零错误 + 217 单元测试全绿（新增 maybeAutoDeliver 六分支单测锁定分支行为）",
+  "v1.1.1 确认流程折叠区布局打磨：新增统一 Switch 组件，自动交付开关改为药丸 Toggle，标题与主按钮左右分离",
+  "ChapterConfirmBar 折叠头部改用统一 Toggle + 图标按钮，解决折行拥挤与 emoji 混用问题",
+  "新增 src/components/ui/switch.tsx 可复用药丸开关，为后续设置页/项目配置统一 Toggle 风格奠基",
+  "质量门禁：tsc 零错误 + 217 单元测试全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.1.1",
+    date: "2026-08-06",
+    title: "确认流程折叠区布局打磨：统一 Switch 组件 + 药丸 Toggle + 去 emoji",
+    sections: [
+      {
+        label: "体验减法：ChapterConfirmBar 折叠头部更清爽",
+        items: [
+          "新增可复用 src/components/ui/switch.tsx 药丸开关，风格收敛到 --nv-primary / --nv-surface-3，支持 sm/md 两档与 label 插槽",
+          "全书智能交付折叠区标题与主按钮左右分离：左侧「折叠入口 + 自动交付 Toggle」，右侧「智能交付全书」主按钮，避免三元素折行拥挤",
+          "自动交付开关由原生 checkbox 改为统一 Switch，符合云笔式右置 Toggle 视觉习惯",
+          "「智能交付全书」与「确认整本交付」按钮的 🚀 emoji 替换为 Icon name=rocket，保持图标体系一致",
+        ],
+      },
+      {
+        label: "集成与风格统一",
+        items: [
+          "Switch 组件为后续设置页、项目配置、功能开关卡片统一 Toggle 风格奠基，避免各页面开关样式碎片化",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿"],
+      },
+    ],
+  },
   {
     version: "v1.1.0",
     date: "2026-08-06",
