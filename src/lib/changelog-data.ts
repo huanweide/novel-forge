@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.103";
+export const LATEST_VERSION = "v1.0.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "状态枚举全面落地：核心确认链路 10 文件的状态字面量全部接入 story-status 单一真相（STATUS_*/CONFIRMABLE_STATUSES），前后端状态名一套真相收尾",
-  "lint 增量归零：新建文件 lint 干净（confirm-guard 唯一 any 修复）、scripts/*.cjs 豁免 require 规则（CommonJS 标准用法）、两组件 error 清除；存量 2542 债基线存档待专项",
-  "游戏导出状态提示：游戏结束屏按轻确认结果区分提示——自动定稿（绿·含质量分）/待手动确认（橙）引导下一步，导出链路闭环可见",
-  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.103",
+  "🎉 v1.0.0 正式版发布：确认流程体系（护栏/幂等/审校/溯源/日志/状态枚举）与体验减法全部收敛，全功能真机验证通过",
+  "全链路检验全绿：tsc 零错误 + 203 单元测试 + 8 个真机验证脚本（确认体系 4 + 游戏全链路 + 护栏盲测 + 用户旅程 9/9）",
+  "正式版用户旅程验证：真实 LLM 写章 → 自动定稿 → 整本交付 → 全流程 API 级可用（scripts/agent-release-journey.cjs）",
+  "自 v0.46.95 起的 Max Loop 9 轮迭代全部收口：从功能可用到规则可信、操作幂等、门禁真实、代码干净",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.0.0",
+    date: "2026-08-05",
+    title: "正式版发布（v1.0.0）——Max Loop 全量收口，全功能确认与真机验证通过",
+    sections: [
+      {
+        label: "正式版里程碑",
+        items: [
+          "版本从 v0.46.x 迭代线升至 v1.0.0 正式版：确认流程体系（护栏统一/幂等/审校联动/填表溯源/日志同构/状态枚举）与体验减法（徽章三档/toast 收敛/交付一步化/弹窗记忆）全部收敛",
+          "全功能巡检：99 个 API 路由 vs 前端 106 处引用交叉核对 0 断链；空按钮/挂空 handler/恒 disabled 0 处；导航链路（首页→工作区→游戏/表格）完整；src 全量 TODO/FIXME 0 处",
+          "正式版用户旅程真机验证（scripts/agent-release-journey.cjs）：建项目→建章→真实 LLM 生成 3416 字→自动定稿（confirmed+质量分 87）→整本交付→软删，9/9 全绿",
+        ],
+      },
+      {
+        label: "验证矩阵（发布门槛）",
+        items: [
+          "tsc --noEmit 零错误；全量 203 单元测试（14 文件）全绿；CI 真闸（tsc+test+lint:colors+build）就绪",
+          "8 个真机验证脚本全绿：batch-guard（护栏统一）/ round2（审查修复）/ idempotency（幂等）/ smart-deliver（智能交付 autoRate 100%）/ game-light-confirm（游戏轻确认主路径+边界）/ quality-blind-test（盲测证伪）/ diag / release-journey（用户旅程）",
+          "游戏模式真机全链路：真实 LLM 游戏→导出轻确认（confirmed+auto-confirm 标记+质量分回写；边界关开关 drafting）",
+        ],
+      },
+      {
+        label: "诚实边界（发布前已知，不影响功能正确性）",
+        items: [
+          "lint 存量债 2542 个（1134 errors 历史 no-explicit-any）未全清，基线存档待专项（增量已归零）",
+          "沙箱无 Chromium：前端视觉未浏览器目测，交互逻辑层已验，本地 npm run dev 可见",
+          "Vercel 线上部署需用户侧控制台操作（无部署凭据）；代码已就绪（postinstall 自动 prisma generate）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.103",
     date: "2026-08-05",
