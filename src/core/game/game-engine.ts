@@ -11,6 +11,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
 import { buildGameSystemPrompt, buildActionPrompt, parseGameOutput } from "./game-prompts";
 import type { GameActionInput, GameTurnOutput, GameSessionContext, GameEntity, GameItem, GameOption, GameSessionSummary } from "./types";
 
@@ -527,6 +528,9 @@ export async function endGameAndExport(sessionId: string): Promise<{
   projectId: string;
   finalContent: string;
   totalWords: number;
+  status: string;
+  autoConfirmed: boolean;
+  qualityScore: number | null;
 }> {
   const session = await prisma.gameSession.findUnique({
     where: { id: sessionId },
@@ -607,15 +611,47 @@ export async function endGameAndExport(sessionId: string): Promise<{
   const finalContent = (existingNarrative + "\n\n" + endingNarrative).trim();
   const finalWordCount = finalContent.length;
 
-  // 5. 保存到 StoryNode.content（覆盖或创建）
+  // 5. 轻确认导出：与正式章节确认流程完全统一（马斯克 Round1 遗留边界 #519）
+  // 先评估质量分并落 drafting（不污染下游、不预置"接受"），
+  // 再按项目「智能审阅」开关走自动确认：开启且达标→applyConfirm（confirmed+自动填表+reviewLogs），
+  // 否则维持 drafting，由用户在确认栏手动定稿。质量分回写供 MonitorPanel 看板可见。
+  const nodeForConfirm = session.node;
+  const el = evaluateConfirmEligibility(
+    { content: finalContent, qualityScore: null },
+    [],
+    true,
+  );
+  const proj = await prisma.project.findUnique({
+    where: { id: session.projectId },
+    select: { autoConfirmEnabled: true },
+  });
+  const autoConfirmOn = proj?.autoConfirmEnabled ?? true;
+
   await prisma.storyNode.update({
     where: { id: session.nodeId },
     data: {
       content: finalContent,
       wordCount: finalWordCount,
-      status: "completed",
+      status: "drafting",
+      qualityScore: el.score ?? null,
     },
   });
+
+  let autoConfirmed = false;
+  if (autoConfirmOn && el.eligible) {
+    try {
+      await applyConfirm({
+        id: session.nodeId,
+        projectId: session.projectId,
+        content: finalContent,
+        order: (nodeForConfirm as any)?.order ?? 0,
+      });
+      autoConfirmed = true;
+    } catch (acErr) {
+      console.error("[game-light-confirm] 自动确认失败，保持 drafting：", acErr);
+    }
+  }
+  // 非自动确认或不达标 → 维持 drafting，由用户在确认栏手动定稿（与正式章节一致）
 
   // 6. 标记会话完成
   await prisma.gameSession.update({
@@ -628,6 +664,9 @@ export async function endGameAndExport(sessionId: string): Promise<{
     projectId: session.projectId,
     finalContent,
     totalWords: finalWordCount,
+    status: autoConfirmed ? "confirmed" : "drafting",
+    autoConfirmed,
+    qualityScore: el.score ?? null,
   };
 }
 

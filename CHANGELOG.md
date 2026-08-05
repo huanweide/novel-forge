@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.94 — 2026-08-05
+**游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）**
+
+- 游戏导出轻确认闭环（#519）：endGameAndExport 改写——导出正文后先 evaluateConfirmEligibility 评估质量分并落 drafting，再按项目 autoConfirmEnabled 开关走轻确认（开启且达标则 applyConfirm：confirmed + safeFillAfterWriting 自动填表 + reviewLogs auto-confirm 标记），否则维持 drafting 手动确认；qualityScore 回写供确认看板可见
+- 根治「游戏导出章节在确认流程与监控看板隐形」缺口：原直接写死 status:completed 绕开 auto-confirm/自动填表/qualityScore/reviewLogs，现复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，与正式章节确认体系完全统一
+- 真机验证（scripts/musk-game-light-confirm-verify.cjs 全绿）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切 autoConfirmEnabled=false 后导出 drafting，与正式章节一致
+- 运维铁律重申：改 game-engine 源码后 dev 需重启（或 HMR 生效）加载新代码，否则游戏导出仍走旧 completed 逻辑
+
 ## v0.46.93 — 2026-08-05
 **确认 UI 减法 + 一键智能交付全书 + 真机生成验收（马斯克 Round3 #516/#517/#518 全绿，tsc 零错误）**
 

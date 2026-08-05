@@ -26,6 +26,9 @@ export async function POST(req: Request) {
       projectId: result.projectId,
       finalContent: result.finalContent,
       totalWords: result.totalWords,
+      status: result.status,
+      autoConfirmed: result.autoConfirmed,
+      qualityScore: result.qualityScore,
     });
   } catch (err: any) {
     console.error("[game/end] 错误:", err);

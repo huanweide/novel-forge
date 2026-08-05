@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.93";
+export const LATEST_VERSION = "v0.46.94";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "一键智能交付全书（马斯克 Round3 #518）：ChapterConfirmBar 新增「智能交付全书🚀」主入口，一键扫描全书自动放行合格章 + 展示拦截清单 + 整本交付，12章×4按钮压缩为1次扫描+1张清单",
-  "确认 UI 减法（马斯克 Round3 #516）：智能审阅态收敛人工4键为「系统自动判定+AI诊断+人工接管(折叠)」，合格章零点击；MonitorPanel 确认看板加「自动放行率」指标（autoRate，从 reviewLogs auto-confirm 标记统计）",
-  "真机生成验收（马斯克 Round3 #517）：重启 dev 修复 stale Prisma 客户端导致 auto-confirm 静默跳过的环境坑，真机生成一章→直接 confirmed+自动填表+auto-confirm 标记，人工零点击（VERIFY_PASS）",
-  "运维铁律重申：改 schema/新增字段后必须重启 dev 加载新 Prisma 客户端，否则 post-processor 的 select 新列查询抛错被 catch 吞掉、auto-confirm 静默不生效（非代码缺陷，属环境 stale client）",
+  "游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，开启智能审阅且质量达标即自动定稿（confirmed + 自动填表 + reviewLogs），否则落 drafting 手动确认，根治原直接写死 completed 绕开确认链路的隐形缺口",
+  "复用 confirm-guard 共享护栏：endGameAndExport 直接复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，质量分回写供确认看板可见",
+  "真机验证全绿（scripts/musk-game-light-confirm-verify.cjs）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切关闭开关后导出 drafting，与正式章节确认体系完全统一",
+  "运维铁律重申：改 game-engine 源码后 dev 需重启（或 HMR 生效）加载新代码，否则游戏导出仍走旧 completed 逻辑",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.94",
+    date: "2026-08-05",
+    title: "游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）",
+    sections: [
+      {
+        label: "游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：复用 confirm-guard 护栏，与正式章节确认链路完全统一",
+        items: [
+          "src/core/game/game-engine.ts 的 endGameAndExport 改写：导出正文后先 evaluateConfirmEligibility 评估质量分并落 drafting，再按项目 autoConfirmEnabled 开关走轻确认——开启且达标则 applyConfirm（confirmed + safeFillAfterWriting 自动填表 + reviewLogs auto-confirm 标记），否则维持 drafting 留给用户手动确认；qualityScore 回写供 MonitorPanel 看板可见",
+          "根治「游戏导出章节在确认流程与监控看板隐形」缺口：原 endGameAndExport 直接写死 status:completed 绕开 auto-confirm/自动填表/qualityScore/reviewLogs，现复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，与正式章节确认体系完全统一",
+        ],
+      },
+      {
+        label: "真机验证（scripts/musk-game-light-confirm-verify.cjs 全绿）",
+        items: [
+          "主路径（autoConfirm 默认开）：建项目→建章→game/start→2轮 game/action(SSE)→game/end，导出节点 status=confirmed、autoConfirmed=true、qualityScore=85、reviewLogs 含 auto-confirm 标记（自动填表已触发）、qualityScore 回写",
+          "边界（切 autoConfirmEnabled=false）：同项目新节点导出 status=drafting、autoConfirmed=false——关闭智能审阅时游戏章节停在待确认态，与正式章节一致，人类在确认栏手动定稿即可",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.93",
     date: "2026-08-05",
