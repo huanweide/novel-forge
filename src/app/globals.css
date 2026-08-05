@@ -53,7 +53,6 @@
   --color-info-soft: var(--nv-info-soft);
   --color-accent: var(--nv-accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -252,7 +251,7 @@
   color-scheme: light;
 
   /* ── 虚空色彩 → 浅色版（同一套语义，降低明度保证对比度） ── */
-  --nv-void:        #EEF0F4;
+  --nv-void:        #F3EFE8;
   --nv-abyss:       #FFFFFF;
   --nv-surface-1:   rgba(15, 18, 30, 0.025);
   --nv-surface-2:   rgba(15, 18, 30, 0.05);
@@ -286,7 +285,7 @@
   --shadow-glow-creative: 0 0 16px oklch(0.55 0.21 295 / 0.15);
 
   /* ── Shadcn 变量 → 浅色 ── */
-  --background: #EEF0F4;
+  --background: #F3EFE8;
   --foreground: #1A1C22;
   --card: rgba(255, 255, 255, 0.7);
   --card-foreground: #1A1C22;
@@ -320,7 +319,7 @@
 }
 
 .light body {
-  background-color: #EEF0F4;
+  background-color: #F3EFE8;
   background-image:
     radial-gradient(ellipse 70% 50% at 50% -10%, oklch(0.55 0.17 270 / 0.10), transparent 70%),
     radial-gradient(ellipse 50% 45% at 88% 8%, oklch(0.55 0.21 295 / 0.07), transparent 70%),

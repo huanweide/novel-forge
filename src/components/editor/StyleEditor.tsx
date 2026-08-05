@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { STYLE_TEMPLATES, getTemplate } from "@/core/templates";
 import {
   scanForbiddenWordsEnhanced,
@@ -24,7 +24,7 @@ import { Modal } from "@/components/ui/Modal";
 interface DimensionDef {
   key: string;
   label: string;
-  icon: string;
+  icon: IconName;
   min: number;
   max: number;
   step: number;
@@ -32,18 +32,18 @@ interface DimensionDef {
 }
 
 const DIMENSIONS: DimensionDef[] = [
-  { key: "vocabularyRichness", label: "词汇丰富度", icon: "📚", min: 1, max: 10, step: 0.5, description: "词汇多样性，越高用词越丰富华丽" },
-  { key: "sentenceLength", label: "句子长度", icon: "📏", min: 1, max: 10, step: 0.5, description: "平均句长，越高句子越长越复杂" },
-  { key: "descriptionDensity", label: "描写密度", icon: "🎨", min: 1, max: 10, step: 0.5, description: "环境/人物描写的详细程度" },
-  { key: "dialogueRatio", label: "对话比例", icon: "💬", min: 1, max: 10, step: 0.5, description: "对话占全文的比例" },
-  { key: "rhetoricLevel", label: "修辞手法", icon: "✨", min: 1, max: 10, step: 0.5, description: "比喻/排比/拟人等修辞频率" },
-  { key: "pacingSpeed", label: "节奏速度", icon: "⚡", min: 1, max: 10, step: 0.5, description: "情节推进速度，越高越快" },
-  { key: "psychoDesc", label: "心理描写", icon: "🧠", min: 1, max: 10, step: 0.5, description: "内心独白/心理活动占比" },
-  { key: "envDesc", label: "环境描写", icon: "🏞️", min: 1, max: 10, step: 0.5, description: "场景/氛围描写的比重" },
-  { key: "colloquialism", label: "口语化", icon: "🗣️", min: 1, max: 10, step: 0.5, description: "语言的口语/书面化程度" },
-  { key: "humorLevel", label: "幽默感", icon: "😄", min: 1, max: 10, step: 0.5, description: "幽默元素的频率和强度" },
-  { key: "violenceLevel", label: "暴力程度", icon: "⚔️", min: 1, max: 10, step: 0.5, description: "血腥暴力描写的程度" },
-  { key: "eroticLevel", label: "暧昧程度", icon: "💋", min: 1, max: 10, step: 0.5, description: "情色/暧昧描写的程度" },
+  { key: "vocabularyRichness", label: "词汇丰富度", icon: "book", min: 1, max: 10, step: 0.5, description: "词汇多样性，越高用词越丰富华丽" },
+  { key: "sentenceLength", label: "句子长度", icon: "ruler", min: 1, max: 10, step: 0.5, description: "平均句长，越高句子越长越复杂" },
+  { key: "descriptionDensity", label: "描写密度", icon: "palette", min: 1, max: 10, step: 0.5, description: "环境/人物描写的详细程度" },
+  { key: "dialogueRatio", label: "对话比例", icon: "message", min: 1, max: 10, step: 0.5, description: "对话占全文的比例" },
+  { key: "rhetoricLevel", label: "修辞手法", icon: "sparkles", min: 1, max: 10, step: 0.5, description: "比喻/排比/拟人等修辞频率" },
+  { key: "pacingSpeed", label: "节奏速度", icon: "zap", min: 1, max: 10, step: 0.5, description: "情节推进速度，越高越快" },
+  { key: "psychoDesc", label: "心理描写", icon: "brain", min: 1, max: 10, step: 0.5, description: "内心独白/心理活动占比" },
+  { key: "envDesc", label: "环境描写", icon: "mountain", min: 1, max: 10, step: 0.5, description: "场景/氛围描写的比重" },
+  { key: "colloquialism", label: "口语化", icon: "messageCircle", min: 1, max: 10, step: 0.5, description: "语言的口语/书面化程度" },
+  { key: "humorLevel", label: "幽默感", icon: "smile", min: 1, max: 10, step: 0.5, description: "幽默元素的频率和强度" },
+  { key: "violenceLevel", label: "暴力程度", icon: "swords", min: 1, max: 10, step: 0.5, description: "血腥暴力描写的程度" },
+  { key: "eroticLevel", label: "暧昧程度", icon: "heart", min: 1, max: 10, step: 0.5, description: "情色/暧昧描写的程度" },
 ];
 
 // 预设风格对应的 12 维度默认值
@@ -338,14 +338,14 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         {/* Tab 切换 */}
         <div className="flex border-b border-[var(--nv-border-2)] shrink-0">
           {([
-            { key: "style" as const, icon: "🎨", label: "文风维度" },
-            { key: "forbidden" as const, icon: "🚫", label: "废词检测" },
-            { key: "params" as const, icon: "⚙️", label: "LLM参数" },
-            { key: "workshop" as const, icon: "✨", label: "工坊文风" },
+            { key: "style" as const, icon: "palette", label: "文风维度" },
+            { key: "forbidden" as const, icon: "ban", label: "废词检测" },
+            { key: "params" as const, icon: "settings", label: "LLM参数" },
+            { key: "workshop" as const, icon: "sparkles", label: "工坊文风" },
           ]).map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 py-2 text-xs font-medium transition-colors ${tab === t.key ? "text-[var(--nv-text-secondary)] border-b-2 border-[var(--nv-primary)] bg-[var(--nv-surface-3)]/20" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)]/10"}`}>
-              {t.icon} {t.label}
+              <Icon name={t.icon as IconName} size={12} className="inline-block align-text-bottom shrink-0" /> {t.label}
             </button>
           ))}
         </div>
@@ -364,14 +364,14 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     // 给 STYLE_TEMPLATES 加一个古风仙侠和极简留白
                     const extended = [
                       ...STYLE_TEMPLATES.filter(t => t.id !== "custom"),
-                      { id: "ancient_xianxia", name: "古风仙侠", icon: "🏯", description: "半文半白、意境悠远。适合仙侠、武侠。" } as any,
+                      { id: "ancient_xianxia", name: "古风仙侠", icon: "building", description: "半文半白、意境悠远。适合仙侠、武侠。" } as any,
                       { id: "minimalist", name: "极简留白", icon: "⬜", description: "海明威式简练。适合文艺、实验性写作。" } as any,
                     ];
                     return extended.map((t) => (
                       <button key={t.id} onClick={() => handleSelectTemplate(t.id)}
                         className={`text-[10px] py-1.5 px-1 rounded-lg text-center transition-colors leading-tight ${config.styleTemplateId === t.id ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)]"}`}
                         title={t.description}>
-                        <div className="text-sm">{t.icon}</div>
+                        <div className="text-sm"><Icon name={t.icon} size={14} /></div>
                         <div className="mt-0.5">{t.name}</div>
                       </button>
                     ));
@@ -401,7 +401,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                   {DIMENSIONS.map((dim) => (
                     <div key={dim.key} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-[var(--nv-text-tertiary)]">{dim.icon} {dim.label}</span>
+                        <span className="text-xs text-[var(--nv-text-tertiary)]"><Icon name={dim.icon} size={12} className="inline-block align-text-bottom shrink-0" /> {dim.label}</span>
                         <span className="text-xs text-[var(--nv-text-muted)] font-mono">{config.dimensions[dim.key]?.toFixed(1) || "5.0"}</span>
                       </div>
                       <input
@@ -492,7 +492,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                 <div className="flex items-center gap-3">
                   <Button onClick={runScan} disabled={scanning || !chapterContent}
                     className={`text-xs h-8 ${scanning ? "bg-[var(--nv-surface-2)]" : "bg-[var(--nv-primary)] hover:brightness-110"}`}>
-                    {scanning ? (<><Icon name="loader" size={13} className="animate-spin" /> 扫描中…</>) : "🔍 扫描当前章节"}
+                    {scanning ? (<><Icon name="loader" size={13} className="animate-spin" /> 扫描中…</>) : (<><Icon name="search" size={13} className="inline-block align-text-bottom" /> 扫描当前章节</>)}
                   </Button>
                   {!chapterContent && (
                     <span className="text-[10px] text-[var(--nv-text-muted)]">请在 workspace 中选中一个章节</span>

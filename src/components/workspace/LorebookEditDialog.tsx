@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { Switch } from "@/components/ui/switch";
 import { DialogField, DialogInput } from "./DialogUI";
 import { Modal } from "@/components/ui/Modal";
 import type { LorebookData } from "./types";
@@ -137,10 +138,10 @@ export function LorebookEditDialog({
         <DialogField label="设定内容（≤200 Token）">
           <textarea className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-2 text-sm resize-none" rows={4} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
         </DialogField>
-        <label className="flex items-center gap-2 text-sm text-[var(--nv-text-tertiary)]">
-          <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="rounded" />
-          启用此词条
-        </label>
+        <div className="flex items-center justify-between gap-3 py-1">
+          <span className="text-sm text-[var(--nv-text-primary)]">启用此词条</span>
+          <Switch checked={form.enabled} onCheckedChange={(next) => setForm({ ...form, enabled: next })} size="sm" />
+        </div>
       </div>
       <div className="flex justify-end gap-2 mt-5">
         <Button variant="outline" onClick={onClose} className="border-[var(--nv-border-2)]">取消</Button>

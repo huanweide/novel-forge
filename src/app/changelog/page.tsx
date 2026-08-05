@@ -40,7 +40,7 @@ export default function ChangelogPage() {
           {VERSIONS.map((v, idx) => (
             <div key={v.version} className="relative pl-6 border-l-2 border-[var(--nv-border-2)]">
               {/* 时间线圆点 */}
-              <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-[var(--nv-primary)] ring-4 ring-[var(--nv-border-3)] shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
+              <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-[var(--nv-primary)] ring-4 ring-[var(--nv-border-3)] shadow-[0_0_8px_var(--nv-primary)]" />
 
               {/* 版本头部 */}
               <div className="mb-4">

@@ -148,7 +148,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             onChange={handleFileChange}
             className="hidden"
           />
-          <div className="text-4xl mb-3">📄</div>
+          <div className="text-4xl mb-3 text-[var(--nv-text-tertiary)]"><Icon name="file" size={32} /></div>
           <p className="text-[var(--nv-text-tertiary)] text-sm">
             拖拽 .txt 文件到此处，或点击选择文件
           </p>

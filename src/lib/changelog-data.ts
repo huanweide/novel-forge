@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.1.1";
+export const LATEST_VERSION = "v1.1.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.1.1 确认流程折叠区布局打磨：新增统一 Switch 组件，自动交付开关改为药丸 Toggle，标题与主按钮左右分离",
-  "ChapterConfirmBar 折叠头部改用统一 Toggle + 图标按钮，解决折行拥挤与 emoji 混用问题",
-  "新增 src/components/ui/switch.tsx 可复用药丸开关，为后续设置页/项目配置统一 Toggle 风格奠基",
-  "质量门禁：tsc 零错误 + 217 单元测试全绿",
+  "v1.1.2 魔王系统 Round-5 第一批：补齐智能审阅真实开关，修复孤儿后端能力",
+  "六处手搓开关统一收敛到 Switch 组件，强制原创人名/自动生成故事线双入口标签对齐",
+  "浅色主题背景暖化为米色，删除重复 --color-accent 令牌，硬编码辉光色收敛到设计令牌",
+  "批量清理用户可见 UI 的 emoji，替换为统一 Icon 图标体系",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.1.2",
+    date: "2026-08-06",
+    title: "魔王系统 Round-5 第一批：补齐智能审阅真实开关 + 开关统一收敛 + 风格令牌治理 + emoji 清场",
+    sections: [
+      {
+        label: "联动补洞：智能审阅（autoConfirmEnabled）不再是孤儿后端",
+        items: [
+          "ChapterConfirmBar 新增「智能审阅」真实开关，与「自动交付」并排同面板，复用已验证的 PATCH /api/projects/[id] 通路落地到 Project.autoConfirmEnabled",
+          "此前该字段有 schema + API + 后处理读取，却全项目无一处 UI 可翻转，设置页文案还误导「可在设置中关闭」——本次补上真开关并修正该假入口文案",
+          "isAutoMode 改为读本地态，切换即时驱动保守/智能两种确认形态，无需等待父组件重拉",
+        ],
+      },
+      {
+        label: "开关统一收敛（R5-2）：六处手搓开关并入 Switch 组件",
+        items: [
+          "AutomationSettingsDialog 两处 peer-sr-only 药丸、BuildConfigPanel 方形 Checkbox、LorebookEditDialog/OutlineDialog/ExportDialog 的 enabled/appendMode/includeOutline 全部改为统一 Switch",
+          "BuildConfigDialog 与 BuildConfigPanel 的强制原创人名/自动生成故事线双入口标签对齐，消除 P0-1 标签漂移与视觉分叉",
+          "删除 BuildConfigDialog 局部 Toggle、BuildConfigPanel 局部 Checkbox 两套重复实现，收敛到 src/components/ui/switch.tsx",
+        ],
+      },
+      {
+        label: "风格统一与令牌治理（R5-3 / R5-6）",
+        items: [
+          "globals.css 删除重复的 --color-accent 令牌（此前被 stray 行覆盖，导致 --color-accent 指向 shadcn 而非 --nv-accent）",
+          "浅色主题背景由冷灰 #EEF0F4 暖化为米色 #F3EFE8，呼应云笔暖色舒适感",
+          "BuildConfigPanel/changelog 页硬编码 rgba(99,102,241) 辉光、ImportWizard 的 accent-pink-600/accent-success 收敛到 --nv-primary/--nv-success 设计令牌",
+          "StyleEditor/ImportWizard/Dissect*/ContextPreview/SettingsImporter/tool-registry 等用户可见 UI 的 emoji 批量替换为统一 Icon 图标体系（协议层 emoji 契约不动）",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿"],
+      },
+    ],
+  },
   {
     version: "v1.1.1",
     date: "2026-08-06",

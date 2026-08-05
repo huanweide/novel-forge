@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { parseManuscriptToText } from "@/lib/manuscript-parse";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { confirmDialog } from "@/components/ui/toast";
 
@@ -538,7 +538,7 @@ export function ImportWizard({
     setSelectedChars(new Set());
     setSelectedLore(new Set());
     setSelectedChapters(new Set());
-    setToast("🗑️ 已清空所有未确认项");
+    setToast("已清空所有未确认项");
     setTimeout(() => setToast(""), 3000);
   };
 
@@ -568,10 +568,10 @@ export function ImportWizard({
                 <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block">导入类型</label>
                 <div className="flex gap-2">
                   {[
-                    { key: "auto", label: "🤖 自动检测", desc: "智能识别" },
-                    { key: "chapters", label: "📖 章节正文", desc: "叙事文本" },
-                    { key: "settings", label: "📋 设定文本", desc: "角色/世界观/风格" },
-                    { key: "quick", label: "⚡ 快速导入", desc: "识别名字→直写DB" },
+                    { key: "auto", icon: "bot", label: "自动检测", desc: "智能识别" },
+                    { key: "chapters", icon: "book", label: "章节正文", desc: "叙事文本" },
+                    { key: "settings", icon: "clipboard", label: "设定文本", desc: "角色/世界观/风格" },
+                    { key: "quick", icon: "zap", label: "快速导入", desc: "识别名字→直写DB" },
                   ].map((opt) => (
                     <button
                       key={opt.key}
@@ -582,7 +582,7 @@ export function ImportWizard({
                           : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] border-2 border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"
                       }`}
                     >
-                      <div>{opt.label}</div>
+                      <div className="flex items-center gap-1.5"><Icon name={opt.icon as IconName} size={15} className="inline-block align-text-bottom" /> {opt.label}</div>
                       <div className="text-xs opacity-70 mt-0.5">{opt.desc}</div>
                     </button>
                   ))}
@@ -667,7 +667,11 @@ export function ImportWizard({
                       disabled={quickLoading || rawText.trim().length < 30}
                       className="bg-success hover:bg-success"
                     >
-                      {quickLoading ? "⚡ 导入中..." : "⚡ 快速导入"}
+                      {quickLoading ? (
+                        <><Icon name="zap" size={14} className="inline-block align-text-bottom" /> 导入中...</>
+                      ) : (
+                        <><Icon name="zap" size={14} className="inline-block align-text-bottom" /> 快速导入</>
+                      )}
                     </Button>
                   ) : (
                     <div className="flex gap-2">
@@ -958,7 +962,7 @@ export function ImportWizard({
                               next.has(i) ? next.delete(i) : next.add(i);
                               setSelectedChars(next);
                             }}
-                            className="mt-0.5 rounded accent-pink-600"
+                            className="mt-0.5 rounded accent-[var(--nv-primary)]"
                           />
                           <div className="min-w-0">
                             <span className="text-[var(--nv-text-secondary)] font-medium">{char.name}</span>
@@ -1028,7 +1032,7 @@ export function ImportWizard({
                                 next.has(i) ? next.delete(i) : next.add(i);
                                 setSelectedLore(next);
                               }}
-                              className="mt-0.5 rounded accent-success"
+                              className="mt-0.5 rounded accent-[var(--nv-success)]"
                             />
                             <div className="min-w-0">
                               <span className="text-[var(--nv-text-secondary)]">{entry.title}</span>
@@ -1079,7 +1083,7 @@ export function ImportWizard({
                     className="border-danger text-danger hover:bg-danger/30 text-xs"
                     disabled={editedCharacters.length === 0 && editedLore.length === 0 && editedChapters.length === 0}
                   >
-                    🗑 一键删除未确认
+                    <Icon name="trash" size={13} className="inline-block align-text-bottom" /> 一键删除未确认
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1132,7 +1136,7 @@ export function ImportWizard({
                       {isDone ? (
                         <span className="text-success shrink-0"><Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /></span>
                       ) : (
-                        <span className="shrink-0">{isChars ? "👤" : isLore ? "📖" : "📝"}</span>
+                        <span className="shrink-0"><Icon name={isChars ? "user" : isLore ? "book" : "pencil"} size={15} className="inline-block align-text-bottom" /></span>
                       )}
                       <span className="flex-1 text-xs">{p.message}</span>
                       {/* 进度条 */}

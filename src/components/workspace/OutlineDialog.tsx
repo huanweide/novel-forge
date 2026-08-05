@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { Switch } from "@/components/ui/switch";
 
 export function OutlineDialog({
   projectName, chapterCount, customChapterCount, customPrompt,
@@ -92,12 +93,12 @@ export function OutlineDialog({
           </div>
           {/* 追加/替换 */}
           {hasExistingChapters && (
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-xs text-[var(--nv-text-secondary)] cursor-pointer">
-                <input type="checkbox" checked={appendMode} onChange={(e) => onAppendModeChange(e.target.checked)} className="rounded accent-[var(--nv-primary)]" />
-                <span>{appendMode ? "追加到已有章节末尾" : "替换全部已有大纲"}</span>
-              </label>
-              <span className="text-[10px] text-[var(--nv-text-tertiary)]">{appendMode ? "新章节从最后一章后面继续编号" : "删除已有章节，重新从第一章开始"}</span>
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                <span className="text-xs text-[var(--nv-text-secondary)]">{appendMode ? "追加到已有章节末尾" : "替换全部已有大纲"}</span>
+                <span className="block text-[10px] text-[var(--nv-text-tertiary)]">{appendMode ? "新章节从最后一章后面继续编号" : "删除已有章节，重新从第一章开始"}</span>
+              </span>
+              <Switch checked={appendMode} onCheckedChange={(next) => onAppendModeChange(next)} size="sm" />
             </div>
           )}
           {/* 错误 */}

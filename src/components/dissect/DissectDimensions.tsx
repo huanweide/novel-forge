@@ -4,14 +4,14 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { DimensionResult } from "@/core/dissect/types";
 import { DIMENSION_LABELS, DIMENSION_ICONS } from "@/core/dissect/types";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 // ─── 维度分组 ──────────────────────────────────────────
 
 interface DimensionGroup {
   id: string;
   label: string;
-  icon: string;
+  icon: IconName;
   dims: string[];
 }
 
@@ -19,31 +19,31 @@ const DIMENSION_GROUPS_UI: DimensionGroup[] = [
   {
     id: "overview",
     label: "总览",
-    icon: "📋",
+    icon: "clipboard",
     dims: ["basic_info", "story_core"],
   },
   {
     id: "world",
     label: "世界设定",
-    icon: "🌍",
+    icon: "globe",
     dims: ["worldview", "map", "factions", "special_settings"],
   },
   {
     id: "power",
     label: "力量体系",
-    icon: "⚡",
+    icon: "zap",
     dims: ["power_system", "cultivation", "currency"],
   },
   {
     id: "characters_plot",
     label: "角色与剧情",
-    icon: "👥",
+    icon: "users",
     dims: ["characters", "plot_thread", "outline_summary", "foreshadowing"],
   },
   {
     id: "items_style",
     label: "物品与风格",
-    icon: "🎒",
+    icon: "backpack",
     dims: ["items", "style_analysis"],
   },
 ];
@@ -88,7 +88,7 @@ export function DissectDimensions({
   if (entries.length === 0) {
     return (
       <div className="text-center py-12 text-[var(--nv-text-muted)]">
-        <div className="text-4xl mb-3">📭</div>
+        <div className="text-4xl mb-3 text-[var(--nv-text-tertiary)]"><Icon name="inbox" size={32} /></div>
         <p>尚无维度数据</p>
       </div>
     );
@@ -227,7 +227,7 @@ export function DissectDimensions({
               onClick={() => toggleGroup(group.id)}
               className="w-full flex items-center gap-2 px-4 py-3 hover:bg-[var(--nv-surface-3)]/50 transition-colors text-left"
             >
-              <span className="text-lg">{group.icon}</span>
+              <span className="text-lg"><Icon name={group.icon} size={16} className="inline-block align-text-bottom" /></span>
               <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">{group.label}</span>
               <span className="text-xs text-[var(--nv-text-muted)] ml-2">{groupDims.length}项</span>
               <span className="ml-auto text-[var(--nv-text-muted)] text-xs">
@@ -358,7 +358,7 @@ export function DissectDimensions({
                     : "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
                 }`}
               >
-                {converting ? (<><Icon name="loader" size={13} className="animate-spin" /> 转换中...</>) : "📦 原样转为项目（100%还原）"}
+                {converting ? (<><Icon name="loader" size={13} className="animate-spin" /> 转换中...</>) : (<><Icon name="package" size={13} className="inline-block align-text-bottom" /> 原样转为项目（100%还原）</>)}
               </button>
             </div>
           )}

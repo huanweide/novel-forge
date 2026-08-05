@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/icons";
+import { Switch } from "@/components/ui/switch";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { BuildConfig } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG, GENRE_OPTIONS, AUDIENCE_OPTIONS, PLOT_STRUCTURES, STYLE_PREFERENCES, POWER_SYSTEMS, GOLDEN_FINGERS, STYLE_TAGS } from "@/core/explore/types";
@@ -141,8 +142,20 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
 
           {/* 开关 */}
           <Section title="生成选项">
-            <Toggle label="强制原创人名" desc="生成时避免借用现实名人姓名" checked={cfg.forceOriginalNames} onChange={(v) => set("forceOriginalNames", v)} />
-            <Toggle label="自动生成故事线" desc="写作时按剧情推进自动维护故事线" checked={cfg.autoGenerateStoryline} onChange={(v) => set("autoGenerateStoryline", v)} />
+            <div className="flex items-center justify-between gap-3 py-1">
+              <span>
+                <span className="text-sm text-[var(--nv-text-primary)]">强制原创人名</span>
+                <span className="block text-xs text-[var(--nv-text-muted)]">生成时避免借用现实名人姓名</span>
+              </span>
+              <Switch checked={cfg.forceOriginalNames} onCheckedChange={(next) => set("forceOriginalNames", next)} size="sm" />
+            </div>
+            <div className="flex items-center justify-between gap-3 py-1">
+              <span>
+                <span className="text-sm text-[var(--nv-text-primary)]">自动生成故事线</span>
+                <span className="block text-xs text-[var(--nv-text-muted)]">写作时按剧情推进自动维护故事线</span>
+              </span>
+              <Switch checked={cfg.autoGenerateStoryline} onCheckedChange={(next) => set("autoGenerateStoryline", next)} size="sm" />
+            </div>
           </Section>
         </div>
 
@@ -172,23 +185,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="text-xs text-[var(--nv-text-tertiary)]">{label}</label>
       <div className="mt-1">{children}</div>
     </div>
-  );
-}
-
-function Toggle({ label, desc, checked, onChange }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-center justify-between gap-3 cursor-pointer py-1">
-      <span>
-        <span className="text-sm text-[var(--nv-text-primary)]">{label}</span>
-        <span className="block text-xs text-[var(--nv-text-muted)]">{desc}</span>
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative w-10 h-5 rounded-full transition-colors ${checked ? "bg-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)]"}`}
-      >
-        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : ""}`} />
-      </button>
-    </label>
   );
 }

@@ -201,7 +201,7 @@ ${
         ) : (
           /* 解析结果 */
           <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-            <div className="text-5xl mb-4">✅</div>
+            <div className="text-5xl mb-4 text-success"><Icon name="check" size={40} /></div>
             <h3 className="text-xl font-semibold mb-2">
               {result.mode === "lorebook"
                 ? "世界观蒸馏完成！"

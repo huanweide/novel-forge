@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 /**
  * 上下文预览面板 —— 展示当前 Prompt 中各区域的 Token 用量
@@ -115,13 +115,13 @@ export function ContextPreview({
   const { breakdown, activeCharacters, usagePercent, contextWindowSize } = data;
 
   const sections = [
-    { key: "systemPrompt", label: "系统指令", icon: "🤖", data: breakdown.systemPrompt },
-    { key: "globalMemory", label: "全局记忆", icon: "🧠", data: breakdown.globalMemory },
-    { key: "triggeredLore", label: "触发词条", icon: "📚", data: breakdown.triggeredLore },
-    { key: "shortTermMemory", label: "短期记忆", icon: "📄", data: breakdown.shortTermMemory },
-    { key: "mediumTermMemory", label: "中期记忆", icon: "📦", data: breakdown.mediumTermMemory },
-    { key: "longTermMemory", label: "长期记忆", icon: "📍", data: breakdown.longTermMemory },
-    { key: "authorNote", label: "作者指令", icon: "✍️", data: breakdown.authorNote },
+    { key: "systemPrompt", label: "系统指令", icon: "bot", data: breakdown.systemPrompt },
+    { key: "globalMemory", label: "全局记忆", icon: "brain", data: breakdown.globalMemory },
+    { key: "triggeredLore", label: "触发词条", icon: "book", data: breakdown.triggeredLore },
+    { key: "shortTermMemory", label: "短期记忆", icon: "file", data: breakdown.shortTermMemory },
+    { key: "mediumTermMemory", label: "中期记忆", icon: "package", data: breakdown.mediumTermMemory },
+    { key: "longTermMemory", label: "长期记忆", icon: "pin", data: breakdown.longTermMemory },
+    { key: "authorNote", label: "作者指令", icon: "pencil", data: breakdown.authorNote },
   ];
 
   // P_c：usage% 自洽——顶栏总 Token 与 usagePercent 同源（均来自 budget.used / 上下文窗口），
@@ -172,7 +172,7 @@ export function ContextPreview({
                 {data.templateInjection.templateVerification.forbiddenInjected ? "✅" : "❌"} 禁用词
               </span>
               <span className="text-[var(--nv-text-muted)]">
-                📐 {data.templateInjection.templateVerification.systemPromptLength.toLocaleString()} 字符
+                <Icon name="ruler" size={12} className="inline-block align-text-bottom" /> {data.templateInjection.templateVerification.systemPromptLength.toLocaleString()} 字符
               </span>
             </div>
           )}
@@ -197,7 +197,7 @@ export function ContextPreview({
             className="w-full flex items-center justify-between text-xs py-1 hover:text-[var(--nv-text-secondary)] transition-colors"
           >
             <span>
-              {icon} {label}
+              <Icon name={icon as IconName} size={12} className="inline-block align-text-bottom shrink-0" /> {label}
             </span>
             <span className="text-[var(--nv-text-muted)] font-mono">{d.tokens.toLocaleString()} tokens</span>
           </button>

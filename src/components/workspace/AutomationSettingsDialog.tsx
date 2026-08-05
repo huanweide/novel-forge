@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { toastError, toastSuccess } from "@/components/ui/toast";
+import { Switch } from "@/components/ui/switch";
 
 // 自动化填表设置弹窗（v0.33.0）
 // 配置项：
@@ -102,11 +103,7 @@ export function AutomationSettingsDialog({
                   <div className="text-sm font-medium text-[var(--nv-text-primary)]">生成后自动填表</div>
                   <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">每章写完后自动抽取事实，回填结构化表格（创意工坊数据库），并持续注入永久上下文</div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center shrink-0">
-                  <input type="checkbox" className="peer sr-only" checked={autoFillEnabled} onChange={(e) => setAutoFillEnabled(e.target.checked)} />
-                  <div className="h-6 w-11 rounded-full bg-[var(--nv-surface-3)] transition-colors peer-checked:bg-[var(--nv-primary)]" />
-                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
-                </label>
+                <Switch checked={autoFillEnabled} onCheckedChange={setAutoFillEnabled} size="sm" />
               </div>
 
               {/* 频率 */}
@@ -125,11 +122,7 @@ export function AutomationSettingsDialog({
                   <div className="text-sm font-medium text-[var(--nv-text-primary)]">跳过最近一章</div>
                   <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">默认开启：用户常对最新章重生成（re-roll）改写，跳过可避免把临时稿写入表格</div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center shrink-0">
-                  <input type="checkbox" className="peer sr-only" checked={skipLatestChapter} onChange={(e) => setSkipLatestChapter(e.target.checked)} />
-                  <div className="h-6 w-11 rounded-full bg-[var(--nv-surface-3)] transition-colors peer-checked:bg-[var(--nv-primary)]" />
-                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
-                </label>
+                <Switch checked={skipLatestChapter} onCheckedChange={setSkipLatestChapter} size="sm" />
               </div>
 
               {/* 上下文楼层 */}

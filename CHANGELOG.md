@@ -2,6 +2,17 @@
 
 ---
 
+## v1.1.2 — 2026-08-06
+**魔王系统 Round-5 第一批：补齐智能审阅真实开关 + 开关统一收敛 + 风格令牌治理 + emoji 清场**
+
+- 联动补洞：智能审阅（`autoConfirmEnabled`）不再是孤儿后端——`ChapterConfirmBar` 新增「智能审阅」真实开关，与「自动交付」并排同面板，复用已验证的 `PATCH /api/projects/[id]` 通路落地到 `Project.autoConfirmEnabled`；此前该字段有 schema + API + 后处理读取却全项目无 UI 可翻转，且设置页文案误导「可在设置中关闭」，本次补上真开关并修正假入口文案；`isAutoMode` 改为读本地态，切换即时驱动保守/智能两种确认形态
+- 开关统一收敛（R5-2）：`AutomationSettingsDialog` 两处 `peer-sr-only` 药丸、`BuildConfigPanel` 方形 `Checkbox`、`LorebookEditDialog`/`OutlineDialog`/`ExportDialog` 的 `enabled`/`appendMode`/`includeOutline` 全部改为统一 `Switch`；`BuildConfigDialog` 与 `BuildConfigPanel` 的「强制原创人名/自动生成故事线」双入口标签对齐（消除 P0-1 标签漂移）；删除 `BuildConfigDialog` 局部 `Toggle`、`BuildConfigPanel` 局部 `Checkbox` 两套重复实现，收敛到 `src/components/ui/switch.tsx`
+- 风格统一与令牌治理（R5-3 / R5-6）：`globals.css` 删除重复的 `--color-accent` 令牌（此前被 stray 行覆盖，导致 `--color-accent` 指向 shadcn 而非 `--nv-accent`）；浅色主题背景由冷灰 `#EEF0F4` 暖化为米色 `#F3EFE8`，呼应云笔暖色舒适感；`BuildConfigPanel`/`changelog` 页硬编码 `rgba(99,102,241)` 辉光、`ImportWizard` 的 `accent-pink-600`/`accent-success` 收敛到 `--nv-primary`/`--nv-success` 设计令牌
+- emoji 清场：`StyleEditor`/`ImportWizard`/`Dissect*`/`ContextPreview`/`SettingsImporter`/`tool-registry` 等用户可见 UI 的 emoji 批量替换为统一 `Icon` 图标体系（协议层 emoji 契约不动）
+- 质量门禁：tsc 零错误 + 217 单元测试全绿
+
+---
+
 ## v1.1.1 — 2026-08-06
 **确认流程折叠区布局打磨：统一 Switch 组件 + 药丸 Toggle + 去 emoji**
 

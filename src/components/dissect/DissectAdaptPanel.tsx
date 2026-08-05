@@ -165,7 +165,7 @@ export function DissectAdaptPanel({
         {creating
           ? (<><Icon name="loader" size={13} className="animate-spin" /> 正在创建改编项目...</>)
           : messages.length > 1
-            ? "🎨 应用修改并创建项目"
+            ? (<><Icon name="palette" size={13} className="inline-block align-text-bottom" /> 应用修改并创建项目</>)
             : "先聊聊你想怎么改..."}
       </button>
     </div>

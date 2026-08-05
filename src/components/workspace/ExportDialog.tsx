@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 type ExportFormat = "markdown" | "txt" | "html" | "docx" | "epub";
 
@@ -171,10 +172,10 @@ export function ExportDialog({
 
         {/* 选项 */}
         <div className="mb-4 space-y-2">
-          <label className="flex items-center gap-2 text-xs text-[var(--nv-text-secondary)]">
-            <input type="checkbox" checked={includeOutline} onChange={(e) => setIncludeOutline(e.target.checked)} className="accent-[var(--nv-primary)]" />
-            包含章节大纲
-          </label>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-[var(--nv-text-secondary)]">包含章节大纲</span>
+            <Switch checked={includeOutline} onCheckedChange={(next) => setIncludeOutline(next)} size="sm" />
+          </div>
           <div>
             <div className="mb-1 text-[11px] text-[var(--nv-text-tertiary)]">作者署名（可选）</div>
             <input

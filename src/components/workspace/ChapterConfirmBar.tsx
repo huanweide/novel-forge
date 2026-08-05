@@ -63,8 +63,12 @@ export function ChapterConfirmBar({
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [autoDeliver, setAutoDeliver] = useState(autoDeliverEnabled ?? true);
   const [togglingDeliver, setTogglingDeliver] = useState(false);
+  // R5-1：智能审阅（autoConfirmEnabled）真实 UI 开关——此前为孤儿后端能力，全项目无入口可翻转。
+  // 复用 PATCH /api/projects/[id] 通路，与「自动交付」并排同面板，满足跨面板对称与联动写入铁律。
+  const [autoConfirm, setAutoConfirm] = useState(autoConfirmEnabled ?? true);
+  const [togglingConfirm, setTogglingConfirm] = useState(false);
 
-  const isAutoMode = autoConfirmEnabled === true;
+  const isAutoMode = autoConfirm === true;
 
   // v1.1.0：切换「全书智能交付自动执行」开关，落地到 Project.autoDeliverEnabled（PATCH /api/projects/[id]）
   const toggleAutoDeliver = async (next: boolean) => {
@@ -91,6 +95,31 @@ export function ChapterConfirmBar({
     }
   };
 
+  // R5-1：切换「智能审阅（自动确认）」开关，落地到 Project.autoConfirmEnabled（PATCH /api/projects/[id]）
+  const toggleAutoConfirm = async (next: boolean) => {
+    setTogglingConfirm(true);
+    setAutoConfirm(next); // 乐观更新，先响应用户；同步驱动上方 isAutoMode 即时切换按钮形态
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoConfirmEnabled: next }),
+      });
+      if (!res.ok) {
+        setAutoConfirm(!next); // 失败回滚
+        const d = await res.json().catch(() => ({}));
+        toastError(d.error || `切换智能审阅失败（${res.status}）`);
+      } else if (!next) {
+        toastInfo("已关闭智能审阅：后续章节改为逐章人工确认，可在本栏重新开启。");
+      }
+    } catch (err) {
+      setAutoConfirm(!next);
+      toastError("切换智能审阅失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setTogglingConfirm(false);
+    }
+  };
+
   // IMP-005：默认开启「智能审阅（自动确认）」时，首次给一次性引导（localStorage 去重），
   // 避免新用户无感定稿、错过逐章审校。后续进入不再打扰。
   useEffect(() => {
@@ -98,7 +127,7 @@ export function ChapterConfirmBar({
       const KEY = "novel-forge-autoconfirm-guided";
       if (!localStorage.getItem(KEY)) {
         localStorage.setItem(KEY, "1");
-        toastInfo("智能审阅已开启：合格章将自动定稿（含自动填表）。如需逐章人工把关，可在设置中关闭。");
+        toastInfo("智能审阅已开启：合格章将自动定稿（含自动填表）。如需逐章人工把关，可关闭本栏「智能审阅」开关。");
       }
     }
   }, [autoConfirmEnabled]);
@@ -147,7 +176,7 @@ export function ChapterConfirmBar({
     try {
       const res = await fetch(`/api/projects/${projectId}/confirm`, { method: "POST" });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { toastSuccess("整本确认完成 🚀 项目创作确认流程走通！"); setDeliverState(null); onAction(); }
+      if (res.ok) { toastSuccess("整本确认完成，项目创作确认流程走通！"); setDeliverState(null); onAction(); }
       else if (res.status === 409) { toastError(d.error || "还有章节未确认"); }
       else { toastError(d.error || `操作失败（${res.status}）`); }
     } catch (err) {
@@ -290,6 +319,14 @@ export function ChapterConfirmBar({
               <Icon name={deliverOpen ? "chevronDown" : "chevronRight"} size={12} />
               全书智能交付
             </button>
+            <Switch
+              checked={autoConfirm}
+              onCheckedChange={(next) => void toggleAutoConfirm(next)}
+              disabled={togglingConfirm}
+              label="智能审阅"
+              size="sm"
+              id="auto-confirm-switch"
+            />
             <Switch
               checked={autoDeliver}
               onCheckedChange={(next) => void toggleAutoDeliver(next)}
