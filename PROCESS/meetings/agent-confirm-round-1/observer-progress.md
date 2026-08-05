@@ -1,7 +1,7 @@
-# 进度观测报告 · 马斯克确认流程专项会议（Round 1）
+# 进度观测报告 · 确认流程专项会议（Round 1）
 
 > 观测智能体：进度观测 Agent
-> 观测对象：7 份人格报告（jobs / musk / pg / zhangxuefeng / munger / feynman / gongfang）
+> 观测对象：7 份人格报告（jobs / agent / pg / zhangxuefeng / munger / feynman / gongfang）
 > 观测时间：Round 1 落盘后
 
 ---
@@ -11,7 +11,7 @@
 | 文件 | 人格 | 字数估算（中文字符） | 是否实质长文 | 备注 |
 |------|------|----------------------|--------------|------|
 | jobs.md | 乔布斯 | ~1500 | ✅ 是 | 五段式完整，含按钮清单/状态机/布局/复用/张力 |
-| musk.md | 马斯克 | ~2000 | ✅ 是 | 含"白痴指数"诊断、五步算法、状态机图、6 步落地 |
+| agent.md | 智能体团队 | ~2000 | ✅ 是 | 含"白痴指数"诊断、五步算法、状态机图、6 步落地 |
 | pg.md | PG | ~1400 | ✅ 是 | 完整五段，提出"锁定开关"替代多按钮的异见 |
 | zhangxuefeng.md | 张雪峰 | ~1500 | ✅ 是 | 用户视角扎实，强调"快照+快检"后悔药 |
 | munger.md | 芒格 | ~2200 | ✅ 是 | 最重的一份，逆向推导四个坑+反推按钮，证据最密 |
@@ -33,9 +33,9 @@
 3. **复用共识（统一）：** 一致主张**不新建表/不重写**，复用 `StoryNode.status` 枚举扩展、`StoryNodeRevision` 快照、`qualityScore`/`reviewLogs` 字段、`/api/story/nodes` PATCH/批量路由。
 
 **健康的分歧（属于同一问题的设计分叉，非发散）：**
-- **状态机命名与层数**：jobs 三态（Draft→Pending→Confirmed）／musk 四态（outline_only→drafting→pending_confirm→confirmed）／munger 四态（completed→pending_review→confirmed→reopened）／gongfang 三态+rejected／zhangxuefeng 草稿⇄已定稿+快照／feynman 三核态。命名不统一但语义同构。
-- **按钮数量**：jobs(4~5)／musk(3)／zhangxuefeng(4+批量)／munger(4)／feynman(4)／**pg(1：锁定开关)**。PG 的"锁定开关"是与多按钮流派真正对立的设计路线，是 Round 2 需要 Chair 拍板的关键分叉。
-- **确认时序 vs 自动填表**：musk、munger、zhangxuefeng 都主张"填表/召回应发生在确认之后"；gongfang 提出折中"填表在待确认阶段即跑、确认只影响可见性"。这是流程走向的核心冲突点。
+- **状态机命名与层数**：jobs 三态（Draft→Pending→Confirmed）／agent 四态（outline_only→drafting→pending_confirm→confirmed）／munger 四态（completed→pending_review→confirmed→reopened）／gongfang 三态+rejected／zhangxuefeng 草稿⇄已定稿+快照／feynman 三核态。命名不统一但语义同构。
+- **按钮数量**：jobs(4~5)／agent(3)／zhangxuefeng(4+批量)／munger(4)／feynman(4)／**pg(1：锁定开关)**。PG 的"锁定开关"是与多按钮流派真正对立的设计路线，是 Round 2 需要 Chair 拍板的关键分叉。
+- **确认时序 vs 自动填表**：agent、munger、zhangxuefeng 都主张"填表/召回应发生在确认之后"；gongfang 提出折中"填表在待确认阶段即跑、确认只影响可见性"。这是流程走向的核心冲突点。
 
 **结论：会议高度收敛于同一主题，分歧是建设性的设计张力，正好为 Chair 整合提供原料。未出现跑题、自说自话或重复空转。**
 
@@ -45,9 +45,9 @@
 
 - **卡死风险：无。** 无报告出现"无法推进""等某人"或逻辑空转。七份都给出了可执行结论。
 - **敷衍风险：无。** 无一份低于 600 字，无一份用占位句/口号填充。每份都含具体文件名、字段名、或状态机图。
-- **最实（证据密度最高、最可落地）TOP3：** ① **munger.md**（逆向推导最严密，引证最多，四坑反推法）② **musk.md**（五步算法+状态机图+6 步复用清单最系统）③ **gongfang.md**（直接给出 PR 级步骤、tsc 门禁、迁移顺序，工程最可操作）。
+- **最实（证据密度最高、最可落地）TOP3：** ① **munger.md**（逆向推导最严密，引证最多，四坑反推法）② **agent.md**（五步算法+状态机图+6 步复用清单最系统）③ **gongfang.md**（直接给出 PR 级步骤、tsc 门禁、迁移顺序，工程最可操作）。
 - **相对轻但仍有实质：** feynman.md、pg.md 篇幅略短、提出"新增 confirmStatus 字段"（feynman）与"锁定开关替代多按钮"（pg）两个异见路线——属观点分歧而非缩水，反而丰富了整合维度。
-- **需 Chair 重点协调的潜在摩擦：** pg 的"锁定开关"与 jobs/musk 的"多按钮极简"直接冲突；musk 的"白痴指数/减法"可能否掉任何增加 token 的方案；张雪峰"显式闸门"与马斯克"生成即确认"倾向对立。这些是 Round 2 交锋引线，已在各报告第五节自陈。
+- **需 Chair 重点协调的潜在摩擦：** pg 的"锁定开关"与 jobs/agent 的"多按钮极简"直接冲突；agent 的"白痴指数/减法"可能否掉任何增加 token 的方案；张雪峰"显式闸门"与智能体团队"生成即确认"倾向对立。这些是 Round 2 交锋引线，已在各报告第五节自陈。
 
 ---
 
@@ -59,7 +59,7 @@
 1. **状态机统一**：七种命名需收敛为一种权威状态词表（建议以 `outline_only → drafting → pending_review → confirmed` 为主干，加 `reopened/needs_revision` 可选枝），并定下用户可见中文（如"待你确认/已确认"）与内部枚举的映射。
 2. **按钮范式拍板**："多按钮流"（确认/打回/诊断/迭代）vs PG"单锁定开关"二选一或融合；明确批量确认入口位置。
 3. **确认时序裁决**：自动填表/伏笔扫描到底"确认后跑"还是"待确认阶段跑、确认只控可见性"——决定下游污染风险与召回延迟。
-4. **字段方案定夺**：扩展现有 `StoryNode.status` 枚举（jobs/musk/munger/gongfang 共识）vs 新增 `confirmStatus` 字段（feynman 提案）——二选一，避免双轨状态。
+4. **字段方案定夺**：扩展现有 `StoryNode.status` 枚举（jobs/agent/munger/gongfang 共识）vs 新增 `confirmStatus` 字段（feynman 提案）——二选一，避免双轨状态。
 5. **边界约定**：游戏模式是否走"轻确认"（feynman 提议），单用户无鉴权下确认记录的语义边界。
 
 **建议下一步：** Chair 以"缺口事实（无显式闸门）+ 复用优先"为底，整合出一份统一状态机与按钮规范草案，把上述 5 项分歧点列成 Round 2 交锋清单，回掷相关人格二次对齐。

@@ -1,4 +1,4 @@
-// 马斯克 Round3 #1：智能自动确认（Auto-Confirm）共享护栏
+// Round3 #1：智能自动确认（Auto-Confirm）共享护栏
 // 单一质量阈值真相；批量确认 / 自动确认 / 流水线挂载三处复用，避免阈值分裂。
 
 import { prisma } from "@/lib/prisma";

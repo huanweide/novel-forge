@@ -1,8 +1,8 @@
-// 马斯克 Round1 遗留边界 #519 真机验证：游戏导出轻确认闭环
+// Round1 遗留边界 #519 真机验证：游戏导出轻确认闭环
 // 主路径：autoConfirm 默认开启 → 游戏导出节点 status=confirmed + reviewLogs 含 auto-confirm + qualityScore 回写
 // 边界：切 autoConfirmEnabled=false → 游戏导出节点 status=drafting（与正式章节确认流程统一）
 //
-// 用法：node scripts/musk-game-light-confirm-verify.cjs   （需 dev 服务在 http://127.0.0.1:3001 运行）
+// 用法：node scripts/agent-game-light-confirm-verify.cjs   （需 dev 服务在 http://127.0.0.1:3001 运行）
 
 const { execSync } = require("child_process");
 const path = require("path");
@@ -82,7 +82,7 @@ async function run() {
   console.log("[1] 创建测试项目 ...");
   const proj = await post("/api/projects", {
     name: `游戏轻确认验证 ${stamp}`,
-    synopsis: "马斯克智能体真机验证游戏导出轻确认闭环。",
+    synopsis: "AI 智能体真机验证游戏导出轻确认闭环。",
     genre: ["科幻"],
   });
   const projectId = proj.id;

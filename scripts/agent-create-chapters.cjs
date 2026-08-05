@@ -1,4 +1,4 @@
-// 马斯克智能体：批量创建 12 章节点（含大纲，status=outline_only）
+// AI 智能体：批量创建 12 章节点（含大纲，status=outline_only）
 const PROJECT_ID = "45bda999-ddd0-4954-b75f-497b17b2f76b";
 const BASE = "http://localhost:3001/api/story/nodes";
 

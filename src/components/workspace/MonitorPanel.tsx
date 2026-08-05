@@ -94,10 +94,10 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
         </div>
       </div>
 
-      {/* 马斯克确认流程看板 */}
+      {/* 确认流程看板 */}
       {data.confirmStats && (
         <div className="p-3 border-b border-[var(--nv-border-2)]">
-          <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="clipboard" size={11} /> 马斯克确认流程</div>
+          <div className="flex items-center gap-1 text-[10px] text-[var(--nv-text-tertiary)] mb-2"><Icon name="clipboard" size={11} /> 确认流程</div>
           <div className="grid grid-cols-2 gap-2">
             <StatBlock label="待确认" value={fmt(data.confirmStats.pending)} color={data.confirmStats.pending > 0 ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-secondary)]"} />
             <StatBlock label="已确认定稿" value={fmt(data.confirmStats.confirmed)} color="text-[var(--nv-success)]" />

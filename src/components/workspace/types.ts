@@ -27,9 +27,9 @@ export interface ProjectData {
   } | null;
   /** 探讨模式布置配置（结构化保存，含 plotStructure/forceOriginalNames/autoGenerateStoryline 等） */
   buildConfig?: Record<string, unknown> | null;
-  /** 马斯克确认流程：整本交付完成时间戳（null=未整体确认交付） */
+  /** 确认流程：整本交付完成时间戳（null=未整体确认交付） */
   confirmedAt: string | null;
-  /** 马斯克 Round3：智能审阅（auto-confirm）开关，默认开 */
+  /** Round3：智能审阅（auto-confirm）开关，默认开 */
   autoConfirmEnabled?: boolean;
 }
 

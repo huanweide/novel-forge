@@ -1,4 +1,4 @@
-// 马斯克 Round3 #1 真机验证：Auto-Confirm 端点（智能审阅执行器）
+// Round3 #1 真机验证：Auto-Confirm 端点（智能审阅执行器）
 // 建沙盒项目 → 建3章(drafting: A/B优质留空质量分实时算, C低质qualityScore=30) → 扫全书自动确认 → 断言放行/拦截 → 清理
 
 const BASE = "http://localhost:3001";

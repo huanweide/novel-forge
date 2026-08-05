@@ -60,7 +60,7 @@ export default function WorkspacePage() {
   // ── 项目数据 ──────────────────────────────
   // FE-8：project 数据统一收口到 useProjectStore（loadProject 写入，面板直接读取），消除本地 project 与 store 并存
   const project = useProjectStore((s) => s.project);
-  // 马斯克确认流程：全书确认进度派生值
+  // 确认流程：全书确认进度派生值
   const chapterNodes = project?.storyNodes.filter((n) => n.type === "chapter" || n.type === "section" || n.type === "scene") || [];
   const allConfirmed = chapterNodes.length > 0 && chapterNodes.every((n) => n.status === "confirmed");
   const projectConfirmedAt = project?.confirmedAt || null;
@@ -1036,7 +1036,7 @@ export default function WorkspacePage() {
             </div>
           )}
 
-          {/* 马斯克确认流程常驻确认栏（贴正文下方） */}
+          {/* 确认流程常驻确认栏（贴正文下方） */}
           {selectedNode && (
             <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
               <ChapterConfirmBar

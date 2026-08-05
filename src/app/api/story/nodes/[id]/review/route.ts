@@ -5,7 +5,7 @@ import { analyzeQuality } from "@/lib/quality-analyzer";
 import type { ReviewIssueType } from "@/core/types";
 
 // POST /api/story/nodes/[id]/review
-// 马斯克确认流程「AI诊断」按钮：纯本地六维质量诊断（零 Token、不依赖 LLM/代理），
+// 确认流程「AI诊断」按钮：纯本地六维质量诊断（零 Token、不依赖 LLM/代理），
 // 返回与前端 reviewResult 兼容的 { passed, overallScore, grade, issues }。
 export async function POST(
   _request: Request,

@@ -1,7 +1,7 @@
 /**
  * 生成延迟硬指标聚合接口
  *
- * 呼应马斯克优化计划 P2「生成延迟当硬指标 / 超过两秒就是失败」：
+ * 呼应智能体团队优化计划 P2「生成延迟当硬指标 / 超过两秒就是失败」：
  * 从已有的 LlmCallLog 表聚合真实生成的延迟分布，把延迟写进可观测面板。
  *
  * 数据来源：src/core/llm/client.ts 在 chat / chatStream 成功返回时，经
@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** 马斯克铁律：P95 总延迟超过此阈值即判「失败」（毫秒） */
+/** 智能体团队铁律：P95 总延迟超过此阈值即判「失败」（毫秒） */
 export const LATENCY_THRESHOLD_MS = 2000;
 
 function quantile(sorted: number[], q: number): number {

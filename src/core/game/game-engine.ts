@@ -611,7 +611,7 @@ export async function endGameAndExport(sessionId: string): Promise<{
   const finalContent = (existingNarrative + "\n\n" + endingNarrative).trim();
   const finalWordCount = finalContent.length;
 
-  // 5. 轻确认导出：与正式章节确认流程完全统一（马斯克 Round1 遗留边界 #519）
+  // 5. 轻确认导出：与正式章节确认流程完全统一（Round1 遗留边界 #519）
   // 先评估质量分并落 drafting（不污染下游、不预置"接受"），
   // 再按项目「智能审阅」开关走自动确认：开启且达标→applyConfirm（confirmed+自动填表+reviewLogs），
   // 否则维持 drafting，由用户在确认栏手动定稿。质量分回写供 MonitorPanel 看板可见。

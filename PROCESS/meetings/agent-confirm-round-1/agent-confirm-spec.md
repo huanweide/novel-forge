@@ -1,14 +1,14 @@
-# 马斯克确认流程 · 单一 UI 规格（musk-confirm-spec）
+# 确认流程 · 单一 UI 规格（agent-confirm-spec）
 
-> 本文件是 Round 1 会议的**唯一权威输出**，工程实现与马斯克智能体验证均以本规格为准。异见见 `_integration.md` 第三节，不混入主规格。
+> 本文件是 Round 1 会议的**唯一权威输出**，工程实现与AI 智能体验证均以本规格为准。异见见 `_integration.md` 第三节，不混入主规格。
 
 ---
 
 ## 一、主语与范围
 
-- **操作者 = 马斯克智能体**（由 `elon-musk-perspective` 驱动），全程真实走通验证。
+- **操作者 = AI 智能体**（由 `elon-agent-perspective` 驱动），全程真实走通验证。
 - **作用对象 = Novel Forge 章节（StoryNode）**，单用户本地工具，无多人审批链。
-- **目标**：写完/生成完章节后，由马斯克智能体逐章「确认 / 打回 / 诊断 / 批量确认」，最终「项目确认完成」。
+- **目标**：写完/生成完章节后，由AI 智能体逐章「确认 / 打回 / 诊断 / 批量确认」，最终「项目确认完成」。
 
 ---
 
@@ -25,9 +25,9 @@ confirmed     ──(批量/整本)──▶ project_confirmed
 
 - `outline_only`：仅有大纲（已有）。
 - `drafting`：已生成/已手写正文，未提交确认（**替代原 `completed` 的"已生成"语义**）。
-- `pending_confirm`：待马斯克确认。
+- `pending_confirm`：待智能体团队确认。
 - `confirmed`：定稿，**此后才触达下游**（导出/时间线/自动填表）。
-- `project_confirmed`：整本交付完成（所有章节 confirmed 且马斯克点「项目确认完成」）。
+- `project_confirmed`：整本交付完成（所有章节 confirmed 且智能体团队点「项目确认完成」）。
 
 **实现**：`src/core/types/index.ts` 的 `ContentStatus` 由 `outline_only | drafting | completed` 扩展为 `outline_only | drafting | pending_confirm | confirmed`（保留 `completed` 向后兼容或迁移为 `drafting`）；schema `StoryNode.status` 为 String，无需新枚举，仅加注释。
 
@@ -67,7 +67,7 @@ confirmed     ──(批量/整本)──▶ project_confirmed
 
 ---
 
-## 六、端到端计划流程（马斯克智能体走通顺序）
+## 六、端到端计划流程（AI 智能体走通顺序）
 
 ```
 1. 建项目（/api/projects）

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ChapterConfirmBar — 马斯克确认流程常驻确认栏
+ * ChapterConfirmBar — 确认流程常驻确认栏
  *
  * 贴在中栏正文下方（PostGenPanel 同区）。
  * 智能审阅模式（autoConfirmEnabled）：合格章由系统自动确认，人类从审批者降级为异常处理者——
@@ -70,7 +70,7 @@ export function ChapterConfirmBar({
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
-        toastSuccess(action === "confirm" ? "已确认定稿 ✓（自动填表已执行）" : action === "submit" ? "已提交确认，等待马斯克拍板" : action === "reject" ? "已打回重写（保留快照）" : action === "reopen" ? "已重开为草稿" : "已记录");
+        toastSuccess(action === "confirm" ? "已确认定稿 ✓（自动填表已执行）" : action === "submit" ? "已提交确认，等待智能体团队拍板" : action === "reject" ? "已打回重写（保留快照）" : action === "reopen" ? "已重开为草稿" : "已记录");
         setShowReject(false); setReason("");
         onAction();
       } else {
@@ -124,7 +124,7 @@ export function ChapterConfirmBar({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Icon name="clipboard" size={13} className="text-[var(--nv-primary)]" />
-          <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">马斯克确认流程</span>
+          <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">确认流程</span>
           <StatusBadge status={nodeStatus} />
           {isAutoMode && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--nv-primary)]/10 text-[var(--nv-primary)] font-medium">智能审阅</span>

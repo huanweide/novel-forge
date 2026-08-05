@@ -105,7 +105,7 @@ export function GenerationLatencyPanel() {
       <div className="mb-2 flex items-center gap-1.5">
         <Icon name="zap" size={15} className="text-[var(--nv-primary)]" />
         <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">生成延迟</span>
-        <span className="text-[9px] text-[var(--nv-text-tertiary)]">马斯克硬指标</span>
+        <span className="text-[9px] text-[var(--nv-text-tertiary)]">智能体团队硬指标</span>
       </div>
 
       {loading && <div className="py-3 text-[11px] text-[var(--nv-text-muted)]">加载延迟数据…</div>}

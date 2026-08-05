@@ -1,4 +1,4 @@
-// 马斯克 Round3 #517 真机生成验收：验证「生成一本书 → 人工零点击全确认」
+// Round3 #517 真机生成验收：验证「生成一本书 → 人工零点击全确认」
 // 真实 LLM 生成一章（SSE 流式）→ 断言生成完节点直接 confirmed 且 reviewLogs 含 auto-confirm（自动审定，无人点按钮）
 
 const BASE = "http://localhost:3001";

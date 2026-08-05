@@ -29,9 +29,9 @@ export const LATEST_VERSION = "v0.46.94";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，开启智能审阅且质量达标即自动定稿（confirmed + 自动填表 + reviewLogs），否则落 drafting 手动确认，根治原直接写死 completed 绕开确认链路的隐形缺口",
+  "游戏导出轻确认闭环（Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，开启智能审阅且质量达标即自动定稿（confirmed + 自动填表 + reviewLogs），否则落 drafting 手动确认，根治原直接写死 completed 绕开确认链路的隐形缺口",
   "复用 confirm-guard 共享护栏：endGameAndExport 直接复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，质量分回写供确认看板可见",
-  "真机验证全绿（scripts/musk-game-light-confirm-verify.cjs）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切关闭开关后导出 drafting，与正式章节确认体系完全统一",
+  "真机验证全绿（scripts/agent-game-light-confirm-verify.cjs）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切关闭开关后导出 drafting，与正式章节确认体系完全统一",
   "运维铁律重申：改 game-engine 源码后 dev 需重启（或 HMR 生效）加载新代码，否则游戏导出仍走旧 completed 逻辑",
 ];
 
@@ -40,17 +40,17 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.46.94",
     date: "2026-08-05",
-    title: "游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）",
+    title: "游戏导出轻确认闭环（Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）",
     sections: [
       {
-        label: "游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：复用 confirm-guard 护栏，与正式章节确认链路完全统一",
+        label: "游戏导出轻确认闭环（Round1 遗留边界 #519）：复用 confirm-guard 护栏，与正式章节确认链路完全统一",
         items: [
           "src/core/game/game-engine.ts 的 endGameAndExport 改写：导出正文后先 evaluateConfirmEligibility 评估质量分并落 drafting，再按项目 autoConfirmEnabled 开关走轻确认——开启且达标则 applyConfirm（confirmed + safeFillAfterWriting 自动填表 + reviewLogs auto-confirm 标记），否则维持 drafting 留给用户手动确认；qualityScore 回写供 MonitorPanel 看板可见",
           "根治「游戏导出章节在确认流程与监控看板隐形」缺口：原 endGameAndExport 直接写死 status:completed 绕开 auto-confirm/自动填表/qualityScore/reviewLogs，现复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，与正式章节确认体系完全统一",
         ],
       },
       {
-        label: "真机验证（scripts/musk-game-light-confirm-verify.cjs 全绿）",
+        label: "真机验证（scripts/agent-game-light-confirm-verify.cjs 全绿）",
         items: [
           "主路径（autoConfirm 默认开）：建项目→建章→game/start→2轮 game/action(SSE)→game/end，导出节点 status=confirmed、autoConfirmed=true、qualityScore=85、reviewLogs 含 auto-confirm 标记（自动填表已触发）、qualityScore 回写",
           "边界（切 autoConfirmEnabled=false）：同项目新节点导出 status=drafting、autoConfirmed=false——关闭智能审阅时游戏章节停在待确认态，与正式章节一致，人类在确认栏手动定稿即可",
@@ -61,27 +61,27 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.46.93",
     date: "2026-08-05",
-    title: "确认 UI 减法 + 一键智能交付全书 + 真机生成验收（马斯克 Round3 #516/#517/#518 全绿，tsc 零错误）",
+    title: "确认 UI 减法 + 一键智能交付全书 + 真机生成验收（Round3 #516/#517/#518 全绿，tsc 零错误）",
     sections: [
       {
-        label: "一键智能交付全书（马斯克 Round3 #518）：12章×4按钮压缩为1次扫描+1张清单",
+        label: "一键智能交付全书（Round3 #518）：12章×4按钮压缩为1次扫描+1张清单",
         items: [
           "ChapterConfirmBar 新增「智能交付全书🚀」主入口：调 POST /api/story/nodes/auto-confirm 扫描全书（合格自动放行、不合格进 blocked 附 reason），前端内联展示「自动放行 N 章 / 拦截 M 章」清单（列出被拦截章标题+原因），再一键 confirm 整本交付；保守模式（关智能审阅）用户同样可用此按钮批量自动放行合格章",
-          "后端链路复用既有 auto-confirm 端点 + projects/[id]/confirm 端点（均经 Round3 #1 真机验证），前端仅为组合调用；scripts/musk-smart-deliver-verify.cjs 验证全绿（VERIFY_PASS）：建3章→首扫放行 A/B 拦截 C(qualityScore=30)→首次整本交付 409(C未确认)→C改优质→二次扫描放行 C→二次整本交付 200 + confirmedAt 设置 + autoRate=100%",
+          "后端链路复用既有 auto-confirm 端点 + projects/[id]/confirm 端点（均经 Round3 #1 真机验证），前端仅为组合调用；scripts/agent-smart-deliver-verify.cjs 验证全绿（VERIFY_PASS）：建3章→首扫放行 A/B 拦截 C(qualityScore=30)→首次整本交付 409(C未确认)→C改优质→二次扫描放行 C→二次整本交付 200 + confirmedAt 设置 + autoRate=100%",
         ],
       },
       {
-        label: "确认 UI 减法（马斯克 Round3 #516）：智能审阅态收敛人工按钮 + 自动放行率看板",
+        label: "确认 UI 减法（Round3 #516）：智能审阅态收敛人工按钮 + 自动放行率看板",
         items: [
           "ChapterConfirmBar 接收 autoConfirmEnabled prop：智能审阅态下 drafting/pending_confirm 章常态只显「系统自动判定，仅拦截异常」+ AI诊断 + 人工接管(折叠展开原4键)，合格章零点击；confirmed 章显示「已自动定稿」、重开降级为不显眼小字；保守模式保持原逐章4键不变",
           "MonitorPanel 确认看板加「自动放行率」指标：monitor 端点 confirmStats 新增 autoConfirmed(由智能审阅自动审定数) 与 autoRate(占比)，从 reviewLogs 的 auto-confirm 动作标记统计；看板并列展示「智能自动放行 / 人工确认」两档，让自动化收益可见",
         ],
       },
       {
-        label: "真机生成验收（马斯克 Round3 #517）：重启 dev 修复 stale client，生成完零点击自动确认",
+        label: "真机生成验收（Round3 #517）：重启 dev 修复 stale client，生成完零点击自动确认",
         items: [
           "初测 FAIL 根因：v0.46.92 加 autoConfirmEnabled 字段后未重启 dev，旧进程加载的 Prisma 客户端不含该列，post-processor 3.1段 select:{autoConfirmEnabled:true} 查询抛错被 catch 吞掉，auto-confirm 静默跳过（qualityScore=83 达标却停 drafting）；重启 dev 加载新客户端后即正常",
-          "重启后真机生成一章：SSE 收 auto_confirm 事件、节点最终 status=confirmed、reviewLogs 含 {action:auto-confirm, fill:自动填表已执行}——生成完直接自动确认+自动填表，人工零点击（VERIFY_PASS，scripts/musk-gen-autoconfirm-verify.cjs）",
+          "重启后真机生成一章：SSE 收 auto_confirm 事件、节点最终 status=confirmed、reviewLogs 含 {action:auto-confirm, fill:自动填表已执行}——生成完直接自动确认+自动填表，人工零点击（VERIFY_PASS，scripts/agent-gen-autoconfirm-verify.cjs）",
           "运维铁律重申：改 schema/新增字段后必须重启 dev（npm run dev，非 npm run dev -p 3001）加载新 Prisma 客户端，否则 post-processor 的 select 新列查询会因 stale client 抛错被 catch 吞掉、auto-confirm 静默不生效",
         ],
       },
@@ -90,15 +90,15 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.46.92",
     date: "2026-08-05",
-    title: "智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）",
+    title: "智能自动确认（Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）",
     sections: [
       {
-        label: "智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认，人类降级异常处理者",
+        label: "智能自动确认（Round3 #1）：生成完合格章自动确认，人类降级异常处理者",
         items: [
           "新增 POST /api/story/nodes/auto-confirm：智能审阅模式下扫描项目下所有 drafting/pending_confirm 章（或显式 nodeIds），合格章自动确认（含 safeFillAfterWriting 自动填表），不合格章（空正文/过短/质量分<60）进 blocked 并附 reason；返回结构与批量确认端点一致，前端看板可复用",
           "抽离共享护栏 src/core/confirm-guard.ts：evaluateConfirmEligibility（空正文/过短优先拦截、qualityScore 非 null 采信省分析、null 回退本地 analyzeQuality 零 Token、<60 拦截）与 applyConfirm（自动填表副作用 + status=confirmed），批量确认/自动确认/生成流水线三处复用单一 QUALITY_PASS_THRESHOLD=60 真相，消除阈值分裂",
           "Project 模型新增 autoConfirmEnabled Boolean @default(true) 开关；post-processor 生成完落库后 best-effort 调用 applyConfirm——若项目开启且质量达标直接 confirmed（含 SSE auto_confirm 事件），失败 catch 降级为 drafting 不阻塞主流程；db push 同步数据库并对已有项目自动填充 true",
-          "端到端真机验证 scripts/musk-auto-confirm-verify.cjs 全绿（VERIFY_PASS）：建沙盒项目→建3章（A/B 优质留空质量分实时算、C 短文本）→扫全书自动确认→A/B 86/A 放行 confirmed、C 正文过短拦截 blocked、最终态 a/b=confirmed c=drafting；护栏路径（实时分析+过短拦截）覆盖；tsc 零错误",
+          "端到端真机验证 scripts/agent-auto-confirm-verify.cjs 全绿（VERIFY_PASS）：建沙盒项目→建3章（A/B 优质留空质量分实时算、C 短文本）→扫全书自动确认→A/B 86/A 放行 confirmed、C 正文过短拦截 blocked、最终态 a/b=confirmed c=drafting；护栏路径（实时分析+过短拦截）覆盖；tsc 零错误",
         ],
       },
     ],
@@ -109,12 +109,12 @@ export const VERSIONS: VersionEntry[] = [
     title: "批量确认本卷（MCCS Round2）：批量确认端点 + 左栏批量确认按钮 + 质量护栏拦截低分章 + 端到端真机验证全绿（tsc 零错误）",
     sections: [
       {
-        label: "批量确认本卷（MCCS Round2·规格 musk-confirm-spec 第47-48行）",
+        label: "批量确认本卷（MCCS Round2·规格 agent-confirm-spec 第47-48行）",
         items: [
           "新增 POST /api/story/nodes/batch-confirm：左栏批量模式勾选 pending_confirm 章节后一键确认；质量护栏 requirePassed 默认 true，仅放行 qualityScore>=60 的章，低于阈值（含无法解析正文）进 blocked 并附 reason，不被蒙混过关",
           "左栏 LeftPanel 批量工具栏新增「批量确认 N」按钮（仅当 selectedPendingCount>0 时显示），workspace page.tsx 加 handleBatchConfirm 回调与 batchConfirming 忙态；确认后 loadProject 刷新 + 清空选择 + 退出批量模式，toast 汇总放行/拦截/跳过数",
           "PUT /api/story/nodes/[id] 补 qualityScore 透传（qualityScore: body.qualityScore）；undefined 时为 Prisma no-op 不影响现有手动保存，让「客户端可落库质量分」成为合法能力，与批量确认端点「score==null 才回退 analyzer、否则用 DB 值」护栏设计一致",
-          "端到端真机验证 scripts/musk-batch-verify.cjs 全绿（VERIFY_PASS）：A/B 章 qualityScore 留 null → 后端实时 analyzer 打 90/A 放行 confirmed；C 章直接置 qualityScore=30 → <60 拦截进 blocked 保持 pending_confirm；护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖，最终态正确",
+          "端到端真机验证 scripts/agent-batch-verify.cjs 全绿（VERIFY_PASS）：A/B 章 qualityScore 留 null → 后端实时 analyzer 打 90/A 放行 confirmed；C 章直接置 qualityScore=30 → <60 拦截进 blocked 保持 pending_confirm；护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖，最终态正确",
         ],
       },
     ],
@@ -122,14 +122,14 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.46.90",
     date: "2026-08-05",
-    title: "确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ 马斯克智能体端到端验证 12 章全闭环（tsc 零错误）",
+    title: "确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ AI 智能体端到端验证 12 章全闭环（tsc 零错误）",
     sections: [
       {
         label: "确认流程断点修复（MCCS Round1 验证中发现）",
         items: [
           "根因：generate/write 后处理管线把生成后节点状态定为 reviewing（审校未过时），而确认栏仅认 completed/drafting，导致生成完的章节卡在 reviewing 且无任何确认按钮，流程死锁",
           "修复：post-processor.ts 生成后状态由 reviewing/completed 改为恒为 drafting（契合 Round1 规格「生成仅落 drafting、诊断是选项不是前置税」）；后处理六维质量审校仍写 reviewLogs/qualityScore 供 AI诊断展示，但不决定节点状态",
-          "端到端验证：马斯克智能体真实建项目「火种：多行星文明备份计划」→ 真实 LLM 写 12 章（约 3.98 万字）→ 逐章提交确认/AI诊断/确认通过（触发自动填表）→ 第5章走打回重写闭环 → 整本确认完成🚀，全部按钮与状态机闭环通过",
+          "端到端验证：AI 智能体真实建项目「火种：多行星文明备份计划」→ 真实 LLM 写 12 章（约 3.98 万字）→ 逐章提交确认/AI诊断/确认通过（触发自动填表）→ 第5章走打回重写闭环 → 整本确认完成🚀，全部按钮与状态机闭环通过",
           "运维注记：dev server 旧进程加载的 Prisma 客户端不含新增 confirmed_at 列会导致确认 503，重启加载新客户端即修复（非代码缺陷，属环境 stale client）",
         ],
       },
@@ -138,12 +138,12 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.46.89",
     date: "2026-08-05",
-    title: "马斯克确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）",
+    title: "确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）",
     sections: [
       {
-        label: "马斯克确认流程（MCCS Round1·由专项会议决定）",
+        label: "确认流程（MCCS Round1·由专项会议决定）",
         items: [
-          "由7人格专项会议（乔布斯/马斯克/PG/张雪峰/芒格/费曼/工坊）+3观测智能体（进度/质量/偏差）+Chair整合，maxloop迭代收敛出单一权威规格 musk-confirm-spec.md",
+          "由7人格专项会议（乔布斯/智能体团队/PG/张雪峰/芒格/费曼/工坊）+3观测智能体（进度/质量/偏差）+Chair整合，maxloop迭代收敛出单一权威规格 agent-confirm-spec.md",
           "5态状态机：outline_only→drafting→pending_confirm→confirmed→project_confirmed；ContentStatus 扩 pending_confirm/confirmed 两态，StoryNode/Project 各加 confirmedAt 时间戳",
           "中栏确认栏 ChapterConfirmBar：4键（提交确认/确认通过/打回重写须填理由/AI诊断）+ 整本确认完成🚀；左栏 OutlineTree 加 pending_confirm 橙、confirmed 绿色标；右栏 MonitorPanel 加确认看板（待确认/已确认/进度条）",
           "最高杠杆修复：自动填表 safeFillAfterWriting 从写章后移至确认通过后才触发，根治未审视草稿污染设定库；AI诊断走纯本地六维质量分析（零Token、不依赖代理）真实可用",
@@ -186,14 +186,14 @@ export const VERSIONS: VersionEntry[] = [
   {
     version: "v0.46.86",
     date: "2026-08-04",
-    title: "删 UI 噪声（马斯克优化计划 P3·先减法后乘法）：顶栏导出/更多下拉收敛 + 右栏监测三面板默认折叠 + 左栏5→3 tab（更多▾收故事线/规则）+ 后处理提取常显其余收高级▾（tsc 零错误）",
+    title: "删 UI 噪声（智能体团队优化计划 P3·先减法后乘法）：顶栏导出/更多下拉收敛 + 右栏监测三面板默认折叠 + 左栏5→3 tab（更多▾收故事线/规则）+ 后处理提取常显其余收高级▾（tsc 零错误）",
     sections: [
       {
-        label: "删 UI 噪声（马斯克优化计划 P3·先减法后乘法）",
+        label: "删 UI 噪声（智能体团队优化计划 P3·先减法后乘法）",
         items: [
           "顶栏收敛：原本 9 个按钮压到 7 个可见（零删任何功能）——「导出文件」与「复制全文」合并进「导出▾」下拉，「自动化」「工具箱」收进「更多▾」下拉；文风 / 大纲 / 摘要 / 导入书稿 / 备份包 保持常显；下拉用 relative z-50 容器 + fixed inset-0 z-40 遮罩，点击外部或遮罩即关闭，零误触零回归（Toolbar.tsx）",
           "右栏监测默认折叠：监测 tab 内「叙事能量曲线 / 生成延迟 / 节点监测」三面板改为可点开的折叠区块，默认全收起；折叠时不挂载子组件（NarrativeEnergyPanel / GenerationLatencyPanel / MonitorPanel 均带 fetch），展开才加载——省首屏请求与渲染开销，作者需要时一键展开看数据（RightPanel.tsx）",
-          "左栏 5→3 tab：大纲 / 角色 / 世界 三个高频 tab 常显，低频的「故事线」「规则」收进「更多▾」下拉（activeTab 落在隐藏 tab 时「更多」按高亮态呈现），功能零丢失；呼应马斯克「先减密度」——作者 90% 时间只用前三者，剩余两项随时可达（LeftPanel.tsx）",
+          "左栏 5→3 tab：大纲 / 角色 / 世界 三个高频 tab 常显，低频的「故事线」「规则」收进「更多▾」下拉（activeTab 落在隐藏 tab 时「更多」按高亮态呈现），功能零丢失；呼应智能体团队「先减密度」——作者 90% 时间只用前三者，剩余两项随时可达（LeftPanel.tsx）",
           "后处理面板去过载：5 个 tab 的「章节提取」常显，「废词检测 / 逻辑自查 / 本地蒸馏 / 审校」4 个高级分析收进「高级▾」第二行（默认折叠），任一高级 tab 有问题时高级入口显红点角标；用内联双行展开（非绝对定位下拉）规避 PostGenPanel overflow-hidden 容器对下拉菜单的裁切，零裁切零回归（PostGenPanelTabs.tsx）",
         ],
       },
@@ -205,12 +205,12 @@ export const VERSIONS: VersionEntry[] = [
     title: "生成延迟硬指标（P2）：LlmCallLog 加 durationMs/firstTokenMs 计时埋点 + GET /api/generation-metrics 延迟聚合 + 生成延迟面板（本地vs云端对比 + 2s 阈值标红）（tsc 零错误）",
     sections: [
       {
-        label: "生成延迟硬指标（马斯克优化计划 P2·把延迟写进门禁）",
+        label: "生成延迟硬指标（智能体团队优化计划 P2·把延迟写进门禁）",
         items: [
-          "监测 tab 新增「生成延迟」面板（GenerationLatencyPanel）：展示首 token 延迟 P95（流式到首个字）、总延迟 P95（端到端 95 分位）、输出吞吐 token/s、样本数，并在总延迟 P95 > 2000ms 时红色警示「超过两秒就是失败」（马斯克原话铁律）；本地推理（Ollama）vs 云端 API 总延迟 P95 横向对比条形，作者一眼看出本地是否更快",
+          "监测 tab 新增「生成延迟」面板（GenerationLatencyPanel）：展示首 token 延迟 P95（流式到首个字）、总延迟 P95（端到端 95 分位）、输出吞吐 token/s、样本数，并在总延迟 P95 > 2000ms 时红色警示「超过两秒就是失败」（智能体团队原话铁律）；本地推理（Ollama）vs 云端 API 总延迟 P95 横向对比条形，作者一眼看出本地是否更快",
           "零新增 schema 主表：复用既有 LlmCallLog 加 durationMs（总耗时）/firstTokenMs（首 token 延迟）两可空字段，PRISMA_DISABLE_SAFE_DELETE=1 npx prisma db push + generate；在 src/core/llm/client.ts 的 chat（成功返回测端到端总耗时，含重试/故障转移）与 chatStream（readStream 新增 onFirstToken 回调测到首个正文 token 的 TTFB）埋点，经 src/lib/llm.ts 的 recordLlmCall 落库，全程 fire-and-forget try-catch 容错，绝不阻塞生成主流程",
           "新增 GET /api/generation-metrics 路由（force-dynamic）：从 LlmCallLog 聚合最近 300 条成功调用（role 不以 fail: 前缀、durationMs 非空，剔除重试/失败记账避免失真），算首 token/总延迟的中位 P95 均值、整体输出吞吐、按 Base URL 含 localhost/11434 分本地/云端对比；返回 overThreshold 标志（P95 总延迟 > 2000ms），供面板标红",
-          "该指标直接验证 P0 本地推理整合收益：本地推理走本机 GPU 零网络往返、云端走 API 受代理/限流影响，作者拿到真实延迟分布即可量化「本地推理到底值不值」；呼应马斯克计划 P2「生成延迟当硬指标 / 把延迟写进门禁」，与 P0 本地推理、P1 叙事能量曲线形成可机检连贯性 + 性能闭环",
+          "该指标直接验证 P0 本地推理整合收益：本地推理走本机 GPU 零网络往返、云端走 API 受代理/限流影响，作者拿到真实延迟分布即可量化「本地推理到底值不值」；呼应智能体团队计划 P2「生成延迟当硬指标 / 把延迟写进门禁」，与 P0 本地推理、P1 叙事能量曲线形成可机检连贯性 + 性能闭环",
         ],
       },
     ],
@@ -221,7 +221,7 @@ export const VERSIONS: VersionEntry[] = [
     title: "叙事能量曲线（叙事物理引擎雏形·P1）：ChapterSummary 事件分层确定性加权能量 + SVG 折线峰谷标注 + 节奏诊断（tsc 零错误）",
     sections: [
       {
-        label: "叙事能量曲线（马斯克优化计划 P1·先粗粒度）",
+        label: "叙事能量曲线（智能体团队优化计划 P1·先粗粒度）",
         items: [
           "监测 tab 顶部新增「叙事能量曲线」面板：SVG 折线图展示各章叙事能量（张力）随章节变化，自动以空心圈标注峰值（accent 色）与谷值（success 色）章节并附能量数值；概览卡显示均值 / 峰值章 / 谷值章",
           "能量计算零新增 schema 字段：复用 ChapterSummary 既有 eventImportances（S/A/B/C 四级事件分层）+ keyEvents 密度，确定性加权 raw = 1.0*S + 0.7*A + 0.4*B + 0.15*C + 0.05*keyEvents，再 /3.0 截断到 [0,1] 得 energy；按 StoryNode.order 排章节序（缺失 StoryNode 顺序的章节按 createdAt 兜底），一章多条摘要取最新",
@@ -237,7 +237,7 @@ export const VERSIONS: VersionEntry[] = [
     title: "伏笔收束率指标（确定性语义种子检测，复用五状态机）+ 本地推理垂直整合（Ollama 免 Key 一键预设）（tsc 零错误）",
     sections: [
       {
-        label: "伏笔收束率指标（马斯克优化计划 P0）",
+        label: "伏笔收束率指标（智能体团队优化计划 P0）",
         items: [
           "伏笔面板顶部新增收束率进度条：实时展示 payoffRate = (已回收 + 0.5*部分回收) / 活跃伏笔，以及已回收/部分/活跃计数；点「重新检测」POST /api/foreshadowing/detect，扫描该伏笔 detectedAt 之后写入的全部章节摘要，用语义种子确定性回写 status / fulfillmentRatio / fulfilledAt",
           "检测零新 schema 字段：复用既有五状态机（pending/detected/partially_fulfilled/fulfilled/voided）+ fulfillmentRatio，新增 detectPayoffs（回写）/ computePayoffStats（只读聚合）于 @/core/foreshadowing.ts；种子取「描述里连续中文短语(≥3字) + closureConditions 闭环条件」，命中规则为闭环条件任一命中或描述短语命中≥2 → 已回收，仅命中 1 且仍埋设中 → 部分回收，未命中维持原状（绝不降级已回收）",
@@ -246,12 +246,12 @@ export const VERSIONS: VersionEntry[] = [
         ],
       },
       {
-        label: "本地推理垂直整合（马斯克优化计划 P0·白痴指数最高环节）",
+        label: "本地推理垂直整合（智能体团队优化计划 P0·白痴指数最高环节）",
         items: [
           "设置页新增「本地推理 (Ollama)」一键预设：选中即填默认 Base URL http://localhost:11434/v1，并展示 Base URL 输入框（本机 Ollama 地址）与「本地推理无需 API Key」提示；模型名留空则提示须填（如 qwen2.5:7b）",
           "测试连接放行无 Key：POST /api/settings/test 对 provider===local 跳过 apiKey 校验（baseUrl 必填），testLLMConnection 走 OpenAI 兼容 /chat/completions，Ollama 忽略空 Bearer；保存路由 PUT /api/settings 接受空 llmApiKey 落库",
           "getSettings 本地分支：llmProvider===local 时免 Key，直接用 db.llmBaseUrl + db.llmModel 构建配置（Base URL / 模型名缺失则明确报错），PROVIDER_BASE_URLS 补 local 兜底；LLM 客户端本就 OpenAI 兼容，生成链路零改动即可本机 GPU 跑模型，零 API 费用",
-          "白痴指数视角：此前 DeepSeek API 托管推理占整链路成本 ~9x（自购 GPU 算力的倍数），本地推理把这笔外部依赖收回到作者自己的机器，是马斯克计划书中杠杆最高的单项优化；保留云端 API 作兜底，不强制",
+          "白痴指数视角：此前 DeepSeek API 托管推理占整链路成本 ~9x（自购 GPU 算力的倍数），本地推理把这笔外部依赖收回到作者自己的机器，是智能体团队计划书中杠杆最高的单项优化；保留云端 API 作兜底，不强制",
         ],
       },
     ],
@@ -1576,7 +1576,7 @@ export const VERSIONS: VersionEntry[] = [
       {
         label: "设计计划（董事会整合）",
         items: [
-          "开会：PG/乔布斯/马斯克/费曼/张雪峰/芒格 六方报告 → Chair 整合落盘 会议/纸舟星海小船设计/整合.md",
+          "开会：PG/乔布斯/智能体团队/费曼/张雪峰/芒格 六方报告 → Chair 整合落盘 会议/纸舟星海小船设计/整合.md",
           "共识：船型即语义（非用户选）、结构真实三要素（比例+连接+光影）、保留原 UI（书栏+详情卡）、性能纪律（≤8 真灯+bloom 假光+实例化+LOD+船型封顶6）、统一墨色视觉语法、真实≠堆细节",
           "船型清单≤6 + 题材映射表：乌篷(武侠/言情/田园)、楼船(仙侠/玄幻/历史)、帆船(冒险/西幻)、渔船(悬疑/灵异)、龙舟(历史连载)、机关舟(科幻/推理)；未命中回退乌篷（不新增第7种几何）",
         ],

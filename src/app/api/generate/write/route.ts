@@ -299,9 +299,9 @@ export async function POST(request: Request) {
             return;
           }
 
-          // ── 马斯克确认流程：自动填表已移至「确认通过」后触发（见 /api/story/nodes/[id] PATCH action=confirm）──
+          // ── 确认流程：自动填表已移至「确认通过」后触发（见 /api/story/nodes/[id] PATCH action=confirm）──
           // 理由：未审视草稿不应污染下游记忆/设定库；填表是 confirm 的副作用，而非 write 的副作用。
-          // 生成仅落库（status=completed），待马斯克智能体逐章确认后才回填表格。
+          // 生成仅落库（status=completed），待AI 智能体逐章确认后才回填表格。
 
           // Token 用量
           send({

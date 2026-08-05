@@ -192,9 +192,9 @@ export async function runPostGenerationPipeline(
     data: {
       content,
       wordCount: content.length,
-      // 马斯克确认流程（spec v1 §二/§五）：生成后仅落 drafting，不污染下游、不预置"接受"。
+      // 确认流程（spec v1 §二/§五）：生成后仅落 drafting，不污染下游、不预置"接受"。
       // 后处理审校（六维质量）结果仍写入 reviewLogs / qualityScore 供「AI诊断」展示，
-      // 但节点状态由人类（马斯克智能体）在确认栏拍板，绝不由自动审校闸门决定。
+      // 但节点状态由人类（AI 智能体）在确认栏拍板，绝不由自动审校闸门决定。
       status: "drafting",
       qualityScore: qualityReport?.overallScore ?? null,
       ...(reviewLogEntry
@@ -209,7 +209,7 @@ export async function runPostGenerationPipeline(
     },
   });
 
-  // ── 3.1 马斯克 Round3：智能审阅（Auto-Confirm）──
+  // ── 3.1 Round3：智能审阅（Auto-Confirm）──
   // 项目开启智能审阅时，生成完若质量达标直接自动确认（含自动填表），
   // 人类从审批者降级为异常处理者。best-effort：失败降级为 drafting，不阻塞落库。
   try {

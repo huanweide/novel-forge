@@ -1,4 +1,4 @@
-// 马斯克 Round3 #1：智能自动确认端点
+// Round3 #1：智能自动确认端点
 // POST /api/story/nodes/auto-confirm
 // 智能审阅模式下，生成完的章（drafting / pending_confirm）自动放行合格章、拦截不合格章。
 // 复用 confirm-guard 的单一质量阈值与确认副作用，与批量确认 / 流水线挂载共享逻辑。

@@ -1,4 +1,4 @@
-// 马斯克 Round3 #518 验证：一键智能交付全书闭环
+// Round3 #518 验证：一键智能交付全书闭环
 // 建项目→建3章(A/B优质 drafting, C低质qualityScore=30)→auto-confirm扫全书→断言放行/拦截→
 // confirm 应 409(因C未确认)→改C为优质→auto-confirm再跑→C放行→confirm 整本交付→断言 confirmedAt + 自动放行率100%
 

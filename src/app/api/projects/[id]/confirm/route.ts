@@ -2,7 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-// POST /api/projects/[id]/confirm —— 马斯克确认流程：整本确认完成
+// POST /api/projects/[id]/confirm —— 确认流程：整本确认完成
 // 仅当所有章节/小节节点均为 confirmed 时才置 Project.confirmedAt；否则返回未确认清单。
 export async function POST(
   _request: Request,

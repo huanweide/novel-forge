@@ -3,28 +3,28 @@
 ---
 
 ## v0.46.94 — 2026-08-05
-**游戏导出轻确认闭环（马斯克 Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）**
+**游戏导出轻确认闭环（Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）**
 
 - 游戏导出轻确认闭环（#519）：endGameAndExport 改写——导出正文后先 evaluateConfirmEligibility 评估质量分并落 drafting，再按项目 autoConfirmEnabled 开关走轻确认（开启且达标则 applyConfirm：confirmed + safeFillAfterWriting 自动填表 + reviewLogs auto-confirm 标记），否则维持 drafting 手动确认；qualityScore 回写供确认看板可见
 - 根治「游戏导出章节在确认流程与监控看板隐形」缺口：原直接写死 status:completed 绕开 auto-confirm/自动填表/qualityScore/reviewLogs，现复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，与正式章节确认体系完全统一
-- 真机验证（scripts/musk-game-light-confirm-verify.cjs 全绿）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切 autoConfirmEnabled=false 后导出 drafting，与正式章节一致
+- 真机验证（scripts/agent-game-light-confirm-verify.cjs 全绿）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切 autoConfirmEnabled=false 后导出 drafting，与正式章节一致
 - 运维铁律重申：改 game-engine 源码后 dev 需重启（或 HMR 生效）加载新代码，否则游戏导出仍走旧 completed 逻辑
 
 ## v0.46.93 — 2026-08-05
-**确认 UI 减法 + 一键智能交付全书 + 真机生成验收（马斯克 Round3 #516/#517/#518 全绿，tsc 零错误）**
+**确认 UI 减法 + 一键智能交付全书 + 真机生成验收（Round3 #516/#517/#518 全绿，tsc 零错误）**
 
-- 一键智能交付全书（#518）：ChapterConfirmBar 新增「智能交付全书🚀」主入口，调 auto-confirm 扫描全书（合格自动放行、不合格进 blocked 附 reason）+ 内联展示放行/拦截清单 + 一键 confirm 整本交付；后端复用既有 auto-confirm 端点 + projects/[id]/confirm，scripts/musk-smart-deliver-verify.cjs 验证全绿（首扫放行 A/B 拦截 C→409→C改优质→二次放行→整本交付 200 + confirmedAt + autoRate=100%）
+- 一键智能交付全书（#518）：ChapterConfirmBar 新增「智能交付全书🚀」主入口，调 auto-confirm 扫描全书（合格自动放行、不合格进 blocked 附 reason）+ 内联展示放行/拦截清单 + 一键 confirm 整本交付；后端复用既有 auto-confirm 端点 + projects/[id]/confirm，scripts/agent-smart-deliver-verify.cjs 验证全绿（首扫放行 A/B 拦截 C→409→C改优质→二次放行→整本交付 200 + confirmedAt + autoRate=100%）
 - 确认 UI 减法（#516）：智能审阅态收敛人工4键为「系统自动判定+AI诊断+人工接管(折叠)」，合格章零点击；confirmed 章显「已自动定稿」、重开降级小字；保守模式保持原4键。MonitorPanel 确认看板加「自动放行率」指标（monitor 端点 confirmStats 新增 autoConfirmed/autoRate，从 reviewLogs auto-confirm 标记统计）
 - 真机生成验收（#517）：重启 dev 修复 stale Prisma 客户端导致 auto-confirm 静默跳过的环境坑（v0.46.92 加字段后未重启 dev，post-processor select 新列查询抛错被 catch 吞掉）；重启后真机生成一章→直接 confirmed+自动填表+auto-confirm 标记，人工零点击（VERIFY_PASS）
 - 运维铁律重申：改 schema/新增字段后必须重启 dev 加载新 Prisma 客户端，否则 post-processor 的 select 新列查询会因 stale client 抛错被 catch 吞掉、auto-confirm 静默不生效（非代码缺陷，属环境 stale client）
 
 ## v0.46.92 — 2026-08-05
-**智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）**
+**智能自动确认（Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）**
 
 - 新增 POST /api/story/nodes/auto-confirm：智能审阅模式下扫描项目下所有 drafting/pending_confirm 章（或显式 nodeIds），合格章自动确认（含 safeFillAfterWriting 自动填表），不合格章（空正文/过短/质量分<60）进 blocked 并附 reason；返回结构与批量确认端点一致，前端看板可复用
 - 抽离共享护栏 src/core/confirm-guard.ts：evaluateConfirmEligibility（空正文/过短优先拦截、qualityScore 非 null 采信省分析、null 回退本地 analyzeQuality 零 Token、<60 拦截）与 applyConfirm（自动填表副作用 + status=confirmed），批量确认/自动确认/生成流水线三处复用单一 QUALITY_PASS_THRESHOLD=60 真相，消除阈值分裂
 - Project 模型新增 autoConfirmEnabled Boolean @default(true) 开关；post-processor 生成完落库后 best-effort 调用 applyConfirm——若项目开启且质量达标直接 confirmed（含 SSE auto_confirm 事件），失败 catch 降级为 drafting 不阻塞主流程；db push 同步数据库并对已有项目自动填充 true
-- 端到端真机验证 scripts/musk-auto-confirm-verify.cjs 全绿（VERIFY_PASS）：建沙盒项目→建3章（A/B 优质留空质量分实时算、C 短文本）→扫全书自动确认→A/B 86/A 放行 confirmed、C 正文过短拦截 blocked、最终态 a/b=confirmed c=drafting；护栏路径（实时分析+过短拦截）覆盖；tsc 零错误
+- 端到端真机验证 scripts/agent-auto-confirm-verify.cjs 全绿（VERIFY_PASS）：建沙盒项目→建3章（A/B 优质留空质量分实时算、C 短文本）→扫全书自动确认→A/B 86/A 放行 confirmed、C 正文过短拦截 blocked、最终态 a/b=confirmed c=drafting；护栏路径（实时分析+过短拦截）覆盖；tsc 零错误
 
 ## v0.46.91 — 2026-08-05
 **批量确认本卷（MCCS Round2）：批量确认端点 + 左栏批量确认按钮 + 质量护栏拦截低分章 + 端到端真机验证全绿（tsc 零错误）**
@@ -32,20 +32,20 @@
 - 新增 POST /api/story/nodes/batch-confirm：左栏批量模式勾选 pending_confirm 章节后一键确认；质量护栏 requirePassed 默认 true，仅放行 qualityScore>=60 的章，低于阈值（含无法解析正文）进 blocked 并附 reason，不被蒙混过关
 - 左栏 LeftPanel 批量工具栏新增「批量确认 N」按钮（仅当 selectedPendingCount>0 时显示），workspace page.tsx 加 handleBatchConfirm 回调与 batchConfirming 忙态；确认后 loadProject 刷新 + 清空选择 + 退出批量模式，toast 汇总放行/拦截/跳过数
 - PUT /api/story/nodes/[id] 补 qualityScore 透传（qualityScore: body.qualityScore）；undefined 时为 Prisma no-op 不影响现有手动保存，与批量确认端点「score==null 才回退 analyzer、否则用 DB 值」护栏设计一致
-- 端到端真机验证 scripts/musk-batch-verify.cjs 全绿（VERIFY_PASS）：A/B 章 qualityScore 留 null 经实时 analyzer 打 90/A 放行、C 章 30 分拦截、最终态正确，护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖
+- 端到端真机验证 scripts/agent-batch-verify.cjs 全绿（VERIFY_PASS）：A/B 章 qualityScore 留 null 经实时 analyzer 打 90/A 放行、C 章 30 分拦截、最终态正确，护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖
 
 ## v0.46.90 — 2026-08-05
-**确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ 马斯克智能体端到端验证 12 章全闭环（tsc 零错误）**
+**确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ AI 智能体端到端验证 12 章全闭环（tsc 零错误）**
 
 - 根因：generate/write 后处理管线把生成后节点状态定为 reviewing（审校未过时），而确认栏仅认 completed/drafting，导致生成完的章节卡在 reviewing 且无任何确认按钮，流程死锁
 - 修复：post-processor.ts 生成后状态由 reviewing/completed 改为恒为 drafting（契合 Round1 规格「生成仅落 drafting、诊断是选项不是前置税」）；后处理六维质量审校仍写 reviewLogs/qualityScore 供 AI诊断展示，但不决定节点状态
-- 端到端验证：马斯克智能体真实建项目「火种：多行星文明备份计划」→ 真实 LLM 写 12 章（约 3.98 万字）→ 逐章提交确认/AI诊断/确认通过（触发自动填表）→ 第5章走打回重写闭环 → 整本确认完成🚀，全部按钮与状态机闭环通过
+- 端到端验证：AI 智能体真实建项目「火种：多行星文明备份计划」→ 真实 LLM 写 12 章（约 3.98 万字）→ 逐章提交确认/AI诊断/确认通过（触发自动填表）→ 第5章走打回重写闭环 → 整本确认完成🚀，全部按钮与状态机闭环通过
 - 运维注记：dev server 旧进程加载的 Prisma 客户端不含新增 confirmed_at 列会导致确认 503，重启加载新客户端即修复（非代码缺陷，属环境 stale client）
 
 ## v0.46.89 — 2026-08-05
-**马斯克确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）**
+**确认流程（MCCS Round1 落地）：中栏确认栏4键状态机 + 左栏确认态色标 + 右栏确认看板 + 自动填表移至确认后（tsc 零错误）**
 
-- 由7人格专项会议（乔布斯/马斯克/PG/张雪峰/芒格/费曼/工坊）+3观测智能体（进度/质量/偏差）+Chair整合，maxloop迭代收敛出单一权威规格 musk-confirm-spec.md，决定所有确认按钮UI与计划流程
+- 由7人格专项会议（乔布斯/智能体团队/PG/张雪峰/芒格/费曼/工坊）+3观测智能体（进度/质量/偏差）+Chair整合，maxloop迭代收敛出单一权威规格 agent-confirm-spec.md，决定所有确认按钮UI与计划流程
 - 5态状态机：outline_only→drafting→pending_confirm→confirmed→project_confirmed；ContentStatus 扩 pending_confirm/confirmed 两态，StoryNode/Project 各加 confirmedAt 时间戳
 - 中栏确认栏 ChapterConfirmBar：4键（提交确认/确认通过/打回重写须填理由/AI诊断）+ 整本确认完成🚀；左栏 OutlineTree 加 pending_confirm 橙、confirmed 绿色标；右栏 MonitorPanel 加确认看板（待确认/已确认/进度条）
 - 最高杠杆修复：自动填表 safeFillAfterWriting 从写章后移至确认通过后才触发，根治未审视草稿污染设定库；AI诊断走纯本地六维质量分析（零Token、不依赖代理）真实可用
@@ -69,7 +69,7 @@
 ---
 
 ## v0.46.86 — 2026-08-04
-**删 UI 噪声（马斯克优化计划 P3·先减法后乘法）：顶栏导出/更多下拉收敛 + 右栏监测三面板默认折叠 + 左栏5→3 tab（更多▾收故事线/规则）+ 后处理提取常显其余收高级▾（tsc 零错误）**
+**删 UI 噪声（智能体团队优化计划 P3·先减法后乘法）：顶栏导出/更多下拉收敛 + 右栏监测三面板默认折叠 + 左栏5→3 tab（更多▾收故事线/规则）+ 后处理提取常显其余收高级▾（tsc 零错误）**
 
 - 顶栏收敛：原本 9 个按钮压到 7 个可见（零删任何功能）——「导出文件」与「复制全文」合并进「导出▾」下拉，「自动化」「工具箱」收进「更多▾」下拉；文风 / 大纲 / 摘要 / 导入书稿 / 备份包 保持常显；下拉用 relative z-50 容器 + fixed inset-0 z-40 遮罩，点击外部即关闭（Toolbar.tsx）
 - 右栏监测默认折叠：监测 tab 内「叙事能量曲线 / 生成延迟 / 节点监测」三面板改为可点开折叠区块，默认全收起；折叠时不挂载子组件（三者均带 fetch），展开才加载，省首屏请求与渲染（RightPanel.tsx）
@@ -81,7 +81,7 @@
 ## v0.46.85 — 2026-08-04
 **生成延迟硬指标（P2）：LlmCallLog 加 durationMs/firstTokenMs 计时埋点 + GET /api/generation-metrics 延迟聚合 + 生成延迟面板（本地vs云端对比 + 2s 阈值标红）（tsc 零错误）**
 
-- 生成延迟硬指标：监测 tab 新增「生成延迟」面板（GenerationLatencyPanel），展示首 token 延迟 P95、总延迟 P95、输出吞吐 token/s、样本数，总延迟 P95 > 2000ms 时红色警示「超过两秒就是失败」（马斯克原话铁律）；本地推理（Ollama）vs 云端 API 总延迟 P95 横向对比条形
+- 生成延迟硬指标：监测 tab 新增「生成延迟」面板（GenerationLatencyPanel），展示首 token 延迟 P95、总延迟 P95、输出吞吐 token/s、样本数，总延迟 P95 > 2000ms 时红色警示「超过两秒就是失败」（智能体团队原话铁律）；本地推理（Ollama）vs 云端 API 总延迟 P95 横向对比条形
 - 零新增 schema 主表：复用既有 LlmCallLog 加 durationMs（总耗时）/firstTokenMs（首 token 延迟）两可空字段，db push + generate；在 src/core/llm/client.ts 的 chat（端到端总耗时）与 chatStream（readStream 新增 onFirstToken 回调测到首个正文 token 的 TTFB）埋点，经 src/lib/llm.ts 的 recordLlmCall 落库，fire-and-forget try-catch 容错，绝不阻塞生成主流程
 - 新增 GET /api/generation-metrics 路由（force-dynamic）：聚合最近 300 条成功调用（role 不以 fail: 前缀、durationMs 非空，剔除重试/失败记账避免失真），算首 token/总延迟中位 P95 均值、整体输出吞吐、按 Base URL 含 localhost/11434 分本地/云端对比，返回 overThreshold 标志供面板标红
 - 直接验证 P0 本地推理整合收益：本地推理走本机 GPU 零网络往返、云端走 API 受代理/限流影响，作者拿到真实延迟分布即可量化「本地推理到底值不值」，把延迟从玄学变成可观测硬指标
@@ -462,7 +462,7 @@
 ## v0.46.45 — 2026-08-03
 **纸舟星海 maxloop 第1轮：BoatFactory 6 真实船型 + ≤8 真灯性能纪律**
 
-- 设计计划：六方董事会（PG/乔布斯/马斯克/费曼/张雪峰/芒格）报告 → Chair 整合落盘 `会议/纸舟星海小船设计/整合.md`；共识=船型即语义、结构真实三要素、保留原 UI、性能纪律、统一墨色语法、真实≠堆细节
+- 设计计划：六方董事会（PG/乔布斯/智能体团队/费曼/张雪峰/芒格）报告 → Chair 整合落盘 `会议/纸舟星海小船设计/整合.md`；共识=船型即语义、结构真实三要素、保留原 UI、性能纪律、统一墨色语法、真实≠堆细节
 - BoatFactory：`makeHull` 参数化船体 + 部件库（篷/桅+受风帆/楼舱+飞檐/龙首/网具/冷蓝发光缝），`createBoat(type)` 按配方拼装，换船型=换配置不写新类；落地乌篷/楼船/帆船/渔船/龙舟/机关舟 6 型，题材→船型映射表驱动
 - 性能纪律：全局真 `PointLight` 封顶 8（仅焦点+最近/最活跃），其余发光球+加性光晕 sprite 假光；共享船体/帆/篷材质；保留船大小=字数、灯亮=活跃度、光尾=连续性、折痕光=题材色语义；底部书栏+详情卡按钮、从书栏进入全部不变
 - 诚实边界：tsc 零错误 + dev 200 + SSR 含关键标记验证；3D 观感（轮廓辨识度/墨色统一度）需浏览器实跑与用户验收，第2轮聚焦高模+真灯受光、第3轮 LOD+实例化收口

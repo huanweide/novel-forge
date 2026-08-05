@@ -40,10 +40,10 @@ model Project {
   updatedAt DateTime @updatedAt
   deletedAt DateTime? @map("deleted_at") // 软删除（回收站）；非空=在回收站
 
-  // 马斯克确认流程：整本交付完成时间戳（null=未整体确认交付）
+  // 确认流程：整本交付完成时间戳（null=未整体确认交付）
   confirmedAt DateTime? @map("confirmed_at")
 
-  // 马斯克 Round3：智能审阅模式（Auto-Confirm）总开关，默认开启——生成完合格章自动确认，人类降级为异常处理者
+  // Round3：智能审阅模式（Auto-Confirm）总开关，默认开启——生成完合格章自动确认，人类降级为异常处理者
   autoConfirmEnabled Boolean @default(true)
 
   // 导入来源标识，用于并发幂等（N2 修复）。Postgres 多 null 不冲突，存量数据安全。
@@ -139,7 +139,7 @@ model StoryNode {
   order    Int @default(0)
   status   String @default("outline_only") // ContentStatus
 
-  // 马斯克确认流程：确认定稿时间戳（null=未确认）
+  // 确认流程：确认定稿时间戳（null=未确认）
   confirmedAt DateTime? @map("confirmed_at")
 
   // 内容

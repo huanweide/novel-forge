@@ -1,5 +1,5 @@
-// 马斯克智能体：真实 LLM 逐章生成（消费 SSE 流直到 done 事件）
-// 用法: node musk-generate.cjs <order>  或  node musk-generate.cjs all
+// AI 智能体：真实 LLM 逐章生成（消费 SSE 流直到 done 事件）
+// 用法: node agent-generate.cjs <order>  或  node agent-generate.cjs all
 const PROJECT_ID = "45bda999-ddd0-4954-b75f-497b17b2f76b";
 const BASE = "http://localhost:3001/api/generate/write";
 
@@ -58,7 +58,7 @@ async function generateOne(order) {
   const body = {
     projectId: PROJECT_ID,
     nodeId,
-    authorNote: `以马斯克视角驱动：硬核、紧迫、工程美学、存在主义。第${order}章《${TITLES[order]}》。`,
+    authorNote: `以产品视角驱动：硬核、紧迫、工程美学、存在主义。第${order}章《${TITLES[order]}》。`,
     targetWordCount: 2200,
   };
   const res = await fetch(BASE, {

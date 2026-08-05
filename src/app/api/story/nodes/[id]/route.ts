@@ -127,7 +127,7 @@ export async function PUT(
   }
 }
 
-// PATCH /api/story/nodes/[id] —— 马斯克确认流程动作（submit/confirm/reject/reopen/diagnose）
+// PATCH /api/story/nodes/[id] —— 确认流程动作（submit/confirm/reject/reopen/diagnose）
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

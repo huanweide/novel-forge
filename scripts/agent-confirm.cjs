@@ -1,4 +1,4 @@
-// 马斯克智能体：驱动确认流程（全按钮）+ 验证状态机闭环（状态感知版）
+// AI 智能体：驱动确认流程（全按钮）+ 验证状态机闭环（状态感知版）
 const PROJECT_ID = "45bda999-ddd0-4954-b75f-497b17b2f76b";
 const NODE_API = "http://localhost:3001/api/story/nodes";
 const REVIEW_API = (id) => `http://localhost:3001/api/story/nodes/${id}/review`;
