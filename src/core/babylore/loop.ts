@@ -121,8 +121,8 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
     if (send) send({ type: "babylore_fill", skipped: true, reason: "disabled" });
     return { ok: false, operations: 0, applied: 0, error: "自动填表已关闭" };
   }
-  const freq = typeof cfg?.fillFrequency === "number" && cfg.fillFrequency > 0 ? cfg.fillFrequency : 3;
-  const skipLatest = cfg?.skipLatestChapter ?? true;
+  const freq = typeof cfg?.fillFrequency === "number" && cfg.fillFrequency > 0 ? cfg.fillFrequency : 1;
+  const skipLatest = cfg?.skipLatestChapter ?? false;
   // 默认跳过最近一章：用户可能重 roll（重新生成）后改写，避免把临时稿写进表格。
   if (skipLatest && isLatestChapter) {
     if (send) send({ type: "babylore_fill", skipped: true, reason: "skipLatestChapter" });

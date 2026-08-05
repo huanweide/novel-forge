@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.87";
+export const LATEST_VERSION = "v0.46.88";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "部署自检加固（P0-3）：doctor 脚本新增 Prisma client 生成检查——直击已知坑「safe-delete 拦截 prisma generate 导致 dev 能起但 API 全挂」，未生成时明确提示修复命令",
-  "doctor 新增端口 3001 占用检测——启动前发现旧 dev 进程未退出，避免端口冲突；修正 Prisma 7 client 路径（client.ts 非 index.js），自检准确不误报",
-  "全面自查：tsc 零错误 + vitest 190/190 全绿 + API health/projects/settings 全 200 + 生产构建通过——用户提过的问题代码层全部修复，无回归",
-  "部署站诊断：health 404 + projects 500 为 Vercel 侧问题（未重新部署最新代码 + Neon DB 额度耗尽），代码已就绪（build 通过 + postinstall prisma generate），待用户侧修复",
+  "填表闭环对齐计划（P1-2）：默认 fillFrequency 由每 3 章改为每章填（1）、skipLatestChapter 由跳过最新章改为当前章也填（false）——写一章即触发自动填表，闭环可见不再隐形",
+  "填表频率/跳过配置从 schema @default 与 loop.ts fallback 两处同步改为每章填；并对已有 24 个项目数据迁移为新默认，本地立即生效",
+  "填表/召回可观测性本就具备（前端 toast 已显示「已写入 N 行」「召回 N 条」）；此前因默认跳过最新章导致填表几乎不触发、前端静默，用户误判未工作——现已修复",
+  "保留可配性：项目仍可在设置里调回频率/跳过（防重 roll 污染），默认值仅改为对齐计划 P1-2 每章自动填表本意",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.88",
+    date: "2026-08-05",
+    title: "填表闭环对齐计划 P1-2：默认每章自动填表（fillFrequency 3→1、skipLatestChapter true→false）+ 已有项目数据迁移",
+    sections: [
+      {
+        label: "填表闭环对齐计划（P1-2·每章自动填表）",
+        items: [
+          "根因：此前默认 fillFrequency=3（每3章填）+ skipLatestChapter=true（跳过最新章），而你总在写最新章 → 写章时填表几乎从不触发 → 前端对 skip 静默不弹 → 误判填表没工作",
+          "修复：schema.prisma 的 fillFrequency @default(3)→1、skipLatestChapter @default(true)→false；loop.ts fallback 同步；对齐计划 P1-2「每写完一章自动填表」本意，写一章即触发、前端 toast「已写入 N 行」可见",
+          "数据迁移：对已有 24 个项目 UPDATE 为 fillFrequency=1、skipLatestChapter=false（prisma db push 更新列默认 + 一次性脚本迁移已有行），本地立即生效；新项目随 @default 生效",
+          "可观测性本就具备：前端 page.tsx 已消费 babylore_fill/babylore_recall SSE 事件（填表成功/失败 toast、召回条数 toast），仅此前因默认跳过导致不触发；保留频率/跳过可配（防重 roll 污染由填表去重+selfCheck 保护）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.87",
     date: "2026-08-04",

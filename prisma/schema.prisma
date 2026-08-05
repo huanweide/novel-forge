@@ -32,8 +32,8 @@ model Project {
 
   // ─── 写作自动化配置（v0.33.0 新增）───
   autoFillEnabled     Boolean @default(true)   // 生成后自动填表总开关
-  fillFrequency       Int     @default(3)       // 每 N 章填一次表（默认每 3 章）
-  skipLatestChapter  Boolean @default(true)    // 默认跳过最近一章（用户可能重 roll 后改写）
+  fillFrequency       Int     @default(1)       // 每 N 章填一次表（默认每章填，对齐计划 P1-2 每写完一章自动填表）
+  skipLatestChapter  Boolean @default(false)   // 当前章也填（对齐计划 P1-2）；重 roll 由填表去重(同名转update)+selfCheck 保护，不污染表
   contextKeepChapters Int    @default(4)       // 上下文保留最近 N 章（楼层窗口大小）
 
   createdAt DateTime @default(now())
