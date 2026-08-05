@@ -33,6 +33,13 @@ export async function POST(request: Request) {
     });
     const knownNames = (project?.characters ?? []).map((c) => c.name);
 
+    // IMP-002：计算项目最大 order，用于判定「是否最新章」，使 skipLatestChapter 生效
+    const maxOrderAgg = await prisma.storyNode.aggregate({
+      where: { projectId },
+      _max: { order: true },
+    });
+    const maxOrder = maxOrderAgg._max.order ?? 0;
+
     const confirmed: { id: string; title: string; score: number | null; grade: string | null }[] = [];
     const blocked: { id: string; title: string; score: number | null; grade: string | null; reason: string }[] = [];
     const skipped: { id: string; title: string; reason: string }[] = [];
@@ -66,16 +73,21 @@ export async function POST(request: Request) {
       let fillMsg = "（无正文，跳过填表）";
       if (node.content && node.content.length > 0) {
         try {
-          await safeFillAfterWriting({
+          const fillRes = await safeFillAfterWriting({
             projectId: node.projectId,
             content: node.content,
             send: undefined,
             nodeOrder: node.order,
-            isLatestChapter: false,
+            isLatestChapter: node.order === maxOrder,
             nodeId: node.id,
             source: "batch",
           });
-          fillMsg = "自动填表已执行";
+          // IMP-004：依据真实返回值决定文案，而非无条件声称「已执行」
+          if (fillRes.ok && fillRes.applied > 0) {
+            fillMsg = "自动填表已执行";
+          } else {
+            fillMsg = `未触发自动填表（${fillRes.error || "无事实可填"}）`;
+          }
         } catch (e) {
           fillMsg = `自动填表失败（不影响确认）: ${e instanceof Error ? e.message : "未知"}`;
         }

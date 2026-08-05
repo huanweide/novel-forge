@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { parseGameOutput } from "./game-prompts";
+import { parseGameOutput, buildMemorySummary } from "./game-prompts";
+import type { GameSessionContext } from "./types";
 
 // 验证游戏模式「背包物品归属」解析：CI| 格式带归属者字段。
 describe("parseGameOutput —— 背包物品归属", () => {
@@ -184,4 +185,77 @@ describe("parseGameOutput —— Round12 A4 同义动词补全", () => {
       expect(r.itemChanges[0].operation).toBe(op);
     });
   }
+});
+
+// 验证 IMP-022「跨轮次记忆摘要」：长游戏（>6 轮）早期实体/关键决策不丢失。
+// buildMemorySummary 仅从持久化的 ctx.entities / ctx.items / previousTurns 提取，
+// 不改动 historySection 截断逻辑。
+describe("buildMemorySummary —— 跨轮次记忆摘要（IMP-022）", () => {
+  // 造一个 8 轮的长局：前 2 轮会掉出 historySection 的「最近 6 轮」。
+  const turns = Array.from({ length: 8 }, (_, i) => ({
+    round: i + 1,
+    playerAction: `玩家在第${i + 1}轮的决定`,
+    narrative: `第${i + 1}轮叙事内容`,
+  }));
+
+  // 早期实体（角色/势力/功法/地点）—— 模拟跨全部轮次合并去重后的结果。
+  const ctx: GameSessionContext = {
+    bookName: "测试书",
+    chapterTitle: "第一章",
+    outline: null,
+    existingContent: null,
+    characters: [],
+    worldLore: [],
+    previousTurns: turns,
+    entities: [
+      { name: "李尘", type: "角色", description: "主角" },
+      { name: "黑风寨", type: "势力", description: "反派据点" },
+      { name: "青云诀", type: "功法", description: "绝世功法" },
+      { name: "断魂崖", type: "地点", description: "险地" },
+    ],
+    items: [
+      { name: "玄铁剑", quantity: 1, category: "equipment", source: "开局", acquiredRound: 1 },
+      { name: "疗伤丹", quantity: 3, category: "consumable", source: "拾取", acquiredRound: 2, owner: "李尘" },
+    ],
+    currentRound: 8,
+    totalWords: 3000,
+    maxWords: 5000,
+    plotProgress: 60,
+  };
+
+  const summary = buildMemorySummary(ctx);
+
+  it("注入跨轮次记忆摘要块（置于 historySection 之前）", () => {
+    expect(summary).toContain("## 跨轮次记忆摘要");
+  });
+
+  it("列出全部持久实体（含掉出最近 6 轮的早期实体）", () => {
+    expect(summary).toContain("李尘(角色)");
+    expect(summary).toContain("黑风寨(势力)");
+    expect(summary).toContain("青云诀(功法)");
+    expect(summary).toContain("断魂崖(地点)");
+  });
+
+  it("列出当前背包关键物品并保留归属者", () => {
+    expect(summary).toContain("玄铁剑 ×1（equipment）");
+    expect(summary).toContain("疗伤丹 ×3（consumable）【归属：李尘】");
+  });
+
+  it("回填掉出最近 6 轮的早期玩家关键决策（第1、2轮）", () => {
+    expect(summary).toContain("早期关键决策：");
+    expect(summary).toContain("第1轮：玩家在第1轮的决定");
+    expect(summary).toContain("第2轮：玩家在第2轮的决定");
+    // 最近 6 轮（第3~8轮）不应出现在摘要里（已在 historySection 呈现）
+    expect(summary).not.toContain("第8轮：玩家在第8轮的决定");
+  });
+
+  it("无实体/无物品/无早期决策时返回空串（不污染短局 prompt）", () => {
+    const empty = buildMemorySummary({
+      ...ctx,
+      entities: [],
+      items: [],
+      previousTurns: turns.slice(-6), // 全部落在最近 6 轮内
+    });
+    expect(empty).toBe("");
+  });
 });

@@ -48,10 +48,14 @@ export async function POST(request: Request) {
     // 原始项目 id（来自备份），作为幂等去重键的一部分；缺失则无法去重，按新建处理
     const origId = typeof p.id === "string" && p.id ? p.id : null;
 
+    // IMP-014：允许强制新建副本（forceNew=true 时跳过幂等命中，新项目名加「（副本）」后缀）
+    const forceNew = bundle.forceNew === true;
+
     // N2 修复：导入来源稳定标识，写入 Project.importSource（DB 唯一约束）。
     // 并发重复导入同一备份 → 唯一冲突 P2002 → 外层捕获后返回已存在项目（幂等）。
     // origId 缺失则无法去重，importSource 置 null（Postgres 多 null 不冲突），按新建处理。
-    importSourceKey = origId ? `${IMPORT_SOURCE}:${origId}` : null;
+    // IMP-014：forceNew 时跳过幂等去重（importSource 置 null，不再按唯一键命中已存在项目，可反复建副本）
+    importSourceKey = origId && !forceNew ? `${IMPORT_SOURCE}:${origId}` : null;
 
     // ── 幂等去重已移入 $transaction 内（见下方事务开头），避免并发重导入竞态重复 ──
 
@@ -75,7 +79,8 @@ export async function POST(request: Request) {
         "characters", "lorebookEntries", "storyNodes", "storyBranches",
         "storylines", "styleCards", "loreTables", "rules",
       ]);
-      projData.name = (projData.name || "导入的项目") + "（导入）";
+      // IMP-014：forceNew 时后缀用「（副本）」，否则保持「（导入）」
+      projData.name = (projData.name || "导入的项目") + (forceNew ? "（副本）" : "（导入）");
       // 记录导入来源，供幂等去重（不改动业务字段语义）。
       // N2 修复：同时写入 buildConfig.importSource（保留既有追踪语义）与顶层 importSource（DB 唯一约束，并发幂等）。
       projData.buildConfig = {

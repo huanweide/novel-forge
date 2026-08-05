@@ -142,7 +142,11 @@ export function applyItemChanges(
 // ─── 会话管理 ──────────────────────────────────────────────────
 
 /** 创建或恢复游戏会话 */
-export async function ensureGameSession(projectId: string, nodeId: string) {
+export async function ensureGameSession(
+  projectId: string,
+  nodeId: string,
+  originalContentSnapshot?: string | null,
+) {
   let session = await prisma.gameSession.findUnique({
     where: { projectId_nodeId: { projectId, nodeId } },
     include: { states: { orderBy: { round: "asc" } } },
@@ -153,6 +157,13 @@ export async function ensureGameSession(projectId: string, nodeId: string) {
     const node = await prisma.storyNode.findUnique({ where: { id: nodeId } });
     if (!node) throw new Error(`章节节点 ${nodeId} 不存在`);
 
+    // IMP-001 快照修复：以「作者进入游戏那一刻」的 node.content 拍原正文快照作为第 0 段前置。
+    // 若传了 preservedSnapshot（来自上一局会话），则复用同一份原正文，保证跨 reset 不变、二次导出不堆叠。
+    const snapshot =
+      originalContentSnapshot && originalContentSnapshot.length > 0
+        ? originalContentSnapshot
+        : (node.content || "");
+
     session = await prisma.gameSession.create({
       data: {
         projectId,
@@ -162,6 +173,7 @@ export async function ensureGameSession(projectId: string, nodeId: string) {
         totalWords: 0,
         maxWords: 3000,
         plotProgress: 0,
+        originalContentSnapshot: snapshot,
       },
       include: { states: { orderBy: { round: "asc" } } },
     });
@@ -531,6 +543,7 @@ export async function endGameAndExport(sessionId: string): Promise<{
   totalWords: number;
   status: string;
   autoConfirmed: boolean;
+  autoFilled: boolean;
   qualityScore: number | null;
 }> {
   const session = await prisma.gameSession.findUnique({
@@ -544,8 +557,16 @@ export async function endGameAndExport(sessionId: string): Promise<{
   if (session.status !== "active") throw new Error("游戏已结束");
 
   // 1. 拼接已有叙事
-  const existingNarrative = session.states
-    .map((s) => s.narrative)
+  // IMP-001 修复：游戏导出须保留写作原正文作为第 0 段前置，否则已有正文章节开启游戏并导出后
+  // 原正文被游戏轮次整体覆盖（数据丢失）。
+  // 关键：必须以「作者进入游戏时刻」的原正文快照（session.originalContentSnapshot）为前置，
+  // 而非实时 session.node.content —— 后者在首次导出后已被改写为「原正文+游戏轮次」，
+  // 若再次导出会把它当成原正文重复前置，造成堆叠损坏。快照跨 reset 复用，保证多次导出前置同一份原正文。
+  const originalContent = session.originalContentSnapshot || session.node?.content || "";
+  const existingNarrative = [
+    originalContent,
+    ...session.states.map((s) => s.narrative),
+  ]
     .filter(Boolean)
     .join("\n\n");
 
@@ -639,15 +660,18 @@ export async function endGameAndExport(sessionId: string): Promise<{
   });
 
   let autoConfirmed = false;
+  let autoFilled = false;
   if (autoConfirmOn && el.eligible) {
     try {
-      await applyConfirm({
+      const fillMsg = await applyConfirm({
         id: session.nodeId,
         projectId: session.projectId,
         content: finalContent,
         order: (nodeForConfirm as any)?.order ?? 0,
       });
       autoConfirmed = true;
+      // IMP-003：记录导出是否真的回填了设定库，供前端给出明确提示（避免静默改动世界观）
+      autoFilled = typeof fillMsg === "string" && fillMsg.includes("已执行");
     } catch (acErr) {
       console.error("[game-light-confirm] 自动确认失败，保持 drafting：", acErr);
     }
@@ -667,6 +691,7 @@ export async function endGameAndExport(sessionId: string): Promise<{
     totalWords: finalWordCount,
     status: autoConfirmed ? STATUS_CONFIRMED : STATUS_DRAFTING,
     autoConfirmed,
+    autoFilled,
     qualityScore: el.score ?? null,
   };
 }
@@ -678,9 +703,12 @@ export async function resetGameSession(projectId: string, nodeId: string) {
   const existing = await prisma.gameSession.findUnique({
     where: { projectId_nodeId: { projectId, nodeId } },
   });
+  // IMP-001 快照修复：保留首次进入游戏前的作者原正文快照，跨 reset 持续复用。
+  // 否则二次开局的 resetGameSession 会以「上一次导出已改写过的 node.content」为原正文再次前置，导致堆叠损坏。
+  const preservedSnapshot = existing?.originalContentSnapshot || null;
   if (existing) {
     await prisma.gameState.deleteMany({ where: { sessionId: existing.id } });
     await prisma.gameSession.delete({ where: { id: existing.id } });
   }
-  return ensureGameSession(projectId, nodeId);
+  return ensureGameSession(projectId, nodeId, preservedSnapshot);
 }

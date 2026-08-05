@@ -10,10 +10,10 @@
  * 新增「智能交付全书 🚀」主入口：一键扫描全书 → 合格自动放行 + 拦截清单 → 整本交付。
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
-import { toastSuccess, toastError } from "@/components/ui/toast";
+import { toastSuccess, toastError, toastInfo } from "@/components/ui/toast";
 
 interface ChapterConfirmBarProps {
   projectId: string;
@@ -60,6 +60,18 @@ export function ChapterConfirmBar({
 
   const isAutoMode = autoConfirmEnabled === true;
 
+  // IMP-005：默认开启「智能审阅（自动确认）」时，首次给一次性引导（localStorage 去重），
+  // 避免新用户无感定稿、错过逐章审校。后续进入不再打扰。
+  useEffect(() => {
+    if (autoConfirmEnabled && typeof window !== "undefined") {
+      const KEY = "novel-forge-autoconfirm-guided";
+      if (!localStorage.getItem(KEY)) {
+        localStorage.setItem(KEY, "1");
+        toastInfo("智能审阅已开启：合格章将自动定稿（含自动填表）。如需逐章人工把关，可在设置中关闭。");
+      }
+    }
+  }, [autoConfirmEnabled]);
+
   const call = async (action: string, extra?: Record<string, unknown>) => {
     setBusy(true);
     try {
@@ -70,7 +82,25 @@ export function ChapterConfirmBar({
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
-        toastSuccess(action === "confirm" ? "已确认定稿 ✓（自动填表已执行）" : action === "submit" ? "已提交确认，等待智能体团队拍板" : action === "reject" ? "已打回重写（保留快照）" : action === "reopen" ? "已重开为草稿" : "已记录");
+        // IMP-004：confirm 时依据服务端回写的 reviewLogs.fill 真实状态决定文案，
+        // 真正执行才说「已执行」，未触发/失败则如实说明，不谎称「已执行」。
+        let msg: string;
+        if (action === "confirm") {
+          const logs: any[] = Array.isArray(d.reviewLogs) ? d.reviewLogs : [];
+          const lastFill = logs.length ? (logs[logs.length - 1] as any)?.fill : undefined;
+          if (typeof lastFill === "string") {
+            if (lastFill.includes("已执行")) msg = "已确认定稿 ✓（自动填表已执行）";
+            else if (lastFill.startsWith("（") || lastFill.includes("未触发") || lastFill.includes("跳过") || lastFill.includes("关闭")) msg = "已确认定稿 ✓（本次未触发自动填表）";
+            else if (lastFill.includes("失败")) msg = "已确认定稿 ✓（自动填表失败，详见日志）";
+            else msg = "已确认定稿 ✓";
+          } else {
+            msg = "已确认定稿 ✓";
+          }
+        } else if (action === "submit") msg = "已提交确认，等待智能体团队拍板";
+        else if (action === "reject") msg = "已打回重写（保留快照）";
+        else if (action === "reopen") msg = "已重开为草稿";
+        else msg = "已记录";
+        toastSuccess(msg);
         setShowReject(false); setReason("");
         onAction();
       } else {

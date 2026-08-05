@@ -200,6 +200,7 @@ const GAME_SYSTEM_PROMPT = `你是一位资深互动小说大师，正在与用�
 - 动作描写干净利落，环境描写嵌入叙事而非单独成段
 - 新信息（实体/物品）自然融入叙事，不生硬介绍
 
+{memorySection}
 {historySection}`;
 
 // ─── 用户行动提示词模板 ────────────────────────────────────────
@@ -221,6 +222,60 @@ const ACTION_PROMPTS: Record<string, string> = {
 };
 
 // ─── 公开 API ───────────────────────────────────────────────────
+
+/**
+ * IMP-022：跨轮次记忆摘要（P1）
+ *
+ * 现象：historySection 仅取最近 6 轮且每轮截断 150 字，长游戏（>6 轮）早期实体/伏笔/关键决策
+ * 在 prompt 中丢失，AI 后续不记得开头设定。
+ *
+ * 修法：从已持久化的上下文中提取一段紧凑「记忆摘要」，注入到 historySection 之前。
+ * 数据来源（均为跨全部轮次持久、已由引擎合并去重，诚实可提取）：
+ *   - ctx.entities：全部轮次出现过的实体（角色/地点/势力/功法/生物…），正是掉出 historySection 的早期设定
+ *   - ctx.items：当前背包（持久物品，常承载伏笔/线索）
+ *   - ctx.previousTurns 中掉出「最近 6 轮」的早期玩家行动：作为「早期关键决策」回填，避免开头选择被遗忘
+ *
+ * 纯字符串处理，不引网络调用；不改变 historySection 的截断逻辑。
+ */
+export function buildMemorySummary(ctx: GameSessionContext): string {
+  const parts: string[] = [];
+
+  // 1. 持久实体（上下文已跨全部轮次合并去重，名称唯一）
+  const entities = ctx.entities.filter((e) => e && e.name);
+  if (entities.length > 0) {
+    const listed = entities
+      .map((e) => `${e.name}(${e.type || "其他"})`)
+      .join("、");
+    parts.push(`- 已出现实体：${listed}`);
+  }
+
+  // 2. 当前背包（持久物品，承载伏笔/线索）
+  if (ctx.items.length > 0) {
+    const listed = ctx.items
+      .map(
+        (i) =>
+          `${i.name} ×${i.quantity}（${i.category}）${i.owner && i.owner !== "主角" ? `【归属：${i.owner}】` : ""}`
+      )
+      .join("、");
+    parts.push(`- 关键物品：${listed}`);
+  }
+
+  // 3. 掉出最近 6 轮的早期玩家关键决策（避免开头选择被遗忘）
+  const HISTORY_KEEP = 6; // 与 historySection 的 .slice(-6) 保持一致
+  const early = ctx.previousTurns.slice(
+    0,
+    Math.max(0, ctx.previousTurns.length - HISTORY_KEEP)
+  );
+  if (early.length > 0) {
+    const listed = early
+      .map((t) => `第${t.round}轮：${t.playerAction.slice(0, 40)}`)
+      .join("；");
+    parts.push(`- 早期关键决策：${listed}`);
+  }
+
+  if (parts.length === 0) return "";
+  return `\n## 跨轮次记忆摘要（持久记住开头设定与伏笔，长局不丢）\n${parts.join("\n")}`;
+}
 
 /**
  * 组装游戏模式的系统提示词
@@ -288,6 +343,7 @@ export function buildGameSystemPrompt(ctx: GameSessionContext): string {
     .replace("{progressPercent}", String(progressPercent))
     .replace("{plotProgress}", String(ctx.plotProgress))
     .replace("{itemsSection}", itemsSection)
+    .replace("{memorySection}", buildMemorySummary(ctx))
     .replace("{historySection}", historySection);
 }
 

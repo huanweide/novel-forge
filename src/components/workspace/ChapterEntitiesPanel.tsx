@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { getEntityMap, findEntitiesInText, getCategoryColor } from "@/core/entity-highlighter";
+import { getEntityMap, findEntitiesInText, getCategoryColor, CHARACTER_COLOR, LORE_COLORS } from "@/core/entity-highlighter";
 import { Icon } from "@/components/ui/icons";
 import type { EntityHighlight, EntityMatch } from "@/core/entity-highlighter";
 
@@ -26,16 +26,16 @@ interface EntityGroup {
 
 function buildGroups(matches: EntityMatch[]): EntityGroup[] {
   const groupDefs: Array<{ key: string; label: string; icon: React.ReactNode; color: string; match: (m: EntityMatch) => boolean }> = [
-    { key: "character", label: "角色", icon: <Icon name="user" size={14} />, color: "#5B9BD5", match: (m) => m.type === "character" },
-    { key: "faction",   label: "势力", icon: <Icon name="building" size={14} />, color: "#70AD47", match: (m) => m.category === "faction" },
-    { key: "item",      label: "物品", icon: <Icon name="gem" size={14} />, color: "#D4A017", match: (m) => m.category === "item" },
-    { key: "geography", label: "地点", icon: <Icon name="map" size={14} />, color: "#C55A11", match: (m) => m.category === "geography" },
-    { key: "magic",     label: "世界观", icon: <Icon name="globe" size={14} />, color: "#9B59B6", match: (m) => m.category === "magic_system" },
-    { key: "technique", label: "功法", icon: <Icon name="sparkles" size={14} />, color: "#D64545", match: (m) => m.category === "technique" },
-    { key: "creature",  label: "生物", icon: <Icon name="sparkles" size={14} className="text-[var(--nv-creative)]" />, color: "#C77D9F", match: (m) => m.category === "creature" },
-    { key: "culture",   label: "文化", icon: <Icon name="palette" size={14} />, color: "#5DA89B", match: (m) => m.category === "culture" },
-    { key: "history",   label: "历史", icon: <Icon name="scroll" size={14} />, color: "#7B8CC4", match: (m) => m.category === "history" },
-    { key: "other",     label: "其他", icon: <Icon name="package" size={14} />, color: "#8B8B8B", match: () => true },
+    { key: "character", label: "角色", icon: <Icon name="user" size={14} />, color: CHARACTER_COLOR, match: (m) => m.type === "character" },
+    { key: "faction",   label: "势力", icon: <Icon name="building" size={14} />, color: LORE_COLORS.faction, match: (m) => m.category === "faction" },
+    { key: "item",      label: "物品", icon: <Icon name="gem" size={14} />, color: LORE_COLORS.item, match: (m) => m.category === "item" },
+    { key: "geography", label: "地点", icon: <Icon name="map" size={14} />, color: LORE_COLORS.geography, match: (m) => m.category === "geography" },
+    { key: "magic",     label: "世界观", icon: <Icon name="globe" size={14} />, color: LORE_COLORS.magic_system, match: (m) => m.category === "magic_system" },
+    { key: "technique", label: "功法", icon: <Icon name="sparkles" size={14} />, color: LORE_COLORS.technique, match: (m) => m.category === "technique" },
+    { key: "creature",  label: "生物", icon: <Icon name="sparkles" size={14} className="text-[var(--nv-creative)]" />, color: LORE_COLORS.creature, match: (m) => m.category === "creature" },
+    { key: "culture",   label: "文化", icon: <Icon name="palette" size={14} />, color: LORE_COLORS.culture, match: (m) => m.category === "culture" },
+    { key: "history",   label: "历史", icon: <Icon name="scroll" size={14} />, color: LORE_COLORS.history, match: (m) => m.category === "history" },
+    { key: "other",     label: "其他", icon: <Icon name="package" size={14} />, color: LORE_COLORS.custom, match: () => true },
   ];
 
   const groups: EntityGroup[] = [];

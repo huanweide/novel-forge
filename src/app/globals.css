@@ -108,7 +108,7 @@
   --nv-text-primary:   #F8F7F2;   /* L1 主文字——近白，对比度 17:1 */
   --nv-text-secondary: #B9B7AD;   /* L2 辅文字——亮灰，对比度 7:1 */
   --nv-text-tertiary:  #98968C;   /* L3 弱文字——中灰，对比度 5.2:1（达 WCAG AA） */
-  --nv-text-muted:     #75736B;   /* L4 禁用/占位文字——灰，对比度 3.6:1（占位可读） */
+  --nv-text-muted:     #83807A;   /* L4 禁用/占位文字——灰，对比度 4.7:1（提亮至达 WCAG AA 4.5:1） */
 
   /* ── 字体栈（Next.js Google Fonts CSS变量 → 中文系统字体 fallback） ── */
   --font-sans:       var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
@@ -279,7 +279,7 @@
   --nv-text-primary:   #1A1C22;
   --nv-text-secondary: #4A4D57;
   --nv-text-tertiary:  #6B6E78;
-  --nv-text-muted:     #9A9DA6;
+  --nv-text-muted:     #696C75;   /* 浅色主题：对比度 4.6:1，达 WCAG AA */
 
   --shadow-glow-indigo:   0 0 16px oklch(0.55 0.17 270 / 0.15);
   --shadow-glow-success:  0 0 16px oklch(0.55 0.16 160 / 0.15);
@@ -1189,7 +1189,7 @@ html.azure {
   --nv-text-primary:   #E9F2F0;
   --nv-text-secondary: #9FB6B2;
   --nv-text-tertiary:  #7C918D;
-  --nv-text-muted:     #5A6F6C;
+  --nv-text-muted:     #6A807C;   /* 苍青主题：对比度 4.8:1，达 WCAG AA */
 
   --background: #04090C;
   --foreground: #E9F2F0;

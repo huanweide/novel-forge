@@ -8,6 +8,25 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_PENDING_CONFIRM } from "@/core/story-status";
+import { computeAutoRate } from "@/core/auto-rate";
+
+// IMP-020：监控全月聚合（aggregate + groupBy）开销大，而结果仅随 projectId / 当月窗口变化，
+// 与切章时的 nodeId 无关。做 30s 内存缓存，避免每次切章重跑全月 groupBy（byProject 分支此前白算）。
+const MONITOR_CACHE_TTL_MS = 30_000;
+interface MonitorCacheEntry {
+  ts: number;
+  llmUsage: unknown;
+  projectLlm: unknown;
+}
+const monitorCache = new Map<string, MonitorCacheEntry>();
+function getCachedMonitor(projectId: string): MonitorCacheEntry | null {
+  const hit = monitorCache.get(projectId);
+  if (hit && Date.now() - hit.ts < MONITOR_CACHE_TTL_MS) return hit;
+  return null;
+}
+function setCachedMonitor(projectId: string, llmUsage: unknown, projectLlm: unknown): void {
+  monitorCache.set(projectId, { ts: Date.now(), llmUsage, projectLlm });
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -37,14 +56,8 @@ export async function GET(request: Request) {
     const confirmedChapters = chapters.filter((n) => n.status === STATUS_CONFIRMED).length;
     const totalChapters = chapters.length;
 
-    // 自动放行率：已确认章中由智能审阅（auto-confirm）自动审定的数量
-    const autoConfirmedChapters = chapters.filter(
-      (n) =>
-        n.status === STATUS_CONFIRMED &&
-        Array.isArray((n as any).reviewLogs) &&
-        (n as any).reviewLogs.some((l: any) => l && l.action === "auto-confirm"),
-    ).length;
-    const autoRate = confirmedChapters > 0 ? Math.round((autoConfirmedChapters / confirmedChapters) * 100) : 0;
+    // 自动放行率：已确认章中由智能审阅（auto-confirm）自动审定的数量（纯函数，便于单测）
+    const { autoConfirmed: autoConfirmedChapters, autoRate } = computeAutoRate(chapters);
 
     // 当前章节
     let currentNode: typeof nodes[0] | null = null;
@@ -92,34 +105,38 @@ export async function GET(request: Request) {
     const usageMonthStart = new Date();
     usageMonthStart.setDate(1);
     usageMonthStart.setHours(0, 0, 0, 0);
-    const [llmAgg, llmByModel] = await Promise.all([
-      prisma.llmCallLog.aggregate({
-        where: { createdAt: { gte: usageMonthStart } },
-        _sum: { promptTokens: true, completionTokens: true, totalTokens: true, estimatedCost: true },
-        _count: true,
-      }),
-      prisma.llmCallLog.groupBy({
-        by: ["model"],
-        where: { createdAt: { gte: usageMonthStart } },
-        _sum: { totalTokens: true, estimatedCost: true },
-        _count: true,
-        orderBy: { _sum: { totalTokens: "desc" } },
-      }),
-    ]);
-    const llmUsage = {
-      since: usageMonthStart.toISOString().slice(0, 10),
-      totalCalls: llmAgg._count,
-      totalPromptTokens: llmAgg._sum.promptTokens || 0,
-      totalCompletionTokens: llmAgg._sum.completionTokens || 0,
-      totalTokens: llmAgg._sum.totalTokens || 0,
-      totalCost: llmAgg._sum.estimatedCost || 0,
-      byModel: llmByModel.map((g: { model: string; _count: number; _sum: { totalTokens?: number | null; estimatedCost?: number | null } }) => ({
-        model: g.model,
-        calls: g._count,
-        tokens: g._sum.totalTokens || 0,
-        cost: g._sum.estimatedCost || 0,
-      })),
-    };
+    // IMP-020：全月 LLM 聚合与 projectId 分组聚合开销大，切章（改 nodeId）不改变结果，
+    // 故按 projectId 做 30s 缓存；命中则跳过下面两次 groupBy，避免重复全月重聚合。
+    const cachedMonitor = getCachedMonitor(projectId);
+    const { llmUsage, projectLlm } = cachedMonitor ?? await (async () => {
+      const [llmAgg, llmByModel] = await Promise.all([
+        prisma.llmCallLog.aggregate({
+          where: { createdAt: { gte: usageMonthStart } },
+          _sum: { promptTokens: true, completionTokens: true, totalTokens: true, estimatedCost: true },
+          _count: true,
+        }),
+        prisma.llmCallLog.groupBy({
+          by: ["model"],
+          where: { createdAt: { gte: usageMonthStart } },
+          _sum: { totalTokens: true, estimatedCost: true },
+          _count: true,
+          orderBy: { _sum: { totalTokens: "desc" } },
+        }),
+      ]);
+      const llmUsage = {
+        since: usageMonthStart.toISOString().slice(0, 10),
+        totalCalls: llmAgg._count,
+        totalPromptTokens: llmAgg._sum.promptTokens || 0,
+        totalCompletionTokens: llmAgg._sum.completionTokens || 0,
+        totalTokens: llmAgg._sum.totalTokens || 0,
+        totalCost: llmAgg._sum.estimatedCost || 0,
+        byModel: llmByModel.map((g: { model: string; _count: number; _sum: { totalTokens?: number | null; estimatedCost?: number | null } }) => ({
+          model: g.model,
+          calls: g._count,
+          tokens: g._sum.totalTokens || 0,
+          cost: g._sum.estimatedCost || 0,
+        })),
+      };
 
     // P_a/P_c：按 projectId 分组聚合（本月）——使监测面板可展示「当前项目」与「全局」两档 token/费用。
     // 复用既有 llmCallLog（填表路径现也已带 projectId 落库），按 projectId 分组求和 estimatedCost。
@@ -151,6 +168,9 @@ export async function GET(request: Request) {
         cost: g._sum.estimatedCost || 0,
       })),
     };
+      setCachedMonitor(projectId, llmUsage, projectLlm);
+      return { llmUsage, projectLlm };
+    })();
 
     return NextResponse.json({
       totalWords,

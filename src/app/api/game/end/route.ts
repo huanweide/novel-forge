@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       totalWords: result.totalWords,
       status: result.status,
       autoConfirmed: result.autoConfirmed,
+      autoFilled: result.autoFilled,
       qualityScore: result.qualityScore,
     });
   } catch (err: any) {

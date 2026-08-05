@@ -136,7 +136,7 @@ export function LeftPanel({
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
         {activeTab === "world" && (
-          <WorldPanel projectId={project.id} entries={project.lorebookEntries ?? []} onRefresh={loadProject} />
+          <WorldPanel projectId={project.id} entries={project.lorebookEntries ?? []} onRefresh={loadProject} onEditEntry={onEditLore} />
         )}
         {activeTab === "rules" && (
           <RulesPanel projectId={project.id} onRefresh={loadProject} />

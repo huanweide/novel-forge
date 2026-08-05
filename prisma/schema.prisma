@@ -355,6 +355,9 @@ model GameSession {
   totalWords   Int      @default(0)
   maxWords     Int      @default(3000)     // 单章游戏模式字数上限
   plotProgress Int      @default(0)        // 情节进度 0-100
+  // IMP-001 快照：作者进入游戏前一刻的写作原正文（不含任何游戏导出轮次）。
+  // 跨 resetGameSession 持续复用，避免二次「结束并导出」把上一次导出的全量内容当成原正文再次前置堆叠。
+  originalContentSnapshot String @default("")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

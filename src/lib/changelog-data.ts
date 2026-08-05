@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.0.0";
+export const LATEST_VERSION = "v1.0.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "🎉 v1.0.0 正式版发布：确认流程体系（护栏/幂等/审校/溯源/日志/状态枚举）与体验减法全部收敛，全功能真机验证通过",
-  "全链路检验全绿：tsc 零错误 + 203 单元测试 + 8 个真机验证脚本（确认体系 4 + 游戏全链路 + 护栏盲测 + 用户旅程 9/9）",
-  "正式版用户旅程验证：真实 LLM 写章 → 自动定稿 → 整本交付 → 全流程 API 级可用（scripts/agent-release-journey.cjs）",
-  "自 v0.46.95 起的 Max Loop 9 轮迭代全部收口：从功能可用到规则可信、操作幂等、门禁真实、代码干净",
+  "v1.0.1 复检修复：导出文件名乱码（默认 markdown/txt 分支补 filename*=）、延迟监控面板全站红误导（改用 useParams 透传 projectId）、游戏复导出正文堆叠损坏（原正文快照防叠加）",
+  "MaxLoop 阶段五复检循环：6 透镜复检上轮 23 条修复真生效，诚实暴露 2 条 P1 假收敛并已补修，新挖 1 条游戏 P1 已修",
+  "门禁全绿：tsc 零错误 + 211 单元测试（较 v1.0.0 增 8 例监控/确认单测）；新增游戏复导出堆叠真机验证脚本",
+  "防假收敛机制生效：复检不靠「没发现」判断「没问题」，所有修复以 diff/测试/真机脚本证据确证",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.0.1",
+    date: "2026-08-06",
+    title: "复检修复版（v1.0.1）——导出文件名乱码、监控全站红误导、游戏复导出堆叠三项 P1 修复",
+    sections: [
+      {
+        label: "复检修复（MaxLoop 阶段五）",
+        items: [
+          "导出文件名乱码：markdown/txt 默认分支 Content-Disposition 补 filename*=UTF-8''（此前仅 HTML/EPUB/DOCX 三处，默认分支漏修致中文名乱码），现 4 分支一致",
+          "延迟监控全站红误导：GenerationLatencyPanel 改用 useParams 从 [projectId] 路由段取 id，替代旧正则（要求尾斜杠、Next.js 默认无尾斜杠→匹配失败→全站红），修复后仅显示本项目真实延迟",
+          "游戏复导出正文堆叠损坏：endGameAndExport 改用原正文快照（进入游戏前拍 originalContentSnapshot 存会话）作前置，多次导出不再把上次全量当原正文叠加；新增 schema 列 + 真机验证脚本",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc --noEmit 零错误；全量 211 单元测试（较 v1.0.0 增 8 例：generation-metrics/route、auto-rate、confirm-guard 扩充、监控单测）全绿",
+          "新增 agent-game-reexport-stack-verify.cjs 真机脚本：复现并断言复导出不堆叠（C1 前置 C0、C2 不以 C1 开头、C2 仍以 C0 前置）",
+          "防假收敛：6 透镜复检子 Agent 复验上轮 23 条修复，诚实暴露 2 条 P1 假收敛（导出/监控）+ 新挖 1 条游戏 P1，全部已修并亲验门禁",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.0.0",
     date: "2026-08-05",

@@ -112,17 +112,34 @@ export async function applyConfirm(node: {
 
   let fillMsg = "（无正文，跳过填表）";
   if (node.content && node.content.length > 0) {
+    // IMP-002：用「node.order === 项目最大 order」判定是否最新章，使 skipLatestChapter 生效，
+    // 不再硬编码 false 导致「跳过最近一章」永远不生效。与 confirm/batch 路径算法一致。
+    let isLatestChapter = false;
     try {
-      await safeFillAfterWriting({
+      const agg = await prisma.storyNode.aggregate({
+        where: { projectId: node.projectId },
+        _max: { order: true },
+      });
+      isLatestChapter = node.order === (agg._max.order ?? node.order);
+    } catch {
+      /* 聚合失败则按非最新处理（保守：不跳过，仍可能填表） */
+    }
+    try {
+      const fillRes = await safeFillAfterWriting({
         projectId: node.projectId,
         content: node.content,
         send: undefined,
         nodeOrder: node.order,
-        isLatestChapter: false,
+        isLatestChapter,
         nodeId: node.id,
         source: "auto-confirm",
       });
-      fillMsg = "自动填表已执行";
+      // IMP-004：依据真实返回值决定文案，而非无条件声称「已执行」
+      if (fillRes.ok && fillRes.applied > 0) {
+        fillMsg = "自动填表已执行";
+      } else {
+        fillMsg = `未触发自动填表（${fillRes.error || "无事实可填"}）`;
+      }
     } catch (e) {
       fillMsg = `自动填表失败（不影响确认）: ${e instanceof Error ? e.message : "未知"}`;
     }

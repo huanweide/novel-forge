@@ -192,11 +192,18 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
           // M1（墨白 Round12）：透传 data.currentNode.order/nodeId，使写入行 _src 形如 ch{n}:batchmanual（章节段非空），与 write 路径一致。
+          // IMP-002 扩充：补算 isLatestChapter 使 skipLatestChapter 在 refine 路径生效（与 confirm/batch 算法一致）。
+          let refineIsLatest = false;
+          try {
+            const agg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
+            refineIsLatest = data.currentNode.order === (agg._max.order ?? data.currentNode.order);
+          } catch { /* 聚合失败按非最新，保守填表 */ }
           const babylore = await safeFillAfterWriting({
             projectId,
             content: newContent,
             send,
             nodeOrder: data.currentNode.order,
+            isLatestChapter: refineIsLatest,
             nodeId,
             projectLlmConfig: projLlm as Record<string, unknown> | null,
           });

@@ -32,7 +32,7 @@ import { MemoryDecayDialog } from "@/components/workspace/MemoryDecayDialog";
 import { ProjectConfigPanel } from "@/components/workspace/ProjectConfigPanel";
 import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
-import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo, toastWarning } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { useShortcut } from "@/components/ShortcutProvider";
@@ -653,6 +653,10 @@ export default function WorkspacePage() {
               onDone?.();
             }
             else if (event.type === "error") { setGenStep("error"); console.error("生成错误:", event.content); }
+            else if (event.type === "postprocess_skip") {
+              // IMP-023：后处理（摘要/审校）失败被静默降级时给出非阻塞提示，不阻塞正文交付主流程
+              toastWarning(`后处理（摘要/审校）已跳过：${event.content || "未知原因"}。正文已生成并保存，可稍后手动重试。`);
+            }
           } catch { /* 忽略解析失败 */ }
         }
       }
@@ -774,6 +778,23 @@ export default function WorkspacePage() {
     const progress = new Map<string, { status: string; error?: string }>();
     ids.forEach((id) => progress.set(id, { status: "pending" }));
     setBatchProgress(new Map(progress));
+
+    // IMP-024：批量生成复用单章角色卡调度逻辑——带当前抽中卡 + 上次 PreGen 确认的角色/新角色约束，
+    // 避免批量章不带角色约束导致质量不一致（与 :666 handleWriteConfirmed 同源）。
+    const pregenPersisted = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(`pregen-conf-${project.id}`) || "{}") as {
+          selected?: string[];
+          newChars?: string[];
+        };
+      } catch {
+        return {};
+      }
+    })();
+    const batchConfirmedCardIds =
+      drawSelectedCharIds.length > 0 ? drawSelectedCharIds : pregenPersisted.selected ?? [];
+    const batchNewChars = pregenPersisted.newChars ?? [];
+
     for (const nodeId of ids) {
       if (batchAbort) break;
       const node = project.storyNodes.find((n) => n.id === nodeId);
@@ -781,7 +802,7 @@ export default function WorkspacePage() {
       progress.set(nodeId, { status: "generating" }); setBatchProgress(new Map(progress));
       try {
         const controller = new AbortController();
-        const res = await fetch("/api/generate/write", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId, authorNote: authorNote || undefined, targetWordCount }), signal: controller.signal });
+        const res = await fetch("/api/generate/write", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId, authorNote: authorNote || undefined, targetWordCount, confirmedCardIds: batchConfirmedCardIds, cardNotes: {}, newCharacterRequests: batchNewChars }), signal: controller.signal });
         if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); progress.set(nodeId, { status: "failed", error: err.error || `HTTP ${res.status}` }); setBatchProgress(new Map(progress)); continue; }
         const reader = res.body?.getReader();
         if (!reader) { progress.set(nodeId, { status: "failed", error: "无法获取响应流" }); setBatchProgress(new Map(progress)); continue; }

@@ -2,6 +2,14 @@
 
 ---
 
+## v1.0.1 — 2026-08-06
+**复检修复版：导出文件名乱码、监控全站红误导、游戏复导出堆叠三项 P1 修复（MaxLoop 阶段五复检循环）**
+
+- 导出文件名乱码：markdown/txt 默认分支 Content-Disposition 补 `filename*=UTF-8''`（此前仅 HTML/EPUB/DOCX 三处，默认分支漏修致中文名乱码），现 4 分支一致，浏览器正确解码中文名
+- 延迟监控全站红误导：GenerationLatencyPanel 改用 `useParams()` 从 `[projectId]` 路由段取 id，替代旧正则（要求尾斜杠、Next.js 默认无尾斜杠→匹配失败→全站红误导），修复后仅显示本项目真实延迟
+- 游戏复导出正文堆叠损坏：endGameAndExport 改用原正文快照（进入游戏前拍 `originalContentSnapshot` 存会话）作前置，多次导出不再把上次全量当原正文叠加；新增 schema 列 + 真机验证脚本 `agent-game-reexport-stack-verify.cjs`
+- 质量门禁：tsc 零错误 + 211 单元测试（较 v1.0.0 增 8 例监控/确认单测）全绿；防假收敛机制生效（6 透镜复检暴露 2 条 P1 假收敛 + 1 条游戏 P1 并全修）
+
 ## v1.0.0 — 2026-08-05
 **🎉 正式版发布：Max Loop 全量收口，全功能确认与真机验证通过**
 

@@ -241,11 +241,18 @@ ${lastParagraphs}
 
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
           // M1（墨白 Round12）：透传 nextNode.order/nodeId，使写入行 _src 形如 ch{n}:batchmanual（章节段非空），与 write 路径一致。
+          // IMP-002 扩充：补算 isLatestChapter 使 skipLatestChapter 在 continue 路径生效（与 confirm/batch 算法一致）。
+          let contIsLatest = false;
+          try {
+            const agg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
+            contIsLatest = (nextNode as any).order === (agg._max.order ?? (nextNode as any).order);
+          } catch { /* 聚合失败按非最新，保守填表 */ }
           const babylore = await safeFillAfterWriting({
             projectId,
             content: fullContent,
             send,
             nodeOrder: (nextNode as any).order,
+            isLatestChapter: contIsLatest,
             nodeId: nextNode.id,
             projectLlmConfig: projLlm as Record<string, unknown> | null,
           });

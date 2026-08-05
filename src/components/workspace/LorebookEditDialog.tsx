@@ -115,6 +115,10 @@ export function LorebookEditDialog({
             <option value="culture">文化/风俗</option>
             <option value="creature">生物/种族</option>
             <option value="item">关键物品</option>
+            <option value="technique">功法体系</option>
+            <option value="law">法则/规则</option>
+            <option value="currency">货币/经济</option>
+            <option value="character_relationship">角色关系</option>
             <option value="custom">自定义</option>
           </select>
         </DialogField>

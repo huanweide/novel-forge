@@ -8,15 +8,26 @@ interface WorldEntryCardProps {
   depthLabels: Record<number, string>;
   onDelete: (id: string) => void;
   deleting: boolean;
+  /** 编辑回调：传入完整条目，由父级复用 LorebookEditDialog 打开弹窗 */
+  onEdit?: (entry: LorebookData) => void;
 }
 
-export function WorldEntryCard({ entry, depthLabels, onDelete, deleting }: WorldEntryCardProps) {
+export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit }: WorldEntryCardProps) {
   return (
     <div
       className="group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]"
     >
       <div className="flex items-start justify-between">
         <span className="truncate text-xs font-medium leading-tight text-[var(--nv-text-primary)]">{entry.title}</span>
+        <button
+          onClick={() => onEdit?.(entry)}
+          disabled={deleting}
+          className="ml-1 shrink-0 text-[var(--nv-text-muted)] opacity-0 transition-all hover:text-[var(--nv-accent)] group-hover:opacity-100 disabled:opacity-40"
+          aria-label="编辑条目"
+          title="编辑条目"
+        >
+          <Icon name="pencil" size={12} />
+        </button>
         <button
           onClick={() => onDelete(entry.id)}
           disabled={deleting}

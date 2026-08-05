@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { Icon } from "@/components/ui/icons";
 
 interface Stat {
@@ -75,11 +76,19 @@ export function GenerationLatencyPanel() {
   const [data, setData] = useState<MetricsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // IMP-019 修复：从路由参数（useParams）提取当前 projectId 透传给指标接口，
+  // 避免未传 projectId 时查询全站数据、导致每个项目都显示全站红告警误导用户。
+  // 原实现用 window.location.pathname 正则 /workspace\/([^/]+)/ 强制要求尾斜杠，
+  // 而 Next.js 默认 /workspace/<id> 无尾斜杠，导致匹配失败、projectId=undefined、
+  // fetch 回退全站聚合返回全局红。改用 useParams 直接从路由段取 projectId，
+  // 在 /workspace/[projectId] 路由树下必能稳定取到（不依赖 URL 字符串形态）。
+  const params = useParams<{ projectId: string }>();
+  const projectId = params?.projectId;
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetch("/api/generation-metrics")
+    fetch(`/api/generation-metrics${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`)
       .then((r) => r.json())
       .then((d: MetricsPayload) => {
         if (!alive) return;
@@ -98,7 +107,7 @@ export function GenerationLatencyPanel() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [projectId]);
 
   return (
     <section className="border-b border-[var(--nv-border-2)] px-4 py-3">

@@ -665,6 +665,22 @@ toolRegistry.register({
   },
 });
 
+// IMP-009：从伏笔描述抽取候选闭环关键词（连续中文片段 ≥2 字），供 detectPayoffs 的
+// closureConditions 精准命中使用，避免 closureConditions 恒为 [] 导致检测退化。
+function deriveClosureConditions(description: string): string[] {
+  if (!description) return [];
+  const segments = description.match(/[一-鿿]{2,}/g) || [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of segments) {
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 8) break; // 限度数，避免噪声
+  }
+  return out;
+}
+
 toolRegistry.register({
   schema: {
     name: "foreshadowing_create",
@@ -687,7 +703,7 @@ toolRegistry.register({
       data: {
         projectId: ctx.projectId,
         source: "user_intent", priority: (args.priority as string) || "medium",
-        description, entityIds, closureConditions: [],
+        description, entityIds, closureConditions: deriveClosureConditions(description),
         status: "pending", fulfillmentRatio: 0, statusHistory: [],
         partiallyFulfilledIds: [],
       },

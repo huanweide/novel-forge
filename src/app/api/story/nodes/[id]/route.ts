@@ -167,17 +167,33 @@ export async function PATCH(
         // 确认副作用：触发自动填表（回填结构化表格 / 记忆）—— 这是 confirm 的副作用，而非 write 的副作用
         let fillMsg = "（无正文，跳过填表）";
         if (node.content && node.content.length > 0) {
+          // IMP-002：用「node.order === 项目最大 order」判定最新章，使 skipLatestChapter 生效
+          let isLatestChapter = false;
           try {
-            await safeFillAfterWriting({
+            const agg = await prisma.storyNode.aggregate({
+              where: { projectId: node.projectId },
+              _max: { order: true },
+            });
+            isLatestChapter = node.order === (agg._max.order ?? node.order);
+          } catch {
+            /* 聚合失败则按非最新处理（保守：不跳过，仍可能填表） */
+          }
+          try {
+            const fillRes = await safeFillAfterWriting({
               projectId: node.projectId,
               content: node.content,
               send: undefined,
               nodeOrder: node.order,
-              isLatestChapter: false,
+              isLatestChapter,
               nodeId: node.id,
               source: "manual",
             });
-            fillMsg = "自动填表已执行";
+            // IMP-004：依据真实返回值决定文案，而非无条件声称「已执行」
+            if (fillRes.ok && fillRes.applied > 0) {
+              fillMsg = "自动填表已执行";
+            } else {
+              fillMsg = `未触发自动填表（${fillRes.error || "无事实可填"}）`;
+            }
           } catch (e) {
             fillMsg = `自动填表失败（不影响确认）: ${e instanceof Error ? e.message : "未知"}`;
           }
@@ -194,6 +210,17 @@ export async function PATCH(
         });
         if (upd.count === 0) {
           return NextResponse.json({ error: "节点状态已变化，未重复确认" }, { status: 409 });
+        }
+        // IMP-007：确认通过后异步触发伏笔收束率检测（fire-and-forget，不阻塞确认响应；失败静默吞掉）
+        try {
+          const base = new URL(request.url).origin;
+          void fetch(`${base}/api/foreshadowing/detect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId: node.projectId }),
+          }).catch(() => {});
+        } catch {
+          /* 构造 URL 失败则跳过，不影响确认 */
         }
         const fresh = await prisma.storyNode.findUnique({ where: { id } });
         return NextResponse.json(fresh);

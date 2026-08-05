@@ -32,7 +32,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <script
           dangerouslySetInnerHTML={{
@@ -63,6 +63,11 @@ if('serviceWorker' in navigator){
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <noscript>
+          <div style={{ padding: "1.5rem", textAlign: "center", color: "#F8F7F2", background: "#0E1424", fontFamily: "system-ui, sans-serif" }}>
+            本应用需要启用 JavaScript 才能运行。请在现代浏览器中开启 JavaScript 后访问 Novel Forge。
+          </div>
+        </noscript>
         <SystemStatusBanner />
         <ToastProvider>
           <ShortcutProvider>{children}</ShortcutProvider>

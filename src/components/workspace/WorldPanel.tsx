@@ -15,9 +15,10 @@ import {
 // ─── 组件 ──────────────────────────────────────────────────
 
 export function WorldPanel({
-  projectId, entries = [], onRefresh,
+  projectId, entries = [], onRefresh, onEditEntry,
 }: {
   projectId: string; entries?: LorebookData[]; onRefresh: () => void;
+  onEditEntry?: (entry: LorebookData) => void;
 }) {
   const [activeModule, setActiveModule] = useState<ModuleKey>("geography");
   const [showCreate, setShowCreate] = useState(false);
@@ -130,6 +131,7 @@ export function WorldPanel({
           depthLabels={DEPTH_LABEL}
           onDelete={deleteEntry}
           deletingId={deletingId}
+          onEdit={onEditEntry}
         />
       </div>
     </div>

@@ -87,7 +87,7 @@ export async function GET(
       return new Response(htmlDoc, {
         headers: {
           "Content-Type": "text/html; charset=utf-8",
-          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
         },
       });
     }
@@ -101,7 +101,7 @@ export async function GET(
       return new Response(epubBlob, {
         headers: {
           "Content-Type": "application/epub+zip",
-          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
         },
       });
     }
@@ -114,7 +114,7 @@ export async function GET(
       return new Response(new Uint8Array(docxBuf), {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
         },
       });
     }
@@ -163,7 +163,7 @@ export async function GET(
     return new Response(output, {
       headers: {
         "Content-Type": format === "markdown" ? "text/markdown" : "text/plain",
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       },
     });
   } catch (err) {
@@ -172,7 +172,13 @@ export async function GET(
 }
 
 function slugify(title: string): string {
-  return encodeURIComponent(title.toLowerCase().replace(/\s+/g, "-"));
+  // IMP-026：固定 slug 规则（小写、空白转连字符、保留 CJK/字母数字、去标点），
+  // 与正文标题前注入的 <a id> 锚点使用同一算法，确保严格渲染器目录可跳转。
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}_-]/gu, "");
 }
 
 function buildMarkdownNode(
@@ -184,7 +190,8 @@ function buildMarkdownNode(
   const prefix = "#".repeat(Math.min(depth + 1, 6));
   let result = "";
 
-  result += `${prefix} ${node.title}\n\n`;
+  const slug = slugify(node.title);
+  result += `${prefix} <a id="${slug}"></a>${node.title}\n\n`;
 
   if (includeOutline && node.outline) {
     result += `> *大纲：${node.outline}*\n\n`;

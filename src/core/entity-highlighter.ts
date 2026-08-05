@@ -100,6 +100,9 @@ export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHig
 const cache = new Map<string, { map: Map<string, EntityHighlight>; ts: number }>();
 const CACHE_TTL = 60_000; // 1 分钟
 
+// IMP-012：最近一次成功获取的实体映射，API 连续失败时降级复用，避免正文静默失色
+const lastGoodMap = new Map<string, Map<string, EntityHighlight>>();
+
 /**
  * 通过 API 获取项目的实体高亮映射表。
  * 浏览器端调用，1 分钟内存缓存。
@@ -110,16 +113,42 @@ export async function getEntityMap(projectId: string): Promise<Map<string, Entit
     return cached.map;
   }
 
-  const res = await fetch(`/api/entities/highlight?projectId=${encodeURIComponent(projectId)}`);
-  if (!res.ok) {
-    console.error("实体高亮 API 失败:", res.status);
-    return new Map();
+  // IMP-012：封装单次获取，失败时 console.warn 并返回 null（不再静默吞错）
+  const fetchOnce = async (): Promise<Map<string, EntityHighlight> | null> => {
+    try {
+      const res = await fetch(`/api/entities/highlight?projectId=${encodeURIComponent(projectId)}`);
+      if (!res.ok) {
+        console.warn("实体高亮 API 失败:", res.status);
+        return null;
+      }
+      const json = await res.json();
+      return buildEntityMapFromData(json.entities || []);
+    } catch (err) {
+      console.warn("实体高亮 API 异常:", err instanceof Error ? err.message : String(err));
+      return null;
+    }
+  };
+
+  let map = await fetchOnce();
+  if (!map) {
+    // 失败重试一次
+    map = await fetchOnce();
   }
 
-  const json = await res.json();
-  const map = buildEntityMapFromData(json.entities || []);
-  cache.set(projectId, { map, ts: Date.now() });
-  return map;
+  if (map) {
+    cache.set(projectId, { map, ts: Date.now() });
+    lastGoodMap.set(projectId, map);
+    return map;
+  }
+
+  // 两次均失败：降级返回上次的可用映射（仍写入缓存避免短时间反复打 API）
+  const fallback = lastGoodMap.get(projectId);
+  if (fallback) {
+    console.warn("实体高亮 API 连续失败，降级使用上次缓存的映射");
+    cache.set(projectId, { map: fallback, ts: Date.now() });
+    return fallback;
+  }
+  return new Map();
 }
 
 export function invalidateEntityCache(projectId: string) {
