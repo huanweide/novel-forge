@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { evaluateConfirmEligibility } from "@/core/confirm-guard";
+import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 
 /**
  * POST /api/story/nodes/batch-confirm
@@ -42,11 +43,11 @@ export async function POST(request: Request) {
         skipped.push({ id, title: "(未知)", reason: "节点不存在" });
         continue;
       }
-      if (node.status !== "pending_confirm") {
+      if (node.status !== STATUS_PENDING_CONFIRM) {
         skipped.push({
           id: node.id,
           title: node.title,
-          reason: node.status === "confirmed" ? "已确认" : `状态为 ${node.status}，非待确认`,
+          reason: node.status === STATUS_CONFIRMED ? "已确认" : `状态为 ${node.status}，非待确认`,
         });
         continue;
       }
@@ -81,9 +82,9 @@ export async function POST(request: Request) {
       }
       // 幂等：条件更新（仅 pending_confirm 才终态），并发/重复确认不重复计数/追加（Max Loop Round2）
       const upd = await prisma.storyNode.updateMany({
-        where: { id: node.id, status: "pending_confirm" },
+        where: { id: node.id, status: STATUS_PENDING_CONFIRM },
         data: {
-          status: "confirmed",
+          status: STATUS_CONFIRMED,
           confirmedAt: now,
           revisionCount: { increment: 1 },
           reviewLogs: [...prevLogs, { action: "confirm", fill: fillMsg, at: now.toISOString(), batch: true }],

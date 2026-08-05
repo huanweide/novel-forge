@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { snapshotRevision } from "@/lib/versions";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
+import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 
 // GET /api/story/nodes/[id]
 export async function GET(
@@ -149,14 +150,14 @@ export async function PATCH(
 
     switch (action) {
       case "submit": {
-        if (node.status !== "completed" && node.status !== "drafting") {
+        if (node.status !== STATUS_COMPLETED && node.status !== STATUS_DRAFTING) {
           return NextResponse.json({ error: `当前状态(${node.status})不可提交确认` }, { status: 409 });
         }
-        data = { status: "pending_confirm", reviewLogs: pushLog({ action: "submit" }) };
+        data = { status: STATUS_PENDING_CONFIRM, reviewLogs: pushLog({ action: "submit" }) };
         break;
       }
       case "confirm": {
-        if (node.status !== "pending_confirm") {
+        if (node.status !== STATUS_PENDING_CONFIRM) {
           return NextResponse.json({ error: `当前状态(${node.status})不可确认通过` }, { status: 409 });
         }
         // 人工确认护栏（与 guard 空正文/过短拦截对齐）：防止误点放行废章（Max Loop 审查 P3）
@@ -183,9 +184,9 @@ export async function PATCH(
         }
         // 幂等：条件更新（仅 pending_confirm 才终态），重复/并发点击不重复计数/追加（Max Loop 审查 P7）
         const upd = await prisma.storyNode.updateMany({
-          where: { id, status: "pending_confirm" },
+          where: { id, status: STATUS_PENDING_CONFIRM },
           data: {
-            status: "confirmed",
+            status: STATUS_CONFIRMED,
             confirmedAt: now,
             revisionCount: { increment: 1 },
             reviewLogs: pushLog({ action: "confirm", fill: fillMsg }),
@@ -198,12 +199,12 @@ export async function PATCH(
         return NextResponse.json(fresh);
       }
       case "reject": {
-        if (node.status !== "pending_confirm") {
+        if (node.status !== STATUS_PENDING_CONFIRM) {
           return NextResponse.json({ error: `当前状态(${node.status})不可打回` }, { status: 409 });
         }
         const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : "（未填写理由）";
         data = {
-          status: "completed",
+          status: STATUS_COMPLETED,
           revisionCount: { increment: 1 },
           reviewLogs: pushLog({ action: "reject", reason }),
         };
@@ -212,10 +213,10 @@ export async function PATCH(
         break;
       }
       case "reopen": {
-        if (node.status !== "confirmed") {
+        if (node.status !== STATUS_CONFIRMED) {
           return NextResponse.json({ error: `当前状态(${node.status})不可重开` }, { status: 409 });
         }
-        data = { status: "completed", confirmedAt: null, reviewLogs: pushLog({ action: "reopen" }) };
+        data = { status: STATUS_COMPLETED, confirmedAt: null, reviewLogs: pushLog({ action: "reopen" }) };
         // 重开使整本回到未交付状态
         await prisma.project.updateMany({ where: { id: node.projectId, confirmedAt: { not: null } }, data: { confirmedAt: null } });
         break;

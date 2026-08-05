@@ -7,6 +7,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
+import { CONFIRMABLE_STATUSES, STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_OUTLINE_ONLY, STATUS_REVIEWING } from "@/core/story-status";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       nodes = await prisma.storyNode.findMany({ where: { id: { in: nodeIds } } });
     } else if (projectId) {
       nodes = await prisma.storyNode.findMany({
-        where: { projectId, status: { in: ["drafting", "pending_confirm"] } },
+        where: { projectId, status: { in: CONFIRMABLE_STATUSES } },
       });
     } else {
       return NextResponse.json({ error: "需提供 nodeIds 或 projectId" }, { status: 400 });
@@ -49,16 +50,16 @@ export async function POST(request: Request) {
     const skipped: { id: string; title: string; reason: string }[] = [];
 
     for (const node of nodes) {
-      if (node.status === "confirmed") {
+      if (node.status === STATUS_CONFIRMED) {
         skipped.push({ id: node.id, title: node.title, reason: "已确认" });
         continue;
       }
-      if (node.status === "completed" || node.status === "outline_only") {
+      if (node.status === STATUS_COMPLETED || node.status === STATUS_OUTLINE_ONLY) {
         skipped.push({ id: node.id, title: node.title, reason: `状态为 ${node.status}，非待确认` });
         continue;
       }
       // 遗留态 reviewing（v0.46.90 前审校中，不再写入新数据）：不自动处理，交人工（Max Loop Round5）
-      if (node.status === "reviewing") {
+      if (node.status === STATUS_REVIEWING) {
         skipped.push({ id: node.id, title: node.title, reason: "遗留态 reviewing，需人工处理" });
         continue;
       }

@@ -2,6 +2,7 @@
 // 单一质量阈值真相；批量确认 / 自动确认 / 流水线挂载三处复用，避免阈值分裂。
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { analyzeQuality } from "@/lib/quality-analyzer";
 import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
@@ -107,7 +108,7 @@ export async function applyConfirm(node: {
     where: { id: node.id },
     select: { reviewLogs: true },
   });
-  const prevLogs: any[] = Array.isArray(existing?.reviewLogs) ? existing.reviewLogs : [];
+  const prevLogs: Prisma.JsonArray = Array.isArray(existing?.reviewLogs) ? existing.reviewLogs : [];
 
   let fillMsg = "（无正文，跳过填表）";
   if (node.content && node.content.length > 0) {

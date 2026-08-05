@@ -17,5 +17,13 @@ export const STORY_NODE_STATUSES = [
 
 export type StoryNodeStatus = (typeof STORY_NODE_STATUSES)[number];
 
+// 单态常量（Max Loop Round9）：核心链路引用单一真相，取代散落字面量
+export const STATUS_OUTLINE_ONLY: StoryNodeStatus = "outline_only";
+export const STATUS_DRAFTING: StoryNodeStatus = "drafting";
+export const STATUS_PENDING_CONFIRM: StoryNodeStatus = "pending_confirm";
+export const STATUS_CONFIRMED: StoryNodeStatus = "confirmed";
+export const STATUS_COMPLETED: StoryNodeStatus = "completed";
+export const STATUS_REVIEWING: StoryNodeStatus = "reviewing";
+
 // 可被自动/批量确认处理的状态（applyConfirm 条件更新的 where 用）
-export const CONFIRMABLE_STATUSES: StoryNodeStatus[] = ["drafting", "pending_confirm"];
+export const CONFIRMABLE_STATUSES: StoryNodeStatus[] = [STATUS_DRAFTING, STATUS_PENDING_CONFIRM];

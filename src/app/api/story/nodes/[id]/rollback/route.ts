@@ -2,6 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { snapshotRevision } from "@/lib/versions";
+import { STATUS_COMPLETED } from "@/core/story-status";
 
 // POST /api/story/nodes/[id]/rollback  body: { revisionId }
 // 把节点正文回滚到指定版本，并把「回滚前」的当前正文先快照（保证回滚可逆）。
@@ -50,7 +51,7 @@ export async function POST(
       data: {
         content: revision.content,
         wordCount: revision.content.length,
-        status: "completed",
+        status: STATUS_COMPLETED,
       },
     });
 

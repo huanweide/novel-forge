@@ -16,6 +16,7 @@ import {
 import { buildRecallBlock } from "@/core/babylore/loop";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 import { applyRegexRules } from "@/core/post-process/regex";
+import { STATUS_COMPLETED, STATUS_DRAFTING } from "@/core/story-status";
 
 /**
  * POST /api/generate/write
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
 
           // 检查未完成草稿
           const partialDraft =
-            data.currentNode.status === "drafting" && data.currentNode.content
+            data.currentNode.status === STATUS_DRAFTING && data.currentNode.content
               ? data.currentNode.content.replace(/\[PARTIAL_DRAFT\]/g, "").trim()
               : "";
 
@@ -224,7 +225,7 @@ export async function POST(request: Request) {
                     where: { id: nodeId },
                     data: {
                       content: combined + "\n\n[PARTIAL_DRAFT]",
-                      status: "drafting",
+                      status: STATUS_DRAFTING,
                     },
                   })
                   .then(() => { saving = false; })
@@ -268,7 +269,7 @@ export async function POST(request: Request) {
           // Phase 2-4: 后处理管线（扫描 → 审校 → 摘要）
           // 容错：后处理（含 LLM 审校/摘要）若因限流/超时失败，不阻断正文交付——
           // 直接降级为"仅生成"，仍继续自动填表并发送 done。
-          let result: any = { nodeId, status: "completed" };
+          let result: any = { nodeId, status: STATUS_COMPLETED };
           try {
             result = await runPostGenerationPipeline({
               send,
@@ -305,7 +306,7 @@ export async function POST(request: Request) {
 
           // Token 用量
           // done 前重查库态：管线内 auto-confirm 可能已把节点改为 confirmed，快照 status 已过期（Max Loop 审查 P1）
-          let finalStatus = result?.status || "completed";
+          let finalStatus = result?.status || STATUS_COMPLETED;
           try {
             const freshNode = await prisma.storyNode.findUnique({
               where: { id: result?.nodeId || nodeId },

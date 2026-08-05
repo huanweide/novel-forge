@@ -12,6 +12,7 @@ import { runLocalDistillation } from "@/lib/distillation-runner";
 import { autoCreateEntities } from "@/lib/entity-auto-creator";
 import { classifyAndConvert } from "@/lib/memory-classifier";
 import { analyzeQuality } from "@/lib/quality-analyzer";
+import { STATUS_DRAFTING } from "@/core/story-status";
 import type { KnownEntity, EntityType } from "@/lib/entity-detector";
 import type { AgentOrchestrator } from "@/core/agents";
 import type { ReviewLog } from "@/core/types";
@@ -198,7 +199,7 @@ export async function runPostGenerationPipeline(
       // 确认流程（spec v1 §二/§五）：生成后仅落 drafting，不污染下游、不预置"接受"。
       // 后处理审校（六维质量）结果仍写入 reviewLogs / qualityScore 供「AI诊断」展示，
       // 但节点状态由人类（AI 智能体）在确认栏拍板，绝不由自动审校闸门决定。
-      status: "drafting",
+      status: STATUS_DRAFTING,
       qualityScore: qualityReport?.overallScore ?? null,
       ...(reviewLogEntry
         ? {

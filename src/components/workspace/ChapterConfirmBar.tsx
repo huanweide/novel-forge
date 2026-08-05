@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 
 interface ChapterConfirmBarProps {
@@ -29,7 +29,7 @@ interface ChapterConfirmBarProps {
 function StatusBadge({ status }: { status: string }) {
   // 体验减法（Max Loop Round6）：状态徽章对齐 story-status.ts 六态枚举（删历史假态 rejected/revised），
   // 视觉三档——灰=进行中/待处理、橙=需行动、绿=已定稿；未知状态兜底灰显，不误导作者。
-  const map: Record<string, { label: string; cls: string; icon: string }> = {
+  const map: Record<string, { label: string; cls: string; icon: IconName }> = {
     outline_only: { label: "仅大纲", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" },
     drafting: { label: "草稿", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "pencil" },
     completed: { label: "已生成·待提交", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "file" },
@@ -40,13 +40,13 @@ function StatusBadge({ status }: { status: string }) {
   const s = map[status] || { label: "未知", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${s.cls}`}>
-      <Icon name={s.icon as any} size={10} /> {s.label}
+      <Icon name={s.icon} size={10} /> {s.label}
     </span>
   );
 }
 
 export function ChapterConfirmBar({
-  projectId, nodeId, nodeStatus, allConfirmed, projectConfirmedAt, autoConfirmEnabled, onAction, onDiagnose,
+  projectId, nodeId, nodeStatus, projectConfirmedAt, autoConfirmEnabled, onAction, onDiagnose,
 }: ChapterConfirmBarProps) {
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);

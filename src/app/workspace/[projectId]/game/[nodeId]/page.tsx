@@ -38,6 +38,8 @@ interface GameState {
   bookName: string;
   chapterTitle: string;
   error: string | null;
+  exportStatus: string | null;   // 导出轻确认结果（v0.46.94+）：confirmed / drafting
+  exportQuality: number | null;  // 导出时质量分（确认看板可见）
 }
 
 interface TurnRecord {
@@ -93,6 +95,8 @@ export default function GamePage() {
     bookName: "加载中...",
     chapterTitle: "加载中...",
     error: null,
+    exportStatus: null,
+    exportQuality: null,
   });
 
   const [customInput, setCustomInput] = useState("");
@@ -443,6 +447,8 @@ export default function GamePage() {
         status: "ended",
         narrative: data.finalContent,
         totalWords: data.totalWords,
+        exportStatus: data.status ?? null,
+        exportQuality: data.qualityScore ?? null,
       }));
     } catch (err: any) {
       setState((s) => ({ ...s, status: "playing", error: err.message }));
@@ -1223,9 +1229,21 @@ export default function GamePage() {
       {/* 已结束状态底部 */}
       {state.status === "ended" && (
         <footer className="relative z-10 border-t border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-4 text-center backdrop-blur-sm">
-          <p className="mb-3 flex items-center justify-center gap-2 text-[var(--nv-success)]">
-            <Icon name="check" size={16} /> 章节已导出并保存为正文，返回工作区查看
-          </p>
+          {state.exportStatus === "confirmed" ? (
+            <p className="mb-3 flex items-center justify-center gap-2 text-[var(--nv-success)]">
+              <Icon name="check" size={16} />
+              章节已导出并自动定稿{state.exportQuality != null ? `（质量分 ${state.exportQuality}）` : ""}，返回工作区查看
+            </p>
+          ) : state.exportStatus === "drafting" ? (
+            <p className="mb-3 flex items-center justify-center gap-2 text-[var(--nv-accent)]">
+              <Icon name="alert" size={16} />
+              章节已导出，待你手动确认（智能审阅关闭或质量未达标），返回工作区处理
+            </p>
+          ) : (
+            <p className="mb-3 flex items-center justify-center gap-2 text-[var(--nv-success)]">
+              <Icon name="check" size={16} /> 章节已导出并保存为正文，返回工作区查看
+            </p>
+          )}
           <button
             onClick={handleBack}
             className="btn-primary rounded-lg px-8 py-2.5 text-sm font-medium text-[var(--nv-text-primary)]"

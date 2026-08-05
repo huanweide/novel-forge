@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
+import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING } from "@/core/story-status";
 import { buildGameSystemPrompt, buildActionPrompt, parseGameOutput } from "./game-prompts";
 import type { GameActionInput, GameTurnOutput, GameSessionContext, GameEntity, GameItem, GameOption, GameSessionSummary } from "./types";
 
@@ -632,7 +633,7 @@ export async function endGameAndExport(sessionId: string): Promise<{
     data: {
       content: finalContent,
       wordCount: finalWordCount,
-      status: "drafting",
+      status: STATUS_DRAFTING,
       qualityScore: el.score ?? null,
     },
   });
@@ -664,7 +665,7 @@ export async function endGameAndExport(sessionId: string): Promise<{
     projectId: session.projectId,
     finalContent,
     totalWords: finalWordCount,
-    status: autoConfirmed ? "confirmed" : "drafting",
+    status: autoConfirmed ? STATUS_CONFIRMED : STATUS_DRAFTING,
     autoConfirmed,
     qualityScore: el.score ?? null,
   };

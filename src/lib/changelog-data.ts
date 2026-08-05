@@ -25,18 +25,56 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.102";
+export const LATEST_VERSION = "v0.46.103";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "智能交付一步化（体验减法）：扫描全书无拦截且本轮有放行 → 自动整本交付，点击从 2 降到 1（拦截时仍展示清单待人工）",
-  "PreGenConfirm 记住选择：同项目 localStorage 预填上次角色勾选/作者指令/新角色，减少重复操作、保留角色调度控制",
-  "回归脚本修复：agent-smart-deliver-verify.cjs 正文加长 >150 字（v0.46.97 结构门槛后脚本过时被拦），回归 VERIFY_PASS（autoRate 100%）",
-  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.102",
+  "状态枚举全面落地：核心确认链路 10 文件的状态字面量全部接入 story-status 单一真相（STATUS_*/CONFIRMABLE_STATUSES），前后端状态名一套真相收尾",
+  "lint 增量归零：新建文件 lint 干净（confirm-guard 唯一 any 修复）、scripts/*.cjs 豁免 require 规则（CommonJS 标准用法）、两组件 error 清除；存量 2542 债基线存档待专项",
+  "游戏导出状态提示：游戏结束屏按轻确认结果区分提示——自动定稿（绿·含质量分）/待手动确认（橙）引导下一步，导出链路闭环可见",
+  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.103",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.103",
+    date: "2026-08-05",
+    title: "状态枚举全面落地 + lint 增量归零 + 游戏导出状态提示（Max Loop Round9 收尾，tsc 零错误 / 203 测试绿）",
+    sections: [
+      {
+        label: "状态枚举单一真相全面落地（规范性收尾）",
+        items: [
+          "story-status.ts 新增 STATUS_OUTLINE_ONLY/STATUS_DRAFTING/STATUS_PENDING_CONFIRM/STATUS_CONFIRMED/STATUS_COMPLETED/STATUS_REVIEWING 单态常量 + CONFIRMABLE_STATUSES 改引用常量",
+          "核心确认链路 10 文件字面量→常量引用：auto-confirm / [id] PATCH / batch-confirm / nodes / rollback / game-engine / post-processor / stats-monitor / projects-confirm / generate-write",
+          "game-engine 的 gameSession.status 与会话状态无关（不属 StoryNode 状态机），保留原字面量不误替换",
+          "create/import/dissect 域的历史字面量保留（初始创建态/流程固定态，不参与确认判定，替换收益低）——诚实边界",
+        ],
+      },
+      {
+        label: "lint 增量归零（存量债基线存档）",
+        items: [
+          "confirm-guard.ts:110 唯一 no-explicit-any 修复（Prisma.JsonArray 类型）；本轮新建文件（story-status/quality-thresholds/confirm-guard.test/extract-keys.test）lint 干净",
+          "eslint.config.mjs 对 scripts/*.cjs 豁免 @typescript-eslint/no-require-imports（CommonJS 工具脚本 require 是标准用法，非 ESM 违规）",
+          "ChapterConfirmBar 修 s.icon as any（icon 字段类型化 IconName）+ 移除未用 allConfirmed 解构；PreGenConfirm loadCards 改函数声明消 no-use-before-define；剩 2 个存量 warning（exhaustive-deps/no-unused-expressions）标注历史债",
+        ],
+      },
+      {
+        label: "游戏导出状态提示（体验闭环）",
+        items: [
+          "game/[nodeId] 页 ended 屏按导出轻确认结果区分：confirmed → 绿色「已导出并自动定稿（质量分 N）」；drafting → 橙色「待手动确认（智能审阅关闭或质量未达标）」；兜底原文案",
+          "handleEnd 消费 /api/game/end 新增的 status/qualityScore 字段存 state，导出链路（游戏→确认看板）在 UI 层闭环可见",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "tsc 零错误；全量 203 测试绿（14 文件）；确认体系 5 个真机脚本 + 游戏全链路回归全绿（见 Round9 复检段）",
+          "沙箱无 Chromium，游戏 ended 屏视觉未浏览器目测（诚实边界，本地 npm run dev 可见）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.102",
     date: "2026-08-05",

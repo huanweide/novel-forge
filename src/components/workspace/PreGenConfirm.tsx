@@ -35,7 +35,7 @@ export function PreGenConfirm({
     return () => ctrl.abort();
   }, []);
 
-  const loadCards = async (signal?: AbortSignal) => {
+  async function loadCards(signal?: AbortSignal) {
     setLoading(true); setError("");
     try {
       const url = nodeId

@@ -9,6 +9,7 @@ import {
   asBool,
   asStrArray,
 } from "@/lib/validators";
+import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
 
 // POST /api/story/nodes
 export async function POST(request: Request) {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
       type: asStr(raw.type, "type", { max: 30, fallback: "section" }),
       title: asStr(raw.title, "title", { max: 200, fallback: "未命名" }),
       order: asInt(raw.order, "order", 0),
-      status: asStr(raw.status, "status", { max: 30, fallback: "outline_only" }),
+      status: asStr(raw.status, "status", { max: 30, fallback: STATUS_OUTLINE_ONLY }),
       outline: asStrOrNull(raw.outline, "outline"),
       content: asStrOrNull(raw.content, "content"),
       wordCount: asInt(raw.wordCount, "wordCount", 0),

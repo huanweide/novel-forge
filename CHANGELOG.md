@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.103 — 2026-08-05
+**状态枚举全面落地 + lint 增量归零 + 游戏导出状态提示（Max Loop Round9 收尾，tsc 零错误 / 203 测试绿）**
+
+- 状态枚举单一真相全面落地：story-status 新增 STATUS_* 单态常量，核心确认链路 10 文件（auto-confirm / [id] PATCH / batch-confirm / nodes / rollback / game-engine / post-processor / stats-monitor / projects-confirm / generate-write）字面量全部接入；gameSession.status 与会话无关保留原样
+- lint 增量归零：confirm-guard 唯一 any 修复（Prisma.JsonArray）；eslint.config 对 scripts/*.cjs 豁免 require（CommonJS 标准用法）；ChapterConfirmBar icon 类型化 + 未用 prop 移除、PreGenConfirm loadCards 提升；存量 2542 债基线存档待专项
+- 游戏导出状态提示：ended 屏按轻确认结果区分——自动定稿（绿·质量分）/待手动确认（橙），导出链路 UI 闭环可见
+- 全量 203 测试绿；tsc 零错误
+
 ## v0.46.102 — 2026-08-05
 **体验减法第二刀：智能交付一步化 + 生成前弹窗记住选择（Max Loop Round7，tsc 零错误 / 203 测试绿）**
 

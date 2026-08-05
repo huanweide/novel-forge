@@ -7,6 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
+import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -31,15 +32,15 @@ export async function GET(request: Request) {
 
     const chapters = nodes.filter((n) => n.type === "chapter" || n.type === "section" || n.type === "scene");
     const totalWords = nodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);
-    const completedChapters = chapters.filter((n) => n.status === "completed").length;
-    const pendingConfirmChapters = chapters.filter((n) => n.status === "pending_confirm").length;
-    const confirmedChapters = chapters.filter((n) => n.status === "confirmed").length;
+    const completedChapters = chapters.filter((n) => n.status === STATUS_COMPLETED).length;
+    const pendingConfirmChapters = chapters.filter((n) => n.status === STATUS_PENDING_CONFIRM).length;
+    const confirmedChapters = chapters.filter((n) => n.status === STATUS_CONFIRMED).length;
     const totalChapters = chapters.length;
 
     // 自动放行率：已确认章中由智能审阅（auto-confirm）自动审定的数量
     const autoConfirmedChapters = chapters.filter(
       (n) =>
-        n.status === "confirmed" &&
+        n.status === STATUS_CONFIRMED &&
         Array.isArray((n as any).reviewLogs) &&
         (n as any).reviewLogs.some((l: any) => l && l.action === "auto-confirm"),
     ).length;
