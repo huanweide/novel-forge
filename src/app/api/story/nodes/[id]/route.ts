@@ -159,6 +159,10 @@ export async function PATCH(
         if (node.status !== "pending_confirm") {
           return NextResponse.json({ error: `当前状态(${node.status})不可确认通过` }, { status: 409 });
         }
+        // 人工确认护栏（与 guard 空正文/过短拦截对齐）：防止误点放行废章（Max Loop 审查 P3）
+        if (!node.content || node.content.trim().length < 50) {
+          return NextResponse.json({ error: "正文为空或过短（少于50字），不可确认通过" }, { status: 422 });
+        }
         // 确认副作用：触发自动填表（回填结构化表格 / 记忆）—— 这是 confirm 的副作用，而非 write 的副作用
         let fillMsg = "（无正文，跳过填表）";
         if (node.content && node.content.length > 0) {
@@ -176,13 +180,21 @@ export async function PATCH(
             fillMsg = `自动填表失败（不影响确认）: ${e instanceof Error ? e.message : "未知"}`;
           }
         }
-        data = {
-          status: "confirmed",
-          confirmedAt: now,
-          revisionCount: { increment: 1 },
-          reviewLogs: pushLog({ action: "confirm", fill: fillMsg }),
-        };
-        break;
+        // 幂等：条件更新（仅 pending_confirm 才终态），重复/并发点击不重复计数/追加（Max Loop 审查 P7）
+        const upd = await prisma.storyNode.updateMany({
+          where: { id, status: "pending_confirm" },
+          data: {
+            status: "confirmed",
+            confirmedAt: now,
+            revisionCount: { increment: 1 },
+            reviewLogs: pushLog({ action: "confirm", fill: fillMsg }),
+          },
+        });
+        if (upd.count === 0) {
+          return NextResponse.json({ error: "节点状态已变化，未重复确认" }, { status: 409 });
+        }
+        const fresh = await prisma.storyNode.findUnique({ where: { id } });
+        return NextResponse.json(fresh);
       }
       case "reject": {
         if (node.status !== "pending_confirm") {

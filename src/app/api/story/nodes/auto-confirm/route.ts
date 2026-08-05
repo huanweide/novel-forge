@@ -69,6 +69,20 @@ export async function POST(request: Request) {
         });
         continue;
       }
+      // 审校联动（Max Loop 审查 P2）：护栏开启时，任一审校 passed=false（如逻辑自查 major 缺陷）不自动放行，交人工介入
+      if (requirePassed) {
+        const reviewLogs: any[] = Array.isArray(node.reviewLogs) ? node.reviewLogs : [];
+        if (reviewLogs.some((l) => l && l.passed === false)) {
+          blocked.push({
+            id: node.id,
+            title: node.title,
+            score: el.score,
+            grade: el.grade,
+            reason: "审校未通过（passed=false），需人工介入",
+          });
+          continue;
+        }
+      }
 
       await applyConfirm({
         id: node.id,

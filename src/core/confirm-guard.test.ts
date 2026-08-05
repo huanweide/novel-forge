@@ -51,6 +51,12 @@ describe("evaluateConfirmEligibility", () => {
     const r = evaluateConfirmEligibility({ content: "", qualityScore: null }, [], false);
     expect(r.eligible).toBe(true);
   });
+
+  it("非有限分数（NaN/Infinity）不采信：回退本地重算，杜绝 NaN<60 恒 false 绕过拦截", () => {
+    const r = evaluateConfirmEligibility({ content: GOOD_TEXT, qualityScore: NaN });
+    expect(Number.isFinite(r.score)).toBe(true);
+    expect(r.eligible).toBe(true);
+  });
 });
 
 describe("analyzer 空文本佐证（费曼：不能只靠分数拦空正文）", () => {

@@ -2,6 +2,15 @@
 
 ---
 
+## v0.46.96 — 2026-08-05
+**Max Loop Round2 审查修复：手动确认护栏+幂等 / auto-confirm 审校联动 / 非法分数拦截 / done 状态同步 / CI 套件可跑（tsc 零错误 / 198 测试绿）**
+
+- 审查发现：代码审查（NaN/Infinity 分数可绕过拦截、CI 套件含 DB 集成测试 Actions 必红、auto-confirm 不消费 applyConfirm 返回值）+ 创造检验（真实 LLM 生成验证：done 状态过期、审校 passed=false 仍自动放行、三条确认路径护栏不一致、超时重试计数/日志不一致）
+- 手动确认补护栏+幂等（PATCH confirm）：空正文/过短(<50字) 422 拦截；updateMany 条件更新（仅 pending_confirm 才终态），重复确认 409 不重复计数/追加——真机验证 agent-round2-guard-verify.cjs 全绿（422/409/计数 1→1）
+- auto-confirm 审校联动：任一审校 passed=false（如逻辑自查 major 缺陷）blocked 交人工，对照无审校失败章正常放行
+- confirm-guard 非法分数拦截：采信处补 Number.isFinite（NaN/Infinity 回退本地重算，杜绝 NaN<60 恒 false 绕过）；单测 8 个、全量 198 测试绿
+- done 事件状态同步 + CI 套件可跑：write done 前重查库态（反映 auto-confirm 结果）；fill.selfcheck 集成测试 skipIf(!DATABASE_URL)，CI 无 DB 自动跳过不再必红
+
 ## v0.46.95 — 2026-08-05
 **护栏统一收编 + 单测门禁 + CI 真闸 + 幂等守卫（Max Loop Round1·Step2 检验落地，tsc 零错误 / 197 测试绿）**
 

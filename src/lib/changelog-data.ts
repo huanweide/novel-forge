@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.95";
+export const LATEST_VERSION = "v0.46.96";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "护栏统一收编（batch-confirm 修复空正文拦截漏洞）：实证 batch-confirm 内联复制护栏且丢失空正文/过短拦截（同一空章 auto-confirm 拦、batch-confirm 放行，阈值分裂），收编评估到 confirm-guard 的 evaluateConfirmEligibility，真机验证两入口对空正文行为一致均拦截",
-  "confirm-guard 单元测试 7 个（gradeOf 边界/空正文拦截/60-59 阈值边界/null 回退/旁路语义/analyzer 空文本佐证），全量 vitest 13 文件 197 测试绿",
-  "CI 真闸（Karpathy）：ci.yml 去掉全部 || true 豁免，新增 tsc --noEmit + npm test 硬门禁，lint:colors/build 硬门禁；lint 存量 2542 问题（1134 errors 历史 no-explicit-any 债）保留豁免并标注待专项清理",
-  "applyConfirm 幂等守卫：updateMany 条件更新（仅待确认态才终态），重复调用不重复 increment/append reviewLogs，真机验证 revisionCount 与日志均 1→1",
+  "手动确认补护栏+幂等（PATCH confirm）：空正文/过短(<50字) 422 拦截 + updateMany 条件更新，重复确认 409 不重复计数/追加（创造检验 P3/P7）",
+  "auto-confirm 审校联动：任一审校 passed=false（如逻辑自查 major 缺陷）不自动放行、交人工介入（创造检验 P2）",
+  "confirm-guard 非法分数拦截：NaN/Infinity 不采信回退本地重算，杜绝 NaN<60 恒 false 绕过拦截（代码审查 P1）；单测 8 个、全量 198 测试绿",
+  "done 事件状态同步 + CI 套件 DB 测试 skipIf：write done 前重查库态反映 auto-confirm 结果；fill.selfcheck 无 DATABASE_URL 自动跳过，CI 门禁不再必红",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.96",
+    date: "2026-08-05",
+    title: "Max Loop Round2 审查修复：手动确认护栏+幂等 / auto-confirm 审校联动 / 非法分数拦截 / done 状态同步 / CI 套件可跑（tsc 零错误 / 198 测试绿）",
+    sections: [
+      {
+        label: "审查发现的问题（代码审查 + 创造检验双报告）",
+        items: [
+          "代码审查（主审）：NaN/Infinity 非有限分数可绕过拦截（NaN<60 恒 false）、CI 套件含 DB 集成测试在 Actions 必红、batch-confirm 无幂等、auto-confirm 不消费 applyConfirm 返回值、analyzer 内部硬编码阈值",
+          "创造检验（工坊·真实 LLM 生成 1 章 + 手动 1 章）：SSE done 事件 status 与库态不同步、审校 passed=false（logic major 缺陷）仍被 auto-confirm 放行、三条确认路径护栏不一致（PATCH 手动 confirm 无门槛）、超时重试下确认计数与日志不一致",
+        ],
+      },
+      {
+        label: "修复落地（全部真机验证全绿）",
+        items: [
+          "手动确认补护栏+幂等（PATCH confirm）：空正文/过短(<50字) 422 拦截，updateMany 条件更新（仅 pending_confirm 才终态），重复确认 409 不重复 increment/append；真机验证 agent-round2-guard-verify.cjs（422/409/计数 1→1 全过）",
+          "auto-confirm 审校联动：requirePassed 时任一审校 passed=false（如逻辑自查 major 缺陷）blocked 附 reason 交人工，对照无审校失败章正常放行",
+          "confirm-guard 非法分数拦截：qualityScore 采信处补 Number.isFinite（NaN/Infinity 回退本地重算），杜绝 NaN<60 恒 false 绕过；单测新增 NaN 用例共 8 个，全量 198 测试绿",
+          "done 事件状态同步：generate/write 的 SSE done 前重查库态（反映管线内 auto-confirm 结果），前端不再拿到过期 status；CI 套件 fill.selfcheck 集成测试加 describe.skipIf(!DATABASE_URL)，Actions 无 DB 时跳过、门禁不再必红",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.95",
     date: "2026-08-05",

@@ -35,7 +35,11 @@ export function evaluateConfirmEligibility(
   knownNames: string[] = [],
   requirePassed = true,
 ): ConfirmEligibility {
-  let score: number | null = typeof node.qualityScore === "number" ? node.qualityScore : null;
+  // 非法分数（NaN/Infinity）不采信：回退本地重算，杜绝「NaN < 60 恒 false」绕过拦截的漏网
+  let score: number | null =
+    typeof node.qualityScore === "number" && Number.isFinite(node.qualityScore)
+      ? node.qualityScore
+      : null;
   if (requirePassed) {
     if (!node.content || node.content.trim().length < 50) {
       return { eligible: false, score: null, grade: "?", reason: "正文为空或过短（少于50字）" };

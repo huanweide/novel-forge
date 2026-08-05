@@ -304,11 +304,22 @@ export async function POST(request: Request) {
           // 生成仅落库（status=completed），待AI 智能体逐章确认后才回填表格。
 
           // Token 用量
+          // done 前重查库态：管线内 auto-confirm 可能已把节点改为 confirmed，快照 status 已过期（Max Loop 审查 P1）
+          let finalStatus = result?.status || "completed";
+          try {
+            const freshNode = await prisma.storyNode.findUnique({
+              where: { id: result?.nodeId || nodeId },
+              select: { status: true },
+            });
+            if (freshNode?.status) finalStatus = freshNode.status;
+          } catch {
+            // 重查失败保留快照，不阻塞主流程
+          }
           send({
             type: "done",
             content: "",
             nodeId: result?.nodeId || nodeId,
-            status: result?.status || "completed",
+            status: finalStatus,
             usage: {
               completionTokens: countTokens(fullContent),
               totalTokens: countTokens(fullContent),
