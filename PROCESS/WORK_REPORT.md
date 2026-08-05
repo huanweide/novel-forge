@@ -2168,3 +2168,46 @@ Round 9 是「会员股东复验闭环」的第 9 轮。6 位股东（青砚/阿
 ### 诚实边界（反自欺）
 - **已真实验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误；四个组件改动逐行写就；图标名全部来自 icons.tsx 实际导出清单（palette/bot/sparkles/sliders/upload/clipboard/package/download/chart/zap/radio 均存在）；双 changelog 升 v0.46.86（`changelog-data.ts` 头部插入 + 根 `CHANGELOG.md` 同步）同 commit `0da8e0d`；代理 push 成功 `871a8db..0da8e0d`。
 - **未验证（必须明示）**：① 沙箱无 Chromium/显示，下拉/折叠的**真实点击与遮罩关闭、z-index 层叠、裁切是否真不发生**未浏览器目测——基于源码通读 + overflow 规则推断，需你本地 `npm run dev` 目测确认。② 下拉菜单在导航栏/左栏的精确像素位置与窄屏换行未目测。③ 后处理「高级▾」双行在 5 个 tab 全有内容时的换行拥挤度未目测。④ LeftPanel 下拉 `fixed inset-0` 遮罩在左栏 `overflow-hidden` 内、点击隐藏 tab 后的内容滚动交互未目测。
+
+---
+
+## v0.46.87 — 部署自检加固（P0-3·doctor 补全）
+
+### 干了什么
+给 `scripts/doctor.mjs` 补了两项启动前自检：① Prisma client 是否生成；② 端口 3001 是否被占用。对齐改造计划表 P0-3「部署前自检」。
+
+### 为什么这么做（第一性原理）
+项目总结文档记过一个真实坑：safe-delete 拦截 `prisma generate`，dev server 看似能起，但所有 API 报 `Cannot find module`（client 没生成）。另一个坑：上一个 dev 进程没退出，新进程端口冲突启动失败。这两个问题都是「启动时才暴露」，doctor 把检查前置，让人部署前一眼看清，避免线上反复翻车。
+
+### 方法、工具与效果
+读 `doctor.mjs`，加两段：pg 直连检查 `src/generated/prisma/client.ts` 存在性（不存在则 fail 并提示 `SAFE_DELETE_DISABLE=1 npx prisma generate`）；`net.createServer` 探测 3001 是否被占（被占 warn）。修正 Prisma 7 generator 输出文件名（`client.ts` 非旧版 `index.js`）。`node scripts/doctor.mjs` 实测通过（✅），端口占用 warn 合理（dev 在跑）。
+
+### 关键取舍
+doctor 是**本地启动前自检**，不是线上监控。部署站 `health 404 + projects 500` 的根因在 Vercel 侧（Neon DB 免费额度耗尽 + 未重新部署最新代码），doctor 改不了——它只保证「本地代码部署就绪」这一环。代码侧已 build 通过 + `postinstall` 自动 `prisma generate`，重新部署即可修复。
+
+### 诚实边界
+已验证：`node doctor.mjs` 实测通过；`npm run build` 通过；tsc 零错误。未验证：Vercel 侧重部署动作（需你操作）。
+
+---
+
+## v0.46.88 — 填表闭环对齐计划 P1-2（默认每章自动填表）
+
+### 干了什么
+把宝宝流填表默认配置从「每 3 章填一次 + 跳过最新章」改为「每章都填 + 当前章也填」，让你写完一章即看到自动填表生效；并对已有 24 个项目做了数据迁移，本地立即生效。
+
+### 为什么这么做（第一性原理）
+改造计划表 P1-2 的本意就是「每写完一章自动把结构化摘要填入世界书表格」。原默认 `fillFrequency=3`（每 3 章才填）+ `skipLatestChapter=true`（跳过最新章）叠加后——你**总在写最新章**却被跳过、且要攒够 3 章才触发——填表几乎从不发生。前端对已触发但 `skipped` 的状态选择静默不弹 toast（避免刷屏），于是你完全看不到填表动作，误判「填表功能没工作」。根因不是「没实现」，而是「默认配置偏离计划导致闭环隐形」。对齐默认值即修复。
+
+### 方法、工具与效果
+1. 先派 Explore agent 通读代码确认：P1 闭环**代码层已通**——`schema.prisma` 有 `LoreTable`（列/行 JSON 存，语义等价 SQL）；`write/route.ts` 写章后调 `safeFillAfterWriting`；前端 `page.tsx` 早已消费 `babylore_fill`/`babylore_recall` SSE 事件弹 toast。断点在默认配置，不是缺失。
+2. 改两处默认值：`prisma/schema.prisma` 的 `fillFrequency @default(3)→1`、`skipLatestChapter @default(true)→false`；`src/core/babylore/loop.ts` 的 fallback 同步。
+3. `prisma db push` 更新列默认值；一次性脚本 `UPDATE` 已有 24 个项目为 `fillFrequency=1, skipLatestChapter=false`（样本回读确认生效），脚本跑完即删。
+4. `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → 0 错误；双 changelog 升 v0.46.88 同 commit `3615cb5`；代理 push `6c64f5a..3615cb5` 成功。
+
+### 关键取舍
+- **保留可配性**：项目设置里仍能调回频率/跳过（防重 roll 后改写污染表格），只把默认值对齐计划本意，不删任何代码、零功能丢失、零回归。
+- **不引入新 UI**：可观测性本就具备（toast 已显「已写入 N 行」「召回 N 条」），无需新增界面，改默认值即让闭环对你可见。
+
+### 诚实边界
+- 已真实验证：tsc 零错误；`prisma db push` 成功（207ms）；24 项目数据迁移样本确认 `fillFrequency=1, skipLatestChapter=false`；双 changelog 同 commit `3615cb5`；代理 push 成功。
+- 未验证（需你本地确认）：① 写一章后是否实时弹「已写入 N 行」toast —— 需 `npm run dev` 实写一章看。② LLM key 缺失时填表静默失败 —— 这是 fetch LLM 的固有行为（`loop.ts` 无 key 时 `ok=false`），非本次改动引入，配好 key 即正常。
