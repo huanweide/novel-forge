@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.101";
+export const LATEST_VERSION = "v0.46.102";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "状态徽章体验减法（Round6）：StatusBadge 对齐 story-status 六态枚举（删历史假态 rejected/revised），视觉三档——灰=进行中/待处理、橙=需行动、绿=已定稿，未知态兜底不误导",
-  "toast 收敛：生成完成 3 连弹（自动填表/记忆召回/完成）收敛为 1 条合并 toast——填表信息并入完成 toast，召回信息走「宝宝流记忆召回面板」展示不重复弹",
-  "枚举单一真相落地：前端状态徽章与后端状态机同源（src/core/story-status.ts），消除 8 态 vs 6 态不一致",
-  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.101",
+  "智能交付一步化（体验减法）：扫描全书无拦截且本轮有放行 → 自动整本交付，点击从 2 降到 1（拦截时仍展示清单待人工）",
+  "PreGenConfirm 记住选择：同项目 localStorage 预填上次角色勾选/作者指令/新角色，减少重复操作、保留角色调度控制",
+  "回归脚本修复：agent-smart-deliver-verify.cjs 正文加长 >150 字（v0.46.97 结构门槛后脚本过时被拦），回归 VERIFY_PASS（autoRate 100%）",
+  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.102",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.102",
+    date: "2026-08-05",
+    title: "体验减法第二刀：智能交付一步化 + 生成前弹窗记住选择（Max Loop Round7，tsc 零错误 / 203 测试绿）",
+    sections: [
+      {
+        label: "智能交付一步化（点击 2 → 1）",
+        items: [
+          "原流程：智能交付全书 → 扫描放行合格章 + 展示拦截清单 → 再点「确认整本交付」两步；现扫描无拦截且本轮有放行时自动调 projects/[id]/confirm 整本交付，前端一步完成",
+          "有拦截时保持原行为（展示清单 + 保留「确认整本交付」按钮），作者处理后手动交付；按钮文案/忙态不变",
+        ],
+      },
+      {
+        label: "PreGenConfirm 记住选择（生成前角色调度弹窗降级第一步）",
+        items: [
+          "弹窗有实际功能（选择哪些角色卡参与生成 + 作者指令 + 新角色），不能删；降级为「记住上次选择」——同项目 localStorage 存 selected/newChars/authorNote，下次打开预填，作者少重复勾选、保留控制",
+          "localStorage 不可用/无记录时回落默认全选；预填仅过滤仍存在的角色卡（scheduledIds 交集），不残留失效 id",
+        ],
+      },
+      {
+        label: "回归修复与验证",
+        items: [
+          "agent-smart-deliver-verify.cjs 的 GOOD 正文 ~120 字 <150 结构门槛（v0.46.97 引入），老脚本章节全被拦导致 VERIFY_FAIL——正文加长至 ~230 字后回归 VERIFY_PASS（首次 409 → C 改优质 → 二次扫描放行 → 整本交付 200 + autoRate 100%）",
+          "全量 203 测试绿；tsc 零错误；沙箱无 Chromium，前端交互未浏览器目测（诚实边界）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.101",
     date: "2026-08-05",

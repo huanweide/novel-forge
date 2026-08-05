@@ -105,8 +105,15 @@ export function ChapterConfirmBar({
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
-        setDeliverState({ confirmed: d.confirmed ?? [], blocked: d.blocked ?? [] });
-        onAction();
+        const confirmed = d.confirmed ?? [];
+        const blocked = d.blocked ?? [];
+        setDeliverState({ confirmed, blocked });
+        if (blocked.length === 0 && confirmed.length > 0) {
+          // 体验减法（Max Loop Round7）：扫描无拦截且本轮有放行 → 自动整本交付（点击 2 → 1）
+          await confirmProject();
+        } else {
+          onAction();
+        }
       } else {
         toastError(d.error || "智能交付失败");
       }

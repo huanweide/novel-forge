@@ -49,7 +49,16 @@ export function PreGenConfirm({
       setStoryInfo(data);
       const scheduledIds = (data.scheduledCards || []).map((c: ScheduledCard) => c.id);
       const preset = (presetCharacterIds || []).filter((id) => scheduledIds.includes(id));
-      setSelected(new Set([...scheduledIds, ...preset]));
+      // 体验减法（Max Loop Round7）：记住上次选择（同项目），预填勾选/作者指令/新角色，减少重复操作
+      const saved = loadSavedConfig(projectId);
+      if (saved?.selected?.length) {
+        const savedIds = saved.selected.filter((id: string) => scheduledIds.includes(id));
+        setSelected(new Set(savedIds.length ? savedIds : [...scheduledIds, ...preset]));
+        if (typeof saved.authorNote === "string") setLocalAuthorNote(saved.authorNote);
+        if (Array.isArray(saved.newChars) && saved.newChars.length) setNewChars(saved.newChars);
+      } else {
+        setSelected(new Set([...scheduledIds, ...preset]));
+      }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : "加载失败");
@@ -68,7 +77,18 @@ export function PreGenConfirm({
 
   const handleConfirm = () => {
     const confirmedIds = cards.filter(c => selected.has(c.id)).map(c => c.id);
+    // 记住本次选择（同项目），下次生成前预填（体验减法 Max Loop Round7）
+    try {
+      localStorage.setItem(`pregen-conf-${projectId}`, JSON.stringify({ selected: confirmedIds, newChars, authorNote: localAuthorNote }));
+    } catch { /* localStorage 不可用时静默忽略 */ }
     onConfirm(confirmedIds, cardNotes, newChars, localAuthorNote);
+  };
+
+  const loadSavedConfig = (pid: string): { selected?: string[]; newChars?: string[]; authorNote?: string } | null => {
+    try {
+      const raw = localStorage.getItem(`pregen-conf-${pid}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
   };
 
   const roleLabel = (r: string) => {
