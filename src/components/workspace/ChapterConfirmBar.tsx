@@ -27,17 +27,17 @@ interface ChapterConfirmBarProps {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  // 体验减法（Max Loop Round6）：状态徽章对齐 story-status.ts 六态枚举（删历史假态 rejected/revised），
+  // 视觉三档——灰=进行中/待处理、橙=需行动、绿=已定稿；未知状态兜底灰显，不误导作者。
   const map: Record<string, { label: string; cls: string; icon: string }> = {
-    outline_only: { label: "仅有大纲", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" },
-    drafting: { label: "草稿中", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "pencil" },
+    outline_only: { label: "仅大纲", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" },
+    drafting: { label: "草稿", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "pencil" },
     completed: { label: "已生成·待提交", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "file" },
     pending_confirm: { label: "待确认", cls: "text-[var(--nv-accent)] bg-[var(--nv-accent-soft)]", icon: "alert" },
-    confirmed: { label: "已确认定稿", cls: "text-[var(--nv-success)] bg-[var(--nv-success)]/10", icon: "check" },
+    confirmed: { label: "已定稿", cls: "text-[var(--nv-success)] bg-[var(--nv-success)]/10", icon: "check" },
     reviewing: { label: "审校中", cls: "text-[var(--nv-accent)] bg-[var(--nv-accent-soft)]", icon: "alert" },
-    rejected: { label: "审校未通过", cls: "text-[var(--nv-danger)] bg-[var(--nv-danger)]/10", icon: "x" },
-    revised: { label: "已修改", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "pencil" },
   };
-  const s = map[status] || map.outline_only;
+  const s = map[status] || { label: "未知", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${s.cls}`}>
       <Icon name={s.icon as any} size={10} /> {s.label}

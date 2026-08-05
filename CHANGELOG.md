@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.101 — 2026-08-05
+**体验减法第一刀：状态徽章三档收敛 + toast 三连弹收敛为一条（Max Loop Round6，tsc 零错误 / 203 测试绿）**
+
+- 状态徽章体验减法：StatusBadge 对齐 story-status 六态枚举（删历史假态 rejected/revised、confirmed 收敛为「已定稿」、未知兜底灰显）；视觉三档——灰=进行中/待处理、橙=需行动、绿=已定稿
+- toast 收敛：生成完成 3 连弹（自动填表/记忆召回/完成）收敛为 1 条合并 toast——填表信息并入完成 toast，召回信息走「宝宝流记忆召回面板」展示不重复弹
+- 枚举单一真相落地：前端状态徽章与后端状态机同源（src/core/story-status.ts）
+- 全量 203 测试绿；tsc 零错误
+
 ## v0.46.100 — 2026-08-05
 **状态枚举单一真相源 + auto-confirm reviewing 遗留态/幂等虚报修复（Max Loop Round5，tsc 零错误 / 203 测试绿）**
 

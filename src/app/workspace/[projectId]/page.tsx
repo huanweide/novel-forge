@@ -548,12 +548,16 @@ export default function WorkspacePage() {
     entitiesAutoCreated: number; entitiesSkipped: number;
   }>({ entityCount: 0, stateChangeCount: 0, foreshadowCount: 0, consistencyIssueCount: 0, elapsedMs: 0, foreshadowCreated: 0, foreshadowUpdated: 0, entitiesAutoCreated: 0, entitiesSkipped: 0 });
 
+  // 本次生成自动填表信息（Max Loop Round6·toast 收敛：合并进 done toast，避免填表/召回/完成三连弹）
+  const lastFillInfoRef = useRef<string | null>(null);
+
   const streamSSE = async (url: string, body: Record<string, unknown>, onDone?: () => void) => {
     const controller = new AbortController();
     abortRef.current = controller;
     let accumulated = "";
     // 重置蒸馏累计
     distillAccum.current = { entityCount: 0, stateChangeCount: 0, foreshadowCount: 0, consistencyIssueCount: 0, elapsedMs: 0, foreshadowCreated: 0, foreshadowUpdated: 0, entitiesAutoCreated: 0, entitiesSkipped: 0 };
+    lastFillInfoRef.current = null; // 重置填表合并信息
     setRecallMemories([]); // 新一轮生成重置宝宝流记忆面板
     try {
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: controller.signal });
@@ -621,7 +625,8 @@ export default function WorkspacePage() {
             // ── 宝宝流自动填表（写作闭环回收） ──
             else if (event.type === "babylore_fill") {
               if (event.ok) {
-                toastSuccess(`宝宝流自动填表完成：本回抽取 ${event.operations ?? 0} 条操作，已写入 ${event.applied ?? 0} 行结构化表格。`);
+                // toast 收敛（Max Loop Round6）：填表成功信息合并进 done toast，减少打断
+                lastFillInfoRef.current = `自动填表：抽取 ${event.operations ?? 0} 条，写入 ${event.applied ?? 0} 行`;
               } else if (event.skipped) {
                 // 主动跳过（频率未到 / 最近章）：避免刷屏，不弹提示
               } else if (event.error) {
@@ -632,7 +637,7 @@ export default function WorkspacePage() {
               const items = Array.isArray(event.items) ? event.items : [];
               const n = items.length;
               setRecallMemories(items);
-              if (n > 0) toastInfo(`宝宝流记忆召回 ${n} 条（世界书/结构化表格），已注入本轮写作上下文。`);
+              // toast 收敛（Max Loop Round6）：召回信息已展示在「宝宝流记忆召回面板」，不重复弹 toast
             }
             else if (event.type === "done") {
               setGenStep("done"); setTimeout(() => setGenStep(""), 5000);
@@ -641,7 +646,8 @@ export default function WorkspacePage() {
               const finalContent = accumulated + (event.content || "");
               setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
-              toastSuccess("正文已生成并保存 ✓");
+              toastSuccess(lastFillInfoRef.current ? `正文已生成并保存 ✓（${lastFillInfoRef.current}）` : "正文已生成并保存 ✓");
+              lastFillInfoRef.current = null;
               loadProject();
               autoExtractChapter(finalContent, selectedNode?.title || "");
               onDone?.();

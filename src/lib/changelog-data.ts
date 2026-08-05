@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.100";
+export const LATEST_VERSION = "v0.46.101";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "状态枚举单一真相源：src/core/story-status.ts 定义 STORY_NODE_STATUSES/StoryNodeStatus/CONFIRMABLE_STATUSES，取代散落状态字符串（含 reviewing 遗留态文档化）",
-  "auto-confirm 修 reviewing 遗留态：显式 skip 交人工（v0.46.90 前旧态不再写入新数据，不得被自动处理）",
-  "auto-confirm 消费 applyConfirm 返回值：幂等跳过（并发/重试已确认）不再虚报 confirmed，数据一致性修复（代码审查遗留项）",
-  "applyConfirm 可确认状态引用 CONFIRMABLE_STATUSES 单一真相；全量 203 测试绿；tsc 零错误；升 v0.46.100",
+  "状态徽章体验减法（Round6）：StatusBadge 对齐 story-status 六态枚举（删历史假态 rejected/revised），视觉三档——灰=进行中/待处理、橙=需行动、绿=已定稿，未知态兜底不误导",
+  "toast 收敛：生成完成 3 连弹（自动填表/记忆召回/完成）收敛为 1 条合并 toast——填表信息并入完成 toast，召回信息走「宝宝流记忆召回面板」展示不重复弹",
+  "枚举单一真相落地：前端状态徽章与后端状态机同源（src/core/story-status.ts），消除 8 态 vs 6 态不一致",
+  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.101",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.101",
+    date: "2026-08-05",
+    title: "体验减法第一刀：状态徽章三档收敛 + toast 三连弹收敛为一条（Max Loop Round6，tsc 零错误 / 203 测试绿）",
+    sections: [
+      {
+        label: "状态徽章体验减法（对齐枚举单一真相）",
+        items: [
+          "StatusBadge 原 8 态映射与 story-status.ts 六态枚举不一致——rejected/revised 为历史假态（实际不再产生），completed 语义也对不齐；现删除假态、confirmed 文案收敛为「已定稿」，未知状态兜底灰显不再误导",
+          "视觉三档语义收敛（乔布斯方向）：灰=进行中/待处理（outline_only/drafting/completed）、橙=需行动（pending_confirm/reviewing）、绿=已定稿（confirmed）——作者一眼可判「这章要不要我管」",
+        ],
+      },
+      {
+        label: "toast 收敛（一次生成 3 连弹 → 1 条）",
+        items: [
+          "实证：生成完成同时弹「自动填表完成」+「记忆召回 N 条」+「正文已生成并保存」三条 toast（page.tsx 624/635/644），打断创作流",
+          "收敛：填表成功信息存入 ref 合并进 done toast（正文已生成并保存（自动填表：抽取 N 条，写入 M 行））；记忆召回信息已在「宝宝流记忆召回面板」展示（page.tsx:1019），删冗余 toast；生成完成仅 1 条 toast",
+          "验证：tsc 零错误、203 测试全绿；沙箱无 Chromium，toast 视觉效果未浏览器目测（诚实边界），逻辑已代码层验证",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.100",
     date: "2026-08-05",
