@@ -179,6 +179,9 @@ export async function runPostGenerationPipeline(
     ? {
         id: crypto.randomUUID(),
         nodeId,
+        // 统一 ReviewLog 结构（Max Loop Round4·P6）：审校条目补 action/at 键，与确认/提交/打回/诊断日志同构
+        action: "review" as const,
+        at: new Date().toISOString(),
         timestamp: new Date().toISOString(),
         passed: reviewLog.passed,
         issues: reviewLog.issues,

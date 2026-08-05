@@ -52,6 +52,8 @@ export async function PATCH(
         globalPrompt: body.globalPrompt,
         llmConfig: body.llmConfig,
         postProcessingRules: body.postProcessingRules,
+        // Max Loop Round4·P8：智能审阅开关 API 写入入口（此前仅 DB/UI 可切，自动化/测试无法配置）
+        autoConfirmEnabled: body.autoConfirmEnabled,
       },
     });
     return NextResponse.json(updated);

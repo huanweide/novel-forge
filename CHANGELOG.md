@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.99 — 2026-08-05
+**autoConfirmEnabled API 入口 + reviewLogs 结构统一 + 盲测扩展实证（Max Loop Round4，tsc 零错误 / 203 测试绿）**
+
+- P8：projects/[id] PATCH 支持 autoConfirmEnabled 字段——智能审阅开关获得 API 写入入口，自动化/测试无需直连 DB 切换确认模式
+- P6：post-processor 审校条目补 action:review + at，reviewLogs 全链统一为 {action, at, ...}（确认/提交/打回/重开/诊断/审校同构），前端可统一渲染；旧字段向后兼容
+- 盲测扩展（+3 样本共 12）：400 字同一句劣质文 analyzer 打 64 分仍过线、250 字口号文 77 分——机械重复结构门槛是必要防线（否则凑字数长文仅凭分数会被自动放行）；假放行率 100% 证伪记录完整
+- 全量 203 测试绿；tsc 零错误
+
 ## v0.46.98 — 2026-08-05
 **填表残词过滤 + _src 溯源增强（Max Loop Round3·创造检验 P4/P5，tsc 零错误 / 203 测试绿）**
 

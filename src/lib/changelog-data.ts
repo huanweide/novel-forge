@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.98";
+export const LATEST_VERSION = "v0.46.99";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "填表残词过滤（P4）：dissect 世界书关键词提取加量词/虚词/人称开头 + 的/了/着/们结尾过滤，「片空旷区域」类切词残留不再污染设定库；extractKeyTerms 导出 + 3 单测锁死",
-  "_src 溯源增强（P5）：填表行溯源追加确认来源段（ch0:batchmanual:auto-confirm / :manual / :batch），可追溯每个事实从哪个确认入口进表",
-  "source 透传链路：safeFillAfterWriting 接受 source，applyConfirm(auto-confirm)/PATCH(manual)/batch-confirm(batch) 三入口分别标记；fill.ops 溯源断言兼容",
-  "全量 203 测试绿（新增残词过滤 3 用例）；tsc 零错误；双 changelog 升 v0.46.98",
+  "autoConfirmEnabled API 写入入口（P8）：projects/[id] PATCH 支持切换智能审阅开关，自动化与测试可配置（此前仅 DB/UI）",
+  "reviewLogs 结构统一（P6）：审校条目补 action:review + at，与确认/提交/打回/诊断日志全链同构，前端可统一渲染",
+  "盲测扩展实证：400 字同一句劣质文 analyzer 仍打 64 分过线、250 字口号文 77 分——机械重复结构门槛是自动放行必要防线（否则凑字数长文也会被放行）",
+  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.99",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.99",
+    date: "2026-08-05",
+    title: "autoConfirmEnabled API 入口 + reviewLogs 结构统一 + 盲测扩展实证（Max Loop Round4，tsc 零错误 / 203 测试绿）",
+    sections: [
+      {
+        label: "配置/结构补齐（创造检验 P8 / P6）",
+        items: [
+          "P8：projects/[id] PATCH 支持 autoConfirmEnabled 字段写入——智能审阅开关获得 API 入口，自动化脚本与测试无需直连 DB 即可切换确认模式（此前仅 UI/DB 可切）",
+          "P6：post-processor 审校条目补 action:review + at 键，与确认(auto-confirm/confirm)/提交(submit)/打回(reject)/重开(reopen)/诊断(diagnose) 日志全链同构，reviewLogs 统一为 {action, at, ...} 结构，前端可统一渲染；旧字段 timestamp/issues 保留向后兼容",
+        ],
+      },
+      {
+        label: "盲测扩展实证（闸门防线必要性）",
+        items: [
+          "新增 3 样本：400 字同一句劣质文 analyzer 打 64 分仍 ≥60 过线、250 字口号堆砌文 77 分过线、中长普通文 83 分——证明「凑字数长文/长空话」同样骗过纯统计分",
+          "结论强化：v0.46.97 的机械重复结构门槛是必要防线——若无它，400 字同一句（过 150 字长度门槛）仅凭 analyzer 64 分会被自动放行；盲测现共 12 样本，假放行率 100% 证伪记录完整",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.98",
     date: "2026-08-05",
