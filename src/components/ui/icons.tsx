@@ -31,6 +31,7 @@ import {
   X,
   ArrowLeft,
   ArrowRight,
+  ArrowDown,
   CheckCircle2,
   AlertTriangle,
   // 数据/文件
@@ -126,6 +127,7 @@ const iconMap = {
   x: X,
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRight,
+  arrowDown: ArrowDown,
   check: CheckCircle2,
   alert: AlertTriangle,
   file: FileText,

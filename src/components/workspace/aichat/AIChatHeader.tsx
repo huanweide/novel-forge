@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icons";
-import { useProjectStore } from "@/store";
 
 interface AIChatHeaderProps {
   loading: boolean;
@@ -24,21 +23,6 @@ const CAPABILITIES: { icon: string; label: string; desc: string }[] = [
 
 export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
   const [showHelp, setShowHelp] = useState(false);
-  const project = useProjectStore((s) => s.project);
-
-  const totalWords = project
-    ? project.storyNodes.reduce((sum: number, n: any) => sum + (n.wordCount || 0), 0)
-    : 0;
-  const charCount = project?.characters.length ?? 0;
-  const loreCount = project?.lorebookEntries.length ?? 0;
-  const nodeCount = project?.storyNodes.length ?? 0;
-
-  const stats = [
-    { label: "总字数", value: totalWords },
-    { label: "角色", value: charCount },
-    { label: "词条", value: loreCount },
-    { label: "节点", value: nodeCount },
-  ];
 
   return (
     <div className="shrink-0 border-b border-[var(--nv-border-1)] bg-gradient-to-br from-[var(--nv-surface-2)] to-[var(--nv-surface-1)]">
@@ -85,21 +69,6 @@ export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
             <Icon name={readonlyMode ? "eye" : "zap"} size={9} />
             {readonlyMode ? "只读" : "可操作"}
           </span>
-        </div>
-
-        {/* 项目统计条 */}
-        <div className="mt-2.5 grid grid-cols-4 gap-1.5">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-lg bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] px-1 py-1.5 text-center transition-colors hover:border-[var(--nv-primary)]/40"
-            >
-              <div className="text-sm font-bold text-[var(--nv-text-primary)] leading-none tabular-nums">
-                {typeof s.value === "number" ? s.value.toLocaleString() : s.value}
-              </div>
-              <div className="text-[9px] text-[var(--nv-text-tertiary)] mt-0.5">{s.label}</div>
-            </div>
-          ))}
         </div>
 
         {/* 能力说明开关 */}

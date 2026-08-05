@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
+import { Collapse } from "@/components/ui/collapse";
 import { DialogField, DialogInput } from "./DialogUI";
 import { Modal } from "@/components/ui/Modal";
 import type { CharacterData } from "./types";
@@ -284,8 +285,7 @@ export function CharacterDialog({
       {isEdit ? (
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* 基本标识 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">基本标识</h4>
+          <Collapse title="基本标识" size="md">
             <div className="space-y-2">
               {field("姓名", form.name, (v) => setForm({ ...form, name: v }))}
               {field("别名（逗号分隔）", form.aliases, (v) => setForm({ ...form, aliases: v }), { placeholder: "阿三, 剑圣, 老疯" })}
@@ -307,10 +307,9 @@ export function CharacterDialog({
                 </select>
               </DialogField>
             </div>
-          </div>
+          </Collapse>
           {/* 外貌 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">外貌</h4>
+          <Collapse title="外貌" size="md">
             <div className="grid grid-cols-3 gap-2">
               {field("发型发色", form.appearanceHair, (v) => setForm({ ...form, appearanceHair: v }), { placeholder: "黑长直" })}
               {field("眼睛", form.appearanceEyes, (v) => setForm({ ...form, appearanceEyes: v }), { placeholder: "丹凤眼" })}
@@ -323,10 +322,9 @@ export function CharacterDialog({
             <div className="mt-2">
               {field("标志性着装", form.appearanceAttire, (v) => setForm({ ...form, appearanceAttire: v }), { placeholder: "黑色劲装, 腰间佩剑, 银质护腕" })}
             </div>
-          </div>
+          </Collapse>
           {/* 性格 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">性格详析</h4>
+          <Collapse title="性格详析" size="md">
             {field("性格特征", form.personality, (v) => setForm({ ...form, personality: v }), {
               textarea: true,
               rows: 5,
@@ -350,19 +348,17 @@ export function CharacterDialog({
                 placeholder: "最深处本性/创伤/欲望？例如：童年被弃导致极度缺乏安全感，所有强势都是伪装",
               })}
             </div>
-          </div>
+          </Collapse>
           {/* 背景 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">背景状态</h4>
+          <Collapse title="背景状态" size="md">
             {field("背景", form.background, (v) => setForm({ ...form, background: v }), {
               textarea: true,
               rows: 16,
               placeholder: "1)所在位置与境遇：xxx\n2)当前短期目标：xxx\n3)长期欲望：xxx\n4)所持资源与限制：xxx\n5)卷入核心事件的方式与态度：xxx",
             })}
-          </div>
+          </Collapse>
           {/* 能力 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">能力/功法</h4>
+          <Collapse title="能力/功法" size="md">
             {field("能力（每行一个，或用逗号分隔）", form.abilities, (v) => setForm({ ...form, abilities: v }), {
               textarea: true,
               rows: 6,
@@ -373,12 +369,9 @@ export function CharacterDialog({
               rows: 3,
               placeholder: "暗中寻找灭门仇人\n表面臣服实则谋反",
             })}
-          </div>
+          </Collapse>
           {/* 时间线 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">
-              <Icon name="calendar" size={13} /> 经历时间线（防OOC·每行：X岁：事件（时间参照））
-            </h4>
+          <Collapse title="经历时间线" icon="calendar" size="md">
             {field("时间线", form.timeline, (v) => setForm({ ...form, timeline: v }), {
               textarea: true,
               rows: 5,
@@ -387,19 +380,17 @@ export function CharacterDialog({
             <p className="text-xs text-[var(--nv-text-muted)] mt-1">
               设定角色人生关键时间点，防止AI把前期角色写成后期状态。age 填该事件时角色的年龄。
             </p>
-          </div>
+          </Collapse>
           {/* 关系 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">人际关系（每行：人物名：关系：动态）</h4>
+          <Collapse title="人际关系（每行：人物名：关系：动态）" size="md">
             {field("关系", form.relationships, (v) => setForm({ ...form, relationships: v }), {
               textarea: true,
               rows: 3,
               placeholder: "张三：师徒：亦师亦友\n李四：宿敌：互相欣赏但立场对立\n王五：暗恋对象：尚未表白",
             })}
-          </div>
+          </Collapse>
           {/* 对话风格 */}
-          <div className="border-b border-[var(--nv-border-2)] pb-3">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">对话风格</h4>
+          <Collapse title="对话风格" size="md">
             {field("风格描述", form.dialogueDesc, (v) => setForm({ ...form, dialogueDesc: v }), { placeholder: "冷漠寡言，但关键时字字千钧" })}
             {field("典型台词（每行一句）", form.dialogueExamples, (v) => setForm({ ...form, dialogueExamples: v }), {
               textarea: true,
@@ -412,16 +403,15 @@ export function CharacterDialog({
               rows: 2,
               placeholder: "多用反问句\n主语常省略\n偏爱四字短语",
             })}
-          </div>
+          </Collapse>
           {/* 弧光 */}
-          <div className="pb-2">
-            <h4 className="text-xs font-semibold text-[var(--nv-text-tertiary)] mb-2 uppercase tracking-wider">人物弧光预登记</h4>
+          <Collapse title="人物弧光" size="md">
             {field("弧光进度", form.arcProgress, (v) => setForm({ ...form, arcProgress: v }), {
               textarea: true,
               rows: 2,
               placeholder: "信念动摇触发点：xxx\n蜕变方向：xxx→xxx\n堕落风险：xxx",
             })}
-          </div>
+          </Collapse>
         </div>
       ) : (
         <div className="space-y-3 px-5 py-4">

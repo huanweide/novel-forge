@@ -2,6 +2,7 @@
 
 import type { CharacterData } from "./types";
 import { CharacterRow } from "./CharacterRow";
+import { Collapse } from "@/components/ui/collapse";
 
 export function CharacterGroupList({
   grouped,
@@ -33,10 +34,7 @@ export function CharacterGroupList({
         const items = grouped[role];
         if (!items || items.length === 0) return null;
         return (
-          <div key={role} className="mb-2">
-            <div className="text-[10px] text-[var(--nv-text-tertiary)] px-2 mb-0.5 font-medium uppercase tracking-wider">
-              {roleLabel[role] || role} ({items.length})
-            </div>
+          <Collapse key={role} title={`${roleLabel[role] || role} (${items.length})`} size="sm">
             {items.map(c => (
               <CharacterRow
                 key={c.id}
@@ -50,7 +48,7 @@ export function CharacterGroupList({
                 onTagClick={onTagClick}
               />
             ))}
-          </div>
+          </Collapse>
         );
       })}
     </>

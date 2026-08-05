@@ -15,7 +15,7 @@ export function WorldModuleSidebar({
   modules, activeModule, getCount, onSelect, onSetShowCreate,
 }: WorldModuleSidebarProps) {
   return (
-    <div className="max-h-[40%] flex-shrink-0 space-y-0.5 overflow-y-auto border-b border-[var(--nv-border-2)] p-2">
+    <div className="max-h-[40%] flex-shrink-0 grid grid-cols-2 gap-1 overflow-y-auto border-b border-[var(--nv-border-2)] p-2">
       {modules.map((mod) => {
         const count = getCount(mod.key);
         const active = activeModule === mod.key;

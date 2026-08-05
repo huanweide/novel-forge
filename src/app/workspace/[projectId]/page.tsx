@@ -872,7 +872,6 @@ export default function WorkspacePage() {
     { id: "character", label: "新建角色", desc: "添加一张角色卡，定义人设与关系", icon: "user", category: "generate", action: () => setShowNewCharacter(true) },
     { id: "workshop", label: "创意工坊", desc: "预设 / 角色卡 / 导入导出分享社区预设", icon: "book", category: "generate", action: () => router.push("/workshop") },
     { id: "tables", label: "结构化表格", desc: "宝宝流数据库，查看已抽取的设定与伏笔", icon: "chart", category: "analyze", action: () => router.push(`/workspace/${project?.id ?? ""}/tables`) },
-    { id: "recall", label: "记忆召回", desc: "查看本轮已注入写作的设定、人设与伏笔", icon: "search", category: "analyze", action: () => setRightPanelOpen(true) },
     { id: "conflict", label: "冲突推演", desc: "给定局势，AI 出≥3 个发展选项（仅供参考由你决定）", icon: "lightbulb", category: "analyze", badge: "AI", action: () => { setShowConflict(true); } },
   ];
 
@@ -1140,6 +1139,7 @@ export default function WorkspacePage() {
         <RightPanel selectedNode={selectedNode}
             onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
             selectedText={selectedText || undefined}
+            toolboxItems={toolboxItems}
             onEditCharacter={(id) => {
               const c = project.characters.find((x) => x.id === id);
               if (c) setEditingCharacter(c);

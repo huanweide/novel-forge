@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.1.2";
+export const LATEST_VERSION = "v1.1.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.1.2 魔王系统 Round-5 第一批：补齐智能审阅真实开关，修复孤儿后端能力",
-  "六处手搓开关统一收敛到 Switch 组件，强制原创人名/自动生成故事线双入口标签对齐",
-  "浅色主题背景暖化为米色，删除重复 --color-accent 令牌，硬编码辉光色收敛到设计令牌",
-  "批量清理用户可见 UI 的 emoji，替换为统一 Icon 图标体系",
+  "v1.1.3 魔王系统 Round-5 第二批：统一折叠组件落地人物卡/世界侧栏，右栏重构为四 tab（还原实体 tab）",
+  "新建可复用 Collapse 组件（受控/非受控/懒挂载/sm/md），人物卡九区块与密集列表可逐段收起",
+  "右栏整合 AI助手/实体/工具箱/统计，工具箱网格内联、监测与统计合一，AIChatHeader 去重",
+  "AIChatBar 新增去AI味/文段概括预设；tsc 零错误 + 217 测试全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.1.3",
+    date: "2026-08-06",
+    title: "魔王系统 Round-5 第二批：统一折叠组件落地人物卡/世界侧栏/分组/故事线 + 右栏重构为四 tab（还原实体 tab）",
+    sections: [
+      {
+        label: "统一折叠组件 Collapse 落地（R5-4）：长表单与密集列表可逐段收起",
+        items: [
+          "新建 src/components/ui/collapse.tsx 可复用折叠组件：支持受控 open / 非受控 defaultOpen、onOpenChange 回调、chevron 箭头（展开 arrowDown、收起 arrowRight）、mountOnOpen 懒挂载、sm/md 两档、disabled，头部与内容样式严格收敛到虚空玻璃设计令牌（--nv-text-primary / --nv-surface-3）",
+          "CharacterDialog 九大区块（基本标识/外貌/性格详析/背景状态/能力功法/经历时间线/人际关系/对话风格/人物弧光）由静态 h4 分区改为 Collapse 折叠，超长人物卡可逐段收起、按需展开，减少滚动疲劳",
+          "WorldModuleSidebar 词条容器由 space-y-0.5 改为 grid grid-cols-2 gap-1 双列网格，信息密度对齐云笔舒适排版；CharacterGroupList 按角色分组折叠、StorylineList 六要素编辑折叠，密集列表可整体收拢",
+          "icons.tsx 补注册 arrowDown（原仓库仅注册 arrowRight），使折叠 chevron 的类型与渲染闭环；WorldEntryCard 经评估维持 line-clamp-3 截断（再包折叠会与紧凑网格意图重复，主动跳过并说明）",
+        ],
+      },
+      {
+        label: "右栏重构为四 tab（R5-5）：功能不丢、整合更顺",
+        items: [
+          "RightPanel 重构为 AI助手 / 实体 / 工具箱 / 统计 四 tab；原查询实体 tab 被误删后已还原——实体追踪 / 伏笔 / 关系图三个面板只在右栏被引用，删则变死功能，本次补回确保 novel-forge 自有功能零丢失",
+          "工具箱 tab 内联 ToolboxDialog 网格（write/generate/analyze 三组），工具入口从仅靠弹窗触发升级为常驻 tab，与更多按钮弹窗并存兼容",
+          "统计 tab 整合原底部 StatRow（总字数/角色/词条/节点）+ 监测三块（叙事能量曲线/生成延迟/上下文监控）+ 上下文预览，首屏默认展开叙事能量避免空白",
+          "AIChatHeader 去重：移除与右栏统计重复的总字数/角色/词条/节点统计条，单一数据来源；page.tsx 接 toolboxItems prop、移除与快捷键冗余的记忆召回项；AIChatBar PRESETS 新增去AI味 / 文段概括 两个聊天预设，走既有 runPreset 到 handleSend 管线",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿"],
+      },
+    ],
+  },
   {
     version: "v1.1.2",
     date: "2026-08-06",

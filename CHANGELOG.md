@@ -2,6 +2,16 @@
 
 ---
 
+## v1.1.3 — 2026-08-06
+**魔王系统 Round-5 第二批：统一折叠组件落地人物卡/世界侧栏/分组/故事线 + 右栏重构为四 tab（还原实体 tab）**
+
+- 统一折叠组件 Collapse 落地（R5-4）：新建 `src/components/ui/collapse.tsx` 可复用折叠组件，支持受控/非受控、chevron 箭头、懒挂载、sm/md 两档，样式收敛到虚空玻璃设计令牌；`CharacterDialog` 九大区块（基本标识/外貌/性格详析/背景状态/能力功法/经历时间线/人际关系/对话风格/人物弧光）改为折叠，超长人物卡可逐段收起；`WorldModuleSidebar` 由 `space-y-0.5` 改为双列网格 `grid grid-cols-2 gap-1`，`CharacterGroupList`/`StorylineList` 分组与六要素编辑折叠；`icons.tsx` 补注册 `arrowDown` 使 chevron 闭环（`WorldEntryCard` 维持截断、主动跳过）
+- 右栏重构为四 tab（R5-5）：`RightPanel` 重构为 AI助手 / 实体 / 工具箱 / 统计；原查询实体 tab 被误删后已还原——实体追踪/伏笔/关系图三面板只在右栏被引用，删则变死功能，本次补回确保功能零丢失；工具箱 tab 内联 `ToolboxDialog` 网格，统计 tab 整合 StatRow + 监测三块 + 上下文预览
+- 去重与联动：`AIChatHeader` 移除与右栏重复的统计条（单一数据来源）；`page.tsx` 接 `toolboxItems` prop、移除冗余的「记忆召回」项；`AIChatBar` PRESETS 新增「去AI味」「文段概括」两个聊天预设，复用 `runPreset` 到 `handleSend` 管线
+- 质量门禁：tsc 零错误 + 217 单元测试全绿
+
+---
+
 ## v1.1.2 — 2026-08-06
 **魔王系统 Round-5 第一批：补齐智能审阅真实开关 + 开关统一收敛 + 风格令牌治理 + emoji 清场**
 

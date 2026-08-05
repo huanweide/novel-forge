@@ -314,6 +314,8 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
     { key: "check", label: "查漏", prompt: "检查本章是否存在逻辑漏洞、前后矛盾或设定冲突，并列出要点。" },
     { key: "fix", label: "修正", prompt: "指出本章可以修正的问题并给出具体修改建议。" },
     { key: "expand", label: "展开", prompt: "挑选当前章节中值得细写的片段，展开描写，增加细节与画面感。" },
+    { key: "deai", label: "去AI味", prompt: "请重写以下选中的段落，去除 AI 生成痕迹（套话、过度对仗、空洞升华），保留原意与节奏，使其读起来更自然、更像人类手写。" },
+    { key: "paraSummary", label: "文段概括", prompt: "请用 1-3 句话概括以下选中段落的要点。" },
   ];
 
   const runPreset = (prompt: string) => {

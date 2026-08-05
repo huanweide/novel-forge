@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { Collapse } from "@/components/ui/collapse";
 import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
@@ -201,12 +202,11 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
                 </select>
               </div>
               {Object.entries(ELEMENT_LABELS).map(([key, { icon, label }]) => (
-                <div key={key}>
-                  <label className="mb-1 flex items-center gap-1.5 text-xs text-[var(--nv-text-tertiary)]"><Icon name={icon} size={13} /> {label}</label>
+                <Collapse key={key} size="sm" title={label} icon={icon}>
                   <textarea className="input-glass w-full resize-none rounded px-3 py-1.5 text-sm"
                     rows={2} value={(editForm as any)[key] || ""}
                     onChange={e => updateField(key, e.target.value)} />
-                </div>
+                </Collapse>
               ))}
             </div>
             <div className="mt-4 flex justify-end gap-2">
