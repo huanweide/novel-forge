@@ -2,6 +2,16 @@
 
 ---
 
+## v1.0.3 — 2026-08-06
+**数据完整性补丁：备份静默丢数据 + markdown 角色关系失效 + 大书导入事务超时（MaxLoop round-14 五透镜深度审计收口）**
+
+- 备份静默丢数据修复：`.nfproject` 备份包设计上不含记忆层/游戏进度（ChapterSummary/StoryBeat/PendingCommitment/PendingItem/StoryNodeRevision/GameSession），但此前未告知用户造成静默丢失错觉；`backup/route.ts` bundle 新增 `excluded` 自描述字段，前端 `BackupDialog` 新增告知文案（包含 8 类核心设定、不含游戏进度/版本历史/记忆摘要/伏笔追踪/待兑现事项，需文本导出迁移设定）
+- markdown 导入角色关系失效修复：`parser.ts` 的 `toCharacterCreateParams` 将 `targetCharacterId`（实为名字）改为 `targetName`，对齐全系统契约；角色关系在世界书注入（`sync-global-prompt`）不再渲染成 `?(?)`，备份再导入也不灭失
+- 大书导入事务超时修复：`import/commit/route.ts` 事务补 `{ timeout: 120000 }`，与 `projects/import` 口径一致；数百章串行落库不再因 Prisma 默认 5s 上限整段回滚、章节零写入
+- 质量门禁：tsc 零错误 + 211 单元测试全绿；新增 `scripts/agent-round14-p1-verify.cjs` 真机复验 3 条 P1 全 PASS（备份 excluded 字段、markdown 关系 targetName 契约、事务 timeout 实锤）
+
+---
+
 ## v1.0.2 — 2026-08-06
 **稳定性补丁：补漏提交 + 副本名叠加 + 缓存泄漏护栏（MaxLoop round-2 观察池复核收口）**
 

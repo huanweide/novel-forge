@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.0.2";
+export const LATEST_VERSION = "v1.0.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.0.2 稳定性补丁：补入上轮漏提交的游戏导出回填提示、修复导入副本名叠加与监控缓存泄漏",
-  "补提交 IMP-003：游戏导出自动回填设定库的前端提示 toast 此前漏入仓，本轮补入并核验一致",
-  "导入 forceNew 去尾：反复导入同一备份不再叠加成「xxx（副本）（副本）」",
-  "监控缓存容量护栏：stats/monitor 内存缓存加 512 上限，长运行不再无限增长泄漏内存",
+  "v1.0.3 数据完整性补丁：修复备份静默丢数据、markdown 角色关系失效、大书导入事务超时三条 P1",
+  "备份回执自描述：导出 .nfproject 时显式声明「不含游戏进度/版本历史/记忆摘要/伏笔追踪/待兑现事项」并在前端 BackupDialog 提示，杜绝静默丢失错觉",
+  "markdown 导入角色关系修复：toCharacterCreateParams 改用 targetName 对齐全系统契约，关系在世界书注入不再渲染成 ?(?)",
+  "大书导入事务护栏：import/commit 事务补 { timeout: 120000 }，与 projects/import 口径一致，数百章串行落库不再因 5s 默认上限整段回滚",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.0.3",
+    date: "2026-08-06",
+    title: "数据完整性补丁：备份静默丢数据 + markdown 角色关系失效 + 大书导入事务超时",
+    sections: [
+      {
+        label: "修复 P1：备份静默丢数据",
+        items: ["IMP-501 backup/route.ts 的 bundle 新增 excluded 自描述字段（声明不含 ChapterSummary/StoryBeat/PendingCommitment/PendingItem/StoryNodeRevision/GameSession）", "前端 BackupDialog 新增告知文案：本次备份包含 8 类核心设定、不含游戏进度/版本历史/记忆摘要等，需文本导出迁移设定"],
+      },
+      {
+        label: "修复 P1：markdown 角色关系失效",
+        items: ["IMP-502 parser.ts 的 toCharacterCreateParams 将 targetCharacterId 改为 targetName，对齐全系统契约", "经 normalizeRelationships 与 sync-global-prompt 注入世界书时角色关系不再渲染成 ?(?)；备份再导入也不灭失"],
+      },
+      {
+        label: "修复 P1：大书导入事务超时",
+        items: ["IMP-503 import/commit/route.ts 事务补 { timeout: 120000 }，与 projects/import 口径一致", "数百章串行落库不再因 Prisma 默认 5s 上限整段回滚、章节零写入"],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 211 单元测试全绿；新增 scripts/agent-round14-p1-verify.cjs 真机复验 3 条 P1 全 PASS；MaxLoop round-14 五透镜深度审计收口"],
+      },
+    ],
+  },
   {
     version: "v1.0.2",
     date: "2026-08-06",

@@ -365,7 +365,7 @@ export function toCharacterCreateParams(char: ParsedCharacter, projectId: string
     background: char.background,
     hiddenMotives: char.hiddenMotives,
     relationships: char.relations.map((r) => ({
-      targetCharacterId: r.target,
+      targetName: r.target,
       relation: r.relation,
       dynamic: "",
       notes: "",

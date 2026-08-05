@@ -54,6 +54,7 @@ export async function GET(
       exportedAt: new Date().toISOString(),
       generator: "Novel Forge",
       include: Array.from(allowed),
+      excluded: ["ChapterSummary","StoryBeat","PendingCommitment","PendingItem","StoryNodeRevision","GameSession"],
       project,
     };
     const name = (project.name || "project").replace(/[^\w一-龥-]/g, "_");

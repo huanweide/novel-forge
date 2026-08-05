@@ -687,7 +687,7 @@ export async function POST(request: Request) {
               data: { synopsis: synopsisText },
             });
           }
-        });
+        }, { timeout: 120000 });
 
         created.characters = charNewData.length + created.charMerged;
         created.loreEntries = loreNewData.length + created.loreMerged;
