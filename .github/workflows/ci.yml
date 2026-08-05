@@ -11,10 +11,16 @@ jobs:
         with:
           node-version: "20"
       - name: Install
-        run: npm ci || npm install || true
-      - name: Lint
-        run: npm run lint || true
+        run: npm ci || npm install
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Test
+        run: npm test
       - name: Color guard (ARCH-7)
-        run: npm run lint:colors || true
+        run: npm run lint:colors
       - name: Build
-        run: npm run build || true
+        run: npm run build
+      # lint 存量 2542 问题（1134 errors，多为历史 no-explicit-any）为技术债，暂不硬门禁；
+      # 待专项清理后移除豁免。tsc/vitest/build 已是硬门禁，任一失败即红。
+      - name: Lint (legacy debt, non-blocking)
+        run: npm run lint || echo "::warning::lint 存量 1134 errors 待专项清理"

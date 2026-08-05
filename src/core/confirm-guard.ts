@@ -96,8 +96,10 @@ export async function applyConfirm(node: {
     }
   }
 
-  await prisma.storyNode.update({
-    where: { id: node.id },
+  // 幂等守卫：仅当节点仍处待确认态（drafting/pending_confirm）才执行终态更新。
+  // 重复/并发请求第二次命中已 confirmed → count=0，不重复 increment revisionCount、不重复追加 reviewLogs。
+  const upd = await prisma.storyNode.updateMany({
+    where: { id: node.id, status: { in: ["drafting", "pending_confirm"] } },
     data: {
       status: "confirmed",
       confirmedAt: now,
@@ -108,5 +110,6 @@ export async function applyConfirm(node: {
       ],
     },
   });
+  if (upd.count === 0) return "节点已确认（幂等跳过，未重复计数）";
   return fillMsg;
 }

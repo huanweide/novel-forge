@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.95 — 2026-08-05
+**护栏统一收编 + 单测门禁 + CI 真闸 + 幂等守卫（Max Loop Round1·Step2 检验落地，tsc 零错误 / 197 测试绿）**
+
+- 护栏统一收编（batch-confirm 修复空正文拦截漏洞）：实证 batch-confirm/route.ts 内联复制阈值/gradeOf/护栏逻辑且丢失空正文/过短(<50字)拦截——同一空正文章 qualityScore=90 走 auto-confirm 被拦、走 batch-confirm 被放行，阈值分裂；收编评估到 confirm-guard 的 evaluateConfirmEligibility（保留 batch:true 日志语义），真机验证 scripts/agent-batch-guard-verify.cjs 全绿（空章拦截/优质章放行/两入口一致）
+- confirm-guard 单元测试：src/core/confirm-guard.test.ts 7 个（gradeOf 边界、空正文/过短拦截、60/59 阈值边界、null 回退 analyzer、旁路语义、analyzer 空文本高分佐证）；全量 vitest 13 文件 197 测试全绿
+- CI 真闸：ci.yml 去掉全部 || true，新增 tsc --noEmit + npm test 硬门禁，lint:colors/build 硬门禁；lint 存量 2542 问题（1134 errors 历史 no-explicit-any 债）保留豁免并标注待专项清理
+- applyConfirm 幂等守卫：updateMany 条件更新（仅 drafting/pending_confirm 才终态），重复调用不重复 increment/append reviewLogs；真机验证 scripts/agent-idempotency-verify.cjs 全绿（revisionCount 1→1、日志 1→1）
+
 ## v0.46.94 — 2026-08-05
 **游戏导出轻确认闭环（Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，自动定稿 + 自动填表 + 看板可见（tsc 零错误）**
 

@@ -2,18 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
-import { analyzeQuality } from "@/lib/quality-analyzer";
-
-// 质量护栏阈值：与 analyzeQuality 的 passed 口径一致（overallScore >= 60 为达标）
-const QUALITY_PASS_THRESHOLD = 60;
-
-function gradeOf(score: number | null): string | null {
-  if (score == null) return null;
-  if (score >= 85) return "A";
-  if (score >= 70) return "B";
-  if (score >= 60) return "C";
-  return "D";
-}
+import { evaluateConfirmEligibility } from "@/core/confirm-guard";
 
 /**
  * POST /api/story/nodes/batch-confirm
@@ -62,25 +51,13 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // ── 质量护栏 ──
-      let score: number | null = typeof node.qualityScore === "number" ? node.qualityScore : null;
-      if (requirePassed) {
-        if (score == null && node.content) {
-          try {
-            score = analyzeQuality(node.content, knownNames).overallScore;
-          } catch {
-            score = null;
-          }
-        }
-        if (score == null) {
-          blocked.push({ id: node.id, title: node.title, score: null, grade: "?", reason: "未评估且无法解析正文" });
-          continue;
-        }
-        if (score < QUALITY_PASS_THRESHOLD) {
-          blocked.push({ id: node.id, title: node.title, score, grade: gradeOf(score) ?? "D", reason: `质量分低于阈值(${QUALITY_PASS_THRESHOLD})` });
-          continue;
-        }
+      // ── 质量护栏（统一走 confirm-guard：恢复空正文/过短<50字拦截，与 auto-confirm 同源，消除阈值分裂）──
+      const el = evaluateConfirmEligibility(node, knownNames, requirePassed);
+      if (!el.eligible) {
+        blocked.push({ id: node.id, title: node.title, score: el.score, grade: el.grade, reason: el.reason ?? "未达标" });
+        continue;
       }
+      const score = el.score;
 
       // ── 放行：执行 confirm 副作用（复用单章确认逻辑）──
       const now = new Date();
@@ -110,7 +87,7 @@ export async function POST(request: Request) {
           reviewLogs: [...prevLogs, { action: "confirm", fill: fillMsg, at: now.toISOString(), batch: true }],
         },
       });
-      confirmed.push({ id: node.id, title: node.title, score, grade: gradeOf(score) });
+      confirmed.push({ id: node.id, title: node.title, score, grade: el.grade });
     }
 
     return NextResponse.json({

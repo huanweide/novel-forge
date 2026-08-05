@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.94";
+export const LATEST_VERSION = "v0.46.95";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "游戏导出轻确认闭环（Round1 遗留边界 #519）：游戏模式导出章节纳入统一确认流程，开启智能审阅且质量达标即自动定稿（confirmed + 自动填表 + reviewLogs），否则落 drafting 手动确认，根治原直接写死 completed 绕开确认链路的隐形缺口",
-  "复用 confirm-guard 共享护栏：endGameAndExport 直接复用 Round3 #1 的 evaluateConfirmEligibility + applyConfirm，零新增填表逻辑，质量分回写供确认看板可见",
-  "真机验证全绿（scripts/agent-game-light-confirm-verify.cjs）：主路径导出 confirmed + auto-confirm 标记 + qualityScore 回写；边界切关闭开关后导出 drafting，与正式章节确认体系完全统一",
-  "运维铁律重申：改 game-engine 源码后 dev 需重启（或 HMR 生效）加载新代码，否则游戏导出仍走旧 completed 逻辑",
+  "护栏统一收编（batch-confirm 修复空正文拦截漏洞）：实证 batch-confirm 内联复制护栏且丢失空正文/过短拦截（同一空章 auto-confirm 拦、batch-confirm 放行，阈值分裂），收编评估到 confirm-guard 的 evaluateConfirmEligibility，真机验证两入口对空正文行为一致均拦截",
+  "confirm-guard 单元测试 7 个（gradeOf 边界/空正文拦截/60-59 阈值边界/null 回退/旁路语义/analyzer 空文本佐证），全量 vitest 13 文件 197 测试绿",
+  "CI 真闸（Karpathy）：ci.yml 去掉全部 || true 豁免，新增 tsc --noEmit + npm test 硬门禁，lint:colors/build 硬门禁；lint 存量 2542 问题（1134 errors 历史 no-explicit-any 债）保留豁免并标注待专项清理",
+  "applyConfirm 幂等守卫：updateMany 条件更新（仅待确认态才终态），重复调用不重复 increment/append reviewLogs，真机验证 revisionCount 与日志均 1→1",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.95",
+    date: "2026-08-05",
+    title: "护栏统一收编 + 单测门禁 + CI 真闸 + 幂等守卫（Max Loop Round1·Step2 检验落地，tsc 零错误 / 197 测试绿）",
+    sections: [
+      {
+        label: "护栏统一收编（batch-confirm 修复空正文拦截漏洞，消除阈值分裂）",
+        items: [
+          "实证（真实性职能指证）：batch-confirm/route.ts 内联复制 QUALITY_PASS_THRESHOLD=60/gradeOf/护栏逻辑，且丢失空正文/过短(<50字)拦截——同一空正文章 qualityScore=90 走 auto-confirm 被拦、走 batch-confirm 被放行，单一护栏宣称与实际不符",
+          "修复：batch-confirm 评估逻辑收编到 confirm-guard 的 evaluateConfirmEligibility（import 复用，删除内联阈值/gradeOf/评估代码），保留 batch 确认的 batch:true 日志语义；真机验证 scripts/agent-batch-guard-verify.cjs 全绿（空正文章拦截、优质章放行、auto-confirm 同拦、两入口行为一致）",
+        ],
+      },
+      {
+        label: "confirm-guard 单元测试 + CI 真闸 + 幂等守卫",
+        items: [
+          "新增 src/core/confirm-guard.test.ts 7 个单测：gradeOf 分级边界、空正文/过短拦截、60/59 阈值边界、qualityScore=null 回退 analyzeQuality、requirePassed=false 旁路语义、analyzer 对空文本高分佐证（证明空正文拦截必须显式存在）；全量 vitest 13 文件 197 测试全绿",
+          "ci.yml 去掉全部 || true 形同虚设的豁免：新增 npx tsc --noEmit + npm test 硬门禁，lint:colors/build 硬门禁，任一失败即红；lint 存量 2542 问题（1134 errors 历史 no-explicit-any 债）保留豁免并标注待专项清理",
+          "applyConfirm 幂等守卫：改 updateMany 条件更新（仅 status 在 drafting/pending_confirm 才执行终态），重复/并发第二次调用 count=0 不重复 increment revisionCount、不重复追加 reviewLogs；真机验证 scripts/agent-idempotency-verify.cjs 全绿（重复 auto-confirm：revisionCount 1→1、auto-confirm 日志 1→1）",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.94",
     date: "2026-08-05",
