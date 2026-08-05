@@ -57,6 +57,11 @@ export async function POST(request: Request) {
         skipped.push({ id: node.id, title: node.title, reason: `状态为 ${node.status}，非待确认` });
         continue;
       }
+      // 遗留态 reviewing（v0.46.90 前审校中，不再写入新数据）：不自动处理，交人工（Max Loop Round5）
+      if (node.status === "reviewing") {
+        skipped.push({ id: node.id, title: node.title, reason: "遗留态 reviewing，需人工处理" });
+        continue;
+      }
 
       const el = evaluateConfirmEligibility(node, knownNames, requirePassed);
       if (!el.eligible) {
@@ -84,13 +89,18 @@ export async function POST(request: Request) {
         }
       }
 
-      await applyConfirm({
+      const fillMsg = await applyConfirm({
         id: node.id,
         projectId: node.projectId,
         content: node.content,
         order: node.order,
       });
-      confirmed.push({ id: node.id, title: node.title, score: el.score, grade: el.grade });
+      if (fillMsg.startsWith("节点已确认")) {
+        // 消费 applyConfirm 返回值：幂等跳过（并发/重试时节点已被确认），不虚报本次放行（Max Loop Round5）
+        skipped.push({ id: node.id, title: node.title, reason: "已确认（幂等跳过，未重复计数）" });
+      } else {
+        confirmed.push({ id: node.id, title: node.title, score: el.score, grade: el.grade });
+      }
     }
 
     return NextResponse.json({

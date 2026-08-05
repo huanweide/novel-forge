@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.99";
+export const LATEST_VERSION = "v0.46.100";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "autoConfirmEnabled API 写入入口（P8）：projects/[id] PATCH 支持切换智能审阅开关，自动化与测试可配置（此前仅 DB/UI）",
-  "reviewLogs 结构统一（P6）：审校条目补 action:review + at，与确认/提交/打回/诊断日志全链同构，前端可统一渲染",
-  "盲测扩展实证：400 字同一句劣质文 analyzer 仍打 64 分过线、250 字口号文 77 分——机械重复结构门槛是自动放行必要防线（否则凑字数长文也会被放行）",
-  "全量 203 测试绿；tsc 零错误；双 changelog 升 v0.46.99",
+  "状态枚举单一真相源：src/core/story-status.ts 定义 STORY_NODE_STATUSES/StoryNodeStatus/CONFIRMABLE_STATUSES，取代散落状态字符串（含 reviewing 遗留态文档化）",
+  "auto-confirm 修 reviewing 遗留态：显式 skip 交人工（v0.46.90 前旧态不再写入新数据，不得被自动处理）",
+  "auto-confirm 消费 applyConfirm 返回值：幂等跳过（并发/重试已确认）不再虚报 confirmed，数据一致性修复（代码审查遗留项）",
+  "applyConfirm 可确认状态引用 CONFIRMABLE_STATUSES 单一真相；全量 203 测试绿；tsc 零错误；升 v0.46.100",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.100",
+    date: "2026-08-05",
+    title: "状态枚举单一真相源 + auto-confirm reviewing 遗留态/幂等虚报修复（Max Loop Round5，tsc 零错误 / 203 测试绿）",
+    sections: [
+      {
+        label: "状态枚举化（单一真相源）",
+        items: [
+          "新建 src/core/story-status.ts：STORY_NODE_STATUSES（outline_only/drafting/pending_confirm/confirmed/completed/reviewing 六态文档化）+ StoryNodeStatus 类型 + CONFIRMABLE_STATUSES（可自动/批量确认态），取代散落的状态字符串字面量",
+          "applyConfirm 的 updateMany 条件更新改引用 CONFIRMABLE_STATUSES——可确认状态集合单一真相，不再内联数组",
+        ],
+      },
+      {
+        label: "auto-confirm 修复（代码审查遗留项）",
+        items: [
+          "reviewing 遗留态（v0.46.90 前审校中，不再写入新数据）显式 skip 交人工——此前会进评估、幂等跳过但虚报 confirmed",
+          "消费 applyConfirm 返回值：返回「节点已确认（幂等跳过）」时计入 skipped 而非 confirmed，并发/重试下不再虚报放行，数据一致性修复",
+          "验证：全量 203 测试绿（幂等回归 agent-idempotency-verify.cjs 全绿）；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.99",
     date: "2026-08-05",

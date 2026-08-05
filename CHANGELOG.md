@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.100 — 2026-08-05
+**状态枚举单一真相源 + auto-confirm reviewing 遗留态/幂等虚报修复（Max Loop Round5，tsc 零错误 / 203 测试绿）**
+
+- 状态枚举化：新建 src/core/story-status.ts（STORY_NODE_STATUSES 六态文档化 + StoryNodeStatus 类型 + CONFIRMABLE_STATUSES），取代散落状态字符串；applyConfirm 条件更新改引用 CONFIRMABLE_STATUSES
+- auto-confirm 修 reviewing 遗留态：显式 skip 交人工（v0.46.90 前旧态不再写入新数据）
+- auto-confirm 消费 applyConfirm 返回值：幂等跳过（并发/重试已确认）计入 skipped 不再虚报 confirmed，数据一致性修复
+- 全量 203 测试绿（幂等回归全绿）；tsc 零错误
+
 ## v0.46.99 — 2026-08-05
 **autoConfirmEnabled API 入口 + reviewLogs 结构统一 + 盲测扩展实证（Max Loop Round4，tsc 零错误 / 203 测试绿）**
 

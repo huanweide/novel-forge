@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { analyzeQuality } from "@/lib/quality-analyzer";
 import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
+import { CONFIRMABLE_STATUSES } from "@/core/story-status";
 
 // 共享阈值（单一真相源）：与 analyzeQuality 的 passed 口径一致
 export { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
@@ -129,7 +130,7 @@ export async function applyConfirm(node: {
   // 幂等守卫：仅当节点仍处待确认态（drafting/pending_confirm）才执行终态更新。
   // 重复/并发请求第二次命中已 confirmed → count=0，不重复 increment revisionCount、不重复追加 reviewLogs。
   const upd = await prisma.storyNode.updateMany({
-    where: { id: node.id, status: { in: ["drafting", "pending_confirm"] } },
+    where: { id: node.id, status: { in: [...CONFIRMABLE_STATUSES] } },
     data: {
       status: "confirmed",
       confirmedAt: now,
