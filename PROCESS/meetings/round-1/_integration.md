@@ -174,3 +174,44 @@
 - **收敛判定（loop-driver 三条件）**：① 6 Agent 全汇报 ✓；② 残留问题 P1=0（P0=0），剩 P2 非阻断转观察池；③ IMP 清单已归零（26 原 IMP 全 closed + 3 补修 P1 closed）。**本轮循环目标（复检+挖坑+修复 P1）达成**，余下 P2 可在 round-2 观察池复核，不阻塞。
 
 > 诚实边界：沙箱无 Chromium，纯浏览器视觉（抽屉 inert 开合/Toast 动画/延迟面板红横幅实际渲染）标注"需本地 npm run dev 目测"；游戏 IMP-001 复导出真机脚本本回合未重跑（Agent 证据+脚本断言逻辑充分），标注已验证来源。
+
+---
+
+## 七、round-2 观察池复核（Chair 亲执行 · 子Agent派发故障转亲自复核）
+
+> 阶段五收口后，round-2 复核观察池 P2 项（约 50 条）。原计划派 6 透镜子 Agent，但子 Agent 派发连续故障（`reading 'history'`），Chair 转亲自执行：用 grep/Read 逐条定位核查真实代码状态，给诚实结论，防假收敛。
+
+### 7.1 关键诚信披露：上轮 IMP-003 漏提交（记录与代码不一致假收敛）
+- 上轮 v1.0.1 commit 时，`git add` 精准列表**漏了 `src/app/workspace/[projectId]/game/[nodeId]/page.tsx`**——这是 IMP-003（游戏导出自动回填设定库提示 toast）的前端消费代码（`toastInfo("游戏导出已自动回填设定库…")`）。
+- `_integration.md` 第五节记录了 IMP-003「已修复」，但代码实际未进仓（工作树 M 状态）。Chair 在 round-2 起始核查 git status 时发现，已诚实披露并补入本轮回合提交。
+- **教训**：MaxLoop 防假收敛必须核对「记录 vs 实际 git 状态」，不能仅信 commit 列表。
+
+### 7.2 复核结论（每项给 文件:行号 证据，不靠"没发现"）
+
+| 项 | 真实代码状态 | 结论 |
+|----|--------------|------|
+| IMP-010（2字召回） | `src/core/text/match.test.ts:121-123`「2字云山在青云山脉仍直接命中」+`:135-136`「叶凡怒喝叶凡直接子串」锁定用例真实存在，2字不吞并保召回铁律成立 | **不修**，维持现状决策合理 |
+| 生成延迟 400 防御（P2 误报） | `generation-metrics/route.ts:45-71`：不带 projectId 时 `logs.length===0 → {empty:true}`，靠空态兜底不返虚假全站红；前端已用 useParams 不再无 projectId 打后端 | **不修**，上轮 recheck-monitor「缺 400 防御」为误判 |
+| IMP-017 深色 muted | `globals.css:111/282/1192` 三处注释均声称已 4.5:1+；上轮「4.0-4.1」为半透明卡片叠加的预估未按真实背景计算 | **维持现状**，标"需本地目测实测对比度" |
+| IMP-018 抽屉 inert | `page.tsx` inert 逻辑代码层自洽，SSR 初始态已证伪误锁死；开合运行时增删需真实浏览器 | **维持现状**，标"需本地目测" |
+| 监控缓存 Map 上限（P2 真实） | `stats/monitor/route.ts:21-29` `monitorCache` 仅 set 不删，长运行泄漏内存 | **修**（C） |
+| import forceNew 同名叠加（P2 真实） | `import/route.ts:83` 固定加「（副本）」，已含后缀再导入会叠加 | **修**（B） |
+| 写作 F2/F3/F4/F6/F7/F8/F9/F11/F12/F16、游戏 G3~G13、设定 [7]~[12]、IO-03~11、UI-04~20、监控 P2-1~13 | 逐项 grep/Read：多为个例/纯美化/纯性能优化/需本地目测，无阻断性硬伤 | **不修**（维持观察池，标注理由：成本>价值或需本地目测） |
+
+### 7.3 round-2 实际修复（3 处，过 tsc+test 门禁）
+
+| 编号 | 文件:行号 | 改动 | 验证 |
+|------|-----------|------|------|
+| IMP-003（补·漏提交） | `game/[nodeId]/page.tsx:454-458` | 补入 v1.0.1 漏提交的 toastInfo 回填提示 | tsc EXIT=0；逻辑与 game-engine autoFilled 链路一致 |
+| B · forceNew 去尾 | `import/route.ts:82-86` | 导入前先 `replace(/(（副本）|（导入）)+$/,"")` 去尾再追加，防「xxx（副本）（副本）」叠加 | import/route.test.ts 2 passed |
+| C · 缓存上限 | `stats/monitor/route.ts:15-31` | 加 `MONITOR_CACHE_MAX_SIZE=512`，超限删最旧，防 Map 无限增长泄漏 | generation-metrics/route.test.ts 3 passed |
+
+**门禁（Chair 亲验）**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → EXIT=0；相关测试 5 passed；全量 `npm test` → 211 passed（待 commit 后复跑确认）。
+
+**round-2 收敛判定**：
+- ① 上轮 P1 假收敛已全部闭环（前轮回合已修复）；本轮复核无新 P1/P0。
+- ② 观察池 P2 经核查：2 项真实小瑕疵已修（B/C）+ 1 项上轮漏提交补入（A）；其余为误报/维持现状/需本地目测，诚实标注不修。
+- ③ 残留非阻断项（IMP-010/017/018 维持现状、其余观察池个例）转入长期观察池，不阻塞。
+- **MaxLoop round-1（含阶段五复检 + round-2 观察池复核）至此完整收口**：P0=0、P1=0、可修 P2 已修、记录与代码一致（含本次补漏提交）。
+
+> 诚实边界：沙箱无 Chromium，IMP-017/018 真实视觉对比度与抽屉开合 inert 运行时行为仍标"需本地 npm run dev 目测"，不臆断。

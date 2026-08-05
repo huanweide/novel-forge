@@ -13,6 +13,8 @@ import { computeAutoRate } from "@/core/auto-rate";
 // IMP-020：监控全月聚合（aggregate + groupBy）开销大，而结果仅随 projectId / 当月窗口变化，
 // 与切章时的 nodeId 无关。做 30s 内存缓存，避免每次切章重跑全月 groupBy（byProject 分支此前白算）。
 const MONITOR_CACHE_TTL_MS = 30_000;
+// round-2 修复：缓存 Map 仅 set 不删会随项目数无限增长，长运行泄漏内存。加容量上限，超限清最旧。
+const MONITOR_CACHE_MAX_SIZE = 512;
 interface MonitorCacheEntry {
   ts: number;
   llmUsage: unknown;
@@ -26,6 +28,11 @@ function getCachedMonitor(projectId: string): MonitorCacheEntry | null {
 }
 function setCachedMonitor(projectId: string, llmUsage: unknown, projectLlm: unknown): void {
   monitorCache.set(projectId, { ts: Date.now(), llmUsage, projectLlm });
+  // 容量护栏：超出上限时删最旧条目（Map 迭代顺序即插入顺序，firstKey 即最旧）
+  if (monitorCache.size > MONITOR_CACHE_MAX_SIZE) {
+    const oldestKey = monitorCache.keys().next().value;
+    if (oldestKey !== undefined) monitorCache.delete(oldestKey);
+  }
 }
 
 export async function GET(request: Request) {

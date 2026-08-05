@@ -18,6 +18,7 @@ import GameOutlineEditor from "@/components/game/GameOutlineEditor";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
+import { toastInfo } from "@/components/ui/toast";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
 import { reconcileFromSummary, applyFrontendItemChanges } from "@/core/game/reconcile";
@@ -450,6 +451,10 @@ export default function GamePage() {
         exportStatus: data.status ?? null,
         exportQuality: data.qualityScore ?? null,
       }));
+      // IMP-003：游戏导出触发自动回填设定库时，给出明确提示，避免静默改动世界观设定
+      if (data.autoFilled) {
+        toastInfo("游戏导出已自动回填设定库（可在创意工坊查看/修订）");
+      }
     } catch (err: any) {
       setState((s) => ({ ...s, status: "playing", error: err.message }));
     }

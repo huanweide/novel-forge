@@ -25,18 +25,37 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.0.1";
+export const LATEST_VERSION = "v1.0.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.0.1 复检修复：导出文件名乱码（默认 markdown/txt 分支补 filename*=）、延迟监控面板全站红误导（改用 useParams 透传 projectId）、游戏复导出正文堆叠损坏（原正文快照防叠加）",
-  "MaxLoop 阶段五复检循环：6 透镜复检上轮 23 条修复真生效，诚实暴露 2 条 P1 假收敛并已补修，新挖 1 条游戏 P1 已修",
-  "门禁全绿：tsc 零错误 + 211 单元测试（较 v1.0.0 增 8 例监控/确认单测）；新增游戏复导出堆叠真机验证脚本",
-  "防假收敛机制生效：复检不靠「没发现」判断「没问题」，所有修复以 diff/测试/真机脚本证据确证",
+  "v1.0.2 稳定性补丁：补入上轮漏提交的游戏导出回填提示、修复导入副本名叠加与监控缓存泄漏",
+  "补提交 IMP-003：游戏导出自动回填设定库的前端提示 toast 此前漏入仓，本轮补入并核验一致",
+  "导入 forceNew 去尾：反复导入同一备份不再叠加成「xxx（副本）（副本）」",
+  "监控缓存容量护栏：stats/monitor 内存缓存加 512 上限，长运行不再无限增长泄漏内存",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.0.2",
+    date: "2026-08-06",
+    title: "稳定性补丁：补漏提交 + 副本名叠加 + 缓存泄漏护栏",
+    sections: [
+      {
+        label: "补入上轮漏提交",
+        items: ["IMP-003 游戏导出自动回填设定库的前端提示 toast 此前漏入仓，本轮补入并核验与 game-engine autoFilled 链路一致"],
+      },
+      {
+        label: "修复",
+        items: ["导入 forceNew 去尾再追加，反复导入同一备份不再叠加成「xxx（副本）（副本）」", "stats/monitor 内存缓存加 512 容量上限并删最旧，防长运行内存泄漏"],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 211 单元测试全绿；MaxLoop round-2 观察池复核完成，记录与代码一致性已校验"],
+      },
+    ],
+  },
   {
     version: "v1.0.1",
     date: "2026-08-06",

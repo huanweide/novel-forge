@@ -79,8 +79,10 @@ export async function POST(request: Request) {
         "characters", "lorebookEntries", "storyNodes", "storyBranches",
         "storylines", "styleCards", "loreTables", "rules",
       ]);
-      // IMP-014：forceNew 时后缀用「（副本）」，否则保持「（导入）」
-      projData.name = (projData.name || "导入的项目") + (forceNew ? "（副本）" : "（导入）");
+      // IMP-014：forceNew 时后缀用「（副本）」，否则保持「（导入）」。
+      // round-2 修复：先去掉已有「（副本）」「（导入）」后缀，避免反复导入堆叠成「xxx（副本）（副本）」。
+      const baseName = (projData.name || "导入的项目").replace(/(（副本）|（导入）)+$/g, "");
+      projData.name = baseName + (forceNew ? "（副本）" : "（导入）");
       // 记录导入来源，供幂等去重（不改动业务字段语义）。
       // N2 修复：同时写入 buildConfig.importSource（保留既有追踪语义）与顶层 importSource（DB 唯一约束，并发幂等）。
       projData.buildConfig = {
