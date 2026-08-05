@@ -2211,3 +2211,32 @@ doctor 是**本地启动前自检**，不是线上监控。部署站 `health 404
 ### 诚实边界
 - 已真实验证：tsc 零错误；`prisma db push` 成功（207ms）；24 项目数据迁移样本确认 `fillFrequency=1, skipLatestChapter=false`；双 changelog 同 commit `3615cb5`；代理 push 成功。
 - 未验证（需你本地确认）：① 写一章后是否实时弹「已写入 N 行」toast —— 需 `npm run dev` 实写一章看。② LLM key 缺失时填表静默失败 —— 这是 fetch LLM 的固有行为（`loop.ts` 无 key 时 `ok=false`），非本次改动引入，配好 key 即正常。
+
+---
+
+## v1.1.3 — MaxLoop Round-5 第二批：折叠基建 + 右栏四 tab（并拦截一次死功能误删）
+
+### 干了什么
+- 实现 R5-4：新建通用折叠组件 `src/components/ui/collapse.tsx`（受控/非受控、chevron arrowRight/arrowDown、mountOnOpen 懒挂载、sm/md 两档），把 `CharacterDialog` 九大区块、`WorldModuleSidebar` 词条双列网格、`CharacterGroupList`/`StorylineList` 分组与六要素改为可折叠，长表单与密集列表能逐段收起。
+- 实现 R5-5：右栏从原「AI助手 / 查询实体 / 监测」三 tab 重构为「AI助手 / 实体 / 工具箱 / 统计」四 tab；工具箱内联 `ToolboxDialog` 网格、统计整合 StatRow 与监测三块 + 上下文预览、`AIChatHeader` 去重统计条、`AIChatBar` 新增「去AI味」「文段概括」预设。
+- **拦截回归**：R5-5 agent 初版把「查询实体」tab 整段删了（实体追踪/伏笔/关系图三面板仅该 tab 引用），Chair 复核 git diff 发现并令其还原，避免三个功能变死功能。
+- 双 changelog 升 v1.1.3，commit `f6e4b48`，代理推送 `6be568f..f6e4b48` 成功。
+- 派侦察 agent 复核 R5-3 原「待续」三项（主色调紫/圆角归一/记忆衰减），据实判定均不强行做。
+
+### 为什么这么做（第一性原理）
+Round-5 核心是对照云笔做折叠/布局/集成体检。折叠解决长人物卡滚动疲劳；四 tab 解决右栏信息堆砌；而「功能集成不得丢功能」是用户铁律——任何重构若让已有功能从 UI 消失，就是假优化。本次若只信 agent「已完成」回报而不看 git diff，就会静默丢掉实体追踪/伏笔/关系图三个真实功能。
+
+### 方法、工具与效果
+1. 两个后台 agent 并行实现 R5-4/R5-5（各自 tsc 自测 EXIT 0）。
+2. **Chair 统一复核（Trust but verify）**：`SAFE_DELETE_DISABLE=1 node node_modules/typescript/bin/tsc --noEmit` 整项目 EXIT 0；`node node_modules/vitest/vitest.mjs run` 217 passed(0 failed)。沙箱 npx 的 PATH 坏，直接用 tsc/vitest 二进制绕过。
+3. 复核手段：`git diff --stat` + `grep` 确认 ChapterEntitiesPanel/ForeshadowingPanel/RelationshipGraph 全项目仅 RightPanel 引用 → 证实删除会致死功能 → 发回 agent 还原为「实体」tab。
+4. 写双 changelog（changelog-data.ts 字符串内用「」与全角括号避 TS1005；CHANGELOG.md 镜像一致）。
+5. 代理 push：`git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 push origin main`（远端放行 PR/状态检查规则）。
+
+### 关键取舍
+- **recon 锚点会漂移**：R5-5 初版基于过时侦察结论（以为原 tab 是 ai/toolbox/stats），实则原结构是 ai/query/monitor。教训：Chair 复核必须对照「功能是否仍可触达」，而非照搬 agent 的删除声明。
+- **R5-3 三项主动不做**（经实读侦察纠正过时清单）：① 记忆衰减早已完整实现（引擎 `memory-decay.ts` + API `+ MemoryDecayDialog` + 设置卡），无需补；② `--nv-primary` 已是 H=270 蓝紫，`--nv-creative` 已 295 紫罗兰，再调紫会撞色、低价值有风险；③ 圆角令牌体系已建，但组件散落约 640 处 `rounded-*`，全量归一要动几百文件且 xl/lg 仅差 2px——属「为追求更优化而强行改」，违背用户反过度工程铁律，刻意不做。
+
+### 诚实边界
+- 已真实验证：整项目 tsc EXIT 0；vitest 217 passed；git diff 确认三面板仅 RightPanel 引用；双 changelog 同 commit `f6e4b48`；代理 push 成功 `6be568f..f6e4b48`。
+- 未验证（沙箱无 Chromium，需你本地确认）：① 四个 tab 的实际视觉与折叠交互手感；② 人物卡九区块折叠后长卡滚动体验。建议 `npm run dev` 打开人物卡与右栏目测。
