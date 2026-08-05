@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.91 — 2026-08-05
+**批量确认本卷（MCCS Round2）：批量确认端点 + 左栏批量确认按钮 + 质量护栏拦截低分章 + 端到端真机验证全绿（tsc 零错误）**
+
+- 新增 POST /api/story/nodes/batch-confirm：左栏批量模式勾选 pending_confirm 章节后一键确认；质量护栏 requirePassed 默认 true，仅放行 qualityScore>=60 的章，低于阈值（含无法解析正文）进 blocked 并附 reason，不被蒙混过关
+- 左栏 LeftPanel 批量工具栏新增「批量确认 N」按钮（仅当 selectedPendingCount>0 时显示），workspace page.tsx 加 handleBatchConfirm 回调与 batchConfirming 忙态；确认后 loadProject 刷新 + 清空选择 + 退出批量模式，toast 汇总放行/拦截/跳过数
+- PUT /api/story/nodes/[id] 补 qualityScore 透传（qualityScore: body.qualityScore）；undefined 时为 Prisma no-op 不影响现有手动保存，与批量确认端点「score==null 才回退 analyzer、否则用 DB 值」护栏设计一致
+- 端到端真机验证 scripts/musk-batch-verify.cjs 全绿（VERIFY_PASS）：A/B 章 qualityScore 留 null 经实时 analyzer 打 90/A 放行、C 章 30 分拦截、最终态正确，护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖
+
 ## v0.46.90 — 2026-08-05
 **确认流程断点修复：写章后状态恒为 drafting（不再卡 reviewing 死锁）+ 马斯克智能体端到端验证 12 章全闭环（tsc 零错误）**
 

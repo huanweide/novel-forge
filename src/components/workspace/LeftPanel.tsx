@@ -17,6 +17,7 @@ export function LeftPanel({
   viewMode, onSetViewMode, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
   batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId, onLoadSample,
+  onBatchConfirm, batchConfirming,
 }: {
   activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules") => void;
@@ -27,6 +28,7 @@ export function LeftPanel({
   batchMode: boolean; onToggleBatchMode: () => void; selectedChapterIds: Set<string>;
   onToggleChapterSelect: (id: string) => void; onSelectAll: () => void;
   onClearSelection: () => void; batchGenerating: boolean; onBatchGenerate: () => void;
+  onBatchConfirm: () => void; batchConfirming: boolean;
   onDeleteNode?: (id: string) => void;
   deletingNodeId?: string | null;
   onLoadSample?: () => void;
@@ -35,6 +37,9 @@ export function LeftPanel({
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  // 选中的章节里处于「待确认」的数量（批量确认仅对这些章生效）
+  const selectedPendingCount =
+    project.storyNodes?.filter((n) => selectedChapterIds.has(n.id) && n.status === "pending_confirm").length ?? 0;
   const visibleTabs = [
     { key: "outline", label: "大纲" },
     { key: "characters", label: `角色 (${project.characters?.length || 0})` },
@@ -108,6 +113,9 @@ export function LeftPanel({
                 <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-1">{selectedChapterIds.size} 章</span>
                 {selectedChapterIds.size > 0 && !batchGenerating && (
                   <button onClick={onBatchGenerate} className="btn-ghost text-[10px] px-2 py-0.5 rounded font-medium ml-auto text-[var(--nv-accent)] border border-[var(--nv-accent)]/40 hover:bg-[var(--nv-accent-soft)]">批量生成</button>
+                )}
+                {selectedPendingCount > 0 && !batchGenerating && !batchConfirming && (
+                  <button onClick={onBatchConfirm} disabled={batchConfirming} className="btn-ghost text-[10px] px-2 py-0.5 rounded font-medium text-[var(--nv-success)] border border-[var(--nv-success)]/40 hover:bg-[var(--nv-success)]/10">批量确认 {selectedPendingCount}</button>
                 )}
               </div>
             )}

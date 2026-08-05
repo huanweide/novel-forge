@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.90";
+export const LATEST_VERSION = "v0.46.91";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "确认流程断点修复：generate/write 写章后状态恒为 drafting，根治生成完章节卡 reviewing 死锁无确认按钮（契合 Round1 规格「生成仅落 drafting」）",
-  "后处理六维质量审校仍写 reviewLogs/qualityScore 供 AI诊断展示，但不再决定节点状态（诊断是选项不是前置税）",
-  "马斯克智能体端到端验证：真实建项目 + 真实 LLM 写 12 章（约 3.98 万字）+ 逐章确认（含第5章打回重写闭环）+ 整本确认完成🚀，全按钮闭环",
-  "运维注记：确认偶发 503 多为 dev 旧进程 stale Prisma 客户端（不含新增 confirmed_at 列），重启加载新客户端即修复",
+  "批量确认本卷（MCCS Round2）：新增 POST /api/story/nodes/batch-confirm，左栏批量模式勾选 pending_confirm 章后一键确认，质量护栏默认拦截 qualityScore<60 的章",
+  "左栏批量模式新增「批量确认 N」按钮（仅选中待确认章>0 时显示），workspace page 加 handleBatchConfirm 回调与 batchConfirming 忙态，确认后自动刷新+清空选择+退出批量模式",
+  "PUT /api/story/nodes/[id] 补 qualityScore 透传（客户端可落库质量分，undefined 为 no-op 不影响现有手动保存），与批量确认端点「否则用 DB 值」护栏设计一致",
+  "端到端真机验证 scripts/musk-batch-verify.cjs 全绿：A/B 章实时 analyzer 90 分放行、C 章 30 分拦截、最终态正确（VERIFY_PASS），护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.91",
+    date: "2026-08-05",
+    title: "批量确认本卷（MCCS Round2）：批量确认端点 + 左栏批量确认按钮 + 质量护栏拦截低分章 + 端到端真机验证全绿（tsc 零错误）",
+    sections: [
+      {
+        label: "批量确认本卷（MCCS Round2·规格 musk-confirm-spec 第47-48行）",
+        items: [
+          "新增 POST /api/story/nodes/batch-confirm：左栏批量模式勾选 pending_confirm 章节后一键确认；质量护栏 requirePassed 默认 true，仅放行 qualityScore>=60 的章，低于阈值（含无法解析正文）进 blocked 并附 reason，不被蒙混过关",
+          "左栏 LeftPanel 批量工具栏新增「批量确认 N」按钮（仅当 selectedPendingCount>0 时显示），workspace page.tsx 加 handleBatchConfirm 回调与 batchConfirming 忙态；确认后 loadProject 刷新 + 清空选择 + 退出批量模式，toast 汇总放行/拦截/跳过数",
+          "PUT /api/story/nodes/[id] 补 qualityScore 透传（qualityScore: body.qualityScore）；undefined 时为 Prisma no-op 不影响现有手动保存，让「客户端可落库质量分」成为合法能力，与批量确认端点「score==null 才回退 analyzer、否则用 DB 值」护栏设计一致",
+          "端到端真机验证 scripts/musk-batch-verify.cjs 全绿（VERIFY_PASS）：A/B 章 qualityScore 留 null → 后端实时 analyzer 打 90/A 放行 confirmed；C 章直接置 qualityScore=30 → <60 拦截进 blocked 保持 pending_confirm；护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖，最终态正确",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.90",
     date: "2026-08-05",

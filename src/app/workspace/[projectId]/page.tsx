@@ -309,6 +309,7 @@ export default function WorkspacePage() {
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchProgress, setBatchProgress] = useState<Map<string, { status: string; error?: string }>>(new Map());
   const [batchAbort, setBatchAbort] = useState(false);
+  const [batchConfirming, setBatchConfirming] = useState(false);
 
   // ── 大纲生成对话框 ────────────────────────
   const [showOutlineDialog, setShowOutlineDialog] = useState(false);
@@ -794,6 +795,38 @@ export default function WorkspacePage() {
   };
 
   // ═══════════════════════════════════════════
+  // 批量确认本卷（质量护栏在后端拦截低分章）
+  // ═══════════════════════════════════════════
+
+  const handleBatchConfirm = async () => {
+    if (!project || selectedChapterIds.size === 0) return;
+    setBatchConfirming(true);
+    try {
+      const res = await fetch("/api/story/nodes/batch-confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, nodeIds: [...selectedChapterIds] }),
+      });
+      const d = await res.json().catch(() => ({}) as any);
+      if (!res.ok) { toastError("批量确认失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      const confirmed: any[] = d.confirmed ?? [];
+      const blocked: any[] = d.blocked ?? [];
+      const skipped: any[] = d.skipped ?? [];
+      let msg = `批量确认完成：通过 ${confirmed.length} 章`;
+      if (blocked.length > 0) msg += `，拦截 ${blocked.length} 章（质量低于阈值）`;
+      if (skipped.length > 0) msg += `，跳过 ${skipped.length} 章（非待确认态）`;
+      if (blocked.length > 0 || skipped.length > 0) toastInfo(msg); else toastSuccess(msg);
+      await loadProject();
+      setSelectedChapterIds(new Set());
+      setBatchMode(false);
+    } catch (err) {
+      toastError("批量确认失败（网络错误）：" + (err instanceof Error ? err.message : "请重试"));
+    } finally {
+      setBatchConfirming(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════
   // 导出
   // ═══════════════════════════════════════════
 
@@ -908,7 +941,7 @@ export default function WorkspacePage() {
           batchMode={batchMode} onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
           selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
-          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onDeleteNode={deleteNode} deletingNodeId={deletingId}
+          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onBatchConfirm={handleBatchConfirm} batchConfirming={batchConfirming} onDeleteNode={deleteNode} deletingNodeId={deletingId}
           onLoadSample={loadSample} />
         </ErrorBoundary>
         </div>
