@@ -2,6 +2,14 @@
 
 ---
 
+## v0.46.92 — 2026-08-05
+**智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）**
+
+- 新增 POST /api/story/nodes/auto-confirm：智能审阅模式下扫描项目下所有 drafting/pending_confirm 章（或显式 nodeIds），合格章自动确认（含 safeFillAfterWriting 自动填表），不合格章（空正文/过短/质量分<60）进 blocked 并附 reason；返回结构与批量确认端点一致，前端看板可复用
+- 抽离共享护栏 src/core/confirm-guard.ts：evaluateConfirmEligibility（空正文/过短优先拦截、qualityScore 非 null 采信省分析、null 回退本地 analyzeQuality 零 Token、<60 拦截）与 applyConfirm（自动填表副作用 + status=confirmed），批量确认/自动确认/生成流水线三处复用单一 QUALITY_PASS_THRESHOLD=60 真相，消除阈值分裂
+- Project 模型新增 autoConfirmEnabled Boolean @default(true) 开关；post-processor 生成完落库后 best-effort 调用 applyConfirm——若项目开启且质量达标直接 confirmed（含 SSE auto_confirm 事件），失败 catch 降级为 drafting 不阻塞主流程；db push 同步数据库并对已有项目自动填充 true
+- 端到端真机验证 scripts/musk-auto-confirm-verify.cjs 全绿（VERIFY_PASS）：建沙盒项目→建3章（A/B 优质留空质量分实时算、C 短文本）→扫全书自动确认→A/B 86/A 放行 confirmed、C 正文过短拦截 blocked、最终态 a/b=confirmed c=drafting；护栏路径（实时分析+过短拦截）覆盖；tsc 零错误
+
 ## v0.46.91 — 2026-08-05
 **批量确认本卷（MCCS Round2）：批量确认端点 + 左栏批量确认按钮 + 质量护栏拦截低分章 + 端到端真机验证全绿（tsc 零错误）**
 

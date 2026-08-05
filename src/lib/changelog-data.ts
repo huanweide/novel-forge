@@ -25,18 +25,34 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v0.46.91";
+export const LATEST_VERSION = "v0.46.92";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "批量确认本卷（MCCS Round2）：新增 POST /api/story/nodes/batch-confirm，左栏批量模式勾选 pending_confirm 章后一键确认，质量护栏默认拦截 qualityScore<60 的章",
-  "左栏批量模式新增「批量确认 N」按钮（仅选中待确认章>0 时显示），workspace page 加 handleBatchConfirm 回调与 batchConfirming 忙态，确认后自动刷新+清空选择+退出批量模式",
-  "PUT /api/story/nodes/[id] 补 qualityScore 透传（客户端可落库质量分，undefined 为 no-op 不影响现有手动保存），与批量确认端点「否则用 DB 值」护栏设计一致",
-  "端到端真机验证 scripts/musk-batch-verify.cjs 全绿：A/B 章实时 analyzer 90 分放行、C 章 30 分拦截、最终态正确（VERIFY_PASS），护栏两条路径（实时分析兜底 + DB 低分直判）均覆盖",
+  "智能自动确认（马斯克 Round3 #1）：新增 POST /api/story/nodes/auto-confirm 端点 + 生成流水线 post-processor 挂载，项目开启后生成完合格章自动确认（含自动填表），人类从审批者降级为异常处理者",
+  "抽离共享质量护栏 src/core/confirm-guard.ts 单一阈值真相（QUALITY_PASS_THRESHOLD=60）：evaluateConfirmEligibility 空正文/过短优先拦截、qualityScore 非 null 采信省分析、null 回退本地 analyzeQuality 零 Token；applyConfirm 封装自动填表副作用 + confirmed 状态，批量确认/自动确认/流水线三处复用",
+  "Project 模型新增 autoConfirmEnabled 开关字段（默认 true），db push 同步数据库并自动填充已有项目；post-processor 生成完若开启且质量达标直接 confirmed（best-effort，失败降级 drafting 不阻塞落库），并推送 SSE auto_confirm 事件",
+  "端到端真机验证 scripts/musk-auto-confirm-verify.cjs 全绿：A/B 优质章实时 analyzer 86/A 自动放行、C 章正文过短拦截、最终态正确（VERIFY_PASS），护栏两条路径（实时分析 + 过短拦截）均覆盖",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v0.46.92",
+    date: "2026-08-05",
+    title: "智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认 + 共享质量护栏 + 项目开关 + 端到端验证全绿（tsc 零错误）",
+    sections: [
+      {
+        label: "智能自动确认（马斯克 Round3 #1）：生成完合格章自动确认，人类降级异常处理者",
+        items: [
+          "新增 POST /api/story/nodes/auto-confirm：智能审阅模式下扫描项目下所有 drafting/pending_confirm 章（或显式 nodeIds），合格章自动确认（含 safeFillAfterWriting 自动填表），不合格章（空正文/过短/质量分<60）进 blocked 并附 reason；返回结构与批量确认端点一致，前端看板可复用",
+          "抽离共享护栏 src/core/confirm-guard.ts：evaluateConfirmEligibility（空正文/过短优先拦截、qualityScore 非 null 采信省分析、null 回退本地 analyzeQuality 零 Token、<60 拦截）与 applyConfirm（自动填表副作用 + status=confirmed），批量确认/自动确认/生成流水线三处复用单一 QUALITY_PASS_THRESHOLD=60 真相，消除阈值分裂",
+          "Project 模型新增 autoConfirmEnabled Boolean @default(true) 开关；post-processor 生成完落库后 best-effort 调用 applyConfirm——若项目开启且质量达标直接 confirmed（含 SSE auto_confirm 事件），失败 catch 降级为 drafting 不阻塞主流程；db push 同步数据库并对已有项目自动填充 true",
+          "端到端真机验证 scripts/musk-auto-confirm-verify.cjs 全绿（VERIFY_PASS）：建沙盒项目→建3章（A/B 优质留空质量分实时算、C 短文本）→扫全书自动确认→A/B 86/A 放行 confirmed、C 正文过短拦截 blocked、最终态 a/b=confirmed c=drafting；护栏路径（实时分析+过短拦截）覆盖；tsc 零错误",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.46.91",
     date: "2026-08-05",

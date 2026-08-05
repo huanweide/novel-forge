@@ -17,6 +17,7 @@ import type { AgentOrchestrator } from "@/core/agents";
 import type { ReviewLog } from "@/core/types";
 import type { PostPipelineParams, PostPipelineResult } from "./types";
 import { snapshotRevision } from "@/lib/versions";
+import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
 
 /**
  * 运行完整的生成后处理管线。
@@ -207,6 +208,34 @@ export async function runPostGenerationPipeline(
       revisionCount: ((currentNode as any).revisionCount || 0) + 1,
     },
   });
+
+  // ── 3.1 马斯克 Round3：智能审阅（Auto-Confirm）──
+  // 项目开启智能审阅时，生成完若质量达标直接自动确认（含自动填表），
+  // 人类从审批者降级为异常处理者。best-effort：失败降级为 drafting，不阻塞落库。
+  try {
+    const proj = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { autoConfirmEnabled: true },
+    });
+    if (proj?.autoConfirmEnabled) {
+      const el = evaluateConfirmEligibility(
+        { content, qualityScore: qualityReport?.overallScore ?? null },
+        [],
+        true,
+      );
+      if (el.eligible) {
+        await applyConfirm({
+          id: nodeId,
+          projectId,
+          content,
+          order: (currentNode as any)?.order ?? 0,
+        });
+        send({ type: "auto_confirm", content: "智能审阅：质量达标，已自动确认" });
+      }
+    }
+  } catch (acErr) {
+    console.error("[auto-confirm] 跳过，保持 drafting：", acErr);
+  }
 
   // ── 3.5 本地蒸馏（增强模式——在 LLM summarize 前运行，零 Token 消耗）──
   send({ type: "distill_local_start", content: "" });
