@@ -1,70 +1,42 @@
 "use client";
 
-import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/icons";
-import { Switch } from "@/components/ui/switch";
-import { toastSuccess, toastError } from "@/components/ui/toast";
-import { useProjectStore } from "@/store";
+import { ChapterConfirmBar } from "@/components/workspace/ChapterConfirmBar";
 
 interface Props {
   projectId: string;
   project: { name?: string; autoConfirmEnabled?: boolean; autoDeliverEnabled?: boolean } | null;
+  selectedNode?: { id: string; status: string } | null;
+  allConfirmed: boolean;
+  projectConfirmedAt: string | null;
   onClose: () => void;
   onOpenBuildConfig: () => void;
   onOpenProjectConfig: () => void;
   onOpenMemoryDecay: () => void;
+  onAction: () => void;
+  onDiagnose: () => void;
 }
 
 export function ProjectSettingsDialog({
   projectId,
   project,
+  selectedNode,
+  allConfirmed,
+  projectConfirmedAt,
   onClose,
   onOpenBuildConfig,
   onOpenProjectConfig,
   onOpenMemoryDecay,
+  onAction,
+  onDiagnose,
 }: Props) {
-  const [autoConfirm, setAutoConfirm] = useState<boolean>(project?.autoConfirmEnabled ?? true);
-  const [autoDeliver, setAutoDeliver] = useState<boolean>(project?.autoDeliverEnabled ?? true);
-  const [busy, setBusy] = useState(false);
-
-  const saveDelivery = async (patch: { autoConfirmEnabled?: boolean; autoDeliverEnabled?: boolean }) => {
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (res.ok) {
-        useProjectStore.getState().patchProject(patch);
-        toastSuccess("确认与交付设置已保存");
-      } else {
-        toastError(d.error || "保存失败");
-      }
-    } catch (e) {
-      toastError("保存失败：" + (e instanceof Error ? e.message : "网络错误"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onToggleAutoConfirm = (v: boolean) => {
-    setAutoConfirm(v);
-    void saveDelivery({ autoConfirmEnabled: v });
-  };
-  const onToggleAutoDeliver = (v: boolean) => {
-    setAutoDeliver(v);
-    void saveDelivery({ autoDeliverEnabled: v });
-  };
-
   return (
     <Modal
       open
       onClose={onClose}
       bare
-      panelClassName="max-w-lg max-h-[90vh] overflow-y-auto"
+      panelClassName="max-w-2xl max-h-[90vh] overflow-y-auto"
       closeOnOverlay={false}
       labelledBy="project-settings-title"
     >
@@ -79,7 +51,7 @@ export function ProjectSettingsDialog({
         </div>
 
         <p className="text-xs text-[var(--nv-text-muted)] mb-5">
-          把分散的项目设置归整到一处：小说骨架、项目配置、记忆衰减，以及确认流程的自动交付开关。
+          把分散的项目设置归整到一处：小说骨架、项目配置、记忆衰减，以及确认与交付。
         </p>
 
         <SettingsEntry
@@ -105,29 +77,26 @@ export function ProjectSettingsDialog({
           <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
             <Icon name="check" size={15} className="text-[var(--nv-primary)]" /> 确认与交付
           </h3>
-          <p className="text-xs text-[var(--nv-text-muted)] mb-3">
-            控制下方「确认流程」的自动化程度。关闭后改回逐章人工审批。
+          <p className="text-xs text-[var(--nv-text-muted)] mb-2">
+            章节定稿、AI 审校、智能交付全书都收在这里——正文区不再被确认栏遮挡。
           </p>
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-sm">智能定稿（自动确认）</div>
-                <div className="text-xs text-[var(--nv-text-muted)] mt-0.5">
-                  章节生成且通过质量门槛后，系统自动盖章定稿，无需你逐章点「确认通过」。
-                </div>
-              </div>
-              <Switch checked={autoConfirm} onCheckedChange={onToggleAutoConfirm} disabled={busy} />
+          {selectedNode ? (
+            <ChapterConfirmBar
+              projectId={projectId}
+              nodeId={selectedNode.id}
+              nodeStatus={selectedNode.status}
+              allConfirmed={allConfirmed}
+              projectConfirmedAt={projectConfirmedAt}
+              autoConfirmEnabled={project?.autoConfirmEnabled ?? true}
+              autoDeliverEnabled={project?.autoDeliverEnabled ?? true}
+              onAction={onAction}
+              onDiagnose={onDiagnose}
+            />
+          ) : (
+            <div className="rounded-xl border border-dashed border-[var(--nv-border-2)] px-4 py-3 text-xs text-[var(--nv-text-muted)]">
+              先在大纲里选中一个章节，即可在这里对它确认定稿、AI 审校，或对全书一键智能交付。
             </div>
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-sm">智能交付全书</div>
-                <div className="text-xs text-[var(--nv-text-muted)] mt-0.5">
-                  全书所有章节均定稿后，系统自动整本交付，生成最终成品。
-                </div>
-              </div>
-              <Switch checked={autoDeliver} onCheckedChange={onToggleAutoDeliver} disabled={busy} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </Modal>

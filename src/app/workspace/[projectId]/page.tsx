@@ -10,7 +10,6 @@ import { Icon } from "@/components/ui/icons";
 import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
 import { PostGenPanel } from "@/components/workspace/PostGenPanel";
-import { ChapterConfirmBar } from "@/components/workspace/ChapterConfirmBar";
 import { Toolbar } from "@/components/workspace/Toolbar";
 import { ToolboxDialog, type ToolboxItem } from "@/components/workspace/ToolboxDialog";
 import { ExportDialog } from "@/components/workspace/ExportDialog";
@@ -1058,35 +1057,7 @@ export default function WorkspacePage() {
             </div>
           )}
 
-          {/* 确认流程常驻确认栏（贴正文下方） */}
-          {selectedNode && (
-            <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
-              <ChapterConfirmBar
-                projectId={project?.id || ""}
-                nodeId={selectedNode.id}
-                nodeStatus={selectedNode.status}
-                allConfirmed={allConfirmed}
-                projectConfirmedAt={projectConfirmedAt}
-                autoConfirmEnabled={project?.autoConfirmEnabled ?? true}
-                autoDeliverEnabled={project?.autoDeliverEnabled ?? true}
-                onAction={() => { void loadProject(); }}
-                onDiagnose={async () => {
-                  try {
-                    const res = await fetch(`/api/story/nodes/${selectedNode.id}/review`, { method: "POST" });
-                    const d = await res.json().catch(() => ({}));
-                    if (res.ok) {
-                      setReviewResult({ passed: d.passed, issues: d.issues || [] });
-                      toastSuccess(`AI 诊断完成：综合 ${d.overallScore} 分（${d.grade} 级）`);
-                    } else {
-                      toastError(d.error || "诊断失败");
-                    }
-                  } catch (e) {
-                    toastError("诊断失败：" + (e instanceof Error ? e.message : "网络错误"));
-                  }
-                }}
-              />
-            </div>
-          )}
+          {/* 确认流程已收口到「项目设定」弹窗——正文区不再常驻确认栏，阅读不被遮挡 */}
 
           {/* 统一分析面板（替代旧版浮动横幅+弹窗+按钮） */}
           {(extractionData || distillSummary || forbiddenScanResult || logicCheckResult || reviewResult) && selectedNode && (
@@ -1183,10 +1154,29 @@ export default function WorkspacePage() {
         <ProjectSettingsDialog
           projectId={project.id}
           project={project}
+          selectedNode={selectedNode}
+          allConfirmed={allConfirmed}
+          projectConfirmedAt={projectConfirmedAt}
           onClose={() => setShowProjectSettings(false)}
           onOpenBuildConfig={() => { setShowProjectSettings(false); setShowBuildConfig(true); }}
           onOpenProjectConfig={() => { setShowProjectSettings(false); setShowProjectConfig(true); }}
           onOpenMemoryDecay={() => { setShowProjectSettings(false); setShowMemoryDecay(true); }}
+          onAction={() => { void loadProject(); }}
+          onDiagnose={async () => {
+            if (!selectedNode) return;
+            try {
+              const res = await fetch(`/api/story/nodes/${selectedNode.id}/review`, { method: "POST" });
+              const d = await res.json().catch(() => ({}));
+              if (res.ok) {
+                setReviewResult({ passed: d.passed, issues: d.issues || [] });
+                toastSuccess(`AI 诊断完成：综合 ${d.overallScore} 分（${d.grade} 级）`);
+              } else {
+                toastError(d.error || "诊断失败");
+              }
+            } catch (e) {
+              toastError("诊断失败：" + (e instanceof Error ? e.message : "网络错误"));
+            }
+          }}
         />
       )}
 
