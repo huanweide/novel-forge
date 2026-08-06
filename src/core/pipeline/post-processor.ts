@@ -192,18 +192,14 @@ export async function runPostGenerationPipeline(
       }
     : null;
 
-  // v1.4.0 章名自动生成：标题为空或「第N章」占位时，用正文首段前 20 字兜底（零成本，不额外调 LLM）
-  const oldTitle = String((currentNode as any)?.title || "").trim();
-  const isPlaceholderTitle = !oldTitle || /^第\s*\d+\s*章$/.test(oldTitle);
-  const autoTitle = isPlaceholderTitle
-    ? (content.split("\n").map((s) => s.trim()).find((s) => s.length > 0) || "").slice(0, 20)
-    : null;
+  // v1.6.1 章节命名：章名不再由「正文首段前 20 字」兜底（用户指出该逻辑错误）。
+  // 改为在下方「4. 摘要」环节用 LLM 对整章的 summary 作为章节名，前缀标注第几章。
+  // 此处不写 title，保留节点原有标题（占位「第N章」或用户自定义），待摘要生成后回填。
 
   const updatedNode = await prisma.storyNode.update({
     where: { id: nodeId },
     data: {
       content,
-      ...(autoTitle ? { title: autoTitle } : {}),
       wordCount: content.length,
       // 确认流程（spec v1 §二/§五）：生成后仅落 drafting，不污染下游、不预置"接受"。
       // 后处理审校（六维质量）结果仍写入 reviewLogs / qualityScore 供「AI诊断」展示，
@@ -572,6 +568,42 @@ export async function runPostGenerationPipeline(
       }
 
       send({ type: "summarize_done", summary, keyEvents });
+
+      // ── 4.1 章节命名（v1.6.1 修复：用户要求章名由 LLM 对整章总结生成，并标注第几章）──
+      // 取 summary 首行作为章节名，前缀「第N章：」，仅当标题为空或仍为「第N章」占位时才回填，
+      // 绝不覆盖用户已自定义的真实标题。
+      try {
+        const cleanSummary = String(summary || "")
+          .split("\n")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)[0] || "";
+        const titleBase = cleanSummary.slice(0, 40).trim();
+        const curTitle = String((currentNode as any)?.title || "").trim();
+        const isPlaceholder = !curTitle || /^第\s*\d+\s*章$/.test(curTitle);
+        // 守卫：仅当正文非空时才回填标题。正文为空（模型偶发空返回）时摘要 LLM 会对空内容胡说，
+        // 此时不该写标题，保留占位，交由上层错误流程处理。
+        if (content && content.trim().length > 0 && isPlaceholder && titleBase) {
+          const newTitle = `第${chapterOrder + 1}章：${titleBase}`;
+          await prisma.storyNode.update({
+            where: { id: nodeId },
+            data: { title: newTitle },
+          });
+          // 同步刚创建的 ChapterSummary.chapterTitle，避免上下文摘要里仍是占位标题
+          const latestSummary = await prisma.chapterSummary.findFirst({
+            where: { projectId, chapterId: nodeId },
+            orderBy: { createdAt: "desc" },
+          });
+          if (latestSummary) {
+            await prisma.chapterSummary.update({
+              where: { id: latestSummary.id },
+              data: { chapterTitle: newTitle },
+            });
+          }
+        }
+      } catch (titleErr) {
+        // 命名失败降级——不阻塞主流程
+        send({ type: "title_error", content: String(titleErr).slice(0, 100) });
+      }
 
       // ── 4.5 规则分类——基于规则的 S/A/B 分级（零 Token 消耗，补充 LLM 分级）──
       try {

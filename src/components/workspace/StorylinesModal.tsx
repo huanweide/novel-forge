@@ -118,7 +118,7 @@ export function StorylinesModal({
               <div className="overflow-hidden rounded-xl border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
                 <div className="flex items-center gap-2 bg-[var(--nv-accent-soft)] px-3 py-2">
                   <Icon name="star" size={13} className="text-[var(--nv-accent)]" />
-                  <span className="flex-1 truncate text-sm font-medium text-[var(--nv-accent)]">主线 · {mainLine.title}</span>
+                  <span className="flex-1 break-words text-sm font-medium text-[var(--nv-accent)]">主线 · {mainLine.title}</span>
                   <button
                     onClick={() => handleToggleComplete(mainLine)}
                     className="text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
@@ -139,7 +139,7 @@ export function StorylinesModal({
               <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
                 <div className="flex items-center gap-2 px-3 py-2">
                   <Icon name="arrowRight" size={12} className="text-[var(--nv-text-tertiary)]" />
-                  <span className="flex-1 truncate text-sm text-[var(--nv-text-primary)]">支线 · {s.title}</span>
+                  <span className="flex-1 break-words text-sm text-[var(--nv-text-primary)]">支线 · {s.title}</span>
                   <button
                     onClick={() => handleToggleComplete(s)}
                     className="text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"

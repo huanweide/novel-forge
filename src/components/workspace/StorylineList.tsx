@@ -160,7 +160,11 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         <div className="overflow-hidden rounded-lg border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
           <div className="flex items-center gap-1 bg-[var(--nv-accent-soft)] px-2 py-1.5">
             <Icon name="star" size={11} className="text-[var(--nv-accent)]" />
-            <span className="flex-1 truncate text-xs font-medium text-[var(--nv-accent)]">{mainLine.title}</span>
+            <span
+              className="flex-1 break-words cursor-pointer text-xs font-medium text-[var(--nv-accent)] hover:underline"
+              onClick={() => setShowFull(true)}
+              title="点击查看完整主线剧情（全屏）"
+            >{mainLine.title}</span>
             <button
               onClick={() => handleToggleComplete(mainLine)}
               className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
@@ -180,7 +184,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         <div key={s.id} className="overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
           <div className="flex items-center gap-1 px-2 py-1.5">
             <Icon name="arrowRight" size={11} className="text-[var(--nv-text-tertiary)]" />
-            <span className="flex-1 truncate text-xs text-[var(--nv-text-primary)]">{s.title}</span>
+            <span className="flex-1 break-words text-xs text-[var(--nv-text-primary)]">{s.title}</span>
             <button
               onClick={() => handleToggleComplete(s)}
               className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
@@ -279,7 +283,7 @@ export function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelet
         <button onClick={onToggle} className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]">展开 ▼</button>
         <button onClick={onEdit} className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" aria-label="编辑"><Icon name="pencil" size={12} /></button>
         <button onClick={onDelete} disabled={deletingId === storyline.id} className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] disabled:opacity-40" aria-label="删除"><Icon name="x" size={12} /></button>
-        {storyline.description && <span className="flex-1 truncate text-[10px] text-[var(--nv-text-tertiary)]">{storyline.description}</span>}
+        {storyline.description && <span className="flex-1 break-words text-[10px] text-[var(--nv-text-tertiary)]">{storyline.description}</span>}
       </div>
     );
   }

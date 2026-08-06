@@ -18,7 +18,11 @@ export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit 
       className="group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]"
     >
       <div className="flex items-start justify-between">
-        <span className="truncate text-xs font-medium leading-tight text-[var(--nv-text-primary)]">{entry.title}</span>
+        <span
+          className="break-words text-xs font-medium leading-tight text-[var(--nv-text-primary)] cursor-pointer hover:text-[var(--nv-accent)]"
+          onClick={() => onEdit?.(entry)}
+          title="点击查看 / 编辑完整条目"
+        >{entry.title}</span>
         <button
           onClick={() => onEdit?.(entry)}
           disabled={deleting}
@@ -38,7 +42,7 @@ export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit 
         </button>
       </div>
       {entry.content && (
-        <p className="mt-0.5 line-clamp-3 text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">
+        <p className="mt-0.5 line-clamp-4 text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">
           {entry.content}
         </p>
       )}

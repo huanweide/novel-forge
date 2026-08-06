@@ -93,6 +93,24 @@ export async function POST(request: Request) {
     writingInstruction +=
       "\n\n【格式铁律】绝不在正文首行或任意位置写「第X章」「第X节」或章节标题。章节标题由系统管理，正文直接切入动作/对话。";
 
+    // ── 6.1 章节承接（v1.6.1 修复：用户要求新章必须衔接上一章收尾）──
+    // 取 previousNodes 中最后一章（即紧邻的上一章）的收尾片段，显式要求从结尾自然续接，
+    // 不凭空重启无关场景。previousNodes 已按 keepChapters 截取最近 N 章，末位即上一章。
+    const prevChapter = previousNodes[previousNodes.length - 1];
+    if (prevChapter?.content && String(prevChapter.content).trim()) {
+      const prevTail = String(prevChapter.content)
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(-400);
+      const prevLabel = prevChapter.title
+        ? `「${String(prevChapter.title).trim()}」`
+        : `第${prevChapter.order + 1}章`;
+      writingInstruction +=
+        `\n\n【承接上一章结尾——最高优先级之一】上一章（${prevLabel}）的收尾内容如下：\n……${prevTail}\n` +
+        `请务必从上一段结尾处自然接续展开，保持情节、人物状态、时间线的连贯；` +
+        `可以顺着同一场景往下写，或合理切换到新场景/新视角，但绝不能凭空重启一个与上文毫无关联的冰冷开头。`;
+    }
+
     // ── 6.5 宝宝流记忆召回（剧情推进 = 记忆召回，与 refine/continue 共享 loop.ts） ──
     const { block: recallBlock, items: recallItems } = await buildRecallBlock({
       projectId,
@@ -282,7 +300,7 @@ export async function POST(request: Request) {
               activeLore: data.loreEntries.filter((l: any) => activeLoreIds.includes(l.id)) as any,
               chapterSummaries: data.summaries as any,
               currentNode: data.currentNode as any,
-              chapterTitle: data.currentNode.title || `第${data.currentNode.order + 1}节`,
+              chapterTitle: data.currentNode.title || `第${data.currentNode.order + 1}章`,
               chapterOrder: data.currentNode.order,
               forbiddenPatterns,
             });
