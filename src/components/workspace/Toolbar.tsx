@@ -102,7 +102,11 @@ export function Toolbar({
         <Button size="sm" variant="outline" onClick={onBackup} disabled={isGenerating}
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-accent)]" title="导出整本备份包 .nfproject（章节+角色+世界书+规则+文风，可导入还原）"><Icon name="package" size={12} /> 备份包</Button>
 
-        {/* 更多▾：工具箱 + 自动化 */}
+        {/* 自动填表：常用功能独立入口（v1.2.0：不再藏进「更多」，改叫「自动填表」） */}
+        <Button size="sm" variant="outline" onClick={onOpenAutomation} disabled={isGenerating}
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]" title="自动填表：设置每章自动抽取回填 + 一键追评所有未填表章节"><Icon name="bot" size={12} /> 自动填表</Button>
+
+        {/* 更多▾：工具箱 */}
         <div className="relative z-50">
           <Button size="sm" variant="outline" onClick={() => { setExportMenuOpen(false); setMoreMenuOpen((o) => !o); }} disabled={isGenerating}
             className="flex h-7 items-center gap-1 text-xs"><Icon name="sliders" size={12} /> 更多 <span className="text-[10px] opacity-70">▾</span></Button>
@@ -110,10 +114,6 @@ export function Toolbar({
             <>
               <div className="fixed inset-0 z-40" onClick={closeMenus} aria-hidden />
               <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 shadow-xl">
-                <button onClick={() => { setMoreMenuOpen(false); onOpenAutomation(); }} disabled={isGenerating}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-[var(--nv-primary)] transition-colors hover:bg-[var(--nv-surface-2)] disabled:opacity-50">
-                  <Icon name="bot" size={13} /> 自动化
-                </button>
                 <button onClick={() => { setMoreMenuOpen(false); onOpenToolbox(); }} disabled={isGenerating}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-surface-2)] disabled:opacity-50">
                   <Icon name="sparkles" size={13} /> 工具箱

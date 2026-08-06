@@ -1,9 +1,8 @@
 /**
  * POST /api/characters/classify
  *
- * v8: 四维足球同人分类——称号/学校/经历/俱乐部
- *     基于角色卡background+abilities+tags，Flash AI四路并行分析。
- *     不靠字符串匹配——AI理解语义后归类。
+ * v1.2.0: 简单自然分组——按角色定位/背景/能力分成 3-6 个自然群体。
+ *     不做多维复杂分类；AI 理解语义后给出直观群体，全部角色覆盖。
  */
 
 import { prisma } from "@/lib/prisma";
@@ -58,9 +57,9 @@ function buildCharList(characters: Array<{ id: string; name: string; background:
 // 四维分类
 // ═══════════════════════════════════════════════
 
-/** 称号/头衔 —— 从名字修饰、背景描述中提取 */
-async function classifyTitles(charList: string, worldContext: string): Promise<ClassifyGroup[]> {
-  const prompt = `根据角色背景和设定，按【称号/头衔】分类。输出JSON。
+/** 简单自然分组 —— 按角色定位/背景/能力分成 3-6 个自然群体（v1.2.0：不做多维复杂分类） */
+async function classifySimple(charList: string, worldContext: string): Promise<ClassifyGroup[]> {
+  const prompt = `根据角色设定，把全部角色分成 3-6 个自然群体。输出JSON。
 
 【世界观】
 ${worldContext}
@@ -68,110 +67,16 @@ ${worldContext}
 【角色——每行: 姓名|定位|能力|标签|背景】
 ${charList}
 
-【分类指南——从角色描述中识别以下模式】
-- 修饰性称号："新梅西""蓝色监狱的心脏""复仇的阿修罗""世界第一"
-- 媒体/粉丝给的标签："天才""怪物""王子""皇帝""魔术师"
-- 角色自带的头衔："U-20队长""世界赛MVP""金球奖候选人"
-- 实力评价："世界级""国家级""地区级""新星"
-
-【要求】
-- 提取所有角色描述中出现的称号/头衔，归类到共同标签下
-- 一人可有多个称号（如同时是"天才"又是"队长"）
-- 所有角色必须出现在至少一个组里
-- 没有明显称号的归入"🏷 暂无称号"
+【分类要求——简单分组即可】
+- 按最直观的自然群体分组：阵营（正/反/中立）、身份职业（家族/门派/组织/平民）、或功能定位（主角团/对手/导师），选一种方式即可
+- 不要超过 6 组，不要拆太细
+- 每个角色只归入一组
+- 所有角色必须覆盖，实在不好归类的归入「未分类」
 - 输出纯JSON
 
-{"groups":[{"category":"title","label":"称号标签","description":"该称号的含义与来源","members":["角色名"]}]}`;
+{"groups":[{"category":"group","label":"群体名","description":"一句话说明该群体","members":["角色名"]}]}`;
 
-  const raw = await callFlash("角色称号分类。从背景描述中提取称号/头衔/标签。不遗漏。JSON。", prompt);
-  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-}
-
-/** 学校 —— 从背景中识别学校/学园 */
-async function classifySchools(charList: string, worldContext: string): Promise<ClassifyGroup[]> {
-  const prompt = `根据角色背景，按【学校/学园】分类。输出JSON。
-
-【世界观】
-${worldContext}
-
-【角色——每行: 姓名|定位|能力|标签|背景】
-${charList}
-
-【分类指南——识别以下学校相关模式】
-- 日本高中：冰帝学园、帝光中学、青学、立海大、白鸟泽、音驹等
-- 足球名校：青训营、足球强校
-- 海外学校：如果背景提到留学/转学经历
-- 蓝色监狱内部层级也可作为"学校"的变体
-
-【要求】
-- 同一学校的角色归入一组
-- 没有明确学校归属的归入"🏫 未知学校"
-- 可跨校（如转学生同时属于两个学校）
-- 输出纯JSON
-
-{"groups":[{"category":"school","label":"学校名","description":"学校简介","members":["角色名"]}]}`;
-
-  const raw = await callFlash("角色学校分类。从背景中识别学校/学园归属。不遗漏。JSON。", prompt);
-  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-}
-
-/** 经历/背景 —— 从背景中提取关键经历 */
-async function classifyExperiences(charList: string, worldContext: string): Promise<ClassifyGroup[]> {
-  const prompt = `根据角色背景，按【经历/履历】分类。输出JSON。
-
-【世界观】
-${worldContext}
-
-【角色——每行: 姓名|定位|能力|标签|背景】
-${charList}
-
-【分类指南——识别以下经历模式】
-- 国家队经历："U-17日本代表""U-20出场""世界杯参赛"
-- 海外经历："德国青训""西班牙留学""英超试训"
-- 重大事件："受伤退役后复出""被淘汰后逆袭""转会风波"
-- 特殊履历："街头足球出身""从其他运动转项""球探发掘"
-- 蓝色监狱经历："一阶段通过""二阶段选拔""三层突破"
-
-【要求】
-- 按共同的经历类别分组（不是按时间线排列）
-- 一人可有多段经历，可归入多组
-- 所有角色必须覆盖
-- 经历不明显的归入"📋 常规履历"
-- 输出纯JSON
-
-{"groups":[{"category":"experience","label":"经历标签","description":"该经历的说明","members":["角色名"]}]}`;
-
-  const raw = await callFlash("角色经历分类。从背景中提取关键经历/履历。不遗漏。JSON。", prompt);
-  return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
-}
-
-/** 俱乐部/队伍 —— 从背景中识别所属队伍 */
-async function classifyClubs(charList: string, worldContext: string): Promise<ClassifyGroup[]> {
-  const prompt = `根据角色背景，按【俱乐部/队伍】分类。输出JSON。
-
-【世界观】
-${worldContext}
-
-【角色——每行: 姓名|定位|能力|标签|背景】
-${charList}
-
-【分类指南——识别以下队伍/俱乐部模式】
-- 职业俱乐部："拜仁慕尼黑""巴塞罗那""曼城""皇马"
-- 日本俱乐部队："浦和红钻""川崎前锋"等
-- 国家队："日本U-20""日本国家队""西班牙代表队"
-- 蓝色监狱内部队伍："Team Z""Team V""洁队""凛队"
-- 特殊组织："蓝色监狱计划""日本足协""球探网络"
-
-【要求】
-- 按具体队伍/俱乐部名称分组
-- 一人可属于多个队伍（如俱乐部+国家队）
-- 所有角色必须覆盖
-- 无明确队伍的归入"⚽ 无固定队伍"
-- 输出纯JSON
-
-{"groups":[{"category":"club","label":"队伍/俱乐部名","description":"该队伍说明","members":["角色名"]}]}`;
-
-  const raw = await callFlash("角色俱乐部分类。从背景中识别队伍/俱乐部归属。不遗漏。JSON。", prompt);
+  const raw = await callFlash("角色简单分组。按阵营/身份分成3-6组，不遗漏。JSON。", prompt);
   return (Array.isArray(parseJSON(raw).groups) ? parseJSON(raw).groups : []) as ClassifyGroup[];
 }
 
@@ -226,60 +131,37 @@ export async function POST(request: Request) {
           return groups;
         };
 
-        // ── 四路并行分类（每路独立60秒超时，总耗时=最慢那路）──
-        send({ type: "progress", stage: "start", message: `🔬 ${characters.length}角色 · 四维并行分类中...`, pct: 5 });
+        // ── 单路简单分组（3-6 组自然群体）──
+        send({ type: "progress", stage: "start", message: `🔬 ${characters.length}角色 · 简单分组中...`, pct: 20 });
 
-        const errors: string[] = [];
-        const allResults: ClassifyGroup[] = [];
-
-        const dims = [
-          { fn: classifyTitles, label: "🏷 称号" },
-          { fn: classifySchools, label: "🏫 学校" },
-          { fn: classifyExperiences, label: "📋 经历" },
-          { fn: classifyClubs, label: "⚽ 俱乐部" },
-        ];
-
-        // 四路并行
-        const dimResults = await Promise.all(
-          dims.map(async (dim) => {
-            send({ type: "progress", stage: dim.label, message: `${dim.label} 分析中...`, pct: 20 });
-            try {
-              const groups = await dim.fn(charList, worldContext);
-              if (groups.length === 0) {
-                errors.push(`${dim.label}: AI未返回分组`);
-                return { dim, groups: [] as ClassifyGroup[], error: `${dim.label}: AI未返回分组` };
-              }
-              send({ type: "progress", stage: dim.label, message: `${dim.label} ✅ ${groups.length}组`, pct: 60 });
-              return { dim, groups, error: null };
-            } catch (e) {
-              const msg = (e instanceof Error ? e.message : String(e)).slice(0, 100);
-              errors.push(`${dim.label}: ${msg}`);
-              send({ type: "progress", stage: `${dim.label}-err`, message: `${dim.label} ⚠️ ${msg}`, pct: 40 });
-              return { dim, groups: [] as ClassifyGroup[], error: `${dim.label}: ${msg}` };
-            }
-          })
-        );
-
-        // 合并结果
-        for (const { dim, groups, error } of dimResults) {
-          if (error) {
-            send({ type: "progress", stage: `${dim.label}-err`, message: `${dim.label} ⚠️ ${error}`, pct: 40 });
+        let allResults: ClassifyGroup[] = [];
+        try {
+          const groups = await classifySimple(charList, worldContext);
+          if (groups.length === 0) {
+            send({ type: "error", message: "AI 未返回分组" });
+            controller.close();
+            return;
           }
-          if (groups.length > 0) {
-            allResults.push(...fillIds(groups));
-          }
+          allResults = fillIds(groups);
+          send({ type: "progress", stage: "done-group", message: `✅ ${groups.length} 组`, pct: 60 });
+        } catch (e) {
+          const msg = (e instanceof Error ? e.message : String(e)).slice(0, 100);
+          send({ type: "progress", stage: "err", message: `⚠️ ${msg}`, pct: 40 });
+          send({ type: "error", message: `分类失败: ${msg}` });
+          controller.close();
+          return;
         }
 
-        send({ type: "progress", stage: "merge", message: `合并结果...`, pct: 75 });
+        send({ type: "progress", stage: "merge", message: `整理分组...`, pct: 75 });
 
         // 覆盖率检查
         const allNamed = new Set(allResults.flatMap(g => g.members));
         const uncovered = characters.filter(c => !allNamed.has(c.name));
         if (uncovered.length > 0) {
           allResults.push({
-            category: "club",
-            label: "❓ 未归类",
-            description: "未被任何维度覆盖的角色",
+            category: "group",
+            label: "未分类",
+            description: "未被任何群体覆盖的角色",
             members: uncovered.map(c => c.name),
             memberIds: uncovered.map(c => c.id),
           });
@@ -293,7 +175,7 @@ export async function POST(request: Request) {
           groups: allResults,
           totalGroups: allResults.length,
           totalMembers,
-          message: `✅ ${allResults.length} 组 · 覆盖 ${totalMembers}/${characters.length} 人 · 四维(称号/学校/经历/俱乐部)`,
+          message: `✅ ${allResults.length} 组 · 覆盖 ${totalMembers}/${characters.length} 人 · 简单分组`,
         });
 
         controller.close();

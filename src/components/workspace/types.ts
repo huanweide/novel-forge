@@ -45,6 +45,7 @@ export interface CharacterData {
   appearance?: Record<string, unknown>;
   personality: string[] | Record<string, unknown>;
   background?: string;
+  storyLine?: string;
   abilities?: string[];
   hiddenMotives?: string[];
   relationships?: Record<string, unknown>[];

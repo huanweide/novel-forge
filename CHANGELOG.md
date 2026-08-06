@@ -2,6 +2,17 @@
 
 ---
 
+## v1.2.0 — 2026-08-06
+**角色卡体系升级：AI 填满全覆盖 + 新增故事线 + 关系图内置角色卡 + 自动填表独立入口**
+
+- AI 填满全覆盖 + 新增故事线：`CharacterCard` 新增 `storyLine` 字段（db push + generate 已同步），角色卡表单新增「故事线」区块；`detectEmptyFields` 扩展覆盖 timeline / relationships / storyLine，性格三层（表层/中层/内核）全空也会补全；prompt 加简洁约束（长文本 3-5 句、列表 1-6 项）；前端回填去掉 surface/middle/core/relationships/timeline 的保留逻辑，personality 写库改合并不覆盖
+- 全选联动 + 分类简化：角色列表「全选」后自动联动「AI 扩展」；expand 后端补 storyLine 与性格三层，与 AI 填满字段对齐（同一套逻辑）；自动分类由四维（称号/学校/经历/俱乐部）简化为单路自然分组（3-6 组，每角色只归一组、全部覆盖），ClassifyPanel 兼容新结构
+- 角色关系：右栏「实体」tab 关系图移除，内置到角色卡「人际关系」区块——列表/关系图双视图切换；AI 填满与 AI 扩展自动检测角色关系（relationships 为空时 LLM 推断 1-4 条关联人物）
+- 自动填表：从 Toolbar「更多」下拉提出为一级「自动填表」按钮，弹窗改名；新增「一键追评所有未填表章节」（POST `/api/babylore/fill-all`，已填自动跳过防重复）
+- 质量门禁：tsc 零错误 + 217 单元测试全绿
+
+---
+
 ## v1.1.5 — 2026-08-06
 **正文区零遮挡：确认流程整体收口到「项目设定」弹窗 + 章纲默认收起、一键直出正文**
 

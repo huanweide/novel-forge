@@ -8,6 +8,7 @@ import { DialogField, DialogInput } from "./DialogUI";
 import { Modal } from "@/components/ui/Modal";
 import type { CharacterData } from "./types";
 import { toastError, toastCreated } from "@/components/ui/toast";
+import { RelationshipGraph } from "@/components/workspace/RelationshipGraph";
 import {
   CHARACTER_ROLE_OPTIONS,
   fromText,
@@ -21,13 +22,16 @@ export function CharacterDialog({
   projectId,
   onClose,
   onSave,
+  allCharacters,
 }: {
   character?: CharacterData;
   projectId: string;
   onClose: () => void;
   onSave: () => void;
+  allCharacters?: CharacterData[]; // 项目全部角色（用于关系图网格视图）
 }) {
   const isEdit = !!character;
+  const [relView, setRelView] = useState<"list" | "graph">("list");
 
   const app = (character?.appearance || {}) as Record<string, unknown>;
   const ds = (character?.dialogueStyle || {}) as Record<string, unknown>;
@@ -55,6 +59,7 @@ export function CharacterDialog({
     middle: String((character?.personality as Record<string, unknown> | undefined)?.middle || ""),
     core: String((character?.personality as Record<string, unknown> | undefined)?.core || ""),
     background: character?.background || "",
+    storyLine: character?.storyLine || "",
     abilities: (character?.abilities || []).join("、"),
     hiddenMotives: (character?.hiddenMotives || []).join("、"),
     relationships: rels,
@@ -83,6 +88,10 @@ export function CharacterDialog({
       if (updated) {
         const ua = (updated.appearance || {}) as Record<string, unknown>;
         const ud = (updated.dialogueStyle || {}) as Record<string, unknown>;
+        const up =
+          updated.personality && typeof updated.personality === "object" && !Array.isArray(updated.personality)
+            ? (updated.personality as Record<string, unknown>)
+            : {};
         setForm({
           name: updated.name || form.name,
           aliases: (updated.aliases || []).join("、"),
@@ -96,18 +105,24 @@ export function CharacterDialog({
           appearanceFeatures: String(ua.features || form.appearanceFeatures),
           appearanceAttire: String(ua.attire || form.appearanceAttire),
           personality: toText(updated.personality) || form.personality,
-          surface: form.surface,
-          middle: form.middle,
-          core: form.core,
+          surface: String(up.surface || form.surface),
+          middle: String(up.middle || form.middle),
+          core: String(up.core || form.core),
           background: updated.background || form.background,
+          storyLine: updated.storyLine || form.storyLine,
           abilities: (updated.abilities || form.abilities.split(/[,，、\n]+/).filter(Boolean)).join("、"),
           hiddenMotives: (updated.hiddenMotives || form.hiddenMotives.split(/[,，、\n]+/).filter(Boolean)).join("、"),
-          relationships: form.relationships,
+          relationships:
+            updated.relationships && Array.isArray(updated.relationships) && updated.relationships.length > 0
+              ? (updated.relationships as any[])
+                  .map((r: any) => [r.targetName, r.relation, r.dynamic].filter(Boolean).join("："))
+                  .join("\n")
+              : form.relationships,
           dialogueDesc: String(ud.description || form.dialogueDesc),
           dialogueExamples: (Array.isArray(ud.examples) ? ud.examples : form.dialogueExamples.split("\n").filter(Boolean)).join("\n"),
           dialogueVocab: (Array.isArray(ud.vocabulary) ? ud.vocabulary : form.dialogueVocab.split(/[,，、]/).filter(Boolean)).join("、"),
           dialoguePatterns: (Array.isArray(ud.speechPatterns) ? ud.speechPatterns : form.dialoguePatterns.split("\n").filter(Boolean)).join("\n"),
-          timeline: form.timeline,
+          timeline: updated.timeline && Array.isArray(updated.timeline) && updated.timeline.length > 0 ? timelineToText(updated.timeline) : form.timeline,
           arcProgress: updated.arcProgress || form.arcProgress,
           currentStatus: updated.currentStatus || form.currentStatus,
         });
@@ -149,6 +164,7 @@ export function CharacterDialog({
             },
             personality: personalityBody,
             background: form.background,
+            storyLine: form.storyLine,
             abilities: form.abilities.split(/[,，、\n]+/).map((s) => s.trim()).filter(Boolean),
             hiddenMotives: form.hiddenMotives.split(/[,，、\n]+/).map((s) => s.trim()).filter(Boolean),
             relationships,
@@ -357,6 +373,17 @@ export function CharacterDialog({
               placeholder: "1)所在位置与境遇：xxx\n2)当前短期目标：xxx\n3)长期欲望：xxx\n4)所持资源与限制：xxx\n5)卷入核心事件的方式与态度：xxx",
             })}
           </Collapse>
+          {/* 故事线 */}
+          <Collapse title="故事线" icon="book" size="md">
+            {field("故事线（该角色在全书主线中的起落）", form.storyLine, (v) => setForm({ ...form, storyLine: v }), {
+              textarea: true,
+              rows: 4,
+              placeholder: "登场的身份与处境 → 卷入主线冲突的方式 → 中途的关键转折 → 结局走向",
+            })}
+            <p className="text-xs text-[var(--nv-text-muted)] mt-1">
+              AI 填满会自动补全；写正文时这段会指导 AI 让角色始终沿着主线走，不会写着写着跑偏。
+            </p>
+          </Collapse>
           {/* 能力 */}
           <Collapse title="能力/功法" size="md">
             {field("能力（每行一个，或用逗号分隔）", form.abilities, (v) => setForm({ ...form, abilities: v }), {
@@ -381,13 +408,54 @@ export function CharacterDialog({
               设定角色人生关键时间点，防止AI把前期角色写成后期状态。age 填该事件时角色的年龄。
             </p>
           </Collapse>
-          {/* 关系 */}
-          <Collapse title="人际关系（每行：人物名：关系：动态）" size="md">
-            {field("关系", form.relationships, (v) => setForm({ ...form, relationships: v }), {
-              textarea: true,
-              rows: 3,
-              placeholder: "张三：师徒：亦师亦友\n李四：宿敌：互相欣赏但立场对立\n王五：暗恋对象：尚未表白",
-            })}
+          {/* 关系：列表 + 关系图 双视图 */}
+          <Collapse title="人际关系" size="md">
+            <div className="flex items-center gap-1 mb-2">
+              <button
+                type="button"
+                onClick={() => setRelView("list")}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                  relView === "list"
+                    ? "border-[var(--nv-primary)]/50 text-[var(--nv-primary)] bg-[var(--nv-primary-soft)]"
+                    : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+                }`}
+              >
+                列表
+              </button>
+              <button
+                type="button"
+                onClick={() => setRelView("graph")}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                  relView === "graph"
+                    ? "border-[var(--nv-primary)]/50 text-[var(--nv-primary)] bg-[var(--nv-primary-soft)]"
+                    : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+                }`}
+              >
+                关系图
+              </button>
+              <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-1">
+                {relView === "list" ? "每行：人物名：关系：动态" : "节点可拖动，连线即关系"}
+              </span>
+            </div>
+            {relView === "list" ? (
+              field("关系", form.relationships, (v) => setForm({ ...form, relationships: v }), {
+                textarea: true,
+                rows: 3,
+                placeholder: "张三：师徒：亦师亦友\n李四：宿敌：互相欣赏但立场对立\n王五：暗恋对象：尚未表白",
+              })
+            ) : (
+              <div className="rounded-xl border border-[var(--nv-border-2)] overflow-hidden">
+                {allCharacters && allCharacters.length > 0 ? (
+                  <div className="h-72 overflow-auto">
+                    <RelationshipGraph characters={allCharacters as any} projectId={projectId} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--nv-text-muted)] p-4">
+                    还没有其他角色。保存本卡或新建更多角色后，这里会以关系图展示角色间的联系。
+                  </p>
+                )}
+              </div>
+            )}
           </Collapse>
           {/* 对话风格 */}
           <Collapse title="对话风格" size="md">

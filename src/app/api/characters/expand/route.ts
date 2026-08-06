@@ -126,8 +126,9 @@ ${JSON.stringify(char.card)}
 【输出格式——单角色完整JSON】
 {
   "appearance": {"hair":"发色发型","eyes":"眼型瞳色","height":"身高","build":"体型","features":"特殊印记","attire":"标志性着装"},
-  "personality": {"dominant":"主导性格","drive":"核心驱动力","contradiction":"内在矛盾","habits":["习惯动作"],"socialMask":"社交面具"},
+  "personality": {"dominant":"主导性格","drive":"核心驱动力","contradiction":"内在矛盾","habits":["习惯动作"],"socialMask":"社交面具","surface":"表层·对外展现","middle":"中层·日常互动","core":"内核·本质驱动"},
   "background": "五要素：1)位置与境遇 2)短期目标 3)长期欲望 4)资源与限制 5)卷入核心事件的方式",
+  "storyLine": "故事线：该角色在全书主线中的起落（登场处境→卷入冲突方式→关键转折→结局走向），3-5句",
   "abilities": ["能力名·等级·一句话描述"],
   "timeline": [{"age":12,"event":"事件","era":"时期"}],
   "dialogueStyle": {"description":"说话风格","examples":["典型台词"],"vocabulary":["用词特点"],"speechPatterns":["句式模式"]},
@@ -678,6 +679,7 @@ ${charListForAudit}
                   personality: safeMerge(r.personality, fallback?.personality) as any,
                   dialogueStyle: safeMerge(r.dialogueStyle, fallback?.dialogueStyle) as any,
                   background: String(r.background || "").trim(),
+                  storyLine: String(r.storyLine || "").trim(),
                   abilities: safeMerge(
                     Array.isArray(r.abilities) ? r.abilities.filter((a: unknown) => typeof a === "string") : null,
                     fallback?.abilities as string[] | undefined,

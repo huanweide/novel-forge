@@ -73,6 +73,7 @@ export function CharacterList({
   };
 
   // 全选/取消全选（仅对筛选后可见列表生效）
+  // v1.2.0：全选后自动联动「AI 扩展」——一次点选即开跑，无需再手动点扩展按钮
   const handleToggleAll = () => {
     if (allInViewSelected) {
       const next = new Set(selectedIds);
@@ -82,6 +83,7 @@ export function CharacterList({
       const next = new Set(selectedIds);
       filtered.forEach(c => next.add(c.id));
       setSelectedIds(next);
+      if (next.size > 0) void handleExpand(next);
     }
   };
 
@@ -136,19 +138,20 @@ export function CharacterList({
     if (expanding) expandFallbackTriggered.current = false;
   }, [expanding, expandDone, expandProgress, expandTotal, expandResult]);
 
-  const handleExpand = async () => {
-    if (selectedIds.size === 0) return;
+  const handleExpand = async (ids?: Set<string>) => {
+    const target = ids ?? selectedIds;
+    if (target.size === 0) return;
     setExpandResult(null); // 清旧结果
     setExpanding(true);
     setExpandProgress([]);
     setExpandDone(0);
-    setExpandTotal(selectedIds.size);
+    setExpandTotal(target.size);
 
     try {
       const res = await fetch("/api/characters/expand", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, characterIds: [...selectedIds] }),
+        body: JSON.stringify({ projectId, characterIds: [...target] }),
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));

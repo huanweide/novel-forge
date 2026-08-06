@@ -85,6 +85,7 @@ model CharacterCard {
   personality     Json @default("[]")    // 结构化性格: {dominant, drive, contradiction, habits, socialMask} 或旧格式 string[]
   dialogueStyle   Json @default("{}")    // DialogueStyle
   background      String @default("")
+  storyLine       String @default("")    // 角色故事线：该角色在主线中的起落弧（v1.2.0 新增，AI 填满/扩展均覆盖）
   quickImportContent String @default("")  // 快速导入原文（不做AI分析，直接抄写）
   abilities       String[] @default([])  // 能力/技能
   hiddenMotives   String[] @default([])

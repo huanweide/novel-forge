@@ -79,16 +79,13 @@ export function ClassifyPanel({
           {/* 分类列表——按 category 分组 */}
           <div className="max-h-80 overflow-y-auto p-1.5 space-y-2">
             {(() => {
-              const catOrder = ["title", "school", "experience", "club"];
+              const catOrder = ["group"];
               const catLabel: Record<string, ReactNode> = {
-                title: <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 称号/头衔</span>,
-                school: <span className="flex items-center gap-1"><Icon name="building" size={10} /> 学校/学园</span>,
-                experience: <span className="flex items-center gap-1"><Icon name="clipboard" size={10} /> 经历/履历</span>,
-                club: <span className="flex items-center gap-1"><Icon name="users" size={10} /> 俱乐部/队伍</span>,
+                group: <span className="flex items-center gap-1"><Icon name="users" size={10} /> 角色分组</span>,
               };
               const grouped = new Map<string, ClassifyGroup[]>();
               for (const g of groups) {
-                const cat = g.category || "club";
+                const cat = g.category || "group";
                 if (!grouped.has(cat)) grouped.set(cat, []);
                 grouped.get(cat)!.push(g);
               }

@@ -5,7 +5,6 @@ import { Icon, type IconName } from "@/components/ui/icons";
 import { ContextPreview } from "@/components/editor/ContextPreview";
 import { ChapterEntitiesPanel } from "./ChapterEntitiesPanel";
 import { ForeshadowingPanel } from "./ForeshadowingPanel";
-import { RelationshipGraph } from "./RelationshipGraph";
 import { AIChatBar } from "./AIChatBar";
 import { MonitorPanel } from "./MonitorPanel";
 import { NarrativeEnergyPanel } from "./NarrativeEnergyPanel";
@@ -159,12 +158,6 @@ export function RightPanel(props: RightPanelProps) {
                   entitySubTab === "foreshadowing" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               ><Icon name="gem" size={15} className="inline-block align-text-bottom shrink-0" /> 伏笔</button>
-              <button
-                onClick={() => setEntitySubTab("relationships")}
-                className={`flex-1 py-1.5 text-[10px] transition-colors ${
-                  entitySubTab === "relationships" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
-                }`}
-              ><Icon name="globe" size={15} className="inline-block align-text-bottom shrink-0" /> 关系图</button>
             </div>
 
             {/* 子内容 */}
@@ -177,12 +170,6 @@ export function RightPanel(props: RightPanelProps) {
                   onEditLore={onEditLore}
                   allCharacters={project.characters.map((c) => ({ id: c.id, name: c.name }))}
                   allLoreEntries={project.lorebookEntries.map((l) => ({ id: l.id, title: l.title }))}
-                />
-              ) : entitySubTab === "relationships" ? (
-                <RelationshipGraph
-                  characters={project.characters as any}
-                  projectId={project.id}
-                  onEditCharacter={onEditCharacter}
                 />
               ) : (
                 <ForeshadowingPanel projectId={project.id} />

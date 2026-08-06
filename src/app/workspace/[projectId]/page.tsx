@@ -1126,8 +1126,8 @@ export default function WorkspacePage() {
       </div>
 
       {/* 弹窗 */}
-      {editingCharacter && <CharacterDialog character={editingCharacter} projectId={project.id} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
-      {showNewCharacter && <CharacterDialog projectId={project.id} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
+      {editingCharacter && <CharacterDialog character={editingCharacter} projectId={project.id} allCharacters={project.characters as any} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
+      {showNewCharacter && <CharacterDialog projectId={project.id} allCharacters={project.characters as any} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
       {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={refreshAfterMutate} />}
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
       {showImportWizard && <ImportWizard projectId={project.id} initialMode={importWizardMode} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}

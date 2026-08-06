@@ -4,15 +4,16 @@ import { useState, useEffect, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { toastError, toastSuccess } from "@/components/ui/toast";
+import { toastError, toastSuccess, confirmDialog } from "@/components/ui/toast";
 import { Switch } from "@/components/ui/switch";
 
-// 自动化填表设置弹窗（v0.33.0）
+// 自动填表弹窗（v0.33.0 原「自动化填表设置」；v1.2.0 改名「自动填表」并加一键追评）
 // 配置项：
 // - autoFillEnabled：生成后自动填表总开关
 // - fillFrequency：每 N 章填一次表
 // - skipLatestChapter：默认跳过最近一章（用户可能重 roll 改写）
 // - contextKeepChapters：上下文楼层数（前文窗口大小）
+// 操作：一键追评所有未填表章节（POST /api/babylore/fill-all）
 export function AutomationSettingsDialog({
   projectId, projectName, onClose,
 }: {
@@ -27,6 +28,41 @@ export function AutomationSettingsDialog({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [fillingAll, setFillingAll] = useState(false);
+  const [fillAllMsg, setFillAllMsg] = useState("");
+
+  // v1.2.0：一键追评所有未填表章节——从第一章到最新章逐章填表（已填自动跳过防重复）
+  const runFillAll = async () => {
+    const ok = await confirmDialog({
+      title: "一键追评所有未填表章节",
+      description: "从第一章到最新一章逐章自动抽取事实、回填全部结构化表格（已填过的章节自动跳过防重复）。每章都会调用 LLM，可能消耗较多 token；填完自动自检地名与信息完整性。是否继续？",
+      confirmText: "开始一键填表",
+      cancelText: "取消",
+    });
+    if (!ok) return;
+    setFillingAll(true);
+    setFillAllMsg("追评中…");
+    try {
+      const res = await fetch(`/api/babylore/fill-all`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.ok) {
+        setFillAllMsg(`完成：处理 ${d.processed} 章，应用 ${d.applied} 条`);
+        toastSuccess(`一键填表完成：处理 ${d.processed} 章，应用 ${d.applied} 条`);
+      } else {
+        setFillAllMsg(`失败：${d.error || "未知错误"}`);
+        toastError(d.error || "一键填表失败");
+      }
+    } catch (err) {
+      setFillAllMsg("失败：" + (err instanceof Error ? err.message : "网络错误"));
+      toastError("一键填表失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setFillingAll(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -71,7 +107,7 @@ export function AutomationSettingsDialog({
         toastError(d.error || "保存失败");
         return;
       }
-      toastSuccess("自动化填表配置已保存");
+      toastSuccess("自动填表配置已保存");
       onClose();
     } catch (err) {
       toastError("保存失败：" + (err instanceof Error ? err.message : "网络错误"));
@@ -86,7 +122,7 @@ export function AutomationSettingsDialog({
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nv-border-2)] shrink-0">
           <div>
             <h2 id="automation-settings-title" className="flex items-center gap-2 text-lg font-semibold text-[var(--nv-text-primary)]">
-              <Icon name="bot" size={18} className="text-[var(--nv-creative)]" /> 自动化填表设置
+              <Icon name="bot" size={18} className="text-[var(--nv-creative)]" /> 自动填表
             </h2>
             <p className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">《{projectName}》</p>
           </div>
@@ -97,6 +133,20 @@ export function AutomationSettingsDialog({
           {loadError && <div className="text-sm text-danger">{loadError}</div>}
           {!loading && !loadError && (
             <>
+              {/* 一键追评所有未填表章节（v1.2.0） */}
+              <div className="rounded-xl border border-[var(--nv-creative)]/40 bg-[var(--nv-creative-soft)]/30 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-[var(--nv-text-primary)]">一键追评所有未填表章节</div>
+                    <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">从第一章到最新一章，把还没填表的章节全部自动填上（已填的自动跳过）</div>
+                  </div>
+                  <Button size="sm" onClick={runFillAll} disabled={fillingAll} className="flex items-center gap-1.5 shrink-0">
+                    {fillingAll && <Icon name="loader" size={13} className="animate-spin" />} {fillingAll ? "追评中…" : "一键填表"}
+                  </Button>
+                </div>
+                {fillAllMsg && <p className="text-xs mt-2 text-[var(--nv-text-tertiary)]">{fillAllMsg}</p>}
+              </div>
+
               {/* 总开关 */}
               <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3">
                 <div>
