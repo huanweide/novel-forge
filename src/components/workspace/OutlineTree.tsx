@@ -117,7 +117,7 @@ export function OutlineTree({
 }: {
   nodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
-  viewMode: "volume" | "flat" | "timeline"; batchMode?: boolean; selectedChapterIds?: Set<string>;
+  viewMode: "volume" | "flat"; batchMode?: boolean; selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void;   onDeleteNode?: (id: string) => void;
   deletingId?: string | null;
   projectId: string;
@@ -166,37 +166,7 @@ export function OutlineTree({
     );
   }
 
-  // v1.4.0：世界时间已删除——时间线视图退化为「按大纲顺序」展示（保留时间线入口，不再显示 worldTime 标记）
-  if (viewMode === "timeline") {
-    const timelineNodes = [...nodes].filter((n) => n.type !== "volume");
-    if (timelineNodes.length === 0) {
-      return (
-        <div className="text-center text-[var(--nv-text-tertiary)] text-xs py-8">
-          还没有可排时间线的章节<br />
-          <button onClick={() => onAddSection(null)} className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70 mt-2 block mx-auto">+ 手动添加章节</button>
-        </div>
-      );
-    }
-    return (
-      <div className="space-y-0.5">
-        <div className="px-1 mb-1 text-[10px] text-[var(--nv-text-tertiary)] flex items-center gap-1">
-          <Icon name="hourglass" size={10} /> 章节时间线（按大纲顺序）
-        </div>
-        {timelineNodes.map((n) => (
-          <NodeTreeItem key={n.id} node={n} allNodes={nodes} selectedNode={selectedNode}
-            onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
-            badgeSlot={
-              <span className="shrink-0 px-1 rounded text-[10px] bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]">{n.order !== undefined ? `#${(n.order ?? 0) + 1}` : ""}</span>
-            }
-            batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
-            projectId={projectId} />
-        ))}
-        <button onClick={() => onAddSection(null)} className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节</button>
-      </div>
-    );
-  }
-
+  // v1.6.0：时间线视图删除（世界时间已删除，三视图冗余），直接走平铺
   const flatNodes = nodes.filter((n) => n.type !== "volume" && !(n.parentId && nodes.find((p) => p.id === n.parentId)?.type === "volume"));
   const roots = flatNodes.filter((n) => !n.parentId);
 

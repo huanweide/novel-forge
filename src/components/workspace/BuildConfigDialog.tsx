@@ -163,6 +163,26 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
               </span>
               <Switch checked={cfg.autoConstructNewMain} onCheckedChange={(next) => set("autoConstructNewMain", next)} size="sm" />
             </div>
+            <div className="py-1">
+              <span className="block text-sm text-[var(--nv-text-primary)]">缝合怪节奏</span>
+              <span className="block text-xs text-[var(--nv-text-muted)] mb-2">构造新主线/剧情推进时的事件密度——快节奏事件密集，慢热铺垫伏笔多（作用于故事线自动生成）</span>
+              <div className="flex gap-2">
+                {([
+                  ["fast", "快节奏", "高频事件、每章都有新变数与冲突升级"],
+                  ["steady", "均衡", "稳步推进，隔章设置变数与阶段性小高潮"],
+                  ["slow", "慢热", "铺垫充分、伏笔密集，冲突逐步累积后爆发"],
+                ] as const).map(([key, label, desc]) => (
+                  <button
+                    key={key}
+                    onClick={() => set("stitchPace", key as any)}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors ${cfg.stitchPace === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
+                  >
+                    <span className={`block text-xs font-medium ${cfg.stitchPace === key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{label}</span>
+                    <span className="block text-[10px] text-[var(--nv-text-tertiary)] leading-snug mt-0.5">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </Section>
         </div>
 

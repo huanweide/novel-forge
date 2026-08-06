@@ -146,6 +146,8 @@ export interface BuildConfig {
   autoGenerateStoryline: boolean;
   /** v1.4.0 缝合怪推进：主线完结后自动构造承接的新主线（默认开） */
   autoConstructNewMain: boolean;
+  /** v1.6.0 缝合怪节奏：fast 高频事件/steady 均衡/slow 慢热（默认 steady） */
+  stitchPace: "fast" | "steady" | "slow";
 }
 
 export const DEFAULT_BUILD_CONFIG: BuildConfig = {
@@ -164,6 +166,7 @@ export const DEFAULT_BUILD_CONFIG: BuildConfig = {
   forceOriginalNames: true,
   autoGenerateStoryline: true,   // v1.4.0：默认开启——写作时按剧情推进自动维护故事线（与缝合怪推进联动）
   autoConstructNewMain: true,    // v1.4.0：默认开启——主线完结后自动构造承接的新主线
+  stitchPace: "steady",          // v1.6.0：默认均衡节奏
 };
 
 /** 对话消息 */

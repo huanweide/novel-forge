@@ -159,7 +159,7 @@ export default function WorkspacePage() {
     mine: Record<string, unknown>;
     server: { editVersion: number; title?: string | null; outline?: string | null; content?: string | null; notes?: string | null };
   } | null>(null);
-  const [viewMode, setViewMode] = useState<"volume" | "flat" | "timeline">("volume");
+  const [viewMode, setViewMode] = useState<"volume" | "flat">("volume");
 
   // ── FE-N5 全局快捷键 ─────────────────────
   // 保存当前章节：PUT 回写 selectedNode.content（与编辑器落库同源端点）
@@ -311,21 +311,23 @@ export default function WorkspacePage() {
   };
 
   // v1.5.0 批量写作：启动后台任务 + 轮询进度（可关窗口，任务继续）
-  const handleBatchWrite = async (count: number, authorNote: string) => {
+  // v1.6.0：改为「章纲确认流」——弹窗内先生成章纲，确认后走这里写正文（mode:"write"）
+  const handleBatchWrite = async (nodeIds: string[], authorNote: string) => {
     setShowBatchWrite(false);
+    if (!project) return;
     try {
       const res = await fetch("/api/story/batch-write", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project?.id, count, authorNote }),
+        body: JSON.stringify({ projectId: project.id, nodeIds, authorNote, mode: "write" }),
       });
       const d = await res.json().catch(() => ({}));
       if (!d.taskId) {
         toastError(d.error || "批量写作启动失败");
         return;
       }
-      setBatchWriteTask({ id: d.taskId, status: "running", progress: 0, done: 0, total: count });
-      toastInfo("批量写作已启动（后台运行），可继续编辑；进度在右下角查看");
+      setBatchWriteTask({ id: d.taskId, status: "running", progress: 0, done: 0, total: nodeIds.length });
+      toastInfo("正文生成已启动（后台运行），可继续编辑；进度在右下角查看");
     } catch (e) {
       toastError("批量写作启动失败：" + (e instanceof Error ? e.message : "网络错误"));
     }
@@ -1151,7 +1153,7 @@ export default function WorkspacePage() {
       {batchGenerating && <BatchProgressPanel progress={batchProgress} nodes={project.storyNodes} onAbort={() => setBatchAbort(true)} />}
 
       {/* v1.5.0 批量写作弹窗 + 后台进度胶囊 */}
-      {showBatchWrite && <BatchWriteDialog onClose={() => setShowBatchWrite(false)} onConfirm={handleBatchWrite} />}
+      {showBatchWrite && <BatchWriteDialog projectId={project.id} onClose={() => setShowBatchWrite(false)} onConfirmWrite={handleBatchWrite} />}
       {batchWriteTask && batchWriteTask.status !== "completed" && batchWriteTask.status !== "failed" && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/95 backdrop-blur px-3 py-1.5 shadow-lg text-xs text-[var(--nv-text-secondary)]">
           <Icon name="loader" size={12} className="animate-spin text-[var(--nv-primary)]" />

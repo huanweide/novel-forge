@@ -24,7 +24,7 @@ export function LeftPanel({
   selectedNode: StoryNodeData | null; onSelectNode: (node: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
   onEditLore: (l: LorebookData) => void; onNewCharacter: () => void;
-  loadProject: () => void; viewMode: "volume" | "flat" | "timeline"; onSetViewMode: (m: "volume" | "flat" | "timeline") => void;
+  loadProject: () => void; viewMode: "volume" | "flat"; onSetViewMode: (m: "volume" | "flat") => void;
   batchMode: boolean; onToggleBatchMode: () => void; selectedChapterIds: Set<string>;
   onToggleChapterSelect: (id: string) => void; onSelectAll: () => void;
   onClearSelection: () => void; batchGenerating: boolean; onBatchGenerate: () => void;
@@ -94,11 +94,6 @@ export function LeftPanel({
                   className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${viewMode === "flat" ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}
                   title="平铺视图">
                   <span className="flex items-center gap-1"><Icon name="file" size={10} /> 平铺</span>
-                </button>
-                <button onClick={() => onSetViewMode("timeline")}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${viewMode === "timeline" ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}
-                  title="时间线视图：按书中世界时间排序">
-                  <span className="flex items-center gap-1"><Icon name="hourglass" size={10} /> 时间线</span>
                 </button>
                 <button onClick={onToggleBatchMode} disabled={batchGenerating}
                   className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${batchMode ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}>

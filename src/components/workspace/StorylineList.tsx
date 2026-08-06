@@ -8,6 +8,7 @@ import { Collapse } from "@/components/ui/collapse";
 import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
+import { StorylinesModal } from "@/components/workspace/StorylinesModal";
 
 export interface StorylineData {
   id: string; projectId: string;
@@ -36,6 +37,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [generating, setGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<StorylineData>>({});
+  const [showFull, setShowFull] = useState(false); // v1.6.0 全屏故事线总览
 
 
   const load = async (signal?: AbortSignal) => {
@@ -135,13 +137,22 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       {/* 工具栏 */}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] text-[var(--nv-text-tertiary)]">{storylines.length} 条故事线</span>
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="flex items-center gap-1 rounded border border-[var(--nv-creative)]/40 bg-[var(--nv-creative-soft)] px-2 py-1 text-[10px] text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-creative-soft)] disabled:opacity-50"
-        >
-          {generating ? <><Icon name="loader" size={11} className="animate-spin" /> 生成中...</> : <><Icon name="bot" size={11} /> AI生成</>}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowFull(true)}
+            className="flex items-center gap-1 rounded border border-[var(--nv-border-2)] px-2 py-1 text-[10px] text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-primary)]/50 hover:text-[var(--nv-primary)]"
+            title="全屏查看全部故事线的完整过程（七要素 + 章节进展时间轴）"
+          >
+            <Icon name="grid" size={11} /> 全屏
+          </button>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="flex items-center gap-1 rounded border border-[var(--nv-creative)]/40 bg-[var(--nv-creative-soft)] px-2 py-1 text-[10px] text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-creative-soft)] disabled:opacity-50"
+          >
+            {generating ? <><Icon name="loader" size={11} className="animate-spin" /> 生成中...</> : <><Icon name="bot" size={11} /> AI生成</>}
+          </button>
+        </div>
       </div>
 
       {/* 主线 */}
@@ -203,6 +214,15 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         />
       )}
 
+      {/* 全屏故事线总览（v1.6.0） */}
+      {showFull && (
+        <StorylinesModal
+          projectId={projectId}
+          onClose={() => setShowFull(false)}
+          onRefresh={() => { void load(); onRefresh(); }}
+        />
+      )}
+
       {/* 编辑弹窗 */}
       {editingId && (
         <Modal open onClose={() => setEditingId(null)} bare panelClassName="max-h-[85vh] w-full max-w-xl overflow-y-auto" labelledBy="storyline-edit-title">
@@ -248,7 +268,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   );
 }
 
-function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete, deletingId }: {
+export function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete, deletingId }: {
   storyline: StorylineData; expanded: boolean;
   onToggle: () => void; onEdit: () => void; onDelete: () => void;
   deletingId: string | null;

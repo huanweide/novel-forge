@@ -5,7 +5,8 @@
  * 内容都能够填写，格式需与内置格式相同」。本模块在每章填表后：
  *  1. LLM 按内置格式抽取章节中新出现且确定的角色与世界观实体；
  *  2. 查重（复用 entity-auto-creator 的 isSimilarName，繁简/错别字变体不重建）；
- *  3. 角色 → CharacterCard（内置字段：name/role/background/storyLine/personality/appearance/currentStatus/tags）；
+ *  3. 角色 → CharacterCard（内置字段：name/role/background/storyLine/personality/appearance/currentStatus/tags/relationships）；
+ *      - 新角色建卡时写入 relationships；已存在角色卡则按名称匹配补 relationships（合并去重，不覆盖手填）。
  *  4. 其他实体 → LorebookEntry（内置字段：title/category/keys/content）。
  *
  * 速度：每章 1 次轻量 LLM 调用（复用 fillModelOf：推理模型映射 deepseek-chat）。
@@ -30,12 +31,13 @@ export interface EntitySyncResult {
 
 const ENTITY_SYSTEM_PROMPT = `你是小说实体抽取助手（自动填表链路·角色卡/世界书入库）。阅读【正文】，抽取其中【新出现且确定】的角色与世界观实体，并按角色卡/世界书的内置格式给出设定内容。
 输出严格 JSON（response_format=json_object），不要任何解释文字：
-{"entities":[{"name":"实体名","type":"character|location|item|technique|organization|creature|other","summary":"一句话概括","description":"3-5 句设定（基于正文，名称与事实零杜撰）","role":"主角/配角/反派/导师/其他（仅角色）","appearance":"外貌一句话（仅角色）","personality":"性格一句话（仅角色）"}]}
+{"entities":[{"name":"实体名","type":"character|location|item|technique|organization|creature|other","summary":"一句话概括","description":"3-5 句设定（基于正文，名称与事实零杜撰）","role":"主角/配角/反派/导师/其他（仅角色）","appearance":"外貌一句话（仅角色）","personality":"性格一句话（仅角色）","relationships":[{"name":"对方角色名","relation":"关系（如：师徒/宿敌/暗恋/上下级）","dynamic":"动态一句话（可选，如：反目成仇后互不信任）"}]（仅角色，1-4 条，只记正文中明确体现的关系）"}]}
 铁律：
 1. 名称零杜撰：实体名必须逐字复制【正文】里的原文用字，禁止改写/缩写/自创同义变体。
 2. 只抽取正文中确定出现的新实体；明显是章节临时道具/路人可跳过。
 3. 每个实体的 description 必须基于正文事实，禁止臆造正文没有的内容。
-4. 已在前文确立的核心角色（如主角）无需重复抽取。`;
+4. 已在前文确立的核心角色（如主角）无需重复抽取。
+5. relationships 只写正文里确实发生互动的角色关系，不许脑补；拿不准就留空数组。`;
 
 const TYPE_TO_CATEGORY: Record<string, string> = {
   location: "geography",
@@ -112,16 +114,18 @@ export async function syncChapterEntities(
 
   if (entities.length === 0) return result;
 
-  // 2) 查重：现有角色名 + 别名 + 世界书标题（大小写不敏感 + 相似度）
+  // 2) 查重：现有角色名 + 别名 + 世界书标题（大小写不敏感 + 相似度）；同时记录已有角色卡 id 与关系（供补 relationships）
   const [existingChars, existingLore] = await Promise.all([
-    prisma.characterCard.findMany({ where: { projectId }, select: { name: true, aliases: true } }),
+    prisma.characterCard.findMany({ where: { projectId }, select: { id: true, name: true, aliases: true, relationships: true } }),
     prisma.lorebookEntry.findMany({ where: { projectId }, select: { title: true } }),
   ]);
   const existingNames = new Set<string>();
   const existingList: string[] = [];
+  const charByName = new Map<string, { id: string; relationships: Array<Record<string, unknown>> }>();
   for (const c of existingChars) {
     existingNames.add(c.name.toLowerCase());
     existingList.push(c.name);
+    charByName.set(c.name.toLowerCase(), { id: c.id, relationships: Array.isArray(c.relationships) ? (c.relationships as Array<Record<string, unknown>>) : [] });
     for (const al of Array.isArray(c.aliases) ? (c.aliases as string[]) : []) {
       if (typeof al === "string" && al.trim()) {
         existingNames.add(al.toLowerCase());
@@ -142,15 +146,47 @@ export async function syncChapterEntities(
   for (const e of entities) {
     const name = String(e.name || "").trim();
     if (!name || name.length < 2) continue;
+    // 关系（仅角色）：过滤掉空 targetName，封顶 8 条
+    const rawRels = Array.isArray(e.relationships)
+      ? (e.relationships as Array<Record<string, unknown>>).filter(
+          (r) => r && typeof r.name === "string" && String(r.name).trim().length >= 2
+        )
+      : [];
+    const newRels = rawRels.slice(0, 8).map((r) => ({
+      targetName: String(r.name).trim(),
+      relation: String(r.relation || "相识").slice(0, 30),
+      dynamic: String(r.dynamic || "").slice(0, 80),
+    }));
+    const type = String(e.type || "other");
+    const summary = String(e.summary || "");
+    const description = String(e.description || summary || `${name}，自动发现。`);
+    // 命中已有角色卡 → 补 relationships（合并去重，不覆盖已有同名关系）
+    const hitKey = existingNames.has(name.toLowerCase()) ? name.toLowerCase() : null;
+    if (type === "character" && newRels.length > 0 && hitKey && charByName.has(hitKey)) {
+      const card = charByName.get(hitKey)!;
+      const merged = [...card.relationships];
+      for (const r of newRels) {
+        if (merged.some((x) => String(x.targetName || "") === r.targetName)) continue; // 同名关系已存在，保留原值
+        merged.push(r);
+        if (merged.length >= 8) break;
+      }
+      if (merged.length !== card.relationships.length) {
+        try {
+          await prisma.characterCard.update({ where: { id: card.id }, data: { relationships: merged as any } });
+          result.createdChars.push(`${name}（补关系）`);
+        } catch {
+          result.skipped.push(`${name}（补关系失败）`);
+        }
+      }
+      addName(name);
+      continue;
+    }
     if (existingNames.has(name.toLowerCase()) || existingList.some((en) => isSimilarName(en, name))) {
       result.skipped.push(name);
       addName(name);
       continue;
     }
     addName(name);
-    const type = String(e.type || "other");
-    const summary = String(e.summary || "");
-    const description = String(e.description || summary || `${name}，自动发现。`);
     try {
       if (type === "character") {
         const roleText = String(e.role || "配角");
@@ -170,6 +206,7 @@ export async function syncChapterEntities(
             appearance: { features: String(e.appearance || "") },
             abilities: [],
             currentStatus: "alive",
+            relationships: newRels as any,
             tags: ["🆕 自动发现"],
           } as any,
         });

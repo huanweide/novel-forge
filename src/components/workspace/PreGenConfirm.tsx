@@ -26,6 +26,11 @@ export function PreGenConfirm({
   const [charInput, setCharInput] = useState("");
   const [error, setError] = useState("");
   const [localAuthorNote, setLocalAuthorNote] = useState(authorNote);
+  // v1.6.0：章纲确认循环——可选先生成章纲 → 编辑/修复 → 确认生成正文
+  const [outlineText, setOutlineText] = useState("");
+  const [outlineLoaded, setOutlineLoaded] = useState(false);
+  const [outlineBusy, setOutlineBusy] = useState(false);
+  const [outlineErr, setOutlineErr] = useState("");
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -49,7 +54,42 @@ export function PreGenConfirm({
     return () => ctrl.abort();
   }, []);
 
-  const handleConfirm = () => {
+  // v1.6.0：生成/修复章纲（写 node.outline，正文生成时自动作为本节大纲）
+  const runOutline = async () => {
+    if (!nodeId) return;
+    setOutlineBusy(true);
+    setOutlineErr("");
+    try {
+      const res = await fetch("/api/generate/chapter-outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, nodeId, authorNote: localAuthorNote || undefined }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || typeof d.outline !== "string") {
+        setOutlineErr(d.error || "章纲生成失败，请重试");
+        return;
+      }
+      setOutlineText(d.outline);
+      setOutlineLoaded(true);
+    } catch (e) {
+      setOutlineErr("章纲生成失败：" + (e instanceof Error ? e.message : "网络错误"));
+    } finally {
+      setOutlineBusy(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    // 保存编辑后的章纲（若有），保证正文生成读到最新章纲
+    if (nodeId && outlineLoaded && outlineText.trim()) {
+      try {
+        await fetch(`/api/story/nodes/${nodeId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ outline: outlineText }),
+        });
+      } catch { /* 章纲保存失败不阻断生成 */ }
+    }
     const inputChars = charInput.split(/[,，、\n]/).map((s) => s.trim()).filter(Boolean);
     // 人物输入匹配已有卡 → 优先作为出场角色；输入中不存在的名字 → 作为 AI 自建角色
     const matchedIds = cards
@@ -103,6 +143,43 @@ export function PreGenConfirm({
                 rows={3}
               />
             </div>
+            {nodeId && (
+              <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)]/50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="flex items-center gap-1 text-xs text-[var(--nv-text-secondary)]">
+                    <Icon name="book" size={12} /> 章纲（可选步骤）
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {outlineLoaded && !outlineBusy && (
+                      <button onClick={runOutline} disabled={outlineBusy}
+                        className="text-[10px] px-2 py-1 rounded border border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] disabled:opacity-50"
+                        title="按当前作者指令重新生成章纲（不满意就改指令再点这里）">
+                        <Icon name="refresh" size={10} className="inline-block mr-1" />修复章纲
+                      </button>
+                    )}
+                    <button onClick={runOutline} disabled={outlineBusy}
+                      className={`text-[10px] px-2 py-1 rounded border flex items-center gap-1 disabled:opacity-50 ${outlineLoaded ? "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)]" : "border-[var(--nv-primary)]/40 text-[var(--nv-primary)] bg-[var(--nv-primary-soft)]"}`}>
+                      <Icon name={outlineBusy ? "loader" : "sparkles"} size={10} className={outlineBusy ? "animate-spin" : ""} />
+                      {outlineBusy ? "生成中…" : outlineLoaded ? "重新生成" : "先生成章纲"}
+                    </button>
+                  </div>
+                </div>
+                {outlineErr && <p className="text-[10px] text-[var(--nv-danger)] mb-1">{outlineErr}</p>}
+                {outlineLoaded ? (
+                  <textarea
+                    value={outlineText}
+                    onChange={(e) => setOutlineText(e.target.value)}
+                    rows={5}
+                    placeholder="本章章纲（先怎样、后怎样、最后怎样）…"
+                    className="input-glass w-full rounded-lg px-3 py-2 text-xs resize-y leading-relaxed"
+                  />
+                ) : (
+                  <p className="text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed">
+                    点「先生成章纲」先规划本章（先怎样 → 后怎样 → 最后怎样），确认内容后再生成正文；不满意可直接在章纲框里改，或改作者指令后点「修复章纲」。不生成章纲也能直接确认生成正文。
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]">取消</button>
               <button onClick={handleConfirm} className="btn-primary px-4 py-1.5 text-xs rounded-lg font-medium"><Icon name="check" size={13} /> 确认生成</button>

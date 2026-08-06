@@ -57,6 +57,15 @@ export async function POST(request: Request) {
   ]
 }`;
 
+    const buildConfig = (project as any).buildConfig || {};
+    const pace = buildConfig.stitchPace || "steady";
+    const paceDesc =
+      pace === "fast"
+        ? "节奏快：高频事件、每章都有新变数与冲突升级，剧情快速推进"
+        : pace === "slow"
+          ? "节奏慢热：铺垫充分、伏笔密集，冲突逐步累积后爆发"
+          : "节奏均衡：稳步推进，隔章设置变数与阶段性小高潮";
+
     const prompt = `【作品信息】
 名称：${project.name}
 类型：${project.genre.join("、")}
@@ -70,6 +79,9 @@ ${loreEntries.slice(0, 20).map(e => `- ${e.title}：${e.content.slice(0, 200)}`)
 
 【已有故事线——${existingStorylines.length}条（如有则在此基础上补充，主线已存在则只生成支线）】
 ${existingStorylines.map(s => `- [${s.type === "main" ? "主线" : "支线"}] ${s.title}`).join("\n")}
+
+【缝合怪节奏——构造新主线时按此节奏设计事件密度（v1.6.0）】
+${paceDesc}
 
 请为这部小说生成故事线：
 ${
