@@ -9,7 +9,7 @@ export function Toolbar({
   projectName, onBack, onGenerateOutline, onSummarize, onImportChapters,
   onEditStyle, onOpenExport, onBackup, isGenerating, outlineGenerating, summarizing,
   projectId, styleTemplateId,
-  onOpenAutomation, onOpenToolbox,
+  onOpenAutomation,
 }: {
   projectName: string; onBack: () => void; onGenerateOutline: () => void;
   onSummarize: () => void; onImportChapters: () => void;
@@ -17,17 +17,15 @@ export function Toolbar({
   isGenerating: boolean; outlineGenerating?: boolean; summarizing: boolean;
   projectId: string; styleTemplateId?: string;
   onOpenAutomation: () => void;
-  onOpenToolbox: () => void;
 }) {
   const [copying, setCopying] = useState(false);
   const [copyTip, setCopyTip] = useState<string | null>(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const activeStyle = getTemplate(styleTemplateId || "");
-  const activeStyleLabel = activeStyle ? `${activeStyle.icon} ${activeStyle.name}` : "✏️ 自定义文风";
+  const activeStyleLabel = activeStyle ? `${activeStyle.icon} ${activeStyle.name}` : "自定义文风";
 
-  const closeMenus = () => { setExportMenuOpen(false); setMoreMenuOpen(false); };
+  const closeMenus = () => { setExportMenuOpen(false); };
 
   const handleCopyMarkdown = async () => {
     setCopying(true);
@@ -79,7 +77,7 @@ export function Toolbar({
 
         {/* 导出下拉：导出文件 + 复制全文 */}
         <div className="relative z-50">
-          <Button size="sm" variant="outline" onClick={() => { setMoreMenuOpen(false); setExportMenuOpen((o) => !o); }} disabled={isGenerating}
+          <Button size="sm" variant="outline" onClick={() => { setExportMenuOpen((o) => !o); }} disabled={isGenerating}
             className="flex h-7 items-center gap-1 text-xs"><Icon name="upload" size={12} /> 导出 <span className="text-[10px] opacity-70">▾</span></Button>
           {exportMenuOpen && (
             <>
@@ -106,23 +104,7 @@ export function Toolbar({
         <Button size="sm" variant="outline" onClick={onOpenAutomation} disabled={isGenerating}
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]" title="自动填表：设置每章自动抽取回填 + 一键追评所有未填表章节"><Icon name="bot" size={12} /> 自动填表</Button>
 
-        {/* 更多▾：工具箱 */}
-        <div className="relative z-50">
-          <Button size="sm" variant="outline" onClick={() => { setExportMenuOpen(false); setMoreMenuOpen((o) => !o); }} disabled={isGenerating}
-            className="flex h-7 items-center gap-1 text-xs"><Icon name="sliders" size={12} /> 更多 <span className="text-[10px] opacity-70">▾</span></Button>
-          {moreMenuOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={closeMenus} aria-hidden />
-              <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 shadow-xl">
-                <button onClick={() => { setMoreMenuOpen(false); onOpenToolbox(); }} disabled={isGenerating}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-surface-2)] disabled:opacity-50">
-                  <Icon name="sparkles" size={13} /> 工具箱
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
+        {/* 复制提示（工具箱入口已合并进右栏「工具箱」tab，避免重复按钮） */}
         {copyTip && <span className="shrink-0 self-center text-xs text-[var(--nv-accent)]">{copyTip}</span>}
       </div>
     </header>

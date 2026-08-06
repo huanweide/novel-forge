@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/icons";
+import { toastSuccess } from "@/components/ui/toast";
 
 /**
  * 备份导出选择弹窗（v0.46.58）
@@ -52,7 +53,7 @@ export function BackupDialog({
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(() => { setExporting(false); onClose(); }, 600);
+    setTimeout(() => { setExporting(false); toastSuccess("备份包已开始下载"); onClose(); }, 600);
   };
 
   return (

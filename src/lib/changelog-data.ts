@@ -25,18 +25,56 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.1";
+export const LATEST_VERSION = "v1.6.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.1 章节承接修复：生成新章时自动注入上一章（紧邻末章）收尾约 400 字 + 显式承接指令，要求从结尾自然续接、不重启无关场景",
-  "章节命名修复：移除错误的「正文首段 20 字」兜底，改为用 LLM 对整章的摘要作章名、前缀「第N章：」，并标注第几章（实测第7章标题正确生成）",
-  "故事线 UI 修复：主线条目标题点击即可打开全屏总览；多处 truncate 改为 break-words，窄栏内完整显示文字不再被截断",
-  "世界面板 UI 修复：世界书条目标题 break-words + 点击直接编辑看全文，内容预览放宽到 4 行；tsc 零错误 + 217 测试全绿 + 真实生成闭环验证",
+  "v1.6.2 UI 三项体检收尾：① 按钮完成反馈——删除/导出/备份/新建章/批量写作均补成功 toast；② 按钮去重——Toolbar「更多▾→工具箱」下拉删除、ToolboxDialog 模态重写为纯类型模块，工具箱统一由右栏 tab 承载；③ 配色兼容——心情色卡/关系图例/角色卡按钮/配置主按钮硬编码色收归 --nv 令牌，并清理用户可见 emoji",
+  "生成链路健壮性修复（真实生成「新城」第7章验证中发现）：摘要环节偶发空返回时加 3 次重试兜底，避免章名停在占位「第N章」；write 空响应时回滚节点到 outline_only 并清空残片，避免在前端留下无法继续的脏空章",
+  "静态自查确认去重彻底：onOpenToolbox 全仓零引用、无组件再将 ToolboxDialog 当弹窗渲染；tsc 零错误 + 217 单元测试全绿",
+  "真实生成验证：链路（记忆召回→正文→废词扫描 100 分→六维质量 A→审校→自动确认 confirmed→实体入库→DONE）闭环通过；沙箱 LLM 网关偶发空返回属环境限制，非代码缺陷，已加兜底与回滚防御",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.2",
+    date: "2026-08-06",
+    title: "UI 三项体检收尾（按钮反馈 / 去重 / 配色）+ 生成链路健壮性修复",
+    sections: [
+      {
+        label: "按钮完成反馈补齐（用户要求：每个按钮点击后要有成功反馈）",
+        items: [
+          "useConfirmDelete 删除成功后补 toastSuccess「已删除」（覆盖删章节/项目/角色/词条/剧情线/规则等 8 处复用）",
+          "ExportDialog 导出后 toastSuccess「已开始导出，文件将在新标签页下载」；BackupDialog 备份包下载后 toastSuccess「备份包已开始下载」",
+          "workspace 页 handleAddSection（新建章）、handleConfirmOutline（批量建章）、handleBatchGenerate（批量写作完成）均补成功 toast",
+        ],
+      },
+      {
+        label: "按钮去重（用户要求：重复的合并，不要重复按钮）",
+        items: [
+          "Toolbar 删除「更多▾→工具箱」下拉（与右栏 RightPanel 的「工具箱」tab 完全重复），工具箱入口统一由右栏 tab 承载",
+          "ToolboxDialog 模态组件重写为纯类型模块（仅导出 ToolboxItem 类型 + CATEGORY_META 常量），删除与右栏重复的 React 模态；静态自查确认 onOpenToolbox 全仓零引用、无组件再当弹窗渲染",
+        ],
+      },
+      {
+        label: "配色兼容（用户要求：与其他按钮保持较好兼容，不要风格差异）",
+        items: [
+          "DrawCards 心情色卡硬编码色（purple-/pink-）收归 --nv 设计令牌（creative/danger/info/success/warning/accent）",
+          "RelationshipGraph 图例爱情色 bg-pink-400 → --nv-creative；CharacterDialog 创建/保存按钮统一 btn-primary；ProjectConfigPanel 主按钮 text-white → --nv-text-primary",
+          "清理用户可见 emoji：Toolbar 自定义文风标签「✏️ 自定义文风」→「自定义文风」",
+        ],
+      },
+      {
+        label: "生成链路健壮性（真实生成「新城」第7章验证中发现并修复）",
+        items: [
+          "摘要重试兜底：post-processor 调用 summarizeChapter 时若返回空 summary（沙箱 LLM 网关偶发），最多重试 3 次再继续；连败则保留占位标题，绝不写垃圾标题",
+          "空响应回滚：write 路由检测到正文为空（模型偶发空返回）时，将节点回滚到 outline_only 并清空残片，避免在前端留下无法继续的脏空章",
+          "质量门禁：tsc 零错误 + 217 单元测试全绿；真实生成验证链路（记忆召回→正文→废词扫描→六维质量→审校→自动确认→实体入库→DONE）闭环通过",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.1",
     date: "2026-08-06",

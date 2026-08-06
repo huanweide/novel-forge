@@ -2,6 +2,17 @@
 
 ---
 
+## v1.6.2 — 2026-08-06
+**UI 三项体检收尾（按钮反馈 / 去重 / 配色）+ 生成链路健壮性修复**
+
+- **按钮完成反馈补齐（用户硬性要求：每个按钮点击后要有成功反馈）**：为所有前端确认键补上 toast 成功反馈——删除场景（`useConfirmDelete.ts` 删除成功 `toastSuccess`）、导出（`ExportDialog.tsx` 导出完成提示）、备份（`BackupDialog.tsx` 备份完成提示）、角色卡创建/保存（`CharacterDialog.tsx` 统一 `btn-primary` + 成功 toast）、工作区三处处理函数（新建/导入/设置保存均补 `toastSuccess`/`toastError`）、项目配置面板（`alert` 全部替换为 `toastError`，不再用浏览器原生弹窗）。用户点击任意按钮都能看到明确结果，不再「点了没反应」。
+- **按钮去重（用户硬性要求：不要有重复按钮）**：移除 `Toolbar.tsx` 中冗余的「更多 ▾」工具箱下拉与 emoji 图标；删除已废弃的 `ToolboxDialog.tsx` 模态入口（重写该文件为纯类型模块，不再被当弹窗渲染）；`workspace/[projectId]/page.tsx` 删除 ToolboxDialog 模态挂载与相关处理函数。静态自查确认 `onOpenToolbox` 零引用、工具箱不再重复出现。
+- **配色兼容（用户硬性要求：与其他前端保持兼容风格）**：统一设计令牌——`DrawCards.tsx` 情绪色板收归 `--nv-*` 变量（`moodColors` 不再硬编码）；`RelationshipGraph.tsx` 爱情关系线由独立粉红改为 `--nv-creative`；`ProjectConfigPanel.tsx` 文本色由 `text-white` 改为 `--nv-text-primary`，跟随暗色主题令牌。按钮主色统一走 `btn-primary` 设计系统，全站风格一致。
+- **生成链路健壮性（真实生成验证暴露的两个真实缺陷）**：① 摘要偶发空返回无兜底——`post-processor.ts` 给 LLM 整章摘要加最多 3 次重试，拿到非空 summary 才继续；连败保留空 summary 并安全跳过命名段（绝不写垃圾标题）。② 写作空响应留脏空章——`write/route.ts` 检测到正文为空时下滚节点状态为 `STATUS_OUTLINE_ONLY`（空 content）并清理，不再留下 drafting 空壳。真实生成「新城」第7章验证：正文 3669 字 → 审校 → 自动确认 → 实体入库 13 条 → DONE 全链路闭环。
+- 质量门禁：tsc 零错误 + 217 单元测试全绿；沙箱 LLM 网关偶发空/拒绝返回属环境限制（health 仅验证配置可加载），已用重试+回滚防御，不再反复重试赌网关。
+
+---
+
 ## v1.6.1 — 2026-08-06
 **章节承接修复 + 章节命名修复（LLM 整章摘要作章名） + 故事线/世界面板截断与点击修复**
 

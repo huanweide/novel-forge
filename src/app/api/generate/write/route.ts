@@ -16,7 +16,7 @@ import {
 import { buildRecallBlock } from "@/core/babylore/loop";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 import { applyRegexRules } from "@/core/post-process/regex";
-import { STATUS_COMPLETED, STATUS_DRAFTING } from "@/core/story-status";
+import { STATUS_COMPLETED, STATUS_DRAFTING, STATUS_OUTLINE_ONLY } from "@/core/story-status";
 
 /**
  * POST /api/generate/write
@@ -311,6 +311,14 @@ export async function POST(request: Request) {
 
           // ── v0.46.55 容错：模型偶发空响应时明确报错，不再静默 done ──
           if (!fullContent || fullContent.trim().length === 0) {
+            // v1.6.2 修复：空响应时节点可能已被置为 drafting 且残留 [PARTIAL_DRAFT] 空壳，
+            // 此处回滚到 outline_only 并清空残片，避免在前端留下无法继续的脏空章。
+            try {
+              await prisma.storyNode.update({
+                where: { id: nodeId },
+                data: { status: STATUS_OUTLINE_ONLY, content: "" },
+              });
+            } catch { /* 回滚失败不阻塞报错返回 */ }
             send({
               type: "error",
               content: "生成内容为空（模型未返回正文），请重试或检查 LLM 配置",

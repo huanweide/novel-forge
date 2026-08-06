@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { toastSuccess } from "@/components/ui/toast";
 
 type ExportFormat = "markdown" | "txt" | "html" | "docx" | "epub";
 
@@ -66,6 +67,7 @@ export function ExportDialog({
   const proceedExport = () => {
     window.open(`/api/projects/${projectId}/export?${buildParams(false).toString()}`, "_blank");
     setPendingHits(null);
+    toastSuccess("已开始导出，文件将在新标签页下载");
     onClose();
   };
 

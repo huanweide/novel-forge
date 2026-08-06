@@ -361,7 +361,7 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
         <span className="text-[var(--nv-text-tertiary)]">图例：</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning" />亲缘</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-danger" />敌对</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400" />爱情</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[var(--nv-creative)]" />爱情</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success" />盟友</span>
 
         <button

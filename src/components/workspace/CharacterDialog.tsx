@@ -504,7 +504,7 @@ export function CharacterDialog({
         </Button>
         <Button
           onClick={handleSave}
-          className={isEdit ? "btn-primary" : "bg-[var(--nv-primary)] hover:bg-[var(--nv-primary)]/80"}
+          className="btn-primary"
           disabled={!form.name.trim()}
         >
           {isEdit ? "保存" : "创建"}

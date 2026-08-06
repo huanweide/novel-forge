@@ -11,7 +11,7 @@ import { StyleEditor } from "@/components/editor/StyleEditor";
 import { ImportWizard } from "@/components/editor/ImportWizard";
 import { PostGenPanel } from "@/components/workspace/PostGenPanel";
 import { Toolbar } from "@/components/workspace/Toolbar";
-import { ToolboxDialog, type ToolboxItem } from "@/components/workspace/ToolboxDialog";
+import type { ToolboxItem } from "@/components/workspace/ToolboxDialog";
 import { ExportDialog } from "@/components/workspace/ExportDialog";
 import { BackupDialog } from "@/components/workspace/BackupDialog";
 import { ConflictPanel } from "@/components/workspace/ConflictPanel";
@@ -149,7 +149,6 @@ export default function WorkspacePage() {
   const [showMemoryDecay, setShowMemoryDecay] = useState(false);
   const [showProjectConfig, setShowProjectConfig] = useState(false);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
-  const [showToolbox, setShowToolbox] = useState(false);
   const [extractionData, setExtractionData] = useState<any>(null);
   const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -541,7 +540,9 @@ export default function WorkspacePage() {
     try {
       const putRes = await fetch("/api/generate/outline", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapters: outlinePreviewChapters, replaceAll: !outlineAppendMode }) });
       if (!putRes.ok) { const err = await putRes.json().catch(() => ({ error: "创建失败" })); toastError("创建章节节点失败: " + (err.error || putRes.status)); return; }
+      const createdCount = outlinePreviewChapters.length;
       setShowOutlineDialog(false); setOutlinePreviewChapters([]); setOutlineCustomPrompt("");
+      toastSuccess(`已创建 ${createdCount} 章`);
       await loadProject();
     } catch (err) { toastError("写入大纲出错: " + (err instanceof Error ? err.message : "网络错误")); }
     finally { setOutlineGenerating(false); }
@@ -727,7 +728,7 @@ export default function WorkspacePage() {
     if (!title) return;
     try {
       const res = await fetch("/api/story/nodes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, parentId, type: parentId ? "section" : "chapter", title, order: project.storyNodes.length }) });
-      if (res.ok) await loadProject();
+      if (res.ok) { await loadProject(); toastSuccess(`已新建「${title}」`); }
       else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("新建节点失败：" + (d.error || `HTTP ${res.status}`)); }
     } catch (err) { console.error("创建节点失败:", err); toastError("新建节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
@@ -838,6 +839,7 @@ export default function WorkspacePage() {
     }
     setBatchGenerating(false); setBatchMode(false); setSelectedChapterIds(new Set());
     await loadProject();
+    toastSuccess(`批量写作完成：${ids.length} 章已生成`);
   };
 
   // ═══════════════════════════════════════════
@@ -937,7 +939,6 @@ export default function WorkspacePage() {
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}
         onOpenAutomation={() => setShowAutomationSettings(true)}
-        onOpenToolbox={() => setShowToolbox(true)}
         onOpenExport={() => setShowExportDialog(true)}
         onBackup={() => setShowBackupDialog(true)}
       />
@@ -1230,9 +1231,6 @@ export default function WorkspacePage() {
           onClose={() => setShowProjectConfig(false)}
         />
       )}
-
-      {/* 工具箱入口 */}
-      {showToolbox && <ToolboxDialog items={toolboxItems} onClose={() => setShowToolbox(false)} />}
 
       {/* 导出弹窗 */}
       {showExportDialog && project && (

@@ -157,12 +157,12 @@ export function DrawCards({
   };
 
   const moodColors: Record<string, string> = {
-    "暗流涌动": "border-purple-700 bg-purple-950/20",
-    "热血沸腾": "border-danger bg-danger/20",
-    "哀而不伤": "border-info bg-info/20",
-    "轻松诙谐": "border-success bg-success/20",
-    "紧张窒息": "border-warning bg-warning/20",
-    "温馨治愈": "border-pink-700 bg-pink-950/20",
+    "暗流涌动": "border-[var(--nv-creative)] bg-[var(--nv-creative)]/20",
+    "热血沸腾": "border-[var(--nv-danger)] bg-[var(--nv-danger)]/20",
+    "哀而不伤": "border-[var(--nv-info)] bg-[var(--nv-info)]/20",
+    "轻松诙谐": "border-[var(--nv-success)] bg-[var(--nv-success)]/20",
+    "紧张窒息": "border-[var(--nv-warning)] bg-[var(--nv-warning)]/20",
+    "温馨治愈": "border-[var(--nv-accent)] bg-[var(--nv-accent)]/20",
   };
 
   return (

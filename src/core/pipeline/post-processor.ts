@@ -510,23 +510,50 @@ export async function runPostGenerationPipeline(
     send({ type: "summarize_start", content: "" });
 
     try {
-      const {
-        summary,
-        keyEvents,
-        characterStates,
-        closingSnapshot,
-        characterImpulses,
-        threadProgress,
-        unresolvedQuestions,
-        impactScore,
-        eventImportances,
-      } = await orchestrator.summarizeChapter(
-        content,
-        chapterTitle,
-        activeCharacters as any,
-        chapterOrder,
-        chapterSummaries.length, // existingSummariesCount — 用于时效性衰减
-      );
+      // v1.6.2 修复：摘要环节偶发空返回（沙箱 LLM 网关抖动）会让命名因 titleBase 空而跳过，
+      // 章节停在占位「第N章」。此处加重试兜底：为空/异常最多重试 3 次，拿到非空 summary 才继续；
+      // 连败则保留空 summary（命名段安全跳过，绝不写垃圾标题）。
+      let summary = "";
+      let keyEvents: any[] = [];
+      let characterStates = "";
+      let closingSnapshot = "";
+      let characterImpulses = "";
+      let threadProgress: any[] = [];
+      let unresolvedQuestions: any[] = [];
+      let impactScore = 0;
+      let eventImportances: any[] = [];
+      let summarized = false;
+      for (let attempt = 1; attempt <= 3 && !summarized; attempt++) {
+        try {
+          const r = await orchestrator.summarizeChapter(
+            content,
+            chapterTitle,
+            activeCharacters as any,
+            chapterOrder,
+            chapterSummaries.length,
+          );
+          if (r && r.summary && String(r.summary).trim().length > 0) {
+            summary = r.summary;
+            keyEvents = (r.keyEvents as any[]) || [];
+            characterStates = (r.characterStates as any) || "";
+            closingSnapshot = (r.closingSnapshot as any) || "";
+            characterImpulses = (r.characterImpulses as any) || "";
+            threadProgress = (r.threadProgress as any[]) || [];
+            unresolvedQuestions = (r.unresolvedQuestions as any[]) || [];
+            impactScore = (r.impactScore as number) || 0;
+            eventImportances = (r.eventImportances as any) || [];
+            summarized = true;
+          } else if (attempt < 3) {
+            send({ type: "summarize_retry", content: `摘要为空，第 ${attempt} 次重试` });
+          }
+        } catch (se) {
+          if (attempt < 3) {
+            send({ type: "summarize_retry", content: `摘要异常，第 ${attempt} 次重试` });
+          } else {
+            throw se;
+          }
+        }
+      }
 
       // 存入 ChapterSummary（含四级事件分层）
       await prisma.chapterSummary.create({
@@ -577,7 +604,9 @@ export async function runPostGenerationPipeline(
           .split("\n")
           .map((s) => s.trim())
           .filter((s) => s.length > 0)[0] || "";
-        const titleBase = cleanSummary.slice(0, 40).trim();
+        // v1.6.2 修复：summary 可能自带「第N章」前缀（正文首行本身即章节标题时，
+        // 摘要会原样摘到「第一章 · 龙髓石」），此处先剥离，避免拼接出「第N章：第N章：xxx」重复标题。
+        let titleBase = cleanSummary.slice(0, 40).trim().replace(/^第\s*\d+\s*章[\s:：·]*/, "");
         const curTitle = String((currentNode as any)?.title || "").trim();
         const isPlaceholder = !curTitle || /^第\s*\d+\s*章$/.test(curTitle);
         // 守卫：仅当正文非空时才回填标题。正文为空（模型偶发空返回）时摘要 LLM 会对空内容胡说，

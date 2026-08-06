@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
+import { toastError } from "@/components/ui/toast";
 
 type PresetRec = {
   presetId: string;
@@ -96,7 +97,7 @@ export function ProjectConfigPanel({
       if (res.ok) {
         setPresets((p) => p.filter((x) => x.presetId !== presetId));
       } else {
-        alert(d.error || "移除失败");
+        toastError(d.error || "移除失败");
       }
     } finally {
       setBusy(false);
@@ -350,7 +351,7 @@ export function ProjectConfigPanel({
               <button
                 onClick={saveRules}
                 disabled={busy}
-                className="rounded-xl bg-[var(--nv-primary)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition disabled:opacity-50"
+                className="rounded-xl bg-[var(--nv-primary)] px-3 py-1.5 text-xs font-medium text-[var(--nv-text-primary)] hover:opacity-90 transition disabled:opacity-50"
               >
                 保存规则
               </button>
@@ -391,7 +392,7 @@ export function ProjectConfigPanel({
               <button
                 onClick={saveLlm}
                 disabled={busy}
-                className="rounded-xl bg-[var(--nv-primary)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition disabled:opacity-50"
+                className="rounded-xl bg-[var(--nv-primary)] px-3 py-1.5 text-xs font-medium text-[var(--nv-text-primary)] hover:opacity-90 transition disabled:opacity-50"
               >
                 保存 LLM 配置
               </button>
@@ -446,7 +447,7 @@ export function ProjectConfigPanel({
             {draftErr && <p className="text-[11px] text-[var(--nv-warning)]">{draftErr}</p>}
             <div className="flex gap-3">
               <button onClick={() => setShowNewRule(false)} className="flex-1 rounded-xl border border-[var(--nv-border-2)] py-2 text-sm text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)] transition">取消</button>
-              <button onClick={confirmNewRule} className="flex-1 rounded-xl bg-[var(--nv-primary)] py-2 text-sm font-medium text-white hover:opacity-90 transition">添加规则</button>
+              <button onClick={confirmNewRule} className="flex-1 rounded-xl bg-[var(--nv-primary)] py-2 text-sm font-medium text-[var(--nv-text-primary)] hover:opacity-90 transition">添加规则</button>
             </div>
           </div>
         </Modal>
