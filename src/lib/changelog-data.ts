@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.2.0";
+export const LATEST_VERSION = "v1.3.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.2.0 角色卡体系升级：新增「故事线」字段，AI 填满全覆盖（时间线/人际关系/性格三层/故事线都填）+ 内容精简约束",
-  "全选自动联动 AI 扩展，扩展与填满字段对齐；自动分类简化为 3-6 组自然群体（不再四维拆细）",
-  "关系图从右栏实体 tab 内置到角色卡「人际关系」列表/关系图双视图，AI 填满/扩展自动检测角色关系",
-  "「自动填表」从更多下拉提为一级按钮 + 新增「一键追评所有未填表章节」；tsc 零错误 + 217 测试全绿",
+  "v1.3.0 自动填表全面打通：一键追评实测修复（推理模型→基础模型，4分18秒失败→7秒成功 applied=16）",
+  "填表不再只写表格——每章自动抽取角色/世界书实体，按内置格式创建角色卡与世界书词条（查重防重复）",
+  "实测「新城 · 龙陨之地」：自动建出角色卡（韩姓男子）与世界书词条（欧阳集团/临港新城），字段全对齐内置格式",
+  "tsc 零错误 + 217 测试全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.3.0",
+    date: "2026-08-06",
+    title: "自动填表全面打通：一键追评实测修复（速度 4min→7s）+ 角色卡/世界书实体自动填充",
+    sections: [
+      {
+        label: "一键追评实测修复（速度与效果，实测驱动）",
+        items: [
+          "实测「新城 · 龙陨之地」一键追评：原来 4m18s 失败（ops=0「模型未返回任何有效操作」）。根因：deepseek-v4-flash 是推理模型，推理内容过长吃光 max_tokens=8000 导致 content 为空，且生成超长使响应体长时间挂起",
+          "新增 fillModelOf：填表这类纯抽取任务统一映射到基础对话模型（deepseek-chat，实测 154-319ms 直出 JSON），推理模型原样透传其余场景；max_tokens 保持 8000；content 为空时从推理尾部提取最后一个 JSON 块兜底",
+          "修复后实测：单章 7.4s 成功（16 ops 全落地），一键追评 7.16s（ok:true、applied=16）——速度提升约 36 倍；保留精简诊断日志（[fill] LLM 耗时/raw_len）便于排查",
+        ],
+      },
+      {
+        label: "角色卡/世界书实体自动填充（新功能：所有内容都能填写）",
+        items: [
+          "新增 src/core/babylore/entity-sync.ts：每章填表后按内置格式抽取章节中新出现且确定的角色与世界观实体（LLM 一次调用，名称零杜撰、基于正文事实）",
+          "角色 → CharacterCard（内置字段：name/role/background/storyLine/personality/appearance/currentStatus/tags 全对齐）；其他实体 → LorebookEntry（title/category/keys/content，category 映射 geography/item/technique/faction/creature）",
+          "查重复用 isSimilarName（繁简/错别字变体不重建）；挂载 babyloreFill（单章）与 babyloreFillAll（一键追评）双链路，失败不影响表格结果",
+          "实测「新城 · 龙陨之地」第四章：自动创建角色卡「韩姓男子」（background 3-5 句基于正文、storyLine/appearance 就位）与世界书词条「欧阳集团(faction)」「临港新城(geography)」；已有 16 卡 19 词条全部查重跳过",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿"],
+      },
+    ],
+  },
   {
     version: "v1.2.0",
     date: "2026-08-06",

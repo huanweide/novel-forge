@@ -23,6 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { recordLlmCall } from "@/lib/llm";
 import { getSettings } from "@/lib/llm";
 import { buildProjectOverrides } from "@/core/llm/client";
+import { syncChapterEntities } from "./entity-sync";
 import type { LoreTableOp, TableDef } from "./types";
 
 export interface FillResult {
@@ -287,6 +288,21 @@ interface LlmCreds {
   model: string;
 }
 
+/**
+ * v1.2.0 实测修复：填表是纯抽取任务，推理模型（deepseek-v4-flash 等）会
+ *  - 推理内容过长吃光 max_tokens → content 为空（ops=0）；
+ *  - 或生成超长导致 res.json() 长时间挂起（响应体等待服务端生成完）。
+ * 故填表统一用同厂商基础对话模型（deepseek-chat），快且输出稳定。
+ * 非推理模型原样透传。
+ */
+export function fillModelOf(model: string): string {
+  const m = (model || "").toLowerCase();
+  if (m.includes("reasoner") || m.includes("thinking") || (m.includes("v4") && m.includes("flash"))) {
+    return "deepseek-chat";
+  }
+  return model;
+}
+
 async function runFillForText(
   chapterText: string,
   tables: TableDef[],
@@ -315,6 +331,7 @@ ${chapterText.slice(0, 12000)}
 
   let lastErr = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
+    const t0 = Date.now();
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -324,7 +341,7 @@ ${chapterText.slice(0, 12000)}
         },
         signal: AbortSignal.timeout(120000),
         body: JSON.stringify({
-          model: llm.model,
+          model: fillModelOf(llm.model),
           messages: [
             { role: "system", content: STRICT_SYSTEM_PROMPT },
             { role: "user", content: userPrompt },
@@ -340,9 +357,20 @@ ${chapterText.slice(0, 12000)}
         lastErr = `API ${res.status}: ${e.slice(0, 200)}`;
         throw new Error(lastErr);
       }
+      console.log(`[fill] LLM attempt=${attempt} http=${res.status} dt=${Date.now() - t0}ms`);
 
       const data = await res.json();
-      const raw = data?.choices?.[0]?.message?.content?.trim() || "";
+      const msg0 = data?.choices?.[0]?.message || {};
+      let raw = (msg0.content || "").trim();
+      // 推理模型兜底（v1.2.0 实测）：deepseek-v4-flash 推理过长时会吃光 max_tokens，
+      // content 为空（finish=length）；此时从推理尾部提取最后一个 JSON 块作为最终答案。
+      if (!raw) {
+        const reasoning = String(msg0.reasoning_content || "");
+        const a = reasoning.lastIndexOf("{");
+        const b = reasoning.lastIndexOf("}");
+        if (a >= 0 && b > a) raw = reasoning.slice(a, b + 1);
+      }
+      console.log(`[fill] LLM attempt=${attempt} raw_len=${raw.length} reasoning_len=${(msg0.reasoning_content || "").length} finish=${data?.choices?.[0]?.finish_reason}`);
       const ops = parseOps(raw);
       if (ops.length === 0) {
         lastErr = "模型未返回任何有效操作";
@@ -376,6 +404,7 @@ ${chapterText.slice(0, 12000)}
       };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
+      console.log(`[fill] LLM attempt=${attempt} FAILED dt=${Date.now() - t0}ms err=${lastErr.slice(0, 120)}`);
       if (attempt < 3) continue;
     }
   }
@@ -564,6 +593,8 @@ export async function babyloreFill(
   const llm: LlmCreds = { baseURL, apiKey, model };
   const srcLabel = `ch${options?.chapterOrder ?? "?"}:batch${options?.batchId ?? "manual"}${options?.source ? ":" + options.source : ""}`;
   const r = await runFillForText(chapterText, tables, llm, options?.tableKeys, srcLabel, projectId);
+  // v1.2.1：同步抽取角色/世界书实体——角色卡、世界卡内容也能自动填写（查重兜底，失败不影响表格结果）
+  await syncChapterEntities(projectId, chapterText, llm).catch(() => null);
   // P1-B（墨白）：落库后跑 selfCheckFill，把疑似问题（地名/空值/跨表/表内异体）合并进结果，供 UI/诊断。
   const selfCheck = await selfCheckFill(projectId);
   // M2（墨白 Round12）：把「类型不匹配」跨表 issue 并入自检结果（复用 SelfCheckIssue 上报结构），
@@ -674,6 +705,8 @@ export async function babyloreFillAll(
     }
     const srcLabel = `ch${ch.order}:batch${runBatch}`;
     const r = await runFillForText(ch.content || "", tables, llm, options?.tableKeys, srcLabel, projectId);
+    // v1.2.1：逐章同步抽取角色/世界书实体（一键追评也覆盖角色卡/世界卡）
+    await syncChapterEntities(projectId, ch.content || "", llm).catch(() => null);
     processed++;
     operations += r.operations;
     applied += r.applied;

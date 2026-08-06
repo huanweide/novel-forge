@@ -2,6 +2,15 @@
 
 ---
 
+## v1.3.0 — 2026-08-06
+**自动填表全面打通：一键追评实测修复（速度 4min→7s）+ 角色卡/世界书实体自动填充**
+
+- 一键追评实测修复：实测「新城 · 龙陨之地」发现原版 4m18s 失败（ops=0）——根因是 `deepseek-v4-flash` 推理模型推理过长吃光 `max_tokens=8000` 致 content 为空、且生成超长使响应挂起。新增 `fillModelOf`：填表这类纯抽取任务统一映射基础对话模型 `deepseek-chat`（实测 154-319ms 直出 JSON）；content 为空时从推理尾部提取 JSON 兜底；保留精简诊断日志。修复后实测：单章 7.4s 成功（16 ops 全落地）、一键追评 7.16s ok:true —— 速度提升约 36 倍
+- 角色卡/世界书实体自动填充：新增 `src/core/babylore/entity-sync.ts`，每章填表后按内置格式抽取新角色与世界观实体——角色 → `CharacterCard`（role/background/storyLine/personality/appearance/currentStatus/tags 全对齐），其他 → `LorebookEntry`（title/category/keys/content，category 映射 geography/item/technique/faction/creature）；查重复用 `isSimilarName`（繁简变体不重建）；挂载单章与一键追评双链路。实测第四章自动建出角色卡「韩姓男子」+ 世界书词条「欧阳集团」「临港新城」，已有实体全部查重跳过
+- 质量门禁：tsc 零错误 + 217 单元测试全绿
+
+---
+
 ## v1.2.0 — 2026-08-06
 **角色卡体系升级：AI 填满全覆盖 + 新增故事线 + 关系图内置角色卡 + 自动填表独立入口**
 
