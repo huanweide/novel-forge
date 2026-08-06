@@ -18,6 +18,7 @@ export function CenterPanel({
   chapterOutlinePrompt, onChapterOutlinePromptChange,
   genStep, genStepLabels, chapterOutlineStatus,
   onOpenGame,
+  onBatchWrite,
   onEditCharacter, onEditLore, todayWords = 0,
   loadProject,
 }: {
@@ -35,6 +36,7 @@ export function CenterPanel({
   refineInstruction: string; onRefineInstructionChange: (v: string) => void;
   onRefine: () => void;
   onOpenGame: () => void;
+  onBatchWrite: () => void;
   genStep: string; genStepLabels: Record<string, { icon: React.ReactNode; label: string }>;
   chapterOutlineStatus: string;
   onEditCharacter?: (id: string) => void;
@@ -282,11 +284,18 @@ export function CenterPanel({
                       {refineMode ? <span className="flex items-center gap-1"><Icon name="wrench" size={11} /> 微调中</span> : <span className="flex items-center gap-1"><Icon name="wrench" size={11} /> 微调</span>}
                     </button>
                     {!isGenerating && (
-                      <button onClick={onOpenGame}
-                        className="text-xs px-2 py-1 h-7 rounded border border-[var(--nv-creative)]/40 text-[var(--nv-creative)] bg-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative)]/20 hover:border-[var(--nv-creative)] transition-colors"
-                        title="互动游戏模式——像文字RPG一样创作本章">
-                        <Icon name="gamepad" size={14} />
-                      </button>
+                      <>
+                        <button onClick={onOpenGame}
+                          className="text-xs px-2 py-1 h-7 rounded border border-[var(--nv-creative)]/40 text-[var(--nv-creative)] bg-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative)]/20 hover:border-[var(--nv-creative)] transition-colors"
+                          title="互动游戏模式——像文字RPG一样创作本章">
+                          <Icon name="gamepad" size={14} />
+                        </button>
+                        <button onClick={onBatchWrite}
+                          className="text-xs px-2 py-1 h-7 rounded border border-[var(--nv-primary)]/40 text-[var(--nv-primary)] bg-[var(--nv-primary-soft)] hover:bg-[var(--nv-primary)]/20 hover:border-[var(--nv-primary)] transition-colors"
+                          title="批量写作：后台连续生成 1-10 个新章节（自动写章名），可关窗口查看进度">
+                          <Icon name="pencil" size={12} /> 批量写作
+                        </button>
+                      </>
                     )}
                   </>
                 )}

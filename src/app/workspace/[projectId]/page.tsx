@@ -22,6 +22,7 @@ import { RightPanel } from "@/components/workspace/RightPanel";
 import { CharacterDialog } from "@/components/workspace/CharacterDialog";
 import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
 import { BatchProgressPanel } from "@/components/workspace/BatchProgressPanel";
+import { BatchWriteDialog } from "@/components/workspace/BatchWriteDialog";
 import { OutlineDialog } from "@/components/workspace/OutlineDialog";
 import { AutomationSettingsDialog } from "@/components/workspace/AutomationSettingsDialog";
 import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
@@ -283,6 +284,9 @@ export default function WorkspacePage() {
   const [batchProgress, setBatchProgress] = useState<Map<string, { status: string; error?: string }>>(new Map());
   const [batchAbort, setBatchAbort] = useState(false);
   const [batchConfirming, setBatchConfirming] = useState(false);
+  // v1.5.0 批量写作（后台任务）
+  const [showBatchWrite, setShowBatchWrite] = useState(false);
+  const [batchWriteTask, setBatchWriteTask] = useState<{ id: string; status: string; progress: number; done: number; total: number } | null>(null);
 
   // ── 大纲生成对话框 ────────────────────────
   const [showOutlineDialog, setShowOutlineDialog] = useState(false);
@@ -305,6 +309,46 @@ export default function WorkspacePage() {
     if (!selectedNode || !project) { toastInfo("请先选中一个章节节点"); return; }
     setShowDrawCards(true);
   };
+
+  // v1.5.0 批量写作：启动后台任务 + 轮询进度（可关窗口，任务继续）
+  const handleBatchWrite = async (count: number, authorNote: string) => {
+    setShowBatchWrite(false);
+    try {
+      const res = await fetch("/api/story/batch-write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project?.id, count, authorNote }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!d.taskId) {
+        toastError(d.error || "批量写作启动失败");
+        return;
+      }
+      setBatchWriteTask({ id: d.taskId, status: "running", progress: 0, done: 0, total: count });
+      toastInfo("批量写作已启动（后台运行），可继续编辑；进度在右下角查看");
+    } catch (e) {
+      toastError("批量写作启动失败：" + (e instanceof Error ? e.message : "网络错误"));
+    }
+  };
+
+  // 批量写作进度轮询
+  useEffect(() => {
+    if (!batchWriteTask || batchWriteTask.status === "completed" || batchWriteTask.status === "failed") return;
+    const timer = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/babylore/fill-task/${batchWriteTask.id}`);
+        const t = await r.json();
+        setBatchWriteTask({ id: t.id, status: t.status, progress: t.progress, done: t.done, total: t.total });
+        if (t.status === "completed") {
+          toastSuccess(`批量写作完成：${t.done}/${t.total} 章已生成`);
+          void loadProject();
+        } else if (t.status === "failed") {
+          toastError("批量写作失败：" + (t.error || "未知错误"));
+        }
+      } catch { /* 轮询失败下轮重试 */ }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [batchWriteTask?.id, batchWriteTask?.status]);
 
   const handleDrawSelect = async (card: { outline: string; characters: string[]; coreConflict: string; mood: string; cardLabel?: string }, storylineId?: string, characterIds?: string[]) => {
     if (!selectedNode) return;
@@ -948,6 +992,7 @@ export default function WorkspacePage() {
             targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
             todayWords={monitorTodayWords}
             onWrite={handleWrite} onStop={handleStop}
+            onBatchWrite={() => setShowBatchWrite(true)}
             onEditOutline={async (outline) => {
               if (!selectedNode) return;
               const prev = selectedNode;
@@ -1104,6 +1149,16 @@ export default function WorkspacePage() {
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
       {showImportWizard && <ImportWizard projectId={project.id} initialMode={importWizardMode} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
       {batchGenerating && <BatchProgressPanel progress={batchProgress} nodes={project.storyNodes} onAbort={() => setBatchAbort(true)} />}
+
+      {/* v1.5.0 批量写作弹窗 + 后台进度胶囊 */}
+      {showBatchWrite && <BatchWriteDialog onClose={() => setShowBatchWrite(false)} onConfirm={handleBatchWrite} />}
+      {batchWriteTask && batchWriteTask.status !== "completed" && batchWriteTask.status !== "failed" && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/95 backdrop-blur px-3 py-1.5 shadow-lg text-xs text-[var(--nv-text-secondary)]">
+          <Icon name="loader" size={12} className="animate-spin text-[var(--nv-primary)]" />
+          批量写作中… {batchWriteTask.done}/{batchWriteTask.total} 章（{batchWriteTask.progress}%）
+          <button onClick={() => setBatchWriteTask(null)} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" title="隐藏进度提示（任务仍在后台继续）"><Icon name="x" size={12} /></button>
+        </div>
+      )}
 
       {/* 大纲生成对话框 */}
       {showOutlineDialog && (

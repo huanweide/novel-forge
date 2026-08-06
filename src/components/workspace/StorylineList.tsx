@@ -89,6 +89,22 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
     } catch (err) { toastError("故事线保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
+  // v1.5.0 一键完成打勾：卡片上点击状态图标在「活跃 ↔ 已完结」间切换（PUT status）
+  const handleToggleComplete = async (s: StorylineData) => {
+    const next = s.status === "completed" ? "active" : "completed";
+    try {
+      const res = await fetch(`/api/storylines/${s.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("状态更新失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      toastSuccess(next === "completed" ? `「${s.title}」已完结 ✓（主线完结将自动缝合新主线）` : `「${s.title}」已重新开启`);
+      load();
+      onRefresh();
+    } catch (err) { toastError("状态更新失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
+  };
+
   const { deletingId, remove: deleteStoryline } = useConfirmDelete({
     title: "删除故事线",
     description: "确定删除这条故事线？此操作不可恢复。",
@@ -134,7 +150,13 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           <div className="flex items-center gap-1 bg-[var(--nv-accent-soft)] px-2 py-1.5">
             <Icon name="star" size={11} className="text-[var(--nv-accent)]" />
             <span className="flex-1 truncate text-xs font-medium text-[var(--nv-accent)]">{mainLine.title}</span>
-            <span className="text-[10px] text-[var(--nv-text-tertiary)]">{mainLine.status === "completed" ? <Icon name="check" size={11} /> : <Icon name="circle" size={11} />}</span>
+            <button
+              onClick={() => handleToggleComplete(mainLine)}
+              className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
+              title={mainLine.status === "completed" ? "已完结——点击重新开启" : "点击打勾标记完成（主线完成后自动缝合新主线）"}
+            >
+              {mainLine.status === "completed" ? <Icon name="check" size={11} className="text-[var(--nv-success)]" /> : <Icon name="circle" size={11} />}
+            </button>
           </div>
           <StorylineDetail storyline={mainLine} expanded={expandedId === mainLine.id}
             onToggle={() => setExpandedId(expandedId === mainLine.id ? null : mainLine.id)}
@@ -148,7 +170,13 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           <div className="flex items-center gap-1 px-2 py-1.5">
             <Icon name="arrowRight" size={11} className="text-[var(--nv-text-tertiary)]" />
             <span className="flex-1 truncate text-xs text-[var(--nv-text-primary)]">{s.title}</span>
-            <span className="text-[10px] text-[var(--nv-text-tertiary)]">{s.status === "completed" ? <Icon name="check" size={11} /> : <Icon name="circle" size={11} />}</span>
+            <button
+              onClick={() => handleToggleComplete(s)}
+              className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
+              title={s.status === "completed" ? "已完结——点击重新开启" : "点击打勾标记完成"}
+            >
+              {s.status === "completed" ? <Icon name="check" size={11} className="text-[var(--nv-success)]" /> : <Icon name="circle" size={11} />}
+            </button>
           </div>
           <StorylineDetail storyline={s} expanded={expandedId === s.id}
             onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
@@ -253,6 +281,20 @@ function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete, dele
           </div>
         );
       })}
+      {/* v1.5.0 章节进展留痕（每章自动回写的大事件） */}
+      {Array.isArray(storyline.chapterBindings) && storyline.chapterBindings.length > 0 && (
+        <div className="mt-1 border-t border-[var(--nv-border-2)] pt-1">
+          <div className="mb-0.5 text-[10px] text-[var(--nv-text-tertiary)] flex items-center gap-1"><Icon name="history" size={10} /> 章节进展（自动记录）：</div>
+          {storyline.chapterBindings.slice(-8).reverse().map((b, i) => {
+            const meta = ELEMENT_LABELS[b.element as keyof typeof ELEMENT_LABELS];
+            return (
+              <div key={i} className="text-[10px] text-[var(--nv-text-secondary)] leading-relaxed">
+                <span className="text-[var(--nv-text-tertiary)]">{meta ? `${meta.label} · ` : ""}第{(b as any).chapterOrder !== undefined ? (b as any).chapterOrder + 1 : "?"}章</span>：{b.note}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
