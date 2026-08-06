@@ -15,7 +15,7 @@ import { completeText } from "@/core/llm/client";
 
 export async function POST(request: Request) {
   try {
-    const { projectId } = await request.json();
+    const { projectId, mode } = await request.json();
     if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
     const [project, characters, loreEntries, existingStorylines] = await Promise.all([
@@ -72,7 +72,13 @@ ${loreEntries.slice(0, 20).map(e => `- ${e.title}：${e.content.slice(0, 200)}`)
 ${existingStorylines.map(s => `- [${s.type === "main" ? "主线" : "支线"}] ${s.title}`).join("\n")}
 
 请为这部小说生成故事线：
-${existingStorylines.filter(s => s.type === "main").length === 0 ? "生成 1 条主线和 3-5 条支线。" : "主线已存在，生成 3-5 条支线来丰富主线。"}`;
+${
+  mode === "newMain"
+    ? "前一条主线已完结（缝合怪推进·构造新主线）。请构造一条承接前主线结局的新主线——延续世界观与人物当前状态，开启下一阶段的更大冲突，并配套 3-5 条支线。"
+    : existingStorylines.filter(s => s.type === "main").length === 0
+      ? "生成 1 条主线和 3-5 条支线。"
+      : "主线已存在，生成 3-5 条支线来丰富主线。"
+}`;
 
     const raw = await completeText(system, prompt, { maxTokens: 8192, temperature: 0.5 });
 

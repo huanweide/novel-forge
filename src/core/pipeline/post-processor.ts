@@ -7,6 +7,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { enrichForeshadow } from "@/core/foreshadowing";
+import { writeStorylineProgress } from "@/core/pipeline/storyline-writer";
 import { scanForbiddenWordsEnhanced, type ForbiddenMatch } from "@/lib/forbidden-checker";
 import { runLocalDistillation } from "@/lib/distillation-runner";
 import { autoCreateEntities } from "@/lib/entity-auto-creator";
@@ -191,10 +192,18 @@ export async function runPostGenerationPipeline(
       }
     : null;
 
+  // v1.4.0 章名自动生成：标题为空或「第N章」占位时，用正文首段前 20 字兜底（零成本，不额外调 LLM）
+  const oldTitle = String((currentNode as any)?.title || "").trim();
+  const isPlaceholderTitle = !oldTitle || /^第\s*\d+\s*章$/.test(oldTitle);
+  const autoTitle = isPlaceholderTitle
+    ? (content.split("\n").map((s) => s.trim()).find((s) => s.length > 0) || "").slice(0, 20)
+    : null;
+
   const updatedNode = await prisma.storyNode.update({
     where: { id: nodeId },
     data: {
       content,
+      ...(autoTitle ? { title: autoTitle } : {}),
       wordCount: content.length,
       // 确认流程（spec v1 §二/§五）：生成后仅落 drafting，不污染下游、不预置"接受"。
       // 后处理审校（六维质量）结果仍写入 reviewLogs / qualityScore 供「AI诊断」展示，
@@ -539,6 +548,11 @@ export async function runPostGenerationPipeline(
           eventImportances: eventImportances as any,
         },
       });
+
+      // v1.4.0：故事线进度回写（threadProgress 之前被丢弃；现在写入 Storyline 七要素 + chapterBindings，只记大事）
+      try {
+        await writeStorylineProgress(projectId, nodeId, chapterOrder, threadProgress);
+      } catch { /* 回写失败不影响主流程 */ }
 
       // 存入 StoryBeat（长期记忆索引）
       if (keyEvents.length > 0) {

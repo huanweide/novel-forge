@@ -166,17 +166,9 @@ export function OutlineTree({
     );
   }
 
-  // FE-N6 时间线视图：按书中世界时间（worldTime）排序，未标记的排末尾
+  // v1.4.0：世界时间已删除——时间线视图退化为「按大纲顺序」展示（保留时间线入口，不再显示 worldTime 标记）
   if (viewMode === "timeline") {
-    const timelineNodes = [...nodes]
-      .filter((n) => n.type !== "volume")
-      .sort((a, b) => {
-        const aw = a.worldTime || ""; const bw = b.worldTime || "";
-        if (aw && bw) return aw.localeCompare(bw, "zh");
-        if (aw && !bw) return -1;
-        if (!aw && bw) return 1;
-        return 0;
-      });
+    const timelineNodes = [...nodes].filter((n) => n.type !== "volume");
     if (timelineNodes.length === 0) {
       return (
         <div className="text-center text-[var(--nv-text-tertiary)] text-xs py-8">
@@ -188,13 +180,13 @@ export function OutlineTree({
     return (
       <div className="space-y-0.5">
         <div className="px-1 mb-1 text-[10px] text-[var(--nv-text-tertiary)] flex items-center gap-1">
-          <Icon name="hourglass" size={10} /> 按书中世界时间排序（未标记排末尾）
+          <Icon name="hourglass" size={10} /> 章节时间线（按大纲顺序）
         </div>
         {timelineNodes.map((n) => (
           <NodeTreeItem key={n.id} node={n} allNodes={nodes} selectedNode={selectedNode}
             onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
             badgeSlot={
-              <span className={`shrink-0 px-1 rounded text-[10px] ${n.worldTime ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]"}`}>{n.worldTime || "未标记"}</span>
+              <span className="shrink-0 px-1 rounded text-[10px] bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]">{n.order !== undefined ? `#${(n.order ?? 0) + 1}` : ""}</span>
             }
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
             onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { CharacterData } from "./types";
+import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
@@ -40,6 +41,13 @@ export function CharacterList({
   const [classifyDone, setClassifyDone] = useState(0);
   const [classifyTotal, setClassifyTotal] = useState(0);
   const [classifyResult, setClassifyResult] = useState<{ ok: boolean; message: string } | null>(null);
+  // 自动去重合并（v1.4.0）
+  const [deduping, setDeduping] = useState(false);
+  const [dedupeResult, setDedupeResult] = useState<{
+    mergedGroups: Array<{ mainId: string; mainName: string; merged: Array<{ id: string; name: string }> }>;
+    markedRockets: string[];
+    total: number;
+  } | null>(null);
   // 分类面板：AI 返回的分类体系
   const [classifyGroups, setClassifyGroups] = useState<Array<{
     category: string; label: string; description: string; members: string[]; memberIds: string[];
@@ -339,6 +347,38 @@ export function CharacterList({
     }
   };
 
+  // v1.4.0：自动去重合并——扫描全部角色卡，合并相似名、标记龙套，结果弹窗预览后由 onExpanded 刷新
+  const handleDedupe = async () => {
+    setDeduping(true);
+    setDedupeResult(null);
+    try {
+      const res = await fetch("/api/characters/dedupe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(d.error || "去重合并失败");
+        return;
+      }
+      setDedupeResult({
+        mergedGroups: d.mergedGroups || [],
+        markedRockets: d.markedRockets || [],
+        total: d.total || 0,
+      });
+      if ((d.mergedGroups || []).length + (d.markedRockets || []).length === 0) {
+        toastSuccess("未发现需去重/标记的角色，全部干净");
+      } else {
+        toastInfo(`扫描 ${d.total || 0} 个角色：${(d.mergedGroups || []).length} 组合并、${(d.markedRockets || []).length} 个龙套`);
+      }
+    } catch (e) {
+      toastError("去重合并失败：" + (e instanceof Error ? e.message : "网络错误"));
+    } finally {
+      setDeduping(false);
+    }
+  };
+
   // 应用用户勾选的标签
   const handleApplyTags = async () => {
     if (!classifyGroups) return;
@@ -443,12 +483,41 @@ export function CharacterList({
         classifying={classifying}
         classifyDone={classifyDone}
         classifyTotal={classifyTotal}
+        deduping={deduping}
         onToggleAll={handleToggleAll}
         onExpand={handleExpand}
         onClassify={handleClassify}
+        onDedupe={handleDedupe}
         onRange={handleRangeSelect}
         onClear={() => setSelectedIds(new Set())}
       />
+
+      {/* 去重合并结果弹窗 */}
+      {dedupeResult && (
+        <div className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-[var(--nv-text-primary)]">去重合并结果（共扫描 {dedupeResult.total} 个角色）</span>
+            <button onClick={() => { setDedupeResult(null); onExpanded(); }} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"><Icon name="x" size={11} /> 关闭</button>
+          </div>
+          {dedupeResult.mergedGroups.length === 0 && dedupeResult.markedRockets.length === 0 ? (
+            <p className="text-xs text-[var(--nv-text-muted)]">全部干净：没有需要合并或标记的角色。</p>
+          ) : (
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {dedupeResult.mergedGroups.map((g, i) => (
+                <div key={i} className="text-[11px] text-[var(--nv-text-secondary)]">
+                  <span className="text-[var(--nv-primary)]">合：{g.mainName}</span> ← {g.merged.map((m) => m.name).join("、")}
+                </div>
+              ))}
+              {dedupeResult.markedRockets.length > 0 && (
+                <div className="text-[11px] text-[var(--nv-text-secondary)]">
+                  <span className="text-[var(--nv-accent)]">龙套标记：</span>{dedupeResult.markedRockets.join("、")}
+                </div>
+              )}
+            </div>
+          )}
+          <p className="text-[10px] text-[var(--nv-text-tertiary)] mt-2">被合并角色已软删标记（🗂 已合并），龙套仅打标签（🎭 龙套）不删除，可在标签筛选中查看/隐藏。</p>
+        </div>
+      )}
 
       <ClassifyPanel
         classifying={classifying}

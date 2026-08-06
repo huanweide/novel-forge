@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { toastError, toastSuccess, confirmDialog } from "@/components/ui/toast";
+import { toastError, toastSuccess, toastInfo, confirmDialog } from "@/components/ui/toast";
 import { Switch } from "@/components/ui/switch";
 
 // 自动填表弹窗（v0.33.0 原「自动化填表设置」；v1.2.0 改名「自动填表」并加一键追评）
@@ -30,18 +30,26 @@ export function AutomationSettingsDialog({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [fillingAll, setFillingAll] = useState(false);
   const [fillAllMsg, setFillAllMsg] = useState("");
+  const fillTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // v1.2.0：一键追评所有未填表章节——从第一章到最新章逐章填表（已填自动跳过防重复）
+  const stopPoll = () => {
+    if (fillTimerRef.current) {
+      clearInterval(fillTimerRef.current);
+      fillTimerRef.current = null;
+    }
+  };
+
+  // v1.4.0：一键追评改后台——创建任务立即返回，后台逐章执行，前端轮询进度；关页面任务继续
   const runFillAll = async () => {
     const ok = await confirmDialog({
       title: "一键追评所有未填表章节",
-      description: "从第一章到最新一章逐章自动抽取事实、回填全部结构化表格（已填过的章节自动跳过防重复）。每章都会调用 LLM，可能消耗较多 token；填完自动自检地名与信息完整性。是否继续？",
-      confirmText: "开始一键填表",
+      description: "从第一章到最新一章逐章自动抽取事实、回填全部结构化表格与角色卡/世界书（已填过的章节自动跳过防重复）。启动后转为后台运行：你可关闭本窗口，任务继续执行，进度稍后查看。是否启动？",
+      confirmText: "启动后台填表",
       cancelText: "取消",
     });
     if (!ok) return;
     setFillingAll(true);
-    setFillAllMsg("追评中…");
+    setFillAllMsg("正在启动后台填表…");
     try {
       const res = await fetch(`/api/babylore/fill-all`, {
         method: "POST",
@@ -49,20 +57,45 @@ export function AutomationSettingsDialog({
         body: JSON.stringify({ projectId }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d.ok) {
-        setFillAllMsg(`完成：处理 ${d.processed} 章，应用 ${d.applied} 条`);
-        toastSuccess(`一键填表完成：处理 ${d.processed} 章，应用 ${d.applied} 条`);
-      } else {
-        setFillAllMsg(`失败：${d.error || "未知错误"}`);
-        toastError(d.error || "一键填表失败");
+      if (!d.taskId) {
+        setFillAllMsg("启动失败：" + (d.error || "未知错误"));
+        toastError(d.error || "一键填表启动失败");
+        setFillingAll(false);
+        return;
       }
+      setFillAllMsg("后台填表已启动，可关闭本窗口（任务继续运行）");
+      toastInfo("后台填表已启动，可关闭本窗口");
+      // 轮询进度（2.5s/次）
+      fillTimerRef.current = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/babylore/fill-task/${d.taskId}`);
+          const t = await r.json();
+          if (t.status === "completed") {
+            stopPoll();
+            setFillingAll(false);
+            const applied = t.result?.applied ?? 0;
+            const processed = t.result?.processed ?? 0;
+            setFillAllMsg(`完成：应用 ${applied} 条（处理 ${processed} 章）`);
+            toastSuccess(`后台填表完成：应用 ${applied} 条`);
+          } else if (t.status === "failed") {
+            stopPoll();
+            setFillingAll(false);
+            const msg = t.error || t.result?.error || "未知错误";
+            setFillAllMsg("失败：" + msg);
+            toastError("后台填表失败：" + msg);
+          } else {
+            setFillAllMsg(`后台填表中… ${t.done}/${t.total} 章（${t.progress}%）`);
+          }
+        } catch { /* 轮询失败下轮重试 */ }
+      }, 2500);
     } catch (err) {
-      setFillAllMsg("失败：" + (err instanceof Error ? err.message : "网络错误"));
-      toastError("一键填表失败：" + (err instanceof Error ? err.message : "网络错误"));
-    } finally {
+      setFillAllMsg("启动失败：" + (err instanceof Error ? err.message : "网络错误"));
+      toastError("启动失败：" + (err instanceof Error ? err.message : "网络错误"));
       setFillingAll(false);
     }
   };
+
+  useEffect(() => () => stopPoll(), []);
 
 
   useEffect(() => {

@@ -2,6 +2,17 @@
 
 ---
 
+## v1.4.0 — 2026-08-06
+**生成轻量化·填表后台化：一键追评改后台 + 自动去重合并 + 故事线回写与缝合怪 + 删世界时间**
+
+- 一键追评填表后台化：新增 `FillTask` 任务表（taskType 支持 fill/batchWrite），`POST /api/babylore/fill-all` 创建任务后立即返回 taskId（实测 139ms），后台 fire-and-forget 逐章执行（关页面任务继续）；新增 `GET /api/babylore/fill-task/[taskId]` 轮询进度；同项目运行中任务自动去重；前端「自动填表」弹窗一键追评改后台——点击即提示「可关闭本窗口」，2.5s 轮询显示「填表中 X/Y 章（Z%）」，完成 toast
+- 角色自动去重合并：「自动分类」旁新增「自动去重合并」按钮（悬浮显示详细介绍）。`POST /api/characters/dedupe`：全正文统计出场次数（每章封顶 1 次），出现<3 次且背景薄弱标记「🎭 龙套」（不删除）；相似名称（小名/繁简/错别字变体）合并到内容最丰富的角色（别名并入、关系改指、被并卡软删标记「🗂 已合并」）；结果弹窗展示合并组与龙套清单。实测 17 角色 483ms 扫描干净
+- 故事线回写 + 缝合怪推进：新增 `storyline-writer.ts`——orchestrator 的 `threadProgress`（之前被丢弃）回写 Storyline 七要素 + chapterBindings，白名单 stage、仅 active 线、impactScore>=4 才写（只记大事）；主线标记完成且无其他 active 主线 → 自动构造承接的新主线（`storylines/generate` 新增 `mode:newMain`）；`autoConstructNewMain` 开关默认开（项目设定可关）；`autoGenerateStoryline` 默认改为开启
+- 删世界时间：正文区/大纲时间线不再手动维护 worldTime（交 LLM 判断），时间线视图退化为按大纲顺序；章名自动生成——标题为空或「第N章」占位时用正文首段前 20 字兜底（零成本）
+- 质量门禁：tsc 零错误 + 217 单元测试全绿
+
+---
+
 ## v1.3.0 — 2026-08-06
 **自动填表全面打通：一键追评实测修复（速度 4min→7s）+ 角色卡/世界书实体自动填充**
 

@@ -25,18 +25,60 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.3.0";
+export const LATEST_VERSION = "v1.4.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.3.0 自动填表全面打通：一键追评实测修复（推理模型→基础模型，4分18秒失败→7秒成功 applied=16）",
-  "填表不再只写表格——每章自动抽取角色/世界书实体，按内置格式创建角色卡与世界书词条（查重防重复）",
-  "实测「新城 · 龙陨之地」：自动建出角色卡（韩姓男子）与世界书词条（欧阳集团/临港新城），字段全对齐内置格式",
+  "v1.4.0 一键追评改后台（点完即返回、可关窗口、轮询进度）+ 角色自动去重合并（去龙套/并小名）",
+  "故事线回写打通：每章进展自动写入主线/支线七要素（只记大事），主线完结自动缝合新主线（默认开）",
+  "删除世界时间手动输入（交 LLM 判断）；章名自动生成（空/占位时用正文首段兜底）",
   "tsc 零错误 + 217 测试全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.4.0",
+    date: "2026-08-06",
+    title: "生成轻量化·填表后台化：一键追评改后台 + 自动去重合并 + 故事线回写与缝合怪 + 删世界时间",
+    sections: [
+      {
+        label: "一键追评填表后台化（不再死等，可关页面）",
+        items: [
+          "新增 FillTask 任务表（taskType 支持 fill/batchWrite），POST /api/babylore/fill-all 改为创建任务后立即返回 taskId（实测 139ms），后台 fire-and-forget 逐章执行（本地进程常驻，关页面任务继续）",
+          "新增 GET /api/babylore/fill-task/[taskId] 进度轮询；同项目运行中任务自动去重（返回既有 taskId）",
+          "前端「自动填表」弹窗一键追评改后台：点击后提示「后台填表已启动，可关闭本窗口」，2.5s 轮询显示「填表中 X/Y 章（Z%）」，完成 toast；已填章节自动跳过（增量语义沿用）",
+        ],
+      },
+      {
+        label: "角色自动去重合并（自动分类旁新增按钮）",
+        items: [
+          "新增 POST /api/characters/dedupe：全正文统计角色出现次数（每章封顶 1 次）——出现<3 次且背景薄弱标记「🎭 龙套」（不删除，可筛选）；相似名称（小名/繁简/错别字变体，isSimilarName）合并到内容最丰富的角色：别名并入、关系合并改指、被并卡软删标记「🗂 已合并」",
+          "角色工具栏「自动分类」旁新增「自动去重合并」按钮，悬浮显示详细介绍；结果弹窗展示合并组与龙套清单，关闭即刷新列表",
+          "实测「新城 · 龙陨之地」17 角色：483ms 扫描，0 组合并 0 龙套（角色均干净，逻辑正确）",
+        ],
+      },
+      {
+        label: "故事线回写 + 缝合怪推进（自动生成故事线默认开启）",
+        items: [
+          "新增 src/core/pipeline/storyline-writer.ts：orchestrator 计算的 threadProgress（之前被丢弃）现在回写 Storyline——白名单七要素、仅 active 线、impactScore>=4 才写（只记大事，不吃个饭这种细节）、覆写七要素 + chapterBindings 留痕；非法 id 静默降级",
+          "缝合怪推进对接：主线标记完成（PUT status=completed）且无其他 active 主线 → 自动构造承接的新主线（storylines/generate 新增 mode:newMain，prompt 要求承接前主线结局、开启下一阶段冲突）；开关 autoConstructNewMain 默认开启，可在项目设定关闭",
+          "自动生成故事线（autoGenerateStoryline）默认改为开启，小字说明与缝合怪推进的联动；BuildConfig 新增 autoConstructNewMain 字段与开关 UI",
+        ],
+      },
+      {
+        label: "删世界时间 + 章名自动生成",
+        items: [
+          "世界时间手动输入删除（正文区/大纲时间线不再显示 worldTime，交给 LLM 判断），时间线视图退化为按大纲顺序展示章节序号",
+          "章名自动生成：正文保存时若标题为空或「第N章」占位，用正文首段前 20 字兜底（零成本，不额外调 LLM）",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿"],
+      },
+    ],
+  },
   {
     version: "v1.3.0",
     date: "2026-08-06",

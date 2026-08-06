@@ -616,7 +616,11 @@ export async function babyloreFill(
  */
 export async function babyloreFillAll(
   projectId: string,
-  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null },
+  options?: {
+    tableKeys?: string[];
+    projectLlmConfig?: Record<string, unknown> | null;
+    onProgress?: (done: number, total: number, currentTitle?: string) => void | Promise<void>;
+  },
 ): Promise<FillAllResult> {
   let settings;
   try {
@@ -724,6 +728,12 @@ export async function babyloreFillAll(
     } else {
       // 该章未达完成门槛，计入失败章，留待重试（P1-1：不得静默吞掉）。
       failedChapters++;
+    }
+    // v1.4.0：后台任务进度回调（每章后上报，供 FillTask 轮询）
+    if (options?.onProgress) {
+      try {
+        await options.onProgress(processed, chapters.length, ch.title || ch.id);
+      } catch { /* 进度上报失败不影响主流程 */ }
     }
   }
 

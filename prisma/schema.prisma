@@ -511,6 +511,28 @@ model ImportTask {
   @@index([projectId])
 }
 
+// ─── 后台任务 (FillTask) —— 一键追评填表 / 批量写作 异步化（v1.4.0）──
+// 用户点「一键追评」后立即返回 taskId，后台 fire-and-forget 逐章执行，
+// 前端 2-3s 轮询 GET /api/babylore/fill-task/[taskId] 展示进度；关页面任务继续（本地进程常驻）。
+
+model FillTask {
+  id        String   @id @default(uuid())
+  projectId String
+  taskType  String   @default("fill") // fill | batchWrite
+  status    String   @default("pending") // pending | running | completed | failed
+  progress  Float    @default(0)          // 0-100
+  total     Int      @default(0)
+  done      Int      @default(0)
+  failed    Int      @default(0)
+  result    Json?                         // 完成后写入: { applied, operations, createdChars, createdLore, skipped }
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
 // ─── 导入提交幂等锁 (Import Commit Lock) ───────────────
 // 替代进程内存 Map：基于 (projectId, nodeId) 唯一约束实现跨实例幂等。
 // commit 为项目级提交，nodeId 用占位键；并发提交同一项目触发 P2002 唯一冲突 → 视为重复跳过（409）。

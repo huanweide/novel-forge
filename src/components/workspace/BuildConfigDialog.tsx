@@ -152,9 +152,16 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
             <div className="flex items-center justify-between gap-3 py-1">
               <span>
                 <span className="text-sm text-[var(--nv-text-primary)]">自动生成故事线</span>
-                <span className="block text-xs text-[var(--nv-text-muted)]">写作时按剧情推进自动维护故事线</span>
+                <span className="block text-xs text-[var(--nv-text-muted)]">写作时按剧情推进自动维护主线/支线，每章进展自动回填七要素；开启后无需手动维护故事线</span>
               </span>
               <Switch checked={cfg.autoGenerateStoryline} onCheckedChange={(next) => set("autoGenerateStoryline", next)} size="sm" />
+            </div>
+            <div className="flex items-center justify-between gap-3 py-1">
+              <span>
+                <span className="text-sm text-[var(--nv-text-primary)]">缝合怪推进 · 主线完结自动开新线</span>
+                <span className="block text-xs text-[var(--nv-text-muted)]">主线打完勾后自动构造一条承接的新主线，让剧情持续演进、规模不够时自动扩张；关闭则推进更随意</span>
+              </span>
+              <Switch checked={cfg.autoConstructNewMain} onCheckedChange={(next) => set("autoConstructNewMain", next)} size="sm" />
             </div>
           </Section>
         </div>

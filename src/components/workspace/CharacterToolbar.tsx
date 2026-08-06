@@ -13,9 +13,11 @@ export function CharacterToolbar({
   classifying,
   classifyDone,
   classifyTotal,
+  deduping,
   onToggleAll,
   onExpand,
   onClassify,
+  onDedupe,
   onRange,
   onClear,
 }: {
@@ -28,9 +30,11 @@ export function CharacterToolbar({
   classifying: boolean;
   classifyDone: number;
   classifyTotal: number;
+  deduping: boolean;
   onToggleAll: () => void;
   onExpand: () => void;
   onClassify: () => void;
+  onDedupe: () => void;
   onRange: (indices: Set<number>) => void;
   onClear: () => void;
 }) {
@@ -68,6 +72,18 @@ export function CharacterToolbar({
         }`}
       >
         {classifying ? <span className="flex items-center gap-1"><Icon name="tag" size={10} /> {classifyDone}/{classifyTotal || "?"}</span> : <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 自动分类</span>}
+      </button>
+      <button
+        onClick={onDedupe}
+        disabled={deduping}
+        className={`text-xs px-2 py-0.5 rounded transition-colors ${
+          deduping
+            ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)] border border-[var(--nv-border-1)]"
+            : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)] border border-[var(--nv-border-1)] hover:border-[var(--nv-border-2)]"
+        }`}
+        title="扫描全部角色卡：① 合并同名/相似角色（小名、繁简、错别字变体归并到内容最丰富的角色，别名与关系一并接管，被并卡软删保留）；② 标记出场次数过少的龙套（出现<3次且无背景，仅打标签不删除，可在标签筛选中隐藏）。执行前先预览待合并/标记清单再确认。"
+      >
+        {deduping ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" /> 去重中…</span> : <span className="flex items-center gap-1">自动去重合并</span>}
       </button>
       {selectedIds.size > 0 && !expanding && (
         <button

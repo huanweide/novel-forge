@@ -144,6 +144,8 @@ export interface BuildConfig {
   coreConflict: string;
   forceOriginalNames: boolean;
   autoGenerateStoryline: boolean;
+  /** v1.4.0 缝合怪推进：主线完结后自动构造承接的新主线（默认开） */
+  autoConstructNewMain: boolean;
 }
 
 export const DEFAULT_BUILD_CONFIG: BuildConfig = {
@@ -160,7 +162,8 @@ export const DEFAULT_BUILD_CONFIG: BuildConfig = {
   goldenFinger: "",
   coreConflict: "",
   forceOriginalNames: true,
-  autoGenerateStoryline: false,
+  autoGenerateStoryline: true,   // v1.4.0：默认开启——写作时按剧情推进自动维护故事线（与缝合怪推进联动）
+  autoConstructNewMain: true,    // v1.4.0：默认开启——主线完结后自动构造承接的新主线
 };
 
 /** 对话消息 */
