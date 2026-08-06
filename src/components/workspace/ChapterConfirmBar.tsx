@@ -14,6 +14,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Switch } from "@/components/ui/switch";
+import { Collapse } from "@/components/ui/collapse";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toastSuccess, toastError, toastInfo } from "@/components/ui/toast";
 
 interface ChapterConfirmBarProps {
@@ -28,24 +30,7 @@ interface ChapterConfirmBarProps {
   onDiagnose: () => void;        // 打开 PostGenPanel 审校 Tab
 }
 
-function StatusBadge({ status }: { status: string }) {
-  // 体验减法（Max Loop Round6）：状态徽章对齐 story-status.ts 六态枚举（删历史假态 rejected/revised），
-  // 视觉三档——灰=进行中/待处理、橙=需行动、绿=已定稿；未知状态兜底灰显，不误导作者。
-  const map: Record<string, { label: string; cls: string; icon: IconName }> = {
-    outline_only: { label: "仅大纲", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" },
-    drafting: { label: "草稿", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "pencil" },
-    completed: { label: "已生成·待提交", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "file" },
-    pending_confirm: { label: "待确认", cls: "text-[var(--nv-accent)] bg-[var(--nv-accent-soft)]", icon: "alert" },
-    confirmed: { label: "已定稿", cls: "text-[var(--nv-success)] bg-[var(--nv-success)]/10", icon: "check" },
-    reviewing: { label: "审校中", cls: "text-[var(--nv-accent)] bg-[var(--nv-accent-soft)]", icon: "alert" },
-  };
-  const s = map[status] || { label: "未知", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" };
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${s.cls}`}>
-      <Icon name={s.icon} size={10} /> {s.label}
-    </span>
-  );
-}
+// StatusBadge 已抽到 @/components/ui/status-badge（全局复用，OutlineTree 等共用）
 
 export function ChapterConfirmBar({
   projectId, nodeId, nodeStatus, projectConfirmedAt, autoConfirmEnabled, autoDeliverEnabled, onAction, onDiagnose,
@@ -67,6 +52,20 @@ export function ChapterConfirmBar({
   // 复用 PATCH /api/projects/[id] 通路，与「自动交付」并排同面板，满足跨面板对称与联动写入铁律。
   const [autoConfirm, setAutoConfirm] = useState(autoConfirmEnabled ?? true);
   const [togglingConfirm, setTogglingConfirm] = useState(false);
+
+  // 确认栏默认收起为极简状态条，正文区不被遮挡；偏好持久化到 localStorage
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const v = localStorage.getItem("confirm-bar-collapsed");
+    return v === null ? true : v !== "0";
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const n = !c;
+      try { localStorage.setItem("confirm-bar-collapsed", n ? "1" : "0"); } catch { /* ignore */ }
+      return n;
+    });
+  };
 
   const isAutoMode = autoConfirm === true;
 
@@ -224,24 +223,44 @@ export function ChapterConfirmBar({
 
   return (
     <div className="surface-elevated rounded-2xl border border-[var(--nv-border-2)] px-4 py-3 mt-4">
+      {/* 常驻头部：极简状态条，点击展开/收起，正文区默认不被遮挡 */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="flex items-center gap-2 text-left cursor-pointer select-none"
+        >
           <Icon name="clipboard" size={13} className="text-[var(--nv-primary)]" />
           <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">确认流程</span>
           <StatusBadge status={nodeStatus} />
           {isAutoMode && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--nv-primary)]/10 text-[var(--nv-primary)] font-medium">智能审阅</span>
           )}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+          <Icon name={collapsed ? "chevronRight" : "chevronDown"} size={12} className="text-[var(--nv-text-tertiary)]" />
+        </button>
+        {!collapsed && (
+          <>
+            {/* 用途说明（默认收起，解答「这有什么用」） */}
+            <Collapse title="这是什么？确认流程怎么用" defaultOpen={false} size="sm" className="w-full border-t border-[var(--nv-border-2)] pt-2">
+              <div className="text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed space-y-1">
+                <p>每章写完后，从这里把章节「定稿」。状态依次为：仅大纲 → 草稿 → 已生成·待提交 → 待确认 → 审校中 → 已定稿。</p>
+                <p><b className="text-[var(--nv-primary)]">智能审阅</b>：开启后合格章由系统自动定稿，你只在被拦截或想亲自把关时点「人工接管」；关闭则每章手动确认。</p>
+                <p><b className="text-[var(--nv-primary)]">AI诊断</b>：让 AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿。</p>
+                <p><b className="text-[var(--nv-primary)]">人工接管</b>：临时切回逐章人工审批（提交/确认通过/打回），系统不再自动判定。</p>
+                <p><b className="text-[var(--nv-primary)]">自动交付</b>：全书章节全部定稿后自动完成整本交付，无需手动点。</p>
+                <p><b className="text-[var(--nv-primary)]">智能交付全书</b>：一键扫描全书，合格自动放行、仅拦异常，最后整本交付。</p>
+              </div>
+            </Collapse>
+
+            <div className="flex items-center gap-2 flex-wrap">
           {/* 智能审阅态：常态收敛人工按钮，仅拦截/接管时展开 */}
           {isAutoMode && !isConfirmed && !manualTakeover && (
             <>
               <span className="text-[10px] text-[var(--nv-text-tertiary)] flex items-center gap-1">
                 <Icon name="alert" size={10} /> 系统自动判定，仅拦截异常
               </span>
-              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
-              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => setManualTakeover(true)}>人工接管</Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose} title="AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿">AI诊断</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => setManualTakeover(true)} title="临时切回逐章人工审批：你来决定提交/确认通过/打回，系统不再自动判定">人工接管</Button>
             </>
           )}
           {isAutoMode && !isConfirmed && manualTakeover && (
@@ -249,14 +268,14 @@ export function ChapterConfirmBar({
               {isConfirmable && (
                 <>
                   <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={() => call("submit")}>提交确认</Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose} title="AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿">AI诊断</Button>
                 </>
               )}
               {isPending && (
                 <>
                   <Button size="sm" className="h-7 text-xs bg-[var(--nv-success)] hover:bg-[var(--nv-success)]/90 text-white" disabled={busy} onClick={() => call("confirm")}>确认通过</Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--nv-danger)]/40 text-[var(--nv-danger)] hover:bg-[var(--nv-danger)]/10" disabled={busy} onClick={() => setShowReject((v) => !v)}>打回重写</Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose} title="AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿">AI诊断</Button>
                 </>
               )}
               <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => setManualTakeover(false)}>收起接管</Button>
@@ -268,14 +287,14 @@ export function ChapterConfirmBar({
               {isConfirmable && (
                 <>
                   <Button size="sm" className="btn-primary h-7 text-xs" disabled={busy} onClick={() => call("submit")}>提交确认</Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose} title="AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿">AI诊断</Button>
                 </>
               )}
               {isPending && (
                 <>
                   <Button size="sm" className="h-7 text-xs bg-[var(--nv-success)] hover:bg-[var(--nv-success)]/90 text-white" disabled={busy} onClick={() => call("confirm")}>确认通过</Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--nv-danger)]/40 text-[var(--nv-danger)] hover:bg-[var(--nv-danger)]/10" disabled={busy} onClick={() => setShowReject((v) => !v)}>打回重写</Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose}>AI诊断</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onDiagnose} title="AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿">AI诊断</Button>
                 </>
               )}
             </>
@@ -291,7 +310,9 @@ export function ChapterConfirmBar({
           {nodeStatus === "outline_only" && (
             <span className="text-[10px] text-[var(--nv-text-tertiary)]">先生成/手写正文，再走确认流程</span>
           )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {showReject && (

@@ -30,6 +30,7 @@ import { DrawCards } from "@/components/workspace/DrawCards";
 import { BuildConfigDialog } from "@/components/workspace/BuildConfigDialog";
 import { MemoryDecayDialog } from "@/components/workspace/MemoryDecayDialog";
 import { ProjectConfigPanel } from "@/components/workspace/ProjectConfigPanel";
+import { ProjectSettingsDialog } from "@/components/workspace/ProjectSettingsDialog";
 import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo, toastWarning } from "@/components/ui/toast";
@@ -147,6 +148,7 @@ export default function WorkspacePage() {
   const [showBuildConfig, setShowBuildConfig] = useState(false);
   const [showMemoryDecay, setShowMemoryDecay] = useState(false);
   const [showProjectConfig, setShowProjectConfig] = useState(false);
+  const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [showToolbox, setShowToolbox] = useState(false);
   const [extractionData, setExtractionData] = useState<any>(null);
   const [extractionLoading, setExtractionLoading] = useState(false);
@@ -931,14 +933,8 @@ export default function WorkspacePage() {
         <button onClick={() => setRightDrawerOpen(o => !o)} className="lg:hidden text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="切换侧栏（窄屏）">
           <Icon name="grid" size={13} /> 侧栏
         </button>
-        <button onClick={() => setShowBuildConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="小说骨架设定：题材 / 受众 / 剧情结构 / 力量体系 / 金手指 / 风格标签">
+        <button onClick={() => setShowProjectSettings(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="项目设定：骨架 / 配置 / 记忆衰减 / 确认交付，统一入口">
           <Icon name="settings" size={13} /> 项目设定
-        </button>
-        <button onClick={() => setShowMemoryDecay(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="设定记忆衰减：控制旧设定在写作上下文中的淡出节奏">
-          <Icon name="hourglass" size={13} /> 记忆衰减
-        </button>
-        <button onClick={() => setShowProjectConfig(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="项目配置：书名 / 模型 / LLM 参数 / 作者注">
-          <Icon name="settings" size={13} /> 项目配置
         </button>
       </div>
 
@@ -1181,6 +1177,17 @@ export default function WorkspacePage() {
       )}
       {showAutomationSettings && project && (
         <AutomationSettingsDialog projectId={project.id} projectName={project.name} onClose={() => setShowAutomationSettings(false)} />
+      )}
+
+      {showProjectSettings && project && (
+        <ProjectSettingsDialog
+          projectId={project.id}
+          project={project}
+          onClose={() => setShowProjectSettings(false)}
+          onOpenBuildConfig={() => { setShowProjectSettings(false); setShowBuildConfig(true); }}
+          onOpenProjectConfig={() => { setShowProjectSettings(false); setShowProjectConfig(true); }}
+          onOpenMemoryDecay={() => { setShowProjectSettings(false); setShowMemoryDecay(true); }}
+        />
       )}
 
       {showBuildConfig && project && (

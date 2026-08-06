@@ -25,18 +25,59 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.1.3";
+export const LATEST_VERSION = "v1.1.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.1.3 魔王系统 Round-5 第二批：统一折叠组件落地人物卡/世界侧栏，右栏重构为四 tab（还原实体 tab）",
-  "新建可复用 Collapse 组件（受控/非受控/懒挂载/sm/md），人物卡九区块与密集列表可逐段收起",
-  "右栏整合 AI助手/实体/工具箱/统计，工具箱网格内联、监测与统计合一，AIChatHeader 去重",
-  "AIChatBar 新增去AI味/文段概括预设；tsc 零错误 + 217 测试全绿",
+  "v1.1.4 魔王系统 Round-5 收尾：关系图可拖动（坐标持久化/连线显示关系/双击开角色卡）、确认流程默认收起+用途说明、大纲状态徽章统一、项目设定枢纽入口",
+  "RelationshipGraph 以角色卡 relationships 为真源，节点可拖动并 localStorage 记忆、连线显示两人关系字、LLM 分析改为按需按钮触发",
+  "ChapterConfirmBar 默认收起为极简状态条 + 新增「这是什么？确认流程怎么用」智能说明；AI诊断/人工接管补用途 tooltip；大纲统一 StatusBadge",
+  "顶栏三设置入口合并为「项目设定」枢纽弹窗（骨架/配置/衰减归口 + 确认交付两开关内联）；tsc 零错误 + 217 测试全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.1.4",
+    date: "2026-08-06",
+    title: "魔王系统 Round-5 收尾：关系图可拖动 + 确认流程默认收起与用途说明 + 大纲状态徽章统一 + 项目设定枢纽入口",
+    sections: [
+      {
+        label: "关系图可拖动 + 角色卡联动（R5-关系图诉求）",
+        items: [
+          "RelationshipGraph 完全重写：以角色卡 relationships 为持久化真源驱动连线，节点坐标支持鼠标/触摸拖动并写入 localStorage（项目级键 rel-graph-pos-{id}），松手即保存、刷新不丢；新增重置布局按钮清空坐标回到圆形布局",
+          "连线之上直接显示两人关系字（relation 字段着色），节点双击在已知角色集合内才打开对应角色卡，避免别名节点误开",
+          "LLM 分析改为按需：去掉挂载自动跑（避免遮挡正文+烧 token），仅由「重新分析正文」按钮触发，用于比对角色卡有而正文未体现的关系；空态区分「还没有角色」与「角色卡未填人际关系」两类引导",
+        ],
+      },
+      {
+        label: "确认流程默认收起 + 智能用途说明（R5-下方确认流程）",
+        items: [
+          "ChapterConfirmBar 默认收起为极简状态条（localStorage 记忆 collapsed，默认 true），仅留标题 + 状态徽章 + 智能审阅标签 + 展开箭头，正文阅读区不再被常驻操作挤占",
+          "新增「这是什么？确认流程怎么用」折叠说明，讲清状态流转（大纲中/草稿/待确认/已定稿/审校中）、智能审阅、AI诊断、人工接管、自动交付、智能交付全书六块用途，把用户没看懂的功能一次性说清",
+          "AI诊断按钮补 title：AI 通读本章给综合评分与问题清单（错别字/逻辑/违禁等）帮你决定能否定稿；人工接管按钮补 title：临时切回逐章人工审批由你决定提交/通过/打回",
+        ],
+      },
+      {
+        label: "左侧大纲统一状态徽章（R5-左侧统一）",
+        items: [
+          "抽离共享组件 src/components/ui/status-badge.tsx：覆盖 outline_only/drafting/completed/pending_confirm/confirmed/reviewing 六态，视觉三档（灰=进行中、橙=需行动、绿=已定稿），未知兜底灰显，供确认栏与大纲复用消除重复",
+          "OutlineTree 节点状态由原先 Icon+自算颜色改为统一 StatusBadge，时间线视图改复用 NodeTreeItem 并传 badgeSlot 显示世界时间，左栏两种视图风格一致",
+        ],
+      },
+      {
+        label: "项目设定统一入口（R5-模块迁移与设置）",
+        items: [
+          "顶栏三个散落按钮（项目设定/记忆衰减/项目配置）合并为一个「项目设定」按钮，触发新建 ProjectSettingsDialog 枢纽弹窗，下方三块归口入口（小说骨架/项目配置/记忆衰减）点击各自跳到原弹窗，关闭枢纽再开子弹窗",
+          "枢纽弹窗内联确认交付两开关（智能定稿 autoConfirmEnabled / 智能交付全书 autoDeliverEnabled），直接 PATCH /api/projects/[id] 持久化并 patchProject 同步前端，把分散的自动化开关收到一处",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: ["tsc 零错误 + 217 单元测试全绿"],
+      },
+    ],
+  },
   {
     version: "v1.1.3",
     date: "2026-08-06",

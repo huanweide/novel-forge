@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icons";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { StoryNodeData } from "./types";
 
 export function NodeTreeItem({
   node, allNodes, selectedNode, onSelectNode, onAddSection, depth,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
-  projectId,
+  projectId, badgeSlot,
 }: {
   node: StoryNodeData; allNodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
@@ -16,6 +17,7 @@ export function NodeTreeItem({
   onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
   deletingId?: string | null;
   projectId: string;
+  badgeSlot?: ReactNode;
 }) {
   const router = useRouter();
   const children = allNodes.filter((n) => n.parentId === node.id);
@@ -24,8 +26,6 @@ export function NodeTreeItem({
   const isChapter = node.type === "chapter" || node.type === "section";
   const isChecked = selectedChapterIds?.has(node.id) || false;
   const typeIcon = node.type === "volume" ? "bookmarked" : node.type === "chapter" ? "book" : node.type === "section" ? "file" : "circle";
-  const statusIcon = node.status === "completed" || node.status === "confirmed" ? "check" : node.status === "drafting" ? "pencil" : node.status === "pending_confirm" || node.status === "reviewing" ? "alert" : "circle";
-  const statusColor = node.status === "confirmed" ? "text-[var(--nv-success)]" : node.status === "pending_confirm" ? "text-[var(--nv-accent)]" : node.status === "completed" ? "text-[var(--nv-success)]" : node.status === "reviewing" ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)]";
 
   return (
     <div>
@@ -40,7 +40,8 @@ export function NodeTreeItem({
             className="w-3 h-3 rounded shrink-0 accent-[var(--nv-accent)]" onClick={(e) => e.stopPropagation()} />
         )}
         <Icon name={typeIcon} size={11} className="shrink-0" />
-        <Icon name={statusIcon as any} size={11} className={`${statusColor} shrink-0`} />
+        <StatusBadge status={node.status} />
+        {badgeSlot}
         <span className="flex-1 truncate">{node.title}</span>
         {isImported && <span className="text-[var(--nv-creative)]/70 text-[10px]" title="从导入文本创建"><Icon name="download" size={11} /></span>}
         {onDeleteNode && (node.type === "chapter" || node.type === "section") && (
@@ -190,13 +191,14 @@ export function OutlineTree({
           <Icon name="hourglass" size={10} /> 按书中世界时间排序（未标记排末尾）
         </div>
         {timelineNodes.map((n) => (
-          <button key={n.id} onClick={() => onSelectNode(n)}
-            className={`w-full flex items-center gap-1.5 py-1 px-1.5 rounded text-xs text-left ${selectedNode?.id === n.id ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"}`}>
-            <Icon name={n.type === "chapter" ? "book" : n.type === "section" ? "file" : "circle"} size={11} className="shrink-0" />
-            <span className={`shrink-0 px-1 rounded text-[10px] ${n.worldTime ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]"}`}>{n.worldTime || "未标记"}</span>
-            <span className="flex-1 truncate">{n.title}</span>
-            <span className="text-[var(--nv-text-tertiary)] text-[10px]">{n.wordCount > 0 ? `${n.wordCount}字` : ""}</span>
-          </button>
+          <NodeTreeItem key={n.id} node={n} allNodes={nodes} selectedNode={selectedNode}
+            onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
+            badgeSlot={
+              <span className={`shrink-0 px-1 rounded text-[10px] ${n.worldTime ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]"}`}>{n.worldTime || "未标记"}</span>
+            }
+            batchMode={batchMode} selectedChapterIds={selectedChapterIds}
+            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
+            projectId={projectId} />
         ))}
         <button onClick={() => onAddSection(null)} className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节</button>
       </div>

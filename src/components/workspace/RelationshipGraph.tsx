@@ -1,15 +1,19 @@
 /**
- * RelationshipGraph — Agent 驱动的角色关系可视化
+ * RelationshipGraph — 角色关系可视化（与角色卡人际关系联动）
  *
- * 数据源：Agent 读取全部章节正文，从实际互动中提取角色关系。
- * 不是角色卡 relationships 的静态翻版——反映的是"正文里实际发生了什么"。
+ * 数据源（真源）：角色卡 CharacterCard.relationships（手填、持久化、离线可用）。
+ * 图的布局默认由角色卡关系驱动；「重新分析正文」按钮按需调用 LLM 抽取正文互动，
+ * 仅做"角色卡有、但正文没体现"的过时关系对比，不直接改写图。
  *
- * 同时对比角色卡已有关系 vs Agent 分析结果，标记"卡上有但正文没体现"的过时关系。
+ * 交互：
+ *   · 节点可拖动（pointer 事件 + setPointerCapture），坐标持久化到 localStorage（按 projectId）
+ *   · 节点间连线上的文字 = 两人关系（relation）
+ *   · 单击节点聚焦其关系详情；双击节点打开角色卡编辑
  */
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Icon } from "@/components/ui/icons";
 
 // ═══════════════════════════════════════════
@@ -95,8 +99,29 @@ function relationStroke(relation: string): string {
   return "#6b7280";
 }
 
+// 从角色卡 relationships 聚合出等价 ExtractedRelation[]（图的真源）
+function buildCardRelations(chars: CharRef[]): ExtractedRelation[] {
+  const rels: ExtractedRelation[] = [];
+  for (const c of chars) {
+    for (const r of c.relationships || []) {
+      const target = (r.targetName || r.targetCharacterId || "").trim();
+      if (!target) continue;
+      rels.push({
+        from: c.name,
+        to: target,
+        relation: r.relation || "关系",
+        dynamic: r.dynamic || "",
+        evidence: "",
+        chapterTitle: "",
+        confidence: 1,
+      });
+    }
+  }
+  return rels;
+}
+
 // ═══════════════════════════════════════════
-// 布局计算
+// 布局计算（固定圆形布局，坐标可被 localStorage 覆盖）
 // ═══════════════════════════════════════════
 
 function computeLayout(
@@ -112,7 +137,6 @@ function computeLayout(
   const center = { cx: 150, cy: 150 };
   const mainR = 100;
 
-  // 收集所有涉及的节点名
   const nameSet = new Set<string>();
   const nameToEdges = new Map<string, Array<{ targetName: string; relation: string; dynamic: string; evidence?: string; chapterTitle?: string }>>();
 
@@ -120,7 +144,6 @@ function computeLayout(
     nameSet.add(r.from);
     nameSet.add(r.to);
 
-    // 双向加边
     const existing = nameToEdges.get(r.from) || [];
     existing.push({ targetName: r.to, relation: r.relation, dynamic: r.dynamic, evidence: r.evidence, chapterTitle: r.chapterTitle });
     nameToEdges.set(r.from, existing);
@@ -130,7 +153,6 @@ function computeLayout(
     nameToEdges.set(r.to, existing2);
   }
 
-  // 名字 → 角色ID 映射
   const nameToId = new Map<string, string>();
   const nameToRole = new Map<string, string>();
   for (const c of chars) {
@@ -142,7 +164,6 @@ function computeLayout(
     }
   }
 
-  // 找主角直连的角色
   const protoConnections = new Set(relations
     .filter((r) => r.from === protagonist.name || r.to === protagonist.name)
     .map((r) => (r.from === protagonist.name ? r.to : r.from)));
@@ -187,14 +208,39 @@ function computeLayout(
 // 组件
 // ═══════════════════════════════════════════
 
+const SVG_W = 300;
+const SVG_H = 320;
+const STORAGE_KEY = (projectId: string) => `rel-graph-pos-${projectId}`;
+
 export function RelationshipGraph({ characters, projectId, onEditCharacter }: RelationshipGraphProps) {
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showStale, setShowStale] = useState(false);
 
-  // ── 自动分析 ──
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const dragRef = useRef<{ id: string; moved: boolean; startX: number; startY: number; originX: number; originY: number } | null>(null);
+
+  // 角色卡关系（真源）
+  const cardRels = useMemo(() => buildCardRelations(characters), [characters]);
+
+  // ── 加载持久化坐标 ──
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY(projectId)) : null;
+      if (raw) setPositions(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, [projectId]);
+
+  const persistPositions = useCallback((next: Record<string, { x: number; y: number }>) => {
+    try {
+      localStorage.setItem(STORAGE_KEY(projectId), JSON.stringify(next));
+    } catch { /* ignore */ }
+  }, [projectId]);
+
+  // ── 按需 LLM 对比（不自动跑，避免遮挡正文 + 烧 token） ──
   const runAnalysis = useCallback(async () => {
     if (characters.length === 0) return;
     setLoading(true);
@@ -218,15 +264,14 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
     }
   }, [projectId, characters.length]);
 
-  useEffect(() => {
-    if (characters.length > 0) runAnalysis();
-  }, [characters.length > 0 ? 1 : 0]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── 计算布局 ──
+  // ── 计算布局（角色卡驱动） ──
   const { nodes, protagonistId } = useMemo(() => {
-    if (!analysis || analysis.relations.length === 0) return { nodes: [], protagonistId: "" };
-    return computeLayout(analysis.relations, characters);
-  }, [analysis, characters]);
+    if (cardRels.length === 0) return { nodes: [], protagonistId: "" };
+    return computeLayout(cardRels, characters);
+  }, [cardRels, characters]);
+
+  // 坐标合并：持久化坐标优先，否则用布局坐标
+  const posOf = (n: GraphNode) => positions[n.id] ?? { x: n.x, y: n.y };
 
   // 名字→节点映射
   const nameToNode = useMemo(() => {
@@ -257,7 +302,35 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
     ? edges.filter((e) => e.from.id === focusId || e.to.id === focusId)
     : edges;
 
-  const svgW = 300, svgH = 320;
+  // ── 拖动 ──
+  const startDrag = (e: React.PointerEvent, node: GraphNode) => {
+    const pos = posOf(node);
+    dragRef.current = { id: node.id, moved: false, startX: e.clientX, startY: e.clientY, originX: pos.x, originY: pos.y };
+    (e.currentTarget as SVGGElement).setPointerCapture?.(e.pointerId);
+  };
+  const moveDrag = (e: React.PointerEvent, node: GraphNode) => {
+    const d = dragRef.current;
+    if (!d || d.id !== node.id || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - d.startX) / rect.width) * SVG_W;
+    const dy = ((e.clientY - d.startY) / rect.height) * SVG_H;
+    if (Math.abs(e.clientX - d.startX) + Math.abs(e.clientY - d.startY) > 4) d.moved = true;
+    setPositions((prev) => ({ ...prev, [d.id]: { x: d.originX + dx, y: d.originY + dy } }));
+  };
+  const endDrag = (e: React.PointerEvent, node: GraphNode) => {
+    const d = dragRef.current;
+    (e.currentTarget as SVGGElement).releasePointerCapture?.(e.pointerId);
+    if (d && d.id === node.id) {
+      if (!d.moved) {
+        setFocusId(focusId === node.id ? null : node.id);
+      } else {
+        persistPositions({ ...positions, [d.id]: posOf(node) });
+      }
+    }
+    dragRef.current = null;
+  };
+
+  const knownIds = useMemo(() => new Set(characters.map((c) => c.id)), [characters]);
 
   // ── 空状态 ──
   if (characters.length === 0) {
@@ -265,6 +338,18 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
       <div className="flex flex-col items-center justify-center h-full text-center px-4">
         <div className="text-2xl mb-2 text-[var(--nv-creative)]"><Icon name="share" size={26} /></div>
         <div className="text-[10px] text-[var(--nv-text-tertiary)]">还没有角色</div>
+      </div>
+    );
+  }
+
+  if (cardRels.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center px-4">
+        <div className="text-2xl mb-2 text-[var(--nv-creative)]"><Icon name="share" size={26} /></div>
+        <div className="text-[10px] text-[var(--nv-text-secondary)] mb-1">角色卡里还没有填人际关系</div>
+        <div className="text-[9px] text-[var(--nv-text-tertiary)] leading-relaxed max-w-[200px]">
+          在「角色卡 → 人际关系」里填写谁和谁是什么关系，关系图会自动生成，并支持拖动排版。
+        </div>
       </div>
     );
   }
@@ -279,31 +364,25 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400" />爱情</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success" />盟友</span>
 
-        {analysis && analysis.staleRelations.length > 0 && (
-          <button
-            onClick={() => setShowStale(!showStale)}
-            className={`ml-auto flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] ${showStale ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)]"}`}
-          >
-            <Icon name="alert" size={9} /> {analysis.staleRelations.length} 条过时
-          </button>
-        )}
+        <button
+          onClick={() => { setPositions({}); persistPositions({}); }}
+          className="ml-auto flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)]"
+          title="重置为自动布局"
+        >
+          <Icon name="refresh" size={9} /> 重置布局
+        </button>
 
         <button
           onClick={runAnalysis}
           disabled={loading}
           className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] disabled:opacity-50"
+          title="用 AI 重新分析正文互动，对比角色卡找出过时关系"
         >
-          {loading ? "分析中…" : <><Icon name="refresh" size={9} /> 刷新</>}
+          {loading ? "分析中…" : <><Icon name="sparkles" size={9} /> 重新分析正文</>}
         </button>
-
-        {analysis && (
-          <span className="text-[var(--nv-text-tertiary)] text-[8px] w-full">
-            {analysis.summary}
-          </span>
-        )}
       </div>
 
-      {/* 过时关系警告 */}
+      {/* 过时关系警告（仅 LLM 对比后显示） */}
       {showStale && analysis && analysis.staleRelations.length > 0 && (
         <div className="shrink-0 px-3 py-1.5 bg-[var(--nv-accent-soft)] border-b border-[var(--nv-accent)]/20">
           <div className="text-[9px] text-[var(--nv-accent)] font-medium mb-1">角色卡记录但正文未体现：</div>
@@ -340,32 +419,37 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
         )}
 
         {!loading && !error && nodes.length > 0 && (
-          <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-full">
+          <svg ref={svgRef} viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full touch-none">
             {/* 连线 */}
-            {visibleEdges.map((e, i) => (
-              <g key={i}>
-                <line
-                  x1={e.from.x} y1={e.from.y} x2={e.to.x} y2={e.to.y}
-                  stroke={relationStroke(e.relation)}
-                  strokeOpacity={0.5}
-                  strokeWidth={0.8}
-                />
-                <text
-                  x={(e.from.x + e.to.x) / 2}
-                  y={(e.from.y + e.to.y) / 2 - 3}
-                  textAnchor="middle"
-                  fill={relationStroke(e.relation)}
-                  fillOpacity={0.6}
-                  fontSize={5}
-                  className="pointer-events-none"
-                >
-                  {e.relation}
-                </text>
-              </g>
-            ))}
+            {visibleEdges.map((e, i) => {
+              const fp = posOf(e.from);
+              const tp = posOf(e.to);
+              return (
+                <g key={i}>
+                  <line
+                    x1={fp.x} y1={fp.y} x2={tp.x} y2={tp.y}
+                    stroke={relationStroke(e.relation)}
+                    strokeOpacity={0.5}
+                    strokeWidth={0.8}
+                  />
+                  <text
+                    x={(fp.x + tp.x) / 2}
+                    y={(fp.y + tp.y) / 2 - 3}
+                    textAnchor="middle"
+                    fill={relationStroke(e.relation)}
+                    fillOpacity={0.6}
+                    fontSize={5}
+                    className="pointer-events-none"
+                  >
+                    {e.relation}
+                  </text>
+                </g>
+              );
+            })}
 
             {/* 节点 */}
             {nodes.map((node) => {
+              const p = posOf(node);
               const isFocus = node.id === focusId;
               const isProtagonist = node.id === protagonistId;
               const r = isProtagonist ? 16 : isFocus ? 12 : 9;
@@ -375,22 +459,24 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
               return (
                 <g
                   key={node.id}
-                  onClick={() => setFocusId(focusId === node.id ? null : node.id)}
-                  onDoubleClick={() => onEditCharacter?.(node.id)}
-                  className="cursor-pointer"
+                  onPointerDown={(e) => startDrag(e, node)}
+                  onPointerMove={(e) => moveDrag(e, node)}
+                  onPointerUp={(e) => endDrag(e, node)}
+                  onDoubleClick={() => { if (knownIds.has(node.id)) onEditCharacter?.(node.id); }}
+                  className="cursor-grab active:cursor-grabbing"
                 >
                   {isFocus && (
-                    <circle cx={node.x} cy={node.y} r={r + 6} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.3}>
+                    <circle cx={p.x} cy={p.y} r={r + 6} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.3}>
                       <animate attributeName="r" from={r + 4} to={r + 8} dur="1.5s" repeatCount="indefinite" />
                       <animate attributeName="stroke-opacity" from="0.4" to="0.1" dur="1.5s" repeatCount="indefinite" />
                     </circle>
                   )}
-                  <circle cx={node.x} cy={node.y} r={r} fill={color} fillOpacity={isFocus || isProtagonist ? 1 : 0.7}
+                  <circle cx={p.x} cy={p.y} r={r} fill={color} fillOpacity={isFocus || isProtagonist ? 1 : 0.7}
                     stroke={isFocus ? "#fff" : "transparent"} strokeWidth={isFocus ? 1.5 : 0} />
                   {isProtagonist && (
-                    <text x={node.x} y={node.y + 0.5} textAnchor="middle" fill="#1e1b4b" fontSize={8} fontWeight="bold" className="pointer-events-none">★</text>
+                    <text x={p.x} y={p.y + 0.5} textAnchor="middle" fill="#1e1b4b" fontSize={8} fontWeight="bold" className="pointer-events-none">★</text>
                   )}
-                  <text x={node.x} y={node.y + r + 12} textAnchor="middle" fill={isFocus ? "#e4e4e7" : "#a1a1aa"}
+                  <text x={p.x} y={p.y + r + 12} textAnchor="middle" fill={isFocus ? "#e4e4e7" : "#a1a1aa"}
                     fontSize={fontSize} fontWeight={isFocus ? "bold" : "normal"} className="pointer-events-none select-none">
                     {node.name.length > 4 ? node.name.slice(0, 3) + "…" : node.name}
                   </text>
@@ -398,15 +484,6 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
               );
             })}
           </svg>
-        )}
-
-        {!loading && !error && nodes.length === 0 && analysis && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-[10px] text-[var(--nv-text-tertiary)] text-center">
-              <div className="mb-1"><Icon name="inbox" size={14} /></div>
-              {analysis.summary || "正文中暂未发现角色互动"}
-            </div>
-          </div>
         )}
       </div>
 
@@ -440,9 +517,11 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
           ) : (
             <div className="text-[9px] text-[var(--nv-text-tertiary)]">暂无关系</div>
           )}
-          <button onClick={() => onEditCharacter?.(focusNode.id)} className="mt-2 text-[9px] text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70">
-            编辑角色卡 →
-          </button>
+          {knownIds.has(focusNode.id) && (
+            <button onClick={() => onEditCharacter?.(focusNode.id)} className="mt-2 text-[9px] text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70">
+              编辑角色卡 →
+            </button>
+          )}
         </div>
       )}
     </div>
