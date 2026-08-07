@@ -161,7 +161,10 @@ const INTENT_RULES: IntentRule[] = [
     tool: "storyline_list",
     extractArgs: (msg) => {
       const statusMatch = msg.match(/(进行中|已完成|暂停|放弃)/);
-      const map: Record<string, string> = { "进行中": "active", "已完成": "completed", "暂停": "paused", "放弃": "abandoned" };
+      // F6 修复（Round-7）：Storyline.status 合法值仅 active|completed|abandoned，
+      // 原 "暂停"→"paused" 是无对应 DB 值的死枚举，会导致 storyline_list 查询永远空。
+      // 收敛为 "abandoned"（业务上「暂停/放弃」同属非活跃终态），使查询命中合法值。
+      const map: Record<string, string> = { "进行中": "active", "已完成": "completed", "暂停": "abandoned", "放弃": "abandoned" };
       return statusMatch ? { status: map[statusMatch[1]] } : {};
     },
     confidence: 0.8,

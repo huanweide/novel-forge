@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget } from "./entity-auto-creator";
+import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget, resolveEntityCategory } from "./entity-auto-creator";
 
 // 验证 entity-auto-creator 的相似名去重（尤其中文短名繁简归一化，青砚 P2）。
 describe("isSimilarName —— 短名繁简去重", () => {
@@ -71,5 +71,31 @@ describe("同人异称融合（v1.6.3）—— samePersonByHonorific 成对判�
     expect(isHonorificVariant("韩先生")).toBe(true);
     expect(isHonorificVariant("韩立")).toBe(false);
     expect(isHonorificVariant("韩山君")).toBe(false);
+  });
+});
+
+describe("resolveEntityCategory（F5）—— 15 类兜底不静默落 custom", () => {
+  it("显式映射类型直接命中正确分类", () => {
+    expect(resolveEntityCategory("location", "青云山脉")).toBe("geography");
+    expect(resolveEntityCategory("pill", "筑基丹")).toBe("item");
+    expect(resolveEntityCategory("technique", "焚天诀")).toBe("technique");
+  });
+
+  it("未映射 type（如 faction/creature）→ 分类器按名称重路由到正确 15 类，而非 custom", () => {
+    // 这些 type 不在显式映射中，旧逻辑会静默落 custom；修复后按名称关键词重路由。
+    // 注：命名刻意避开「宗门」（geography 与 faction 共有词，分类器按列表序裁决归 geography），
+    // 用 faction 专属词「王朝」确保稳定归 faction。
+    expect(resolveEntityCategory("faction", "大周王朝")).toBe("faction");
+    expect(resolveEntityCategory("creature", "九幽妖兽")).toBe("creature");
+    expect(resolveEntityCategory("currency", "中品灵石")).toBe("currency");
+  });
+
+  it("完全未知 type + 含世界关键词的名称 → 重路由到对应 15 类", () => {
+    expect(resolveEntityCategory("unknown", "上古遗迹")).toBe("history");
+    expect(resolveEntityCategory("whatever", "天道的戒律")).toBe("law");
+  });
+
+  it("无法识别的名称 → 安全兜底 custom（不误判）", () => {
+    expect(resolveEntityCategory("mystery", "张三")).toBe("custom");
   });
 });

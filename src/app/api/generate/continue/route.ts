@@ -15,6 +15,7 @@ import {
   runPostGenerationPipeline,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
+import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
 
 /**
  * POST /api/generate/continue
@@ -41,17 +42,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "项目或节点不存在" }, { status: 404 });
     }
 
-    // ── 创建下一节节点 ──
-    // R3 修复（复检 NEW-3 / 任务 NEW-1 章号不递增）：order 必须严格递增且不重复。
-    // 旧逻辑用「兄弟数组下标 + 1」当全局 order，在嵌套/分卷结构下会与既有节点撞号，
-    // 导致续写章 order 倒挂或重复，破坏「order 即序列位次」不变量与 isLatestChapter 判定。
-    // 改为基于数据库当前最大 order + 1：实时聚合，避免读取陈旧内存快照（并发更安全）。
-    const orderAgg = await prisma.storyNode.aggregate({
-      where: { projectId },
-      _max: { order: true },
-    });
-    const nextOrder = (orderAgg._max.order ?? 0) + 1;
-
     let nextTitle = "";
     if ((currentNode as any).title) {
       const match = (currentNode as any).title.match(/^(.+?)(\d+)$/);
@@ -65,16 +55,33 @@ export async function POST(request: Request) {
       nextOutline = "基于前文剧情自然推进，续写下一节。保持节奏和风格一致。";
     }
 
-    const nextNode = await prisma.storyNode.create({
-      data: {
-        projectId, parentId: (currentNode as any).parentId,
-        type: (currentNode as any).type || "section",
-        title: nextTitle, order: nextOrder, status: "drafting",
-        outline: nextOutline || null,
-        activeCharacters: (currentNode as any).activeCharacters,
-        activeLoreIds: (currentNode as any).activeLoreIds,
-        notes: null,
-      },
+    // ── 创建下一节节点 ──
+    // R3 修复（复检 NEW-3 / 任务 NEW-1 章号不递增）：order 必须严格递增且不重复。
+    // 旧逻辑用「兄弟数组下标 + 1」当全局 order，在嵌套/分卷结构下会与既有节点撞号，
+    // 导致续写章 order 倒挂或重复，破坏「order 即序列位次」不变量与 isLatestChapter 判定。
+    // 改为基于数据库当前最大 order + 1。
+    // F5 修复（Round-7 · 并发 TOCTOU 加固）：把「聚合 max → +1 → 插入」放进一个 DB 事务，
+    // 事务内先对当前 Project 行加 `FOR UPDATE` 行锁，使同一 projectId 的并发 continue 请求串行化——
+    // 后到的请求在获得锁后会重新读到前者已提交的 max(order)，从而得到 +1 后的新值，
+    // 杜绝并发下两条节点拿到相同 order（schema 尚未加 (projectId, order) 唯一约束前，软件层兜底）。
+    const nextNode = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
+      const orderAgg = await tx.storyNode.aggregate({
+        where: { projectId },
+        _max: { order: true },
+      });
+      const nextOrder = (orderAgg._max.order ?? 0) + 1;
+      return await tx.storyNode.create({
+        data: {
+          projectId, parentId: (currentNode as any).parentId,
+          type: (currentNode as any).type || "section",
+          title: nextTitle, order: nextOrder, status: "drafting",
+          outline: nextOutline || null,
+          activeCharacters: (currentNode as any).activeCharacters,
+          activeLoreIds: (currentNode as any).activeLoreIds,
+          notes: null,
+        },
+      });
     });
 
     // ── 角色预处理 ──
@@ -204,6 +211,21 @@ ${lastParagraphs}
               controller.close();
               return;
             }
+          }
+
+          // ── 空响应守卫（F5 修复 / 与 write 路由一致：模型返回空正文 → 回滚为 OUTLINE_ONLY，不标记 completed 空章）──
+          // 放在后处理管线之前：空响应根本不跑管线，自然无孤儿 ChapterSummary 等副作用，
+          // 下游导出也不会出现「（此节暂无内容）」的已完成空章。
+          if (!fullContent || fullContent.trim().length === 0) {
+            try {
+              await prisma.storyNode.update({
+                where: { id: nextNode.id },
+                data: { status: STATUS_OUTLINE_ONLY, content: "" },
+              });
+            } catch { /* 回滚失败不阻塞报错返回 */ }
+            send({ type: "error", content: "续写内容为空（模型未返回正文），已回滚该节点，未生成空章。请重试或检查 LLM 配置" });
+            controller.close();
+            return;
           }
 
           // ── 正则后处理（U1：与 write 统一消费 postProcessingRules）──

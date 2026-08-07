@@ -24,7 +24,7 @@ import { NextResponse } from "next/server";
 import {
   loadOutlineData, extractPrevContext, extractNextContext,
   buildCharacterList, prepareOutlineDirective, formatSummaries,
-  formatStorylines, extractLastChapterHook,
+  formatStorylines, extractLastChapterHook, filterActiveStorylines,
 } from "@/core/pipeline/outline-context";
 import { completeText } from "@/core/llm/client";
 
@@ -47,7 +47,10 @@ export async function POST(request: Request) {
 
     const prevContext = extractPrevContext(allNodes, nodeId);
     const nextContext = extractNextContext(allNodes, nodeId);
-    const storylineContext = formatStorylines(storylines); // v0.46.57：章纲剧情感知
+    // F1 修复（Round-7）：取回的故事线含任意 status 的 main 主线（含 abandoned/completed），
+    // 必须先 filterActiveStorylines 过滤，再 formatStorylines，避免废弃/完结主线污染章纲 prompt。
+    // 与写作主路径 orchestrator.ts:buildPromptContext 口径一致。
+    const storylineContext = formatStorylines(filterActiveStorylines(storylines)); // v0.46.57：章纲剧情感知
     const lastHook = extractLastChapterHook(allNodes, nodeId); // 上章钩子
 
     const authorDirectiveRaw = await prepareOutlineDirective(projectId, explicitAuthorNote || project.authorNote);

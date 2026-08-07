@@ -899,7 +899,8 @@ toolRegistry.register({
     parameters: {
       type: "object",
       properties: {
-        status: { type: "string", description: "按状态筛选", enum: ["active", "completed", "paused", "abandoned"] },
+        // F6 修复（Round-7）：移除 "paused"（Storyline.status 无此合法值，属死枚举，会误导 LLM 传入）。
+        status: { type: "string", description: "按状态筛选", enum: ["active", "completed", "abandoned"] },
       },
       required: [],
     },

@@ -184,6 +184,7 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
         fulfilledAt: true,
         detectedAt: true,
         createdAt: true,
+        sourceNodeId: true,
       },
     });
 
@@ -215,7 +216,7 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
           createdAt: { gte: new Date(minAnchor) },
         },
         orderBy: { createdAt: "asc" },
-        select: { createdAt: true, content: true },
+        select: { id: true, createdAt: true, content: true },
       }),
     ]);
 
@@ -241,7 +242,16 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
       // 用 >= 而非 >：与伏笔同期创建（createdAt == anchor）、日后 refine 补回收信号的章节仍属合法命中
       // （保留 Round-4 新坑1 能力），而 createdAt 早于 anchor 的旧章节无论怎么 refine 都不可能承载该伏笔的回收，
       // 直接排除，正好消解假阳性。与 laterSummaries 的 createdAt 口径一致。
-      const laterNodes = nodes.filter((n) => n.createdAt >= anchor);
+      // F2（Round-7 修复 Round-4 回归）：埋设章自身（sourceNodeId 对应节点）绝不进入其
+      // 自身伏笔的搜索域——它的正文本就由该伏笔 description 提炼而来，≥2 短语命中会把它自己
+      // 误判 fulfilled（refine 改写把 updatedAt 推过 detectedAt 后尤甚）。即便 createdAt>=anchor
+      // 在某些时钟异常下把埋设章捞回，也在此硬性排除。埋设章不可能“回收”自己的伏笔，故排除恒正确。
+      // 注意：仅当 sourceNodeId 存在且与节点 id 相等时才排除；sourceNodeId 为 undefined（未记录
+      // 埋设章）时不应误伤其它节点（避免出现 `undefined !== undefined` 把正常节点也排除的退化）。
+      const laterNodes = nodes.filter((n) => {
+        if (c.sourceNodeId && n.id === c.sourceNodeId) return false; // 排除埋设章自身
+        return n.createdAt >= anchor;
+      });
       // NEW-4 修复：不再把所有 later 文本拼接成单个巨型字符串，改为按片段数组逐个判定、
       // 命中即短路（.some），峰值内存从「全文拼接」降为「单次种子扫描」，长书更稳。
       const textPieces = [

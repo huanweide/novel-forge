@@ -10,7 +10,7 @@ import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
-import { formatStorylines } from "@/core/pipeline/outline-context";
+import { formatStorylines, filterActiveStorylines } from "@/core/pipeline/outline-context";
 
 const OUTLINE_SYSTEM_PROMPT = `你是一位资深小说架构师，专精于将故事创意转化为可执行的"工程蓝图"。你的输出将被AI写作引擎直接解析和执行。
 
@@ -72,7 +72,9 @@ export async function POST(req: Request) {
         take: 5,
       }),
       prisma.storyline.findMany({
-        where: { projectId, status: { in: ["active", "main"] } },
+        // F2 修复（Round-7）：移除死字面量 "main"（status 合法值仅 active|completed|abandoned）。
+        // 改为与 loadOutlineData 一致的 OR 查询：任意 status 的 main 主线 + 所有 active 线。
+        where: { projectId, OR: [{ type: "main" }, { status: "active" }] },
         orderBy: { order: "asc" },
       }),
     ]);
@@ -119,7 +121,8 @@ export async function POST(req: Request) {
     ).join("\n");
 
     // 剧情线感知（与快速章纲/抽卡一致：呼应主线，不盲写）
-    const storylineContext = formatStorylines(storylines as any[]);
+    // F2/F1 加固（Round-7）：先过滤废弃/完结主线，再格式化，避免 abandoned 主线泄漏进游戏章纲 prompt。
+    const storylineContext = formatStorylines(filterActiveStorylines(storylines as any[]));
 
     // 3. 组装用户提示词
     const userPromptParts = [

@@ -271,6 +271,25 @@ export async function POST(request: Request) {
             }
           }
 
+          // ── v0.46.55 容错（前置到管线之前，F1 修复）──
+          // 模型偶发空响应时先回滚节点、再报错返回，绝不进入后处理管线。
+          // 旧逻辑（守卫在管线之后）会在空正文上跑出孤儿 ChapterSummary / PendingCommitment /
+          // 实体，并触发 detect；这些副作用在「管线后回滚」时不会被撤销，污染后续章上下文。
+          // 前置拦截后：空响应根本不跑管线，自然无孤儿副作用。
+          if (!fullContent || fullContent.trim().length === 0) {
+            try {
+              await prisma.storyNode.update({
+                where: { id: nodeId },
+                data: { status: STATUS_OUTLINE_ONLY, content: "" },
+              });
+            } catch { /* 回滚失败不阻塞报错返回 */ }
+            send({
+              type: "error",
+              content: "生成内容为空（模型未返回正文），请重试或检查 LLM 配置",
+            });
+            return;
+          }
+
           // Phase 2-4: 后处理管线（扫描 → 审校 → 摘要）
           const activeCharIds = Array.isArray(data.currentNode.activeCharacters)
             ? (data.currentNode.activeCharacters as string[])
@@ -307,23 +326,6 @@ export async function POST(request: Request) {
           } catch (e) {
             console.error("后处理管线失败（已降级为仅生成）:", e instanceof Error ? e.message : e);
             send({ type: "postprocess_skip", content: e instanceof Error ? e.message : "后处理跳过" });
-          }
-
-          // ── v0.46.55 容错：模型偶发空响应时明确报错，不再静默 done ──
-          if (!fullContent || fullContent.trim().length === 0) {
-            // v1.6.2 修复：空响应时节点可能已被置为 drafting 且残留 [PARTIAL_DRAFT] 空壳，
-            // 此处回滚到 outline_only 并清空残片，避免在前端留下无法继续的脏空章。
-            try {
-              await prisma.storyNode.update({
-                where: { id: nodeId },
-                data: { status: STATUS_OUTLINE_ONLY, content: "" },
-              });
-            } catch { /* 回滚失败不阻塞报错返回 */ }
-            send({
-              type: "error",
-              content: "生成内容为空（模型未返回正文），请重试或检查 LLM 配置",
-            });
-            return;
           }
 
           // ── 确认流程：自动填表已移至「确认通过」后触发（见 /api/story/nodes/[id] PATCH action=confirm）──

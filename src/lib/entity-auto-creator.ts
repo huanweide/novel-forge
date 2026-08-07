@@ -12,6 +12,10 @@
 import { prisma } from "@/lib/prisma";
 import type { DetectedEntity } from "./entity-detector";
 import { isCompleteEntityName } from "./entity-detector";
+import {
+  classifyWorldCategory,
+  type WorldCategory,
+} from "@/lib/world-category-classifier";
 
 // ─── 类型定义 ────────────────────────────────────────────────
 
@@ -20,6 +24,7 @@ export interface AutoCreateResult {
     type: "character" | "lorebook";
     id: string;
     name: string;
+    // 世界书词条为 15 类 WorldCategory；角色卡分支记为 "character"（元桶，非 15 类之一）。
     category: string;
   }>;
   skipped: string[]; // 因重复跳过的实体名
@@ -27,14 +32,54 @@ export interface AutoCreateResult {
 
 // ─── 实体类型 → Lorebook category 映射 ──────────────────────
 
-const ENTITY_TYPE_TO_CATEGORY: Record<string, string> = {
+// 显式类型映射：优先把蒸馏出的实体类型直接路由到 15 类世界卡分类之一。
+// 键入 WorldCategory，类型系统强制值域合法（不会映射出非法分类）。
+// 前半段是 entity-detector 实际产出的类型（已映射）；后半段与 entity-sync 的
+// TYPE_TO_CATEGORY 共享更完整词汇，便于未来扩展 / 防御未知 type（F5）。
+const ENTITY_TYPE_TO_CATEGORY: Record<string, WorldCategory> = {
+  // detector 实际产出的类型
   pill: "item",
   artifact: "item",
   technique: "technique",
   location: "geography",
   material: "item",
+  // 与 entity-sync 共享的更完整类型词汇（防御未知 type，F5）
+  organization: "faction",
+  creature: "creature",
+  fate: "fate_system",
+  physics: "physics",
+  public: "public_system",
+  magic_system: "magic_system",
+  culture: "culture",
+  history: "history",
+  law: "law",
+  currency: "currency",
+  other: "custom",
   // character 走 CharacterCard，不走 LorebookEntry
 };
+
+/**
+ * 把蒸馏出的实体（类型 + 名称）解析为世界卡 15 分类之一（F5）。
+ *
+ * 解析顺序（与 entity-sync.ts:228-238 的兜底完全一致）：
+ *  1. 先走显式 ENTITY_TYPE_TO_CATEGORY 映射；
+ *  2. 未命中（落到 "custom" / 未映射 type）时，用确定性世界卡分类器对「名称」
+ *     重新路由，避免 faction / creature / culture / history / law / currency /
+ *     fate_system / physics / public_system 等实体经此路径静默误归 custom；
+ *  3. 只接受世界卡分类；角色关系（交角色卡负责）/ 元桶保持 custom，不重路由。
+ *
+ * 抽成纯函数便于单测（无需 mock prisma），与 entity-sync 行为对齐、杜绝漂移。
+ */
+export function resolveEntityCategory(type: string, name: string): WorldCategory {
+  let category: WorldCategory = ENTITY_TYPE_TO_CATEGORY[type] || "custom";
+  if (category === "custom") {
+    const cr = classifyWorldCategory(name);
+    if (cr.category && cr.category !== "character_relationship") {
+      category = cr.category;
+    }
+  }
+  return category;
+}
 
 // ─── 实体类型中文标签 ──────────────────────────────────────
 
@@ -322,7 +367,8 @@ export async function autoCreateEntities(
         });
       } else {
         // ── 创建世界书词条 ──
-        const category = ENTITY_TYPE_TO_CATEGORY[entity.type] || "custom";
+        // F5：先显式映射，未命中再用确定性分类器重路由，确保 15 类全覆盖、无静默落 custom。
+        const category = resolveEntityCategory(entity.type, name);
         const label = TYPE_LABELS[entity.type] || entity.type;
 
         const entry = await prisma.lorebookEntry.create({

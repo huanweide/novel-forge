@@ -71,8 +71,9 @@ const routes = new Set([...loadManifestRoutes(), ...discoverFsRoutes()]);
 
 // 前端引用提取
 const refs = new Map();
-let ignoredTemplate = 0; // ① 模板插值忽略数
-let ignoredDoc = 0; // ② 文档性字符串忽略数
+let ignoredTemplate = 0; // ① 原模板插值“忽略”数（F3-②起已改为归一后照常核对，本值恒为 0，保留键名兼容）
+let templateHandled = 0; // ② F3-②：模板插值动态段归一为 [id] 后纳入 routeExists 核对的数量
+let ignoredDoc = 0; // ③ 文档性字符串忽略数
 
 function walk(d) {
   for (const f of fs.readdirSync(d)) {
@@ -88,15 +89,34 @@ function walk(d) {
         ignoredDoc++;
         continue;
       }
-      const c = fs.readFileSync(p, "utf8");
-      const m = c.matchAll(/[`"'](\/api\/[^`"'?}]+)/g);
+      const cRaw = fs.readFileSync(p, "utf8");
+      // F3-①：过滤 /* */ 块注释与 // 行注释，避免注释里的 /api/ 被当真引用误报。
+      // 用 [^:] 保护 http:// / https:// 不被误删（其内不含我们关心的后端路由）。
+      const c = cRaw
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/([^:])\/\/[^\n]*/g, "$1")
+        .replace(/^\/\/[^\n]*/gm, "");
+      // F3-②：提取改为完整捕获模板字面量（含 ${...}），不再在 } 处截断，
+      // 以便把动态段归一为 [id] 后照常走 routeExists 动态段匹配。
+      // 用 lookbehind 要求 /api/ 前为引号/反引号，避免命中 /regex/ 字面量造成误报。
+      const m = c.matchAll(/(?<=['"`])\/api\/[^\s`'"?]*(?:\$\{[^}]*\}[^\s`'"?]*)*/g);
       for (const x of m) {
-        const k = normUrl(x[1]);
+        const raw = x[0];
+        let k = normUrl(raw);
         if (!k) continue;
-        // ① 变量插值（/api/${...} 等模板字面量截断）忽略
+        // ② F3-②：模板插值（/api/${...}）不再整条忽略 —— 动态段归一为 [id] 后纳入核对，
+        //    把“真死链但带插值”也纳入巡检（如 /api/does-not-exist/${id} 会被 routeExists 判出）。
+        //    保守边界：归一后若仍残留反引号或 ${（说明是嵌套/复杂模板字面量，无法可靠解析），
+        //    则退回“忽略”，避免误报（F3-② 边界脆弱点，真死链风险极小且原规则已覆盖）。
         if (k.includes("${")) {
-          ignoredTemplate++;
-          continue;
+          const normalized = raw.replace(/\$\{[^}]*\}/g, "[id]");
+          if (/[`]/.test(normalized) || normalized.includes("${")) {
+            ignoredTemplate++;
+            continue;
+          }
+          k = normUrl(normalized);
+          templateHandled++;
+          if (!k) continue;
         }
         const list = refs.get(k) || [];
         list.push(rel);
@@ -136,5 +156,5 @@ for (const [k, v] of refs) {
 }
 
 console.log("TOTAL_REFS", refs.size, "REAL_BROKEN_LINKS", missing);
-console.log("IGNORED_TEMPLATE_INTERPOLATION", ignoredTemplate, "IGNORED_DOC_STRINGS", ignoredDoc);
+console.log("IGNORED_TEMPLATE_INTERPOLATION", ignoredTemplate, "TEMPLATE_NORMALIZED_AND_CHECKED", templateHandled, "IGNORED_DOC_STRINGS", ignoredDoc);
 for (const { k, v } of misses) console.log("BROKEN", k, "<=", v.join(","));

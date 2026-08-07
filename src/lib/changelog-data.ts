@@ -25,18 +25,52 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.8";
+export const LATEST_VERSION = "v1.6.9";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.8 伏笔 detect 并发去重（NEW-2）：confirm-guard.ts 的 triggerForeshadowDetect 加 projectId 进程内互斥去重锁，并发确认只发一次全量 detect 并复用在途 promise 结果，杜绝超时重试放大服务端雪崩",
-  "v1.6.8 伏笔 detect 时序倒挂假阳性 + 长书内存峰值（NEW-3 + NEW-4）：detectPayoffs 回收口径由 updatedAt 改为 createdAt >= anchor，排除旧章节无关润色 refine 刷新 updatedAt 误判 fulfilled 的时序倒挂假阳性（保留同期章节 refine 合法命中）；DB 层按 createdAt 预过滤章节正文、命中改片段数组短路，长书峰值内存显著下降",
-  "v1.6.8 多独立主线跨线误归属（NEW-5）：outline-context.ts 的 pickReassignMainId 仅在恰一条活跃兄弟主线时自动重挂，0 条或 ≥2 条活跃兄弟返回 null，交由删除路由把子线 parentId 置空、由 resolveParent 回退，杜绝盲目嫁接第一条 active 主线",
-  "v1.6.8 浅色 tertiary 达 WCAG AA + 层级倒挂消解（NEW-UI-WC-2）：globals.css 浅色 --nv-text-tertiary 由 #6B6E78(3.767:1<AA) 改为 #5E616B(≈4.577:1≥AA)，且仍弱于专用 --nv-text-muted-on-surface-3(#5A5D67,4.860)，层级不再倒挂",
+  "v1.6.9 故事线状态机与入口治理（SL-1~SL-6）：abandoned/paused 治理覆盖章纲、抽卡、游戏三入口——chapter-outline 双路由补 filterActiveStorylines、game/outline/generate 的 main 死字面量改 OR、intent-parser/tool-registry 的 paused 状态统一改 abandoned；workspace 页 storylineId 选择器短路修正；continue 路由加事务 + 空响应守卫，防 order 并发与空壳写入",
+  "v1.6.9 IO 健壮性（IO-1~IO-8）：write/refine 空守卫前置（杜绝空摘要/空正文入库）、export 非法 format 返回 400 而非静默降级、import/commit 结构化错误 + 异步触发（fire-and-forget）伏笔 detect、post-processor 连败跳过空壳，导入导出与续写链路更稳",
+  "v1.6.9 世界卡安全与兜底（WC-1~WC-2）：lorebook PUT 加字段白名单（防越权改类型/归属）、entity-auto-creator 的 resolveEntityCategory 加兜底（分类器未覆盖时回退不丢实体），世界卡写入更可控",
+  "v1.6.9 伏笔面板实时性 + 监控减负（FS-1~FS-3 + MON）：ForeshadowingPanel 订阅 store 防抖重拉 + foreshadowing:updated 事件驱动刷新（确认/定稿后秒级更新）；monitor 路由加 15s TTL 缓存（不再每次全量扫）；巡检脚本容注释过滤更稳",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.9",
+    date: "2026-08-07",
+    title: "魔王 Round-7 补批（故事线状态机与入口治理 / IO 健壮性 / 世界卡安全兜底 / 伏笔面板实时性 + 监控减负）",
+    sections: [
+      {
+        label: "故事线状态机与入口治理（SL-1~SL-6）",
+        items: [
+          "abandoned/paused 治理覆盖章纲、抽卡、游戏三入口：chapter-outline 双路由补 filterActiveStorylines 排除已完成/废弃线；game/outline/generate 的 main 死字面量改 OR[ {type:main},{status:active} ]；intent-parser/tool-registry 的 paused 状态统一改 abandoned，状态机口径一致",
+          "workspace/[projectId]/page.tsx 的 storylineId 选择器短路修正（原 && 短路漏渲染活跃线）；generate/continue/route.ts 加事务 + 空响应守卫，防 order 并发重复章号与空壳写入",
+        ],
+      },
+      {
+        label: "IO 健壮性（IO-1~IO-8）",
+        items: [
+          "generate/write、generate/refine 路由空守卫前置（write 空摘要、refine 无守卫已补），杜绝空正文/空摘要入库",
+          "projects/[id]/export 非法 format 返回 400 而非静默降级；import/commit 返回结构化错误并异步触发（fire-and-forget）伏笔 detect；pipeline/post-processor 连败跳过空壳，导入导出与续写链路更稳",
+        ],
+      },
+      {
+        label: "世界卡安全与兜底（WC-1~WC-2）",
+        items: [
+          "lorebook/[id] PUT 加字段白名单（仅允许更新允许的字段，防越权改类型/归属）；lib/entity-auto-creator 的 resolveEntityCategory 加兜底（分类器未覆盖实体时回退不丢），世界卡写入更可控",
+        ],
+      },
+      {
+        label: "伏笔面板实时性 + 监控减负（FS-1~FS-3 + MON）",
+        items: [
+          "components/workspace/ForeshadowingPanel 订阅 store 500ms 防抖重拉 + 监听 foreshadowing:updated 事件驱动刷新，确认/定稿后面板秒级更新；core/foreshadowing 排除 sourceNodeId 防 refine 误判回收；auto-confirm 循环内 skipDetect 避免重复 detect",
+          "stats/monitor 路由加 15s TTL 缓存（不再每次全量扫）；scripts/audit-api-refs.cjs 容注释过滤 + 模板归一，巡检更稳",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.8",
     date: "2026-08-07",

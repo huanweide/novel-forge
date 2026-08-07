@@ -115,3 +115,55 @@ describe("detectPayoffs（Round-4 修复新坑1：扫描实时正文而非陈旧
     expect(stats.fulfilled).toBe(0);
   });
 });
+
+describe("detectPayoffs（F2 Round-7：排除埋设章自身 sourceNodeId，杜绝 refine 误回收）", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.pendingCommitment.update.mockResolvedValue({});
+  });
+
+  it("description 短语仅出现在埋设章自身正文（createdAt>=anchor）且被 sourceNodeId 排除 → 不误判 fulfilled", async () => {
+    // 埋设章节点 id="sourceNode"，其正文含 description 抽出的短语两次（≥2 本应 fulfilled）
+    prismaMock.pendingCommitment.findMany.mockResolvedValue([
+      { ...baseCommit(), sourceNodeId: "sourceNode" },
+    ]);
+    prismaMock.chapterSummary.findMany.mockResolvedValue([]);
+    prismaMock.storyNode.findMany.mockResolvedValue([
+      {
+        id: "sourceNode",
+        createdAt: anchor,
+        content: "神秘戒指的下落牵动人心，那枚神秘戒指的下落终于揭晓。",
+      },
+    ]);
+
+    const stats = await detectPayoffs("p1");
+    // 埋设章自身被排除，无其它回收信号 → 不应更新、不应 fulfilled（这正是 F2 修复的回归点）
+    expect(prismaMock.pendingCommitment.update).not.toHaveBeenCalled();
+    expect(stats.fulfilled).toBe(0);
+  });
+
+  it("回收信号来自“别的章”（非 sourceNodeId）→ 仍正常判定 fulfilled", async () => {
+    // 用闭环条件（精确标记）模拟“别的章”命中回收；埋设章自身被排除不应干扰。
+    prismaMock.pendingCommitment.findMany.mockResolvedValue([
+      { ...baseCommit({ closureConditions: ["神秘戒指的下落"] }), sourceNodeId: "sourceNode" },
+    ]);
+    prismaMock.chapterSummary.findMany.mockResolvedValue([]);
+    prismaMock.storyNode.findMany.mockResolvedValue([
+      {
+        id: "sourceNode",
+        createdAt: anchor,
+        content: "神秘戒指的下落只是伏笔。", // 埋设章自身，应被排除
+      },
+      {
+        id: "otherChapter",
+        createdAt: later,
+        content: "神秘戒指的下落牵动人心，那枚神秘戒指的下落终于揭晓。", // 别的章命中 closure
+      },
+    ]);
+
+    const stats = await detectPayoffs("p1");
+    expect(prismaMock.pendingCommitment.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.pendingCommitment.update.mock.calls[0][0].data.status).toBe("fulfilled");
+  });
+});
+

@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { NextResponse } from "next/server";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import { triggerForeshadowDetect } from "@/core/confirm-guard";
 import { getSettings, recordLlmCall } from "@/lib/llm";
 import { normalizeRelationships } from "@/lib/relations";
 
@@ -702,8 +703,42 @@ export async function POST(request: Request) {
 
         syncGlobalPrompt(projectId).catch(() => {});
 
+        // F4（从 foreshadowing 复检移交）：导入完成后触发一次伏笔收束率检测，
+        // 使导入章对已有伏笔的回收/深化信号被扫描（detect 按 projectId 全量重算）。
+        // 仅当确实存在导入章时才触发；fire-and-forget，失败不阻塞导入主流程。
+        // 复用共享 helper（含失败日志 + 轻量重试 + 超时保护 + 同项目在途去重锁），与 write/refine 口径一致。
+        if (created.chapters > 0) {
+          try {
+            const origin = new URL(request.url).origin;
+            void triggerForeshadowDetect({ projectId, origin });
+          } catch {
+            /* detect 触发失败不影响导入主流程 */
+          }
+        }
+
       } catch (err) {
-        send({ type: "error", message: err instanceof Error ? err.message : "导入失败" });
+        // F5 修复：结构化错误分类（对齐 .nfproject 还原路径 projects/import）。
+        // 事务已整体 rollback，此处仅把笼统错误细化为前端可定位的 code，不改动事务本身。
+        const le = err as any;
+        const rawMsg = le instanceof Error ? le.message : String(le);
+        const prismaCode = le?.code;
+        let detail = rawMsg;
+        let code = "UNKNOWN";
+        if (/timed?\s*out|transaction.*timeout|timeout/i.test(rawMsg)) {
+          detail = "事务超时：导入数据量过大，120 秒内未完成。建议拆分为更小的批次分批导入。";
+          code = "TIMEOUT";
+        } else if (prismaCode === "P2002") {
+          detail = `数据库唯一约束冲突（字段重复写入）：${rawMsg}`;
+          code = "UNIQUE";
+        } else if (prismaCode === "P2003") {
+          detail = `外键约束冲突（引用了不存在的关联记录）：${rawMsg}`;
+          code = "FK";
+        } else if (/missing|required|Argument `.+` is missing|Invalid value for argument/i.test(rawMsg)) {
+          detail = `字段缺失或必填项为空：${rawMsg}`;
+          code = "FIELD";
+        }
+        console.error("[import/commit] 导入失败（已回滚）:", rawMsg);
+        send({ type: "error", message: detail, code });
       } finally {
         controller.close();
         // 释放幂等锁：删除锁行即视为解锁（进程被杀则依赖部署侧重启/清理，不再用 TTL 兜底）

@@ -559,6 +559,10 @@ export async function runPostGenerationPipeline(
       }
 
       // 存入 ChapterSummary（含四级事件分层）
+      // F8 修复：摘要最多 3 次重试仍连败（summarized=false / summary 为空）时，跳过空壳摘要写入，
+      // 避免「chapterId=该节点、summary:""」的空壳进入后续章上下文（context-loader 的 order<=currentOrder 过滤）
+      // 与 classifyAndConvert 流程。连败时仅回报事件、不落库；下游命名/分类因 latestSummary 为空已自守卫。
+      if (summarized && String(summary).trim().length > 0) {
       await prisma.chapterSummary.create({
         data: {
           projectId,
@@ -574,11 +578,17 @@ export async function runPostGenerationPipeline(
           eventImportances: eventImportances as any,
         },
       });
+      } else {
+        send({ type: "summarize_empty", content: "摘要连续生成失败，跳过空摘要写入（不污染后续章上下文）" });
+      }
 
       // v1.4.0：故事线进度回写（threadProgress 之前被丢弃；现在写入 Storyline 七要素 + chapterBindings，只记大事）
+      // 同样仅在摘要成功时回写（连败则 threadProgress 为空，无有意义进度可记）。
+      if (summarized && String(summary).trim().length > 0) {
       try {
         await writeStorylineProgress(projectId, nodeId, chapterOrder, threadProgress);
       } catch { /* 回写失败不影响主流程 */ }
+      }
 
       // 存入 StoryBeat（长期记忆索引）
       if (keyEvents.length > 0) {

@@ -35,6 +35,49 @@ function setCachedMonitor(projectId: string, llmUsage: unknown, projectLlm: unkn
   }
 }
 
+// F2（round-7 监控去误报延伸）：节点清单 + 三个 count 仅依赖 projectId，与切章(nodeId)无关。
+// 此前每次切章都重跑全量 storyNode.findMany（长项目是无效重负载、存在超长请求风险）。
+// 复用既有“按 projectId 内存缓存 + 容量护栏”机制，短 TTL 命中即跳过全量扫描。
+// 注意：currentNode 依赖 nodeId，仍从（缓存/实查的）nodes 中 find，不随聚合缓存整段跳过。
+const NODE_SCAN_CACHE_TTL_MS = 15_000;
+const NODE_SCAN_CACHE_MAX_SIZE = 512;
+type MonitorNode = {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  wordCount: number;
+  order: number;
+  updatedAt: Date;
+  reviewLogs: unknown;
+};
+interface NodeScanEntry {
+  ts: number;
+  nodes: MonitorNode[];
+  summaries: number;
+  beats: number;
+  commitments: number;
+}
+const nodeScanCache = new Map<string, NodeScanEntry>();
+function getCachedNodeScan(projectId: string): NodeScanEntry | null {
+  const hit = nodeScanCache.get(projectId);
+  if (hit && Date.now() - hit.ts < NODE_SCAN_CACHE_TTL_MS) return hit;
+  return null;
+}
+function setCachedNodeScan(
+  projectId: string,
+  nodes: MonitorNode[],
+  summaries: number,
+  beats: number,
+  commitments: number,
+): void {
+  nodeScanCache.set(projectId, { ts: Date.now(), nodes, summaries, beats, commitments });
+  if (nodeScanCache.size > NODE_SCAN_CACHE_MAX_SIZE) {
+    const oldestKey = nodeScanCache.keys().next().value;
+    if (oldestKey !== undefined) nodeScanCache.delete(oldestKey);
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
@@ -45,16 +88,31 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [nodes, summaries, beats, commitments] = await Promise.all([
-      prisma.storyNode.findMany({
-        where: { projectId },
-        select: { id: true, title: true, type: true, status: true, wordCount: true, order: true, updatedAt: true, reviewLogs: true },
-        orderBy: { order: "asc" },
-      }),
-      prisma.chapterSummary.count({ where: { projectId } }),
-      prisma.storyBeat.count({ where: { projectId } }),
-      prisma.pendingCommitment.count({ where: { projectId } }),
-    ]);
+    // F2（round-7）：节点清单 + 三个 count 仅依赖 projectId，与切章(nodeId)无关。
+    // 缓存命中即跳过全量 findMany，降低长项目切章的超长请求风险。
+    const cachedScan = getCachedNodeScan(projectId);
+    let nodes: MonitorNode[];
+    let summaries: number;
+    let beats: number;
+    let commitments: number;
+    if (cachedScan) {
+      nodes = cachedScan.nodes;
+      summaries = cachedScan.summaries;
+      beats = cachedScan.beats;
+      commitments = cachedScan.commitments;
+    } else {
+      [nodes, summaries, beats, commitments] = await Promise.all([
+        prisma.storyNode.findMany({
+          where: { projectId },
+          select: { id: true, title: true, type: true, status: true, wordCount: true, order: true, updatedAt: true, reviewLogs: true },
+          orderBy: { order: "asc" },
+        }),
+        prisma.chapterSummary.count({ where: { projectId } }),
+        prisma.storyBeat.count({ where: { projectId } }),
+        prisma.pendingCommitment.count({ where: { projectId } }),
+      ]);
+      setCachedNodeScan(projectId, nodes, summaries, beats, commitments);
+    }
 
     const chapters = nodes.filter((n) => n.type === "chapter" || n.type === "section" || n.type === "scene");
     const totalWords = nodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);

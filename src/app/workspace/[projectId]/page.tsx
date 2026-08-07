@@ -1281,7 +1281,7 @@ export default function WorkspacePage() {
         <DrawCards projectId={project.id} nodeId={selectedNode.id}
           authorNote={authorNote} chapterOutlinePrompt={chapterOutlinePrompt}
           nodeTitle={selectedNode.title}
-          storylineId={project.storylines?.find((s: any) => s.status === "active" || s.type === "main")?.id}
+          storylineId={project.storylines?.find((s: any) => s.status === "active")?.id ?? project.storylines?.find((s: any) => s.type === "main" && s.status !== "abandoned")?.id}
           onSelect={handleDrawSelect} onClose={() => setShowDrawCards(false)} />
       )}
 

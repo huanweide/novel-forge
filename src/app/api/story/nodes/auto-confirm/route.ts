@@ -6,7 +6,7 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
+import { evaluateConfirmEligibility, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
 import { CONFIRMABLE_STATUSES, STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_OUTLINE_ONLY, STATUS_REVIEWING } from "@/core/story-status";
 
 export async function POST(request: Request) {
@@ -95,6 +95,7 @@ export async function POST(request: Request) {
         projectId: node.projectId,
         content: node.content,
         order: node.order,
+        skipDetect: true,
       });
       if (fillMsg.startsWith("节点已确认")) {
         // 消费 applyConfirm 返回值：幂等跳过（并发/重试时节点已被确认），不虚报本次放行（Max Loop Round5）
@@ -102,6 +103,13 @@ export async function POST(request: Request) {
       } else {
         confirmed.push({ id: node.id, title: node.title, score: el.score, grade: el.grade });
       }
+    }
+
+    // F3（Round-7）：循环内每个 applyConfirm 已传 skipDetect:true，避免 N 个节点各触发一次
+    // 全量 detect（detectPayoffs 是 O(章数×伏笔数) 重算，并发 N 次会雪崩超时）。循环结束后
+    // 统一只触发一次，与 batch-confirm 的「只触发一次」原则保持一致。
+    if (confirmed.length > 0) {
+      void triggerForeshadowDetect({ projectId: pid });
     }
 
     return NextResponse.json({

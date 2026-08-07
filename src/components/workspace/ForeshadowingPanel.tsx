@@ -7,8 +7,9 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StatusDot, Icon } from "@/components/ui/icons";
+import { useProjectStore } from "@/store";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -110,6 +111,64 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
     }
     load();
     return () => { cancelled = true; };
+  }, [projectId]);
+
+  // ═══════════════════════════════════════════
+  // F1（Round-7）：面板自动刷新
+  // 后端 detect（写/确认/refine 之后 fire-and-forget 触发）回写了伏笔状态与收束率，
+  // 但面板原本只在挂载和手动「重新检测」时拉数据，导致前端看不到更新。这里用两套
+  // 轻量、零依赖的机制让面板随后端 detect 自动刷新，不引状态库、不轮询、不无限重渲染：
+  //  ① 订阅项目 store：workspace 在写/确认/refine 完成后都会调 loadProject 重写 store，
+  //     故 store 引用变化即可作为“数据可能已变”的信号，防抖 500ms 轻量重拉列表。
+  //  ② 监听全局自定义事件 `foreshadowing:updated`：任何 detect 完成后 dispatch 该事件，
+  //     面板即重拉（命名清晰，便于其他入口显式推送刷新信号）。
+  // ═══════════════════════════════════════════
+  const project = useProjectStore((s) => s.project);
+  const didMountRef = useRef(false);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return; // 跳过挂载首跑，避免与上面的初始拉取重复
+    }
+    let cancelled = false;
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      (async () => {
+        try {
+          const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`);
+          if (!res.ok || cancelled) return;
+          const json = await res.json();
+          if (!cancelled) setData(json);
+        } catch {
+          /* 轻量刷新失败静默忽略，下次动作/手动刷新再补 */
+        }
+      })();
+    }, 500);
+    return () => {
+      cancelled = true;
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
+  }, [project, projectId]);
+
+  useEffect(() => {
+    const onUpdated = () => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`);
+          if (!res.ok || cancelled) return;
+          const json = await res.json();
+          if (!cancelled) setData(json);
+        } catch {
+          /* ignore */
+        }
+      })();
+      return () => { cancelled = true; };
+    };
+    window.addEventListener("foreshadowing:updated", onUpdated);
+    return () => window.removeEventListener("foreshadowing:updated", onUpdated);
   }, [projectId]);
 
   const toggleGroup = (key: string) => {

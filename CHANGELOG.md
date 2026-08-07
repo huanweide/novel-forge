@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.9 — 2026-08-07
+**魔王 Round-7 补批（故事线状态机与入口治理 / IO 健壮性 / 世界卡安全兜底 / 伏笔面板实时性 + 监控减负）**
+
+- **故事线状态机与入口治理（SL-1~SL-6）**：abandoned/paused 治理覆盖章纲、抽卡、游戏三入口——`chapter-outline` 双路由补 `filterActiveStorylines` 排除已完成/废弃线；`game/outline/generate` 的 `main` 死字面量改 `OR:[{type:main},{status:active}]`；`intent-parser`/`tool-registry` 的 `paused` 状态统一改 `abandoned`；`workspace/[projectId]/page.tsx` 的 `storylineId` 选择器短路修正；`generate/continue/route.ts` 加事务 + 空响应守卫，防 `order` 并发重复章号与空壳写入。
+- **IO 健壮性（IO-1~IO-8）**：`generate/write`、`generate/refine` 空守卫前置（杜绝空摘要/空正文入库）；`projects/[id]/export` 非法 `format` 返回 400 而非静默降级；`import/commit` 返回结构化错误并异步触发（fire-and-forget）伏笔 detect；`pipeline/post-processor` 连败跳过空壳，导入导出与续写链路更稳。
+- **世界卡安全与兜底（WC-1~WC-2）**：`lorebook/[id]` PUT 加字段白名单（防越权改类型/归属）；`lib/entity-auto-creator` 的 `resolveEntityCategory` 加兜底（分类器未覆盖实体时回退不丢），世界卡写入更可控。
+- **伏笔面板实时性 + 监控减负（FS-1~FS-3 + MON）**：`components/workspace/ForeshadowingPanel` 订阅 store 500ms 防抖重拉 + 监听 `foreshadowing:updated` 事件驱动刷新（确认/定稿后面板秒级更新）；`core/foreshadowing` 排除 `sourceNodeId` 防 refine 误判回收；`auto-confirm` 循环内 `skipDetect` 避免重复 detect；`stats/monitor` 路由加 15s TTL 缓存（不再每次全量扫）；`scripts/audit-api-refs.cjs` 容注释过滤 + 模板归一，巡检更稳。
+
+---
+
 ## v1.6.8 — 2026-08-07
 **魔王 Round-7 收口（伏笔 detect 并发去重 / 时序倒挂假阳性 / 长书内存峰值 / 多主线跨线误归属 / 浅色 tertiary AA）**
 

@@ -20,6 +20,17 @@ export async function GET(
     const url = new URL(request.url);
     const format = url.searchParams.get("format") || "markdown";
     const includeOutline = url.searchParams.get("includeOutline") !== "false";
+
+    // F7 修复：格式白名单校验。仅 markdown|txt|html|epub|docx 有语义，
+    // 传入未定义值（如 pdf/rtf）时不再静默降级为纯文本，而是明确返回 400，
+    // 避免「pdf 请求却拿到 .txt 文件」的误导行为。已支持格式行为不变。
+    const SUPPORTED_FORMATS = ["markdown", "txt", "html", "epub", "docx"];
+    if (!SUPPORTED_FORMATS.includes(format)) {
+      return NextResponse.json(
+        { error: `不支持的导出格式：${format}（仅支持 ${SUPPORTED_FORMATS.join(" / ")}）` },
+        { status: 400 },
+      );
+    }
     const author = url.searchParams.get("author")?.trim() || undefined;
     const check = url.searchParams.get("check") === "1"; // FE-N7 违禁词预检模式
 

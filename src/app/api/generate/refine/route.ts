@@ -165,6 +165,18 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             }
           }
 
+          // ── F3 修复：空响应守卫（对齐 write 路由）──
+          // refine 在空响应（模型未返回正文）时若进入管线，step 3 会以空串覆盖 content，
+          // 把已有章节正文清空，且 done 仍回报 status:"completed"。此处前置拦截：保留原正文、
+          // 不跑管线、回报 error，避免线上节点被清空（原正文可经版本快照找回，但线上态不应被污染）。
+          if (!newContent || newContent.trim().length === 0) {
+            send({
+              type: "error",
+              content: "微调内容为空（模型未返回正文），已保留原章节正文，请重试或检查 LLM 配置",
+            });
+            return;
+          }
+
           // 后处理管线（仅扫描+存储，跳过审校和摘要）
           const forbiddenPatterns = collectForbiddenPatterns(
             template?.forbiddenPatterns || [], customForbidden,
