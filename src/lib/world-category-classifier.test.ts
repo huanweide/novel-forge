@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyWorldCategory, ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS, type WorldCategory } from "./world-category-classifier";
+import { classifyWorldCategory, ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS, WORLD_CATEGORY_SECTIONS, type WorldCategory } from "./world-category-classifier";
 
 describe("世界卡确定性分类器", () => {
   it("15 个世界卡分类均能唯一识别（覆盖用户 14 类含 3 新类 + item/magic_system/technique）", () => {
@@ -66,6 +66,23 @@ describe("世界卡确定性分类器", () => {
     }
     // 反向：标签映射不允许出现分类清单之外的多余 key
     for (const k of labelKeys) {
+      expect(cats).toContain(k);
+    }
+  });
+
+  it("WORLD_CATEGORY_SECTIONS 与 ALL_WORLD_CATEGORIES 同源（覆盖全部 15 类、emoji/label 非空，杜绝 engine 手抄塌缩）", () => {
+    // Round-5 修复 NEW-UI-WC-1：装配引擎的板块标签改为由此派生，
+    // 键集必须 ⊆ 且 = ALL_WORLD_CATEGORIES，且对全部 15 类都有 emoji + label。
+    const cats = ALL_WORLD_CATEGORIES;
+    const sectionKeys = Object.keys(WORLD_CATEGORY_SECTIONS) as WorldCategory[];
+    expect(sectionKeys).toHaveLength(cats.length);
+    for (const cat of cats) {
+      const s = WORLD_CATEGORY_SECTIONS[cat];
+      expect(s, `分类 ${cat} 必须存在板块结构`).toBeTruthy();
+      expect(s.emoji.trim().length).toBeGreaterThan(0);
+      expect(s.label.trim().length).toBeGreaterThan(0);
+    }
+    for (const k of sectionKeys) {
       expect(cats).toContain(k);
     }
   });

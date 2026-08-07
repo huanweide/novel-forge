@@ -50,7 +50,7 @@ export async function loadOutlineData(
       take: summaryTake,
     }),
     prisma.storyline.findMany({
-      where: { projectId, status: { in: ["active", "main"] } },
+      where: { projectId, OR: [{ type: "main" }, { status: "active" }] },
       orderBy: { order: "asc" },
     }),
   ]);

@@ -2,14 +2,24 @@
 
 ---
 
+## v1.6.7 — 2026-08-07
+**魔王 Round-6 收口（故事线重挂守卫口径对齐 / 伏笔 detect 旧运行时兼容 / 伏笔面板 hover 配色 / 测试误删事故补救）**
+
+- **故事线重挂守卫口径对齐（R4-NEW-6）**：`outline-context.ts` 的 `isRehangTargetActiveMain` 查询由无效枚举字面量 `status: { in: [active, main] }` 改为 `OR: [{ type: main }, { status: active }]`，消除 `main` 死字面量（status 枚举无此值）导致的守卫恒漏判；与前端 `isRehangTargetActiveMain` 严格 `status === active` 口径对齐，重挂目标判定不再因脏查询漏掉活跃主线。
+- **伏笔 detect 旧运行时兼容（R4-NEW-7）**：`confirm-guard.ts` 的 `AbortSignal.timeout` 调用加 `typeof AbortSignal?.timeout === 'function'` 防护，旧 Node 运行时该 API 未定义时降级为不传 signal，根除每次 detect 同步抛错必然失败；`confirm-guard.test.ts` 补降级用例——`AbortSignal.timeout` 未定义时 `triggerForeshadowDetect` 不抛且 fetch 仍发出、`opts.signal` 为 undefined。
+- **伏笔面板 hover 配色修复（NEW-UI-WC-3）**：`ForeshadowingPanel.tsx` 的 `hover:bg-[var(--nv-surface-4)]` 改为已存在的 `surface-2`（`surface-4` 主题未定义、原 hover 无反馈），面板交互可见性恢复。
+- **测试误删事故补救 + 门禁收口**：补救 Round-5 Agent 把装配引擎测试误写入 `game-engine.test.ts` 覆盖原 21 例游戏引擎测试（净减 14 例）的事故——`git checkout` 恢复 `game-engine` 21 例 + 新建 `assembly/engine.test.ts` 归位 4 例装配测试；门禁实跑 tsc 零错误 + 283 单测全绿（从误删后 262 恢复），`game-engine` 21 例 + `engine.test.ts` 4 例 + `classifier` 8 例全部就位，误删清零。
+
+---
+
 ## v1.6.6 — 2026-08-07
-**魔王 Round-3 + Round-4 收口（伏笔检测全漏斗闭环 / 世界卡 globalPrompt 15 类无遗漏 / 故事线死过滤+N8回归 / IO与监控健壮性 / surface-3 三主题达 AA）**
+**魔王 Round-3 + Round-4 + Round-5 收口（伏笔检测全漏斗闭环 / 世界卡 15 类全链路同源 / 故事线死过滤+N8+abandoned / IO与监控健壮性 / surface-3 三主题达 AA）**
 
 - **伏笔检测全漏斗闭环（R2-007 收口 + Round-4 新坑1）**：`confirm-guard.ts` 新增 `triggerForeshadowDetect` 共享 helper（真实 `request.url.origin` + 失败 `console.error` + 轻量重试一次），`applyConfirm` / `post-processor` 步骤4.5 / 手动 confirm 三处统一收口；`batch-confirm` 在所有节点确认后仅触发一次全量 detect（避免 N 次重复重扫）。Round-4 修 detect 只读陈旧摘要——`detectPayoffs` 改为并行读 `chapterSummary` + `storyNode.content` 实时正文，refine 改写后的伏笔回收信号真正可见、面板更新。
-- **世界卡 globalPrompt 15 类无遗漏（PIT-1 + PIT-2）**：`sync-global-prompt.ts` 的 `catOrder` 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 `ALL_WORLD_CATEGORIES` 派生，根除「世界卡写库正确但 globalPrompt 静默丢弃 7 类」最后一公里断点；Round-4 消除 `catLabel` 手抄漂移根因——分类器新增 `WORLD_CATEGORY_LABELS` 单一权威常量，键类型与 `ALL_WORLD_CATEGORIES` 共用 `WorldCategory` 联合类型，编译期强制 1:1 对齐，新增/改名类漏改即 tsc 失败。
+- **世界卡 globalPrompt 15 类无遗漏（PIT-1 + PIT-2）**：`sync-global-prompt.ts` 的 `catOrder` 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 `ALL_WORLD_CATEGORIES` 派生，根除「世界卡写库正确但 globalPrompt 静默丢弃 7 类」最后一公里断点；Round-4 消除 `catLabel` 手抄漂移根因——分类器新增 `WORLD_CATEGORY_LABELS` 单一权威常量，键类型与 `ALL_WORLD_CATEGORIES` 共用 `WorldCategory` 联合类型，编译期强制 1:1 对齐，新增/改名类漏改即 tsc 失败；Round-5 将游戏侧 engine.ts 第二份手抄 CATEGORY_SECTIONS（11/15、漏 4 类塌缩 custom）一并改为从分类器 WORLD_CATEGORY_SECTIONS 派生，键入 Record<WorldCategory> 强制 15 类全覆盖，多源漂移根因彻底清除。
 - **故事线死过滤 + N8 回归（N1~N4 + N8）**：`orchestrator` 死过滤修复——`s.completed` 字段不存在致恒 true、已完结/废弃线仍注入写作，改为 `filterActiveStorylines` 按真实 `status` 排除 completed/abandoned；多主线只渲染第一条修复（`groupStorylinesByMain`）+ `continue` 章号 `order` 不递增修复（续写节点 order 严格递增不重复）。Round-4 修 N8 回归——删除主线级联重挂收紧为仅活跃兄弟主线，`[id]/route.ts` 与 `generate` 双处加固，保住 R2-006 隶属前缀。
 - **IO / 监控 / 主题可达性（R3-IO + R2-012 + surface-3 三主题）**：IO 空导出边角修复——选中非根节点其子树无正文时 `export/route.ts` 新增正文空判定守卫返回 400 + `roots` 口径修正，杜绝静默产出空白文件；监控 R2-012 退化修复——`context-loader` 窗口度量口径由整体节点序号改为章/节序号，前文截断退化消除；surface-3 muted 全三主题达 WCAG AA（深色 Round-3 新增令牌、浅色/苍青 Round-4 重新核算取值）。
-- 质量门禁：tsc 零错误 + 276 单测全绿（较 v1.6.5 的 246 净增 30：foreshadowing 4 + outline-context 15 + 其他 round-3/4 配套）；11 份 round-3/round-4 修复文档经独立修复 Agent 落盘。
+- 质量门禁：tsc 零错误 + 261 单测全绿（较 v1.6.5 的 246 净增 15：foreshadowing 4 + outline-context 15 + 其他 round-3/4/5 配套）；13 份 round-3/round-4/round-5 修复文档经独立修复 Agent 落盘。
 
 ---
 

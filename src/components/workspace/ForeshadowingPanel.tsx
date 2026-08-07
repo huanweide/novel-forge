@@ -378,7 +378,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
                                 <button
                                   onClick={() => regenHint(item)}
                                   disabled={busyId === item.id}
-                                  className="flex items-center gap-1 rounded bg-[var(--nv-surface-3)] px-2 py-1 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-4)] disabled:opacity-50"
+                                  className="flex items-center gap-1 rounded bg-[var(--nv-surface-3)] px-2 py-1 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] disabled:opacity-50"
                                 >
                                   <Icon name="sparkles" size={10} /> {busyId === item.id ? "生成中…" : "AI 重生成"}
                                 </button>

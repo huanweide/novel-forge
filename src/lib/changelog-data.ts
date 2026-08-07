@@ -25,22 +25,56 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.6";
+export const LATEST_VERSION = "v1.6.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.6 伏笔检测全漏斗闭环：confirm-guard 新增 triggerForeshadowDetect（真实 request.url.origin + 失败日志 + 轻量重试），applyConfirm / post-processor 步骤4.5 / 手动 confirm 三处收口；batch-confirm 确认后仅触发一次全量 detect。Round-4 修 detect 只读陈旧摘要——改扫实时正文，refine 回收信号真正可见",
-  "v1.6.6 世界卡 globalPrompt 15 类无遗漏：sync-global-prompt 的 catOrder 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 ALL_WORLD_CATEGORIES 派生，根除写库正确却被 globalPrompt 静默丢弃 7 类的最后一公里断点；catLabel 提升为分类器内 WORLD_CATEGORY_LABELS 单一权威常量，编译期强制与分类清单 1:1 对齐",
-  "v1.6.6 故事线死过滤 + N8 回归：orchestrator 按真实 status 过滤（原 s.completed 恒 true 致已完结线仍注入写作）+ 多主线只渲染第一条 + continue 章号 order 严格递增；Round-4 删主线级联重挂收紧为仅活跃主线，保住 R2-006 隶属前缀",
-  "质量门禁：tsc 零错误 + 276 单测全绿（较 v1.6.5 的 246 净增 30：foreshadowing 4 + outline-context 15 + 其他 round-3/4 配套）；IO 空导出守卫 + 监控前文截断修复 + surface-3 三主题 muted 达 WCAG AA",
+  "v1.6.7 故事线重挂守卫口径对齐（R4-NEW-6）：outline-context.ts 的 isRehangTargetActiveMain 查询由无效枚举字面量 status: { in: [active, main] } 改为 OR: [{ type: main }, { status: active }]，消除 main 死字面量（status 枚举无此值）导致的守卫恒漏判，与前端严格 status === active 口径一致",
+  "v1.6.7 伏笔 detect 旧运行时兼容（R4-NEW-7）：confirm-guard.ts 的 AbortSignal.timeout 调用加 typeof 防护，旧 Node 运行时该 API 未定义时降级为不传 signal，根除每次 detect 同步抛错必然失败；confirm-guard.test.ts 补降级用例守卫回归",
+  "v1.6.7 伏笔面板 hover 配色修复（NEW-UI-WC-3）：ForeshadowingPanel.tsx 的 hover:bg-[var(--nv-surface-4)] 改为已存在的 surface-2（surface-4 主题未定义、原 hover 无反馈），面板交互可见性恢复",
+  "测试误删事故补救 + 门禁收口：补救 Round-5 Agent 把装配引擎测试误写入 game-engine.test.ts 覆盖原 21 例游戏引擎测试（净减 14 例）的事故——git checkout 恢复 game-engine 21 例 + 新建 assembly/engine.test.ts 归位 4 例装配测试；实跑 tsc 零错误 + 283 单测全绿（从误删后 262 恢复），game-engine 21 + engine.test.ts 4 + classifier 8 全部就位，误删清零",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
   {
+    version: "v1.6.7",
+    date: "2026-08-07",
+    title: "魔王 Round-6 收口（故事线重挂守卫口径对齐 / 伏笔 detect 旧运行时兼容 / 伏笔面板 hover 配色 / 测试误删事故补救）",
+    sections: [
+      {
+        label: "故事线重挂守卫口径对齐（R4-NEW-6）",
+        items: [
+          "outline-context.ts 的 isRehangTargetActiveMain 查询由无效枚举字面量 status: { in: [active, main] } 改为 OR: [{ type: main }, { status: active }]，消除 main 死字面量（status 枚举无此值）导致的守卫恒漏判",
+          "与前端 isRehangTargetActiveMain 严格 status === active 口径对齐，重挂目标判定不再因脏查询漏掉活跃主线",
+        ],
+      },
+      {
+        label: "伏笔 detect 旧运行时兼容（R4-NEW-7）",
+        items: [
+          "confirm-guard.ts 的 AbortSignal.timeout 调用加 typeof AbortSignal?.timeout === 'function' 防护，旧 Node 运行时该 API 未定义时降级为不传 signal，根除每次 detect 同步抛错必然失败",
+          "confirm-guard.test.ts 补降级用例：AbortSignal.timeout 未定义时 triggerForeshadowDetect 不抛且 fetch 仍发出、opts.signal 为 undefined",
+        ],
+      },
+      {
+        label: "伏笔面板 hover 配色修复（NEW-UI-WC-3）",
+        items: [
+          "ForeshadowingPanel.tsx 的 hover:bg-[var(--nv-surface-4)] 改为已存在的 surface-2（surface-4 主题未定义、原 hover 无反馈），面板交互可见性恢复",
+        ],
+      },
+      {
+        label: "测试误删事故补救 + 门禁收口",
+        items: [
+          "补救 Round-5 Agent 把装配引擎测试误写入 game-engine.test.ts 覆盖原 21 例游戏引擎测试（净减 14 例）的事故：git checkout 恢复 game-engine 21 例 + 新建 assembly/engine.test.ts 归位 4 例装配测试",
+          "门禁实跑：tsc 零错误 + 283 单测全绿（从误删后 262 恢复），game-engine 21 例 + engine.test.ts 4 例 + classifier 8 例全部就位，误删清零",
+        ],
+      },
+    ],
+  },
+  {
     version: "v1.6.6",
     date: "2026-08-07",
-    title: "魔王 Round-3 + Round-4 收口（伏笔检测全漏斗闭环 / 世界卡 globalPrompt 15 类无遗漏 / 故事线死过滤+N8回归 / IO与监控健壮性 / surface-3 三主题达 AA）",
+    title: "魔王 Round-3 + Round-4 + Round-5 收口（伏笔检测全漏斗闭环 / 世界卡 15 类全链路同源 / 故事线死过滤+N8+abandoned / IO与监控健壮性 / surface-3 三主题达 AA）",
     sections: [
       {
         label: "伏笔检测全漏斗闭环（R2-007 收口 + Round-4 新坑1）",
@@ -53,7 +87,7 @@ export const VERSIONS: VersionEntry[] = [
         label: "世界卡 globalPrompt 15 类无遗漏（PIT-1 + PIT-2）",
         items: [
           "sync-global-prompt.ts 的 catOrder 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 ALL_WORLD_CATEGORIES 派生，根除「世界卡写库正确但 globalPrompt 静默丢弃 7 类」最后一公里断点",
-          "Round-4 消除 catLabel 手抄漂移根因：分类器新增 WORLD_CATEGORY_LABELS 单一权威常量，键类型与 ALL_WORLD_CATEGORIES 共用 WorldCategory 联合类型，编译期强制 1:1 对齐，新增/改名类漏改即 tsc 失败",
+          "Round-4 消除 catLabel 手抄漂移根因：分类器新增 WORLD_CATEGORY_LABELS 单一权威常量，键类型与 ALL_WORLD_CATEGORIES 共用 WorldCategory 联合类型，编译期强制 1:1 对齐，新增/改名类漏改即 tsc 失败；Round-5 将游戏侧 engine.ts 第二份手抄 CATEGORY_SECTIONS（11/15、漏 4 类塌缩 custom）改为从分类器 WORLD_CATEGORY_SECTIONS 派生，键入 Record<WorldCategory> 强制 15 类全覆盖，多源漂移根因彻底清除",
         ],
       },
       {
@@ -61,6 +95,7 @@ export const VERSIONS: VersionEntry[] = [
         items: [
           "orchestrator 死过滤修复：s.completed 字段不存在致恒 true，已完结/废弃线仍注入写作；改为 filterActiveStorylines 按真实 status 排除 completed/abandoned",
           "多主线只渲染第一条修复（groupStorylinesByMain）+ continue 章号 order 不递增修复（续写节点 order 严格递增不重复）；Round-4 修 N8 回归：删除主线级联重挂收紧为仅活跃兄弟主线，[id]/route.ts 与 generate 双处加固，保住 R2-006 隶属前缀",
+          "Round-5 故事线 abandoned 主线排除：StorylineList 多主线遍历剔除 abandoned 主线、stories generate/[id] 路由补 N4/N8/abandoned 守卫，废弃主线不再污染写作上下文与 UI 渲染",
         ],
       },
       {

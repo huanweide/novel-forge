@@ -63,6 +63,24 @@ export const WORLD_CATEGORY_LABELS: Record<WorldCategory, string> = {
   public_system: "🏛 公开体制",
 };
 
+// 拆分后的「emoji + 文案」结构，供装配引擎 loreSection / forcedLore 等
+// 「需要把 emoji 与文案分离渲染」的场景复用。
+//
+// 关键：直接由 WORLD_CATEGORY_LABELS 派生（同一权威源），键入为
+// Record<WorldCategory, { emoji; label }>。类型系统强制覆盖全部 15 类——
+// 一旦 ALL_WORLD_CATEGORIES 增删/改名某一类而此处漏改，tsc 直接报错；
+// 同时彻底取代装配引擎里原先那份弱类型、11/15 覆盖的手抄标签映射，
+// 消除 fate_system / physics / public_system / character_relationship 四类
+// 被塌缩到 custom 的多源漂移（Round-5 修复 NEW-UI-WC-1）。
+export const WORLD_CATEGORY_SECTIONS: Record<WorldCategory, { emoji: string; label: string }> = (() => {
+  const sections = {} as Record<WorldCategory, { emoji: string; label: string }>;
+  for (const cat of ALL_WORLD_CATEGORIES) {
+    const [emoji, ...rest] = WORLD_CATEGORY_LABELS[cat].split(" ");
+    sections[cat] = { emoji, label: rest.join(" ") };
+  }
+  return sections;
+})();
+
 // 关键词表：每个分类一组。越长越具体，权重越高（权重 = 字符长度）。顺序无关。
 const KEYWORDS: Record<WorldCategory, string[]> = {
   geography: ["大陆", "国家", "城市", "宗门", "秘境", "山脉", "河流", "海域", "疆域", "地图", "地域", "圣地", "洞天", "福地", "关隘", "都城", "城池", "山谷", "平原", "沙漠", "海洋", "岛屿", "宗门驻地", "灵脉"],

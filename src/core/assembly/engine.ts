@@ -31,6 +31,9 @@ import type {
 import { countTokens, truncateByTokens } from "./tokenizer";
 import { safeJoin } from "@/lib/utils";
 import { formatEventsForPrompt } from "@/core/distillation";
+// world 卡板块标签（emoji + 文案）统一派生自分类器权威常量 WORLD_CATEGORY_SECTIONS，
+// 与 catLabel（sync-global-prompt）共用同一 WORLD_CATEGORY_LABELS 源，杜绝手抄漂移（Round-5 / NEW-UI-WC-1）。
+import { WORLD_CATEGORY_SECTIONS, type WorldCategory } from "@/lib/world-category-classifier";
 
 // ─── 配置常量 ───────────────────────────────────────────────
 
@@ -209,22 +212,9 @@ function buildGlobalMemorySection(memory: GlobalMemory, maxTokens: number): stri
   return truncateByTokens(fullContent, maxTokens);
 }
 
-/** 板块分类标签——宽松的自然语言格式，不给 LLM 压力 */
-const CATEGORY_SECTIONS: Record<string, { emoji: string; label: string }> = {
-  geography:    { emoji: "🗺️", label: "地理环境" },
-  faction:      { emoji: "⚔️", label: "势力阵营" },
-  item:         { emoji: "💎", label: "重要物品" },
-  magic_system: { emoji: "⚡", label: "力量体系" },
-  technique:    { emoji: "📜", label: "功法技能" },
-  creature:     { emoji: "🐉", label: "生物种族" },
-  culture:      { emoji: "🎭", label: "文化风俗" },
-  history:      { emoji: "📚", label: "历史背景" },
-  law:          { emoji: "⚖️", label: "世界法则" },
-  currency:     { emoji: "💰", label: "货币体系" },
-  custom:       { emoji: "🔮", label: "特殊设定" },
-};
+/** 板块分类标签（emoji + 文案）由 WORLD_CATEGORY_SECTIONS 派生，覆盖全部 15 类，见文件顶部 import（Round-5 修复 NEW-UI-WC-1）。 */
 
-function buildLoreSection(
+export function buildLoreSection(
   triggeredLore: TriggeredLore[],
   maxTokens: number
 ): string {
@@ -238,15 +228,15 @@ function buildLoreSection(
   // 按板块分组注入，每板块独立小标题——格式宽松，纯自然语言
   const grouped = new Map<string, typeof sorted>();
   for (const t of sorted) {
-    const cat = (t.entry as any).category || "custom";
-    const key = CATEGORY_SECTIONS[cat] ? cat : "custom";
+    const cat = ((t.entry as any).category as WorldCategory) || "custom";
+    const key = WORLD_CATEGORY_SECTIONS[cat] ? cat : "custom";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(t);
   }
 
   const sections: string[] = [];
   for (const [cat, items] of grouped) {
-    const sec = CATEGORY_SECTIONS[cat] || CATEGORY_SECTIONS.custom;
+    const sec = WORLD_CATEGORY_SECTIONS[cat as WorldCategory] || WORLD_CATEGORY_SECTIONS.custom;
     const lines = items.map((t) => {
       const title = t.entry.title;
       const content = (t.entry.content || "").replace(/\n/g, "；");
@@ -263,18 +253,18 @@ function buildLoreSection(
  * 共享渲染：把一组世界书词条按板块分组渲染成「- 标题：内容」文本。
  * 同时服务于关键词触发的 loreSection 与强制注入的 forced 区块。
  */
-function renderLoreEntries(entries: { title: string; content: string; category?: string }[]): string {
+export function renderLoreEntries(entries: { title: string; content: string; category?: string }[]): string {
   if (entries.length === 0) return "";
   const grouped = new Map<string, typeof entries>();
   for (const e of entries) {
-    const cat = (e.category as any) || "custom";
-    const key = CATEGORY_SECTIONS[cat] ? cat : "custom";
+    const cat = ((e.category as any) as WorldCategory) || "custom";
+    const key = WORLD_CATEGORY_SECTIONS[cat] ? cat : "custom";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(e);
   }
   const sections: string[] = [];
   for (const [cat, items] of grouped) {
-    const sec = CATEGORY_SECTIONS[cat] || CATEGORY_SECTIONS.custom;
+    const sec = WORLD_CATEGORY_SECTIONS[cat as WorldCategory] || WORLD_CATEGORY_SECTIONS.custom;
     const lines = items.map((e) => `- ${e.title}：${(e.content || "").replace(/\n/g, "；")}`);
     sections.push(`【${sec.emoji} ${sec.label}】\n${lines.join("\n")}`);
   }

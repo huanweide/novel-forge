@@ -211,7 +211,7 @@ export async function triggerForeshadowDetect(args: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(TIMEOUT_MS) : undefined,
       });
       if (!res.ok) {
         lastErr = new Error(`detect 返回非 2xx 状态码 ${res.status}`);

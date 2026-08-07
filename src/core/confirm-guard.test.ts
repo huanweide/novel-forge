@@ -96,6 +96,17 @@ describe("triggerForeshadowDetect（R2-007 收口：detect 自调用 + 失败日
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(errSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("AbortSignal.timeout 未定义的旧运行时 → 降级不抛且 fetch 仍发出（R4-NEW-7）", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    // 模拟旧 Node 运行时：AbortSignal.timeout 不存在
+    vi.stubGlobal("AbortSignal", { ...AbortSignal, timeout: undefined });
+    await expect(triggerForeshadowDetect({ projectId: "p1" })).resolves.not.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, opts] = fetchMock.mock.calls[0];
+    expect(opts.signal).toBeUndefined();
+  });
 });
 
 describe("applyConfirm（R2-007 收口：skipDetect 控制 detect 触发）", () => {
