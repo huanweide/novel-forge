@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.3";
+export const LATEST_VERSION = "v1.6.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.3 世界卡体系补全：新增命运体系/物理列表/公开体系三类模块并补齐功法/货币，世界面板 WORLD_MODULES、LoreCategory 枚举、parser 分类、agent 工具 enum、编辑下拉、填表映射、pre-write-cards 校验七处定义点同步，世界书覆盖由 12 类扩至 15 类",
-  "世界卡确定性分类器 world-category-classifier.ts 上线：长词优先消歧，覆盖 15 个世界卡分类 + 2 个元桶，自动填表路由准确率提升；配套 6/6 单测；14 类自动填表链路在 entity-sync 补齐 fate/physics/public 映射后完成闭环验证",
-  "故事线正式融入写作：outline-context.ts 的 formatStorylines 经 orchestrator 注入写作 systemPrompt（修仙/非修仙双分支），仅注入未完成的 active 线，AI 写章时实时感知主线/支线七要素进展，不再各写各的",
-  "故事线进度量化与 UI：新增 storyline-progress.ts 算七要素 + 章节进展百分比，StorylineList 卡片加进度条；质量门禁 tsc 零错误 + 238 单测全绿（净增 21），21 个在途改动全部收口",
+  "v1.6.4 故事线支线联动：generate 路由两阶段创建让支线 parentId 真正挂主线（'支线服务于主线'铁律数据化）；StorylineList 主线卡片聚合旗下支线数与平均进度、给出主线+支线综合联动进度，支线卡片显示'隶属主线'标签并缩进连线，主线/支线层级一眼可见",
+  "v1.6.4 支线归属解析优先 parentId、回退唯一主线，历史数据（parentId 为 null）同样联动；综合联动进度 = 主线本体 70% + 支线生态 30%，更直观反映整体推进",
+  "#652 整体标记 completed：子项 #653–#656（世界卡三类模块补全 / 确定性分类器 / 故事线融入写作 / 进度量化）全绿，#657 质量门禁（tsc 0 / vitest 238）、#658 升版收尾同步完成，v1.6.3 写作模块与世界卡融合工作全部收口",
+  "质量门禁：tsc 零错误 + 238 单测全绿（19 文件），#651 改动不破坏编译与现有测试",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.4",
+    date: "2026-08-07",
+    title: "故事线支线联动 UI + 数据化（#651）+ #652 整体标记完成",
+    sections: [
+      {
+        label: "支线联动 UI 与数据化（#651）",
+        items: [
+          "generate 路由两阶段创建：先建主线拿 id，再建支线时 parentId 挂主线，落实'支线服务于主线'铁律，schema 的 parentId 字段从此真正生效（此前所有支线 parentId 均为 null）",
+          "StorylineList 主线卡片聚合'旗下支线数 + 支线平均进度 + 综合联动进度条（主线本体 70% + 支线生态 30%）'，一眼看到主线带动了几条支线、整体推进到哪",
+          "支线卡片显示'隶属主线：XXX'标签并左侧 accent 竖线缩进，形成可见层级归属；归属解析优先 parentId、回退唯一主线，历史数据（parentId 为 null）同样联动",
+        ],
+      },
+      {
+        label: "#652 整体标记 completed",
+        items: [
+          "子项 #653✅ #654✅ #655✅ #656✅（世界卡三类模块补全 / 确定性分类器 / 故事线融入写作 / 进度量化）全绿，#657 质量门禁（tsc 0 / vitest 238），#658 升版收尾，本条整体 completed——v1.6.3 写作模块与世界卡融合工作全部收口",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 零错误 + 238 单测全绿（19 文件），#651 改动不破坏编译与现有测试",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.3",
     date: "2026-08-06",

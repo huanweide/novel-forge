@@ -133,6 +133,26 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const sideLines = storylines.filter(s => s.type === "side");
   const editingStory = storylines.find(s => s.id === editingId) || null;
 
+  // v1.6.4 #651 支线归属解析：优先 parentId，回退到唯一主线
+  const resolveParent = (s: StorylineData): StorylineData | null => {
+    if (s.parentId) {
+      const p = storylines.find((m) => m.id === s.parentId);
+      if (p) return p;
+    }
+    return mainLine ?? null;
+  };
+  const childLines = mainLine
+    ? sideLines.filter((s) => resolveParent(s)?.id === mainLine.id)
+    : [];
+  const childAvg = childLines.length
+    ? Math.round(
+        childLines.reduce((acc, s) => acc + computeStorylineProgress(s).overallPercent, 0) /
+          childLines.length,
+      )
+    : 0;
+  const mainProgress = mainLine ? computeStorylineProgress(mainLine).overallPercent : 0;
+  const combinedProgress = Math.round(mainProgress * 0.7 + childAvg * 0.3);
+
   if (loading) return <div className="py-4 text-center text-xs text-[var(--nv-text-tertiary)]">加载中...</div>;
 
   return (
@@ -177,6 +197,23 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
             </button>
           </div>
           <StorylineProgressBar s={mainLine} />
+          {/* v1.6.4 #651 支线联动：主线聚合旗下支线进度 */}
+          {childLines.length > 0 && (
+            <div className="px-2 pb-1.5">
+              <div className="flex items-center justify-between text-[9px] text-[var(--nv-text-tertiary)]">
+                <span className="flex items-center gap-1">
+                  <Icon name="link" size={9} /> 支线联动 {childLines.length} 条 · 均 {childAvg}%
+                </span>
+                <span>综合 {combinedProgress}%</span>
+              </div>
+              <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${combinedProgress}%`, background: "var(--nv-accent)" }}
+                />
+              </div>
+            </div>
+          )}
           <StorylineDetail storyline={mainLine} expanded={expandedId === mainLine.id}
             onToggle={() => setExpandedId(expandedId === mainLine.id ? null : mainLine.id)}
             onEdit={() => startEdit(mainLine)} onDelete={() => deleteStoryline(mainLine.id)} deletingId={deletingId} />
@@ -184,10 +221,13 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       )}
 
       {/* 支线 */}
-      {sideLines.map(s => (
-        <div key={s.id} className="overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
+      {sideLines.map(s => {
+        const parent = resolveParent(s);
+        const belongsMain = !!parent && parent.id !== s.id;
+        return (
+        <div key={s.id} className="ml-3 overflow-hidden rounded-lg border border-[var(--nv-border-2)] border-l-2 border-l-[var(--nv-accent)] bg-[var(--nv-surface-1)]">
           <div className="flex items-center gap-1 px-2 py-1.5">
-            <Icon name="arrowRight" size={11} className="text-[var(--nv-text-tertiary)]" />
+            <Icon name="arrowRight" size={11} className="text-[var(--nv-accent)]/70" />
             <span className="flex-1 break-words text-xs text-[var(--nv-text-primary)]">{s.title}</span>
             <button
               onClick={() => handleToggleComplete(s)}
@@ -197,12 +237,18 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
               {s.status === "completed" ? <Icon name="check" size={11} className="text-[var(--nv-success)]" /> : <Icon name="circle" size={11} />}
             </button>
           </div>
+          {belongsMain && (
+            <div className="flex items-center gap-1 px-2 pb-1 text-[9px] text-[var(--nv-text-tertiary)]">
+              <Icon name="link" size={9} /> 隶属主线：{parent!.title}
+            </div>
+          )}
           <StorylineProgressBar s={s} />
           <StorylineDetail storyline={s} expanded={expandedId === s.id}
             onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
             onEdit={() => startEdit(s)} onDelete={() => deleteStoryline(s.id)} deletingId={deletingId} />
         </div>
-      ))}
+        );
+      })}
 
       {loadError && !loading && (
         <div className="px-4 py-6 text-center text-xs text-[var(--nv-danger)]">

@@ -115,32 +115,59 @@ ${
     // 找到已有最大 order
     const maxOrder = existingStorylines.reduce((max, s) => Math.max(max, s.order), 0);
 
-    // 批量创建
-    const created = await Promise.all(
-      lines.map((line, i) =>
+    // 解析主/支线（v1.6.4 #651：支线须挂主线 parentId）
+    const mainLines = lines.filter((l) => (l.type as string) === "main");
+    const sideLines = lines.filter((l) => (l.type as string) !== "main");
+
+    // 主线 id：已有主线优先，否则取本次新建的第一条主线
+    let mainId: string | null =
+      existingStorylines.find((s) => s.type === "main")?.id ?? null;
+
+    const created: any[] = [];
+    const buildData = (
+      line: Record<string, unknown>,
+      type: string,
+      order: number,
+      parentId: string | null,
+    ) => ({
+      projectId,
+      type,
+      parentId,
+      title: (line.title as string) || `事件线${order}`,
+      description: (line.description as string) || "",
+      order,
+      desire: (line.desire as string) || "",
+      obstacle: (line.obstacle as string) || "",
+      action: (line.action as string) || "",
+      result: (line.result as string) || "",
+      twist: (line.twist as string) || "",
+      turn: (line.turn as string) || "",
+      ending: (line.ending as string) || "",
+    });
+
+    // 先建主线（如有），拿到 id 供支线挂载
+    for (const line of mainLines) {
+      const m = await prisma.storyline.create({
+        data: buildData(line, "main", maxOrder + created.length + 1, null),
+      });
+      created.push(m);
+      if (!mainId) mainId = m.id;
+    }
+
+    // 再建支线，parentId 挂到主线（让"支线服务于主线"数据化）
+    const createdSides = await Promise.all(
+      sideLines.map((line, i) =>
         prisma.storyline.create({
-          data: {
-            projectId,
-            type: (line.type as string) || "side",
-            title: (line.title as string) || `事件线${i + 1}`,
-            description: (line.description as string) || "",
-            order: maxOrder + i + 1,
-            desire: (line.desire as string) || "",
-            obstacle: (line.obstacle as string) || "",
-            action: (line.action as string) || "",
-            result: (line.result as string) || "",
-            twist: (line.twist as string) || "",
-            turn: (line.turn as string) || "",
-            ending: (line.ending as string) || "",
-          },
+          data: buildData(line, "side", maxOrder + created.length + i + 1, mainId),
         })
       )
     );
+    created.push(...createdSides);
 
     return NextResponse.json({
       storylines: created,
       count: created.length,
-      types: { main: created.filter(s => s.type === "main").length, side: created.filter(s => s.type === "side").length },
+      types: { main: created.filter((s) => s.type === "main").length, side: created.filter((s) => s.type === "side").length },
     });
   } catch (err) {
     return jsonError(err);
