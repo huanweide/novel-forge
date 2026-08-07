@@ -12,9 +12,10 @@ interface WorldEntryListProps {
   onDelete: (id: string) => void;
   deletingId: string | null;
   onEdit?: (entry: LorebookData) => void;
+  onConfirm?: (id: string) => void;
 }
 
-export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, deletingId, onEdit }: WorldEntryListProps) {
+export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, deletingId, onEdit, onConfirm }: WorldEntryListProps) {
   const [view, setView] = useState<"list" | "grid">("list");
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -48,6 +49,7 @@ export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, de
             onDelete={onDelete}
             deleting={deletingId === entry.id}
             onEdit={onEdit}
+            onConfirm={onConfirm}
           />
         ))}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { confirmDialog, toastError, toastSuccess } from "@/components/ui/toast";
+import { confirmDialog, toast, toastError, toastSuccess } from "@/components/ui/toast";
 
 interface UseConfirmDeleteOptions {
   /** 确认弹窗标题 */
@@ -14,6 +14,10 @@ interface UseConfirmDeleteOptions {
   onSuccess?: (id: string) => void;
   /** 失败 toast 前缀，默认「删除失败」 */
   errorPrefix?: string;
+  /** 成功 toast 文案，默认「已删除」 */
+  successMessage?: string;
+  /** 可选「撤销」动作（如软删除后的恢复），点击即执行 run(id) */
+  undo?: { label: string; run: (id: string) => void | Promise<void> };
 }
 
 /**
@@ -42,7 +46,15 @@ export function useConfirmDelete(opts: UseConfirmDeleteOptions) {
       try {
         await opts.deleteFn(id);
         opts.onSuccess?.(id);
-        toastSuccess("已删除");
+        if (opts.undo) {
+          toast({
+            type: "success",
+            description: opts.successMessage ?? "已删除",
+            action: { label: opts.undo.label, onClick: () => opts.undo!.run(id) },
+          });
+        } else {
+          toastSuccess(opts.successMessage ?? "已删除");
+        }
       } catch (err) {
         toastError(
           `${opts.errorPrefix ?? "删除失败"}：${

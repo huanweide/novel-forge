@@ -36,7 +36,7 @@ export async function loadGenerationContext(
       // 等），不拉每章正文 content——长项目可省 10~20MB 无效内存。
       // 仅当前章之前的「近期窗口」章节按需拉全量正文（供承接/连续性注入）。
       prisma.storyNode.findMany({
-        where: { projectId },
+        where: { projectId, deletedAt: null },
         orderBy: { order: "asc" },
         select: {
           id: true,

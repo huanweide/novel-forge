@@ -22,7 +22,7 @@ const STEPS: { n: number; title: string; desc: string }[] = [
 ];
 
 const FEATURES: { icon: IconName; title: string; desc: string }[] = [
-  { icon: "bot", title: "自动化填表", desc: "AI 写完一章，自动把人物、设定、伏笔整理进结构化表格，零配置。" },
+  { icon: "bot", title: "自动化填表", desc: "AI 写完一章，自动把人物、设定、未收尾线索整理进结构化表格，零配置。" },
   { icon: "gem", title: "抽卡剧情", desc: "用「抽卡」随机生成剧情走向，并关联你的角色与故事线。" },
   { icon: "clipboard", title: "拆解大纲", desc: "一键把粗略想法拆成卷纲 → 章纲，逐级展开。" },
   { icon: "star", title: "竞品借鉴打磨", desc: "已补齐导出 HTML/EPUB、实体徽章、快捷芯片、叙事视角等体验。" },

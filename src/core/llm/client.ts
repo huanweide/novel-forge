@@ -127,6 +127,20 @@ function backoffDelay(attempt: number, baseMs = 600, maxDelayMs = 8000): number 
   return Math.max(0, Math.round(capped + jitter));
 }
 
+/** 解析供应商 429 的 Retry-After 头（支持「秒数」或「HTTP-date」），转毫秒；封顶 60s 防恶意超大值；非法返回 null */
+function parseRetryAfter(headers: Headers): number | null {
+  const raw = headers.get("retry-after");
+  if (!raw) return null;
+  const secs = Number(raw);
+  if (Number.isFinite(secs) && secs > 0) return Math.min(60000, Math.round(secs * 1000));
+  const date = Date.parse(raw);
+  if (!Number.isNaN(date)) {
+    const delta = date - Date.now();
+    if (delta > 0) return Math.min(60000, delta);
+  }
+  return null;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -162,7 +176,7 @@ function buildChain(config: LLMConfig, primaryModel: string): ChatTarget[] {
 
 type AttemptResult =
   | { ok: true; value: LLMResponse }
-  | { ok: false; fatal: boolean; error: Error };
+  | { ok: false; fatal: boolean; error: Error; retryAfterMs?: number };
 
 /** 单次非流式请求（含解析）；网络/429/5xx 返回可重试错误，4xx 返回 fatal */
 async function attemptChat(
@@ -207,10 +221,12 @@ async function attemptChat(
 
   if (!response.ok) {
     const err = await response.text();
+    const retryAfterMs = response.status === 429 ? parseRetryAfter(response.headers) : null;
     return {
       ok: false,
       fatal: !isRetryable(response.status),
       error: new Error(mapLLMError(response.status, err, target.model)),
+      retryAfterMs: retryAfterMs ?? undefined,
     };
   }
 
@@ -266,7 +282,7 @@ async function attemptChat(
 
 type EstablishResult =
   | { ok: true; response: Response }
-  | { ok: false; fatal: boolean; error: Error };
+  | { ok: false; fatal: boolean; error: Error; retryAfterMs?: number };
 
 /** 建立流式连接（仅此阶段可重试 / 故障转移；进入 token 流后不再切换，避免重复输出） */
 async function establishStream(
@@ -314,10 +330,12 @@ async function establishStream(
 
   if (!response.ok) {
     const err = await response.text();
+    const retryAfterMs = response.status === 429 ? parseRetryAfter(response.headers) : null;
     return {
       ok: false,
       fatal: !isRetryable(response.status),
       error: new Error(mapLLMError(response.status, err, target.model)),
+      retryAfterMs: retryAfterMs ?? undefined,
     };
   }
 
@@ -460,7 +478,7 @@ export function createLLMClient(config: LLMConfig) {
           // 4xx 鉴权/配置错误：直接抛出，不重试也不切备用模型
           if (res.fatal) throw res.error;
           lastError = res.error;
-          if (attempt < DEFAULT_RETRIES) await sleep(backoffDelay(attempt));
+          if (attempt < DEFAULT_RETRIES) await sleep(res.retryAfterMs ?? backoffDelay(attempt));
         }
       }
 
@@ -516,7 +534,7 @@ export function createLLMClient(config: LLMConfig) {
           // 4xx 鉴权/配置错误：直接抛出，不重试也不切备用模型
           if (est.fatal) throw est.error;
           lastError = est.error;
-          if (attempt < DEFAULT_RETRIES) await sleep(backoffDelay(attempt));
+          if (attempt < DEFAULT_RETRIES) await sleep(est.retryAfterMs ?? backoffDelay(attempt));
         }
       }
 

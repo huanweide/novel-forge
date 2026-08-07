@@ -36,6 +36,7 @@ import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIss
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo, toastWarning } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
+import { RefineDiffModal } from "@/components/workspace/RefineDiffModal";
 import { useShortcut } from "@/components/ShortcutProvider";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
@@ -248,6 +249,8 @@ export default function WorkspacePage() {
   const handleRefineInstructionChange = (v: string) => {
     setRefineInstruction(v);
   };
+  // #124 精修 diff 预览：精修完成后对比原/新正文，需用户显式「应用」或「撤销」
+  const [refineDiff, setRefineDiff] = useState<{ old: string; new: string } | null>(null);
 
   // ── 章纲提示词（临时态：跳转即丢，不持久化） ──
   const [chapterOutlinePrompt, setChapterOutlinePrompt] = useState("");
@@ -659,6 +662,15 @@ export default function WorkspacePage() {
               setRecallMemories(items);
               // toast 收敛（Max Loop Round6）：召回信息已展示在「宝宝流记忆召回面板」，不重复弹 toast
             }
+            else if (event.type === "notice") {
+              // #124：精修预算超上限提醒——明确告知用户将截断，并给出「分段精修 / 提高预算」建议
+              if (event.kind === "budget_capped") {
+                const add = (event.requested || 0) - (event.existingLen || 0);
+                toastWarning(
+                  `⚠️ 精修预算超上限：已有 ${event.existingLen} 字 + 续写 ${add} 字 > 上限 ${event.ceiling} 字，输出将被截断。建议改为「分段精修」（分多次精修）或「提高预算上限」。`,
+                );
+              }
+            }
             else if (event.type === "done") {
               setGenStep("done"); setTimeout(() => setGenStep(""), 5000);
               // 把本地蒸馏累计数据写入 state（触发 UI 通知）
@@ -666,8 +678,17 @@ export default function WorkspacePage() {
               const finalContent = accumulated + (event.content || "");
               setLastChapterContent(finalContent);
               setLastChapterTitle(selectedNode?.title || "");
-              toastSuccess(lastFillInfoRef.current ? `正文已生成并保存 ✓（${lastFillInfoRef.current}）` : "正文已生成并保存 ✓");
               lastFillInfoRef.current = null;
+
+              // #124：精修（修改/续写已有正文）完成后，先展示 diff 预览，由用户显式「应用」或「撤销」，不直接落库刷新
+              const isRefineWithExisting = event.mode === "refine" && !!selectedNode?.content && (selectedNode.content || "").trim().length > 0;
+              if (isRefineWithExisting && finalContent.trim().length > 0) {
+                setRefineDiff({ old: selectedNode.content || "", new: finalContent });
+                onDone?.();
+                return;
+              }
+
+              toastSuccess(lastFillInfoRef.current ? `正文已生成并保存 ✓（${lastFillInfoRef.current}）` : "正文已生成并保存 ✓");
               loadProject();
               autoExtractChapter(finalContent, selectedNode?.title || "");
               onDone?.();
@@ -694,8 +715,37 @@ export default function WorkspacePage() {
   const handleRefineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); setStreamContent(""); setReviewResult(null);
-    await streamSSE("/api/generate/refine", { projectId: project.id, nodeId: selectedNode.id, instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情", targetWords: targetWordCount, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, authorNote: finalAuthorNote || authorNote || undefined });
+    // #124：精修的「续写字数」收敛为合理增量（≤1500），避免传入全本 targetWordCount（星辰=30万）导致预算恒超上限、
+    // 长章静默失效。仅当章节本身已很长（>上限-增量）时才触发 cap 告警，提示用户「分段精修」。
+    const refineTarget = Math.min(targetWordCount, 1500);
+    await streamSSE("/api/generate/refine", { projectId: project.id, nodeId: selectedNode.id, instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情", targetWords: refineTarget, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, authorNote: finalAuthorNote || authorNote || undefined });
     setIsGenerating(false);
+  };
+
+  // #124 精修 diff 预览：应用 = 刷新采用已落库的新正文；撤销 = PUT 还原精修前的原正文
+  const applyRefine = () => {
+    setRefineDiff(null);
+    toastSuccess("已应用精修结果");
+    loadProject();
+    if (refineDiff) autoExtractChapter(refineDiff.new, selectedNode?.title || "");
+  };
+  const undoRefine = async () => {
+    const target = refineDiff;
+    setRefineDiff(null);
+    if (!target || !selectedNode?.id) { loadProject(); return; }
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...selectedNode, content: target.old, wordCount: (target.old || "").length }),
+      });
+      if (res.ok) toastSuccess("已撤销，恢复原正文");
+      else toastError("撤销失败");
+    } catch {
+      toastError("撤销失败");
+    } finally {
+      loadProject();
+    }
   };
 
   const handleContinueConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
@@ -737,7 +787,7 @@ export default function WorkspacePage() {
     title: "删除章节节点",
     description: (id) => {
       const node = project?.storyNodes.find((n) => n.id === id);
-      return `确定删除「${node?.title || "此节点"}」？\n删除后后续章节将自动重新编号。`;
+      return `确定删除「${node?.title || "此节点"}」？\n删除后移入回收站（可在回收站恢复），后续章节将自动重新编号。`;
     },
     deleteFn: async (nodeId) => {
       const res = await fetch(`/api/story/nodes/${nodeId}`, { method: "DELETE" });
@@ -748,6 +798,16 @@ export default function WorkspacePage() {
       loadProject();
     },
     errorPrefix: "删除失败",
+    successMessage: "已移入回收站",
+    // #123 撤销期：删除后立即可通过 toast 按钮恢复（清空 deletedAt）
+    undo: {
+      label: "撤销",
+      run: async (nodeId) => {
+        const res = await fetch(`/api/story/nodes/${nodeId}/restore`, { method: "POST" });
+        if (res.ok) { loadProject(); toastSuccess("已恢复"); }
+        else { toastError("恢复失败"); }
+      },
+    },
   });
 
   // B3 引导：空态「看示例」——载入内置示范小说（幂等），成功跳转其工作区
@@ -1275,6 +1335,16 @@ export default function WorkspacePage() {
           onResolve={resolveConflict}
         />
       )}
+
+      {/* #124 精修 diff 预览：应用 / 撤销（恢复原正文） */}
+      <RefineDiffModal
+        open={!!refineDiff}
+        oldContent={refineDiff?.old || ""}
+        newContent={refineDiff?.new || ""}
+        onApply={applyRefine}
+        onUndo={undoRefine}
+        onClose={() => { setRefineDiff(null); loadProject(); }}
+      />
 
       {/* 抽卡模式——章纲路线选择 */}
       {showDrawCards && selectedNode && (

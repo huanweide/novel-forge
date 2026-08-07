@@ -14,7 +14,7 @@ export async function GET(
       include: {
         characters: true,
         lorebookEntries: true,
-        storyNodes: { orderBy: { order: "asc" } },
+        storyNodes: { where: { deletedAt: null }, orderBy: { order: "asc" } },
         storyBranches: true,
         storylines: { orderBy: [{ type: "asc" }, { order: "asc" }] },
         styleCards: true,

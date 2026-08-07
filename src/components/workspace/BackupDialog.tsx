@@ -95,7 +95,7 @@ export function BackupDialog({
         </p>
 
         <p className="mt-2 text-[10px] leading-relaxed text-[var(--nv-text-muted)]">
-          本次备份包含：章节/角色/世界书/规则/文风/分支/剧情线/文风卡/世界表；不含：游戏进度/版本历史/记忆摘要/伏笔追踪/待兑现事项（请用文本导出迁移设定）。
+          本次备份包含：章节/角色/世界书/规则/文风/分支/剧情线/文风卡/世界表；不含：游戏进度/版本历史/记忆摘要/未收尾线索追踪/待兑现事项（请用文本导出迁移设定）。
         </p>
 
         <div className="mt-4 flex gap-2">

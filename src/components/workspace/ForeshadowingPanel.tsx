@@ -73,7 +73,7 @@ const SOURCE_LABEL: Record<string, string> = {
   outline_summary: "大纲",
   user_intent: "用户",
   ai_inference: "AI推断",
-  foreshadow: "伏笔检测",
+  foreshadow: "未收尾线索",
 };
 
 // ═══════════════════════════════════════════
@@ -258,9 +258,9 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      showToast("已刷新收束率");
+      showToast("已刷新收尾进度");
     } catch (err) {
-      showToast(`检测失败：${String(err)}`);
+      showToast(`整理失败：${String(err)}`);
     } finally {
       try {
         const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`);
@@ -276,7 +276,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   };
 
   if (loading) {
-    return <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">加载伏笔数据...</div>;
+    return <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">加载未收尾线索...</div>;
   }
 
   if (error) {
@@ -286,8 +286,8 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   if (!data || data.total === 0) {
     return (
       <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">
-        <p>暂无伏笔记录</p>
-        <p className="mt-1 text-[var(--nv-text-tertiary)]">写完章节后 AI 会自动检测伏笔</p>
+        <p>暂无未收尾线索</p>
+        <p className="mt-1 text-[var(--nv-text-tertiary)]">写完章节后 AI 会自动整理未收尾的剧情线</p>
       </div>
     );
   }
@@ -304,23 +304,23 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
       {/* 顶部统计 */}
       <div className="px-3 py-2 border-b border-[var(--nv-border-2)] text-[10px] text-[var(--nv-text-tertiary)]">
         <div className="flex items-center justify-between gap-2">
-          <span>共 {data.total} 条伏笔 · {data.groups.pending?.count || 0} 待回收</span>
+          <span>共 {data.total} 条线索 · {data.groups.pending?.count || 0} 待收尾</span>
           <button
             onClick={runDetect}
             disabled={detecting}
-            title="扫描埋设点之后的章节，回写收束状态"
+            title="扫描埋设点之后的章节，回写收尾状态"
             className="flex items-center gap-1 rounded border border-[var(--nv-border-2)] px-2 py-0.5 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)] disabled:opacity-50"
           >
             <Icon name="refresh" size={10} className={detecting ? "animate-spin" : ""} />
-            {detecting ? "检测中…" : "重新检测"}
+            {detecting ? "整理中…" : "重新整理"}
           </button>
         </div>
 
-        {/* 收束率进度条 */}
+        {/* 收尾进度条 */}
         {data.payoffStats && (
           <div className="mt-1.5">
             <div className="flex items-center justify-between">
-              <span>收束率</span>
+              <span>收尾进度</span>
               <span className="text-[var(--nv-accent)] font-medium">
                 {Math.round((data.payoffStats.payoffRate || 0) * 100)}%
               </span>
@@ -332,9 +332,9 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
               />
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-[9px] text-[var(--nv-text-tertiary)]">
-              <span>已回收 {data.payoffStats.fulfilled}</span>
-              <span>部分 {data.payoffStats.partial}</span>
-              <span>活跃 {data.payoffStats.active}</span>
+              <span>已收 {data.payoffStats.fulfilled}</span>
+              <span>部分收 {data.payoffStats.partial}</span>
+              <span>待收 {data.payoffStats.active}</span>
             </div>
           </div>
         )}
@@ -399,13 +399,13 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
                           <>
                             <div className="mt-1 ml-4 p-2 rounded bg-[var(--nv-surface-2)] text-[10px] text-[var(--nv-text-tertiary)] space-y-0.5">
                               {item.expiryChapter && (
-                                <p>预计回收章：第 {item.expiryChapter} 章</p>
+                                <p>预计收尾章：第 {item.expiryChapter} 章</p>
                               )}
                               {item.chapterNumber && (
                                 <p>关联章：第 {item.chapterNumber} 章</p>
                               )}
                               {item.fulfilledChapterId && (
-                                <p>已回收于：章节 {item.fulfilledChapterId.slice(0, 8)}...</p>
+                                <p>已收尾于：章节 {item.fulfilledChapterId.slice(0, 8)}...</p>
                               )}
                               <p>创建时间：{new Date(item.createdAt).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })}</p>
                             </div>

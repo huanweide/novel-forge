@@ -9,12 +9,14 @@ import { toastSuccess, toastWarning } from "@/components/ui/toast";
 
 type ExportFormat = "markdown" | "txt" | "html" | "docx" | "epub";
 
-const FORMATS: { key: ExportFormat; label: string; hint: string }[] = [
-  { key: "docx", label: "Word 文档", hint: ".docx · 投稿首选" },
-  { key: "epub", label: "电子书", hint: ".epub · 阅读器" },
-  { key: "html", label: "网页 HTML", hint: "可打印 PDF" },
+const BASIC_FORMATS: { key: ExportFormat; label: string; hint: string }[] = [
   { key: "markdown", label: "Markdown", hint: ".md · 可再编辑" },
   { key: "txt", label: "纯文本", hint: ".txt · 极简" },
+  { key: "html", label: "网页 HTML", hint: "可打印 PDF" },
+];
+const ADVANCED_FORMATS: { key: ExportFormat; label: string; hint: string }[] = [
+  { key: "docx", label: "Word 文档", hint: ".docx · 投稿首选" },
+  { key: "epub", label: "电子书", hint: ".epub · 阅读器" },
 ];
 
 interface ChapterOption {
@@ -33,12 +35,13 @@ export function ExportDialog({
   chapters: ChapterOption[];
   onClose: () => void;
 }) {
-  const [format, setFormat] = useState<ExportFormat>("docx");
+  const [format, setFormat] = useState<ExportFormat>("markdown");
   const [range, setRange] = useState<"all" | "selected">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [includeOutline, setIncludeOutline] = useState(true);
   const [author, setAuthor] = useState("");
   const [checking, setChecking] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [pendingHits, setPendingHits] = useState<{
     total: number;
     hits: { word: string; chapter: string; context: string }[];
@@ -131,7 +134,7 @@ export function ExportDialog({
         <div className="mb-4">
           <div className="mb-2 text-[11px] text-[var(--nv-text-tertiary)]">导出格式</div>
           <div className="grid grid-cols-2 gap-2">
-            {FORMATS.map((f) => (
+            {BASIC_FORMATS.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setFormat(f.key)}
@@ -149,6 +152,34 @@ export function ExportDialog({
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="mt-2 flex w-full items-center justify-between rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-1.5 text-xs text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-border-3)]"
+          >
+            <span>进阶格式（Word / 电子书）</span>
+            <span className="text-[var(--nv-text-tertiary)]">{showAdvanced ? "▴" : "▾"}</span>
+          </button>
+          {showAdvanced && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {ADVANCED_FORMATS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFormat(f.key)}
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+                    format === f.key
+                      ? "border-[var(--nv-primary)] bg-[var(--nv-primary-soft)]"
+                      : "border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] hover:border-[var(--nv-border-3)]"
+                  }`}
+                >
+                  <Icon name="file" size={15} className={format === f.key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-tertiary)]"} />
+                  <div>
+                    <div className="text-xs font-medium text-[var(--nv-text-primary)]">{f.label}</div>
+                    <div className="text-[9px] text-[var(--nv-text-tertiary)]">{f.hint}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 范围 */}
@@ -243,7 +274,7 @@ export function ExportDialog({
           </div>
         ) : (
           <Button onClick={doExport} disabled={checking} className="btn-primary h-9 w-full text-sm">
-            <Icon name="upload" size={14} /> {checking ? "预检中…" : `导出 ${FORMATS.find((f) => f.key === format)?.label}`}
+            <Icon name="upload" size={14} /> {checking ? "预检中…" : `导出 ${[...BASIC_FORMATS, ...ADVANCED_FORMATS].find((f) => f.key === format)?.label}`}
           </Button>
         )}
       </div>

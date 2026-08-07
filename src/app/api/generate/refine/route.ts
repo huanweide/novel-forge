@@ -74,6 +74,12 @@ export async function POST(request: Request) {
     // ── 7. 微调指令（路由特有逻辑）──
     const existingContent = data.currentNode.content || "";
     const hasContent = existingContent.trim().length > 0;
+
+    // #124：输出预算上限（cap）。已有正文 + 目标续写字数 超过上限时，模型无法完整重输出前文，
+    // 会触发 L5-06 静默丢内容或 L5-02 截断。此处显式检测，向前端发 notice + done 标记，杜绝「静默截断」。
+    const BUDGET_CEILING = 5000;
+    const requestedBudget = existingContent.length + targetWords;
+    const budgetCapped = requestedBudget > BUDGET_CEILING;
     const refineInstruction = instruction && instruction.trim().length > 0
       ? instruction.trim()
       : "请在现有正文基础上自然续写，保持文风一致，推进剧情。";
@@ -152,9 +158,20 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
           // L5-01 修复(Round9)：refine 需重输出「已有正文+增量」，目标输出字数=已有正文长+增量，
           // 据此放大 max_tokens 预算（resolveMaxTokens 按 targetWordCount*1.6），避免整章重输出在已有正文处被截断。
           // cap 5000 字（≈8000 token）防止超模型 max_tokens 硬上限。
+          // #124：超上限时先发 notice，前端明确告警（建议「分段精修」或「提高预算上限」），不再静默截断。
+          if (budgetCapped) {
+            send({
+              type: "notice",
+              kind: "budget_capped",
+              ceiling: BUDGET_CEILING,
+              existingLen: existingContent.length,
+              requested: requestedBudget,
+              mode: hasContent ? "refine" : "write",
+            });
+          }
           for await (const chunk of orchestrator.writeSection(
             promptContext, writingInstruction,
-            hasContent ? Math.min(existingContent.length + targetWords, 5000) : targetWords,
+            hasContent ? Math.min(existingContent.length + targetWords, BUDGET_CEILING) : targetWords,
             undefined, undefined, effectiveTemperature, effectiveTopP,
             request.signal, // L5-04：客户端断连信号透传
           )) {
@@ -288,6 +305,8 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             mode: hasContent ? "refine" : "write", wordCount: newContent.length,
             usage: { completionTokens: tokenCount, totalTokens: tokenCount },
             babylore,
+            // #124：透传预算上限信息，供前端判断是否需要提示用户
+            budgetCapped, budgetCeiling: BUDGET_CEILING, existingLen: existingContent.length, newLen: newContent.length,
           });
         } catch (err) {
           // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message

@@ -22,6 +22,8 @@ interface ToastOptions {
   title?: string;
   description: string;
   duration?: number;
+  /** 可选动作按钮（如「撤销」），点击后自动关闭该 toast */
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastItem extends Omit<ToastOptions, "type"> {
@@ -58,6 +60,7 @@ export function toast(opts: ToastOptions): void {
     title: opts.title,
     description: opts.description,
     duration: opts.duration ?? 4000,
+    action: opts.action,
   });
 }
 
@@ -204,6 +207,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     <p className="text-sm font-semibold tracking-wide text-[var(--nv-text-primary)]">{t.title}</p>
                   ) : null}
                   <p className="break-words text-sm leading-relaxed text-[var(--nv-text-secondary)]">{t.description}</p>
+                  {t.action ? (
+                    <button
+                      onClick={() => {
+                        t.action!.onClick();
+                        setToasts((prev) => prev.filter((x) => x.id !== t.id));
+                      }}
+                      className="mt-2 rounded-lg bg-[var(--nv-surface-2)] px-3 py-1 text-xs font-semibold text-[var(--nv-text-primary)] transition-colors hover:bg-[var(--nv-surface-3)]"
+                    >
+                      {t.action.label}
+                    </button>
+                  ) : null}
                 </div>
                 <button
                   onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}

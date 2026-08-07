@@ -40,7 +40,7 @@ export async function loadOutlineData(
     prisma.project.findUnique({ where: { id: projectId } }),
     prisma.storyNode.findUnique({ where: { id: nodeId } }),
     prisma.storyNode.findMany({
-      where: { projectId, parentId: null, type: { not: "volume" } },
+      where: { projectId, parentId: null, type: { not: "volume" }, deletedAt: null },
       orderBy: { order: "asc" },
     }),
     prisma.characterCard.findMany({ where: { projectId }, take: 50 }),

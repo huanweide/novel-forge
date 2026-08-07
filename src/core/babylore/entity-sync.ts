@@ -246,6 +246,7 @@ export async function syncChapterEntities(
             insertionOrder: 50,
             enabled: true,
             relatedEntryIds: [],
+            reviewStatus: "pending", // 自动填表进待审区，用户确认后才算正式并入
           },
         });
         result.createdLore.push(name);

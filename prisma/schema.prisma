@@ -95,6 +95,7 @@ model CharacterCard {
   currentStatus   String @default("alive") // CharacterStatus
   arcProgress     String @default("")
   tags            String[] @default([])
+  reviewStatus    String   @default("approved") // 自动填表待审：pending=待确认 approved=已确认
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -121,6 +122,7 @@ model LorebookEntry {
   enabled         Boolean @default(true)
   parentId        String?                   // 父词条
   relatedEntryIds String[] @default([])
+  reviewStatus    String   @default("approved") // 自动填表待审：pending=待确认 approved=已确认
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,6 +177,9 @@ model StoryNode {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // #123 软删除（tombstone）：删除节点仅标记 deletedAt，不物理删；可经回收站恢复/彻底清空
+  deletedAt DateTime? @map("deleted_at")
+
   // 自引用
   parent   StoryNode?  @relation("NodeTree", fields: [parentId], references: [id])
   children StoryNode[] @relation("NodeTree")
@@ -191,6 +196,7 @@ model StoryNode {
   @@index([projectId])
   @@index([parentId])
   @@index([branchId])
+  @@index([deletedAt])
 }
 
 // ─── 正文版本快照 (Story Node Revision) ──────────────────

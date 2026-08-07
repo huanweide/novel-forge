@@ -43,6 +43,7 @@ export async function PUT(
         enabled: body.enabled,
         parentId: body.parentId,
         relatedEntryIds: body.relatedEntryIds,
+        reviewStatus: body.reviewStatus,
       },
     });
     syncGlobalPrompt(body.projectId || entry.projectId).catch(() => {});

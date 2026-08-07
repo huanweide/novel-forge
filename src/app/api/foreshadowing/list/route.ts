@@ -44,10 +44,10 @@ export async function GET(request: Request) {
       total: commitments.length,
       payoffStats,
       groups: {
-        pending: { label: "⏳ 埋设中", count: pending.length, items: pending },
-        partial: { label: "🔄 部分回收", count: partial.length, items: partial },
-        fulfilled: { label: "✅ 已回收", count: fulfilled.length, items: fulfilled },
-        voided: { label: "❌ 已废弃", count: voided.length, items: voided },
+        pending: { label: "⏳ 已埋未收", count: pending.length, items: pending },
+        partial: { label: "🔄 部分收", count: partial.length, items: partial },
+        fulfilled: { label: "✅ 已收", count: fulfilled.length, items: fulfilled },
+        voided: { label: "❌ 悬空", count: voided.length, items: voided },
       },
     });
   } catch (err) {

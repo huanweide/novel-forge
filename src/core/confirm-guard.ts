@@ -290,7 +290,7 @@ export async function maybeAutoDeliver(projectId: string): Promise<{ delivered: 
       return { delivered: false };
     }
     const nodes = await prisma.storyNode.findMany({
-      where: { projectId, type: { in: ["chapter", "section", "scene"] } },
+      where: { projectId, type: { in: ["chapter", "section", "scene"] }, deletedAt: null },
       select: { status: true },
     });
     if (nodes.length === 0) return { delivered: false };

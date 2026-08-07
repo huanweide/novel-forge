@@ -259,7 +259,49 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/story/nodes/[id] —— 删除节点并自动重新编号章节
+// 收集某节点整棵子树（含自身）的全部 id —— 用于软删/彻底删的级联
+async function collectSubtreeIds(projectId: string, rootId: string): Promise<string[]> {
+  const all = await prisma.storyNode.findMany({
+    where: { projectId },
+    select: { id: true, parentId: true },
+  });
+  const childrenMap = new Map<string | null, string[]>();
+  for (const n of all) {
+    const key = n.parentId ?? null;
+    const arr = childrenMap.get(key) ?? [];
+    arr.push(n.id);
+    childrenMap.set(key, arr);
+  }
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const stack = [rootId];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    ids.push(cur);
+    for (const c of childrenMap.get(cur) ?? []) stack.push(c);
+  }
+  return ids;
+}
+
+// 顶层章节软删/彻底删后，对「存活」顶层节点重新编号（跳过已软删）
+async function renumberLiveTopChapters(projectId: string) {
+  const remaining = await prisma.storyNode.findMany({
+    where: { projectId, parentId: null, type: { not: "volume" }, deletedAt: null },
+    orderBy: { order: "asc" },
+  });
+  const cnDigits = ["零","一","二","三","四","五","六","七","八","九","十","十一","十二","十三","十四","十五","十六","十七","十八","十九","二十","二十一","二十二","二十三","二十四","二十五","二十六","二十七","二十八","二十九","三十"];
+  const toCn = (n: number) => cnDigits[n] || String(n);
+  for (let i = 0; i < remaining.length; i++) {
+    const ch = remaining[i];
+    const rawTitle = (ch.title || "").replace(/^第[一二三四五六七八九十百千\d]+章[：:]\s*/, "");
+    const newTitle = rawTitle ? `第${toCn(i + 1)}章：${rawTitle}` : `第${toCn(i + 1)}章`;
+    await prisma.storyNode.update({ where: { id: ch.id }, data: { title: newTitle, order: i } });
+  }
+}
+
+// DELETE /api/story/nodes/[id] —— #123 软删除：仅标记 deletedAt，不物理删（可经回收站恢复）
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -272,47 +314,20 @@ export async function DELETE(
       return NextResponse.json({ error: "节点不存在" }, { status: 404 });
     }
 
-    // L3-001：删除节点包 $transaction，先清关联孤儿（String 引用子记录，schema 无
-    // onDelete Cascade），再删节点本身；子节点一并清理其孤儿，杜绝删除章污染写作上下文。
-    const children = await prisma.storyNode.findMany({
-      where: { parentId: id },
-      select: { id: true },
+    // #123：级联软删整棵子树（含自身），孤儿记录（摘要/节拍/待兑现）保留以便撤销后完整恢复
+    const subtreeIds = await collectSubtreeIds(node.projectId, id);
+    const now = new Date();
+    await prisma.storyNode.updateMany({
+      where: { id: { in: subtreeIds } },
+      data: { deletedAt: now },
     });
-    const affectedNodeIds = [id, ...children.map((c) => c.id)];
-    await prisma.$transaction([
-      prisma.chapterSummary.deleteMany({ where: { chapterId: { in: affectedNodeIds } } }),
-      prisma.storyBeat.deleteMany({ where: { nodeId: { in: affectedNodeIds } } }),
-      prisma.pendingCommitment.deleteMany({ where: { sourceNodeId: { in: affectedNodeIds } } }),
-      prisma.pendingItem.deleteMany({ where: { sourceNodeId: { in: affectedNodeIds } } }),
-      prisma.storyNode.deleteMany({ where: { parentId: id } }),
-      prisma.storyNode.delete({ where: { id } }),
-    ]);
 
-    // 如果删除的是顶层章节（parentId=null, type=chapter），重新编号所有剩余章节
+    // 软删顶层章节后，对存活顶层章节重新编号（被删节点已不在序列内）
     if (node.parentId === null && (node.type === "chapter" || node.type === "section")) {
-      const remaining = await prisma.storyNode.findMany({
-        where: { projectId: node.projectId, parentId: null, type: { not: "volume" } },
-        orderBy: { order: "asc" },
-      });
-
-      const cnDigits = ["零","一","二","三","四","五","六","七","八","九","十","十一","十二","十三","十四","十五","十六","十七","十八","十九","二十","二十一","二十二","二十三","二十四","二十五","二十六","二十七","二十八","二十九","三十"];
-      const toCn = (n: number) => cnDigits[n] || String(n);
-
-      for (let i = 0; i < remaining.length; i++) {
-        const ch = remaining[i];
-        // 提取原标题中冒号后的部分（如果有的话）
-        const rawTitle = (ch.title || "").replace(/^第[一二三四五六七八九十百千\d]+章[：:]\s*/, "");
-        const newTitle = rawTitle
-          ? `第${toCn(i + 1)}章：${rawTitle}`
-          : `第${toCn(i + 1)}章`;
-        await prisma.storyNode.update({
-          where: { id: ch.id },
-          data: { title: newTitle, order: i },
-        });
-      }
+      await renumberLiveTopChapters(node.projectId);
     }
 
-    return NextResponse.json({ success: true, renumbered: true });
+    return NextResponse.json({ success: true, softDeleted: true, renumbered: true, count: subtreeIds.length });
   } catch (err) {
     return jsonError(err);
   }

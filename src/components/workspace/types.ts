@@ -64,6 +64,7 @@ export interface LorebookData {
   content: string;
   enabled: boolean;
   depth: number;   // 注入深度 0-4（酒馆 depth 迁移）
+  reviewStatus?: string; // 自动填表待审：pending=待确认 approved=已确认
 }
 
 export interface StoryNodeData {
@@ -136,6 +137,15 @@ export interface SSEEvent {
   error?: string;
   // 宝宝流记忆召回列表
   items?: Array<{ source: string; title: string; content: string }>;
+  // #124：精修预算上限提醒
+  kind?: string;
+  ceiling?: number;
+  existingLen?: number;
+  requested?: number;
+  budgetCapped?: boolean;
+  budgetCeiling?: number;
+  newLen?: number;
+  mode?: string;
 }
 
 export function categoryLabel(cat: string): string {

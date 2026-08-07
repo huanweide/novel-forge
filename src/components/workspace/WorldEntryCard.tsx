@@ -10,9 +10,11 @@ interface WorldEntryCardProps {
   deleting: boolean;
   /** 编辑回调：传入完整条目，由父级复用 LorebookEditDialog 打开弹窗 */
   onEdit?: (entry: LorebookData) => void;
+  /** 待审确认：自动填表条目确认并入 */
+  onConfirm?: (id: string) => void;
 }
 
-export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit }: WorldEntryCardProps) {
+export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm }: WorldEntryCardProps) {
   return (
     <div
       className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]" + (entry.enabled ? "" : " opacity-60")}
@@ -25,6 +27,20 @@ export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit 
         >{entry.title}</span>
         {!entry.enabled && (
           <span className="ml-1 shrink-0 rounded bg-[var(--nv-surface-3)] px-1 py-0.5 text-[8px] text-[var(--nv-text-tertiary)]">已停用</span>
+        )}
+        {entry.reviewStatus === "pending" && (
+          <span className="ml-1 shrink-0 rounded bg-[var(--nv-warning)]/20 px-1 py-0.5 text-[8px] text-[var(--nv-warning)]">待审</span>
+        )}
+        {entry.reviewStatus === "pending" && onConfirm && (
+          <button
+            onClick={() => onConfirm(entry.id)}
+            disabled={deleting}
+            className="ml-1 shrink-0 text-[var(--nv-success)] opacity-0 transition-all hover:text-[var(--nv-success)] group-hover:opacity-100 disabled:opacity-40"
+            aria-label="确认并入"
+            title="确认并入世界书"
+          >
+            <Icon name="check" size={12} />
+          </button>
         )}
         <button
           onClick={() => onEdit?.(entry)}
@@ -39,7 +55,8 @@ export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit 
           onClick={() => onDelete(entry.id)}
           disabled={deleting}
           className="ml-1 shrink-0 text-[var(--nv-text-muted)] opacity-0 transition-all hover:text-[var(--nv-danger)] group-hover:opacity-100 disabled:opacity-40"
-          aria-label="删除条目"
+          aria-label="删除条目（拒绝待审）"
+          title="删除条目（拒绝待审）"
         >
           <Icon name="x" size={12} />
         </button>

@@ -99,6 +99,22 @@ export function WorldPanel({
     errorPrefix: "条目删除失败",
   });
 
+  // 待审确认：自动填表条目确认并入世界书
+  const confirmEntry = async (id: string) => {
+    try {
+      const res = await fetch(`/api/lorebook/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewStatus: "approved" }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      onRefresh();
+      toastSuccess("已确认并入");
+    } catch (err) {
+      toastError(`确认失败：${String(err)}`);
+    }
+  };
+
   const moduleInfo = WORLD_MODULES.find((m) => m.key === activeModule);
   const currentFields = MODULE_FIELDS[activeModule];
 
@@ -132,6 +148,7 @@ export function WorldPanel({
           onDelete={deleteEntry}
           deletingId={deletingId}
           onEdit={onEditEntry}
+          onConfirm={confirmEntry}
         />
       </div>
     </div>
