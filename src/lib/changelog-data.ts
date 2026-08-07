@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.10";
+export const LATEST_VERSION = "v1.6.11";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.10 性能与内存墙（L1 路A + L3-002）：post-processor 4.5 段四查询改 Promise.all 并发 + 窄列 select + take 上限（summary50/beat60/commitment30，character 复用 context-loader 已载数据）；context-loader 双表 take:50 窄列；摘要/节拍写前 deleteMany 去重杜绝重复行挤占窗口；导出建树 O(N²)→O(N) childrenMap；世界卡分类器关键词小写预计算",
-  "v1.6.10 全站限流 + 导入安全（L2 路B）：新建 rate-limit.ts 内存滑动窗口，生成类 10/min、导入类 5/min、settings/test 3/min，超限 429；import/parse+quick 的 rawText 上限 50 万返 413；api-error.ts 错误泛化不再回显原始 err.message",
-  "v1.6.10 数据并发与孤儿治理（L3 路C）：删节点 $transaction 清理孤儿引用（chapterSummary/storyBeat/pendingCommitment/pendingItem）；故事线删除事务重挂一致 + 清理 chapterBindings；storyline-writer/plan-chapter 改 bindings 原子事务且结构同形；entity-auto-creator 写入前二次查重防并发重复；story-status.ts 状态常量化（STORYLINE_STATUS/COMMITMENT_STATUS）替换散落字面量；confirm-guard 幂等前置",
-  "v1.6.10 UI 无障碍 + 写章端到端（L4 路D + L5 路E）：浅色金 --nv-accent-text-on-light + text-accent-label 11 处回填达 WCAG AA；生成进度加 aria-live 区域；client.ts maxTokens 按 targetWordCount*1.6 动态 + finish_reason 透传；write/refine/continue 截断检测回滚 + request.signal 透传中止；continue 孤儿 drafting 复用/清理；import/commit 逐章 content 校验容错",
+  "v1.6.11 双 P0 bug 修复：章节摘要 summarize 不再把 LLM 自由文本 JSON.parse（对齐全站 raw 约定），消除 500（#113）；精修 refine 按已有正文长+增量放大 max_tokens 预算，消除整章重输出截断（#114），并加 L5-06 完整性保护（新输出过短则保留原正文+告警）防静默丢前文",
+  "v1.6.11 Round-16 功能实用性董事会：游戏模式三处 UI 入口（大纲树 / 工作区 / 新手引导）移除——7/7 人格判为傻子功能，偏离本地写作利器核心",
+  "v1.6.11 限流降级：单用户本地场景下限流属过度防御，rate-limit 加 ENABLE_RATE_LIMIT 开关默认关闭，仅保护自用 API key / 供应商额度时开启，不再误伤本地作者",
+  "v1.6.11 构建修复：globals.css 新增 @source not 排除 PROCESS 审计文档被 Tailwind v4 误扫描生成非法 CSS 变量名，根治 next build 因文档反引号类名字面量报错",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.11",
+    date: "2026-08-07",
+    title: "Round-16 功能实用性董事会（星辰底座实机复检 / 双 P0 bug 修复 / 游戏模式入口移除 / 限流降级 / 构建修复）",
+    sections: [
+      {
+        label: "星辰底座实机复检与双 P0 bug 修复",
+        items: [
+          "章节摘要 summarize 修复（#113）：route 把 LLM 返回的自由文本 characterStates 当 JSON.parse 必抛 SyntaxError→500；改为 raw: characterStates 对齐全站 post-processor/apply-extraction 的 { raw } 约定，星辰底座实机复检 HTTP 200 通过",
+          "精修 refine 截断修复（#114）：writeSection 原传 targetWords（增量）致 max_tokens 预算只覆盖增量、整章重输出在已有正文处截断增长 0；改为传 existingContent.length+targetWords（cap 5000）放大预算，截断消除",
+          "refine L5-06 完整性保护：新输出显著短于原正文（<90% 且非主动缩写意图）时降级保留原正文+告警，防模型把续写误解为重写精简版而静默丢前文；prompt 加「一字不落保留已有正文」铁律",
+        ],
+      },
+      {
+        label: "Round-16 功能实用性董事会裁决",
+        items: [
+          "游戏模式入口移除（全票傻子功能）：大纲树游戏按钮、工作区互动游戏按钮、新手引导游戏化激励三处 UI 入口隐藏（底层 game 路由/引擎/页面代码保留作技术债参考），7/7 人格判定其偏离本地写作利器核心、把小说平台偷换为互动游戏引擎",
+          "限流降级：单用户本地场景下限流属过度防御（防不存在的多租户滥用），rate-limit 加 ENABLE_RATE_LIMIT 开关默认关闭，仅当保护自用 API key/供应商额度避免资损时设 true 开启，不再对本地作者误伤",
+        ],
+      },
+      {
+        label: "构建稳定性修复",
+        items: [
+          "globals.css 新增 @source not 排除 PROCESS 审计文档与诊断产物被 Tailwind v4 自动扫描误入反引号类名字面量（如 text-[var(--nv-…)]）生成非法 CSS 变量名，根治 next build 因文档内容报错；关键帧位置整理",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.10",
     date: "2026-08-07",

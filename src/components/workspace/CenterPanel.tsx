@@ -292,11 +292,7 @@ export function CenterPanel({
                     </button>
                     {!isGenerating && (
                       <>
-                        <button onClick={onOpenGame}
-                          className="text-xs px-2 py-1 h-7 rounded border border-[var(--nv-creative)]/40 text-[var(--nv-creative)] bg-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative)]/20 hover:border-[var(--nv-creative)] transition-colors"
-                          title="互动游戏模式——像文字RPG一样创作本章">
-                          <Icon name="gamepad" size={14} />
-                        </button>
+                        {/* Round16 董事会：游戏模式入口移除（7/7 判傻子功能） */}
                         <button onClick={onBatchWrite}
                           className="text-xs px-2 py-1 h-7 rounded border border-[var(--nv-primary)]/40 text-[var(--nv-primary)] bg-[var(--nv-primary-soft)] hover:bg-[var(--nv-primary)]/20 hover:border-[var(--nv-primary)] transition-colors"
                           title="批量写作：后台连续生成 1-10 个新章节（自动写章名），可关窗口查看进度">

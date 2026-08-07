@@ -49,10 +49,7 @@ export function NodeTreeItem({
             disabled={deletingId === node.id}
             className="opacity-0 group-hover:opacity-100 text-[var(--nv-danger)]/60 hover:text-[var(--nv-danger)] text-[12px] px-0.5 transition-opacity disabled:opacity-40" title="删除此章节"><Icon name="x" size={12} /></button>
         )}
-        {isChapter && (
-          <button onClick={(e) => { e.stopPropagation(); router.push(`/workspace/${projectId}/game/${node.id}`); }}
-            className="text-[var(--nv-creative)]/80 hover:text-[var(--nv-creative)] hover:bg-[var(--nv-creative)]/10 text-[12px] px-0.5 rounded transition-colors" title="进入游戏模式——像文字 RPG 一样创作本章"><Icon name="gamepad" size={12} /></button>
-        )}
+        {/* Round16 董事会决议：游戏模式入口移除（7/7 判为傻子功能，偏离写作利器核心） */}
         <span className="text-[var(--nv-text-tertiary)] text-[10px]">{node.wordCount > 0 ? `${node.wordCount}字` : ""}</span>
       </div>
       {children.map((child) => (

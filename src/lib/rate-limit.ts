@@ -81,6 +81,9 @@ const limiters = new Map<string, RateLimiter>();
  * @param windowMs 窗口时长（毫秒）
  */
 export function rateLimit(name: string, key: string, limit: number, windowMs: number): RateLimitResult {
+  // Round16 董事会：单用户本地场景下，限流属过度防御（防不存在的多租户滥用）。
+  // 默认禁用，仅当 ENABLE_RATE_LIMIT=true 时启用（保护自用 API key / 供应商额度，避免资损）。
+  if (process.env.ENABLE_RATE_LIMIT !== "true") return { ok: true };
   let limiter = limiters.get(name);
   if (!limiter) {
     limiter = createRateLimiter({ windowMs, max: limit });

@@ -102,7 +102,8 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 3. 如果问题位置引用的原文和你的修改之间不矛盾——优先保留原文。
 4. 输出的全文必须和原文99%相同——只有问题位置不同。
 5. 禁止顺手润色、禁止调段落、禁止改标点风格。
-6. 输出完整修改后全文——用原文+局部替换的方式，不要只输出修改片段。` : `操作指南：
+6. 输出完整修改后全文——用原文+局部替换的方式，不要只输出修改片段。` : `【铁律】你的输出必须完整包含已有正文的全部内容（一字不落），仅在末尾追加续写或在指定处局部修改；严禁浓缩、删减、重写已有正文。
+操作指南：
 - 如果是修改指令（如"改对话""加描写"）：只修改指定部分，其他保留不变。输出完整修改后的版本。
 - 如果是续写指令（如"继续写""补500字"）：从已有正文断点处无缝衔接续写。输出已有正文+续写内容。
 - 如果是混合指令：先按修改要求调整，再从断点续写到目标字数。
@@ -148,8 +149,12 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             send({ type: "babylore_recall", items: refineRecallItems });
           }
 
+          // L5-01 修复(Round9)：refine 需重输出「已有正文+增量」，目标输出字数=已有正文长+增量，
+          // 据此放大 max_tokens 预算（resolveMaxTokens 按 targetWordCount*1.6），避免整章重输出在已有正文处被截断。
+          // cap 5000 字（≈8000 token）防止超模型 max_tokens 硬上限。
           for await (const chunk of orchestrator.writeSection(
-            promptContext, writingInstruction, targetWords,
+            promptContext, writingInstruction,
+            hasContent ? Math.min(existingContent.length + targetWords, 5000) : targetWords,
             undefined, undefined, effectiveTemperature, effectiveTopP,
             request.signal, // L5-04：客户端断连信号透传
           )) {
@@ -201,6 +206,21 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
               wordCount: (data.currentNode.content || "").length,
               truncated: true,
               warning: "⚠️ 微调被 max_tokens 截断（finish_reason=length），已保留原章节正文，未用残片覆盖，请重试。",
+            });
+            return;
+          }
+
+          // ── L5-06：微调完整性保护（防模型静默丢前文）──
+          // 模型偶发把「续写/修改」误解为「重写精简版」，输出显著短于原正文，导致静默丢内容。
+          // 当新输出 < 原正文 90% 且指令非主动缩写时，判定为未完成重输出，降级保留原正文 + 告警，
+          // 类比 L5-02，避免线上节点被缩短版覆盖。
+          const isShrinkIntent = /(缩写|精简|压缩|缩短|删减|提炼)/.test(refineInstruction);
+          if (hasContent && !isShrinkIntent && newContent.length < existingContent.length * 0.9) {
+            send({
+              type: "done", content: "", nodeId,
+              status: data.currentNode.status, mode: "refine",
+              wordCount: existingContent.length, truncated: true,
+              warning: "⚠️ 微调输出比原正文过短（可能未完整重输出前文），已保留原章节正文，请重试或调整指令。",
             });
             return;
           }

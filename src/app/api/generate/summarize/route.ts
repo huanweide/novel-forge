@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         summary,
         keyEvents,
         characterStates: {
-          states: JSON.parse(characterStates || '{"states":[]}'),
+          raw: characterStates,
           closingSnapshot,
           impulses: characterImpulses,
         } as any,
