@@ -15,6 +15,11 @@
 import { prisma } from "@/lib/prisma";
 import { isSimilarName } from "@/lib/entity-auto-creator";
 import { fillModelOf } from "./fill";
+import {
+  classifyWorldCategory,
+  ALL_WORLD_CATEGORIES,
+  type WorldCategory,
+} from "@/lib/world-category-classifier";
 
 interface LlmCreds {
   baseURL: string;
@@ -31,7 +36,7 @@ export interface EntitySyncResult {
 
 const ENTITY_SYSTEM_PROMPT = `你是小说实体抽取助手（自动填表链路·角色卡/世界书入库）。阅读【正文】，抽取其中【新出现且确定】的角色与世界观实体，并按角色卡/世界书的内置格式给出设定内容。
 输出严格 JSON（response_format=json_object），不要任何解释文字：
-{"entities":[{"name":"实体名","type":"character|location|item|technique|organization|creature|fate|physics|public|other","summary":"一句话概括","description":"3-5 句设定（基于正文，名称与事实零杜撰）","role":"主角/配角/反派/导师/其他（仅角色）","appearance":"外貌一句话（仅角色）","personality":"性格一句话（仅角色）","relationships":[{"name":"对方角色名","relation":"关系（如：师徒/宿敌/暗恋/上下级）","dynamic":"动态一句话（可选，如：反目成仇后互不信任）"}]（仅角色，1-4 条，只记正文中明确体现的关系）"}]}
+{"entities":[{"name":"实体名","type":"character|location|item|technique|organization|creature|fate|physics|public|magic_system|culture|history|law|currency|other","summary":"一句话概括","description":"3-5 句设定（基于正文，名称与事实零杜撰）","role":"主角/配角/反派/导师/其他（仅角色）","appearance":"外貌一句话（仅角色）","personality":"性格一句话（仅角色）","relationships":[{"name":"对方角色名","relation":"关系（如：师徒/宿敌/暗恋/上下级）","dynamic":"动态一句话（可选，如：反目成仇后互不信任）"}]（仅角色，1-4 条，只记正文中明确体现的关系）"}]}
 铁律：
 1. 名称零杜撰：实体名必须逐字复制【正文】里的原文用字，禁止改写/缩写/自创同义变体。
 2. 只抽取正文中确定出现的新实体；明显是章节临时道具/路人可跳过。
@@ -48,6 +53,11 @@ const TYPE_TO_CATEGORY: Record<string, string> = {
   fate: "fate_system",
   physics: "physics",
   public: "public_system",
+  magic_system: "magic_system",
+  culture: "culture",
+  history: "history",
+  law: "law",
+  currency: "currency",
   other: "custom",
 };
 
@@ -215,7 +225,17 @@ export async function syncChapterEntities(
         });
         result.createdChars.push(name);
       } else {
-        const category = TYPE_TO_CATEGORY[type] || "custom";
+        let category: WorldCategory = (TYPE_TO_CATEGORY[type] || "custom") as WorldCategory;
+        // R2-001：当 LLM 给的 type 不可信（落在 custom / 未映射）时，
+        // 用确定性世界卡分类器对「名称+描述」重新路由，避免力量/文化/历史/法则/货币
+        // 等 5 类静默归到 custom，导致自动填表永远不可达（P0）。
+        if (category === "custom") {
+          const cr = classifyWorldCategory(`${name} ${description}`);
+          // 只接受世界卡分类；角色关系（角色卡负责）/ 元桶（character/unknown）保持 custom。
+          if (cr.category && cr.category !== "character_relationship") {
+            category = cr.category;
+          }
+        }
         await prisma.lorebookEntry.create({
           data: {
             projectId,

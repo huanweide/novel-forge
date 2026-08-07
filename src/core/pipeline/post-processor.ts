@@ -233,11 +233,14 @@ export async function runPostGenerationPipeline(
         true,
       );
       if (el.eligible) {
+        // R2-007：后处理中 applyConfirm 早于本章摘要生成（摘要在步骤 4 才落库），
+        // 故先 skipDetect，待摘要写完后（见步骤 4.5 末尾）再统一触发 detect，避免漏看本章。
         await applyConfirm({
           id: nodeId,
           projectId,
           content,
           order: (currentNode as any)?.order ?? 0,
+          skipDetect: true,
         });
         send({ type: "auto_confirm", content: "智能审阅：质量达标，已自动确认" });
       }
@@ -690,6 +693,19 @@ export async function runPostGenerationPipeline(
           type: "classify_error",
           content: `规则分类跳过：${String(classifyErr).slice(0, 100)}`,
         });
+      }
+
+      // R2-007：本章摘要已落库，补触发伏笔收束率检测（applyConfirm 入参 skipDetect=true 时已跳过）。
+      // fire-and-forget，不阻塞管线；本轮确认（auto-confirm）只触发一次，无重复。
+      try {
+        const origin = process.env.APP_ORIGIN || "http://localhost:3001";
+        void fetch(`${origin}/api/foreshadowing/detect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, nodeId }),
+        }).catch(() => {});
+      } catch {
+        /* 构造请求失败则跳过，不影响管线 */
       }
     } catch (summaryErr) {
       // 摘要失败不阻塞主流程

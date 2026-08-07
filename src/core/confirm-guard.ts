@@ -96,12 +96,20 @@ export function evaluateConfirmEligibility(
 /**
  * 对单个节点执行确认副作用：自动填表（safeFillAfterWriting）+ 状态置 confirmed。
  * 不校验状态，由调用方（端点 / 流水线）决定哪些节点进入。
+ *
+ * R2-007（修复 IMP-007 部分失效）：确认成功后 fire-and-forget 触发
+ * POST /api/foreshadowing/detect，使伏笔面板随自动确认 / 批量确认同步更新。
+ * 与 src/app/api/story/nodes/[id]/route.ts 的手动 confirm 路径保持一致。
+ *
+ * skipDetect：当调用方会在确认后再补一次 detect（如后处理管线在生成章摘要之后才触发，
+ * 避免「确认早于摘要」导致 detect 漏看本章）时置 true，由调用方负责最终触发，避免重复触发。
  */
 export async function applyConfirm(node: {
   id: string;
   projectId: string;
   content: string | null;
   order: number;
+  skipDetect?: boolean;
 }): Promise<string> {
   const now = new Date();
   const existing = await prisma.storyNode.findUnique({
@@ -163,6 +171,19 @@ export async function applyConfirm(node: {
   // v1.1.0：节点刚定稿，尝试自动整本交付（仅当项目开启 autoDeliverEnabled 且全书章节均已 confirmed）。
   // fire-and-forget：交付是确认后的红利，失败静默（不阻塞确认响应），用户手动点也能兜底。
   void maybeAutoDeliver(node.projectId).catch(() => {});
+
+  // R2-007：确认成功后异步触发伏笔收束率检测（fire-and-forget，不阻塞确认响应；失败静默吞掉）。
+  // 与手动 confirm 路径（src/app/api/story/nodes/[id]/route.ts:215-225）保持一致。
+  // 时序盲点处理：detect 路由自身不 lazy 生成章摘要（见 src/core/foreshadowing.ts:detectPayoffs），
+  // 故「确认早于摘要」的调用方（后处理管线）需传 skipDetect=true 并在摘要落库后再触发，避免漏看本章。
+  if (!node.skipDetect) {
+    const origin = process.env.APP_ORIGIN || "http://localhost:3001";
+    void fetch(`${origin}/api/foreshadowing/detect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: node.projectId, nodeId: node.id }),
+    }).catch(() => {});
+  }
   return fillMsg;
 }
 

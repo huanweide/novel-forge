@@ -107,7 +107,7 @@
   --nv-text-primary:   #F8F7F2;   /* L1 主文字——近白，对比度 17:1 */
   --nv-text-secondary: #B9B7AD;   /* L2 辅文字——亮灰，对比度 7:1 */
   --nv-text-tertiary:  #98968C;   /* L3 弱文字——中灰，对比度 5.2:1（达 WCAG AA） */
-  --nv-text-muted:     #83807A;   /* L4 禁用/占位文字——灰，对比度 4.7:1（提亮至达 WCAG AA 4.5:1） */
+  --nv-text-muted:     #8E8B82;   /* L4 禁用/占位文字——灰；R2-010：提亮至落深色卡片/弹窗(popover #161E34)≥4.5:1(WCAG AA)，实测约 4.86:1，且仍低于 tertiary #98968C 保层级 */
 
   /* ── 字体栈（Next.js Google Fonts CSS变量 → 中文系统字体 fallback） ── */
   --font-sans:       var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;

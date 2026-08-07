@@ -2,6 +2,21 @@
 
 ---
 
+## v1.6.5 — 2026-08-07
+**魔王系统 Round-2 深度体检 + 15 项修复（世界卡闭环 / 写章溯源 / 故事线层级 / 伏笔闭环 / IO 健壮性 / 主题可达性 / 监控去误报）**
+
+- **世界卡 15 类自动填表闭环（P0 · R2-001/R2-002）**：确定性分类器 `world-category-classifier.ts` 正式接入自动填表（`entity-sync.ts` 对 custom 兜底路由）；type 枚举补 magic_system/culture/history/law/currency 5 类、TYPE_TO_CATEGORY 补 5 映射，15 类世界卡全部可达；新增主张级集成测试（mock LLM 覆盖各 type，断言落库分类覆盖全集）。v1.6.3 写的分类器「声明即摆设」问题根除。
+- **世界卡收口（P1 · R2-014/R2-015）**：lorebook API 用 `ALL_WORLD_CATEGORIES` 做 Set 白名单校验，非法分类（如 `currnecy` 错字）直接 400 拒绝，不再静默持久化错乱数据；LorebookEditDialog 分类下拉与 pre-write-cards 完整性校验全部由 WORLD_MODULES / ALL_WORLD_CATEGORIES 派生，消除 13~36 文件字符串散落。配套 lorebook 路由测试 4/4。
+- **写章溯源与批量角色卡（P1 · R2-003/R2-004）**：refine/continue 路由补传 source 字段，填表/确认溯源链闭合；批量生成 PreGenConfirm 补 `localStorage` 写入端，批量角色卡约束主路径真正生效（此前读写断链）。
+- **故事线层级（P1 · R2-005/R2-006）**：generate 解析现有主线优先接管未完结主线，支线不再误挂已完结旧主线；formatStorylines 注入「支线 X 隶属于主线 Y」层级说明，AI 写章实时感知支线归属。
+- **伏笔检测闭环（P1 · R2-007，部分）**：applyConfirm 新增 skipDetect，auto-confirm / 手动确认 / 游戏导出三条路径触发 `/api/foreshadowing/detect`；批量确认与 refine 确认两条漏斗的 detect 触发留待 v1.6.6 收口（复检发现）。
+- **导入导出健壮性（P1 · R2-008/R2-009）**：导出勾选仅命中父节点时后端返回 400 + 前端 toastWarning 提示（空导出主场景拦截）；导入错误细化为超时 / P2002 / P2003 / 字段缺失结构化错误。
+- **深色主题可达性（P1 · R2-010）**：`--nv-text-muted` 由 #83807A 调亮至 #8E8B82，弹窗/卡片/纯底对比度 4.86/4.83/5.39 达 WCAG AA（surface-3 残留 4.25 留 v1.6.6）。
+- **监控去误报 + 生成按需加载（P1 · R2-011/R2-012）**：API 巡检脚本跳过模板插值（70 处）+ 文档白名单 + 文件系统动态发现，实跑 REAL_BROKEN_LINKS=0；context-loader 全量节点改为轻量 select + 按需拉取 keepWindow(≥5) 章正文，长项目不再无界拉 10–20MB（多卷前文截断退化留 v1.6.6）。
+- 质量门禁：tsc 零错误 + 246 单测全绿（较 v1.6.4 净增 8：entity-sync 4 + lorebook 4）；18 文件改动经 8 透镜深度体验 + 8 复检 Agent 交叉验证「真生效」。
+
+---
+
 ## v1.6.4 — 2026-08-07
 **故事线支线联动 UI + 数据化（#651）+ #652 整体标记完成**
 

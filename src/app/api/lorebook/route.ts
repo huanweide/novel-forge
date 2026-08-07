@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
+import { badRequest } from "@/lib/validators";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import {
   readValidatedBody,
@@ -10,6 +11,11 @@ import {
   asInt,
   asBool,
 } from "@/lib/validators";
+import { ALL_WORLD_CATEGORIES } from "@/lib/world-category-classifier";
+
+// 应用级白名单：category 只能取 15 类世界卡分类之一（不改 schema，避免迁移风险与
+// 历史错字数据导致 db push 失败；非法值在此被拒绝，防静默错分/错字，R2-014）。
+const VALID_CATEGORIES = new Set<string>(ALL_WORLD_CATEGORIES);
 
 // POST /api/lorebook
 export async function POST(request: Request) {
@@ -27,6 +33,14 @@ export async function POST(request: Request) {
       relatedEntryIds: asStrArray(raw.relatedEntryIds, "relatedEntryIds"),
     }));
     if (body instanceof NextResponse) return body;
+
+    // R2-014：应用级白名单——category 必须落在 15 类世界卡分类内，否则拒绝（400）。
+    if (!VALID_CATEGORIES.has(body.category)) {
+      return badRequest(
+        `category「${body.category}」非法：必须为 15 类世界卡分类之一`,
+        "category",
+      );
+    }
 
     const entry = await prisma.lorebookEntry.create({
       data: {

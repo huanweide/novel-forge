@@ -58,6 +58,15 @@ export async function GET(
       }
     }
 
+    // R2-008/P1：选章导出时若级联展开后没有任何节点（选中节点不存在或无下属内容），
+    // 直接返回结构化错误，避免后端静默产出一个空白文件让作者误以为成功。
+    if (chapterIdsParam && allNodes.length === 0) {
+      return NextResponse.json(
+        { error: "未选中任何有效章节（选中节点不存在或不含下属内容）" },
+        { status: 400 }
+      );
+    }
+
     // 构建树结构
     const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
     const roots = allNodes.filter((n) => !n.parentId);

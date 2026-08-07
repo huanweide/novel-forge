@@ -242,6 +242,7 @@ ${lastParagraphs}
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
           // M1（墨白 Round12）：透传 nextNode.order/nodeId，使写入行 _src 形如 ch{n}:batchmanual（章节段非空），与 write 路径一致。
           // IMP-002 扩充：补算 isLatestChapter 使 skipLatestChapter 在 continue 路径生效（与 confirm/batch 算法一致）。
+          // R2-003：补传 source:"continue"，闭合填表溯源单链路（写章报告 F-07）；此前漏传 source 导致 _src 缺溯源段、与 confirm/manual/auto-confirm/batch 四入口不一致。
           let contIsLatest = false;
           try {
             const agg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
@@ -254,6 +255,7 @@ ${lastParagraphs}
             nodeOrder: (nextNode as any).order,
             isLatestChapter: contIsLatest,
             nodeId: nextNode.id,
+            source: "continue",
             projectLlmConfig: projLlm as Record<string, unknown> | null,
           });
 

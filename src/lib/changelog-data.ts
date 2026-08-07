@@ -25,18 +25,81 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.4";
+export const LATEST_VERSION = "v1.6.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.4 故事线支线联动：generate 路由两阶段创建让支线 parentId 真正挂主线（'支线服务于主线'铁律数据化）；StorylineList 主线卡片聚合旗下支线数与平均进度、给出主线+支线综合联动进度，支线卡片显示'隶属主线'标签并缩进连线，主线/支线层级一眼可见",
-  "v1.6.4 支线归属解析优先 parentId、回退唯一主线，历史数据（parentId 为 null）同样联动；综合联动进度 = 主线本体 70% + 支线生态 30%，更直观反映整体推进",
-  "#652 整体标记 completed：子项 #653–#656（世界卡三类模块补全 / 确定性分类器 / 故事线融入写作 / 进度量化）全绿，#657 质量门禁（tsc 0 / vitest 238）、#658 升版收尾同步完成，v1.6.3 写作模块与世界卡融合工作全部收口",
-  "质量门禁：tsc 零错误 + 238 单测全绿（19 文件），#651 改动不破坏编译与现有测试",
+  "v1.6.5 魔王 Round-2 深度体检 + 15 项修复：世界卡 15 类自动填表闭环（确定性分类器正式接入 entity-sync 兜底路由，type 枚举补 magic_system/culture/history/law/currency 5 类、TYPE_TO_CATEGORY 补 5 映射，新增主张级集成测试），根除 v1.6.3「分类器声明即摆设」",
+  "v1.6.5 世界卡收口：lorebook API 用 ALL_WORLD_CATEGORIES 做 Set 白名单校验，非法分类（如 currnecy 错字）直接 400 拒绝不再静默错乱；LorebookEditDialog 下拉与 pre-write-cards 校验全部由 WORLD_MODULES / ALL_WORLD_CATEGORIES 派生，消除 13~36 文件字符串散落",
+  "v1.6.5 写章 refine/continue 补传 source 溯源链闭合；批量生成 PreGenConfirm 补 localStorage 写入端让批量角色卡约束真正生效；故事线 generate 优先接管未完结主线（支线不挂旧完结线）+ 注入「支线隶属主线」；伏笔 auto-confirm/手动/游戏导出闭环（批量/refine 留 v1.6.6）",
+  "质量门禁：tsc 零错误 + 246 单测全绿（净增 8：entity-sync 4 + lorebook 4）；API 巡检 REAL_BROKEN_LINKS=0；生成按需加载（长项目不再无界拉 10–20MB）；深色 --nv-text-muted 调亮达 WCAG AA；18 文件经 8 透镜 + 8 复检 Agent 交叉验证「真生效」",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.5",
+    date: "2026-08-07",
+    title: "魔王 Round-2 深度体检 + 15 项修复（世界卡闭环 / 写章溯源 / 故事线层级 / 伏笔闭环 / IO 健壮性 / 主题可达性 / 监控去误报）",
+    sections: [
+      {
+        label: "世界卡 15 类自动填表闭环（P0 · R2-001/R2-002）",
+        items: [
+          "确定性分类器 world-category-classifier.ts 正式接入自动填表：entity-sync.ts 对 custom 分支用分类器兜底路由，根除 v1.6.3「分类器声明即摆设」",
+          "type 枚举补 magic_system/culture/history/law/currency 5 类、TYPE_TO_CATEGORY 补 5 映射，15 类世界卡全部可达；新增主张级集成测试（mock LLM 覆盖各 type，断言落库分类覆盖全集）",
+        ],
+      },
+      {
+        label: "世界卡收口（P1 · R2-014/R2-015）",
+        items: [
+          "lorebook API 用 ALL_WORLD_CATEGORIES 做 Set 白名单校验，非法分类（如 currnecy 错字）直接 400 拒绝，不再静默持久化错乱数据",
+          "LorebookEditDialog 分类下拉与 pre-write-cards 完整性校验全部由 WORLD_MODULES / ALL_WORLD_CATEGORIES 派生，消除 13~36 文件字符串散落",
+        ],
+      },
+      {
+        label: "写章溯源与批量角色卡（P1 · R2-003/R2-004）",
+        items: [
+          "refine/continue 路由补传 source 字段，填表/确认溯源链闭合",
+          "批量生成 PreGenConfirm 补 localStorage 写入端，批量角色卡约束主路径真正生效（此前读写断链）",
+        ],
+      },
+      {
+        label: "故事线层级（P1 · R2-005/R2-006）",
+        items: [
+          "generate 解析现有主线优先接管未完结主线，支线不再误挂已完结旧主线",
+          "formatStorylines 注入「支线 X 隶属于主线 Y」层级说明，AI 写章实时感知支线归属",
+        ],
+      },
+      {
+        label: "伏笔检测闭环（P1 · R2-007，部分）",
+        items: [
+          "applyConfirm 新增 skipDetect，auto-confirm / 手动确认 / 游戏导出三条路径触发 /api/foreshadowing/detect",
+          "批量确认与 refine 确认两条漏斗的 detect 触发留待 v1.6.6 收口（复检发现）",
+        ],
+      },
+      {
+        label: "导入导出健壮性（P1 · R2-008/R2-009）",
+        items: [
+          "导出勾选仅命中父节点时后端返回 400 + 前端 toastWarning 提示（空导出主场景拦截）",
+          "导入错误细化为超时 / P2002 / P2003 / 字段缺失结构化错误",
+        ],
+      },
+      {
+        label: "深色主题可达性 + 监控去误报 + 生成按需加载（P1 · R2-010/R2-011/R2-012）",
+        items: [
+          "--nv-text-muted 由 #83807A 调亮至 #8E8B82，弹窗/卡片/纯底对比度 4.86/4.83/5.39 达 WCAG AA（surface-3 残留 4.25 留 v1.6.6）",
+          "API 巡检脚本跳过模板插值 + 文档白名单 + 文件系统动态发现，实跑 REAL_BROKEN_LINKS=0",
+          "context-loader 全量节点改为轻量 select + 按需拉取 keepWindow(≥5) 章正文，长项目不再无界拉 10–20MB（多卷前文截断退化留 v1.6.6）",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 零错误 + 246 单测全绿（较 v1.6.4 净增 8：entity-sync 4 + lorebook 4）；18 文件改动经 8 透镜深度体验 + 8 复检 Agent 交叉验证「真生效」",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.4",
     date: "2026-08-07",

@@ -119,9 +119,10 @@ ${
     const mainLines = lines.filter((l) => (l.type as string) === "main");
     const sideLines = lines.filter((l) => (l.type as string) !== "main");
 
-    // 主线 id：已有主线优先，否则取本次新建的第一条主线
+    // 主线 id：优先复用【未完结】主线；若现有主线均已完结（newMain 缝合怪·构造新主线），
+    // 则不接管旧主线，置 null 交由本次新建的主线接管，避免支线误挂到已完结旧主线（R2-005）
     let mainId: string | null =
-      existingStorylines.find((s) => s.type === "main")?.id ?? null;
+      existingStorylines.find((s) => s.type === "main" && s.status !== "completed")?.id ?? null;
 
     const created: any[] = [];
     const buildData = (

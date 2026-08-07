@@ -9,6 +9,8 @@ import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { ALL_WORLD_CATEGORIES } from "@/lib/world-category-classifier";
+import { WORLD_MODULES } from "@/components/workspace/worldPanelData";
 
 export async function GET(request: Request) {
   try {
@@ -205,40 +207,30 @@ export async function GET(request: Request) {
     }
 
     // ── 世界卡完整性检查 ──
+    // R2-015：15 类收敛为单一来源——直接由 ALL_WORLD_CATEGORIES 派生，排除
+    // character_relationship（走角色卡）与 custom（非具体世界观分类）。
+    const LORE_LABELS: Record<string, string> = Object.fromEntries(
+      WORLD_MODULES.map((m) => [m.key, m.label]),
+    );
+    const LORE_CHECK_CATEGORIES = ALL_WORLD_CATEGORIES.filter(
+      (c) => c !== "character_relationship" && c !== "custom",
+    );
+
     const lorebookEntries = await prisma.lorebookEntry.findMany({
       where: { projectId, enabled: true },
     });
-    const hasGeography = lorebookEntries.some(l => l.category === "geography");
-    const hasFaction = lorebookEntries.some(l => l.category === "faction");
-    const hasMagicSystem = lorebookEntries.some(l => l.category === "magic_system");
-    const hasTechnique = lorebookEntries.some(l => l.category === "technique");
-    const hasHistory = lorebookEntries.some(l => l.category === "history");
-    const hasCulture = lorebookEntries.some(l => l.category === "culture");
-    const hasLaw = lorebookEntries.some(l => l.category === "law");
-    const hasCurrency = lorebookEntries.some(l => l.category === "currency");
-    const hasCreature = lorebookEntries.some(l => l.category === "creature");
-    const hasItem = lorebookEntries.some(l => l.category === "item");
-    const hasFateSystem = lorebookEntries.some(l => l.category === "fate_system");
-    const hasPhysics = lorebookEntries.some(l => l.category === "physics");
-    const hasPublicSystem = lorebookEntries.some(l => l.category === "public_system");
+    const categories: Record<string, boolean> = {};
     const missingLoreCategories: string[] = [];
-    if (!hasGeography) missingLoreCategories.push("geography");
-    if (!hasFaction) missingLoreCategories.push("faction");
-    if (!hasMagicSystem) missingLoreCategories.push("magic_system");
-    if (!hasTechnique) missingLoreCategories.push("technique");
-    if (!hasHistory) missingLoreCategories.push("history");
-    if (!hasCulture) missingLoreCategories.push("culture");
-    if (!hasLaw) missingLoreCategories.push("law");
-    if (!hasCurrency) missingLoreCategories.push("currency");
-    if (!hasCreature) missingLoreCategories.push("creature");
-    if (!hasItem) missingLoreCategories.push("item");
-    if (!hasFateSystem) missingLoreCategories.push("fate_system");
-    if (!hasPhysics) missingLoreCategories.push("physics");
-    if (!hasPublicSystem) missingLoreCategories.push("public_system");
+    for (const c of LORE_CHECK_CATEGORIES) {
+      const has = lorebookEntries.some((l) => l.category === c);
+      categories[c] = has;
+      if (!has) missingLoreCategories.push(c);
+    }
     const loreWarning = lorebookEntries.length === 0
-      ? "⚠️ 世界卡完全为空——强烈建议至少创建1条世界设定，防止AI凭空编造" : missingLoreCategories.length > 0
-      ? `💡 建议补充世界卡类型：${missingLoreCategories.map(c => ({geography:"地理",faction:"势力",magic_system:"力量体系",technique:"功法",history:"历史",culture:"文化",law:"法则",currency:"货币",creature:"生物",item:"物品",fate_system:"命运",physics:"物理",public_system:"公开体系"}[c] || c)).join("、")}`
-      : "";
+      ? "⚠️ 世界卡完全为空——强烈建议至少创建1条世界设定，防止AI凭空编造"
+      : missingLoreCategories.length > 0
+        ? `💡 建议补充世界卡类型：${missingLoreCategories.map((c) => LORE_LABELS[c] || c).join("、")}`
+        : "";
 
     return NextResponse.json({
       scheduledCards: scheduled.map(c => ({
@@ -263,13 +255,7 @@ export async function GET(request: Request) {
       // ── 世界卡完整性 ──
       lorebookStats: {
         totalEntries: lorebookEntries.length,
-        categories: {
-          geography: hasGeography,
-          faction: hasFaction,
-          magic_system: hasMagicSystem,
-          history: hasHistory,
-          culture: hasCulture,
-        },
+        categories,
         missingCategories: missingLoreCategories,
         warning: loreWarning,
       },

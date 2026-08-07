@@ -1237,7 +1237,10 @@ export default function WorkspacePage() {
         <ExportDialog
           projectId={project.id}
           projectName={project.name}
-          chapters={project.storyNodes.filter((n) => n.type === "chapter").map((n) => ({ id: n.id, title: n.title }))}
+          chapters={project.storyNodes.map((n) => ({
+            id: n.id,
+            title: `${n.type === "volume" ? "卷：" : n.type === "section" ? "节：" : n.type === "scene" ? "幕：" : ""}${n.title}`,
+          }))}
           onClose={() => setShowExportDialog(false)}
         />
       )}
@@ -1289,6 +1292,20 @@ export default function WorkspacePage() {
           title={preGenMode === "write" ? "生成前确认——角色调度" : preGenMode === "refine" ? "微调前确认——角色调度" : preGenMode === "continue" ? "续写前确认——角色调度" : "大纲生成前确认——角色调度"}
           onAuthorNoteChange={handleAuthorNoteChange}
           onConfirm={(cards, notes, newChars, finalAuthorNote) => {
+            // R2-004：单章 PreGen 确认后，把用户选定的角色卡 / 新角色请求持久化到 localStorage，
+            // 作为「批量生成」(handleBatchGenerate) 角色约束的默认来源。此前全代码库无写入端，
+            // 批量章恒为空约束（confirmedCardIds 退回 drawSelectedCharIds、newCharacterRequests 恒为空）。
+            // 来源说明：cards/newChars 即用户在 PreGenConfirm 弹窗中勾选/输入的约束，写入即批量主路径的约束来源。
+            if (project) {
+              try {
+                localStorage.setItem(
+                  `pregen-conf-${project.id}`,
+                  JSON.stringify({ selected: cards, newChars }),
+                );
+              } catch {
+                /* localStorage 不可用（隐私模式等）时静默降级，批量退回 drawSelectedCharIds */
+              }
+            }
             switch (preGenMode) {
               case "write": handleWriteConfirmed(cards, notes, newChars, finalAuthorNote); break;
               case "refine": handleRefineConfirmed(cards, notes, newChars, finalAuthorNote); break;

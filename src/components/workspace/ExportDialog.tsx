@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { toastSuccess } from "@/components/ui/toast";
+import { toastSuccess, toastWarning } from "@/components/ui/toast";
 
 type ExportFormat = "markdown" | "txt" | "html" | "docx" | "epub";
 
@@ -73,10 +73,30 @@ export function ExportDialog({
 
   // FE-N7：导出前先跑违禁词预检，命中则弹确认清单
   const doExport = async () => {
+    // R2-008/P1：选章模式下未勾选任何章节时，给出非阻塞提示并中止，避免静默导出整本或空文件
+    if (range === "selected" && selected.size === 0) {
+      toastWarning("未选中任何章节");
+      return;
+    }
+
     setChecking(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/export?${buildParams(true).toString()}`);
       if (!res.ok) {
+        // 预检失败时不盲目降级导出：若后端明确是「未选中/无内容」类错误，提示作者而非静默下载空白文件
+        let emptyHint: string | null = null;
+        try {
+          const errData = (await res.json()) as { error?: string };
+          if (errData?.error && /未选中|没有内容|没有有效章节/.test(errData.error)) {
+            emptyHint = errData.error;
+          }
+        } catch {
+          /* 解析失败则按原有降级逻辑处理 */
+        }
+        if (emptyHint) {
+          toastWarning(emptyHint);
+          return;
+        }
         proceedExport();
         return;
       }

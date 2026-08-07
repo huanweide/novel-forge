@@ -104,49 +104,63 @@ export async function POST(request: Request) {
       const branchParentMap: Record<string, string | null> = {};
       const lostForks: string[] = [];
       if (want("branches")) {
-        // Pass 1：创建全部分支。forkPointNodeId 为 required String 无默认值，必须给占位值，
-        // 否则 Prisma 抛 Missing required value → 事务整体回滚 → 备份静默失败（G1 修复）。
-        // 占位取 重映射节点id ?? 旧节点id ?? ""；parentBranchId 一并 strip，Pass 2 重映射（W1 修复悬空）。
-        for (const b of p.storyBranches || []) {
-          branchForkMap[b.id] = b.forkPointNodeId;
-          branchParentMap[b.id] = b.parentBranchId ?? null;
-          const cb = await tx.storyBranch.create({
-            data: {
-              ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId", "parentBranchId"]),
-              projectId: pid,
-              forkPointNodeId: nodeMap[b.forkPointNodeId] ?? b.forkPointNodeId ?? "",
-            } as any,
-          });
-          branchMap[b.id] = cb.id;
-        }
-        // Pass 2：parentBranchId 重映射（此时 branchMap 已全部就绪，可跨序引用旧 id）
-        for (const b of p.storyBranches || []) {
-          const oldParent = branchParentMap[b.id];
-          const newParent = oldParent ? (branchMap[oldParent] ?? null) : null;
-          if (newParent) {
-            await tx.storyBranch.update({
-              where: { id: branchMap[b.id] },
-              data: { parentBranchId: newParent } as any,
+        let curBranch: any = null;
+        try {
+          // Pass 1：创建全部分支。forkPointNodeId 为 required String 无默认值，必须给占位值，
+          // 否则 Prisma 抛 Missing required value → 事务整体回滚 → 备份静默失败（G1 修复）。
+          // 占位取 重映射节点id ?? 旧节点id ?? ""；parentBranchId 一并 strip，Pass 2 重映射（W1 修复悬空）。
+          for (const b of p.storyBranches || []) {
+            curBranch = b;
+            branchForkMap[b.id] = b.forkPointNodeId;
+            branchParentMap[b.id] = b.parentBranchId ?? null;
+            const cb = await tx.storyBranch.create({
+              data: {
+                ...strip(b, ["id", "projectId", "createdAt", "forkPointNodeId", "parentBranchId"]),
+                projectId: pid,
+                forkPointNodeId: nodeMap[b.forkPointNodeId] ?? b.forkPointNodeId ?? "",
+              } as any,
             });
+            branchMap[b.id] = cb.id;
           }
+          // Pass 2：parentBranchId 重映射（此时 branchMap 已全部就绪，可跨序引用旧 id）
+          for (const b of p.storyBranches || []) {
+            curBranch = b;
+            const oldParent = branchParentMap[b.id];
+            const newParent = oldParent ? (branchMap[oldParent] ?? null) : null;
+            if (newParent) {
+              await tx.storyBranch.update({
+                where: { id: branchMap[b.id] },
+                data: { parentBranchId: newParent } as any,
+              });
+            }
+          }
+        } catch (e) {
+          throw new Error(`故事分支「${curBranch?.name ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
 
       // 3. 章节节点 pass1 创建（不带 parent/branch），pass2 回填 parentId/branchId
       if (want("chapters")) {
-        for (const n of p.storyNodes || []) {
-          const cn = await tx.storyNode.create({
-            data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt", "parentId", "branchId"]), projectId: pid, revisionCount: 0 } as any,
-          });
-          nodeMap[n.id] = cn.id;
-        }
-        for (const n of p.storyNodes || []) {
-          const upd: Record<string, any> = {};
-          if (n.parentId && nodeMap[n.parentId]) upd.parentId = nodeMap[n.parentId];
-          if (n.branchId && branchMap[n.branchId]) upd.branchId = branchMap[n.branchId];
-          if (Object.keys(upd).length) {
-            await tx.storyNode.update({ where: { id: nodeMap[n.id] }, data: upd });
+        let curNode: any = null;
+        try {
+          for (const n of p.storyNodes || []) {
+            curNode = n;
+            const cn = await tx.storyNode.create({
+              data: { ...strip(n, ["id", "projectId", "createdAt", "updatedAt", "parentId", "branchId"]), projectId: pid, revisionCount: 0 } as any,
+            });
+            nodeMap[n.id] = cn.id;
           }
+          for (const n of p.storyNodes || []) {
+            curNode = n;
+            const upd: Record<string, any> = {};
+            if (n.parentId && nodeMap[n.parentId]) upd.parentId = nodeMap[n.parentId];
+            if (n.branchId && branchMap[n.branchId]) upd.branchId = branchMap[n.branchId];
+            if (Object.keys(upd).length) {
+              await tx.storyNode.update({ where: { id: nodeMap[n.id] }, data: upd });
+            }
+          }
+        } catch (e) {
+          throw new Error(`第 ${(p.storyNodes || []).indexOf(curNode) + 1} 个章节「${curNode?.title ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
 
@@ -178,55 +192,92 @@ export async function POST(request: Request) {
       // 4. 世界书词条（parentId / relatedEntryIds 重映射）
       const loreMap: Record<string, string> = {};
       if (want("lorebook")) {
-        for (const l of p.lorebookEntries || []) {
-          const cl = await tx.lorebookEntry.create({
-            data: { ...strip(l, ["id", "projectId", "createdAt", "updatedAt", "parentId", "relatedEntryIds"]), projectId: pid } as any,
-          });
-          loreMap[l.id] = cl.id;
-        }
-        for (const l of p.lorebookEntries || []) {
-          const upd: Record<string, any> = {};
-          if (l.parentId && loreMap[l.parentId]) upd.parentId = loreMap[l.parentId];
-          if (Array.isArray(l.relatedEntryIds)) {
-            const remapped = (l.relatedEntryIds as string[]).map((rid) => loreMap[rid]).filter(Boolean);
-            if (remapped.length) upd.relatedEntryIds = remapped;
+        let curLore: any = null;
+        try {
+          for (const l of p.lorebookEntries || []) {
+            curLore = l;
+            const cl = await tx.lorebookEntry.create({
+              data: { ...strip(l, ["id", "projectId", "createdAt", "updatedAt", "parentId", "relatedEntryIds"]), projectId: pid } as any,
+            });
+            loreMap[l.id] = cl.id;
           }
-          if (Object.keys(upd).length) {
-            await tx.lorebookEntry.update({ where: { id: loreMap[l.id] }, data: upd });
+          for (const l of p.lorebookEntries || []) {
+            curLore = l;
+            const upd: Record<string, any> = {};
+            if (l.parentId && loreMap[l.parentId]) upd.parentId = loreMap[l.parentId];
+            if (Array.isArray(l.relatedEntryIds)) {
+              const remapped = (l.relatedEntryIds as string[]).map((rid) => loreMap[rid]).filter(Boolean);
+              if (remapped.length) upd.relatedEntryIds = remapped;
+            }
+            if (Object.keys(upd).length) {
+              await tx.lorebookEntry.update({ where: { id: loreMap[l.id] }, data: upd });
+            }
           }
+        } catch (e) {
+          throw new Error(`世界书词条「${curLore?.title ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
 
       // 5. 其余扁平子表
       if (want("characters")) {
-        for (const c of p.characters || []) {
-          await tx.characterCard.create({
-            data: {
-              ...strip(c, ["id", "projectId", "createdAt", "updatedAt"]),
-              relationships: normalizeRelationships((c as any).relationships),
-              projectId: pid,
-            } as any,
-          });
+        let curChar: any = null;
+        try {
+          for (const c of p.characters || []) {
+            curChar = c;
+            await tx.characterCard.create({
+              data: {
+                ...strip(c, ["id", "projectId", "createdAt", "updatedAt"]),
+                relationships: normalizeRelationships((c as any).relationships),
+                projectId: pid,
+              } as any,
+            });
+          }
+        } catch (e) {
+          throw new Error(`角色卡「${curChar?.name ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
       if (want("storylines")) {
-        for (const s of p.storylines || []) {
-          await tx.storyline.create({ data: { ...strip(s, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        let curSl: any = null;
+        try {
+          for (const s of p.storylines || []) {
+            curSl = s;
+            await tx.storyline.create({ data: { ...strip(s, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+          }
+        } catch (e) {
+          throw new Error(`故事线「${curSl?.name ?? curSl?.title ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
       if (want("style")) {
-        for (const sc of p.styleCards || []) {
-          await tx.styleCard.create({ data: { ...strip(sc, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        let curStyle: any = null;
+        try {
+          for (const sc of p.styleCards || []) {
+            curStyle = sc;
+            await tx.styleCard.create({ data: { ...strip(sc, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+          }
+        } catch (e) {
+          throw new Error(`风格卡「${curStyle?.name ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
       if (want("tables")) {
-        for (const lt of p.loreTables || []) {
-          await tx.loreTable.create({ data: { ...strip(lt, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        let curTable: any = null;
+        try {
+          for (const lt of p.loreTables || []) {
+            curTable = lt;
+            await tx.loreTable.create({ data: { ...strip(lt, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+          }
+        } catch (e) {
+          throw new Error(`设定表「${curTable?.name ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
       if (want("rules")) {
-        for (const r of p.rules || []) {
-          await tx.rule.create({ data: { ...strip(r, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+        let curRule: any = null;
+        try {
+          for (const r of p.rules || []) {
+            curRule = r;
+            await tx.rule.create({ data: { ...strip(r, ["id", "projectId", "createdAt", "updatedAt"]), projectId: pid } as any });
+          }
+        } catch (e) {
+          throw new Error(`规则「${curRule?.name ?? "?"}」导入失败：${(e as Error)?.message ?? String(e)}`);
         }
       }
 
@@ -257,9 +308,29 @@ export async function POST(request: Request) {
       }
     }
     // P1-①：事务已自动 rollback，此处不再留孤儿；仅报错返回
-    console.error("[import] 还原失败（已回滚）:", err instanceof Error ? err.message : String(err));
+    // R2-009/P1：将笼统的错误原因细化为结构化、可定位的提示（不改动事务/超时逻辑本身）。
+    const le = err as any;
+    const rawMsg = le instanceof Error ? le.message : String(le);
+    const prismaCode = le?.code;
+    let detail = rawMsg;
+    let kind = "UNKNOWN";
+    if (/timed?\s*out|transaction.*timeout|timeout/i.test(rawMsg)) {
+      // round-1 已修 timeout 逻辑本身，这里仅把超时错误翻译成作者能懂的中文提示
+      detail = "事务超时：备份数据量过大，120 秒内未完成。建议拆分为更小的备份分批导入。";
+      kind = "TIMEOUT";
+    } else if (prismaCode === "P2002") {
+      detail = `数据库唯一约束冲突（字段重复写入）：${rawMsg}`;
+      kind = "UNIQUE";
+    } else if (prismaCode === "P2003") {
+      detail = `外键约束冲突（引用了不存在的关联记录）：${rawMsg}`;
+      kind = "FK";
+    } else if (/missing|required|Argument `.+` is missing|Invalid value for argument/i.test(rawMsg)) {
+      detail = `字段缺失或必填项为空：${rawMsg}`;
+      kind = "FIELD";
+    }
+    console.error("[import] 还原失败（已回滚）:", rawMsg);
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : String(err) },
+      { success: false, error: detail, code: kind, rawCode: prismaCode ?? null },
       { status: 500 },
     );
   }

@@ -8,6 +8,7 @@ import { DialogField, DialogInput } from "./DialogUI";
 import { Modal } from "@/components/ui/Modal";
 import type { LorebookData } from "./types";
 import { toastError } from "@/components/ui/toast";
+import { WORLD_MODULES } from "./worldPanelData";
 
 export function LorebookEditDialog({
   entry,
@@ -109,21 +110,9 @@ export function LorebookEditDialog({
         </DialogField>
         <DialogField label="分类">
           <select className="input-glass w-full rounded px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-            <option value="geography">地理</option>
-            <option value="faction">势力/组织</option>
-            <option value="magic_system">力量体系</option>
-            <option value="history">历史事件</option>
-            <option value="culture">文化/风俗</option>
-            <option value="creature">生物/种族</option>
-            <option value="item">关键物品</option>
-            <option value="technique">功法体系</option>
-            <option value="law">法则/规则</option>
-            <option value="currency">货币/经济</option>
-            <option value="fate_system">命运体系</option>
-            <option value="physics">物理列表</option>
-            <option value="public_system">公开体系</option>
-            <option value="character_relationship">角色关系</option>
-            <option value="custom">自定义</option>
+            {WORLD_MODULES.map((m) => (
+              <option key={m.key} value={m.key}>{m.label}</option>
+            ))}
           </select>
         </DialogField>
         <DialogField label="记忆注入方式（决定这条设定何时被 AI 读取）">

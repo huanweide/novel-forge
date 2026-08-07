@@ -700,15 +700,21 @@ export async function endGameAndExport(sessionId: string): Promise<{
  * 清除旧会话（重新开始游戏时用）
  */
 export async function resetGameSession(projectId: string, nodeId: string) {
+  // R2-013 修复：每次「开局 / 重置游戏会话」都重拍作者「当前正在编辑」的实时 node.content 为原正文快照，
+  // 确保快照始终 == 工作区真实正文，避免作者润色游戏导出章节后重开游戏时，手动编辑被首次入游的旧快照无声覆盖；
+  // 同时消除两局语境错位（C0 旧快照与 C1 实时内容来源不同一）。
+  // 注意：endGameAndExport 仍用快照作前置（防「同会话重复导出」的堆叠逻辑不变），此处只是把快照来源刷新为实时正文。
+  // 取舍（遗留风险）：若作者「导出后未手动编辑」就直接重开游戏，上一局的游戏正文会被并入新快照基线
+  // （即旧游戏输出现在成为新局的「原正文前置」），跨多次重开会持续累积；这与 IMP-001「重开即丢弃旧游戏输出、回到纯净原正文」的语义不同。
+  const node = await prisma.storyNode.findUnique({ where: { id: nodeId } });
+  const freshSnapshot = node?.content || "";
+
   const existing = await prisma.gameSession.findUnique({
     where: { projectId_nodeId: { projectId, nodeId } },
   });
-  // IMP-001 快照修复：保留首次进入游戏前的作者原正文快照，跨 reset 持续复用。
-  // 否则二次开局的 resetGameSession 会以「上一次导出已改写过的 node.content」为原正文再次前置，导致堆叠损坏。
-  const preservedSnapshot = existing?.originalContentSnapshot || null;
   if (existing) {
     await prisma.gameState.deleteMany({ where: { sessionId: existing.id } });
     await prisma.gameSession.delete({ where: { id: existing.id } });
   }
-  return ensureGameSession(projectId, nodeId, preservedSnapshot);
+  return ensureGameSession(projectId, nodeId, freshSnapshot);
 }

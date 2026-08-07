@@ -67,13 +67,23 @@ const SEVEN_ELEMENTS: Array<[key: string, label: string]> = [
   ["result", "结果"], ["twist", "意外"], ["turn", "转折"], ["ending", "结局"],
 ];
 
-/** 活跃剧情线摘要：每条线的 title + description + 非空七要素 */
+/** 活跃剧情线摘要：每条线的 title + description + 非空七要素；支线标注隶属主线（R2-006） */
 export function formatStorylines(storylines: any[]): string {
   if (!storylines || storylines.length === 0) return "";
+  // 主线 id -> title 映射，用于支线隶属解析（仅本批注入的 active 线，约束保持）
+  const mainTitleById = new Map<string, string>();
+  for (const s of storylines) {
+    if (s.type === "main" && s.id) mainTitleById.set(s.id, s.title);
+  }
   return storylines
     .map((s: any) => {
       const parts: string[] = [];
-      parts.push(`【剧情线：${s.title}】${s.type === "main" ? "（主线）" : "（支线）"}`);
+      // 支线标注从属主线：让 AI 感知「支线 X 隶属于主线 Y」（基于 parentId 解析）
+      let prefix = `【剧情线：${s.title}】${s.type === "main" ? "（主线）" : "（支线）"}`;
+      if (s.type !== "main" && s.parentId && mainTitleById.has(s.parentId)) {
+        prefix += `（隶属主线 ${mainTitleById.get(s.parentId)}）`;
+      }
+      parts.push(prefix);
       if (s.description) parts.push(`说明：${s.description}`);
       const elems = SEVEN_ELEMENTS
         .map(([k, label]) => (s[k] ? `${label}:${s[k]}` : ""))
