@@ -278,9 +278,9 @@
 
   --nv-text-primary:   #1A1C22;
   --nv-text-secondary: #4A4D57;
-  --nv-text-tertiary:  #6B6E78;
+  --nv-text-tertiary:  #5E616B;  /* NEW-UI-WC-2 修复：浅色 tertiary 原 #6B6E78 在 surface-3(#E1DDD8) 上仅 3.767:1(<4.5 AA)，改为 #5E616B ≈4.577:1(≥AA)，且弱于专用 --nv-text-muted-on-surface-3(#5A5D67,4.860)，消解层级倒挂 */
   --nv-text-muted:     #696C75;   /* 浅色主题：对比度 4.6:1，达 WCAG AA */
-  --nv-text-muted-on-surface-3: #5A5D67;  /* Round-4 补修：浅色 surface-3 合成 #E1DDD8 上，原复用 #696C75 仅 3.881:1(<4.5 AA)；改用浅色 muted-foreground #5A5D67，surface-3 上 4.860:1(≥4.5 AA)。注：浅色 tertiary #6B6E78 在同面仅 3.765:1(本身<AA)，故无法保持 muted<tertiary 同面对比度又达 AA，按 recheck「浅色需更深的灰」取合规值，亮级介于 secondary(6.238) 与 tertiary(3.765) 之间 */
+  --nv-text-muted-on-surface-3: #5A5D67;  /* Round-4 补修：浅色 surface-3 合成 #E1DDD8 上，原复用 #696C75 仅 3.881:1(<4.5 AA)；改用浅色 muted-foreground #5A5D67，surface-3 上 4.860:1(≥4.5 AA)。注：浅色 tertiary 已随 NEW-UI-WC-2 改为 #5E616B（surface-3 上 ≈4.577:1 ≥ AA），且弱于本专用 muted(4.860)，层级不再倒挂；原 #6B6E78(3.767:1) 已废弃 */
 
   --shadow-glow-indigo:   0 0 16px oklch(0.55 0.17 270 / 0.15);
   --shadow-glow-success:  0 0 16px oklch(0.55 0.16 160 / 0.15);

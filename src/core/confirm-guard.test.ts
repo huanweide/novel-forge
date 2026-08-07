@@ -107,6 +107,16 @@ describe("triggerForeshadowDetect（R2-007 收口：detect 自调用 + 失败日
     const [, opts] = fetchMock.mock.calls[0];
     expect(opts.signal).toBeUndefined();
   });
+
+  it("NEW-2: 同 projectId 并发触发 → fetch 仅发一次（互斥去重防雪崩）", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    await Promise.all([
+      triggerForeshadowDetect({ projectId: "dedup-p" }),
+      triggerForeshadowDetect({ projectId: "dedup-p" }),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("applyConfirm（R2-007 收口：skipDetect 控制 detect 触发）", () => {

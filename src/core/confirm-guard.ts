@@ -196,6 +196,12 @@ export async function applyConfirm(node: {
  *
  * 调用方一律 `void triggerForeshadowDetect(...)` 触发，不阻塞主流程。
  */
+// NEW-2 修复：同 projectId 进程内互斥去重锁。并发确认（批量确认 / 多章同时定稿）会各自
+// fire-and-forget 触发 detect；若不互斥，N 个请求对同一个项目同时发起 N 次全量 detect
+// （O(C×S) 重算），服务端雪崩。加锁后：同一 projectId 在途 detect 期间，后续触发直接复用
+// 在途 promise 的结果（不另发请求、也不重试），大幅收敛并发放大。
+const detectLocks = new Map<string, Promise<void>>();
+
 export async function triggerForeshadowDetect(args: {
   projectId: string;
   origin?: string;
@@ -204,31 +210,53 @@ export async function triggerForeshadowDetect(args: {
   const url = `${origin}/api/foreshadowing/detect`;
   const body = JSON.stringify({ projectId: args.projectId });
   const TIMEOUT_MS = 5000;
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+
+  // NEW-2：同 projectId 已有在途 detect → 复用其结果，不重复发请求（规避重试放大雪崩）。
+  const inflight = detectLocks.get(args.projectId);
+  if (inflight) {
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(TIMEOUT_MS) : undefined,
-      });
-      if (!res.ok) {
-        lastErr = new Error(`detect 返回非 2xx 状态码 ${res.status}`);
-        // 非 2xx 同样走重试（应对确认瞬间短暂抖动）
-      } else {
-        return;
-      }
-    } catch (e) {
-      lastErr = e;
+      await inflight;
+    } catch {
+      /* 复用侧不重复记日志：原调用已记录失败 */
     }
-    if (attempt < 2) await sleep(200); // 轻退避
+    return;
   }
-  console.error(
-    "[foreshadowing/detect] 自调用失败（已重试1次，放弃）:",
-    lastErr instanceof Error ? lastErr.message : String(lastErr),
-    { projectId: args.projectId },
-  );
+
+  const run = (async () => {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(TIMEOUT_MS) : undefined,
+        });
+        if (!res.ok) {
+          lastErr = new Error(`detect 返回非 2xx 状态码 ${res.status}`);
+          // 非 2xx 同样走重试（应对确认瞬间短暂抖动）
+        } else {
+          return;
+        }
+      } catch (e) {
+        lastErr = e;
+      }
+      if (attempt < 2) await sleep(200); // 轻退避
+    }
+    console.error(
+      "[foreshadowing/detect] 自调用失败（已重试1次，放弃）:",
+      lastErr instanceof Error ? lastErr.message : String(lastErr),
+      { projectId: args.projectId },
+    );
+  })();
+
+  detectLocks.set(args.projectId, run);
+  try {
+    await run;
+  } finally {
+    // 不论成功失败，本次 detect 结算后立即释放锁，允许下一波变更触发新一次 detect
+    detectLocks.delete(args.projectId);
+  }
 }
 
 /** 最小退避，避免重试瞬间打满正在抖动的 detect 路由。 */

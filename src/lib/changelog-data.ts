@@ -25,18 +25,50 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.7";
+export const LATEST_VERSION = "v1.6.8";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.7 故事线重挂守卫口径对齐（R4-NEW-6）：outline-context.ts 的 isRehangTargetActiveMain 查询由无效枚举字面量 status: { in: [active, main] } 改为 OR: [{ type: main }, { status: active }]，消除 main 死字面量（status 枚举无此值）导致的守卫恒漏判，与前端严格 status === active 口径一致",
-  "v1.6.7 伏笔 detect 旧运行时兼容（R4-NEW-7）：confirm-guard.ts 的 AbortSignal.timeout 调用加 typeof 防护，旧 Node 运行时该 API 未定义时降级为不传 signal，根除每次 detect 同步抛错必然失败；confirm-guard.test.ts 补降级用例守卫回归",
-  "v1.6.7 伏笔面板 hover 配色修复（NEW-UI-WC-3）：ForeshadowingPanel.tsx 的 hover:bg-[var(--nv-surface-4)] 改为已存在的 surface-2（surface-4 主题未定义、原 hover 无反馈），面板交互可见性恢复",
-  "测试误删事故补救 + 门禁收口：补救 Round-5 Agent 把装配引擎测试误写入 game-engine.test.ts 覆盖原 21 例游戏引擎测试（净减 14 例）的事故——git checkout 恢复 game-engine 21 例 + 新建 assembly/engine.test.ts 归位 4 例装配测试；实跑 tsc 零错误 + 283 单测全绿（从误删后 262 恢复），game-engine 21 + engine.test.ts 4 + classifier 8 全部就位，误删清零",
+  "v1.6.8 伏笔 detect 并发去重（NEW-2）：confirm-guard.ts 的 triggerForeshadowDetect 加 projectId 进程内互斥去重锁，并发确认只发一次全量 detect 并复用在途 promise 结果，杜绝超时重试放大服务端雪崩",
+  "v1.6.8 伏笔 detect 时序倒挂假阳性 + 长书内存峰值（NEW-3 + NEW-4）：detectPayoffs 回收口径由 updatedAt 改为 createdAt >= anchor，排除旧章节无关润色 refine 刷新 updatedAt 误判 fulfilled 的时序倒挂假阳性（保留同期章节 refine 合法命中）；DB 层按 createdAt 预过滤章节正文、命中改片段数组短路，长书峰值内存显著下降",
+  "v1.6.8 多独立主线跨线误归属（NEW-5）：outline-context.ts 的 pickReassignMainId 仅在恰一条活跃兄弟主线时自动重挂，0 条或 ≥2 条活跃兄弟返回 null，交由删除路由把子线 parentId 置空、由 resolveParent 回退，杜绝盲目嫁接第一条 active 主线",
+  "v1.6.8 浅色 tertiary 达 WCAG AA + 层级倒挂消解（NEW-UI-WC-2）：globals.css 浅色 --nv-text-tertiary 由 #6B6E78(3.767:1<AA) 改为 #5E616B(≈4.577:1≥AA)，且仍弱于专用 --nv-text-muted-on-surface-3(#5A5D67,4.860)，层级不再倒挂",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.8",
+    date: "2026-08-07",
+    title: "魔王 Round-7 收口（伏笔 detect 并发去重 / 时序倒挂假阳性 / 长书内存峰值 / 多主线跨线误归属 / 浅色 tertiary AA）",
+    sections: [
+      {
+        label: "伏笔 detect 并发去重（NEW-2）",
+        items: [
+          "confirm-guard.ts 的 triggerForeshadowDetect 加 projectId 进程内互斥去重锁（detectLocks），并发确认（批量确认/多章同时定稿）只发一次全量 detect 并复用在途 promise 结果，杜绝超时重试放大服务端雪崩",
+        ],
+      },
+      {
+        label: "伏笔 detect 时序倒挂假阳性 + 长书内存峰值（NEW-3 + NEW-4）",
+        items: [
+          "detectPayoffs 回收判定口径由 updatedAt 改为 createdAt >= anchor：排除伏笔埋设前旧章节被无关润色 refine 刷新 updatedAt 误判 fulfilled 的时序倒挂假阳性，同时保留与伏笔同期创建章节日后 refine 补回收的合法命中（Round-4 新坑1 能力不回退）",
+          "DB 层按 createdAt >= minAnchor 预过滤章节正文，不再把全书旧章节一次性载入；命中由单个巨型 haystack 改为按片段数组逐个短路（.some），长篇小说 O(C×S) 全量载入的峰值内存显著下降",
+        ],
+      },
+      {
+        label: "多独立主线跨线误归属（NEW-5）",
+        items: [
+          "outline-context.ts 的 pickReassignMainId 仅在「恰有一条活跃兄弟主线」时自动重挂；0 条或 ≥2 条活跃兄弟时返回 null，交由删除路由把子线 parentId 置空、由 resolveParent 回退，杜绝多独立主线并存时把被删主线子线盲目嫁接第一条 active 主线",
+        ],
+      },
+      {
+        label: "浅色 tertiary 达 WCAG AA + 层级倒挂消解（NEW-UI-WC-2）",
+        items: [
+          "globals.css 浅色 --nv-text-tertiary 由 #6B6E78（surface-3 上 3.767:1 < 4.5 AA）改为 #5E616B（≈4.577:1 ≥ AA），且仍弱于专用 --nv-text-muted-on-surface-3(#5A5D67, 4.860)，层级不再倒挂",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.7",
     date: "2026-08-07",

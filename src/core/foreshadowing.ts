@@ -192,6 +192,16 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
     //  - 实时正文（storyNode.content）随 refine 改写刷新 updatedAt，能反映最新回收/新埋信号。
     // Round-4 修复（新坑1）：refine 确认触发 detect 时，摘要仍是改写前的陈旧快照，
     // 故必须把实时正文纳入 haystack，否则 detect 只看陈旧摘要、伏笔面板看着没变。
+    // NEW-4 修复：仅在「最早一条伏笔埋设点」之后创建的章节才可能回收该伏笔，
+    // 故 DB 层用 createdAt > minAnchor 预过滤，避免把全书旧章节正文一次性载入内存拼巨型 haystack
+    // （长篇小说 O(C×S) 全量载入峰值内存随字数线性膨胀）。minAnchor=0（无伏笔）时退化为不过滤。
+    const minAnchor = commitments.length
+      ? commitments.reduce(
+          (m, c) => Math.min(m, (c.detectedAt || c.createdAt).getTime()),
+          Number.MAX_SAFE_INTEGER,
+        )
+      : 0;
+
     const [summaries, nodes] = await Promise.all([
       prisma.chapterSummary.findMany({
         where: { projectId },
@@ -199,9 +209,13 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
         select: { createdAt: true, summary: true, keyEvents: true },
       }),
       prisma.storyNode.findMany({
-        where: { projectId, type: { in: ["chapter", "section", "scene"] } },
+        where: {
+          projectId,
+          type: { in: ["chapter", "section", "scene"] },
+          createdAt: { gte: new Date(minAnchor) },
+        },
         orderBy: { createdAt: "asc" },
-        select: { createdAt: true, updatedAt: true, content: true },
+        select: { createdAt: true, content: true },
       }),
     ]);
 
@@ -222,10 +236,15 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
       const anchor = c.detectedAt || c.createdAt;
       // 摘要：createdAt 晚于伏笔埋设点（原有语义）。
       const laterSummaries = summaries.filter((s) => s.createdAt > anchor);
-      // 实时正文：updatedAt 晚于伏笔埋设点（覆盖 refine 改写——refine 改写后 updatedAt 刷新，
-      // 但其 chapterSummary 因 skipSummarize 而陈旧，故必须纳入正文才可能看见 refine 回收信号）。
-      const laterNodes = nodes.filter((n) => (n.updatedAt ?? n.createdAt) > anchor);
-      const haystack = [
+      // NEW-3 修复：仅纳入「创建时间不早于伏笔埋设点」的实时正文（createdAt >= anchor），
+      // 杜绝「伏笔埋设前就已存在的旧章节」被无关润色 refine 刷新 updatedAt 后误判 fulfilled 的时序倒挂假阳性。
+      // 用 >= 而非 >：与伏笔同期创建（createdAt == anchor）、日后 refine 补回收信号的章节仍属合法命中
+      // （保留 Round-4 新坑1 能力），而 createdAt 早于 anchor 的旧章节无论怎么 refine 都不可能承载该伏笔的回收，
+      // 直接排除，正好消解假阳性。与 laterSummaries 的 createdAt 口径一致。
+      const laterNodes = nodes.filter((n) => n.createdAt >= anchor);
+      // NEW-4 修复：不再把所有 later 文本拼接成单个巨型字符串，改为按片段数组逐个判定、
+      // 命中即短路（.some），峰值内存从「全文拼接」降为「单次种子扫描」，长书更稳。
+      const textPieces = [
         ...laterSummaries.map((s) => {
           const events = Array.isArray(s.keyEvents)
             ? (s.keyEvents as string[]).join("\n")
@@ -233,15 +252,15 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
           return `${s.summary || ""}\n${events}`;
         }),
         ...laterNodes.map((n) => (n.content || "")),
-      ].join("\n");
+      ];
 
       let matchedClosure = 0;
       for (const seed of closure) {
-        if (seed && haystack.includes(seed)) matchedClosure++;
+        if (seed && textPieces.some((p) => p.includes(seed))) matchedClosure++;
       }
       let matchedPhrase = 0;
       for (const seed of phrases) {
-        if (seed && haystack.includes(seed)) matchedPhrase++;
+        if (seed && textPieces.some((p) => p.includes(seed))) matchedPhrase++;
       }
 
       let newStatus = c.status;

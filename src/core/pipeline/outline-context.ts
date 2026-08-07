@@ -133,7 +133,12 @@ export function isRehangTargetActiveMain(
  */
 export function pickReassignMainId(siblings: any[]): string | null {
   if (!Array.isArray(siblings)) return null;
-  return siblings.find((m: any) => m?.status === "active")?.id ?? null;
+  const activeMains = siblings.filter((m: any) => m?.status === "active");
+  // NEW-5 修复：仅在「恰有一条活跃兄弟主线」时才自动重挂，避免多独立主线并存时把被删
+  // 主线的子线盲目嫁接第一条 active 主线造成跨线误归属。0 条或 ≥2 条活跃兄弟 → 返回 null，
+  // 交由 delete 路由把子线 parentId 置空、由 resolveParent 回退，不再制造虚假隶属。
+  if (activeMains.length === 1) return activeMains[0]?.id ?? null;
+  return null;
 }
 
 /** 活跃剧情线摘要：每条线的 title + description + 非空七要素；支线标注隶属主线（R2-006） */

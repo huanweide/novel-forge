@@ -98,4 +98,20 @@ describe("detectPayoffs（Round-4 修复新坑1：扫描实时正文而非陈旧
     expect(prismaMock.pendingCommitment.update).not.toHaveBeenCalled();
     expect(stats.fulfilled).toBe(0);
   });
+
+  it("NEW-3 回归：伏笔埋设前的旧章节被 refine（updatedAt 晚于 anchor）且恰含 closure 短语 → 不误判 fulfilled", async () => {
+    prismaMock.pendingCommitment.findMany.mockResolvedValue([baseCommit()]);
+    prismaMock.chapterSummary.findMany.mockResolvedValue([]);
+    // 旧章节在伏笔埋设前(createAt 早于 anchor)已写成并含有 closure 短语；日后无关润色刷新 updatedAt 晚于 anchor。
+    // 旧代码用 updatedAt > anchor 会误将其算作回收；NEW-3 改用 createdAt >= anchor，旧章节 createdAt < anchor 应排除。
+    const beforeAnchor = new Date("2025-12-01T00:00:00.000Z");
+    const afterAnchor = new Date("2026-03-01T00:00:00.000Z");
+    prismaMock.storyNode.findMany.mockResolvedValue([
+      { createdAt: beforeAnchor, updatedAt: afterAnchor, content: "他早早就把戒指已戴上，如今旧事重提。" },
+    ]);
+
+    const stats = await detectPayoffs("p1");
+    expect(prismaMock.pendingCommitment.update).not.toHaveBeenCalled();
+    expect(stats.fulfilled).toBe(0);
+  });
 });

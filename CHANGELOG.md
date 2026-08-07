@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.8 — 2026-08-07
+**魔王 Round-7 收口（伏笔 detect 并发去重 / 时序倒挂假阳性 / 长书内存峰值 / 多主线跨线误归属 / 浅色 tertiary AA）**
+
+- **伏笔 detect 并发去重（NEW-2）**：`confirm-guard.ts` 的 `triggerForeshadowDetect` 加 `projectId` 进程内互斥去重锁（`detectLocks`），并发确认只发一次全量 detect 并复用在途 promise 结果，杜绝超时重试放大服务端雪崩。
+- **伏笔 detect 时序倒挂假阳性 + 长书内存峰值（NEW-3 + NEW-4）**：`detectPayoffs` 回收口径由 `updatedAt` 改为 `createdAt >= anchor`——排除伏笔埋设前旧章节被无关润色 refine 刷新 `updatedAt` 误判 fulfilled 的时序倒挂假阳性，同时保留与伏笔同期创建章节日后 refine 补回收的合法命中（Round-4 新坑1 能力不回退）；DB 层按 `createdAt >= minAnchor` 预过滤章节正文、命中由单个巨型 haystack 改为按片段数组逐个短路（`.some`），长书 O(C×S) 全量载入峰值内存显著下降。
+- **多独立主线跨线误归属（NEW-5）**：`outline-context.ts` 的 `pickReassignMainId` 仅在「恰有一条活跃兄弟主线」时自动重挂；0 条或 ≥2 条活跃兄弟时返回 `null`，交由删除路由把子线 `parentId` 置空、由 `resolveParent` 回退，杜绝多独立主线并存时把被删主线子线盲目嫁接第一条 active 主线。
+- **浅色 tertiary 达 WCAG AA + 层级倒挂消解（NEW-UI-WC-2）**：`globals.css` 浅色 `--nv-text-tertiary` 由 `#6B6E78`（surface-3 上 3.767:1 < 4.5 AA）改为 `#5E616B`（≈4.577:1 ≥ AA），且仍弱于专用 `--nv-text-muted-on-surface-3`(`#5A5D67`, 4.860)，层级不再倒挂。
+
+---
+
 ## v1.6.7 — 2026-08-07
 **魔王 Round-6 收口（故事线重挂守卫口径对齐 / 伏笔 detect 旧运行时兼容 / 伏笔面板 hover 配色 / 测试误删事故补救）**
 
