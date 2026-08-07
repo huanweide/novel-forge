@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.5";
+export const LATEST_VERSION = "v1.6.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.5 魔王 Round-2 深度体检 + 15 项修复：世界卡 15 类自动填表闭环（确定性分类器正式接入 entity-sync 兜底路由，type 枚举补 magic_system/culture/history/law/currency 5 类、TYPE_TO_CATEGORY 补 5 映射，新增主张级集成测试），根除 v1.6.3「分类器声明即摆设」",
-  "v1.6.5 世界卡收口：lorebook API 用 ALL_WORLD_CATEGORIES 做 Set 白名单校验，非法分类（如 currnecy 错字）直接 400 拒绝不再静默错乱；LorebookEditDialog 下拉与 pre-write-cards 校验全部由 WORLD_MODULES / ALL_WORLD_CATEGORIES 派生，消除 13~36 文件字符串散落",
-  "v1.6.5 写章 refine/continue 补传 source 溯源链闭合；批量生成 PreGenConfirm 补 localStorage 写入端让批量角色卡约束真正生效；故事线 generate 优先接管未完结主线（支线不挂旧完结线）+ 注入「支线隶属主线」；伏笔 auto-confirm/手动/游戏导出闭环（批量/refine 留 v1.6.6）",
-  "质量门禁：tsc 零错误 + 246 单测全绿（净增 8：entity-sync 4 + lorebook 4）；API 巡检 REAL_BROKEN_LINKS=0；生成按需加载（长项目不再无界拉 10–20MB）；深色 --nv-text-muted 调亮达 WCAG AA；18 文件经 8 透镜 + 8 复检 Agent 交叉验证「真生效」",
+  "v1.6.6 伏笔检测全漏斗闭环：confirm-guard 新增 triggerForeshadowDetect（真实 request.url.origin + 失败日志 + 轻量重试），applyConfirm / post-processor 步骤4.5 / 手动 confirm 三处收口；batch-confirm 确认后仅触发一次全量 detect。Round-4 修 detect 只读陈旧摘要——改扫实时正文，refine 回收信号真正可见",
+  "v1.6.6 世界卡 globalPrompt 15 类无遗漏：sync-global-prompt 的 catOrder 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 ALL_WORLD_CATEGORIES 派生，根除写库正确却被 globalPrompt 静默丢弃 7 类的最后一公里断点；catLabel 提升为分类器内 WORLD_CATEGORY_LABELS 单一权威常量，编译期强制与分类清单 1:1 对齐",
+  "v1.6.6 故事线死过滤 + N8 回归：orchestrator 按真实 status 过滤（原 s.completed 恒 true 致已完结线仍注入写作）+ 多主线只渲染第一条 + continue 章号 order 严格递增；Round-4 删主线级联重挂收紧为仅活跃主线，保住 R2-006 隶属前缀",
+  "质量门禁：tsc 零错误 + 276 单测全绿（较 v1.6.5 的 246 净增 30：foreshadowing 4 + outline-context 15 + 其他 round-3/4 配套）；IO 空导出守卫 + 监控前文截断修复 + surface-3 三主题 muted 达 WCAG AA",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.6",
+    date: "2026-08-07",
+    title: "魔王 Round-3 + Round-4 收口（伏笔检测全漏斗闭环 / 世界卡 globalPrompt 15 类无遗漏 / 故事线死过滤+N8回归 / IO与监控健壮性 / surface-3 三主题达 AA）",
+    sections: [
+      {
+        label: "伏笔检测全漏斗闭环（R2-007 收口 + Round-4 新坑1）",
+        items: [
+          "confirm-guard.ts 新增 triggerForeshadowDetect 共享 helper（真实 request.url.origin + 失败 console.error + 轻量重试一次），applyConfirm / post-processor 步骤4.5 / 手动 confirm 三处统一收口",
+          "batch-confirm 在所有节点确认后仅触发一次全量 detect（避免 N 次重复重扫）；Round-4 修 detect 只读陈旧摘要——detectPayoffs 改为并行读 chapterSummary + storyNode.content 实时正文，refine 改写后的伏笔回收信号真正可见、面板更新",
+        ],
+      },
+      {
+        label: "世界卡 globalPrompt 15 类无遗漏（PIT-1 + PIT-2）",
+        items: [
+          "sync-global-prompt.ts 的 catOrder 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 ALL_WORLD_CATEGORIES 派生，根除「世界卡写库正确但 globalPrompt 静默丢弃 7 类」最后一公里断点",
+          "Round-4 消除 catLabel 手抄漂移根因：分类器新增 WORLD_CATEGORY_LABELS 单一权威常量，键类型与 ALL_WORLD_CATEGORIES 共用 WorldCategory 联合类型，编译期强制 1:1 对齐，新增/改名类漏改即 tsc 失败",
+        ],
+      },
+      {
+        label: "故事线死过滤 + N8 回归（N1~N4 + N8）",
+        items: [
+          "orchestrator 死过滤修复：s.completed 字段不存在致恒 true，已完结/废弃线仍注入写作；改为 filterActiveStorylines 按真实 status 排除 completed/abandoned",
+          "多主线只渲染第一条修复（groupStorylinesByMain）+ continue 章号 order 不递增修复（续写节点 order 严格递增不重复）；Round-4 修 N8 回归：删除主线级联重挂收紧为仅活跃兄弟主线，[id]/route.ts 与 generate 双处加固，保住 R2-006 隶属前缀",
+        ],
+      },
+      {
+        label: "IO / 监控 / 主题可达性（R3-IO + R2-012 + surface-3 三主题）",
+        items: [
+          "IO 空导出边角修复：选中非根节点其子树无正文时 export/route.ts 新增正文空判定守卫返回 400 + roots 口径修正，杜绝静默产出空白文件",
+          "监控 R2-012 退化修复：context-loader 窗口度量口径由整体节点序号改为章/节序号，前文截断退化消除；surface-3 muted 全三主题达 WCAG AA（深色 Round-3 新增令牌、浅色/苍青 Round-4 重新核算取值）",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.5",
     date: "2026-08-07",

@@ -42,9 +42,15 @@ export async function POST(request: Request) {
     }
 
     // ── 创建下一节节点 ──
-    const siblings = (allNodes as any[]).filter((n: any) => n.parentId === (currentNode as any).parentId);
-    const currentIndex = siblings.findIndex((n: any) => n.id === currentNodeId);
-    const nextOrder = currentIndex >= 0 ? currentIndex + 1 : siblings.length;
+    // R3 修复（复检 NEW-3 / 任务 NEW-1 章号不递增）：order 必须严格递增且不重复。
+    // 旧逻辑用「兄弟数组下标 + 1」当全局 order，在嵌套/分卷结构下会与既有节点撞号，
+    // 导致续写章 order 倒挂或重复，破坏「order 即序列位次」不变量与 isLatestChapter 判定。
+    // 改为基于数据库当前最大 order + 1：实时聚合，避免读取陈旧内存快照（并发更安全）。
+    const orderAgg = await prisma.storyNode.aggregate({
+      where: { projectId },
+      _max: { order: true },
+    });
+    const nextOrder = (orderAgg._max.order ?? 0) + 1;
 
     let nextTitle = "";
     if ((currentNode as any).title) {

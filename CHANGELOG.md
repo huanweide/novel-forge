@@ -2,6 +2,17 @@
 
 ---
 
+## v1.6.6 — 2026-08-07
+**魔王 Round-3 + Round-4 收口（伏笔检测全漏斗闭环 / 世界卡 globalPrompt 15 类无遗漏 / 故事线死过滤+N8回归 / IO与监控健壮性 / surface-3 三主题达 AA）**
+
+- **伏笔检测全漏斗闭环（R2-007 收口 + Round-4 新坑1）**：`confirm-guard.ts` 新增 `triggerForeshadowDetect` 共享 helper（真实 `request.url.origin` + 失败 `console.error` + 轻量重试一次），`applyConfirm` / `post-processor` 步骤4.5 / 手动 confirm 三处统一收口；`batch-confirm` 在所有节点确认后仅触发一次全量 detect（避免 N 次重复重扫）。Round-4 修 detect 只读陈旧摘要——`detectPayoffs` 改为并行读 `chapterSummary` + `storyNode.content` 实时正文，refine 改写后的伏笔回收信号真正可见、面板更新。
+- **世界卡 globalPrompt 15 类无遗漏（PIT-1 + PIT-2）**：`sync-global-prompt.ts` 的 `catOrder` 由硬编码 10 项（含 2 虚构分类、漏 7 类）改为从 `ALL_WORLD_CATEGORIES` 派生，根除「世界卡写库正确但 globalPrompt 静默丢弃 7 类」最后一公里断点；Round-4 消除 `catLabel` 手抄漂移根因——分类器新增 `WORLD_CATEGORY_LABELS` 单一权威常量，键类型与 `ALL_WORLD_CATEGORIES` 共用 `WorldCategory` 联合类型，编译期强制 1:1 对齐，新增/改名类漏改即 tsc 失败。
+- **故事线死过滤 + N8 回归（N1~N4 + N8）**：`orchestrator` 死过滤修复——`s.completed` 字段不存在致恒 true、已完结/废弃线仍注入写作，改为 `filterActiveStorylines` 按真实 `status` 排除 completed/abandoned；多主线只渲染第一条修复（`groupStorylinesByMain`）+ `continue` 章号 `order` 不递增修复（续写节点 order 严格递增不重复）。Round-4 修 N8 回归——删除主线级联重挂收紧为仅活跃兄弟主线，`[id]/route.ts` 与 `generate` 双处加固，保住 R2-006 隶属前缀。
+- **IO / 监控 / 主题可达性（R3-IO + R2-012 + surface-3 三主题）**：IO 空导出边角修复——选中非根节点其子树无正文时 `export/route.ts` 新增正文空判定守卫返回 400 + `roots` 口径修正，杜绝静默产出空白文件；监控 R2-012 退化修复——`context-loader` 窗口度量口径由整体节点序号改为章/节序号，前文截断退化消除；surface-3 muted 全三主题达 WCAG AA（深色 Round-3 新增令牌、浅色/苍青 Round-4 重新核算取值）。
+- 质量门禁：tsc 零错误 + 276 单测全绿（较 v1.6.5 的 246 净增 30：foreshadowing 4 + outline-context 15 + 其他 round-3/4 配套）；11 份 round-3/round-4 修复文档经独立修复 Agent 落盘。
+
+---
+
 ## v1.6.5 — 2026-08-07
 **魔王系统 Round-2 深度体检 + 15 项修复（世界卡闭环 / 写章溯源 / 故事线层级 / 伏笔闭环 / IO 健壮性 / 主题可达性 / 监控去误报）**
 

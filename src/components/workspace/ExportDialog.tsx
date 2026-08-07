@@ -87,7 +87,7 @@ export function ExportDialog({
         let emptyHint: string | null = null;
         try {
           const errData = (await res.json()) as { error?: string };
-          if (errData?.error && /未选中|没有内容|没有有效章节/.test(errData.error)) {
+          if (errData?.error && /未选中|没有内容|没有有效章节|没有可导出正文|无可导出正文/.test(errData.error)) {
             emptyHint = errData.error;
           }
         } catch {

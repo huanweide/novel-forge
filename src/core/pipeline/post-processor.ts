@@ -19,7 +19,7 @@ import type { AgentOrchestrator } from "@/core/agents";
 import type { ReviewLog } from "@/core/types";
 import type { PostPipelineParams, PostPipelineResult } from "./types";
 import { snapshotRevision } from "@/lib/versions";
-import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
+import { evaluateConfirmEligibility, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
 
 /**
  * 运行完整的生成后处理管线。
@@ -696,17 +696,9 @@ export async function runPostGenerationPipeline(
       }
 
       // R2-007：本章摘要已落库，补触发伏笔收束率检测（applyConfirm 入参 skipDetect=true 时已跳过）。
-      // fire-and-forget，不阻塞管线；本轮确认（auto-confirm）只触发一次，无重复。
-      try {
-        const origin = process.env.APP_ORIGIN || "http://localhost:3001";
-        void fetch(`${origin}/api/foreshadowing/detect`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId, nodeId }),
-        }).catch(() => {});
-      } catch {
-        /* 构造请求失败则跳过，不影响管线 */
-      }
+      // 复用共享 helper（含失败日志 + 轻量重试 + 超时保护）；本轮确认（auto-confirm）只触发一次，无重复。
+      // nodeId 为死参数已移除（detect 按 projectId 全量重算）。
+      void triggerForeshadowDetect({ projectId });
     } catch (summaryErr) {
       // 摘要失败不阻塞主流程
       send({

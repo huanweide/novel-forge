@@ -5,7 +5,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { snapshotRevision } from "@/lib/versions";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING, STATUS_PENDING_CONFIRM } from "@/core/story-status";
-import { maybeAutoDeliver } from "@/core/confirm-guard";
+import { maybeAutoDeliver, triggerForeshadowDetect } from "@/core/confirm-guard";
 
 // GET /api/story/nodes/[id]
 export async function GET(
@@ -212,17 +212,9 @@ export async function PATCH(
         if (upd.count === 0) {
           return NextResponse.json({ error: "节点状态已变化，未重复确认" }, { status: 409 });
         }
-        // IMP-007：确认通过后异步触发伏笔收束率检测（fire-and-forget，不阻塞确认响应；失败静默吞掉）
-        try {
-          const base = new URL(request.url).origin;
-          void fetch(`${base}/api/foreshadowing/detect`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ projectId: node.projectId }),
-          }).catch(() => {});
-        } catch {
-          /* 构造 URL 失败则跳过，不影响确认 */
-        }
+        // IMP-007 / R2-007 收口：确认通过后异步触发伏笔收束率检测。
+        // 用真实 request.url.origin（始终可达）+ 共享 helper（失败日志 + 轻量重试）。
+        void triggerForeshadowDetect({ projectId: node.projectId, origin: new URL(request.url).origin });
         const fresh = await prisma.storyNode.findUnique({ where: { id } });
         // v1.1.0：手动确认刚定稿，尝试自动整本交付（fire-and-forget，红利不阻塞响应）
         void maybeAutoDeliver(node.projectId).catch(() => {});

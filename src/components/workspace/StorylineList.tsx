@@ -10,7 +10,7 @@ import { confirmDialog, toastError, toastSuccess, toastInfo, toastCreated } from
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { StorylinesModal } from "@/components/workspace/StorylinesModal";
 import { DialogField, DialogInput } from "./DialogUI";
-import { computeStorylineProgress } from "@/lib/storyline-progress";
+import { computeStorylineProgress, groupStorylinesByMain } from "@/lib/storyline-progress";
 
 export interface StorylineData {
   id: string; projectId: string;
@@ -129,29 +129,9 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const mainLine = storylines.find(s => s.type === "main");
-  const sideLines = storylines.filter(s => s.type === "side");
+  // N2 修复：多主线支持——遍历所有主线，分别聚合支线；回退优先活跃主线
+  const { mains: mainLines, sides: sideLines, resolveParent } = groupStorylinesByMain(storylines);
   const editingStory = storylines.find(s => s.id === editingId) || null;
-
-  // v1.6.4 #651 支线归属解析：优先 parentId，回退到唯一主线
-  const resolveParent = (s: StorylineData): StorylineData | null => {
-    if (s.parentId) {
-      const p = storylines.find((m) => m.id === s.parentId);
-      if (p) return p;
-    }
-    return mainLine ?? null;
-  };
-  const childLines = mainLine
-    ? sideLines.filter((s) => resolveParent(s)?.id === mainLine.id)
-    : [];
-  const childAvg = childLines.length
-    ? Math.round(
-        childLines.reduce((acc, s) => acc + computeStorylineProgress(s).overallPercent, 0) /
-          childLines.length,
-      )
-    : 0;
-  const mainProgress = mainLine ? computeStorylineProgress(mainLine).overallPercent : 0;
-  const combinedProgress = Math.round(mainProgress * 0.7 + childAvg * 0.3);
 
   if (loading) return <div className="py-4 text-center text-xs text-[var(--nv-text-tertiary)]">加载中...</div>;
 
@@ -178,9 +158,19 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         </div>
       </div>
 
-      {/* 主线 */}
-      {mainLine && (
-        <div className="overflow-hidden rounded-lg border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
+      {/* 主线（N2 修复：遍历所有主线，分别聚合支线） */}
+      {mainLines.map((mainLine) => {
+        const childLines = sideLines.filter((s) => resolveParent(s)?.id === mainLine.id);
+        const childAvg = childLines.length
+          ? Math.round(
+              childLines.reduce((acc, s) => acc + computeStorylineProgress(s).overallPercent, 0) /
+                childLines.length,
+            )
+          : 0;
+        const mainProgress = computeStorylineProgress(mainLine).overallPercent;
+        const combinedProgress = Math.round(mainProgress * 0.7 + childAvg * 0.3);
+        return (
+        <div key={mainLine.id} className="overflow-hidden rounded-lg border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
           <div className="flex items-center gap-1 bg-[var(--nv-accent-soft)] px-2 py-1.5">
             <Icon name="star" size={11} className="text-[var(--nv-accent)]" />
             <span
@@ -188,6 +178,9 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
               onClick={() => setShowFull(true)}
               title="点击查看完整主线剧情（全屏）"
             >{mainLine.title}</span>
+            {mainLine.status === "completed" && (
+              <span className="rounded bg-[var(--nv-success)]/15 px-1 text-[9px] text-[var(--nv-success)]">已完结</span>
+            )}
             <button
               onClick={() => handleToggleComplete(mainLine)}
               className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
@@ -218,7 +211,8 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
             onToggle={() => setExpandedId(expandedId === mainLine.id ? null : mainLine.id)}
             onEdit={() => startEdit(mainLine)} onDelete={() => deleteStoryline(mainLine.id)} deletingId={deletingId} />
         </div>
-      )}
+        );
+      })}
 
       {/* 支线 */}
       {sideLines.map(s => {

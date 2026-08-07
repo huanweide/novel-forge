@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyWorldCategory, ALL_WORLD_CATEGORIES, type WorldCategory } from "./world-category-classifier";
+import { classifyWorldCategory, ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS, type WorldCategory } from "./world-category-classifier";
 
 describe("世界卡确定性分类器", () => {
   it("15 个世界卡分类均能唯一识别（覆盖用户 14 类含 3 新类 + item/magic_system/technique）", () => {
@@ -51,5 +51,22 @@ describe("世界卡确定性分类器", () => {
   it("全 15 类在 ALL_WORLD_CATEGORIES 中且均能映射", () => {
     expect(ALL_WORLD_CATEGORIES).toHaveLength(15);
     expect(new Set(ALL_WORLD_CATEGORIES).size).toBe(15);
+  });
+
+  it("WORLD_CATEGORY_LABELS 与 ALL_WORLD_CATEGORIES 同源（键集一致且标签非空，杜绝 catLabel 手抄漂移）", () => {
+    // catLabel（生成侧 globalPrompt 分组标题）现已派生自 WORLD_CATEGORY_LABELS。
+    // 此用例为 Round-4 加固：确保标签映射与分类清单永远 1:1 对齐，
+    // 一旦有人增删/改名 ALL_WORLD_CATEGORIES 却漏改标签，本用例会失败（叠加 tsc 编译期报错）。
+    const cats = ALL_WORLD_CATEGORIES;
+    const labelKeys = Object.keys(WORLD_CATEGORY_LABELS) as WorldCategory[];
+    expect(new Set(labelKeys).size).toBe(cats.length);
+    for (const cat of cats) {
+      expect(WORLD_CATEGORY_LABELS[cat], `分类 ${cat} 必须存在中文标签`).toBeTruthy();
+      expect(WORLD_CATEGORY_LABELS[cat].trim().length).toBeGreaterThan(0);
+    }
+    // 反向：标签映射不允许出现分类清单之外的多余 key
+    for (const k of labelKeys) {
+      expect(cats).toContain(k);
+    }
   });
 });

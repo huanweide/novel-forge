@@ -96,24 +96,119 @@ export async function loadGenerationContext(
   const currentOrder = (currentNode as any).order as number;
   const chapterNum = currentOrder + 1;
 
-  // R2-012：按需补全「当前章之前近期窗口」章节的全量正文。
-  // write/refine/preview 取 previousNodes 注入承接上下文，continue 用
-  // `n.content` 过滤取最近 5 章——这些章节必须有 content，其余章节保持轻量。
+  // R2-012：按需补全「当前章之前」章节的全量正文（只补窗口内，不无界全量拉 content）。
+  //
+  // 下游对「前文」有两种度量口径，必须分别覆盖，否则多卷/多节结构会错位或截断：
+  //   (A) write/refine/continue 走「整体节点序号」窗口：
+  //       - write/refine: previousNodes = allNodes.slice(idx - keepChapters, idx)
+  //       - continue: allNodes.filter(n => n.order <= cur.order && n.content).slice(-5)
+  //   (B) extractPrevContext 走「章/节节点序号」窗口（只取 type===chapter||section 的前 N 章）。
+  //
+  // 原实现只用 (A) 的整体序号窗口（keepWindow），当卷/节/幕节点穿插时，章序号窗口会超出
+  // 整体序号窗口，导致 extractPrevContext 注入的前文被截断、且补拉正文与章序号错位（R2-012 退化）。
+  //
+  // 修复策略：
+  //   - (A) 保留整体序号窗口，供 write/refine/continue。
+  //   - (B) 新增章/节序号窗口，与 extractPrevContext 过滤口径（chapter||section）完全对齐；
+  //         并做多卷感知——窗口下限至少下探到「当前卷起始章」+「上一卷尾部衔接章」，
+  //         避免跨卷断崖；不再用单一「最近 5 章」一刀切导致跨卷丢失。
+  //   - 两窗口取并集补拉正文；合并时按 id 回填到按 order 升序的骨架列表，章序号 1:1 对齐、不重排。
   const keepChapters = ((project as any)?.contextKeepChapters as number) ?? 4;
   const keepWindow = Math.max(keepChapters, 5); // 覆盖 continue 硬编码的 -5
-  const curIdx = (allNodesLight as any[]).findIndex((n) => n.id === nodeId);
-  const prevIds = curIdx >= 0
-    ? (allNodesLight as any[])
-        .slice(Math.max(0, curIdx - keepWindow), curIdx)
-        .map((n) => n.id)
-    : [];
+
+  const allLight = allNodesLight as any[];
+  const curIdx = allLight.findIndex((n) => n.id === nodeId);
+
+  // 章/节节点列表（与 extractPrevContext 的过滤口径完全一致：chapter || section）
+  const CHAPTER_SECTION = new Set(["chapter", "section"]);
+  const chapterNodes = allLight.filter((n: any) => CHAPTER_SECTION.has(n.type));
+  const curChIdx = chapterNodes.findIndex((n: any) => n.id === nodeId);
+
+  // parentId / 节点索引映射，用于向上回溯卷节点（多卷感知）
+  const parentOf = new Map<string, string | null>();
+  const nodeById = new Map<string, any>();
+  for (const n of allLight) {
+    parentOf.set(n.id, (n as any).parentId ?? null);
+    nodeById.set(n.id, n);
+  }
+  // 返回某节点所属卷的 id（沿 parentId 向上找到 type===volume）；无卷则返回 null
+  const findVolumeId = (id: string): string | null => {
+    let cur: string | null = id;
+    const seen = new Set<string>();
+    while (cur && !seen.has(cur)) {
+      seen.add(cur);
+      const node = nodeById.get(cur);
+      if (node && node.type === "volume") return node.id;
+      cur = parentOf.get(cur) ?? null;
+    }
+    return null;
+  };
+  // 章/节节点对应的卷 id（预计算，避免重复回溯）
+  const chVolumeIds = chapterNodes.map((n: any) => findVolumeId(n.id));
+
+  const prevIds = new Set<string>();
+
+  // (A) 整体序号窗口：覆盖 write/refine/continue 的按整体序号切片 / 最近有正文节点
+  if (curIdx >= 0) {
+    for (let i = Math.max(0, curIdx - keepWindow); i < curIdx; i++) {
+      prevIds.add(allLight[i].id);
+    }
+  }
+
+  // (B) 章/节序号窗口 + 多卷感知：与 extractPrevContext 对齐，并按卷边界扩展下限
+  if (curChIdx >= 0) {
+    // 默认：取当前章之前的 keepWindow 个章/节节点（对齐 extractPrevContext 的 prevCount=5）
+    let windowStart = Math.max(0, curChIdx - keepWindow);
+
+    const curVolumeId = chVolumeIds[curChIdx];
+    if (curVolumeId) {
+      // 当前卷在章/节数组中的起始下标
+      const curVolFirstChIdx = chVolumeIds.indexOf(curVolumeId);
+      if (curVolFirstChIdx >= 0) {
+        windowStart = Math.min(windowStart, curVolFirstChIdx);
+      }
+      // 上一卷：order 小于当前卷 order 的最近一个 volume 节点
+      const curVolOrder = (nodeById.get(curVolumeId) as any)?.order ?? 0;
+      const prevVolume = allLight
+        .filter((n: any) => n.type === "volume" && n.order < curVolOrder)
+        .sort((a: any, b: any) => b.order - a.order)[0];
+      if (prevVolume) {
+        const prevVolChIdxes = chVolumeIds
+          .map((vid: string | null, i: number) => ({ i, vid }))
+          .filter((x: any) => x.vid === prevVolume.id)
+          .map((x: any) => x.i);
+        if (prevVolChIdxes.length > 0) {
+          const prevVolLastChIdx = prevVolChIdxes[prevVolChIdxes.length - 1];
+          const TAIL_BRIDGING = 3; // 上一卷尾部衔接章数量，避免跨卷断崖
+          const extendStart = Math.max(0, prevVolLastChIdx - TAIL_BRIDGING + 1);
+          windowStart = Math.min(windowStart, extendStart);
+        }
+      }
+    }
+
+    // 安全上限：避免超大卷导致无界补拉（保留 R2-012 性能收益）
+    const MAX_CHAPTER_WINDOW = 60;
+    if (curChIdx - windowStart > MAX_CHAPTER_WINDOW) {
+      windowStart = Math.max(0, curChIdx - MAX_CHAPTER_WINDOW);
+    }
+
+    for (let i = windowStart; i < curChIdx; i++) {
+      prevIds.add(chapterNodes[i].id);
+    }
+  }
+
+  const prevIdsArr = [...prevIds];
   const prevFull =
-    prevIds.length > 0
-      ? await prisma.storyNode.findMany({ where: { id: { in: prevIds } } })
+    prevIdsArr.length > 0
+      ? await prisma.storyNode.findMany({
+          where: { id: { in: prevIdsArr } },
+          orderBy: { order: "asc" }, // 显式按 order 排序，确保与章序号一一对应
+        })
       : [];
-  const prevFullMap = new Map((prevFull as any[]).map((n) => [n.id, n]));
-  // 轻量结构列表 + 近期章节补回全量正文（顺序/索引不变，下游逻辑无感）
-  const allNodes: any[] = (allNodesLight as any[]).map((n) => {
+  const prevFullMap = new Map((prevFull as any[]).map((n: any) => [n.id, n]));
+  // 轻量结构列表 + 窗口内章/节补回全量正文；保持 allNodesLight 原有（按 order 升序）骨架顺序，
+  // 下游逻辑无感、章序号不重排、与章节序号一一对应。
+  const allNodes: any[] = allLight.map((n: any) => {
     const full = prevFullMap.get(n.id);
     return full ? full : n;
   });

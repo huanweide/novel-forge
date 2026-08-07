@@ -41,6 +41,28 @@ export const ALL_WORLD_CATEGORIES: WorldCategory[] = [
   "character_relationship", "custom", "fate_system", "physics", "public_system",
 ];
 
+// 中文标签映射（单一权威源，与 ALL_WORLD_CATEGORIES 同源）。
+// 键入为 Record<WorldCategory, string>：类型系统强制覆盖全部 15 类，
+// 一旦 ALL_WORLD_CATEGORIES 增删/改名某一类，而此处漏改，tsc 直接报错，
+// 从而在编译期消除「catOrder 与 catLabel 多源漂移」的根因（原 Round-2 PIT-2）。
+export const WORLD_CATEGORY_LABELS: Record<WorldCategory, string> = {
+  geography: "🗺 地理",
+  faction: "🏛 势力",
+  item: "💎 器物",
+  magic_system: "⚙️ 力量体系",
+  technique: "📘 功法体系",
+  creature: "🐉 生物",
+  culture: "🎭 文化",
+  history: "📜 历史",
+  law: "⚖️ 规则法则",
+  currency: "💰 货币体系",
+  character_relationship: "🔗 角色关系",
+  custom: "📦 自定义",
+  fate_system: "🔮 命运体系",
+  physics: "🔬 物理",
+  public_system: "🏛 公开体制",
+};
+
 // 关键词表：每个分类一组。越长越具体，权重越高（权重 = 字符长度）。顺序无关。
 const KEYWORDS: Record<WorldCategory, string[]> = {
   geography: ["大陆", "国家", "城市", "宗门", "秘境", "山脉", "河流", "海域", "疆域", "地图", "地域", "圣地", "洞天", "福地", "关隘", "都城", "城池", "山谷", "平原", "沙漠", "海洋", "岛屿", "宗门驻地", "灵脉"],

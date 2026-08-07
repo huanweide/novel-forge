@@ -108,6 +108,7 @@
   --nv-text-secondary: #B9B7AD;   /* L2 辅文字——亮灰，对比度 7:1 */
   --nv-text-tertiary:  #98968C;   /* L3 弱文字——中灰，对比度 5.2:1（达 WCAG AA） */
   --nv-text-muted:     #8E8B82;   /* L4 禁用/占位文字——灰；R2-010：提亮至落深色卡片/弹窗(popover #161E34)≥4.5:1(WCAG AA)，实测约 4.86:1，且仍低于 tertiary #98968C 保层级 */
+  --nv-text-muted-on-surface-3: #96948B;  /* Round-3 UI-002 残留修复：muted 落在最深浮起面 surface-3(rgba(255,255,255,0.09)合成#242938)上时，原 #8E8B82 仅 4.25:1(<4.5 AA)；本变体提亮到 #96948B，surface-3 上约 4.77:1，达 WCAG AA，且仍低于 tertiary 保层级 */
 
   /* ── 字体栈（Next.js Google Fonts CSS变量 → 中文系统字体 fallback） ── */
   --font-sans:       var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
@@ -279,6 +280,7 @@
   --nv-text-secondary: #4A4D57;
   --nv-text-tertiary:  #6B6E78;
   --nv-text-muted:     #696C75;   /* 浅色主题：对比度 4.6:1，达 WCAG AA */
+  --nv-text-muted-on-surface-3: #5A5D67;  /* Round-4 补修：浅色 surface-3 合成 #E1DDD8 上，原复用 #696C75 仅 3.881:1(<4.5 AA)；改用浅色 muted-foreground #5A5D67，surface-3 上 4.860:1(≥4.5 AA)。注：浅色 tertiary #6B6E78 在同面仅 3.765:1(本身<AA)，故无法保持 muted<tertiary 同面对比度又达 AA，按 recheck「浅色需更深的灰」取合规值，亮级介于 secondary(6.238) 与 tertiary(3.765) 之间 */
 
   --shadow-glow-indigo:   0 0 16px oklch(0.55 0.17 270 / 0.15);
   --shadow-glow-success:  0 0 16px oklch(0.55 0.16 160 / 0.15);
@@ -1189,6 +1191,7 @@ html.azure {
   --nv-text-secondary: #9FB6B2;
   --nv-text-tertiary:  #7C918D;
   --nv-text-muted:     #6A807C;   /* 苍青主题：对比度 4.8:1，达 WCAG AA */
+  --nv-text-muted-on-surface-3: #708885;  /* Round-4 补修：苍青 surface-3 合成 #131B1E 上，原复用 #6A807C 仅 4.149:1(<4.5 AA)；提亮为 #708885，surface-3 上 4.612:1(≥4.5 AA)，且仍低于同面 tertiary #7C918D(5.229:1)，保持 muted<tertiary 层级 */
 
   --background: #04090C;
   --foreground: #E9F2F0;

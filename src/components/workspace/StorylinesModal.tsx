@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
 import { toastError, toastSuccess, toastCreated } from "@/components/ui/toast";
 import { StorylineDetail, type StorylineData } from "./StorylineList";
+import { groupStorylinesByMain } from "@/lib/storyline-progress";
 
 // v1.6.0 故事线全屏弹窗：展示全部主线/支线完整过程（七要素 + 章节进展时间轴），支持一键打勾完结、AI 生成
 export function StorylinesModal({
@@ -73,8 +74,8 @@ export function StorylinesModal({
     finally { setGenerating(false); }
   };
 
-  const mainLine = storylines.find((s) => s.type === "main");
-  const sideLines = storylines.filter((s) => s.type === "side");
+  // N2 修复：多主线支持——遍历所有主线（旧的已完结主线也要展示，不能只取第一条）
+  const { mains: mainLines, sides: sideLines } = groupStorylinesByMain(storylines);
   const toggle = (id: string) => setExpandedId(expandedId === id ? null : id);
 
   return (
@@ -118,11 +119,14 @@ export function StorylinesModal({
 
         {!loading && !loadError && storylines.length > 0 && (
           <div className="space-y-3">
-            {mainLine && (
-              <div className="overflow-hidden rounded-xl border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
+            {mainLines.map((mainLine) => (
+              <div key={mainLine.id} className="overflow-hidden rounded-xl border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
                 <div className="flex items-center gap-2 bg-[var(--nv-accent-soft)] px-3 py-2">
                   <Icon name="star" size={13} className="text-[var(--nv-accent)]" />
-                  <span className="flex-1 break-words text-sm font-medium text-[var(--nv-accent)]">主线 · {mainLine.title}</span>
+                  <span className="flex-1 break-words text-sm font-medium text-[var(--nv-accent)]">
+                    主线 · {mainLine.title}
+                    {mainLine.status === "completed" && <span className="ml-1 rounded bg-[var(--nv-success)]/15 px-1 text-[9px] text-[var(--nv-success)]">已完结</span>}
+                  </span>
                   <button
                     onClick={() => handleToggleComplete(mainLine)}
                     className="text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-accent)]"
@@ -138,7 +142,7 @@ export function StorylinesModal({
                     onDelete={() => { /* 删除走左栏 tab */ }} deletingId={null} />
                 </div>
               </div>
-            )}
+            ))}
             {sideLines.map((s) => (
               <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]">
                 <div className="flex items-center gap-2 px-3 py-2">

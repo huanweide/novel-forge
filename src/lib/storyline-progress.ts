@@ -55,3 +55,44 @@ export function computeStorylineProgress(s: any): StorylineProgress {
     label,
   };
 }
+
+// ─── 多主线分组（N2 修复） ─────────────────────────────────────
+// 旧逻辑把主线当成单一对象（`find(s => s.type === "main")` 只取第一条），
+// 多主线项目下（如 newMain 缝合怪产生「旧 completed 主线 + 新 active 主线」）
+// 新活跃主线会被吞掉、支线误归属第一条主线。这里按所有主线分别聚合。
+//
+// 解析规则：
+// - 优先用 parentId 精确匹配已知剧情线；
+// - parentId 为空/悬空时，回退到「活跃（status=active）主线」，而非数组第一条；
+//   若没有活跃主线则回退到第一条主线（保持旧单主线行为），再无则 null。
+
+export interface StorylineGroup {
+  mains: any[];
+  sides: any[];
+  /** 回退主线：parentId 解析失败时的默认归属 */
+  fallbackMain: any | null;
+  /** 解析某条线的归属主线（可能为自身若是主线） */
+  resolveParent: (s: any) => any | null;
+  /** 取某条主线名下的支线集合 */
+  childrenOf: (mainId: string) => any[];
+}
+
+export function groupStorylinesByMain(storylines: any[]): StorylineGroup {
+  const list = Array.isArray(storylines) ? storylines : [];
+  const mains = list.filter((s) => s && s.type === "main");
+  const sides = list.filter((s) => s && s.type === "side");
+  const fallbackMain = mains.find((m) => m.status === "active") || mains[0] || null;
+
+  const resolveParent = (s: any): any | null => {
+    if (s && s.parentId) {
+      const p = list.find((m) => m.id === s.parentId);
+      if (p) return p;
+    }
+    return fallbackMain;
+  };
+
+  const childrenOf = (mainId: string) =>
+    sides.filter((s) => resolveParent(s)?.id === mainId);
+
+  return { mains, sides, fallbackMain, resolveParent, childrenOf };
+}

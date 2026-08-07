@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStorylineProgress, SEVEN_ELEMENT_KEYS } from "./storyline-progress";
+import { computeStorylineProgress, SEVEN_ELEMENT_KEYS, groupStorylinesByMain } from "./storyline-progress";
 
 describe("故事线进度量化", () => {
   it("空故事线：进度全 0", () => {
@@ -43,5 +43,38 @@ describe("故事线进度量化", () => {
     expect(() => computeStorylineProgress({ chapterBindings: "bad" })).not.toThrow();
     const p = computeStorylineProgress({ chapterBindings: "bad" });
     expect(p.chapterCount).toBe(0);
+  });
+});
+
+describe("N2 groupStorylinesByMain（多主线遍历）", () => {
+  const data = [
+    { id: "old", type: "main", status: "completed", title: "旧主线" },
+    { id: "new", type: "main", status: "active", title: "新主线" },
+    { id: "s1", type: "side", status: "active", title: "挂新主线", parentId: "new" },
+    { id: "s2", type: "side", status: "active", title: "无父悬空" },
+    { id: "s3", type: "side", status: "active", title: "挂旧主线", parentId: "old" },
+  ];
+
+  it("所有主线都被返回，新活跃主线不被吞", () => {
+    const { mains } = groupStorylinesByMain(data);
+    expect(mains.map((m: any) => m.id).sort()).toEqual(["new", "old"]);
+  });
+
+  it("回退主线优先活跃主线（而非数组第一条旧主线）", () => {
+    const { fallbackMain, resolveParent } = groupStorylinesByMain(data);
+    expect(fallbackMain?.id).toBe("new");
+    // 悬空支线应回退到活跃主线，而非误归属旧 completed 主线
+    expect(resolveParent({ id: "s2", type: "side" })?.id).toBe("new");
+  });
+
+  it("按各自主线正确聚合子线", () => {
+    const { childrenOf } = groupStorylinesByMain(data);
+    expect(childrenOf("new").map((s: any) => s.id).sort()).toEqual(["s1", "s2"]);
+    expect(childrenOf("old").map((s: any) => s.id)).toEqual(["s3"]);
+  });
+
+  it("空/异常输入安全", () => {
+    expect(groupStorylinesByMain(undefined as any).mains).toEqual([]);
+    expect(groupStorylinesByMain([]).fallbackMain).toBeNull();
   });
 });

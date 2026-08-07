@@ -172,19 +172,68 @@ export async function applyConfirm(node: {
   // fire-and-forget：交付是确认后的红利，失败静默（不阻塞确认响应），用户手动点也能兜底。
   void maybeAutoDeliver(node.projectId).catch(() => {});
 
-  // R2-007：确认成功后异步触发伏笔收束率检测（fire-and-forget，不阻塞确认响应；失败静默吞掉）。
-  // 与手动 confirm 路径（src/app/api/story/nodes/[id]/route.ts:215-225）保持一致。
+  // R2-007：确认成功后异步触发伏笔收束率检测（fire-and-forget，不阻塞确认响应）。
+  // 与手动 confirm 路径（src/app/api/story/nodes/[id]/route.ts）保持一致。
   // 时序盲点处理：detect 路由自身不 lazy 生成章摘要（见 src/core/foreshadowing.ts:detectPayoffs），
   // 故「确认早于摘要」的调用方（后处理管线）需传 skipDetect=true 并在摘要落库后再触发，避免漏看本章。
+  // R2-007 收口：复用共享 helper（含失败日志 + 轻量重试），不再静默吞错。
   if (!node.skipDetect) {
-    const origin = process.env.APP_ORIGIN || "http://localhost:3001";
-    void fetch(`${origin}/api/foreshadowing/detect`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId: node.projectId, nodeId: node.id }),
-    }).catch(() => {});
+    void triggerForeshadowDetect({ projectId: node.projectId });
   }
   return fillMsg;
+}
+
+/**
+ * R2-007 收口（新坑3）+ Round-4（新坑4/新坑5）改进：伏笔收束率检测自调用的共享 fire-and-forget helper。
+ * - 失败不再静默吞掉：至少 console.error 一次，附 projectId 便于排查。
+ * - 轻量重试一次（最多 2 次），两次之间 sleep 200ms 轻退避，避免对正在抖动的服务器雪上加霜。
+ * - 超时保护：fetch 带 AbortSignal.timeout(5000)，避免 detect 路由在 O(C×S) 全量重算时
+ *   长时间不返回导致 fire-and-forget promise 挂死、占用连接/事件循环。
+ * - nodeId 为死参数（detect 路由只按 projectId 全量重算，见新坑5），已从签名与 body 中移除，
+ *   不再制造「detect 已做节点级隔离」的错觉。
+ * - origin 优先用调用方传入的真实 request.url.origin（始终可达）；未传则回退
+ *   APP_ORIGIN || http://localhost:3001（保持与原实现一致的部署耦合）。
+ *
+ * 调用方一律 `void triggerForeshadowDetect(...)` 触发，不阻塞主流程。
+ */
+export async function triggerForeshadowDetect(args: {
+  projectId: string;
+  origin?: string;
+}): Promise<void> {
+  const origin = args.origin || process.env.APP_ORIGIN || "http://localhost:3001";
+  const url = `${origin}/api/foreshadowing/detect`;
+  const body = JSON.stringify({ projectId: args.projectId });
+  const TIMEOUT_MS = 5000;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        lastErr = new Error(`detect 返回非 2xx 状态码 ${res.status}`);
+        // 非 2xx 同样走重试（应对确认瞬间短暂抖动）
+      } else {
+        return;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+    if (attempt < 2) await sleep(200); // 轻退避
+  }
+  console.error(
+    "[foreshadowing/detect] 自调用失败（已重试1次，放弃）:",
+    lastErr instanceof Error ? lastErr.message : String(lastErr),
+    { projectId: args.projectId },
+  );
+}
+
+/** 最小退避，避免重试瞬间打满正在抖动的 detect 路由。 */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

@@ -67,9 +67,24 @@ export async function GET(
       );
     }
 
+    // R3-IO：选章导出时若级联展开后的整棵子树「没有任何正文」（即所有节点均无 content，
+    // 例如单独选中一个尚未动笔的 section/scene，或选中的节点及其后代都还是空壳），
+    // 视为空导出范围，返回结构化错误而非静默产出空白文件。
+    // 仅当展开后仍无任何正文章才拦截；若选中节点本身或其后代存在正文则正常放行。
+    if (chapterIdsParam && !allNodes.some((n) => n.content)) {
+      return NextResponse.json(
+        { error: "所选范围无可导出正文" },
+        { status: 400 }
+      );
+    }
+
     // 构建树结构
     const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
-    const roots = allNodes.filter((n) => !n.parentId);
+    // R3-IO：roots 重定义为「父节点不在当前选中集合内」的子树顶层节点，而非仅取 parentId 为空。
+    // 这样选中「非根节点」（如某 section / scene / 父级为 volume 的 chapter）时，该节点及其后代
+    // 能正确成为渲染根，避免级联展开后 roots 为空、进而静默产出空文件。
+    const idsInScope = new Set(allNodes.map((n) => n.id));
+    const roots = allNodes.filter((n) => !n.parentId || !idsInScope.has(n.parentId));
 
     // FE-N7 违禁词预检：扫描全部节点的正文，返回命中清单（不下载文件）
     if (check) {

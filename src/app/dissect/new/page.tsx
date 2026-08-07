@@ -146,7 +146,7 @@ export default function NewDissectPage() {
                 <h2 className="text-base font-semibold">正在拆解...</h2>
                 <button
                   onClick={handleCancel}
-                  className="px-3 py-1 text-xs text-[var(--nv-text-muted)] hover:text-danger bg-[var(--nv-surface-3)] rounded-lg transition-colors"
+                  className="px-3 py-1 text-xs text-[var(--nv-text-muted-on-surface-3)] hover:text-danger bg-[var(--nv-surface-3)] rounded-lg transition-colors"
                 >
                   取消
                 </button>

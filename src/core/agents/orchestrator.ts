@@ -41,7 +41,7 @@ import { injectOptimizedMemory, DEFAULT_BUDGET } from "@/lib/memory-injector";
 import type { TieredMemory } from "@/lib/memory-classifier";
 import { toolRegistry } from "./tool-registry";
 import type { ToolSchema, ToolContext, ToolResult } from "./tool-registry";
-import { formatStorylines } from "@/core/pipeline/outline-context";
+import { formatStorylines, filterActiveStorylines } from "@/core/pipeline/outline-context";
 
 // ─── Prompt 模板 ─────────────────────────────────────────────
 
@@ -676,7 +676,7 @@ export function buildPromptContext(params: {
   // 体裁适配：修仙/玄幻类沿用"白金修仙模拟引擎"；其他体裁走通用作家角色，
   // 避免硬编码修仙网文风压制用户在创意工坊设定的文风预设（如古风·严谨文笔）。
   const isXianxia = Array.isArray((project as any).genre) && (project as any).genre.some((g: string) => /修仙|玄幻|仙侠|武侠|洪荒|奇幻|末世/.test(g));
-  const activeStorylines = (storylines || []).filter((s: any) => !s?.completed);
+  const activeStorylines = filterActiveStorylines(storylines || []);
   const storylineBlock = activeStorylines.length > 0
     ? `\n## 故事线进度（必须持续推进，避免偏离主线/支线设定）\n${formatStorylines(activeStorylines)}\n`
     : "";

@@ -117,13 +117,13 @@ export function MemoryDecayDialog({
           <div className="mb-4 space-y-3">
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-lg bg-[var(--nv-surface-3)] p-2.5">
-                <div className="text-[var(--nv-text-muted)]">已记录章节摘要</div>
+                <div className="text-[var(--nv-text-muted-on-surface-3)]">已记录章节摘要</div>
                 <div className="text-sm font-medium text-[var(--nv-text-primary)]">
                   {preview.summaryCount} 条
                 </div>
               </div>
               <div className="rounded-lg bg-[var(--nv-surface-3)] p-2.5">
-                <div className="text-[var(--nv-text-muted)]">最新进度基准</div>
+                <div className="text-[var(--nv-text-muted-on-surface-3)]">最新进度基准</div>
                 <div className="text-sm font-medium text-[var(--nv-text-primary)]">
                   第 {preview.latestChapter} 章
                 </div>
@@ -139,7 +139,7 @@ export function MemoryDecayDialog({
                     className="flex items-center justify-between rounded-md bg-[var(--nv-surface-3)] px-2.5 py-1.5 text-xs"
                   >
                     <span className="text-[var(--nv-text-secondary)]">{rule.label}</span>
-                    <span className="text-[var(--nv-text-muted)]">
+                    <span className="text-[var(--nv-text-muted-on-surface-3)]">
                       {rule.maxAge === null ? "永久保留" : `超 ${rule.maxAge} 章降级 / 清理`}
                     </span>
                   </div>
@@ -155,15 +155,15 @@ export function MemoryDecayDialog({
               本次衰减结果（第 {result.latestChapter} 章基准）
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--nv-text-muted)]">检查摘要</span>
+              <span className="text-[var(--nv-text-muted-on-surface-3)]">检查摘要</span>
               <span className="text-[var(--nv-text-primary)]">{result.summariesChecked} 条</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--nv-text-muted)]">保留</span>
+              <span className="text-[var(--nv-text-muted-on-surface-3)]">保留</span>
               <span className="text-success">{result.eventsKept}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--nv-text-muted)]">降级</span>
+              <span className="text-[var(--nv-text-muted-on-surface-3)]">降级</span>
               <span className="text-warning">{result.eventsDowngraded}</span>
             </div>
             <div className="flex justify-between">

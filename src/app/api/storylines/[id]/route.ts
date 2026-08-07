@@ -7,6 +7,7 @@ import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { pickReassignMainId } from "@/core/pipeline/outline-context";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,6 +80,26 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    // N3 修复：删除主线前先处理其子线，避免子线 parentId 悬空指向已删主线。
+    // 优先把子线重挂到同项目另一条主线（优先活跃主线）；若无其他主线则置空。
+    const target = await prisma.storyline.findUnique({
+      where: { id },
+      select: { id: true, projectId: true, type: true },
+    });
+    if (target) {
+      const siblings = await prisma.storyline.findMany({
+        where: { projectId: target.projectId, type: "main", id: { not: id } },
+        select: { id: true, status: true },
+      });
+      // N3 级联重挂 + N8 回归修复：仅重挂到【活跃】兄弟主线；
+      // 若只剩 completed/abandoned 兄弟则置 null，绝不挂到 completed 主线
+      // （否则 formatStorylines 因 loadOutlineData 排除 completed 主线会丢失「隶属主线」前缀，R2-006 冲突）。
+      const reassignId = pickReassignMainId(siblings);
+      await prisma.storyline.updateMany({
+        where: { projectId: target.projectId, parentId: id },
+        data: { parentId: reassignId },
+      });
+    }
     await prisma.storyline.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {

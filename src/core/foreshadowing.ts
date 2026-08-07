@@ -187,11 +187,23 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
       },
     });
 
-    const summaries = await prisma.chapterSummary.findMany({
-      where: { projectId },
-      orderBy: { createdAt: "asc" },
-      select: { createdAt: true, summary: true, keyEvents: true },
-    });
+    // 同时读取「章节摘要」与「章节实时正文」。二者互补：
+    //  - 摘要由 LLM 生成，精炼但可能陈旧（refine 路径 skipSummarize 不刷新摘要）；
+    //  - 实时正文（storyNode.content）随 refine 改写刷新 updatedAt，能反映最新回收/新埋信号。
+    // Round-4 修复（新坑1）：refine 确认触发 detect 时，摘要仍是改写前的陈旧快照，
+    // 故必须把实时正文纳入 haystack，否则 detect 只看陈旧摘要、伏笔面板看着没变。
+    const [summaries, nodes] = await Promise.all([
+      prisma.chapterSummary.findMany({
+        where: { projectId },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true, summary: true, keyEvents: true },
+      }),
+      prisma.storyNode.findMany({
+        where: { projectId, type: { in: ["chapter", "section", "scene"] } },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true, updatedAt: true, content: true },
+      }),
+    ]);
 
     const updates: Promise<unknown>[] = [];
     let fulfilled = 0;
@@ -208,15 +220,20 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
 
       const { closure, phrases } = extractSeeds(c);
       const anchor = c.detectedAt || c.createdAt;
-      const later = summaries.filter((s) => s.createdAt > anchor);
-      const haystack = later
-        .map((s) => {
+      // 摘要：createdAt 晚于伏笔埋设点（原有语义）。
+      const laterSummaries = summaries.filter((s) => s.createdAt > anchor);
+      // 实时正文：updatedAt 晚于伏笔埋设点（覆盖 refine 改写——refine 改写后 updatedAt 刷新，
+      // 但其 chapterSummary 因 skipSummarize 而陈旧，故必须纳入正文才可能看见 refine 回收信号）。
+      const laterNodes = nodes.filter((n) => (n.updatedAt ?? n.createdAt) > anchor);
+      const haystack = [
+        ...laterSummaries.map((s) => {
           const events = Array.isArray(s.keyEvents)
             ? (s.keyEvents as string[]).join("\n")
             : "";
           return `${s.summary || ""}\n${events}`;
-        })
-        .join("\n");
+        }),
+        ...laterNodes.map((n) => (n.content || "")),
+      ].join("\n");
 
       let matchedClosure = 0;
       for (const seed of closure) {

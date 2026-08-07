@@ -67,6 +67,75 @@ const SEVEN_ELEMENTS: Array<[key: string, label: string]> = [
   ["result", "结果"], ["twist", "意外"], ["turn", "转折"], ["ending", "结局"],
 ];
 
+/**
+ * 过滤出应注入写作上下文的「活跃」剧情线（N1 修复）。
+ *
+ * 旧实现用不存在的 `s.completed` 布尔字段做过滤（`!s?.completed` 永远为 true，系死过滤）。
+ * 这里改用真实存在的 `status` 字段：排除 `completed`（已完结）与 `abandoned`（已废弃），
+ * 保留 `active`（活跃）及任何其他非终态线。与全仓 status 语义保持一致。
+ */
+export function filterActiveStorylines(storylines: any[]): any[] {
+  if (!Array.isArray(storylines)) return [];
+  return storylines.filter(
+    (s: any) => s?.status !== "completed" && s?.status !== "abandoned",
+  );
+}
+
+/**
+ * N4 修复：返回「已完结旧主线」的 id 列表，供 newMain 流把仍指向它们的旧支线重挂到新主线。
+ * 仅当主线 type==="main" 且 status==="completed" 时计入。
+ */
+export function getCompletedMainIds(storylines: any[]): string[] {
+  if (!Array.isArray(storylines)) return [];
+  return storylines
+    .filter((s: any) => s?.type === "main" && s?.status === "completed")
+    .map((s: any) => s.id);
+}
+
+/**
+ * N8 回归加固：判断 `mainId` 是否为可安全接收「旧支线重挂」的【活跃主线】。
+ *
+ * 用于 newMain 等场景（N4 重挂）：把仍指向「已完结旧主线」的支线重挂到 mainId。
+ * 仅当 mainId 指向一条 status === "active" 的主线时才允许重挂——确保重挂后
+ * `formatStorylines` 的 `mainTitleById` 能解析该主线（loadOutlineData 已按 status 过滤
+ * 排除非活跃主线），从而保留 R2-006「（隶属主线 …）」前缀；若重挂目标为
+ * completed 或 abandoned 等任何非 active 终态主线，该前缀会因目标主线不在注入集合中而
+ * 静默丢失（即 N8 回归，R4-NEW-1 已确认 abandoned 与 completed 同构漏网）。
+ *
+ * 判定规则：
+ * - mainId 为 null → 不允许（无目标主线）；
+ * - mainId 不在 existingStorylines 快照中（即本轮「新建」的主线，DB 默认 status="active"）→ 视为活跃，允许；
+ * - mainId 命中 existing 中的一条主线 → 必须 type==="main" 且 status === "active" 才允许，否则拒绝
+ *   （排除 completed 与 abandoned 等所有非 active 终态，与 DELETE 侧 pickReassignMainId 口径一致）。
+ */
+export function isRehangTargetActiveMain(
+  mainId: string | null,
+  existingStorylines: any[],
+): boolean {
+  if (!mainId) return false;
+  if (!Array.isArray(existingStorylines)) return true; // 新创建主线，默认 active
+  const main = existingStorylines.find((s: any) => s.id === mainId);
+  if (!main) return true; // 新建主线（不在 existing 快照中），默认 active
+  return main.type === "main" && main.status === "active";
+}
+
+/**
+ * N8 回归修复：删除主线时，选择接管其子线的兄弟主线。
+ *
+ * 仅返回【活跃】兄弟主线；若同项目已无其他 active 主线（只剩 completed/abandoned 兄弟），
+ * 返回 null。绝不把被删主线的子线重挂到 completed 主线——否则 `formatStorylines` 因
+ * loadOutlineData 排除 completed 主线，会让这些子线在写作 prompt 中静默丢失「隶属主线」前缀
+ * （N8 回归，与 R2-006 冲突）。返回 null 时由 N2 的 `resolveParent` 回退到活跃主线（若后续出现），
+ * 不再制造指向已完成主线的虚假隶属。
+ *
+ * 该函数不移除 N3 的级联处理：删除主线前仍会对子线执行 updateMany（置 null 或重挂活跃主线），
+ * 仅收紧重挂目标为「活跃主线」，避免把子线误嫁接到已完结主线。
+ */
+export function pickReassignMainId(siblings: any[]): string | null {
+  if (!Array.isArray(siblings)) return null;
+  return siblings.find((m: any) => m?.status === "active")?.id ?? null;
+}
+
 /** 活跃剧情线摘要：每条线的 title + description + 非空七要素；支线标注隶属主线（R2-006） */
 export function formatStorylines(storylines: any[]): string {
   if (!storylines || storylines.length === 0) return "";

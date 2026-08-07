@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 import { completeText } from "@/core/llm/client";
+import { getCompletedMainIds, isRehangTargetActiveMain } from "@/core/pipeline/outline-context";
 
 export async function POST(request: Request) {
   try {
@@ -119,10 +120,11 @@ ${
     const mainLines = lines.filter((l) => (l.type as string) === "main");
     const sideLines = lines.filter((l) => (l.type as string) !== "main");
 
-    // 主线 id：优先复用【未完结】主线；若现有主线均已完结（newMain 缝合怪·构造新主线），
-    // 则不接管旧主线，置 null 交由本次新建的主线接管，避免支线误挂到已完结旧主线（R2-005）
+    // 主线 id：优先复用【活跃】主线；若现有主线均非 active（已完结/已废弃，newMain 缝合怪·构造新主线），
+    // 则不接管旧主线，置 null 交由本次新建的主线接管，避免支线误挂到已完结/已废弃旧主线（R2-005 / R4-NEW-1）。
+    // 注意：必须用 status === "active" 而非 !== "completed"，否则 abandoned 主线会被误当目标（R4-NEW-1 同构复现 N8）。
     let mainId: string | null =
-      existingStorylines.find((s) => s.type === "main" && s.status !== "completed")?.id ?? null;
+      existingStorylines.find((s) => s.type === "main" && s.status === "active")?.id ?? null;
 
     const created: any[] = [];
     const buildData = (
@@ -153,6 +155,22 @@ ${
       });
       created.push(m);
       if (!mainId) mainId = m.id;
+    }
+
+    // N4 修复（R2-005 向后兼容）+ N8 回归加固：newMain 等场景下，把仍指向「已完结旧主线」的支线
+    // 重挂到当前活跃主线（mainId），避免旧支线隶属关系在新主线构造后静默丢失。
+    // 仅更新 parentId 命中旧已完结主线的支线，不影响已正确挂载的线。
+    // N8 加固（R4-NEW-1 收紧）：仅当 mainId 指向【活跃主线】时才重挂——绝不把旧支线重挂到 completed
+    // 或 abandoned 等任何非 active 终态主线，否则 formatStorylines 因 loadOutlineData 仅含活跃主线，
+    // 会让「隶属主线」前缀静默丢失（R2-006 冲突）。abandoned 与 completed 同构，已被 isRehangTargetActiveMain
+    // 的 status==="active" 判定一并排除。
+    // mainId 为新建主线（不在 existing 快照中）时默认 active，isRehangTargetActiveMain 会放行，N4 新建行为不回退。
+    const oldCompletedMainIds = getCompletedMainIds(existingStorylines);
+    if (mainId && oldCompletedMainIds.length > 0 && isRehangTargetActiveMain(mainId, existingStorylines)) {
+      await prisma.storyline.updateMany({
+        where: { projectId, type: "side", parentId: { in: oldCompletedMainIds } },
+        data: { parentId: mainId },
+      });
     }
 
     // 再建支线，parentId 挂到主线（让"支线服务于主线"数据化）

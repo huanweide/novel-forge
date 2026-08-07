@@ -8,6 +8,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getTemplate } from "@/core/templates";
+import { ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS } from "@/lib/world-category-classifier";
 
 /**
  * 构建并写入 globalPrompt。
@@ -162,18 +163,20 @@ ${project.authorNote}`);
   // ═══════════════════════════════════════════
   parts.push(`\n# 世界书（共${loreEntries.length}条）`);
 
-  // 按category分组
-  // ⚠️ 注意：worldview（创作定义·规则）与 story_progression（剧情推进倾向）是"定义级"内容，
-  // 必须像角色卡/风格卡一样常驻静态上下文——否则用户下了"不能出现男人"这类规则却只在关键词命中时才生效，
-  // 等于"定义了没用"。故将它们排在标准世界书分类之前，始终随 globalPrompt 注入。
-  // （lorebook 世界书仍走关键词动态触发路径，保持酒馆语义，不在此常驻。）
-  const catOrder = ["worldview", "story_progression", "geography", "faction", "magic_system", "history", "culture", "creature", "item", "custom"];
-  const catLabel: Record<string, string> = {
-    worldview: "🌐 世界观（定义·规则）", story_progression: "🧭 剧情推进倾向",
-    geography: "🗺 地理", faction: "🏛 势力", magic_system: "⚙️ 力量体系",
-    history: "📜 历史", culture: "🎭 文化", creature: "🐉 生物",
-    item: "💎 器物", custom: "📦 自定义",
-  };
+  // 按 category 分组注入世界书。
+  // ⚠️ 关键修复（Round-3 / 复检 PIT-1）：catOrder 必须从权威分类常量 ALL_WORLD_CATEGORIES 派生，
+  // 禁止再硬编码。硬编码版本曾遗漏 technique / law / currency / character_relationship / fate_system /
+  // physics / public_system 共 7 类，导致 entity-sync 已正确写库的这几类世界卡在生成侧被静默丢弃，
+  // 形成 R2-002 的"最后一公里"断点。改为派生后，分类增减自动同步，杜绝多源漂移（见 PIT-2）。
+  // 注：原 worldview / story_progression 是 15 类 taxonomy 中并不存在的虚构分类
+  // （lorebookEntry.category 永远不可能取这两个值），属死代码，已删除——移除前它们本就只遍历空分组。
+  // catOrder 与 catLabel 现在全部派生自 world-category-classifier 的权威常量：
+  //   - catOrder = ALL_WORLD_CATEGORIES（Round-3 已派生，覆盖 15 类）
+  //   - catLabel = WORLD_CATEGORY_LABELS（本次 Round-4 派生，键入 Record<WorldCategory,string>）
+  // 两者同源：WORLD_CATEGORY_LABELS 的类型强制覆盖全部 15 类，分类增删/改名时若漏改标签，tsc 直接报错，
+  // 彻底消除 Round-3 复检「新坑 2」指出的最后一处手抄漂移根因（原 PIT-2）。
+  const catOrder = ALL_WORLD_CATEGORIES;
+  const catLabel = WORLD_CATEGORY_LABELS;
 
   for (const cat of catOrder) {
     const group = loreEntries.filter((e: any) => (e.category || "custom") === cat);

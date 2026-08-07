@@ -23,6 +23,7 @@ import {
   runPostGenerationPipeline,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
+import { triggerForeshadowDetect } from "@/core/confirm-guard";
 
 export async function POST(request: Request) {
   try {
@@ -188,6 +189,17 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
           } catch (e) {
             console.error("微调后处理失败（已降级为仅生成）:", e instanceof Error ? e.message : e);
             send({ type: "postprocess_skip", content: e instanceof Error ? e.message : "后处理跳过" });
+          }
+
+          // R2-007 收口（新坑2）：refine 路径后处理内 applyConfirm 传 skipDetect:true，
+          // 且 skipSummarize:true 使 4.5 的 detect 补触发被整体跳过，故此处显式兜底触发 detect。
+          // detect 为幂等全量重算，refine 新埋/新收的伏笔可借此回写收束率（覆盖本地蒸馏在
+          // step 3.6 新创建的 pendingCommitment）。失败不阻塞微调主流程。
+          try {
+            const origin = new URL(request.url).origin;
+            void triggerForeshadowDetect({ projectId, origin });
+          } catch {
+            /* detect 触发失败不影响微调主流程 */
           }
 
           // 宝宝流自动填表（正文 → 填表，闭合写作闭环）

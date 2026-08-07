@@ -2,7 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
-import { evaluateConfirmEligibility, maybeAutoDeliver } from "@/core/confirm-guard";
+import { evaluateConfirmEligibility, maybeAutoDeliver, triggerForeshadowDetect } from "@/core/confirm-guard";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 
 /**
@@ -111,6 +111,14 @@ export async function POST(request: Request) {
 
     // v1.1.0：批量确认刚定稿若干章，尝试自动整本交付（fire-and-forget，红利不阻塞响应）
     void maybeAutoDeliver(projectId).catch(() => {});
+
+    // R2-007 收口（新坑1）：批量确认成功后统一补触发一次伏笔收束率检测。
+    // detect 为整本全量重算（见 src/core/foreshadowing.ts:detectPayoffs），故在所有节点确认完后
+    // 仅触发一次，避免 N 次重复全扫；用真实 request.url.origin（始终可达）。
+    // 仅当确有章节被确认时才触发，避免空跑。
+    if (confirmed.length > 0) {
+      void triggerForeshadowDetect({ projectId, origin: new URL(request.url).origin });
+    }
 
     return NextResponse.json({
       ok: true,

@@ -61,7 +61,7 @@ export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
           <span
             className={`shrink-0 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full transition-colors ${
               readonlyMode
-                ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted)]"
+                ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted-on-surface-3)]"
                 : "bg-[var(--nv-success)]/15 text-[var(--nv-success)]"
             }`}
             title={readonlyMode ? "只读模式：仅查信息，不可改动项目数据（设置中可开启操作权限）" : "可操作模式：能查询并修改角色/词条等数据"}
