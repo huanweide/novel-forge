@@ -14,8 +14,22 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { STORYLINE_STATUS, withStorylineLock } from "@/core/story-status";
 
 const STAGES = ["desire", "obstacle", "action", "result", "twist", "turn", "ending"] as const;
+
+// 统一 bindings 数据结构（L3-003）：applyChapterPlanToStorylines 与 writeStorylineProgress
+// 写入同形状，消除解析脆弱。两个函数各自只填自己关心的字段，其余补默认空值。
+export interface ChapterBinding {
+  storylineId: string;
+  chapterId: string | null;
+  chapterOrder: number | null;
+  element: string | null;
+  focus: string;
+  advance: string[];
+  note: string;
+  at: string;
+}
 
 export interface ThreadProgressItem {
   storylineId?: string;
@@ -39,20 +53,29 @@ export async function writeStorylineProgress(
     if (!note) continue;
     // 只记录大事：impactScore 4+（1-3 为日常过渡，用户明确不要细节）
     if (typeof tp.impactScore === "number" && tp.impactScore < 4) continue;
+    const storylineId = tp.storylineId;
     try {
-      const sl = await prisma.storyline.findUnique({ where: { id: tp.storylineId } });
-      if (!sl || sl.projectId !== projectId || sl.status !== "active") continue;
-      const updateData: Record<string, unknown> = { [stage]: note };
-      const bindings = Array.isArray(sl.chapterBindings) ? (sl.chapterBindings as unknown[]).slice() : [];
-      bindings.push({
-        element: stage,
-        chapterId: nodeId,
-        chapterOrder: chapterOrder ?? null,
-        note,
-        at: new Date().toISOString(),
+      // L3-003：按 storylineId 串行化读改写，避免并发写不同章时彼此覆盖丢失更新
+      await withStorylineLock(storylineId, async () => {
+        const sl = await prisma.storyline.findUnique({ where: { id: storylineId } });
+        if (!sl || sl.projectId !== projectId || sl.status !== STORYLINE_STATUS.ACTIVE) return;
+        const updateData: Record<string, unknown> = { [stage]: note };
+        const bindings = Array.isArray(sl.chapterBindings) ? (sl.chapterBindings as unknown[]).slice() : [];
+        // L3-003：写入统一形状（其余字段补默认空值，消除两种形状混存的解析脆弱）
+        const binding: ChapterBinding = {
+          storylineId,
+          chapterId: nodeId,
+          chapterOrder: chapterOrder ?? null,
+          element: stage,
+          focus: "",
+          advance: [],
+          note,
+          at: new Date().toISOString(),
+        };
+        bindings.push(binding);
+        updateData.chapterBindings = bindings.slice(-200);
+        await prisma.storyline.update({ where: { id: sl.id }, data: updateData as any });
       });
-      updateData.chapterBindings = bindings.slice(-200);
-      await prisma.storyline.update({ where: { id: sl.id }, data: updateData as any });
     } catch {
       /* 单条回写失败不影响主流程 */
     }

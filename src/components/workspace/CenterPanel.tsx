@@ -191,6 +191,13 @@ export function CenterPanel({
   return (
     <>
     <main className="flex-1 flex flex-col overflow-hidden bg-[var(--nv-void)]">
+      {/* F03：生成状态读屏实时播报——常驻 live region，避免可见 genStep 容器在流式（MarkdownViewer）分支不挂载时漏报；error 用 assertive，复用 toast 的 role=alert 模式 */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {genStep && genStep !== "error" ? genStepLabels[genStep]?.label : ""}
+      </div>
+      <div className="sr-only" role="alert" aria-live="assertive" aria-atomic="true">
+        {genStep === "error" ? genStepLabels.error.label : ""}
+      </div>
       {selectedNode ? (
         <>
           {/* 控制栏 */}
@@ -198,7 +205,7 @@ export function CenterPanel({
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
               <span className="text-xs text-[var(--nv-text-tertiary)] flex items-center gap-2">
-                {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-[var(--nv-success)]" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-[var(--nv-accent)]" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
+                {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-[var(--nv-success)]" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-accent-label" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
                 · {selectedNode.wordCount || 0} 字
                 <button onClick={openRevisions}
                   className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors"
@@ -308,7 +315,7 @@ export function CenterPanel({
                   className="input-glass flex-1 min-w-0 rounded px-2 py-1 text-xs" />
               </div>
               {refineMode && !isGenerating && (
-                <p className="text-[10px] text-[var(--nv-accent)]/70">微调模式：不重写正文，按指令修改现有内容或续写补长。字数不够会自动补，中途打断可续写。</p>
+                <p className="text-[10px] text-accent-label">微调模式：不重写正文，按指令修改现有内容或续写补长。字数不够会自动补，中途打断可续写。</p>
               )}
             </div>
           </div>

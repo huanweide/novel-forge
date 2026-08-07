@@ -97,6 +97,19 @@ export async function GET(
     const idsInScope = new Set(allNodes.map((n) => n.id));
     const roots = allNodes.filter((n) => !n.parentId || !idsInScope.has(n.parentId));
 
+    // L1-009：一次性构建 parentId → 子节点 映射（O(N)），消除递归建树/目录的 O(N²) 过滤
+    const childrenMap = new Map<string, any[]>();
+    for (const n of allNodes) {
+      const pid = n.parentId;
+      if (!pid) continue;
+      let arr = childrenMap.get(pid);
+      if (!arr) {
+        arr = [];
+        childrenMap.set(pid, arr);
+      }
+      arr.push(n);
+    }
+
     // FE-N7 违禁词预检：扫描全部节点的正文，返回命中清单（不下载文件）
     if (check) {
       const hits: Array<{ word: string; chapter: string; context: string }> = [];
@@ -163,7 +176,7 @@ export async function GET(
       // 目录
       output += "## 目录\n\n";
       for (const root of roots) {
-        const children = allNodes.filter((n) => n.parentId === root.id);
+        const children = childrenMap.get(root.id) || [];
         output += `- [${root.title}](#${slugify(root.title)})`;
         if (root.wordCount) output += ` (${root.wordCount}字)`;
         output += "\n";
@@ -177,7 +190,7 @@ export async function GET(
 
       // 正文
       for (const root of roots) {
-        output += buildMarkdownNode(root, allNodes, includeOutline, 1);
+        output += buildMarkdownNode(root, childrenMap, includeOutline, 1);
       }
     } else {
       // 纯文本
@@ -185,7 +198,7 @@ export async function GET(
       if (author) output += `作者：${author}\n\n`;
 
       for (const root of roots) {
-        output += buildTextNode(root, allNodes, includeOutline);
+        output += buildTextNode(root, childrenMap, includeOutline);
       }
     }
 
@@ -218,7 +231,7 @@ function slugify(title: string): string {
 
 function buildMarkdownNode(
   node: any,
-  allNodes: any[],
+  childrenMap: Map<string, any[]>,
   includeOutline: boolean,
   depth: number
 ): string {
@@ -239,15 +252,15 @@ function buildMarkdownNode(
   }
 
   // 子节点
-  const children = allNodes.filter((n) => n.parentId === node.id);
+  const children = childrenMap.get(node.id) || [];
   for (const child of children) {
-    result += buildMarkdownNode(child, allNodes, includeOutline, depth + 1);
+    result += buildMarkdownNode(child, childrenMap, includeOutline, depth + 1);
   }
 
   return result;
 }
 
-function buildTextNode(node: any, allNodes: any[], includeOutline: boolean): string {
+function buildTextNode(node: any, childrenMap: Map<string, any[]>, includeOutline: boolean): string {
   let result = "";
 
   result += `${node.title}\n${"-".repeat(node.title.length)}\n\n`;
@@ -260,9 +273,9 @@ function buildTextNode(node: any, allNodes: any[], includeOutline: boolean): str
     result += node.content + "\n\n";
   }
 
-  const children = allNodes.filter((n) => n.parentId === node.id);
+  const children = childrenMap.get(node.id) || [];
   for (const child of children) {
-    result += buildTextNode(child, allNodes, includeOutline);
+    result += buildTextNode(child, childrenMap, includeOutline);
   }
 
   return result;

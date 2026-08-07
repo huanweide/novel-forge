@@ -92,11 +92,14 @@ export function classifyError(e: unknown): ApiErrorInfo {
     };
   }
 
-  // 4) 默认：透传可读信息（getSettings 抛的「LLM xxx」本身就是中文可操作的）
+  // 4) 默认：泛化文案（L2-003 修复）
+  // 不再把原始 err.message 透传给客户端，避免泄露内部路径/SQL 片段/实现细节；
+  // 明细仅留存服务端日志（保留堆栈）供排查。
+  console.error("[api-error] 未分类异常:", err);
   return {
     status: 500,
     code: "INTERNAL",
-    error: err.message || "服务器内部错误",
+    error: "服务器内部错误，请查看日志",
     hint: "如问题持续，请查看服务端日志。",
   };
 }

@@ -18,6 +18,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const maxDuration = 300; // 无角色数量上限，200+人批量导入充裕
 
@@ -266,6 +267,11 @@ async function dbMerge(
 // ═══════════════════════════════════════════════
 
 export async function POST(request: Request) {
+  // L2-001：快速导入限流（1 分钟 5 次），业务前拦截
+  if (!rateLimit("import/quick", clientIp(request), 5, 60000).ok) {
+    return rateLimitResponse();
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -281,6 +287,10 @@ export async function POST(request: Request) {
   const text = rawText as string;
   if (text.length < 20) {
     return NextResponse.json({ error: "文本太短" }, { status: 400 });
+  }
+  // L2-002：rawText 上限（与下限判断并列，返回 413）
+  if (text.length > 500000) {
+    return NextResponse.json({ error: "导入文本过长（上限 500000 字）" }, { status: 413 });
   }
 
   const encoder = new TextEncoder();
@@ -364,9 +374,11 @@ export async function POST(request: Request) {
 
         controller.close();
       } catch (err) {
+        // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+        console.error("[import/quick] 处理失败:", err);
         send({
           type: "error",
-          message: err instanceof Error ? err.message : String(err),
+          message: "服务器内部错误，请查看日志",
         });
         controller.close();
       }

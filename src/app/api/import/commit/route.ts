@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { NextResponse } from "next/server";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { triggerForeshadowDetect } from "@/core/confirm-guard";
 import { getSettings, recordLlmCall } from "@/lib/llm";
@@ -314,6 +315,11 @@ ${loreNames.join("、") || "（暂无）"}`;
 // ═══════════════════════════════════════════════════════════════
 
 export async function POST(request: Request) {
+  // L2-001：导入提交限流（1 分钟 5 次），业务 LLM 调用前拦截
+  if (!rateLimit("import/commit", clientIp(request), 5, 60000).ok) {
+    return rateLimitResponse();
+  }
+
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
@@ -559,9 +565,25 @@ export async function POST(request: Request) {
         // ─── 3. 文风 + 总纲：先算好待写入内容 ───
 
         const writeStyle = style && Object.keys(style).length > 0;
+
+        // ─── L5-06：逐章 content 校验（非空字符串）───
+        // 畸形章（content 为 undefined/数字/对象/空串）逐章跳过并告警，
+        // 避免单章错误触发整 120s 事务回滚导致全部导入失败。
+        const chapterWarnings: string[] = [];
+        const validChapters = (chapters as any[]).filter((ch: any) => {
+          const c = ch.content;
+          if (typeof c !== "string" || c.trim().length === 0) {
+            chapterWarnings.push(
+              `章节「${typeof ch.chapterTitle === "string" ? ch.chapterTitle : "(无标题)"}」已跳过：content 缺失或类型错误（${typeof c}），未写入。`,
+            );
+            return false;
+          }
+          return true;
+        });
+
         let synopsisText: string | null = null;
-        if (updateSynopsis && chapters.length > 0) {
-          const first = chapters[0].content;
+        if (updateSynopsis && validChapters.length > 0) {
+          const first = validChapters[0].content;
           if (first && first.length > 100 && !project.synopsis) {
             synopsisText = `导入文本开篇：${first.slice(0, 500).replace(/\n/g, " ")}...`;
           }
@@ -571,11 +593,11 @@ export async function POST(request: Request) {
         send({ type: "progress", stage: "commit", message: "原子写入数据库（事务中）...", pct: 95 });
         await prisma.$transaction(async (tx) => {
           // 章节节点
-          if (chapters.length > 0) {
+          if (validChapters.length > 0) {
             const volumeMap = new Map<string, string>();
             if (volumeMode) {
               const seenVolumes = new Set<string>();
-              for (const ch of chapters) {
+              for (const ch of validChapters) {
                 if (ch.volumeTitle && !seenVolumes.has(ch.volumeTitle)) {
                   seenVolumes.add(ch.volumeTitle);
                   const volNode = await tx.storyNode.create({
@@ -587,8 +609,8 @@ export async function POST(request: Request) {
                 }
               }
             }
-            for (let i = 0; i < chapters.length; i++) {
-              const ch = chapters[i];
+            for (let i = 0; i < validChapters.length; i++) {
+              const ch = validChapters[i];
               await tx.storyNode.create({
                 data: { projectId: projectId as string, parentId: volumeMode && ch.volumeTitle ? volumeMap.get(ch.volumeTitle) || null : null,
                   type: "chapter", title: ch.chapterTitle || `第${i + 1}章`, order: ch.order ?? i,
@@ -675,7 +697,7 @@ export async function POST(request: Request) {
                 lexicalFeatures: (style.lexicalFeatures || {}) as any,
                 styleDescription: String(style.styleDescription || ""),
                 sampleText: String(style.sampleText || ""),
-                sourceChapterCount: chapters.length,
+                sourceChapterCount: validChapters.length,
               },
             });
             created.styleCard = true;
@@ -698,7 +720,8 @@ export async function POST(request: Request) {
           type: "done",
           status: deadlineHit ? "partial" : "completed",
           created,
-          message: `✅ 导入完成：${created.volumes}卷 ${created.chapters}章 ${totalChars}角色 ${created.loreEntries}词条${created.styleCard ? " +文风卡" : ""}（含${created.charMerged}个AI合并 +${created.loreMerged}个词条合并）${deadlineHit ? " · ⏱️ 全局 deadline 截断，未放飞批次已降级规则合并" : ""}`,
+          warnings: chapterWarnings,
+          message: `✅ 导入完成：${created.volumes}卷 ${created.chapters}章 ${totalChars}角色 ${created.loreEntries}词条${created.styleCard ? " +文风卡" : ""}（含${created.charMerged}个AI合并 +${created.loreMerged}个词条合并）${deadlineHit ? " · ⏱️ 全局 deadline 截断，未放飞批次已降级规则合并" : ""}${chapterWarnings.length > 0 ? ` · ⚠️ ${chapterWarnings.length} 章因 content 校验失败已跳过` : ""}`,
         });
 
         syncGlobalPrompt(projectId).catch(() => {});

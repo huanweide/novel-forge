@@ -114,9 +114,18 @@ export async function applyConfirm(node: {
   const now = new Date();
   const existing = await prisma.storyNode.findUnique({
     where: { id: node.id },
-    select: { reviewLogs: true },
+    select: { reviewLogs: true, status: true },
   });
   const prevLogs: Prisma.JsonArray = Array.isArray(existing?.reviewLogs) ? existing.reviewLogs : [];
+
+  // L3-006：幂等前置——先判定是否真会发生状态跃迁（仍处待确认态），
+  // 仅当会跃迁时才执行填表等副作用；否则直接幂等跳过，避免重复/并发确认
+  // 在状态判定前就跑一遍 safeFillAfterWriting（多余副作用与潜在双触发）。
+  const willTransition =
+    existing != null && (existing.status == null || (CONFIRMABLE_STATUSES as readonly string[]).includes(existing.status));
+  if (!willTransition) {
+    return "节点已确认（幂等跳过，未触发填表/计数）";
+  }
 
   let fillMsg = "（无正文，跳过填表）";
   if (node.content && node.content.length > 0) {
@@ -158,7 +167,7 @@ export async function applyConfirm(node: {
   const upd = await prisma.storyNode.updateMany({
     where: { id: node.id, status: { in: [...CONFIRMABLE_STATUSES] } },
     data: {
-      status: "confirmed",
+      status: STATUS_CONFIRMED,
       confirmedAt: now,
       revisionCount: { increment: 1 },
       reviewLogs: [

@@ -16,6 +16,7 @@
 
 export const maxDuration = 120;
 import { jsonError } from "@/lib/api-error";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -29,6 +30,10 @@ import {
 import { completeText } from "@/core/llm/client";
 
 export async function POST(request: Request) {
+  // L2-001：章纲生成限流（1 分钟 10 次），业务 LLM 调用前拦截
+  if (!rateLimit("generate/chapter-outline", clientIp(request), 10, 60000).ok) {
+    return rateLimitResponse();
+  }
   try {
     const { projectId, nodeId, prompt: customPrompt, authorNote: explicitAuthorNote } = await request.json();
 
@@ -235,8 +240,10 @@ ${charBriefs}
     try {
       outlineText = await completeText(outlineSystem, outlinePrompt, { maxTokens: 4096, temperature: 0.3 });
     } catch (err) {
+      // L2-003：章纲生成失败不向客户端回显原始 err.message
+      console.error("[generate/chapter-outline] 章纲生成失败:", err);
       return NextResponse.json(
-        { error: `章纲生成失败：${err instanceof Error ? err.message : String(err)}` },
+        { error: "服务器内部错误，请查看日志" },
         { status: 502 }
       );
     }

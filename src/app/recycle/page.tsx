@@ -88,7 +88,7 @@ export default function RecyclePage() {
               <Icon name="arrowLeft" size={16} />
             </Link>
             <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
-              <Icon name="trash" size={18} className="text-[var(--nv-accent)]" /> 回收站
+              <Icon name="trash" size={18} className="text-accent-label" /> 回收站
             </h1>
           </div>
           <Link href="/" className="btn-primary text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 font-medium">

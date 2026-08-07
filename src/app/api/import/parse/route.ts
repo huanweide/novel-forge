@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { getSettings, recordLlmCall } from "@/lib/llm";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { THREE_CARD_BOUNDARIES } from "@/core/settings";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const maxDuration = 300;
 
@@ -263,11 +264,21 @@ async function callFlash(cfg: CallConfig, systemPrompt: string, userPrompt: stri
 // ═══════════════════════════════════════════════
 
 export async function POST(request: Request) {
+  // L2-001：导入解析限流（1 分钟 5 次），业务 LLM 调用前拦截
+  if (!rateLimit("import/parse", clientIp(request), 5, 60000).ok) {
+    return rateLimitResponse();
+  }
+
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: "请求体必须是 JSON" }, { status: 400 });
   }
   const { projectId, rawText, volumeMode, importMode: userMode, charactersOnly } = body;
+
+  // L2-002：rawText 上限（必须在 SSE 流创建前拦截，才能正确返回 413）
+  if (typeof rawText === "string" && rawText.length > 500000) {
+    return new Response(JSON.stringify({ error: "导入文本过长（上限 500000 字）" }), { status: 413 });
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -532,8 +543,10 @@ ${loreText}
         }
 
       } catch (err) {
+        // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+        console.error("[import/parse] 处理失败:", err);
+        send({ type: "error", message: "服务器内部错误，请查看日志" });
         const msg = err instanceof Error ? err.message : String(err);
-        send({ type: "error", message: msg });
         if (taskId) void prisma.importTask.update({ where: { id: taskId }, data: { status: "failed", error: msg } }).catch(() => {});
       } finally { controller.close(); }
     },

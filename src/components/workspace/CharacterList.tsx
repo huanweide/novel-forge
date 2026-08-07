@@ -510,7 +510,7 @@ export function CharacterList({
               ))}
               {dedupeResult.markedRockets.length > 0 && (
                 <div className="text-[11px] text-[var(--nv-text-secondary)]">
-                  <span className="text-[var(--nv-accent)]">龙套标记：</span>{dedupeResult.markedRockets.join("、")}
+                  <span className="text-accent-label">龙套标记：</span>{dedupeResult.markedRockets.join("、")}
                 </div>
               )}
             </div>

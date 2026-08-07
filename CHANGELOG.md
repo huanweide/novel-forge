@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.10 — 2026-08-07
+**魔王 Round-8（性能内存墙与摘要去重 / 全站限流与导入安全 / 数据并发与孤儿治理 / 浅色金 AA 与写章截断检测）**
+
+- **性能与内存墙（L1 路A + L3-002）**：`post-processor` 4.5 段四查询改 `Promise.all` 并发 + 窄列 `select`（summary 仅 id/chapterId/content/order/nodeId；beat 仅 id/nodeId/content；commitment 仅 id/sourceNodeId/type/content；character 复用 `context-loader` 已载窄列），并加 `take` 上限（summary50/beat60/commitment30）杜绝长书全量载入峰值内存；`context-loader` 的 characterCard/lorebookEntry 查询加 `take:50` + 窄列投影并回传 `data.characters` 供 `post-processor` 复用；摘要/节拍写前 `deleteMany` 去重（先清旧再建新）；导出递归建树 O(N²) 改一次性 `childrenMap`（O(N)）；世界卡分类器关键词模块级小写预计算。
+- **全站限流与导入安全（L2 路B）**：新建 `src/lib/rate-limit.ts` 内存滑动窗口（`Map` + 惰性清理），导出 `createRateLimiter`/`rateLimit`；`generate/write|refine|continue|chapter-outline`、`import/parse|quick|commit`、`settings/test` 接入，阈值生成类 10/min、导入类 5/min、settings/test 3/min，超限返回 `429 Too Many Requests`；`import/parse` 与 `import/quick` 的 `rawText` 加上限 50 万字符超返 `413`；`api-error.ts` 的 `classifyError` 默认分支泛化（不再回显原始 err.message），杜绝异常信息泄漏。
+- **数据并发与孤儿治理（L3 路C）**：`story/nodes/[id]` 删除节点包 `$transaction` 先 `deleteMany` 关联孤儿（chapterSummary/storyBeat/pendingCommitment/pendingItem）再删节点，根除删节点留孤儿 String 引用；`storylines/[id]` 重挂 + 删除包 `$transaction` 原子，并清理相关 storyNode 的 `bindings` JSON 中已删线条目；`storyline-writer` 与 `plan-chapter` 对同一条 Storyline 的 `chapterBindings` 改写包 `$transaction` 原子并统一结构；`entity-auto-creator` 写入前二次查重防并发重复；`story-status.ts` 新增 `STORYLINE_STATUS`/`COMMITMENT_STATUS` 常量替换散落字面量；`confirm-guard` 幂等前置（仅状态真跃迁才执行填表副作用）。
+- **浅色金 AA 与写章端到端（L4 路D + L5 路E）**：`globals.css` 浅色新增 `--nv-accent-text-on-light: oklch(0.50 0.12 95)`（CR≥4.5 达 WCAG AA），新增 `.text-accent-label` 类，settings/recycle/workshop/page/game/status-badge 等 11 处金色小文字改 `text-accent-label`，治愈浅色金 CR≈2.51 不达标；`workspace/[projectId]/page.tsx` 与 `CenterPanel` 生成进度加 `aria-live=polite` 区域；`llm/client` 的 `resolveMaxTokens` 按 `targetWordCount*1.6` 动态计算（下限 4096）替代固定 4096，流式透传 `finish_reason`，`write/refine/continue` 检测 `length` 截断即回滚节点不落残片；`write/refine/continue` 透传 `request.signal` 断连即中止（L5-04）；`continue` 复用/清理本会话孤儿 `drafting` 节点（L5-03）；`import/commit` 逐章校验 `content` 非空缺漏跳过并告警（L5-06）。
+
+---
+
 ## v1.6.9 — 2026-08-07
 **魔王 Round-7 补批（故事线状态机与入口治理 / IO 健壮性 / 世界卡安全兜底 / 伏笔面板实时性 + 监控减负）**
 

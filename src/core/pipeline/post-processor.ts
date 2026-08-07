@@ -562,22 +562,25 @@ export async function runPostGenerationPipeline(
       // F8 修复：摘要最多 3 次重试仍连败（summarized=false / summary 为空）时，跳过空壳摘要写入，
       // 避免「chapterId=该节点、summary:""」的空壳进入后续章上下文（context-loader 的 order<=currentOrder 过滤）
       // 与 classifyAndConvert 流程。连败时仅回报事件、不落库；下游命名/分类因 latestSummary 为空已自守卫。
+      let createdSummary: any = null;
       if (summarized && String(summary).trim().length > 0) {
-      await prisma.chapterSummary.create({
-        data: {
-          projectId,
-          chapterId: nodeId,
-          chapterTitle,
-          summary,
-          keyEvents,
-          characterStates: {
-            raw: characterStates,
-            closingSnapshot,
-            impulses: characterImpulses,
-          } as any,
-          eventImportances: eventImportances as any,
-        },
-      });
+        // L3-002 摘要去重：写入前清除本章已有摘要，确保每章唯一、不挤占 take 窗口
+        await prisma.chapterSummary.deleteMany({ where: { projectId, chapterId: nodeId } });
+        createdSummary = await prisma.chapterSummary.create({
+          data: {
+            projectId,
+            chapterId: nodeId,
+            chapterTitle,
+            summary,
+            keyEvents,
+            characterStates: {
+              raw: characterStates,
+              closingSnapshot,
+              impulses: characterImpulses,
+            } as any,
+            eventImportances: eventImportances as any,
+          },
+        });
       } else {
         send({ type: "summarize_empty", content: "摘要连续生成失败，跳过空摘要写入（不污染后续章上下文）" });
       }
@@ -596,6 +599,8 @@ export async function runPostGenerationPipeline(
         if (unresolvedQuestions && unresolvedQuestions.length > 0) {
           description += `\n【悬念】${unresolvedQuestions.join("；")}`;
         }
+        // L3-002 节拍去重：写入前清除本节点已有节拍，避免重复行
+        await prisma.storyBeat.deleteMany({ where: { projectId, nodeId } });
         await prisma.storyBeat.create({
           data: {
             projectId,
@@ -630,14 +635,10 @@ export async function runPostGenerationPipeline(
             where: { id: nodeId },
             data: { title: newTitle },
           });
-          // 同步刚创建的 ChapterSummary.chapterTitle，避免上下文摘要里仍是占位标题
-          const latestSummary = await prisma.chapterSummary.findFirst({
-            where: { projectId, chapterId: nodeId },
-            orderBy: { createdAt: "desc" },
-          });
-          if (latestSummary) {
+          // 复用 4 段 create 返回值（L1-006）：同步刚创建的 ChapterSummary.chapterTitle
+          if (createdSummary) {
             await prisma.chapterSummary.update({
-              where: { id: latestSummary.id },
+              where: { id: createdSummary.id },
               data: { chapterTitle: newTitle },
             });
           }
@@ -649,19 +650,57 @@ export async function runPostGenerationPipeline(
 
       // ── 4.5 规则分类——基于规则的 S/A/B 分级（零 Token 消耗，补充 LLM 分级）──
       try {
-        const allSummaries = await prisma.chapterSummary.findMany({
-          where: { projectId },
-          orderBy: { createdAt: "asc" },
-        });
-        const allBeats = await prisma.storyBeat.findMany({
-          where: { projectId },
-        });
-        const allCommitments = await prisma.pendingCommitment.findMany({
-          where: { projectId },
-        });
-        const allCharacters = await prisma.characterCard.findMany({
-          where: { projectId },
-        });
+        // L1-001/L1-003/L1-004：四个查询窄列投影 + take 上限 + Promise.all 并发。
+        // 窄列仅取 classifyAndConvert 实际消费的字段（classifyEvents 仅读这些），
+        // 字段名以 Prisma schema 为准（ChapterSummary 无 content/order/nodeId；
+        // PendingCommitment 无 type/content；StoryBeat 文本字段为 description）。
+        const [allSummaries, allBeats, allCommitments, allCharacters] = await Promise.all([
+          prisma.chapterSummary.findMany({
+            where: { projectId },
+            select: {
+              id: true,
+              chapterId: true,
+              chapterTitle: true,
+              summary: true,
+              keyEvents: true,
+              eventImportances: true,
+            },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          }),
+          prisma.storyBeat.findMany({
+            where: { projectId },
+            select: {
+              id: true,
+              nodeId: true,
+              description: true,
+              chapterNumber: true,
+              impact: true,
+            },
+            take: 60,
+          }),
+          prisma.pendingCommitment.findMany({
+            where: { projectId },
+            select: {
+              id: true,
+              sourceNodeId: true,
+              status: true,
+              description: true,
+            },
+            take: 30,
+          }),
+          prisma.characterCard.findMany({
+            where: { projectId },
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              arcProgress: true,
+              currentStatus: true,
+            },
+            take: 50,
+          }),
+        ]);
 
         const classified = classifyAndConvert(
           allSummaries as any,
@@ -680,14 +719,10 @@ export async function runPostGenerationPipeline(
           cTier: (llmImportances.cTier || []).slice(0, 50),
         };
 
-        // 更新刚创建的 ChapterSummary
-        const latestSummary = await prisma.chapterSummary.findFirst({
-          where: { projectId, chapterId: nodeId },
-          orderBy: { createdAt: "desc" },
-        });
-        if (latestSummary) {
+        // 更新刚创建的 ChapterSummary（L1-006 复用 create 返回值，免去重查）
+        if (createdSummary) {
           await prisma.chapterSummary.update({
-            where: { id: latestSummary.id },
+            where: { id: createdSummary.id },
             data: { eventImportances: merged as any },
           });
         }

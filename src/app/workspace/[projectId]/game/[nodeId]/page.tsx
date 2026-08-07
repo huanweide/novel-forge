@@ -1068,8 +1068,8 @@ export default function GamePage() {
                                   key={idx}
                                   className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
                                 >
-                                  <span className="text-[var(--nv-accent)]">{i.name}</span>
-                                  <span className="ml-2 text-[var(--nv-accent)]">
+                                  <span className="text-accent-label">{i.name}</span>
+                                  <span className="ml-2 text-accent-label">
                                     ×{i.quantity}
                                   </span>
                                   {i.owner && (
@@ -1240,7 +1240,7 @@ export default function GamePage() {
               章节已导出并自动定稿{state.exportQuality != null ? `（质量分 ${state.exportQuality}）` : ""}，返回工作区查看
             </p>
           ) : state.exportStatus === "drafting" ? (
-            <p className="mb-3 flex items-center justify-center gap-2 text-[var(--nv-accent)]">
+            <p className="mb-3 flex items-center justify-center gap-2 text-accent-label">
               <Icon name="alert" size={16} />
               章节已导出，待你手动确认（智能审阅关闭或质量未达标），返回工作区处理
             </p>

@@ -6,6 +6,7 @@
  */
 export const maxDuration = 300;
 import { jsonError } from "@/lib/api-error";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -26,6 +27,10 @@ import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { triggerForeshadowDetect } from "@/core/confirm-guard";
 
 export async function POST(request: Request) {
+  // L2-001：生成微调限流（1 分钟 10 次），业务 LLM 调用前拦截
+  if (!rateLimit("generate/refine", clientIp(request), 10, 60000).ok) {
+    return rateLimitResponse();
+  }
   try {
     const {
       projectId, nodeId, instruction, targetWords = 500,
@@ -119,9 +124,9 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
     if (refineRecallBlock) writingInstruction += refineRecallBlock;
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
-    const projRec = await prisma.project.findUnique({ where: { id: projectId }, select: { llmConfig: true, postProcessingRules: true } });
-    const projLlm = projRec?.llmConfig;
-    const projectRules = projRec?.postProcessingRules;
+    // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig / postProcessingRules），直接复用，避免重复 DB 查询
+    const projLlm = (data.project as any)?.llmConfig;
+    const projectRules = (data.project as any)?.postProcessingRules;
     const orchestrator = await AgentOrchestrator.fromSettings(
       { defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP },
       projLlm as Record<string, unknown> | null,
@@ -137,6 +142,7 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 
         try {
           let newContent = "";
+          let finishReason: string | undefined; // L5-01：流式截断信号
 
           if (refineRecallItems.length > 0) {
             send({ type: "babylore_recall", items: refineRecallItems });
@@ -145,10 +151,14 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
           for await (const chunk of orchestrator.writeSection(
             promptContext, writingInstruction, targetWords,
             undefined, undefined, effectiveTemperature, effectiveTopP,
+            request.signal, // L5-04：客户端断连信号透传
           )) {
             if (chunk.type === "token") {
               newContent += chunk.content;
               send({ type: "token", content: chunk.content });
+            } else if (chunk.type === "done") {
+              // L5-01：流式末尾携带 finish_reason
+              if (chunk.finishReason) finishReason = chunk.finishReason;
             } else if (chunk.type === "error") {
               send({ type: "error", content: chunk.content });
               controller.close();
@@ -173,6 +183,24 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             send({
               type: "error",
               content: "微调内容为空（模型未返回正文），已保留原章节正文，请重试或检查 LLM 配置",
+            });
+            return;
+          }
+
+          // ── L5-02：微调截断保护 ──
+          // finish_reason==='length' 表示新正文被 max_tokens 截断。不覆盖线上节点为残片：
+          // 跳过管线（post-processor 在覆盖前已 snapshotRevision 存了上一版完整正文，可经版本历史恢复），
+          // 保留原完整正文，明确告警「草稿未完成」，用户重试即可恢复。
+          if (finishReason === "length") {
+            send({
+              type: "done",
+              content: "",
+              nodeId,
+              status: data.currentNode.status,
+              mode: hasContent ? "refine" : "write",
+              wordCount: (data.currentNode.content || "").length,
+              truncated: true,
+              warning: "⚠️ 微调被 max_tokens 截断（finish_reason=length），已保留原章节正文，未用残片覆盖，请重试。",
             });
             return;
           }
@@ -242,7 +270,9 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             babylore,
           });
         } catch (err) {
-          send({ type: "error", content: err instanceof Error ? err.message : "微调失败" });
+          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+          console.error("[generate/refine] 微调失败:", err);
+          send({ type: "error", content: "服务器内部错误，请查看日志" });
         } finally {
           controller.close();
         }

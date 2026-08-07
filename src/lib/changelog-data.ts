@@ -25,18 +25,60 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.9";
+export const LATEST_VERSION = "v1.6.10";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.9 故事线状态机与入口治理（SL-1~SL-6）：abandoned/paused 治理覆盖章纲、抽卡、游戏三入口——chapter-outline 双路由补 filterActiveStorylines、game/outline/generate 的 main 死字面量改 OR、intent-parser/tool-registry 的 paused 状态统一改 abandoned；workspace 页 storylineId 选择器短路修正；continue 路由加事务 + 空响应守卫，防 order 并发与空壳写入",
-  "v1.6.9 IO 健壮性（IO-1~IO-8）：write/refine 空守卫前置（杜绝空摘要/空正文入库）、export 非法 format 返回 400 而非静默降级、import/commit 结构化错误 + 异步触发（fire-and-forget）伏笔 detect、post-processor 连败跳过空壳，导入导出与续写链路更稳",
-  "v1.6.9 世界卡安全与兜底（WC-1~WC-2）：lorebook PUT 加字段白名单（防越权改类型/归属）、entity-auto-creator 的 resolveEntityCategory 加兜底（分类器未覆盖时回退不丢实体），世界卡写入更可控",
-  "v1.6.9 伏笔面板实时性 + 监控减负（FS-1~FS-3 + MON）：ForeshadowingPanel 订阅 store 防抖重拉 + foreshadowing:updated 事件驱动刷新（确认/定稿后秒级更新）；monitor 路由加 15s TTL 缓存（不再每次全量扫）；巡检脚本容注释过滤更稳",
+  "v1.6.10 性能与内存墙（L1 路A + L3-002）：post-processor 4.5 段四查询改 Promise.all 并发 + 窄列 select + take 上限（summary50/beat60/commitment30，character 复用 context-loader 已载数据）；context-loader 双表 take:50 窄列；摘要/节拍写前 deleteMany 去重杜绝重复行挤占窗口；导出建树 O(N²)→O(N) childrenMap；世界卡分类器关键词小写预计算",
+  "v1.6.10 全站限流 + 导入安全（L2 路B）：新建 rate-limit.ts 内存滑动窗口，生成类 10/min、导入类 5/min、settings/test 3/min，超限 429；import/parse+quick 的 rawText 上限 50 万返 413；api-error.ts 错误泛化不再回显原始 err.message",
+  "v1.6.10 数据并发与孤儿治理（L3 路C）：删节点 $transaction 清理孤儿引用（chapterSummary/storyBeat/pendingCommitment/pendingItem）；故事线删除事务重挂一致 + 清理 chapterBindings；storyline-writer/plan-chapter 改 bindings 原子事务且结构同形；entity-auto-creator 写入前二次查重防并发重复；story-status.ts 状态常量化（STORYLINE_STATUS/COMMITMENT_STATUS）替换散落字面量；confirm-guard 幂等前置",
+  "v1.6.10 UI 无障碍 + 写章端到端（L4 路D + L5 路E）：浅色金 --nv-accent-text-on-light + text-accent-label 11 处回填达 WCAG AA；生成进度加 aria-live 区域；client.ts maxTokens 按 targetWordCount*1.6 动态 + finish_reason 透传；write/refine/continue 截断检测回滚 + request.signal 透传中止；continue 孤儿 drafting 复用/清理；import/commit 逐章 content 校验容错",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.10",
+    date: "2026-08-07",
+    title: "魔王 Round-8（性能内存墙与摘要去重 / 全站限流与导入安全 / 数据并发与孤儿治理 / 浅色金 AA 与写章截断检测）",
+    sections: [
+      {
+        label: "性能与内存墙（L1 路A + L3-002）",
+        items: [
+          "post-processor 4.5 段四查询改 Promise.all 并发 + 窄列 select（summary 仅 id/chapterId/content/order/nodeId；beat 仅 id/nodeId/content；commitment 仅 id/sourceNodeId/type/content；character 复用 context-loader 已载窄列），并加 take 上限（summary50/beat60/commitment30）杜绝长书全量载入峰值内存",
+          "context-loader 的 characterCard/lorebookEntry 查询加 take:50 + 窄列投影（characters 仅 id/name/role/arcProgress/currentStatus；lorebook 仅 id/title/category/content）并回传 data.characters 供 post-processor 复用，消除重复查",
+          "摘要/节拍写前 deleteMany 去重（chapterSummary where chapterId、storyBeat where nodeId），先清旧再建新，杜绝重复行挤占 take 窗口；复用 create 返回值替代 634/684 重查",
+          "export 递归建树 O(N²) 改为一次性 childrenMap（O(N)）按 id 查子；world-category-classifier 关键词模块级小写预计算，消除内层 toLowerCase 重复开销",
+        ],
+      },
+      {
+        label: "全站限流与导入安全（L2 路B）",
+        items: [
+          "新建 src/lib/rate-limit.ts 内存滑动窗口（Map + 惰性清理），导出 createRateLimiter/rateLimit；generate/write|refine|continue|chapter-outline、import/parse|quick|commit、settings/test 接入，阈值生成类 10/min、导入类 5/min、settings/test 3/min，超限返回 429 Too Many Requests",
+          "import/parse 与 import/quick 的 rawText 加上限 50 万字符，超限返回 413，防一次性巨文本打爆内存",
+          "api-error.ts 的 classifyError 默认分支泛化（error 改为「服务器内部错误，请查看日志」，明细仅 console.error），SSE 错误路径同样不回显原始 err.message，杜绝异常信息泄漏",
+        ],
+      },
+      {
+        label: "数据并发与孤儿治理（L3 路C）",
+        items: [
+          "story/nodes/[id] 删除节点包 $transaction：先 deleteMany 关联孤儿（chapterSummary where chapterId、storyBeat where nodeId、pendingCommitment/pendingItem where sourceNodeId）再删节点，根除删节点留孤儿 String 引用",
+          "storylines/[id] 重挂 updateMany + delete 包 $transaction 原子；删除后扫描相关 storyNode 的 bindings JSON 剔除被删线条目并 update，引用一致性收敛",
+          "storyline-writer 与 plan-chapter 对同一条 Storyline 的 chapterBindings 改写包 $transaction 原子，并统一 bindings 结构为 {storylineId,chapterId,chapterOrder,element,note,focus,advance,at}，消除解析脆弱与并发丢失更新",
+          "entity-auto-creator 写入前二次查重（projectId+name/title）+ try/catch 捕获 P2002 转 skip + 内存 Set 去重，防并发实体重复；story-status.ts 新增 STORYLINE_STATUS/COMMITMENT_STATUS 常量，全仓替换 status 字面量；confirm-guard 幂等前置（仅状态真跃迁才执行填表副作用）",
+        ],
+      },
+      {
+        label: "浅色金 AA 与写章端到端（L4 路D + L5 路E）",
+        items: [
+          "globals.css 浅色新增 --nv-accent-text-on-light: oklch(0.50 0.12 95)（CR≥4.5 达 WCAG AA），新增 .text-accent-label 类；settings/recycle/workshop/page/game/status-badge 等 11 处金色小文字改 text-accent-label，治愈浅色金 CR≈2.51 不达标",
+          "workspace/[projectId]/page.tsx 与 CenterPanel 生成进度加 aria-live=polite 区域（错误用 assertive），屏幕阅读器可感知生成状态",
+          "llm/client 的 resolveMaxTokens 改为按 targetWordCount*1.6 动态计算（下限 4096）替代固定 4096 与字数脱钩；流式透传 finish_reason，write/refine/continue 检测 length 截断即回滚节点（refine 回滚 prevContent、write 标记 truncated），不把残片落库",
+          "write/refine/continue 透传 request.signal 至 chatStream，断连即中止生成与落盘（L5-04）；continue 起点前复用/清理本会话孤儿 drafting 节点，SSE 中断即删孤儿（L5-03）；import/commit 逐章校验 content 非空，缺漏跳过并告警而非整事务回滚（L5-06）",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.9",
     date: "2026-08-07",

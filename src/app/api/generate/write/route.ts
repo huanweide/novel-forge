@@ -1,4 +1,5 @@
 import { jsonError } from "@/lib/api-error";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
@@ -25,6 +26,10 @@ import { STATUS_COMPLETED, STATUS_DRAFTING, STATUS_OUTLINE_ONLY } from "@/core/s
  * 管线：数据加载 → 角色预处理 → 规则注入 → 上下文构建 → 流式生成 → 后处理（扫描/审校/摘要）
  */
 export async function POST(request: Request) {
+  // L2-001：生成写章限流（1 分钟 10 次），业务 LLM 调用前拦截
+  if (!rateLimit("generate/write", clientIp(request), 10, 60000).ok) {
+    return rateLimitResponse();
+  }
   try {
     const body = await request.json();
     const {
@@ -146,7 +151,8 @@ export async function POST(request: Request) {
     }
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
-    const projLlm = (await prisma.project.findUnique({ where: { id: projectId }, select: { llmConfig: true } }))?.llmConfig;
+    // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig），直接复用，避免重复 DB 查询
+    const projLlm = (data.project as any)?.llmConfig;
     const orchestrator = await AgentOrchestrator.fromSettings(
       { defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP },
       projLlm as Record<string, unknown> | null,
@@ -171,6 +177,7 @@ export async function POST(request: Request) {
 
         try {
           let newContent = "";
+          let finishReason: string | undefined; // L5-01：流式截断信号
 
           // 检查未完成草稿
           const partialDraft =
@@ -197,6 +204,7 @@ export async function POST(request: Request) {
             undefined,
             effectiveTemperature,
             effectiveTopP,
+            request.signal, // L5-04：客户端断连信号透传，断连即中止生成与落盘
           )) {
             if (chunk.type === "token") {
               newContent += chunk.content;
@@ -249,6 +257,9 @@ export async function POST(request: Request) {
                   .then(() => { saving = false; })
                   .catch((e) => { saving = false; console.error("草稿保存失败:", e?.message); });
               }
+            } else if (chunk.type === "done") {
+              // L5-01：流式末尾携带 finish_reason（'length' 表示被 max_tokens 截断）
+              if (chunk.finishReason) finishReason = chunk.finishReason;
             } else if (chunk.type === "error") {
               send({ type: "error", content: chunk.content });
               controller.close();
@@ -286,6 +297,31 @@ export async function POST(request: Request) {
             send({
               type: "error",
               content: "生成内容为空（模型未返回正文），请重试或检查 LLM 配置",
+            });
+            return;
+          }
+
+          // ── L5-01：max_tokens 截断保护 ──
+          // finish_reason==='length' 表示模型在 max_tokens 处被硬截断（已按 targetWordCount 动态放大预算仍不足）。
+          // 此时正文残缺，绝不静默进入后处理/待确认：保留流式阶段已落盘的 partial draft（含 [PARTIAL_DRAFT]），
+          // 状态维持 drafting，便于用户下次「继续生成」从断点恢复；并明确告警为「草稿未完成」。
+          if (finishReason === "length") {
+            const insufficient = fullContent.length < Math.ceil(targetWordCount * 0.6);
+            try {
+              await prisma.storyNode.update({
+                where: { id: nodeId },
+                data: { status: STATUS_DRAFTING },
+              });
+            } catch { /* 回滚状态失败不阻塞告警返回 */ }
+            send({
+              type: "done",
+              content: "",
+              nodeId,
+              status: STATUS_DRAFTING,
+              truncated: true,
+              warning: insufficient
+                ? "⚠️ 生成被 max_tokens 截断（finish_reason=length）且字数明显不足，已保留已生成部分作为草稿，请点击「继续生成」补全后再确认。"
+                : "⚠️ 生成被 max_tokens 截断（finish_reason=length），已保留已生成部分作为草稿，请点击「继续生成」补全后再确认。",
             });
             return;
           }
@@ -355,9 +391,11 @@ export async function POST(request: Request) {
             },
           });
         } catch (err) {
+          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+          console.error("[generate/write] 生成失败:", err);
           send({
             type: "error",
-            content: err instanceof Error ? err.message : "生成过程中出错",
+            content: "服务器内部错误，请查看日志",
           });
         } finally {
           controller.close();

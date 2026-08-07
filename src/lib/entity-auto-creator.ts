@@ -10,6 +10,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import type { DetectedEntity } from "./entity-detector";
 import { isCompleteEntityName } from "./entity-detector";
 import {
@@ -344,6 +345,25 @@ export async function autoCreateEntities(
       }
     }
 
+    // L3-004 二次查重（并发兜底）：写入前再查一次库，捕捉「调用开始时快照」之外的
+    // 并发新建，避免同 project 两章并发生成时重复落库角色卡 / 世界书词条。
+    const dupChar = await prisma.characterCard.findFirst({
+      where: { projectId, name: { equals: name } },
+      select: { id: true },
+    });
+    if (dupChar) {
+      skipped.push(name);
+      continue;
+    }
+    const dupLore = await prisma.lorebookEntry.findFirst({
+      where: { projectId, title: { equals: name } },
+      select: { id: true },
+    });
+    if (dupLore) {
+      skipped.push(name);
+      continue;
+    }
+
     try {
       if (entity.type === "character") {
         // ── 创建角色卡 ──
@@ -390,8 +410,14 @@ export async function autoCreateEntities(
           category,
         });
       }
-    } catch {
-      // 单个实体创建失败不阻塞整体流程
+    } catch (e) {
+      // 单个实体创建失败不阻塞整体流程。
+      // L3-004：若后续为 (projectId,name)/(projectId,title) 加唯一约束，并发冲突
+      // 触发 P2002 时转 skip（与二次查重共同构成并发兜底）。
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        skipped.push(name);
+        continue;
+      }
       skipped.push(name);
     }
   }

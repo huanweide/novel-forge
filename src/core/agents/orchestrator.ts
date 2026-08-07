@@ -195,7 +195,9 @@ ${loreBriefs}
     temperatureOverride?: number,
     /** 覆盖默认 topP（来自项目文风设置） */
     topPOverride?: number,
-  ): AsyncGenerator<{ type: "token" | "done" | "error"; content: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
+    /** L5-04：外部 AbortSignal（客户端断连），透传到 chatStream 的 request.signal，断连即中止生成 */
+    signal?: AbortSignal,
+  ): AsyncGenerator<{ type: "token" | "done" | "error"; content: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number }; finishReason?: string }> {
     const systemPrompt = context.systemPrompt;
     const client = clientOverride || this.client;
     const model = writerModelOverride || this.config.writerModel;
@@ -227,6 +229,9 @@ ${loreBriefs}
         temperature: temperatureOverride ?? this.config.defaultTemperature,
         topP: topPOverride ?? this.config.defaultTopP,
         maxTokens: this.config.maxTokensPerRequest,
+        // L5-01：按目标字数动态放大 max_tokens；L5-04：透传断连信号
+        targetWordCount,
+        signal,
       })) {
         yield chunk;
       }

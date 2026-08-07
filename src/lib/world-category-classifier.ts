@@ -103,6 +103,15 @@ const KEYWORDS: Record<WorldCategory, string[]> = {
 // 角色互动强信号词（无世界关键词时降级到 character 元桶）
 const CHARACTER_SIGNALS = ["说道", "道：", "说：", "问道", "答道", "笑道", "怒道", "心想", "看向", "握住", "叹道", "低声", "喊道", "冷笑", "沉默"];
 
+// L1-011：模块级预计算小写关键词（KEYWORDS 为静态串），避免热循环内重复 toLowerCase()
+// 产生不必要的字符串分配。内层循环只读预计算值。
+const LOWER_KEYWORDS: Record<WorldCategory, string[]> = Object.fromEntries(
+  (Object.keys(KEYWORDS) as WorldCategory[]).map((cat) => [
+    cat,
+    KEYWORDS[cat].map((kw) => kw.toLowerCase()),
+  ]),
+) as Record<WorldCategory, string[]>;
+
 export function classifyWorldCategory(text: string): ClassifyResult {
   const t = (text || "").toLowerCase();
   if (!t.trim()) {
@@ -114,8 +123,12 @@ export function classifyWorldCategory(text: string): ClassifyResult {
 
   for (const cat of ALL_WORLD_CATEGORIES) {
     let catScore = 0;
-    for (const kw of KEYWORDS[cat]) {
-      if (t.includes(kw.toLowerCase())) {
+    const lowerKws = LOWER_KEYWORDS[cat];
+    const kws = KEYWORDS[cat];
+    for (let i = 0; i < lowerKws.length; i++) {
+      const lowerKw = lowerKws[i];
+      if (t.includes(lowerKw)) {
+        const kw = kws[i];
         catScore += kw.length; // 权重 = 字符长度
         if (!matched.includes(kw)) matched.push(kw);
       }
@@ -131,7 +144,7 @@ export function classifyWorldCategory(text: string): ClassifyResult {
     const s = scores[cat] ?? 0;
     if (s === 0) continue;
     const longest = Math.max(
-      ...KEYWORDS[cat].filter((k) => t.includes(k.toLowerCase())).map((k) => k.length),
+      ...LOWER_KEYWORDS[cat].filter((lk) => t.includes(lk)).map((lk) => lk.length),
       0,
     );
     if (s > bestScore || (s === bestScore && longest > bestLong)) {

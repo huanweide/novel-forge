@@ -272,9 +272,21 @@ export async function DELETE(
       return NextResponse.json({ error: "节点不存在" }, { status: 404 });
     }
 
-    // 级联删除子节点
-    await prisma.storyNode.deleteMany({ where: { parentId: id } });
-    await prisma.storyNode.delete({ where: { id } });
+    // L3-001：删除节点包 $transaction，先清关联孤儿（String 引用子记录，schema 无
+    // onDelete Cascade），再删节点本身；子节点一并清理其孤儿，杜绝删除章污染写作上下文。
+    const children = await prisma.storyNode.findMany({
+      where: { parentId: id },
+      select: { id: true },
+    });
+    const affectedNodeIds = [id, ...children.map((c) => c.id)];
+    await prisma.$transaction([
+      prisma.chapterSummary.deleteMany({ where: { chapterId: { in: affectedNodeIds } } }),
+      prisma.storyBeat.deleteMany({ where: { nodeId: { in: affectedNodeIds } } }),
+      prisma.pendingCommitment.deleteMany({ where: { sourceNodeId: { in: affectedNodeIds } } }),
+      prisma.pendingItem.deleteMany({ where: { sourceNodeId: { in: affectedNodeIds } } }),
+      prisma.storyNode.deleteMany({ where: { parentId: id } }),
+      prisma.storyNode.delete({ where: { id } }),
+    ]);
 
     // 如果删除的是顶层章节（parentId=null, type=chapter），重新编号所有剩余章节
     if (node.parentId === null && (node.type === "chapter" || node.type === "section")) {

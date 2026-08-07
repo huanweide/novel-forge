@@ -27,3 +27,45 @@ export const STATUS_REVIEWING: StoryNodeStatus = "reviewing";
 
 // 可被自动/批量确认处理的状态（applyConfirm 条件更新的 where 用）
 export const CONFIRMABLE_STATUSES: StoryNodeStatus[] = [STATUS_DRAFTING, STATUS_PENDING_CONFIRM];
+
+// ─── 故事线状态常量（L3-005：消除散落字面量，单一真相源）──
+export const STORYLINE_STATUS = {
+  ACTIVE: "active",
+  ABANDONED: "abandoned",
+  COMPLETED: "completed",
+  PAUSED: "paused",
+} as const;
+
+// ─── 伏笔承诺状态常量（L3-005：消除散落字面量，单一真相源）──
+export const COMMITMENT_STATUS = {
+  PENDING: "pending",
+  DETECTED: "detected",
+  FULFILLED: "fulfilled",
+  PARTIAL: "partially_fulfilled",
+} as const;
+
+// ─── 故事线并发护栏（L3-003）：按 storylineId 串行化 chapterBindings 读改写 ──
+// 同一条故事线的「读出 bindings → JS push → 回写」非原子，并发写不同章（同 project
+// 活跃故事线）会彼此覆盖丢失更新。用进程内 per-storylineId 互斥，使同一条故事线的
+// 读改写串行化（与 confirm-guard 的 detectLocks 同思路），配合事务化写入。
+const storylineMutexes = new Map<string, Promise<unknown>>();
+
+export function withStorylineLock<T>(
+  storylineId: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const tail = storylineMutexes.get(storylineId) ?? Promise.resolve();
+  const result = tail.then(() => fn());
+  const settle = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  storylineMutexes.set(storylineId, settle);
+  // 仅当本 promise 仍为队尾时才清理 Map，避免误删后续排队的锁
+  settle.finally(() => {
+    if (storylineMutexes.get(storylineId) === settle) {
+      storylineMutexes.delete(storylineId);
+    }
+  });
+  return result;
+}

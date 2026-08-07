@@ -488,7 +488,7 @@ export default function SettingsPage() {
               ))}
             </ul>
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
-              <span className="text-[var(--nv-accent)]">执行方式：</span>
+              <span className="text-accent-label">执行方式：</span>
               部署到 Vercel 等平台时由定时任务（cron）自动触发；本地运行时为<b>手动</b>——写作页底部「记忆衰减」按钮可预览受影响内容并执行清理。衰减只影响章节摘要里的重要性事件，<b>不改动正文与伏笔</b>。
             </p>
           </div>

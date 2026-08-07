@@ -8,6 +8,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { pickReassignMainId } from "@/core/pipeline/outline-context";
+import { STORYLINE_STATUS } from "@/core/story-status";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -45,7 +46,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     });
 
     // v1.4.0 缝合怪推进：主线标记完成 → 无其他 active 主线 → 自动构造承接的新主线（默认开启，可在项目设定关闭）
-    if (body.status === "completed" && prev.type === "main" && prev.status !== "completed") {
+    if (body.status === STORYLINE_STATUS.COMPLETED && prev.type === "main" && prev.status !== STORYLINE_STATUS.COMPLETED) {
       try {
         const project = await prisma.project.findUnique({
           where: { id: prev.projectId },
@@ -55,7 +56,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const autoConstruct = bc.autoConstructNewMain !== false; // 默认开启
         if (autoConstruct) {
           const activeMain = await prisma.storyline.count({
-            where: { projectId: prev.projectId, type: "main", status: "active" },
+            where: { projectId: prev.projectId, type: "main", status: STORYLINE_STATUS.ACTIVE },
           });
           if (activeMain === 0) {
             const origin = process.env.APP_ORIGIN || "http://localhost:3001";
@@ -95,12 +96,19 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       // 若只剩 completed/abandoned 兄弟则置 null，绝不挂到 completed 主线
       // （否则 formatStorylines 因 loadOutlineData 排除 completed 主线会丢失「隶属主线」前缀，R2-006 冲突）。
       const reassignId = pickReassignMainId(siblings);
-      await prisma.storyline.updateMany({
-        where: { projectId: target.projectId, parentId: id },
-        data: { parentId: reassignId },
-      });
+      // L3-001 / L3-009：重挂子线 + 删除主线包 $transaction（原子），
+      // 避免 updateMany 失败后子线 parentId 仍悬空指向已删主线。
+      await prisma.$transaction([
+        prisma.storyline.updateMany({
+          where: { projectId: target.projectId, parentId: id },
+          data: { parentId: reassignId },
+        }),
+        prisma.storyline.delete({ where: { id } }),
+      ]);
+    } else {
+      // 不存在则直接尝试删除（无则报错，由原 jsonError 兜底）
+      await prisma.storyline.delete({ where: { id } });
     }
-    await prisma.storyline.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
     return jsonError(err);

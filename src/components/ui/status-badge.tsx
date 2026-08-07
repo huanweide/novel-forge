@@ -22,9 +22,9 @@ export function StatusBadge({
     outline_only: { label: "仅大纲", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" },
     drafting: { label: "草稿", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "pencil" },
     completed: { label: "已生成·待提交", cls: "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]", icon: "file" },
-    pending_confirm: { label: "待确认", cls: "text-[var(--nv-accent)] bg-[var(--nv-accent-soft)]", icon: "alert" },
+    pending_confirm: { label: "待确认", cls: "text-accent-label bg-[var(--nv-accent-soft)]", icon: "alert" },
     confirmed: { label: "已定稿", cls: "text-[var(--nv-success)] bg-[var(--nv-success)]/10", icon: "check" },
-    reviewing: { label: "审校中", cls: "text-[var(--nv-accent)] bg-[var(--nv-accent-soft)]", icon: "alert" },
+    reviewing: { label: "审校中", cls: "text-accent-label bg-[var(--nv-accent-soft)]", icon: "alert" },
   };
   const s = map[status] || { label: "未知", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-3)]", icon: "circle" as IconName };
   return (

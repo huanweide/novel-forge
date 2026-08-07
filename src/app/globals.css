@@ -275,6 +275,7 @@
   --nv-info-soft:    oklch(0.55 0.15 230 / 0.12);
   --nv-accent:       oklch(0.68 0.14 95);
   --nv-accent-soft:  oklch(0.68 0.14 95 / 0.14);
+  --nv-accent-text-on-light: oklch(0.50 0.12 95);  /* F01：浅色背景[243,239,232]上金色小文字对比度变体（CR≥4.5:1 AA）；深色/苍青沿用 --nv-accent */
 
   --nv-text-primary:   #1A1C22;
   --nv-text-secondary: #4A4D57;
@@ -319,6 +320,10 @@
   --sidebar-border: rgba(15, 18, 30, 0.09);
   --sidebar-ring: oklch(0.55 0.17 270 / 0.5);
 }
+
+/* F01：金色小文字浅色对比度变体类。基础色沿用 --nv-accent（深色/苍青主题外观不变，均已达 AA），仅 .light 下切换为暗金令牌 --nv-accent-text-on-light */
+.text-accent-label { color: var(--nv-accent); }
+.light .text-accent-label { color: var(--nv-accent-text-on-light); }
 
 .light body {
   background-color: #F3EFE8;

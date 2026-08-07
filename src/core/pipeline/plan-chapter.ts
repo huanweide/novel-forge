@@ -9,6 +9,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { getSettings, recordLlmCall } from "@/lib/llm";
+import { STORYLINE_STATUS, withStorylineLock } from "@/core/story-status";
+import type { ChapterBinding } from "@/core/pipeline/storyline-writer";
 
 export interface ChapterPlan {
   /** 本章核心焦点（一句话） */
@@ -66,7 +68,7 @@ export async function planChapterStoryline(input: {
   }
   if (!settings?.apiKey) return null;
 
-  const active = (input.storylines || []).filter((s: any) => s.status === "active");
+  const active = (input.storylines || []).filter((s: any) => s.status === STORYLINE_STATUS.ACTIVE);
   if (active.length === 0) return null; // 无活跃剧情线则不规划（用户可能尚未建立）
 
   const slText = active
@@ -156,24 +158,41 @@ export async function applyChapterPlanToStorylines(
 ): Promise<void> {
   try {
     const active = await prisma.storyline.findMany({
-      where: { projectId, status: "active" },
-      select: { id: true, chapterBindings: true },
+      where: { projectId, status: STORYLINE_STATUS.ACTIVE },
+      select: { id: true },
     });
     for (const s of active) {
-      const bindings: any[] = Array.isArray(s.chapterBindings) ? [...(s.chapterBindings as any[])] : [];
-      bindings.push({
-        order: chapterOrder,
-        at: new Date().toISOString(),
-        focus: plan.focus || "",
-        advance: plan.advance || [],
-        obstacle: plan.obstacle || "",
-        twist: plan.twist || "",
-      });
-      const trimmed = bindings.slice(-50);
-      await prisma.storyline.update({
-        where: { id: s.id },
-        data: { chapterBindings: trimmed },
-      });
+      // L3-003：按 storylineId 串行化读改写；锁内重新读取最新 bindings，避免基于过期快照丢失更新
+      try {
+        await withStorylineLock(s.id, async () => {
+          const fresh = await prisma.storyline.findUnique({
+            where: { id: s.id },
+            select: { chapterBindings: true },
+          });
+          const bindings: any[] = Array.isArray(fresh?.chapterBindings)
+            ? [...(fresh.chapterBindings as any[])]
+            : [];
+          // L3-003：写入与 writeStorylineProgress 同形状的绑定，消除两种形状混存
+          const binding: ChapterBinding = {
+            storylineId: s.id,
+            chapterId: null,
+            chapterOrder,
+            element: null,
+            focus: plan.focus || "",
+            advance: plan.advance || [],
+            note: plan.note || "",
+            at: new Date().toISOString(),
+          };
+          bindings.push(binding);
+          const trimmed = bindings.slice(-50);
+          await prisma.storyline.update({
+            where: { id: s.id },
+            data: { chapterBindings: trimmed },
+          });
+        });
+      } catch (e) {
+        console.warn("[plan-chapter] 单条剧情线回写失败:", e instanceof Error ? e.message : String(e));
+      }
     }
     console.log(`[plan-chapter] 剧情预设回写 project=${projectId} 条数=${active.length} 章序=${chapterOrder + 1}`);
   } catch (e) {

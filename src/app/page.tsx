@@ -317,7 +317,7 @@ export default function Dashboard() {
                       <div className="gi mb-2.5">{g.icon}</div>
                       <div className="text-sm font-medium text-[var(--nv-text-primary)]">{g.name}</div>
                       <div className="text-[11px] text-[var(--nv-text-tertiary)] mt-0.5 leading-snug">{g.desc}</div>
-                      {loadingGenre === g.id && <div className="text-[10px] text-[var(--nv-accent)] mt-1">创建中…</div>}
+                      {loadingGenre === g.id && <div className="text-[10px] text-accent-label mt-1">创建中…</div>}
                     </button>
                   ))}
                 </div>

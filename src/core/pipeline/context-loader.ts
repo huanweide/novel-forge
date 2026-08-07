@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { GenerationData } from "./types";
+import { STORYLINE_STATUS, COMMITMENT_STATUS } from "@/core/story-status";
 
 /**
  * 加载单章生成所需的所有上下文数据。
@@ -49,9 +50,17 @@ export async function loadGenerationContext(
           activeCharacters: true,
         },
       }),
-      prisma.characterCard.findMany({ where: { projectId } }),
+      // L1-002：与 loadOutlineData 对齐加 take 上限，避免长书每次生成搬运角色/世界书全集。
+      // 注意：此处保留完整字段——下游编排器(buildPromptContext)与 lorebook 触发匹配
+      // (matchLoreEntries/recall) 实际消费 background/aliases/personality/appearance/
+      // storyLine/timeline/relationships 及 keys/depth/insertionOrder，窄列会破坏功能。
+      prisma.characterCard.findMany({
+        where: { projectId },
+        take: 50,
+      }),
       prisma.lorebookEntry.findMany({
         where: { projectId, enabled: true },
+        take: 50,
       }),
       // 摘要：先多拉一些，再按时间线过滤（ChapterSummary 无 chapterOrder 字段，需关联 node）
       prisma.chapterSummary.findMany({
@@ -75,13 +84,13 @@ export async function loadGenerationContext(
         take: 50, // 多拉一些，后续按 sourceNode 时间线过滤
       }),
       prisma.pendingItem.findMany({
-        where: { projectId, status: "pending" },
+        where: { projectId, status: COMMITMENT_STATUS.PENDING },
         orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
         take: 30,
       }),
       // 活跃剧情线：参与每章生成上下文（v0.33.0 接通）
       prisma.storyline.findMany({
-        where: { projectId, status: "active" },
+        where: { projectId, status: STORYLINE_STATUS.ACTIVE },
         orderBy: { type: "asc" },
       }),
       // 结构化表格（LoreTable）：供触发词匹配吞并更长名候选（Round8 P0）

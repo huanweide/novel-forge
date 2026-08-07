@@ -38,6 +38,8 @@ export interface LLMRequest {
   temperature?: number;
   topP?: number;
   maxTokens?: number;
+  /** 业务目标字数（中文）：用于 L5-01 动态推算 max_tokens，避免长章被固定 4096 硬截断 */
+  targetWordCount?: number;
   stream?: boolean;
   /** 推理模式：仅 DeepSeek 官方 API 支持，硅基流动等第三方不用传 */
   thinking?: { type: "enabled" | "disabled" };
@@ -82,8 +84,27 @@ export type LLMClient = ReturnType<typeof createLLMClient>;
  */
 const REASONING_MODEL_RE = /reason|r1|thinking|o1|o3|o4|qwq|z1|v4-flash|deepseek-v4/i;
 const REASONING_MIN_MAX_TOKENS = 2500;
-function resolveMaxTokens(model: string, requested: number | undefined, fallback: number): number {
-  const base = requested ?? fallback;
+/**
+ * L5-01：动态推算 max_tokens。
+ * - 若业务声明 targetWordCount（如章节目标字数），则按「中文 1.6 倍 token 估算」放大预算，
+ *   并取 4096 下限、modelCtxLimit 上限（contextWindowSize*0.8 安全余量），避免长章被固定 4096 硬截断。
+ * - 否则回退到既有 requested/fallback（= config.maxTokensPerRequest）。
+ * - 推理模型最低预算保护（N1）仍优先于上述结果。
+ */
+function resolveMaxTokens(
+  model: string,
+  requested: number | undefined,
+  fallback: number,
+  opts?: { targetWordCount?: number; contextWindowSize?: number },
+): number {
+  let base: number;
+  const twc = opts?.targetWordCount;
+  if (typeof twc === "number" && twc > 0) {
+    const ctxLimit = Math.floor((opts?.contextWindowSize ?? 65536) * 0.8);
+    base = Math.min(ctxLimit, Math.max(4096, Math.ceil(twc * 1.6)));
+  } else {
+    base = requested ?? fallback;
+  }
   if (REASONING_MODEL_RE.test(model) && base < REASONING_MIN_MAX_TOKENS) {
     return REASONING_MIN_MAX_TOKENS;
   }
@@ -154,7 +175,10 @@ async function attemptChat(
     messages: request.messages,
     temperature: request.temperature ?? config.defaultTemperature,
     top_p: request.topP ?? config.defaultTopP,
-    max_tokens: resolveMaxTokens(target.model, request.maxTokens, config.maxTokensPerRequest),
+    max_tokens: resolveMaxTokens(target.model, request.maxTokens, config.maxTokensPerRequest, {
+      targetWordCount: request.targetWordCount,
+      contextWindowSize: config.contextWindowSize,
+    }),
     stream: false,
     ...(request.thinking ? { thinking: request.thinking } : {}),
   };
@@ -255,7 +279,10 @@ async function establishStream(
     messages: request.messages,
     temperature: request.temperature ?? config.defaultTemperature,
     top_p: request.topP ?? config.defaultTopP,
-    max_tokens: resolveMaxTokens(target.model, request.maxTokens, config.maxTokensPerRequest),
+    max_tokens: resolveMaxTokens(target.model, request.maxTokens, config.maxTokensPerRequest, {
+      targetWordCount: request.targetWordCount,
+      contextWindowSize: config.contextWindowSize,
+    }),
     stream: true,
     stream_options: { include_usage: true },
     ...(request.thinking ? { thinking: request.thinking } : {}),
@@ -302,7 +329,7 @@ async function* readStream(
   response: Response,
   onUsage?: (u: { promptTokens: number; completionTokens: number; totalTokens: number }) => void,
   onFirstToken?: () => void,
-): AsyncGenerator<{ type: "token" | "done"; content: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
+): AsyncGenerator<{ type: "token" | "done"; content: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number }; finishReason?: string }> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("无法获取响应流");
 
@@ -310,6 +337,8 @@ async function* readStream(
   let buffer = "";
   let promptTokens = 0;
   let completionTokens = 0;
+  // L5-01：流式 finish_reason 透传（在最后的 data chunk 中携带，早于 [DONE]）
+  let finishReason: string | undefined;
 
   try {
     while (true) {
@@ -332,6 +361,7 @@ async function* readStream(
             type: "done" as const,
             content: "",
             usage: finalUsage,
+            finishReason,
           };
           return;
         }
@@ -339,6 +369,10 @@ async function* readStream(
           try {
             const data = JSON.parse(dataStr);
             const delta = data.choices?.[0]?.delta;
+
+            // L5-01：捕获流式 finish_reason（截断检测依据，早于 [DONE] 到达）
+            const fr = data.choices?.[0]?.finish_reason;
+            if (typeof fr === "string" && fr.length > 0) finishReason = fr;
 
           // 推理模型把思考链放在 delta.reasoning_content，它同样占用 max_tokens
           // 预算与 completion_tokens 计数。这里把 reasoning token 也计入 completionTokens，
@@ -376,6 +410,7 @@ async function* readStream(
     type: "done" as const,
     content: "",
     usage: finalUsage,
+    finishReason,
   };
 }
 

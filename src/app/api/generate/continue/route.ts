@@ -1,4 +1,5 @@
 import { jsonError } from "@/lib/api-error";
+import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
@@ -24,6 +25,10 @@ import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
  * 管线：创建新节点 → 数据加载 → 角色预处理 → 上下文构建 → 流式生成 → 完整后处理
  */
 export async function POST(request: Request) {
+  // L2-001：生成续写限流（1 分钟 10 次），业务 LLM 调用前拦截
+  if (!rateLimit("generate/continue", clientIp(request), 10, 60000).ok) {
+    return rateLimitResponse();
+  }
   try {
     const {
       projectId, currentNodeId, styleTemplateId, authorNote, autoOutline = true,
@@ -54,6 +59,18 @@ export async function POST(request: Request) {
     if (autoOutline && (currentNode as any).content) {
       nextOutline = "基于前文剧情自然推进，续写下一节。保持节奏和风格一致。";
     }
+
+    // ── L5-03：清理本 project 因中断/503 遗留的「尾部 drafting 孤儿节点」──
+    // 仅针对尾部节点（order === 当前最大 order）且 content 含 [PARTIAL_DRAFT]，
+    // 避免每次 continue 失败都新建节点导致残缺节点堆积污染章节树；
+    // 同时不误删用户正在撰写的中部草稿（其中部节点 order 较小，不会被命中）。
+    try {
+      const orderAgg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
+      const maxOrder = orderAgg._max.order ?? 0;
+      await prisma.storyNode.deleteMany({
+        where: { projectId, order: maxOrder, status: "drafting", content: { contains: "[PARTIAL_DRAFT]" } },
+      });
+    } catch { /* 清理失败不阻塞新建 */ }
 
     // ── 创建下一节节点 ──
     // R3 修复（复检 NEW-3 / 任务 NEW-1 章号不递增）：order 必须严格递增且不重复。
@@ -190,6 +207,7 @@ ${lastParagraphs}
           for await (const chunk of orchestrator.writeSection(
             promptContext, writingInstruction, targetWords,
             undefined, undefined, temperature, topP,
+            request.signal, // L5-04：客户端断连信号透传
           )) {
             if (chunk.type === "token") {
               fullContent += chunk.content;
@@ -295,7 +313,18 @@ ${lastParagraphs}
             babylore,
           });
         } catch (err) {
-          send({ type: "error", content: err instanceof Error ? err.message : "续写失败" });
+          // L5-03 + L5-04：SSE 中断/客户端断连（request.signal 中止）或网关异常时，
+          // 删除本次新建的 drafting 孤儿节点，避免残缺节点堆积污染章节树与导出。
+          if (request.signal?.aborted) {
+            try {
+              await prisma.storyNode.deleteMany({
+                where: { id: nextNode.id, status: "drafting" },
+              });
+            } catch { /* 删除失败不阻塞报错返回 */ }
+          }
+          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+          console.error("[generate/continue] 续写失败:", err);
+          send({ type: "error", content: "服务器内部错误，请查看日志" });
         } finally {
           controller.close();
         }

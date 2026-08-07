@@ -435,7 +435,7 @@ export default function Workshop() {
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--nv-primary)]/15 text-[var(--nv-primary)]">
                     {TYPE_LABEL[p.type] || p.type}
                   </span>
-                  {p.isBuiltin && <span className="text-[11px] text-[var(--nv-accent)]">内置</span>}
+                  {p.isBuiltin && <span className="text-[11px] text-accent-label">内置</span>}
                 </div>
                 <h3 className="font-semibold text-[var(--nv-text-primary)]">{p.title}</h3>
                 <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed flex-1">{p.description || "—"}</p>
