@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.3 — 2026-08-06
+**世界卡体系补全（三类模块 + 确定性分类器 + 14 类自动填表验证）+ 故事线深度融入写作 + 进度量化**
+
+- **世界卡三类模块补全（#653）**：世界面板 WORLD_MODULES 新增命运体系(fate_system)/物理列表(physics)/公开体系(public_system) 三类模块并补齐功法(technique)/货币(currency)，世界书分类由 12 类扩至 15 类；四处定义点（LoreCategory 枚举 / parser.category / tool-registry enum 与中文映射 / LorebookEditDialog 下拉）同步；填表链路（entity-sync TYPE_TO_CATEGORY、pre-write-cards 完整性校验）同步补 fate/physics/public/currency 判定。
+- **世界卡确定性分类器与 14 类验证（#654）**：新增 world-category-classifier.ts，确定性、长词优先消歧，覆盖 15 分类 + 2 元桶（地点/人物），自动填表路由更准；6/6 单测通过；entity-sync 补映射后 14 类自动填表闭环验证完成。
+- **故事线深度融入写作（#655）**：formatStorylines 经 orchestrator.buildPromptContext 注入写作 systemPrompt（修仙/非修仙双分支），仅注入未完成 active 线，AI 写章实时感知主线/支线七要素进展，避免前后矛盾。
+- **故事线进度量化与 UI（#656）+ 质量门禁（#657）**：新增 storyline-progress.ts 算七要素 + 章节进展百分比（5/5 单测）；StorylineList 主/支线卡片加进度条；tsc 零错误 + 238 单测全绿（净增 21），21 个在途改动收口。
+
+---
+
 ## v1.6.2 — 2026-08-06
 **UI 三项体检收尾（按钮反馈 / 去重 / 配色）+ 生成链路健壮性修复**
 

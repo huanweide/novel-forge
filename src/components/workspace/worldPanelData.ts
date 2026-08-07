@@ -14,6 +14,9 @@ export const WORLD_MODULES = [
   { key: "law",         label: "规则法则", icon: "shield" as IconName, desc: "天道规则、世界法则、禁忌" },
   { key: "currency",    label: "货币体系", icon: "gem" as IconName, desc: "灵石、金币、兑换比例" },
   { key: "custom",      label: "特殊设定", icon: "sparkles" as IconName, desc: "金手指、系统、血脉、漏洞" },
+  { key: "fate_system",label: "命运体系", icon: "compass" as IconName, desc: "天命、命格、预言、因果线" },
+  { key: "physics",    label: "物理列表", icon: "flask" as IconName, desc: "世界底层物理规则、时空法则、能量守恒" },
+  { key: "public_system",label: "公开体系", icon: "landmark" as IconName, desc: "公开社会制度、阶级、律法执行、公共资源" },
   { key: "character_relationship", label: "角色关系", icon: "users" as IconName, desc: "角色间的互动关系——从正文自动提取，生成时必定读取" },
 ] as const;
 
@@ -44,6 +47,9 @@ export const CATEGORY_TO_MODULE: Record<string, ModuleKey> = {
   currency: "currency",
   character_relationship: "character_relationship",
   custom: "custom",
+  fate_system: "fate_system",
+  physics: "physics",
+  public_system: "public_system",
 };
 
 // ─── 每个板块的新建字段模板 ──────────────────────────────
@@ -118,6 +124,24 @@ export const MODULE_FIELDS: Record<ModuleKey, WorldFieldDef[]> = {
     { key: "type", label: "类型", placeholder: "系统/金手指/天赋/血脉/世界漏洞", type: "text" },
     { key: "trigger", label: "触发条件", placeholder: "条件/代价", type: "text" },
     { key: "description", label: "描述", placeholder: "效果、限制、未解之谜...", type: "textarea" },
+  ],
+  fate_system: [
+    { key: "type", label: "类型", placeholder: "天命/命格/预言/因果", type: "text" },
+    { key: "bearer", label: "承载者", placeholder: "角色名/势力/世界", type: "text" },
+    { key: "trigger", label: "触发条件", placeholder: "何种情形下显现", type: "text" },
+    { key: "description", label: "描述", placeholder: "命运机制、预言内容、因果如何闭环...", type: "textarea" },
+  ],
+  physics: [
+    { key: "domain", label: "作用域", placeholder: "时空/能量/物质/因果", type: "text" },
+    { key: "rule", label: "基本定律", placeholder: "如：灵气守恒、光速上限", type: "text" },
+    { key: "exception", label: "例外/破例", placeholder: "何种情况可被打破", type: "text" },
+    { key: "description", label: "描述", placeholder: "底层物理规则、与力量体系的耦合...", type: "textarea" },
+  ],
+  public_system: [
+    { key: "type", label: "类型", placeholder: "阶级/律法/税制/公共资源", type: "text" },
+    { key: "authority", label: "执行主体", placeholder: "官府/教会/联盟", type: "text" },
+    { key: "scope", label: "覆盖范围", placeholder: "全大陆/某国/某城", type: "text" },
+    { key: "description", label: "描述", placeholder: "社会制度、阶级流动、公开规则...", type: "textarea" },
   ],
   character_relationship: [
     { key: "charA", label: "角色A", placeholder: "角色名（如：陈凡）", type: "text" },

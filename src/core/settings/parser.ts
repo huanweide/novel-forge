@@ -96,7 +96,7 @@ export interface ParsedCharacter {
 
 export interface ParsedLoreEntry {
   title: string;
-  category: "geography" | "faction" | "magic_system" | "history" | "culture" | "creature" | "item" | "custom";
+  category: "geography" | "faction" | "magic_system" | "technique" | "history" | "culture" | "creature" | "item" | "law" | "currency" | "character_relationship" | "fate_system" | "physics" | "public_system" | "custom";
   keys: string[];
   content: string;
   insertionOrder: number;

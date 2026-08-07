@@ -211,17 +211,33 @@ export async function GET(request: Request) {
     const hasGeography = lorebookEntries.some(l => l.category === "geography");
     const hasFaction = lorebookEntries.some(l => l.category === "faction");
     const hasMagicSystem = lorebookEntries.some(l => l.category === "magic_system");
+    const hasTechnique = lorebookEntries.some(l => l.category === "technique");
     const hasHistory = lorebookEntries.some(l => l.category === "history");
     const hasCulture = lorebookEntries.some(l => l.category === "culture");
+    const hasLaw = lorebookEntries.some(l => l.category === "law");
+    const hasCurrency = lorebookEntries.some(l => l.category === "currency");
+    const hasCreature = lorebookEntries.some(l => l.category === "creature");
+    const hasItem = lorebookEntries.some(l => l.category === "item");
+    const hasFateSystem = lorebookEntries.some(l => l.category === "fate_system");
+    const hasPhysics = lorebookEntries.some(l => l.category === "physics");
+    const hasPublicSystem = lorebookEntries.some(l => l.category === "public_system");
     const missingLoreCategories: string[] = [];
     if (!hasGeography) missingLoreCategories.push("geography");
     if (!hasFaction) missingLoreCategories.push("faction");
     if (!hasMagicSystem) missingLoreCategories.push("magic_system");
+    if (!hasTechnique) missingLoreCategories.push("technique");
     if (!hasHistory) missingLoreCategories.push("history");
     if (!hasCulture) missingLoreCategories.push("culture");
+    if (!hasLaw) missingLoreCategories.push("law");
+    if (!hasCurrency) missingLoreCategories.push("currency");
+    if (!hasCreature) missingLoreCategories.push("creature");
+    if (!hasItem) missingLoreCategories.push("item");
+    if (!hasFateSystem) missingLoreCategories.push("fate_system");
+    if (!hasPhysics) missingLoreCategories.push("physics");
+    if (!hasPublicSystem) missingLoreCategories.push("public_system");
     const loreWarning = lorebookEntries.length === 0
       ? "⚠️ 世界卡完全为空——强烈建议至少创建1条世界设定，防止AI凭空编造" : missingLoreCategories.length > 0
-      ? `💡 建议补充世界卡类型：${missingLoreCategories.map(c => ({geography:"地理",faction:"势力",magic_system:"能力体系",history:"历史",culture:"文化"}[c] || c)).join("、")}`
+      ? `💡 建议补充世界卡类型：${missingLoreCategories.map(c => ({geography:"地理",faction:"势力",magic_system:"力量体系",technique:"功法",history:"历史",culture:"文化",law:"法则",currency:"货币",creature:"生物",item:"物品",fate_system:"命运",physics:"物理",public_system:"公开体系"}[c] || c)).join("、")}`
       : "";
 
     return NextResponse.json({

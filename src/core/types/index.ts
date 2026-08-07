@@ -96,12 +96,17 @@ export type LoreCategory =
   | "geography"        // 地理
   | "faction"          // 势力/组织
   | "magic_system"     // 魔法/能力体系
+  | "technique"        // 功法/技能体系
   | "history"          // 历史事件
   | "culture"          // 文化/风俗
   | "creature"         // 生物/种族
   | "item"             // 关键物品
   | "law"              // 法则/规则
+  | "currency"         // 货币/经济
   | "character_relationship"  // 角色关系
+  | "fate_system"      // 命运体系
+  | "physics"          // 物理列表
+  | "public_system"    // 公开体系
   | "custom";          // 自定义
 
 // ─── 故事结构系统 (Story Structure) ────────────────────────

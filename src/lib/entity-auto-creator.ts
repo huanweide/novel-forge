@@ -100,13 +100,79 @@ function levenshtein(a: string, b: string): number {
 }
 
 /**
+ * 同人异称识别（v1.6.3）：尊称 / 描述性变体与正主指同一人，应并入别名而非拆成两张卡。
+ * 例：韩先生 / 韩姓男子 / 韩某 / 老韩 与 韩立 视为同一人；韩立 与 韩雪 视为不同人。
+ */
+const HONORIFIC_TOKENS = [
+  "先生", "女士", "女子", "男子", "姑娘", "公子", "少年", "少女",
+  "姓", "某", "氏", "老板", "师傅", "师父", "大人", "阁下", "兄台", "小姐",
+  "夫人", "殿下", "陛下", "兄", "姐", "君", "公", "翁", "婆", "徒弟",
+  "管家", "仆", "婢", "少侠", "大侠", "壮士", "道友", "前辈", "掌门",
+  "宗主", "将军", "王", "皇", "帝", "后", "妃", "书生", "侠女", "女侠", "朋友",
+];
+const PREFIX_HONORIFICS = ["老", "小", "阿", "大"];
+const BEFORE_FILLERS = ["", "大", "小", "阿", "二", "三", "老", "少", "姓"];
+
+/** 是否为「称呼/描述性变体」（如 韩先生 / 韩姓男子 / 韩某 / 老韩） */
+export function isHonorificVariant(name: string): boolean {
+  const n = normalizeTraditional(name.trim().toLowerCase());
+  if (n.length < 2 || n.length > 5) return false;
+  // 前缀尊称：老/小/阿 + 姓（≤3 字）
+  if (PREFIX_HONORIFICS.includes(n[0]) && n.length <= 3) return true;
+  const rest = n.slice(1); // 去掉姓
+  for (const t of HONORIFIC_TOKENS) {
+    const idx = rest.indexOf(t);
+    if (idx === -1) continue;
+    const before = rest.slice(0, idx);
+    const after = rest.slice(idx + t.length);
+    // token 后必须为空，token 前只能是空或单个修饰字（大/小/姓…），避免把真实姓名误判
+    if (after.length === 0 && BEFORE_FILLERS.includes(before)) return true;
+  }
+  return false;
+}
+
+/** 提取「姓」：前缀尊称（老韩）取第二字，否则取首字 */
+export function coreSurname(name: string): string {
+  const n = normalizeTraditional(name.trim().toLowerCase());
+  if (PREFIX_HONORIFICS.includes(n[0])) return n[1] || n[0];
+  return n[0];
+}
+
+/** 两名称是否「同人异称」：共享姓，且其一为称呼变体、另一为普通姓名（仅成对判定，不含歧义闸门） */
+export function samePersonByHonorific(a: string, b: string): boolean {
+  const x = normalizeTraditional(a.trim().toLowerCase());
+  const y = normalizeTraditional(b.trim().toLowerCase());
+  if (!x || !y) return false;
+  if (Math.abs(x.length - y.length) > 3) return false;
+  if (coreSurname(x) !== coreSurname(y)) return false;
+  const xHon = isHonorificVariant(x);
+  const yHon = isHonorificVariant(y);
+  return xHon !== yHon;
+}
+
+/**
+ * 同人异称消歧：给定一组已有姓名，判断 honorificName（尊称/描述变体）能否无歧义并入某个同姓正主。
+ * 能并入则返回该正主姓名，否则返回 null（同姓正主不唯一 → 拒绝，避免把「韩先生」错并进「韩雪」）。
+ */
+export function resolveHonorificTarget(allNames: string[], honorificName: string): string | null {
+  if (!isHonorificVariant(honorificName)) return null;
+  const surname = coreSurname(honorificName);
+  const plainCands = allNames
+    .filter((n) => n.trim().toLowerCase() !== honorificName.trim().toLowerCase())
+    .filter((n) => !isHonorificVariant(n))
+    .filter((n) => coreSurname(n) === surname);
+  return plainCands.length === 1 ? plainCands[0] : null;
+}
+
+/**
  * 判断两个名称是否「高度相似、疑似同一实体的变体」。
  * 规则：忽略大小写后
  *  - 完全相同 → 是
+ *  - 同人异称（尊称/描述变体，如 韩先生/韩立）→ 是（v1.6.3 新增，并入别名）
  *  - 长度差 > 2 → 否（明显不同实体）
  *  - 短名（任一 ≤2 字）先繁简归一化，归一化后相同 → 是（灭「萧炎/蕭炎」重复建卡，
  *    青砚 P2）；归一化后仍不同 → 否（不并，安全优先，避免「白云/白衣」被误并）
- *  - 长名（≥3 字）编辑距离 ≤ 1 → 是（灭繁简/错别字，如 青龙镇/青龍镇、李尘/李麈）
+ *  - 长名（≥3 字）编辑距离 = 0 → 是（灭繁简/错别字，如 青龙镇/青龍镇、李尘/李麈）
  */
 export function isSimilarName(a: string, b: string): boolean {
   // P1-2：繁简归一在比对前统一完成（青龍镇→青龙镇），使后续仅依赖编辑距离判定，
@@ -149,7 +215,7 @@ export async function autoCreateEntities(
   const [existingChars, existingLore] = await Promise.all([
     prisma.characterCard.findMany({
       where: { projectId },
-      select: { name: true, aliases: true },
+      select: { id: true, name: true, aliases: true },
     }),
     prisma.lorebookEntry.findMany({
       where: { projectId },
@@ -202,6 +268,24 @@ export async function autoCreateEntities(
     if (similar) {
       skipped.push(name);
       continue;
+    }
+    // 同人异称：尊称/描述变体自动并入唯一同姓正主别名（歧义时拒绝，避免错并）
+    if (isHonorificVariant(name)) {
+      const targetName = resolveHonorificTarget(existingChars.map((c) => c.name), name);
+      if (targetName) {
+        const matched = existingChars.find((c) => c.name.toLowerCase() === targetName.toLowerCase());
+        if (matched) {
+          const curAliases = Array.isArray(matched.aliases) ? (matched.aliases as string[]) : [];
+          if (!curAliases.some((al) => al.toLowerCase() === name.toLowerCase())) {
+            await prisma.characterCard.update({
+              where: { id: matched.id },
+              data: { aliases: Array.from(new Set([...curAliases, name])).slice(0, 50) },
+            });
+          }
+        }
+        skipped.push(name);
+        continue;
+      }
     }
     // 标记为已存在，避免同一批次内的重复（主名 + 别名）
     existingNames.add(name.toLowerCase());

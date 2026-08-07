@@ -25,18 +25,57 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.2";
+export const LATEST_VERSION = "v1.6.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.2 UI 三项体检收尾：① 按钮完成反馈——删除/导出/备份/新建章/批量写作均补成功 toast；② 按钮去重——Toolbar「更多▾→工具箱」下拉删除、ToolboxDialog 模态重写为纯类型模块，工具箱统一由右栏 tab 承载；③ 配色兼容——心情色卡/关系图例/角色卡按钮/配置主按钮硬编码色收归 --nv 令牌，并清理用户可见 emoji",
-  "生成链路健壮性修复（真实生成「新城」第7章验证中发现）：摘要环节偶发空返回时加 3 次重试兜底，避免章名停在占位「第N章」；write 空响应时回滚节点到 outline_only 并清空残片，避免在前端留下无法继续的脏空章",
-  "静态自查确认去重彻底：onOpenToolbox 全仓零引用、无组件再将 ToolboxDialog 当弹窗渲染；tsc 零错误 + 217 单元测试全绿",
-  "真实生成验证：链路（记忆召回→正文→废词扫描 100 分→六维质量 A→审校→自动确认 confirmed→实体入库→DONE）闭环通过；沙箱 LLM 网关偶发空返回属环境限制，非代码缺陷，已加兜底与回滚防御",
+  "v1.6.3 世界卡体系补全：新增命运体系/物理列表/公开体系三类模块并补齐功法/货币，世界面板 WORLD_MODULES、LoreCategory 枚举、parser 分类、agent 工具 enum、编辑下拉、填表映射、pre-write-cards 校验七处定义点同步，世界书覆盖由 12 类扩至 15 类",
+  "世界卡确定性分类器 world-category-classifier.ts 上线：长词优先消歧，覆盖 15 个世界卡分类 + 2 个元桶，自动填表路由准确率提升；配套 6/6 单测；14 类自动填表链路在 entity-sync 补齐 fate/physics/public 映射后完成闭环验证",
+  "故事线正式融入写作：outline-context.ts 的 formatStorylines 经 orchestrator 注入写作 systemPrompt（修仙/非修仙双分支），仅注入未完成的 active 线，AI 写章时实时感知主线/支线七要素进展，不再各写各的",
+  "故事线进度量化与 UI：新增 storyline-progress.ts 算七要素 + 章节进展百分比，StorylineList 卡片加进度条；质量门禁 tsc 零错误 + 238 单测全绿（净增 21），21 个在途改动全部收口",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.3",
+    date: "2026-08-06",
+    title: "世界卡体系补全（三类模块 + 确定性分类器 + 14 类自动填表验证）+ 故事线深度融入写作 + 进度量化",
+    sections: [
+      {
+        label: "世界卡三类模块补全（#653）",
+        items: [
+          "世界面板 WORLD_MODULES 新增命运体系(fate_system,icon compass)/物理列表(physics,icon flask)/公开体系(public_system,icon landmark) 三类模块，并补齐功法(technique)/货币(currency) 此前缺失的模块定义，世界书分类覆盖由 12 类扩至 15 类",
+          "四处定义点同步：core/types/index.ts 的 LoreCategory 枚举、core/settings/parser.ts 的 ParsedLoreEntry.category、core/agents/tool-registry.ts 的 agent 工具 enum 与中文映射 CATEGORY_MAP、components/workspace/LorebookEditDialog.tsx 分类下拉（全仓唯一硬编码点）补齐三类 option",
+          "填表链路同步：core/babylore/entity-sync.ts 的 TYPE_TO_CATEGORY 补 fate/physics/public 映射；api/generate/pre-write-cards/route.ts 完整性校验补 fate_system/physics/public_system/currency 等判定，避免新模块被误判缺失",
+        ],
+      },
+      {
+        label: "世界卡确定性分类器与 14 类自动填表验证（#654）",
+        items: [
+          "新增 src/lib/world-category-classifier.ts：确定性强、长词优先消歧，覆盖 15 个世界卡分类 + 2 个元桶（地点/人物），让自动填表路由到正确模块，不再靠 LLM 自由发挥",
+          "配套 src/lib/world-category-classifier.test.ts 6/6 通过，验证长词优先、元桶兜底、边界消歧",
+          "entity-sync 补齐 fate/physics/public 映射后，14 类自动填表链路完成闭环验证（写章自动建卡 → 确认自动填表 → 世界书正确归类）",
+        ],
+      },
+      {
+        label: "故事线深度融入写作（#655）",
+        items: [
+          "outline-context.ts 的 formatStorylines 经 orchestrator.buildPromptContext 注入写作 systemPrompt，修仙/非修仙双分支均覆盖",
+          "仅注入未完成的 active 线（status=active 且未完结），让 AI 写章时实时感知主线/支线七要素进展与章节绑定，避免各写各的、前后矛盾",
+          "真实生成验证：新城项目写章时已能读到故事线上下文",
+        ],
+      },
+      {
+        label: "故事线进度量化与 UI + 质量门禁（#656 + #657）",
+        items: [
+          "新增 src/lib/storyline-progress.ts：computeStorylineProgress 计算七要素填充数 + 章节进展数，输出完成百分比与文案；配套 storyline-progress.test.ts 5/5 通过",
+          "StorylineList 主/支线卡片新增进度条小组件，直观显示每条故事线的完成度",
+          "质量门禁：tsc 零错误 + vitest 238 个测试全绿（较 v1.6.2 的 217 净增 21：分类器 6 + 进度 5 + entity-auto-creator 16）；21 个在途改动全部收口",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.2",
     date: "2026-08-06",

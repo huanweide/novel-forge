@@ -41,6 +41,7 @@ import { injectOptimizedMemory, DEFAULT_BUDGET } from "@/lib/memory-injector";
 import type { TieredMemory } from "@/lib/memory-classifier";
 import { toolRegistry } from "./tool-registry";
 import type { ToolSchema, ToolContext, ToolResult } from "./tool-registry";
+import { formatStorylines } from "@/core/pipeline/outline-context";
 
 // ─── Prompt 模板 ─────────────────────────────────────────────
 
@@ -675,8 +676,12 @@ export function buildPromptContext(params: {
   // 体裁适配：修仙/玄幻类沿用"白金修仙模拟引擎"；其他体裁走通用作家角色，
   // 避免硬编码修仙网文风压制用户在创意工坊设定的文风预设（如古风·严谨文笔）。
   const isXianxia = Array.isArray((project as any).genre) && (project as any).genre.some((g: string) => /修仙|玄幻|仙侠|武侠|洪荒|奇幻|末世/.test(g));
+  const activeStorylines = (storylines || []).filter((s: any) => !s?.completed);
+  const storylineBlock = activeStorylines.length > 0
+    ? `\n## 故事线进度（必须持续推进，避免偏离主线/支线设定）\n${formatStorylines(activeStorylines)}\n`
+    : "";
   let systemPrompt = isXianxia
-    ? `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}# Role: 白金级玄幻修仙网文作家
+    ? `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}${storylineBlock}# Role: 白金级玄幻修仙网文作家
 
 你是一名专业的玄幻修仙小说作家。你不仅仅是在写小说，更是在运行一个严密的修仙模拟游戏。你必须同时兼顾【文学性】（文笔、剧情与逻辑性）。
 
@@ -1240,7 +1245,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
 10. 选项→性格罗盘+隐形标签+动作台词双轨（U.A.R.E.互动叙事）
 
 正在撰写《${project.name}》——一部${project.genre.join("、")}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`
-    : `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}# Role: 资深小说作家
+    : `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}${storylineBlock}# Role: 资深小说作家
 
 你正在创作一部《${project.name}》——体裁为${((project as any).genre || []).join("、") || "通用"}。
 

@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { StorylinesModal } from "@/components/workspace/StorylinesModal";
+import { DialogField, DialogInput } from "./DialogUI";
+import { computeStorylineProgress } from "@/lib/storyline-progress";
 
 export interface StorylineData {
   id: string; projectId: string;
@@ -129,6 +131,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
 
   const mainLine = storylines.find(s => s.type === "main");
   const sideLines = storylines.filter(s => s.type === "side");
+  const editingStory = storylines.find(s => s.id === editingId) || null;
 
   if (loading) return <div className="py-4 text-center text-xs text-[var(--nv-text-tertiary)]">加载中...</div>;
 
@@ -173,6 +176,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
               {mainLine.status === "completed" ? <Icon name="check" size={11} className="text-[var(--nv-success)]" /> : <Icon name="circle" size={11} />}
             </button>
           </div>
+          <StorylineProgressBar s={mainLine} />
           <StorylineDetail storyline={mainLine} expanded={expandedId === mainLine.id}
             onToggle={() => setExpandedId(expandedId === mainLine.id ? null : mainLine.id)}
             onEdit={() => startEdit(mainLine)} onDelete={() => deleteStoryline(mainLine.id)} deletingId={deletingId} />
@@ -193,6 +197,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
               {s.status === "completed" ? <Icon name="check" size={11} className="text-[var(--nv-success)]" /> : <Icon name="circle" size={11} />}
             </button>
           </div>
+          <StorylineProgressBar s={s} />
           <StorylineDetail storyline={s} expanded={expandedId === s.id}
             onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
             onEdit={() => startEdit(s)} onDelete={() => deleteStoryline(s.id)} deletingId={deletingId} />
@@ -224,6 +229,8 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           projectId={projectId}
           onClose={() => setShowFull(false)}
           onRefresh={() => { void load(); onRefresh(); }}
+          onEdit={(s) => { setShowFull(false); startEdit(s); }}
+          onDelete={(id) => { setShowFull(false); deleteStoryline(id); }}
         />
       )}
 
@@ -233,18 +240,21 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           <div className="p-5">
             <h3 id="storyline-edit-title" className="mb-4 text-lg font-semibold text-[var(--nv-text-primary)]">编辑故事线</h3>
             <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs text-[var(--nv-text-tertiary)]">标题</label>
-                <input className="input-glass w-full rounded px-3 py-1.5 text-sm"
-                  value={editForm.title || ""} onChange={e => updateField("title", e.target.value)} />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-[var(--nv-text-tertiary)]">简述</label>
-                <input className="input-glass w-full rounded px-3 py-1.5 text-sm"
-                  value={editForm.description || ""} onChange={e => updateField("description", e.target.value)} />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-[var(--nv-text-tertiary)]">状态</label>
+              {editingStory && (
+                <div className="mb-1 flex items-center gap-2">
+                  <span className={`rounded px-2 py-0.5 text-[10px] ${editingStory.type === "main" ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)]"}`}>
+                    {editingStory.type === "main" ? "主线" : "支线"}
+                  </span>
+                  <span className="text-[10px] text-[var(--nv-text-tertiary)]">编辑故事线</span>
+                </div>
+              )}
+              <DialogField label="标题">
+                <DialogInput value={editForm.title || ""} onChange={(v) => updateField("title", v)} />
+              </DialogField>
+              <DialogField label="简述">
+                <DialogInput value={editForm.description || ""} onChange={(v) => updateField("description", v)} />
+              </DialogField>
+              <DialogField label="状态">
                 <select className="input-glass w-full rounded px-3 py-1.5 text-sm"
                   value={editForm.status || "active"}
                   onChange={e => updateField("status", e.target.value)}>
@@ -252,7 +262,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
                   <option value="completed">已完结</option>
                   <option value="abandoned">已废弃</option>
                 </select>
-              </div>
+              </DialogField>
               {Object.entries(ELEMENT_LABELS).map(([key, { icon, label }]) => (
                 <Collapse key={key} size="sm" title={label} icon={icon}>
                   <textarea className="input-glass w-full resize-none rounded px-3 py-1.5 text-sm"
@@ -268,6 +278,25 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         </div>
       </Modal>
     )}
+    </div>
+  );
+}
+
+function StorylineProgressBar({ s }: { s: StorylineData }) {
+  const p = computeStorylineProgress(s);
+  const barColor =
+    p.overallPercent >= 100 ? "var(--nv-success)"
+    : p.overallPercent >= 50 ? "var(--nv-primary)"
+    : "var(--nv-accent)";
+  return (
+    <div className="px-2 pb-1.5">
+      <div className="flex items-center justify-between text-[9px] text-[var(--nv-text-tertiary)]">
+        <span>{p.label}</span>
+        <span>{p.overallPercent}%</span>
+      </div>
+      <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
+        <div className="h-full rounded-full" style={{ width: `${p.overallPercent}%`, background: barColor }} />
+      </div>
     </div>
   );
 }

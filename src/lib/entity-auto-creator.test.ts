@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSimilarName } from "./entity-auto-creator";
+import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget } from "./entity-auto-creator";
 
 // 验证 entity-auto-creator 的相似名去重（尤其中文短名繁简归一化，青砚 P2）。
 describe("isSimilarName —— 短名繁简去重", () => {
@@ -27,5 +27,49 @@ describe("isSimilarName —— 短名繁简去重", () => {
 
   it("P1-2 长名编辑距离1 其他语义不同实体不误并（剑/刀）", () => {
     expect(isSimilarName("玄铁剑", "玄铁刀")).toBe(false);
+  });
+});
+
+describe("同人异称融合（v1.6.3）—— resolveHonorificTarget 唯一性闸门", () => {
+  it("唯一同姓正主：尊称变体并入（韩先生→韩立）", () => {
+    expect(resolveHonorificTarget(["韩立"], "韩先生")).toBe("韩立");
+  });
+  it("唯一同姓正主：描述性变体并入（韩姓男子→韩立）", () => {
+    expect(resolveHonorificTarget(["韩立"], "韩姓男子")).toBe("韩立");
+  });
+  it("唯一同姓正主：某称/前缀/夫人/拉丁变体并入", () => {
+    expect(resolveHonorificTarget(["韩立"], "韩某")).toBe("韩立");
+    expect(resolveHonorificTarget(["韩立"], "老韩")).toBe("韩立");
+    expect(resolveHonorificTarget(["王立"], "王夫人")).toBe("王立");
+    expect(resolveHonorificTarget(["A全名"], "A先生")).toBe("A全名");
+  });
+  it("同姓正主不唯一：拒绝合并，避免错并（韩先生 遇 韩立+韩雪 → null）", () => {
+    expect(resolveHonorificTarget(["韩立", "韩雪"], "韩先生")).toBeNull();
+  });
+  it("自身已是正主则无目标（韩立 不是变体）", () => {
+    expect(resolveHonorificTarget(["韩立"], "韩立")).toBeNull();
+  });
+  it("真实姓名含尊称字不误判（韩山君 非变体）", () => {
+    expect(isHonorificVariant("韩山君")).toBe(false);
+    expect(resolveHonorificTarget(["韩立"], "韩山君")).toBeNull();
+  });
+});
+
+describe("同人异称融合（v1.6.3）—— samePersonByHonorific 成对判定", () => {
+  it("共享姓且一为变体 → true（韩先生/韩立、韩姓男子/韩立、A先生/A全名）", () => {
+    expect(samePersonByHonorific("韩先生", "韩立")).toBe(true);
+    expect(samePersonByHonorific("韩姓男子", "韩立")).toBe(true);
+    expect(samePersonByHonorific("A先生", "A全名")).toBe(true);
+  });
+  it("同姓不同人 → false（韩立/韩雪）", () => {
+    expect(samePersonByHonorific("韩立", "韩雪")).toBe(false);
+  });
+  it("异姓 → false（韩先生/李立）", () => {
+    expect(samePersonByHonorific("韩先生", "李立")).toBe(false);
+  });
+  it("helper：isHonorificVariant 判定", () => {
+    expect(isHonorificVariant("韩先生")).toBe(true);
+    expect(isHonorificVariant("韩立")).toBe(false);
+    expect(isHonorificVariant("韩山君")).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ interface WorldEntryCardProps {
 export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit }: WorldEntryCardProps) {
   return (
     <div
-      className="group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]"
+      className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]" + (entry.enabled ? "" : " opacity-60")}
     >
       <div className="flex items-start justify-between">
         <span
@@ -23,6 +23,9 @@ export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit 
           onClick={() => onEdit?.(entry)}
           title="点击查看 / 编辑完整条目"
         >{entry.title}</span>
+        {!entry.enabled && (
+          <span className="ml-1 shrink-0 rounded bg-[var(--nv-surface-3)] px-1 py-0.5 text-[8px] text-[var(--nv-text-tertiary)]">已停用</span>
+        )}
         <button
           onClick={() => onEdit?.(entry)}
           disabled={deleting}

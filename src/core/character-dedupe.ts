@@ -10,7 +10,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { isSimilarName } from "@/lib/entity-auto-creator";
+import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget } from "@/lib/entity-auto-creator";
 
 export interface DedupeResult {
   mergedGroups: Array<{
@@ -62,6 +62,7 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
   }
 
   const capChars = chars.slice(0, 500);
+  const capNames = capChars.map((c) => c.name);
   const consumed = new Set<string>();
   const mergedGroups: DedupeResult["mergedGroups"] = [];
 
@@ -72,9 +73,15 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     for (let j = i + 1; j < capChars.length; j++) {
       const b = capChars[j];
       if (consumed.has(b.id)) continue;
-      // 龙套不与主卡合并（龙套单独标记），避免把主角团外的杂鱼并进主卡
-      if (rocketNames.has(b.name)) continue;
-      if (isSimilarName(a.name, b.name)) {
+      // 龙套不与主卡合并（龙套单独标记），避免把主角团外的杂鱼并进主卡；
+      // 但同人异称（如 韩先生/韩立）即便被标龙套也照常融合进别名
+      if (rocketNames.has(b.name) && !samePersonByHonorific(a.name, b.name)) continue;
+      // 同人异称（尊称/描述变体）仅在同姓正主唯一时才并入，避免错并（韩先生 有多位韩姓正主时拒绝）
+      const honorificHit =
+        isSimilarName(a.name, b.name) ||
+        (isHonorificVariant(a.name) && resolveHonorificTarget(capNames, a.name)?.toLowerCase() === b.name.toLowerCase()) ||
+        (isHonorificVariant(b.name) && resolveHonorificTarget(capNames, b.name)?.toLowerCase() === a.name.toLowerCase());
+      if (honorificHit) {
         group.push(b);
         consumed.add(b.id);
       }
@@ -82,9 +89,10 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     if (group.length <= 1) continue;
     consumed.add(a.id);
 
-    // 主卡 = 内容更丰富者（background+storyLine 更长）
+    // 主卡 = 普通姓名优先（避免把「韩先生」这类称呼变体当主卡），其次取内容更丰富者
     const richness = (x: typeof a) => (x.background || "").length + (x.storyLine || "").length;
-    const main = group.reduce((m, x) => (richness(x) > richness(m) ? x : m));
+    const plainMembers = group.filter((x) => !isHonorificVariant(x.name) && !rocketNames.has(x.name));
+    const main = (plainMembers.length > 0 ? plainMembers : group).reduce((m, x) => (richness(x) > richness(m) ? x : m));
     const merged = group.filter((x) => x.id !== main.id);
 
     mergedGroups.push({

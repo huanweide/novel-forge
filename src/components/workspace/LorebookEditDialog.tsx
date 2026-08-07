@@ -111,7 +111,7 @@ export function LorebookEditDialog({
           <select className="input-glass w-full rounded px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             <option value="geography">地理</option>
             <option value="faction">势力/组织</option>
-            <option value="magic_system">魔法体系</option>
+            <option value="magic_system">力量体系</option>
             <option value="history">历史事件</option>
             <option value="culture">文化/风俗</option>
             <option value="creature">生物/种族</option>
@@ -119,11 +119,14 @@ export function LorebookEditDialog({
             <option value="technique">功法体系</option>
             <option value="law">法则/规则</option>
             <option value="currency">货币/经济</option>
+            <option value="fate_system">命运体系</option>
+            <option value="physics">物理列表</option>
+            <option value="public_system">公开体系</option>
             <option value="character_relationship">角色关系</option>
             <option value="custom">自定义</option>
           </select>
         </DialogField>
-        <DialogField label="记忆注入方式（常驻=始终在场 · 触发=关键词命中才出现）">
+        <DialogField label="记忆注入方式（决定这条设定何时被 AI 读取）">
           <select className="input-glass w-full rounded px-3 py-2 text-sm" value={String(form.depth)} onChange={(e) => setForm({ ...form, depth: Number(e.target.value) })}>
             <option value="0">0 · 常驻·强效（正文前，优先级最高）</option>
             <option value="1">1 · 常驻·指令上方</option>
@@ -131,6 +134,10 @@ export function LorebookEditDialog({
             <option value="3">3 · 触发·背景设定（关键词命中才出现，默认）</option>
             <option value="4">4 · 触发·深层背景</option>
           </select>
+          <p className="mt-1 text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">
+            常驻（深度 0-2）：永远出现在 AI 的设定上下文里，适合「必须时刻遵守」的核心规则，如力量体系、世界法则、核心矛盾。<br />
+            触发（深度 3-4）：只有正文写到相关关键词时才临时插入，适合冷门地名、小众物品，省下常驻额度、防止设定过载。
+          </p>
         </DialogField>
         <DialogField label="触发关键词（逗号分隔）">
           <DialogInput value={form.keys} onChange={(v) => setForm({ ...form, keys: v })} placeholder="魔法, 魔力, 法师" />
@@ -139,7 +146,12 @@ export function LorebookEditDialog({
           <textarea className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-3 py-2 text-sm resize-none" rows={4} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
         </DialogField>
         <div className="flex items-center justify-between gap-3 py-1">
-          <span className="text-sm text-[var(--nv-text-primary)]">启用此词条</span>
+          <div className="flex flex-col">
+            <span className="text-sm text-[var(--nv-text-primary)]">启用此词条</span>
+            <span className={`text-[10px] ${form.enabled ? "text-[var(--nv-success)]" : "text-[var(--nv-text-tertiary)]"}`}>
+              {form.enabled ? "已启用：生成时会按上述方式读取" : "已停用：生成时不会读取此词条"}
+            </span>
+          </div>
           <Switch checked={form.enabled} onCheckedChange={(next) => setForm({ ...form, enabled: next })} size="sm" />
         </div>
       </div>

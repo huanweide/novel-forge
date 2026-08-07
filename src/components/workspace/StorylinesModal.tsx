@@ -12,10 +12,14 @@ export function StorylinesModal({
   projectId,
   onClose,
   onRefresh,
+  onEdit,
+  onDelete,
 }: {
   projectId: string;
   onClose: () => void;
   onRefresh: () => void;
+  onEdit?: (s: StorylineData) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [storylines, setStorylines] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +134,7 @@ export function StorylinesModal({
                 <div className="px-2">
                   <StorylineDetail storyline={mainLine} expanded={expandedId === mainLine.id}
                     onToggle={() => toggle(mainLine.id)}
-                    onEdit={() => { /* 左栏 tab 内可编辑，全屏弹窗保持简洁 */ }}
+                    onEdit={() => onEdit?.(mainLine)}
                     onDelete={() => { /* 删除走左栏 tab */ }} deletingId={null} />
                 </div>
               </div>
@@ -151,7 +155,7 @@ export function StorylinesModal({
                 <div className="px-2">
                   <StorylineDetail storyline={s} expanded={expandedId === s.id}
                     onToggle={() => toggle(s.id)}
-                    onEdit={() => { }} onDelete={() => { }} deletingId={null} />
+                    onEdit={() => onEdit?.(s)} onDelete={() => onDelete?.(s.id)} deletingId={null} />
                 </div>
               </div>
             ))}

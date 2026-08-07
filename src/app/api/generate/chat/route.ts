@@ -96,6 +96,20 @@ export async function POST(request: Request) {
     const client = createLLMClient(config);
     const toolCtx = buildToolContext(projectId);
 
+    // v1.6.3：实时项目快照——让 Agent 每轮都感知当前项目状态（认知实时更新）
+    const [charCount, loreEnabled, storylineRows] = await Promise.all([
+      prisma.characterCard.count({ where: { projectId } }),
+      prisma.lorebookEntry.count({ where: { projectId, enabled: true } }),
+      prisma.storyline.findMany({ where: { projectId }, select: { type: true, title: true, status: true } }),
+    ]);
+    const storylineSummary = storylineRows.length
+      ? storylineRows.map((s) => `${s.type === "main" ? "主线" : "支线"}·${s.title}(${s.status})`).join("；")
+      : "（暂无）";
+    const projectSnapshot = `项目实时概况：角色卡 ${charCount} 张｜已启用世界卡 ${loreEnabled} 条｜故事线 ${storylineRows.length} 条（${storylineSummary}）。`;
+    const modeLine = readonlyMode
+      ? "权限模式：只读——只能查询/分析，禁止任何写工具（character_*/lore_*/outline_*/foreshadowing_*/chapter_generate/relation_sync 均被拒绝，调用会返回明确错误）。"
+      : "权限模式：可操作——可执行查询与写工具（创建/修改/删除角色、世界卡、大纲、伏笔、生成章节、同步关系）。";
+
     // ── 意图解析 prompt ──
     const systemPrompt = `你是小说写作Agent。思维路径：先判断意图类型 → 选择数据源 → 查询 → 分析 → 回复。
 
@@ -145,7 +159,15 @@ CHAT
 - 缺角色ID时先查列表拿到ID
 - TOOL行JSON必须有效，一行
 
-作品：《${project.name}》| ${project.genre.join("、")}`;
+作品：《${project.name}》| ${project.genre.join("、")}
+
+## 当前项目实时状态（每轮刷新）
+${projectSnapshot}
+
+## 权限与边界
+${modeLine}
+- 写工具仅在「可操作」模式有效；只读模式调用写工具会被拒绝并返回提示，不要重试写操作。
+- 修改数据前先用对应查询工具确认目标存在，避免重复创建。`;
 
     // ── 会话记忆：注入最近对话历史 ──
     const recentContext = getRecentContext(projectId, 10);

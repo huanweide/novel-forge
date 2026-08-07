@@ -322,7 +322,7 @@ toolRegistry.register({
     parameters: {
       type: "object",
       properties: {
-        category: { type: "string", description: "分类筛选", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "custom"] },
+        category: { type: "string", description: "分类筛选", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
         enabled: { type: "boolean", description: "只显示启用的词条（默认 true）" },
       },
       required: [],
@@ -349,7 +349,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         keywords: { type: "string", description: "查询关键词，多个用逗号分隔" },
-        category: { type: "string", description: "可选：限定分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "custom"] },
+        category: { type: "string", description: "可选：限定分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
       },
       required: ["keywords"],
     },
@@ -379,7 +379,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         title: { type: "string", description: "词条标题（必填）" },
-        category: { type: "string", description: "分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "custom"] },
+        category: { type: "string", description: "分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
         content: { type: "string", description: "设定内容" },
         keys: { type: "string", description: "触发关键词，逗号分隔（正文出现这些词时自动注入该设定）" },
         insertionOrder: { type: "number", description: "插入优先级 0-100，越大越靠前" },
@@ -406,6 +406,10 @@ toolRegistry.register({
       "文化": "culture", "风俗": "culture",
       "历史": "history", "事件": "history",
       "法则": "law", "规则": "law",
+      "货币": "currency", "灵石": "currency", "经济": "currency",
+      "命运": "fate_system", "天命": "fate_system", "因果": "fate_system", "预言": "fate_system",
+      "物理": "physics", "物理规则": "physics", "时空": "physics",
+      "公开": "public_system", "制度": "public_system", "律法": "public_system", "阶级": "public_system",
       "角色关系": "character_relationship", "关系": "character_relationship",
     };
     const rawCategory = (args.category as string) || "custom";
@@ -439,7 +443,7 @@ toolRegistry.register({
       properties: {
         entryId: { type: "string", description: "词条ID" },
         title: { type: "string", description: "新标题" },
-        category: { type: "string", description: "新分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "custom"] },
+        category: { type: "string", description: "新分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
         content: { type: "string", description: "新内容" },
         keys: { type: "string", description: "触发关键词，逗号分隔（会替换原关键词）" },
       },
@@ -459,6 +463,10 @@ toolRegistry.register({
         "地理": "geography", "地点": "geography", "物品": "item", "功法": "technique", "技能": "technique",
         "魔法": "magic_system", "力量体系": "magic_system", "生物": "creature", "种族": "creature",
         "文化": "culture", "历史": "history", "法则": "law",
+        "货币": "currency", "灵石": "currency",
+        "命运": "fate_system", "天命": "fate_system", "因果": "fate_system", "预言": "fate_system",
+        "物理": "physics", "物理规则": "physics", "时空": "physics",
+        "公开": "public_system", "制度": "public_system", "律法": "public_system", "阶级": "public_system",
         "角色关系": "character_relationship", "关系": "character_relationship",
       };
       data.category = CAT_MAP[rawCat] || rawCat;
