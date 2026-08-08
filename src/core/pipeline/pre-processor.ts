@@ -158,7 +158,7 @@ export function buildGenerationContext(params: {
   const pendingItems = (data.pendingItems || []) as any[];
 
   // ── S/A/B 三级记忆分级 ──
-  const currentChapter = ((data.currentNode as any).order as number) + 1;
+  const currentChapter = (data.currentNode?.order ?? 0) + 1;
   const tieredMemory = classifyEvents(
     data.summaries as any,
     data.storyBeats as any,

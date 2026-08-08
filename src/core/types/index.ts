@@ -146,6 +146,24 @@ export interface StoryNode {
   deletedAt?: Date | null;       // #123 软删除（tombstone）：非空=在回收站
 }
 
+/**
+ * 轻量节点结构（诚实子集，非 StoryNode 完整镜像）。
+ * context-loader 的 allNodesLight 用 select 只取结构字段（不含 content），
+ * 故不能强转 StoryNode（会制造「content 存在」的假类型信心）。
+ * 仅含 select 实际返回的字段，用于多卷树回溯 / 章节序号窗口等纯结构计算。
+ */
+export interface StoryNodeLight {
+  id: string;
+  parentId: string | null;
+  type: StoryNodeType;
+  title: string;
+  order: number;
+  status: ContentStatus;
+  branchId: string | null;
+  activeLoreIds: string[];
+  activeCharacters: string[];
+}
+
 export type StoryNodeType =
   | "volume"           // 卷
   | "chapter"          // 章

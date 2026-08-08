@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.30";
+export const LATEST_VERSION = "v1.6.31";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.30 大书流式导出（性能/稳定性）：马斯克 CEO 拍板选 C——手写零依赖流式 ZIP（不引第三方），epub.ts 新增 buildEpubStream(dest, …) 边生成章节边写入流，章节 Buffer 写完即释放；导出路由 epub 分支改 PassThrough 流式响应，内存峰值从「整本 Buffer」降到「单章最大 Buffer」+ 轻量中央目录元数据，根治大书（数百章）整本 Buffer.concat 的 OOM 风险",
-  "v1.6.30 字节产物守恒：buildEpubStream 的 local header / 中央目录 / crc32 逐字段与同步版 makeZip 完全一致（stored 不压缩、mimetype 首条、entry 顺序相同）；新增 epub.stream.test.ts 2 用例——结构等价（逐 entry 比对，仅 OPF 时间戳行豁免）+ 大书 300 章 ZIP 合法性（end record 签名、entry 数 = 章节+5、mimetype 首条 stored）钉死",
-  "v1.6.30 诚实边界（docx 未做真流式）：DOCX 所有章节拼进单个 document.xml（OOXML 物理限制，难拆独立文件流式），本轮仅 epub 真流式；docx 分支本轮未动，大书 docx 导出仍为整本 Buffer.concat——标注为已知边界，留后续立项",
-  "v1.6.30 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿（新增 2）；运行时 epub 导出行为不变（仅传输方式从整本 Buffer 响应改成流式响应），客户端下载字节结构等价",
+  "v1.6.31 StoryNode 类型收口（消除读取端 as any 绕过）：延续 v1.6.27/29 类型债总清主题，诚实引入 StoryNodeLight 轻量类型（对齐 select 子集，不含 content，避免假类型信心），替换 context-loader 的 allLight as any[] 与节点字段 as any；continue/write/pre-processor 路由的 (currentNode/nextNode/data.currentNode as any) 惰性绕过全部消除（currentNode 经 null 守卫已 Narrow 为 StoryNode、nextNode 是全字段 Prisma 对象、(n:any) 回调定型 StoryNode）",
+  "v1.6.31 诚实边界（必需桥接保留）：context-loader 返回 GenerationData.currentNode 处仍保留 currentNode as any——根因是 prisma.storyNode.findUnique 的 reviewLogs 是 Prisma JsonValue，与手动 StoryNode.reviewLogs: ReviewLog[] 不兼容（与 v1.6.27/29 的 as unknown as Record 同源 Json↔强类型桥接问题），as StoryNode 会触发 TS2352 不兼容，故该处 as any 是诚实桥接非惰性绕过；另 allNodes 是「窗口补全文 full 节点 + 轻量 n」混合数组，本就 (any[]) 合理，未强行定型",
+  "v1.6.31 诚实边界（范围克制）：post-processor 的 (currentNode as any) 与 game-engine 的 (nodeForConfirm as any) 源未显式定型（参数为 any / session:any），去 as any 需先定型参数属范围蔓延+风险，本轮如实留后续；sync-global-prompt 全仓覆盖率经两轮穷举已完整，再扫属边际收益，不空耗版本",
+  "v1.6.31 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化，纯类型层收口降低后续维护误读",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.31",
+    date: "2026-08-08",
+    title: "v1.6.31 StoryNode 类型收口（消除读取端 as any 绕过）",
+    sections: [
+      {
+        label: "StoryNode 类型收口（工程/类型安全）",
+        items: [
+          "诚实引入 StoryNodeLight 轻量类型（src/core/types/index.ts）：字段严格对齐 context-loader 的 allNodesLight select 子集（id/parentId/type/title/order/status/branchId/activeLoreIds/activeCharacters），刻意不含 content——避免把轻量节点强转 StoryNode 制造「content 存在」的假类型信心（违背本项目铁律）",
+          "context-loader：allLight = allNodesLight as StoryNodeLight[]（替代 as any[]）；节点字段 as any（parentId/order/id/type）与 Map<string,any> 全部定型 StoryNodeLight；currentOrder 改 currentNode?.order ?? 0（currentNode 为 StoryNode|null，可选链诚实处理）",
+          "continue/write/pre-processor 路由：消除 (currentNode as any)/(nextNode as any)/(data.currentNode as any) 惰性绕过——currentNode 经路由层 null 守卫已 Narrow 为 StoryNode、nextNode 是 tx.storyNode.create 全字段返回、(n:any) 回调定型 StoryNode；write 路由 previousNodes 源自 data.allNodes.slice()（StoryNode[]），去 as any 顺带移除 previousNodes as any 透传",
+        ],
+      },
+      {
+        label: "诚实边界（必需桥接 + 范围克制）",
+        items: [
+          "context-loader 返回 GenerationData.currentNode 处保留 currentNode as any：prisma.storyNode.findUnique 的 reviewLogs 是 Prisma JsonValue，与手动 StoryNode.reviewLogs: ReviewLog[] 不兼容（as StoryNode 触发 TS2352），与 v1.6.27/29 的 as unknown as Record 同源 Json↔强类型桥接——诚实桥接非绕过，已在代码注释标注",
+          "allNodes（line 216）=「窗口补全文 full 节点 + 轻量 n」混合数组，本就 (any[]) 合理，未强行定型；post-processor 的 (currentNode as any) 与 game-engine 的 (nodeForConfirm as any) 源参数未显式定型（session:any），去 as any 需先定型参数属范围蔓延，如实留后续",
+          "验证：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.30",
     date: "2026-08-08",

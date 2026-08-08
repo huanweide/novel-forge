@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.31 — 2026-08-08
+**v1.6.31 StoryNode 类型收口（消除读取端 as any 绕过）**
+
+- **StoryNode 类型收口（工程 / 类型安全）**：延续 v1.6.27/29 类型债总清主题。诚实引入 `StoryNodeLight` 轻量类型（`src/core/types/index.ts`），字段严格对齐 `context-loader` 的 `allNodesLight` select 子集（id/parentId/type/title/order/status/branchId/activeLoreIds/activeCharacters），刻意不含 content——避免把轻量节点强转 `StoryNode` 制造「content 存在」的假类型信心（违背本项目铁律）。`context-loader` 的 `allLight as any[]` 与节点字段 `as any`（parentId/order/id/type）、`Map<string,any>` 全部定型 `StoryNodeLight`；`currentOrder` 改 `currentNode?.order ?? 0`（currentNode 为 StoryNode|null，可选链诚实处理）。`continue`/`write`/`pre-processor` 路由消除 `(currentNode as any)`/`(nextNode as any)`/`(data.currentNode as any)` 惰性绕过——currentNode 经路由层 null 守卫已 Narrow 为 StoryNode、nextNode 是 `tx.storyNode.create` 全字段返回、`(n:any)` 回调定型 StoryNode；write 路由 `previousNodes` 源自 `data.allNodes.slice()`（StoryNode[]），去 as any 顺带移除 `previousNodes as any` 透传。
+- **诚实边界（必需桥接 + 范围克制）**：`context-loader` 返回 `GenerationData.currentNode` 处保留 `currentNode as any`——`prisma.storyNode.findUnique` 的 `reviewLogs` 是 Prisma JsonValue，与手动 `StoryNode.reviewLogs: ReviewLog[]` 不兼容（as StoryNode 触发 TS2352），与 v1.6.27/29 的 `as unknown as Record` 同源 Json↔强类型桥接——诚实桥接非绕过，已代码注释标注。`allNodes`（line 216）=「窗口补全文 full 节点 + 轻量 n」混合数组，本就 `(any[])` 合理。`post-processor` 的 `(currentNode as any)` 与 `game-engine` 的 `(nodeForConfirm as any)` 源参数未显式定型（session:any），去 as any 需先定型参数属范围蔓延，如实留后续。tsc 0 错误 + vitest 309/309 全绿（无新增测试，靠双门禁 + 源码逐处核实）；运行时零行为变化。
+
+---
+
 ## v1.6.30 — 2026-08-08
 **v1.6.30 大书流式导出（epub 零依赖流式 ZIP，防 OOM）**
 

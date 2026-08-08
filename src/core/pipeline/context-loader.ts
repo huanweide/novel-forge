@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import type { GenerationData } from "./types";
 import { STORYLINE_STATUS, COMMITMENT_STATUS } from "@/core/story-status";
-import type { Project } from "@/core/types";
+import type { Project, StoryNodeLight } from "@/core/types";
 
 /**
  * 加载单章生成所需的所有上下文数据。
@@ -98,7 +98,7 @@ export async function loadGenerationContext(
   // ── 时间线过滤 ──
   // 当前章 order（0-based），用于过滤"未来章节"的数据。
   // chapterNumber 是 1-based (order + 1)。
-  const currentOrder = (currentNode as any).order as number;
+  const currentOrder = currentNode?.order ?? 0;
   const chapterNum = currentOrder + 1;
 
   // R2-012：按需补全「当前章之前」章节的全量正文（只补窗口内，不无界全量拉 content）。
@@ -121,19 +121,19 @@ export async function loadGenerationContext(
   const keepChapters = project?.contextKeepChapters ?? 4;
   const keepWindow = Math.max(keepChapters, 5); // 覆盖 continue 硬编码的 -5
 
-  const allLight = allNodesLight as any[];
+  const allLight = allNodesLight as StoryNodeLight[];
   const curIdx = allLight.findIndex((n) => n.id === nodeId);
 
   // 章/节节点列表（与 extractPrevContext 的过滤口径完全一致：chapter || section）
   const CHAPTER_SECTION = new Set(["chapter", "section"]);
-  const chapterNodes = allLight.filter((n: any) => CHAPTER_SECTION.has(n.type));
-  const curChIdx = chapterNodes.findIndex((n: any) => n.id === nodeId);
+  const chapterNodes = allLight.filter((n: StoryNodeLight) => CHAPTER_SECTION.has(n.type));
+  const curChIdx = chapterNodes.findIndex((n: StoryNodeLight) => n.id === nodeId);
 
   // parentId / 节点索引映射，用于向上回溯卷节点（多卷感知）
   const parentOf = new Map<string, string | null>();
-  const nodeById = new Map<string, any>();
+  const nodeById = new Map<string, StoryNodeLight>();
   for (const n of allLight) {
-    parentOf.set(n.id, (n as any).parentId ?? null);
+    parentOf.set(n.id, n.parentId ?? null);
     nodeById.set(n.id, n);
   }
   // 返回某节点所属卷的 id（沿 parentId 向上找到 type===volume）；无卷则返回 null
@@ -173,7 +173,7 @@ export async function loadGenerationContext(
         windowStart = Math.min(windowStart, curVolFirstChIdx);
       }
       // 上一卷：order 小于当前卷 order 的最近一个 volume 节点
-      const curVolOrder = (nodeById.get(curVolumeId) as any)?.order ?? 0;
+      const curVolOrder = nodeById.get(curVolumeId)?.order ?? 0;
       const prevVolume = allLight
         .filter((n: any) => n.type === "volume" && n.order < curVolOrder)
         .sort((a: any, b: any) => b.order - a.order)[0];

@@ -53,15 +53,15 @@ export async function POST(request: Request) {
     }
 
     let nextTitle = "";
-    if ((currentNode as any).title) {
-      const match = (currentNode as any).title.match(/^(.+?)(\d+)$/);
-      nextTitle = match ? `${match[1]}${parseInt(match[2]) + 1}` : `${(currentNode as any).title}（续）`;
+    if (currentNode.title) {
+      const match = currentNode.title.match(/^(.+?)(\d+)$/);
+      nextTitle = match ? `${match[1]}${parseInt(match[2]) + 1}` : `${currentNode.title}（续）`;
     } else {
       nextTitle = `第${(allNodes as any[]).length + 1}节`;
     }
 
     let nextOutline = "";
-    if (autoOutline && (currentNode as any).content) {
+    if (autoOutline && currentNode.content) {
       nextOutline = "基于前文剧情自然推进，续写下一节。保持节奏和风格一致。";
     }
 
@@ -95,12 +95,12 @@ export async function POST(request: Request) {
       const nextOrder = (orderAgg._max.order ?? 0) + 1;
       return await tx.storyNode.create({
         data: {
-          projectId, parentId: (currentNode as any).parentId,
-          type: (currentNode as any).type || "section",
+          projectId, parentId: currentNode.parentId,
+          type: currentNode.type || "section",
           title: nextTitle, order: nextOrder, status: "drafting",
           outline: nextOutline || null,
-          activeCharacters: (currentNode as any).activeCharacters,
-          activeLoreIds: (currentNode as any).activeLoreIds,
+          activeCharacters: currentNode.activeCharacters,
+          activeLoreIds: currentNode.activeLoreIds,
           notes: null,
         },
       });
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
 
     // ── 上下文窗口 ──
     const previousNodes = (allNodes as any[])
-      .filter((n: any) => n.order <= (currentNode as any).order && n.content)
+      .filter((n: any) => n.order <= currentNode.order && n.content)
       .slice(-5);
 
     // ── 组装 GenerationData 供管线函数使用 ──
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
     });
 
     // ── 撰写指令 ──
-    const lastContent = (currentNode as any).content || "";
+    const lastContent = currentNode.content || "";
     const lastParagraphs = lastContent.split("\n").slice(-6).join("\n");
     const targetWords = template?.targetWordsPerSection || 1000;
 
@@ -261,10 +261,10 @@ ${lastParagraphs}
           }
 
           // Phase 2-4: 后处理管线
-          const activeCharIds = Array.isArray((nextNode as any).activeCharacters)
-            ? ((nextNode as any).activeCharacters as string[]) : [];
-          const activeLoreIds = Array.isArray((nextNode as any).activeLoreIds)
-            ? ((nextNode as any).activeLoreIds as string[]) : [];
+          const activeCharIds = Array.isArray(nextNode.activeCharacters)
+            ? (nextNode.activeCharacters as string[]) : [];
+          const activeLoreIds = Array.isArray(nextNode.activeLoreIds)
+            ? (nextNode.activeLoreIds as string[]) : [];
 
           const forbiddenPatterns = collectForbiddenPatterns(
             template?.forbiddenPatterns || [], customForbidden,
@@ -282,7 +282,7 @@ ${lastParagraphs}
               chapterSummaries: summaries as any,
               currentNode: nextNode as any,
               chapterTitle: nextTitle,
-              chapterOrder: (nextNode as any).order,
+              chapterOrder: nextNode.order,
               forbiddenPatterns,
             });
           } catch (e) {
@@ -297,13 +297,13 @@ ${lastParagraphs}
           let contIsLatest = false;
           try {
             const agg = await prisma.storyNode.aggregate({ where: { projectId, deletedAt: null }, _max: { order: true } });
-            contIsLatest = (nextNode as any).order === (agg._max.order ?? (nextNode as any).order);
+            contIsLatest = nextNode.order === (agg._max.order ?? nextNode.order);
           } catch { /* 聚合失败按非最新，保守填表 */ }
           const babylore = await safeFillAfterWriting({
             projectId,
             content: fullContent,
             send,
-            nodeOrder: (nextNode as any).order,
+            nodeOrder: nextNode.order,
             isLatestChapter: contIsLatest,
             nodeId: nextNode.id,
             source: "continue",
@@ -312,7 +312,7 @@ ${lastParagraphs}
 
           send({
             type: "done", content: "",
-            nodeId: result?.nodeId || nextNode.id, title: nextTitle, order: (nextNode as any).order,
+            nodeId: result?.nodeId || nextNode.id, title: nextTitle, order: nextNode.order,
             status: result?.status || "completed",
             nextAction: `已自动创建并完成「${nextTitle}」，可继续续写`,
             babylore,

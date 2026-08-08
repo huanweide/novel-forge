@@ -14,6 +14,7 @@ import {
   buildGenerationContext,
   runPostGenerationPipeline,
 } from "@/core/pipeline";
+import type { StoryNode } from "@/core/types";
 import { buildRecallBlock } from "@/core/babylore/loop";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 import { applyRegexRules } from "@/core/post-process/regex";
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       extractLLMConfig(data);
 
     // ── 5. 上下文窗口 ──
-    const currentNodeIndex = data.allNodes.findIndex((n: any) => n.id === nodeId);
+    const currentNodeIndex = data.allNodes.findIndex((n: StoryNode) => n.id === nodeId);
     const keepChapters = data.project?.contextKeepChapters ?? 4;
     const previousNodes = data.allNodes.slice(
       Math.max(0, currentNodeIndex - keepChapters),
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       data,
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote,
-      previousNodes: previousNodes as any,
+      previousNodes,
       pendingCommitments: data.pendingCommitments,
     });
 
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
         data.currentNode.outline || "",
         cleanAuthorNote || "",
         activeChars.map((c: any) => c.name).join("、"),
-        previousNodes.map((n: any) => n.content || n.outline || "").join("\n"),
+        previousNodes.map((n: StoryNode) => n.content || n.outline || "").join("\n"),
       ].join("\n"),
       loreEntries: data.loreEntries,
     });
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     try {
       chapterPlan = await planChapterStoryline({
         projectId,
-        chapterOrder: (data.currentNode as any).order,
+        chapterOrder: data.currentNode.order,
         outline: data.currentNode.outline || "",
         authorNote: cleanAuthorNote,
         recallBlock,
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
       if (chapterPlan?.planText) writingInstruction += "\n\n" + chapterPlan.planText;
       // 动态回写剧情线（持续修正、不矛盾、不丢历史）
       if (chapterPlan?.plan) {
-        await applyChapterPlanToStorylines(projectId, chapterPlan.plan, (data.currentNode as any).order);
+        await applyChapterPlanToStorylines(projectId, chapterPlan.plan, data.currentNode.order);
       }
     } catch (_) {
       // 规划失败不阻断正文生成（规划是锦上添花，非交付前置）
