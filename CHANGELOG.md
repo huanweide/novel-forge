@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.42 — 2026-08-09
+**v1.6.42 修复 expand 路由直写残缺 globalPrompt（闭合单一真相源最后旁路）**
+
+- **expand 路由直写残缺 globalPrompt（数据一致性/生成质量）**：角色批量扩展接口 /api/characters/expand 旧逻辑用 context.includes(`世界观(${loreCount}条)`) 判定 globalPrompt 是否需重建，但该标记与 syncGlobalPrompt 实际输出「世界书（共N条）」（全角括号+「世界书」）永远不匹配 → includes 检查恒为 false → 每次调用该接口都用 slimContext() 构造的残缺版 globalPrompt（缺角色段/风格卡/POV比例/探讨布置）直写 project，覆盖 sync 渲染的完整版——v1.6.40/41 刚立的「syncGlobalPrompt 为唯一真相源」铁律被架空。改为：globalPrompt 非空直接复用（零覆盖风险）；为空才 await syncGlobalPrompt 重建完整版；sync 仍为空才 slimContext 局部兜底且不落库；末尾扩展完成后 sync 保留为唯一出口，删除永不命中的 loreCount 查询。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 35 文件 323/323 全绿（收敛性删除覆盖逻辑，既有测试全量通过）。马斯克人格执行 CEO 子 Agent 拍板做 A（闭合 expand 唯一确凿旁路），拒 B（llmConfig 强类型收口，v1.6.41 已拍板暂缓）与 C（19/21 处非阻塞 sync 是 v1.6.40 起的刻意性能权衡、非缺陷不动）；个人 IP 仍归瑞宝宝，本轮只迭代不立新。
+
+---
+
 ## v1.6.41 — 2026-08-09
 **v1.6.41 修复 build-config 漏同步 + sync 丢弃 explore 布置字段（单一真相源）**
 

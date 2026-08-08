@@ -228,16 +228,25 @@ export async function POST(request: Request) {
         if (!project) { send({ type: "error", message: "项目不存在" }); controller.close(); return; }
 
         // ── 加载上下文 ──
-        const loreCount = await prisma.lorebookEntry.count({ where: { projectId, enabled: true } });
+        // v1.6.42 单一真相源收口：globalPrompt 一律由 syncGlobalPrompt 渲染，禁止此处用 slimContext 直写 project。
+        // 旧逻辑用 includes(`世界观(${loreCount}条)`) 判重，但该标记与 sync 实际输出「世界书（共N条）」全角格式永不匹配
+        // → 检查恒 false → 每次展开都用 slimContext 残缺版覆盖 sync 完整版，单一真相源形同虚设（v1.6.40/41 铁律被架空）。
+        // 改为：globalPrompt 非空直接复用（零覆盖风险）；为空才 await syncGlobalPrompt 重建完整版；
+        // sync 仍空（项目尚无任何世界书/角色/风格数据）才 slimContext 局部兜底，且不落库避免污染真相源。
         let context = project.globalPrompt || "";
 
-        if (!context || !context.includes(`世界观(${loreCount}条)`)) {
-          const [allLore, style] = await Promise.all([
-            prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
-            prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
-          ]);
-          context = slimContext(project, allLore, style);
-          await prisma.project.update({ where: { id: projectId }, data: { globalPrompt: context } }).catch(() => {});
+        if (!context) {
+          const synced = await syncGlobalPrompt(projectId);
+          if (synced) {
+            context = synced;
+          } else {
+            // 项目尚无数据 → 构造最小局部上下文供本次角色扩展使用，不写库
+            const [allLore, style] = await Promise.all([
+              prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
+              prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
+            ]);
+            context = slimContext(project, allLore, style);
+          }
         }
 
         // ═══════════════════════════════════════════════════════
