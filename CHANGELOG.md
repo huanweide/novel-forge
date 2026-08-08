@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.34 — 2026-08-08
+**v1.6.34 docx 真流式导出（兑现 v1.6.30 递延诚实边界）+ 路由端 currentNode as any 冗余收口（纠正类型债谎言）**
+
+- **docx 真流式导出（工程 / 性能 / 防 OOM）**：新增通用 `streamZip(dest, entries)` helper（epub.ts）——从已测 `buildEpubStream` 抽取的流式 ZIP 写入逻辑（push 背压 + writeEntry 30B/46B + CRC32 + 末尾 central/end record），零回归保留 `buildEpubStream`。docx.ts 复用 `streamZip` 新增 `buildDocxStream(dest, projectName, chapters, opts)`：与 `buildDocx` 同源 7-part entries 构造（`[Content_Types].xml` / `_rels/.rels` / `word/document.xml` / `word/styles.xml` / `word/_rels/document.xml.rels` / `docProps/core.xml` / `docProps/app.xml`），末行 `await streamZip` 流式落地。导出路由 docx 分支改 PassThrough 流式响应（与 epub 分支同源）。诚实边界：OOXML 规范强制 `word/document.xml` 必须是单文件（所有章节拼进一个 XML），不能像 epub 逐章拆 entry——本版仅去除 ZIP 层整本 `Buffer.concat` 内存峰值 + 改流式 HTTP 响应，不谎称「章节级真流式」。新增 `docx.stream.test.ts` 固化结构等价 + 300 章大书固定 7 entry + stored 首条 + end record 签名校验。
+- **路由端 currentNode as any 冗余收口（工程 / 类型安全）**：write 路由 L363、refine 路由 L264、pre-processor L172 共 3 处 `currentNode: data.currentNode as any` 纯冗余绕过——`data.currentNode` 在 `GenerationData` 中已定型 `StoryNode`、`PostPipelineParams.currentNode` 字段为 `StoryNode`，`as any` 纯历史胶带，消除为 `data.currentNode`，TS 真正校验该字段访问。与 v1.6.32 写入端、v1.6.33 game-engine 同源——node 已是确定 `StoryNode` 类型，撕掉胶带后类型系统接管，收窄「currentNode 读取端 + 写入端 + 路由透传」全链路绕过面。
+- **诚实边界（纠正 v1.6.31 假宣称 + post-processor 已在 v1.6.32 收口）**：v1.6.31 changelog 宣称「continue/write/pre-processor 路由消除 `(data.currentNode as any)` 惰性绕过」，实测 grep 仍查到 L363/L264/L172 三处存活——v1.6.34 实测推翻前序宣称，补齐被谎报已消除的类型债，即 trust-but-verify 对估算式结论的纠偏。post-processor 收口已于 v1.6.32 落地（`PostPipelineParams.currentNode: StoryNode`，6 处 `currentNode as any` 消除），本版不重复；Json 列 `reviewLogs` 写入桥接仍必需保留，不强行消除。tsc 0 错误 + vitest 32 文件 311/311 全绿；运行时零行为变化。
+
+---
+
 ## v1.6.33 — 2026-08-08
 **v1.6.33 game-engine nodeForConfirm 类型收口（消除 to-one 关系冗余 as any + 纠正前序误判）**
 

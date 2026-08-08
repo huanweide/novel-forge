@@ -169,7 +169,7 @@ export function buildGenerationContext(params: {
 
   return buildPromptContext({
     project: data.project as any,
-    currentNode: data.currentNode as any,
+    currentNode: data.currentNode,
     previousNodes: previousNodes as any,
     characters: activeCharacters as any,
     loreEntries: data.loreEntries as any,

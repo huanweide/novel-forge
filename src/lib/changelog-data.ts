@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.33";
+export const LATEST_VERSION = "v1.6.34";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.33 game-engine nodeForConfirm 类型收口（消除 to-one 关系冗余 as any）：endGameAndExport 的 session 来自 prisma.gameSession.findUnique({ include: { node: true } })，session.node 被 Prisma 自动推断为 StoryNode|null（含 order 字段，非 Json 列），故 L676 的 (nodeForConfirm as any)?.order 是纯冗余 as any，消除为 nodeForConfirm?.order ?? 0——与 v1.6.32 的 currentNode 写入端收口同源（node 已是确定 StoryNode 类型）",
-  "v1.6.33 诚实边界（纠正前序 memo 误判）：v1.6.31 记忆曾判定 game-engine 的 (nodeForConfirm as any)「源参数 session:any 未定型、去 as any 需先定型参数属范围蔓延」——实测推翻该判断：session 是 Prisma 查询结果（node 已定型 StoryNode|null），非 any，故该 as any 可零风险消除；trust-but-verify 的价值即在于实测推翻 subagent/记忆的估算式结论",
-  "v1.6.33 诚实边界（Json 列桥接必需保留）：game-engine 其余约 15 处 as any（L198/204/207/226/250/257/419/445-459 等）全是 gameState.entities/items/options 的 Prisma Json 列桥接（JsonValue 直转 GameEntity[]/GameItem[]/GameOption[] 不满足 InputJsonValue，与 reviewLogs 同源鸿沟），必需保留，不强行消除——已逐处 grep 核实来源字段均为 Json 列，非惰性绕过",
-  "v1.6.33 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化，纯类型层收口",
+  "v1.6.34 docx 真流式导出（兑现 v1.6.30 递延诚实边界）：epub.ts 新增通用 streamZip(dest,entries) helper（从已测 buildEpubStream 抽取的流式 ZIP 写入，push 背压 + writeEntry 30B/46B + CRC32 + 末尾 central/end record），零回归保留 buildEpubStream；docx.ts 复用 streamZip 新增 buildDocxStream（与 buildDocx 同源 7-part entries）；导出路由 docx 分支改 PassThrough 流式响应（与 epub 同源）。诚实边界：OOXML 强制 word/document.xml 单文件（所有章节拼进一个 XML），不能像 epub 逐章拆 entry——仅去 ZIP 层整本 Buffer.concat 内存峰值 + 改流式响应，不谎称章节级真流式",
+  "v1.6.34 路由端 currentNode as any 冗余收口：write 路由 L363、refine 路由 L264、pre-processor L172 共 3 处 currentNode: data.currentNode as any 纯历史胶带——data.currentNode 在 GenerationData 已定型 StoryNode、PostPipelineParams.currentNode 为 StoryNode，消除为 data.currentNode，TS 真正校验该字段访问",
+  "v1.6.34 诚实边界（纠正 v1.6.31 假宣称）：v1.6.31 changelog 宣称路由消除 (data.currentNode as any) 惰性绕过，实测 grep 仍查到 L363/L264/L172 三处存活；v1.6.34 实测推翻前序宣称、补齐类型债谎言，即 trust-but-verify 对估算式结论的纠偏",
+  "v1.6.34 验证（质量门）：tsc 0 错误 + vitest 32 文件 311/311 全绿（新增 docx.stream.test.ts 2 用例）；运行时零行为变化，纯类型层收口 + 导出流式化",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.34",
+    date: "2026-08-08",
+    title: "v1.6.34 docx 真流式导出（兑现 v1.6.30 递延诚实边界）+ 路由端 currentNode as any 冗余收口（纠正类型债谎言）",
+    sections: [
+      {
+        label: "docx 真流式导出（工程/性能/防 OOM）",
+        items: [
+          "epub.ts 新增通用 streamZip(dest, entries) helper——从已测 buildEpubStream 抽取的流式 ZIP 写入逻辑（push 背压 + writeEntry 30B/46B + CRC32 + 末尾 central/end record），零回归保留 buildEpubStream；docx.ts 复用 streamZip 新增 buildDocxStream(dest, projectName, chapters, opts)，与 buildDocx 同源 7-part entries 构造（[Content_Types].xml/_rels/.rels/word/document.xml/word/styles.xml/word/_rels/document.xml.rels/docProps/core.xml/docProps/app.xml），末行 await streamZip 流式落地",
+          "导出路由 docx 分支改 PassThrough 流式响应（与 epub 分支同源）；诚实边界：OOXML 规范强制 word/document.xml 必须是单文件（所有章节拼进一个 XML），不能像 epub 逐章拆 entry——本版仅去除 ZIP 层整本 Buffer.concat 内存峰值 + 改流式 HTTP 响应，不谎称章节级真流式",
+          "新增 docx.stream.test.ts 固化：测试1 结构等价（buildDocx vs buildDocxStream，entry 名顺序 + 逐条内容相等，仅 docProps/core.xml 的 dcterms:created/modified 时间戳行豁免）；测试2 大书 300 章 DOCX 固定 7 entry（OOXML 单文件限制）+ [Content_Types].xml 首条 stored（compMethod=0）+ end record 签名校验",
+        ],
+      },
+      {
+        label: "路由端 currentNode as any 冗余收口（工程/类型安全）",
+        items: [
+          "write 路由 L363、refine 路由 L264、pre-processor L172 共 3 处 currentNode: data.currentNode as any 纯冗余绕过——data.currentNode 在 GenerationData 中已定型 StoryNode、PostPipelineParams.currentNode 字段为 StoryNode，as any 纯历史胶带，消除为 data.currentNode，TS 真正校验该字段访问",
+          "与 v1.6.32 写入端、v1.6.33 game-engine 同源：node 已是确定 StoryNode 类型，撕掉胶带后类型系统接管，收窄 currentNode 读取端 + 写入端 + 路由透传 全链路绕过面",
+        ],
+      },
+      {
+        label: "诚实边界（纠正 v1.6.31 假宣称 + post-processor 已在 v1.6.32 收口）",
+        items: [
+          "v1.6.31 changelog 宣称 continue/write/pre-processor 路由消除 (data.currentNode as any) 惰性绕过，实测 grep 仍查到 L363/L264/L172 三处存活——v1.6.34 实测推翻前序宣称，补齐被谎报已消除的类型债，即 trust-but-verify 对估算式结论的纠偏",
+          "post-processor 收口已于 v1.6.32 落地（PostPipelineParams.currentNode: StoryNode，6 处 currentNode as any 消除），本版不重复；Json 列 reviewLogs 写入桥接仍必需保留，不强行消除",
+          "验证：tsc 0 错误 + vitest 32 文件 311/311 全绿（新增 docx.stream.test.ts 2 用例）；运行时零行为变化",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.33",
     date: "2026-08-08",

@@ -384,6 +384,92 @@ export function buildEpub(
 }
 
 /**
+ * 通用流式构建 stored ZIP 写入目标流（零依赖）——逐 entry 写入（带背压），末尾写中央目录 + end record。
+ * 字节算法与 makeZip / buildEpubStream 完全一致（local 30B / central 46B / CRC32），供 docx 等大文件导出复用防 OOM。
+ * entries 顺序由调用方保证（首条通常为 mimetype 等固定项），本函数不做内容假设。
+ */
+export async function streamZip(
+  dest: Writable,
+  entries: ZipEntry[]
+): Promise<void> {
+  const central: Buffer[] = [];
+  let offset = 0;
+
+  // 带背压的写入：write 返回 false 时等待 drain，避免 PassThrough 无限缓冲吞噬内存
+  const push = (buf: Buffer): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      if (dest.write(buf)) return resolve();
+      dest.once("drain", resolve);
+      dest.once("error", reject);
+    });
+
+  const writeEntry = async (name: string, data: Buffer) => {
+    const nameBuf = Buffer.from(name, "utf8");
+    const crc = crc32(data);
+    const size = data.length;
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0); // 签名
+    local.writeUInt16LE(20, 4); // 版本
+    local.writeUInt16LE(0, 6); // 标志
+    local.writeUInt16LE(0, 8); // 压缩方法 0 = stored
+    local.writeUInt16LE(0, 10); // 修改时间
+    local.writeUInt16LE(0, 12); // 修改日期
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(size, 18); // 压缩后大小
+    local.writeUInt32LE(size, 22); // 未压缩大小
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28); // 额外字段长度
+
+    await push(local);
+    await push(nameBuf);
+    await push(data);
+
+    const cd = Buffer.alloc(46);
+    cd.writeUInt32LE(0x02014b50, 0);
+    cd.writeUInt16LE(20, 4); // 版本生成
+    cd.writeUInt16LE(20, 6); // 版本需要
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt16LE(0, 10);
+    cd.writeUInt16LE(0, 12);
+    cd.writeUInt16LE(0, 14);
+    cd.writeUInt32LE(crc, 16);
+    cd.writeUInt32LE(size, 20);
+    cd.writeUInt32LE(size, 24);
+    cd.writeUInt16LE(nameBuf.length, 28);
+    cd.writeUInt16LE(0, 30); // 额外
+    cd.writeUInt16LE(0, 32); // 注释
+    cd.writeUInt16LE(0, 34); // 磁盘号
+    cd.writeUInt16LE(0, 36); // 内部属性
+    cd.writeUInt32LE(0, 38); // 外部属性
+    cd.writeUInt32LE(offset, 42); // 本地头偏移
+
+    central.push(cd, nameBuf);
+
+    offset += local.length + nameBuf.length + data.length;
+  };
+
+  for (const e of entries) {
+    await writeEntry(e.name, e.data);
+  }
+
+  const centralBuf = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(0, 4);
+  end.writeUInt16LE(0, 6);
+  end.writeUInt16LE(entries.length, 8);
+  end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(centralBuf.length, 12);
+  end.writeUInt32LE(offset, 16);
+  end.writeUInt16LE(0, 20);
+
+  await push(centralBuf);
+  await push(end);
+  dest.end();
+}
+
+/**
  * 流式构建 EPUB（零依赖 stored ZIP）——边生成章节边写入目标流，章节内容 Buffer 写完即释放，
  * 内存峰值从「整本 Buffer」降到「单章最大 Buffer」+ 轻量中央目录元数据数组，用于大书导出防 OOM。
  * 字节产物与 buildEpub（同步版）完全一致（mimetype 首条 stored、中央目录顺序相同），由单测钉死。

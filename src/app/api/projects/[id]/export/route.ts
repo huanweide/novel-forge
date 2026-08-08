@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { scanBannedWords } from "@/lib/banned-words";
 import { NextResponse } from "next/server";
 import { buildChapterList, buildHtmlDoc, buildEpub, buildEpubStream } from "@/core/epub";
-import { buildDocx } from "@/core/docx";
+import { buildDocx, buildDocxStream } from "@/core/docx";
 import { PassThrough, Readable } from "stream";
 
 /**
@@ -167,12 +167,15 @@ export async function GET(
       });
     }
 
-    // DOCX（Word）导出：零依赖 OOXML ZIP，中文靠 styles.xml 的 eastAsia="宋体"
+    // DOCX（Word）导出：零依赖 OOXML ZIP 流式写入响应（与 epub 同源），去掉整本 Buffer.concat 防大书 OOM
     if (format === "docx") {
       const chapters = buildChapterList(roots, allNodes, includeOutline);
-      const docxBuf = buildDocx(project.name, chapters, { includeOutline, author });
+      const stream = new PassThrough();
+      buildDocxStream(stream, project.name, chapters, { includeOutline, author }).catch(
+        (e) => stream.destroy(e)
+      );
       const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.docx`;
-      return new Response(new Uint8Array(docxBuf), {
+      return new Response(Readable.toWeb(stream) as unknown as BodyInit, {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,

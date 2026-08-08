@@ -261,7 +261,7 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
               activeCharacters: activeChars as any,
               activeLore: [] as any,
               chapterSummaries: data.summaries as any,
-              currentNode: data.currentNode as any,
+              currentNode: data.currentNode,
               chapterTitle: data.currentNode.title || "",
               chapterOrder: data.currentNode.order,
               forbiddenPatterns,

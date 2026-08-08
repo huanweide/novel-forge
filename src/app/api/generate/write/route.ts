@@ -360,7 +360,7 @@ export async function POST(request: Request) {
               activeCharacters: activeChars.filter((c: any) => activeCharIds.includes(c.id)) as any,
               activeLore: data.loreEntries.filter((l: any) => activeLoreIds.includes(l.id)) as any,
               chapterSummaries: data.summaries as any,
-              currentNode: data.currentNode as any,
+              currentNode: data.currentNode,
               chapterTitle: data.currentNode.title || `第${data.currentNode.order + 1}章`,
               chapterOrder: data.currentNode.order,
               forbiddenPatterns,
