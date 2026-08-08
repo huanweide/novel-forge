@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "未提供 nodeIds" }, { status: 400 });
     }
 
-    const nodes = await prisma.storyNode.findMany({ where: { id: { in: nodeIds } } });
+    const nodes = await prisma.storyNode.findMany({ where: { id: { in: nodeIds }, deletedAt: null } });
     if (nodes.length === 0) {
       return NextResponse.json({ error: "未找到任何节点" }, { status: 404 });
     }

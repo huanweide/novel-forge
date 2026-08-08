@@ -165,12 +165,12 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
             </div>
             <div className="py-1">
               <span className="block text-sm text-[var(--nv-text-primary)]">缝合怪节奏</span>
-              <span className="block text-xs text-[var(--nv-text-muted)] mb-2">构造新主线/剧情推进时的事件密度——快节奏事件密集，慢热铺垫伏笔多（作用于故事线自动生成）</span>
+              <span className="block text-xs text-[var(--nv-text-muted)] mb-2">构造新主线/剧情推进时的事件密度——快节奏事件密集，慢热铺垫未收尾线索多（作用于故事线自动生成）</span>
               <div className="flex gap-2">
                 {([
                   ["fast", "快节奏", "高频事件、每章都有新变数与冲突升级"],
                   ["steady", "均衡", "稳步推进，隔章设置变数与阶段性小高潮"],
-                  ["slow", "慢热", "铺垫充分、伏笔密集，冲突逐步累积后爆发"],
+                  ["slow", "慢热", "铺垫充分、未收尾线索密集，冲突逐步累积后爆发"],
                 ] as const).map(([key, label, desc]) => (
                   <button
                     key={key}

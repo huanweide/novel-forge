@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.13";
+export const LATEST_VERSION = "v1.6.14";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.13 导出过滤软删节点（复验#1）：导出查询加 deletedAt:null，已删章节不再泄漏到 md/txt/html/epub/docx 成书产物",
-  "v1.6.13 精修拦截软删节点（复验#2）：refine 路由加 deletedAt 判定，回收站节点无法精修，杜绝覆写已删正文致「幽灵复活」",
-  "v1.6.13 待审世界卡隔离生成上下文（复验#3）：AI 自动填表的 pending 卡不再注入写作上下文，仅 approved 卡参与正文生成",
-  "v1.6.13 伏笔改名残留 UI 统一（复验#4）：拆书/监控/冲突/抽卡/蒸馏等 13 处用户可见标签统一为「未收尾线索」，底层不动",
+  "v1.6.14 软删防复活补全（复验#A/#B/#C·高）：write/continue 路由加 deletedAt 410 拦截，幽灵复活漏洞在 write/refine/continue 三兄弟路由全闭环",
+  "v1.6.14 待审隔离补漏（复验#E·高）：outline 路由绕过 context-loader 自取世界卡，已补 reviewStatus:approved 过滤，AI 待审猜测不再渗进大纲 Prompt",
+  "v1.6.14 Agent 删除改软删（复验#D·高）：tool-registry 的 outline_delete 由硬删改 updateMany 软删，与前端/API 删除一致，不再绕过回收站",
+  "v1.6.14 伏笔改名收尾 + undo 精确回滚（复验#G/#H·中）：7 处遗留 UI 文案统一为「未收尾线索」；撤销精修只还原正文不再回退 revisionCount 等元数据",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.14",
+    date: "2026-08-08",
+    title: "v1.6.13 复验修复（软删防复活补全 + 待审隔离补漏 + Agent 删除改软删 + 伏笔改名收尾）",
+    sections: [
+      {
+        label: "软删防复活补全（复验 #A / #B / #C · 高）",
+        items: [
+          "write / continue 路由补 deletedAt 410 拦截：与 refine 一致，回收站节点无法写章/续写，幽灵复活漏洞在生成三兄弟路由全闭环",
+          "outline 路由 replaceAll 路径的 findMany 补 deletedAt:null：替换全部章纲时不再物理硬删回收站中的软删节点（原会绕过回收站静默彻底删）",
+        ],
+      },
+      {
+        label: "待审隔离补漏（复验 #E · 高）",
+        items: [
+          "outline 路由绕过 context-loader 自取 project.lorebookEntries（裸 include 不过滤），AI 自动填表的 pending 卡会渗进大纲 Prompt——已改 include 加 reviewStatus:approved + enabled:true 过滤",
+          "write / refine / continue 经 context-loader 取 loreEntries 的隔离此前已正确（v1.6.13），本次补齐唯一漏网的大纲入口",
+        ],
+      },
+      {
+        label: "Agent 删除改软删（复验 #D · 高）",
+        items: [
+          "tool-registry 的 outline_delete 工具原本递归 .delete() 硬删，绕过软删机制——已改递归 updateMany(deletedAt) 软删",
+          "前端 UI 删除 / API DELETE / Agent outline_delete 三入口现在语义一致，均进回收站可恢复",
+        ],
+      },
+      {
+        label: "确认防误改 + 伏笔改名收尾 + undo 精确回滚（复验 #F / #G / #H · 中）",
+        items: [
+          "batch-confirm / auto-confirm 两处查询补 deletedAt:null：已软删节点不再被批量/自动确认误改状态",
+          "7 处遗留的「伏笔」用户可见文案统一为「未收尾线索」（设置页记忆衰减说明 / 工作台表格入口 / 构造配置对话框 2 处 / 游戏大纲编辑器 3 处）",
+          "撤销精修只还原正文（去掉 ...selectedNode 透传）：不再回退 revisionCount 等元数据，避免整节点回滚到弹窗打开那一刻",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.13",
     date: "2026-08-08",

@@ -20,10 +20,10 @@ export async function POST(request: Request) {
     // 目标节点：显式 nodeIds 优先；否则扫 projectId 下所有未确认章（drafting + pending_confirm）
     let nodes;
     if (nodeIds.length > 0) {
-      nodes = await prisma.storyNode.findMany({ where: { id: { in: nodeIds } } });
+      nodes = await prisma.storyNode.findMany({ where: { id: { in: nodeIds }, deletedAt: null } });
     } else if (projectId) {
       nodes = await prisma.storyNode.findMany({
-        where: { projectId, status: { in: CONFIRMABLE_STATUSES } },
+        where: { projectId, status: { in: CONFIRMABLE_STATUSES }, deletedAt: null },
       });
     } else {
       return NextResponse.json({ error: "需提供 nodeIds 或 projectId" }, { status: 400 });

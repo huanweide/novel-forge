@@ -629,16 +629,16 @@ toolRegistry.register({
     const id = String(args.nodeId || "");
     const existing = await ctx.prisma.storyNode.findUnique({ where: { id } });
     if (!existing) return fail("outline_delete", `节点不存在（ID: ${id}）`);
-    // 递归删除子节点
-    const deleteChildren = async (parentId: string) => {
+    // 递归软删子节点（与前端/API DELETE 一致，不绕过回收站）
+    const softDeleteChildren = async (parentId: string) => {
       const children = await ctx.prisma.storyNode.findMany({ where: { parentId } });
       for (const child of children) {
-        await deleteChildren(child.id);
-        await ctx.prisma.storyNode.delete({ where: { id: child.id } });
+        await softDeleteChildren(child.id);
+        await ctx.prisma.storyNode.updateMany({ where: { id: child.id }, data: { deletedAt: new Date() } });
       }
     };
-    await deleteChildren(id);
-    await ctx.prisma.storyNode.delete({ where: { id } });
+    await softDeleteChildren(id);
+    await ctx.prisma.storyNode.updateMany({ where: { id }, data: { deletedAt: new Date() } });
     return ok("outline_delete", { deleted: { id, title: existing.title }, message: `节点"${existing.title}"及其子节点已删除` });
   },
 });

@@ -737,7 +737,7 @@ export default function WorkspacePage() {
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...selectedNode, content: target.old, wordCount: (target.old || "").length }),
+        body: JSON.stringify({ content: target.old, wordCount: (target.old || "").length }),
       });
       if (res.ok) toastSuccess("已撤销，恢复原正文");
       else toastError("撤销失败");
@@ -952,7 +952,7 @@ export default function WorkspacePage() {
     { id: "draw", label: "抽卡选章纲", desc: "用色子抽取剧情走向，选定本章路线", icon: "sparkles", category: "generate", action: () => handleDrawChapterOutline() },
     { id: "character", label: "新建角色", desc: "添加一张角色卡，定义人设与关系", icon: "user", category: "generate", action: () => setShowNewCharacter(true) },
     { id: "workshop", label: "创意工坊", desc: "预设 / 角色卡 / 导入导出分享社区预设", icon: "book", category: "generate", action: () => router.push("/workshop") },
-    { id: "tables", label: "结构化表格", desc: "宝宝流数据库，查看已抽取的设定与伏笔", icon: "chart", category: "analyze", action: () => router.push(`/workspace/${project?.id ?? ""}/tables`) },
+    { id: "tables", label: "结构化表格", desc: "宝宝流数据库，查看已抽取的设定与未收尾线索", icon: "chart", category: "analyze", action: () => router.push(`/workspace/${project?.id ?? ""}/tables`) },
     { id: "conflict", label: "冲突推演", desc: "给定局势，AI 出≥3 个发展选项（仅供参考由你决定）", icon: "lightbulb", category: "analyze", badge: "AI", action: () => { setShowConflict(true); } },
   ];
 

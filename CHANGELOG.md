@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.14 — 2026-08-08
+**v1.6.13 复验修复（软删防复活补全 + 待审隔离补漏 + Agent 删除改软删 + 伏笔改名收尾）**
+
+- **软删防复活补全（复验 #A / #B / #C · 高）**：write / continue 路由补 `deletedAt` 410 拦截，与 refine 一致，回收站节点无法写章 / 续写，幽灵复活漏洞在生成三兄弟路由全闭环；outline 路由 replaceAll 路径的 `findMany` 补 `deletedAt: null`，替换全部章纲时不再物理硬删回收站中的软删节点。
+- **待审隔离补漏（复验 #E · 高）**：outline 路由绕过 `context-loader` 自取 `project.lorebookEntries`（裸 include 不过滤），AI 自动填表的 `pending` 卡会渗进大纲 Prompt——已改 include 加 `reviewStatus: "approved"` + `enabled: true` 过滤，补齐唯一漏网的大纲入口。
+- **Agent 删除改软删（复验 #D · 高）**：`tool-registry` 的 `outline_delete` 工具原本递归 `.delete()` 硬删，绕过软删机制——已改递归 `updateMany(deletedAt)` 软删；前端 UI 删除 / API DELETE / Agent 删除三入口现在语义一致，均进回收站可恢复。
+- **确认防误改 + 伏笔改名收尾 + undo 精确回滚（复验 #F / #G / #H · 中）**：batch-confirm / auto-confirm 两处查询补 `deletedAt: null`，已软删节点不再被批量 / 自动确认误改状态；7 处遗留的用户可见「伏笔」文案统一为「未收尾线索」；撤销精修只还原正文（去掉 `...selectedNode` 透传），不再回退 `revisionCount` 等元数据。
+
+---
+
 ## v1.6.13 — 2026-08-08
 **v1.6.12 复验修复（软删泄漏两高 + 待审隔离 + 伏笔改名收尾）**
 

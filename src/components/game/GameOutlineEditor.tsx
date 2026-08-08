@@ -306,7 +306,7 @@ export default function GameOutlineEditor({
             ref={textareaRef}
             value={outlineText}
             onChange={(e) => setOutlineText(e.target.value)}
-            placeholder={`在此编写结构化章纲...\n\nC| ${chapterTitle ? chapterTitle.match(/\d+章/) : "?"} | ${chapterTitle} | 时间地点 | 主角\n\n- 【章首衔接】：...\n\nR| [角色名] [动作] [对象] [结果]\n⟨✍ 写作指令⟩\nL| [地点名] [场景氛围]\n\n- 【章尾悬念】：...\n\nCF| [伏笔名] | 埋设 | [操作细节]\nM| [情绪] | 7 | [实现手段]\nT| [下一章标题] | [目标]`}
+            placeholder={`在此编写结构化章纲...\n\nC| ${chapterTitle ? chapterTitle.match(/\d+章/) : "?"} | ${chapterTitle} | 时间地点 | 主角\n\n- 【章首衔接】：...\n\nR| [角色名] [动作] [对象] [结果]\n⟨✍ 写作指令⟩\nL| [地点名] [场景氛围]\n\n- 【章尾悬念】：...\n\nCF| [未收尾线索名] | 埋设 | [操作细节]\nM| [情绪] | 7 | [实现手段]\nT| [下一章标题] | [目标]`}
             className="flex-1 bg-[var(--nv-abyss)]/30 border border-[var(--nv-creative)]/20 rounded-lg p-4 text-sm font-mono text-[var(--nv-text-secondary)] resize-none outline-none focus:border-[var(--nv-creative)]/40 placeholder:text-[var(--nv-text-muted)]"
             spellCheck={false}
           />
@@ -336,7 +336,7 @@ export default function GameOutlineEditor({
                 <p className="text-xs">
                   输入你的反馈或修改方向，AI 会针对性修改章纲。
                   <br />
-                  例如："方向A更合适"、"第3段节奏太慢"、"加一个伏笔"
+                  例如："方向A更合适"、"第3段节奏太慢"、"加一个未收尾线索"
                 </p>
               </div>
             )}
@@ -394,7 +394,7 @@ export default function GameOutlineEditor({
 
       {/* 底部提示 */}
       <div className="px-4 py-1.5 border-t border-[var(--nv-creative)]/20 text-[10px] text-[var(--nv-text-muted)] flex gap-3">
-        <span>C|章节 R|角色 L|场景 G|金手指 P|剧情 CF|伏笔 M|情绪 K|台词 EL|弧线 T|过渡</span>
+        <span>C|章节 R|角色 L|场景 G|金手指 P|剧情 CF|未收尾线索 M|情绪 K|台词 EL|弧线 T|过渡</span>
       </div>
     </div>
   );

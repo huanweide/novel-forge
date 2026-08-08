@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      include: { characters: true, lorebookEntries: true, styleCards: true },
+      include: { characters: true, lorebookEntries: { where: { enabled: true, reviewStatus: "approved" } }, styleCards: true },
     });
 
     if (!project) {
@@ -323,7 +323,7 @@ export async function PUT(request: Request) {
 
     if (replaceAll) {
       const oldRootNodes = await prisma.storyNode.findMany({
-        where: { projectId, parentId: null, type: { not: "volume" } },
+        where: { projectId, parentId: null, type: { not: "volume" }, deletedAt: null },
       });
       if (oldRootNodes.length > 0) {
         await prisma.storyNode.deleteMany({

@@ -47,6 +47,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "项目或节点不存在" }, { status: 404 });
     }
 
+    // #123 软删防复活：已移入回收站的节点不允许续写，避免覆写已删正文导致「幽灵复活」
+    if (currentNode.deletedAt) {
+      return NextResponse.json({ error: "该节点已被删除（回收站），无法续写。如需操作请先从回收站恢复" }, { status: 410 });
+    }
+
     let nextTitle = "";
     if ((currentNode as any).title) {
       const match = (currentNode as any).title.match(/^(.+?)(\d+)$/);
