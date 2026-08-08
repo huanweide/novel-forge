@@ -17,6 +17,7 @@ export function CharacterList({
   projectId,
   onEdit,
   onDelete,
+  onConfirm,
   onNew,
   onExpanded,
 }: {
@@ -24,6 +25,7 @@ export function CharacterList({
   projectId: string;
   onEdit: (c: CharacterData) => void;
   onDelete: (id: string) => Promise<void>;
+  onConfirm?: (id: string) => Promise<void>;
   onNew: () => void;
   onExpanded: () => void;
 }) {
@@ -425,6 +427,26 @@ export function CharacterList({
     errorPrefix: "角色删除失败",
   });
 
+  // v1.6.24：角色卡待审审批闭环——默认确认处理器（父组件可传 onConfirm 覆盖，统一刷新逻辑）
+  const handleConfirm = async (id: string) => {
+    try {
+      const res = await fetch(`/api/characters/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewStatus: "approved" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "失败" }));
+        toastError(`确认失败: ${err.error || res.status}`);
+        return;
+      }
+      toastSuccess("角色卡已确认并入（将注入生成）");
+      onExpanded();
+    } catch (e) {
+      toastError("确认失败：" + (e instanceof Error ? e.message : "网络错误"));
+    }
+  };
+
   const toggleGroup = (label: string) => {
     const sel = new Map(groupSelections);
     const group = classifyGroups?.find(g => g.label === label);
@@ -557,6 +579,7 @@ export function CharacterList({
         onToggleSelect={toggleSelect}
         onEdit={onEdit}
         onDelete={(id, name) => deleteCharacter(id, name)}
+        onConfirm={onConfirm ?? handleConfirm}
         onTagClick={(t) => setTagFilter(t)}
       />
 

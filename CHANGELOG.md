@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.24 — 2026-08-08
+**v1.6.24 角色卡待审审批闭环（补齐 v1.6.18/22 缺口）**
+
+- **角色卡待审审批闭环（高）**：发现真实功能缺口——v1.6.18 让 9 类 AI 自动建卡转 pending + v1.6.22 强制 approved 才注入后，角色卡全仓无任何审批入口（前端仅世界卡 WorldPanel 有审批 UI），导致角色卡永久卡 pending 无法注入生成，待审隔离反而让角色卡失效。本次补齐：后端 `characters/[id]` PUT 增加 `reviewStatus` 透传（审批落地后复用既有 syncGlobalPrompt 自动重算缓存）；前端 `CharacterRow` 加「待审」徽标 + 勾选批准按钮（仿世界卡 WorldEntryCard），`CharacterGroupList`/`CharacterList` 透传 `onConfirm`，`LeftPanel` 接线审批后刷新。
+- **类型补全（工程）**：`components/workspace/types.ts` 的 `CharacterData` 接口补 `reviewStatus?` 字段（此前仅 `LorebookData` 有），消除 tsc 报错并让前端识别待审角色卡。
+- **与世界卡对称（一致性）**：世界卡审批 UI 早已存在（`WorldPanel` PUT `/api/lorebook/[id]` 带 `reviewStatus` 并重算 globalPrompt），本次让角色卡获得同等能力，待审隔离在两类卡上完整闭环。
+- **验证（质量门）**：tsc 0 错误 + vitest 299/299 全绿；UI 变更经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测，留 agent-browser 复检）。
+
+---
+
 ## v1.6.23 — 2026-08-08
 **v1.6.23 自动填表 update 类精确还原（F2 修复）**
 

@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.23";
+export const LATEST_VERSION = "v1.6.24";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.23 自动填表 update 类精确还原（F2 修复，高）：BabyloreFillBatch 新增 updatedRowsBefore 字段，填表时 diff 捕获「被 update 改写的既有行」更新前整行快照；revertBabyloreFill 撤销章节时既删新增行、又把这些行精确还原到填表前状态（此前仅删新增行，update 改写无法撤销）",
-  "v1.6.23 后续章节数据安全保护（中）：回滚引入「后续批次 touched 集合」——若同一行被更晚的章节也改过，撤销较早章节时不还原 / 不误删该行，避免覆盖后续章节的真实编辑（数据安全优先于单章还原）",
-  "v1.6.23 零侵入实现（工程）：不改动 applyOps 核心，仅在 babyloreFill 填表前后快照 diff 出 updated 行；revert 逻辑去重合并 + 命中更新两类 update 统一覆盖",
-  "v1.6.23 验证（质量门）：tsc 0 错误 + vitest 299/299 全绿（较 v1.6.22 的 297 +2，新增 update 还原 + 后续保护两单测）；schema 已 db push 同步本地 PG17",
+  "v1.6.24 角色卡待审审批闭环（高）：v1.6.18 自动转 pending + v1.6.22 强制 approved 后，角色卡此前无任何审批入口、永久卡在 pending 无法注入生成——本次补齐。后端 characters/[id] PUT 增加 reviewStatus 透传（审批落地并自动重算 globalPrompt），前端 CharacterRow 加「待审」徽标 + 勾选批准按钮（仿世界卡 WorldEntryCard），LeftPanel 接线 onConfirm 审批后刷新",
+  "v1.6.24 类型补全（工程）：components/workspace/types.ts 的 CharacterData 接口补 reviewStatus? 字段（此前仅 LorebookData 有），消除 tsc 报错并确保前端能识别待审角色卡",
+  "v1.6.24 与世界卡审批对称（一致性）：世界卡早已在 WorldPanel 有审批 UI（PUT /api/lorebook/[id] 带 reviewStatus），本次让角色卡获得同等能力，待审隔离在两类卡上闭环",
+  "v1.6.24 验证（质量门）：tsc 0 错误 + vitest 299/299 全绿；UI 变更经源码阅读 + 类型门禁核实（沙箱无 Chromium，未做端到端点击实测，留 agent-browser 复检）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.24",
+    date: "2026-08-08",
+    title: "v1.6.24 角色卡待审审批闭环（补齐 v1.6.18/22 缺口）",
+    sections: [
+      {
+        label: "角色卡待审审批闭环（高）",
+        items: [
+          "发现真实功能缺口：v1.6.18 让 9 类 AI 自动建卡转 pending + v1.6.22 强制 approved 才注入后，角色卡全仓无任何审批入口（前端仅世界卡 WorldPanel 有审批 UI），导致角色卡永久卡 pending 无法注入生成——待审隔离反而让角色卡失效",
+          "后端 characters/[id] PUT 增加 reviewStatus 透传（仅当 body 携带时写入），审批落地后复用既有的 syncGlobalPrompt 自动重算 globalPrompt；前端 CharacterRow 加「待审」warning 徽标 + 勾选批准按钮（仿 WorldEntryCard 的 onConfirm），CharacterGroupList/CharacterList 透传 onConfirm，LeftPanel 接线审批后 loadProject 刷新",
+        ],
+      },
+      {
+        label: "类型补全 + 对称（工程 / 一致性）",
+        items: [
+          "components/workspace/types.ts 的 CharacterData 接口补 reviewStatus? 字段（此前仅 LorebookData 有），消除 tsc 报错并让前端识别待审角色卡",
+          "世界卡审批 UI 早已存在（WorldPanel PUT /api/lorebook/[id] 带 reviewStatus 并重算 globalPrompt），本次让角色卡与世界卡获得对称能力，待审隔离在两类卡上完整闭环",
+          "tsc 0 错误 + vitest 299/299 全绿；UI 变更经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测，留 agent-browser 复检）",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.23",
     date: "2026-08-08",

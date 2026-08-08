@@ -47,6 +47,7 @@ export async function PUT(
         currentStatus: body.currentStatus,
         arcProgress: body.arcProgress,
         tags: body.tags,
+        ...(body.reviewStatus ? { reviewStatus: body.reviewStatus } : {}),
       },
     });
     syncGlobalPrompt(body.projectId || character.projectId).catch(() => {});

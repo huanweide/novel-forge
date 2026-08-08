@@ -128,6 +128,7 @@ export function LeftPanel({
         {activeTab === "characters" && (
           <CharacterList characters={project.characters ?? []} projectId={project.id} onEdit={onEditCharacter}
             onDelete={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
+            onConfirm={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewStatus: "approved" }) }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
         {activeTab === "world" && (

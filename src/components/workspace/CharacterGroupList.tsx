@@ -14,6 +14,7 @@ export function CharacterGroupList({
   onToggleSelect,
   onEdit,
   onDelete,
+  onConfirm,
   onTagClick,
 }: {
   grouped: Record<string, CharacterData[]>;
@@ -25,6 +26,7 @@ export function CharacterGroupList({
   onToggleSelect: (id: string) => void;
   onEdit: (c: CharacterData) => void;
   onDelete: (id: string, name: string) => void;
+  onConfirm?: (id: string) => void;
   onTagClick: (tag: string) => void;
 }) {
   return (
@@ -44,6 +46,7 @@ export function CharacterGroupList({
                 onToggleSelect={onToggleSelect}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onConfirm={onConfirm}
                 tagFilter={tagFilter}
                 onTagClick={onTagClick}
               />

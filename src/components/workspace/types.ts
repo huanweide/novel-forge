@@ -54,6 +54,7 @@ export interface CharacterData {
   arcProgress?: string;
   currentStatus: string;
   tags?: string[];
+  reviewStatus?: string; // 自动填表待审：pending=待确认 approved=已确认（v1.6.24 审批闭环）
 }
 
 export interface LorebookData {

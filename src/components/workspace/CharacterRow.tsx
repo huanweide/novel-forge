@@ -10,6 +10,7 @@ export function CharacterRow({
   onToggleSelect,
   onEdit,
   onDelete,
+  onConfirm,
   tagFilter,
   onTagClick,
 }: {
@@ -19,6 +20,7 @@ export function CharacterRow({
   onToggleSelect: (id: string) => void;
   onEdit: (c: CharacterData) => void;
   onDelete: (id: string, name: string) => void;
+  onConfirm?: (id: string) => void;
   tagFilter: string;
   onTagClick: (tag: string) => void;
 }) {
@@ -55,6 +57,18 @@ export function CharacterRow({
           )}
         </div>
       </div>
+      {character.reviewStatus === "pending" && (
+        <span className="ml-1 shrink-0 rounded bg-[var(--nv-warning)]/20 px-1 py-0.5 text-[8px] text-[var(--nv-warning)]">待审</span>
+      )}
+      {character.reviewStatus === "pending" && onConfirm && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onConfirm(character.id); }}
+          disabled={deleting}
+          className="ml-1 shrink-0 text-[var(--nv-success)] opacity-0 transition-all hover:text-[var(--nv-success)] group-hover:opacity-100 disabled:opacity-40"
+          aria-label="确认并入"
+          title="确认并入角色卡（审批后才会注入生成）"
+        ><Icon name="check" size={12} className="align-middle" /></button>
+      )}
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
         disabled={deleting}
