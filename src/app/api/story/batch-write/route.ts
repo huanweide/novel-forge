@@ -119,7 +119,7 @@ export async function POST(request: Request) {
           try {
             // 1) 建章（标题占位「第N章」，正文生成后由章名兜底逻辑自动命名）
             const maxOrder = await prisma.storyNode.aggregate({
-              where: { projectId },
+              where: { projectId, deletedAt: null },
               _max: { order: true },
             });
             const order = (maxOrder._max.order ?? 0) + 1;

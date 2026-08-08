@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     // 避免每次 continue 失败都新建节点导致残缺节点堆积污染章节树；
     // 同时不误删用户正在撰写的中部草稿（其中部节点 order 较小，不会被命中）。
     try {
-      const orderAgg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
+      const orderAgg = await prisma.storyNode.aggregate({ where: { projectId, deletedAt: null }, _max: { order: true } });
       const maxOrder = orderAgg._max.order ?? 0;
       await prisma.storyNode.deleteMany({
         where: { projectId, order: maxOrder, status: "drafting", content: { contains: "[PARTIAL_DRAFT]" } },
@@ -296,7 +296,7 @@ ${lastParagraphs}
           // R2-003：补传 source:"continue"，闭合填表溯源单链路（写章报告 F-07）；此前漏传 source 导致 _src 缺溯源段、与 confirm/manual/auto-confirm/batch 四入口不一致。
           let contIsLatest = false;
           try {
-            const agg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
+            const agg = await prisma.storyNode.aggregate({ where: { projectId, deletedAt: null }, _max: { order: true } });
             contIsLatest = (nextNode as any).order === (agg._max.order ?? (nextNode as any).order);
           } catch { /* 聚合失败按非最新，保守填表 */ }
           const babylore = await safeFillAfterWriting({

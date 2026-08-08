@@ -183,6 +183,7 @@ export async function POST(request: Request) {
             abilities: c.abilities || [],
             timeline: c.experience ? [{ chapter: chapterTitle, type: "出场", event: c.experience }] : [],
             currentStatus: "alive",
+            reviewStatus: "pending",
           },
         });
         // 批次内去重：主名 + 别名 摊平进比对集与别名索引
@@ -260,6 +261,7 @@ export async function POST(request: Request) {
               title: item.name,
               category: group.category,
               keys,
+              reviewStatus: "pending",
               content,
               enabled: true,
             },
@@ -436,6 +438,7 @@ export async function POST(request: Request) {
             category: "character_relationship",
             keys, content: content.slice(0, 5000),
             enabled: true,
+            reviewStatus: "pending",
           },
         });
         relationshipsSaved++;

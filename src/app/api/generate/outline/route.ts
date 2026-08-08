@@ -333,7 +333,7 @@ export async function PUT(request: Request) {
     }
 
     const lastNode = await prisma.storyNode.findFirst({
-      where: { projectId },
+      where: { projectId, deletedAt: null },
       orderBy: { order: "desc" },
     });
     const startOrder = (lastNode?.order ?? -1) + 1;

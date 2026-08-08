@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.17 — 2026-08-08
+**v1.6.16 复验修复（待审隔离泄漏修复 + order 计算漏 deletedAt 补全）**
+
+- **待审隔离泄漏修复（复验 · 中）**：apply-extraction 的角色卡 L177 / 世界卡 L257 / 关系卡 L433 三处 create 补 `reviewStatus: pending`，与 `entity-sync` 一致；此前漏传字段落 schema 默认 `approved` 被 `context-loader` 的 `reviewStatus: approved` 过滤直注入正文，绕过 v1.6.13 待审隔离——自动抽取落库的世界卡/角色卡必须经人工待审才进正文注入链路。
+- **order/maxOrder/lastNode 计算漏 deletedAt 补全（复验 · 中低）**：`generate/outline` L335 lastNode + `generate/continue` L73 与 L299 两处 maxOrder + `generate/refine` L293 maxOrder + `story/batch-write` L121 maxOrder，共 5 处「最新/最大章节序号」计算补 `deletedAt: null`；已软删章节不再干扰新建章节序号（避免跳号）与续写/精修「是否最新章」判定（避免误判非最新导致保守填表）。
+- **双门禁收口（质量门）**：tsc 0 错误 + vitest 286/286 全绿；遗留 #6（undo 不回滚 babylore 副作用）确认属实，留 v1.6.18+ 产品线处理，#5 修复已让 apply-extraction 建卡转 pending 间接缩小危害面。
+
+---
+
 ## v1.6.16 — 2026-08-08
 **v1.6.15 复验修复（软删读泄漏补全 12 处 + MemoryDecayDialog 文案统一 + DrawCards 误报核实）**
 

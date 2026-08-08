@@ -290,7 +290,7 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
           // R2-003：补传 source:"refine"，闭合填表溯源单链路（写章报告 F-07）；此前漏传 source 导致 _src 缺溯源段、与 confirm/manual/auto-confirm/batch 四入口不一致。
           let refineIsLatest = false;
           try {
-            const agg = await prisma.storyNode.aggregate({ where: { projectId }, _max: { order: true } });
+            const agg = await prisma.storyNode.aggregate({ where: { projectId, deletedAt: null }, _max: { order: true } });
             refineIsLatest = data.currentNode.order === (agg._max.order ?? data.currentNode.order);
           } catch { /* 聚合失败按非最新，保守填表 */ }
           const babylore = await safeFillAfterWriting({

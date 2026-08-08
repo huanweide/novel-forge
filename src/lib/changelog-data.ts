@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.16";
+export const LATEST_VERSION = "v1.6.17";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.16 软删读泄漏补全 12 处 StoryNode 查询（复验·高/中）：tool-registry 的 outline_list / outline_create / chapter_get / project_info count 与 aggregate / analyze_chapter / analyze_relationships / relation_sync + extract-chapter 下一章衔接 + memory-decay 衰减基准 + story GET isLatest 判定 + story collectSubtreeIds 级联——已软删章节不再渗进大纲树、最新章取用、章节数与总字数统计、AI 分析与关系抽取语料、下一章衔接、衰减基准、最新章判定与级联子树收集",
-  "v1.6.16 MemoryDecayDialog 文案统一（复验·低）：用户可见「伏笔」→「未收尾线索」，符合 v1.6.13 防爆半径约定（keys 保留，仅 UI 文案改）",
-  "v1.6.16 DrawCards:33 复验核实为误报不改（复验·低）：meta.key 是 6 小节统一渲染约定（带【】括号），改 meta.label 会破坏统一格式且 key 保留【伏笔】是 v1.6.13 既定大纲切分原则",
-  "v1.6.16 双门禁收口：tsc 0 错误 + vitest 286 全绿",
+  "v1.6.17 待审隔离泄漏修复（复验·中）：apply-extraction 角色卡/世界卡/关系卡三处 create 补 reviewStatus:pending，与 entity-sync 一致；此前漏传字段落 schema 默认 approved 被 context-loader 的 reviewStatus:approved 过滤直注入正文，绕过 v1.6.13 待审隔离",
+  "v1.6.17 order/maxOrder/lastNode 计算漏 deletedAt 补全（复验·中低）：generate/outline L335 lastNode + generate/continue L73/L299 maxOrder + generate/refine L293 maxOrder + story/batch-write L121 maxOrder 共 5 处「最新/最大章节序号」计算补 deletedAt:null，已删章节不再干扰新建序号与续写/精修「是否最新章」判定",
+  "v1.6.17 双门禁收口：tsc 0 + vitest 286 全绿",
+  "v1.6.17 遗留 #6（undo 不回滚 babylore 副作用）确认属实留 v1.6.18+ 产品线处理；#5 修复已让 apply-extraction 建卡转 pending，间接缩小危害面",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.17",
+    date: "2026-08-08",
+    title: "v1.6.16 复验修复（待审隔离泄漏修复 + order 计算漏 deletedAt 补全）",
+    sections: [
+      {
+        label: "待审隔离泄漏修复（复验 · 中）",
+        items: [
+          "apply-extraction 的角色卡 L177 / 世界卡 L257 / 关系卡 L433 三处 create 补 reviewStatus:pending，与 entity-sync 一致；此前漏传字段落 schema 默认 approved 被 context-loader 的 reviewStatus:approved 过滤直注入正文，绕过 v1.6.13 待审隔离——自动抽取落库的世界卡/角色卡必须经人工待审才进正文注入链路",
+          "schema.prisma 的 CharacterCard.reviewStatus 与 LorebookEntry.reviewStatus 默认均为 approved，故任何漏传 reviewStatus 的建卡入口都会绕过 v1.6.13 待审隔离；本次将 apply-extraction 与 entity-sync 行为对齐为 pending，补齐最后一公里",
+        ],
+      },
+      {
+        label: "order/maxOrder/lastNode 计算漏 deletedAt 补全（复验 · 中低）",
+        items: [
+          "generate/outline L335 lastNode + generate/continue L73 与 L299 两处 maxOrder + generate/refine L293 maxOrder + story/batch-write L121 maxOrder，共 5 处「最新/最大章节序号」计算补 deletedAt:null",
+          "已软删章节不再干扰新建章节序号（避免跳号）与续写/精修「是否最新章」判定（避免误判非最新导致保守填表），与存活节点计算口径一致",
+        ],
+      },
+      {
+        label: "双门禁收口（质量门）",
+        items: [
+          "tsc 0 错误 + vitest 286/286 全绿",
+          "遗留 #6（undo 不回滚 babylore 副作用）确认属实，留 v1.6.18+ 产品线处理；#5 修复已让 apply-extraction 建卡转 pending，间接缩小危害面",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.16",
     date: "2026-08-08",
