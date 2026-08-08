@@ -1,9 +1,11 @@
 /**
  * PATCH /api/projects/[id]/build-config
  *
- * 更新探讨模式布置配置（BuildConfig），并据此重建 globalPrompt。
- * 重建逻辑：读取项目世界书条目 → 反向映射为 adopted → buildGlobalPromptFromExplore。
- * 保证 workspace 内修改布置后，globalPrompt 与结构化配置保持一致。
+ * 更新探讨模式布置配置（BuildConfig），并通过 syncGlobalPrompt 统一重建 globalPrompt。
+ * v1.6.41：改为单一真相源——只写 buildConfig/genre/toneKeywords，随后调 syncGlobalPrompt(id)，
+ * 由 sync 统一渲染「作品信息 + 探讨布置(buildConfig) + 角色卡 + 世界书 + 风格卡」。
+ * 不再直接用 buildGlobalPromptFromExplore 直写 globalPrompt（旧逻辑会覆盖 sync 渲染的
+ * 角色/世界观段落，且 sync 又反过来丢弃 explore 布置字段，两套来源互相覆盖）。
  *
  * Body: Partial<BuildConfig>
  * Response: { ok: true, projectId }
@@ -11,22 +13,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { BuildConfig, ExploreStep } from "@/core/explore/types";
+import type { BuildConfig } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG } from "@/core/explore/types";
-import { buildGlobalPromptFromExplore, lorebookToAdopted } from "@/core/explore/build-prompt";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { jsonError } from "@/lib/api-error";
 
 export const maxDuration = 60;
-
-const CATEGORY_TO_STEP: Record<string, ExploreStep> = {
-  worldview: "worldview",
-  custom: "protagonist",
-  plot: "core_conflict",
-  faction: "factions",
-  magic_system: "power_system",
-  economy: "currency",
-  geography: "map",
-};
 
 export async function PATCH(
   req: NextRequest,
@@ -43,23 +35,18 @@ export async function PATCH(
     const prev = (project.buildConfig as unknown as BuildConfig) || DEFAULT_BUILD_CONFIG;
     const merged: BuildConfig = { ...prev, ...patch };
 
-    // 重建 globalPrompt：从世界书条目反向重建 adopted
-    const entries = await prisma.lorebookEntry.findMany({
-      where: { projectId: id },
-      select: { title: true, content: true, category: true },
-    });
-    const adopted = lorebookToAdopted(entries, CATEGORY_TO_STEP);
-    const globalPrompt = buildGlobalPromptFromExplore(merged, adopted);
-
+    // 只写结构化字段；globalPrompt 交由 syncGlobalPrompt 统一重建（单一真相源）。
     await prisma.project.update({
       where: { id },
       data: {
         buildConfig: merged as any,
-        globalPrompt,
         genre: merged.genre ? [merged.genre] : project.genre,
         toneKeywords: merged.stylePreference ? [merged.stylePreference] : project.toneKeywords,
       },
     });
+
+    // 统一重建：sync 现在也会读取 buildConfig 段，explore 布置字段不再丢失。
+    syncGlobalPrompt(id).catch(() => {});
 
     return NextResponse.json({ ok: true, projectId: id });
   } catch (err) {

@@ -10,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getTemplate } from "@/core/templates";
 import { ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS } from "@/lib/world-category-classifier";
+import type { BuildConfig } from "@/core/explore/types";
+import { PLOT_STRUCTURE_LABEL } from "@/core/explore/build-prompt";
 
 /**
  * 构建并写入 globalPrompt。
@@ -18,7 +20,7 @@ import { ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS } from "@/lib/world-categor
 export async function syncGlobalPrompt(projectId: string): Promise<string | null> {
   try {
     const [project, characters, loreEntries, styleCard] = await Promise.all([
-      prisma.project.findUnique({ where: { id: projectId }, select: { name: true, genre: true, synopsis: true, toneKeywords: true, authorNote: true, llmConfig: true } }),
+      prisma.project.findUnique({ where: { id: projectId }, select: { name: true, genre: true, synopsis: true, toneKeywords: true, authorNote: true, llmConfig: true, buildConfig: true } }),
       getApprovedCharacters(prisma, projectId),
       getApprovedLore(prisma, projectId),
       prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
@@ -42,7 +44,7 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
 }
 
 function buildGlobalPrompt(
-  project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string; llmConfig?: any },
+  project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string; llmConfig?: any; buildConfig?: any },
   characters: any[],
   loreEntries: any[],
   styleCard: Record<string, unknown> | null,
@@ -60,6 +62,30 @@ function buildGlobalPrompt(
   if (project.authorNote?.trim()) {
     parts.push(`\n## 作者指令（最高优先级）
 ${project.authorNote}`);
+  }
+
+  // ═══════════════════════════════════════════
+  // 第一部分·补：探讨模式结构配置（buildConfig）
+  // v1.6.41：纳为单一真相源。此前 sync 不读 buildConfig，导致 explore 布置的
+  // 受众/篇幅/情节结构/原创人名/自动故事线/流派标签/核心冲突/力量体系/金手指/风格偏好
+  // 在 sync 重写 globalPrompt 时被静默丢弃（explore 建项目与 build-config PATCH 双漏口）。
+  // 非 explore 项目 buildConfig 为空，判空跳过，不影响既有行为。
+  // ═══════════════════════════════════════════
+  const bc = project.buildConfig as unknown as BuildConfig | null | undefined;
+  if (bc && typeof bc === "object") {
+    const bcParts: string[] = [];
+    bcParts.push(`\n## 探讨布置（结构配置）`);
+    if (bc.audience) bcParts.push(`- 受众：${bc.audience}`);
+    if (bc.wordCount) bcParts.push(`- 篇幅：${bc.wordCount}`);
+    if (bc.plotStructure) bcParts.push(`- 情节结构：${PLOT_STRUCTURE_LABEL[bc.plotStructure] || bc.plotStructure}`);
+    bcParts.push(`- 强制原创人名：${bc.forceOriginalNames ? "是" : "否"}`);
+    bcParts.push(`- 自动生成故事线：${bc.autoGenerateStoryline ? "是" : "否"}`);
+    if (Array.isArray(bc.styleTags) && bc.styleTags.length) bcParts.push(`- 流派标签：${bc.styleTags.join("、")}`);
+    if (bc.coreConflict?.trim()) bcParts.push(`- 核心冲突：${bc.coreConflict}`);
+    if (bc.powerSystem?.trim()) bcParts.push(`- 力量体系：${bc.powerSystem}`);
+    if (bc.goldenFinger?.trim()) bcParts.push(`- 金手指：${bc.goldenFinger}`);
+    if (bc.stylePreference?.trim()) bcParts.push(`- 风格偏好：${bc.stylePreference}`);
+    parts.push(bcParts.join("\n"));
   }
 
   // ═══════════════════════════════════════════

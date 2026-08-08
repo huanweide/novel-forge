@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.40";
+export const LATEST_VERSION = "v1.6.41";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.40 修复 PATCH 路由漏同步 globalPrompt（真实一致性 bug）：项目设置页改类型/基调/总纲/作者指令（synopsis/genre/toneKeywords/authorNote，均为 globalPrompt 系统提示词渲染源）后，下一章 AI 生成仍读旧的全局提示词；PATCH 成功后若改了作品信息字段且未手动覆盖 globalPrompt，则自动 syncGlobalPrompt(projectId) 刷新",
-  "v1.6.40 受控守卫：仅当请求体改了 synopsis/genre/toneKeywords/authorNote 之一、且未显式传 globalPrompt 覆盖时才同步，避免清掉作者手动编辑的全局提示词；零行为回归（确定性重渲染，与 characters/explore/lorebook 既有同步范式一致）",
-  "v1.6.40 双门禁实证：tsc 0 错误 + vitest 34 文件 320/320 全绿（新增 src/app/api/projects/[id]/route.test.ts 6 项：改 genre/synopsis/toneKeywords/authorNote→触发同步；显式传 globalPrompt→不触发且保留；仅改 name→不触发）",
-  "v1.6.40 取舍：马斯克人格执行 CEO 子 Agent 拍板本轮只做 A（PATCH 漏同步修复），拒 B（agent-browser UI 复检，纯只读无代码改动不当迭代驱动器）与 C（llmConfig 强类型收口，前轮已拍板暂缓、范围蔓延易引回归）；个人 IP 仍归瑞宝宝，本轮只迭代不立新",
+  "v1.6.41 修复 build-config 漏同步 + sync 丢弃 explore 布置字段（双写者互相覆盖）：build-config PATCH 原用 buildGlobalPromptFromExplore 直写 globalPrompt，会覆盖 sync 渲染的角色/世界观段落；且 syncGlobalPrompt 从不读 buildConfig，导致 explore 建项目（sync 重写提示词）与 build-config 保存两处都静默丢失受众/篇幅/情节结构/原创人名/自动故事线/流派标签/核心冲突/力量体系/金手指/风格偏好",
+  "v1.6.41 提升 syncGlobalPrompt 为 globalPrompt 唯一真相源：project.select 增 buildConfig，buildGlobalPrompt 新增「探讨布置（结构配置）」段渲染上述 buildConfig 字段；build-config PATCH 改为只写 buildConfig/genre/toneKeywords 后调 syncGlobalPrompt(id) 统一重建，append-only 改动、非 explore 项目 buildConfig 判空无回归",
+  "v1.6.41 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿（新增 src/app/api/projects/[id]/build-config/route.test.ts 3 项：PATCH→触发 sync、不再直写 explore-only 的 globalPrompt、增量合并生效）",
+  "v1.6.41 取舍：马斯克人格执行 CEO 子 Agent 拍板本轮做 A（build-config 漏同步修复），拒 B（llmConfig 类型债，已拍板暂缓、无正确性 bug、改动大）与 C（F2 delete 精确还原，v1.6.23 已闭合）；个人 IP 仍归瑞宝宝，只迭代不立新",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.41",
+    date: "2026-08-09",
+    title: "v1.6.41 修复 build-config 漏同步 + sync 丢弃 explore 布置字段（单一真相源）",
+    sections: [
+      {
+        label: "build-config 漏同步 + sync 丢弃 explore 布置字段（数据一致性/生成质量）",
+        items: [
+          "build-config PATCH /api/projects/[id]/build-config 原用 buildGlobalPromptFromExplore 直写 globalPrompt，只含 explore 布置字段、缺角色卡/风格卡段，保存会覆盖 sync 渲染的角色/世界观段落；且 syncGlobalPrompt() 从不读 buildConfig，导致 explore 建项目（sync 重写提示词）与 build-config 保存两处都静默丢失受众/篇幅/情节结构/强制原创人名/自动生成故事线/流派标签/核心冲突/力量体系/金手指/风格偏好——两套来源互相覆盖",
+          "提升 syncGlobalPrompt 为 globalPrompt 唯一真相源：project.select 增 buildConfig，buildGlobalPrompt 新增「探讨布置（结构配置）」段（受众/篇幅/情节结构/原创人名/自动故事线/流派标签/核心冲突/力量体系/金手指/风格偏好）；build-config PATCH 改为只写 buildConfig/genre/toneKeywords 后调 syncGlobalPrompt(id) 统一重建，append-only 改动、非 explore 项目 buildConfig 判空无行为回归",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿（新增 src/app/api/projects/[id]/build-config/route.test.ts 3 项断言防回归）",
+          "马斯克人格执行 CEO 子 Agent 拍板本轮做 A（build-config 漏同步修复），拒 B（llmConfig 强类型收口，前轮已拍板暂缓、无正确性 bug、改动大）与 C（F2 delete 精确还原，v1.6.23 已闭合）；个人 IP 仍归瑞宝宝，本轮只迭代不立新",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.40",
     date: "2026-08-09",
