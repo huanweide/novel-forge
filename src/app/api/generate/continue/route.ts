@@ -17,6 +17,7 @@ import {
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
+import { toAppStoryNode } from "@/core/story-node-bridge";
 
 /**
  * POST /api/generate/continue
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
     // ── 组装 GenerationData 供管线函数使用 ──
     const data = {
       project: project as any,
-      currentNode: nextNode as any,
+      currentNode: toAppStoryNode(nextNode),
       allNodes: allNodes as any,
       characters: characters as any,
       loreEntries: loreEntries as any,
@@ -280,7 +281,7 @@ ${lastParagraphs}
               activeCharacters: activeChars.filter((c: any) => activeCharIds.includes(c.id)) as any,
               activeLore: (loreEntries as any[]).filter((l: any) => activeLoreIds.includes(l.id)) as any,
               chapterSummaries: summaries as any,
-              currentNode: nextNode as any,
+              currentNode: toAppStoryNode(nextNode),
               chapterTitle: nextTitle,
               chapterOrder: nextNode.order,
               forbiddenPatterns,
