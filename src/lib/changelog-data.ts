@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.32";
+export const LATEST_VERSION = "v1.6.33";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.32 post-processor currentNode 类型收口（消除写入端 as any 绕过）：延续 StoryNode 类型债总清主题，post-processor 的 PostPipelineParams.currentNode 已定型为 StoryNode（非 null），故 6 处 (currentNode as any) 惰性绕过全部消除——prevContent/prevWordCount 改 currentNode?.content/wordCount、existingReviewLogs 改 currentNode.reviewLogs、revisionCount 改 currentNode.revisionCount、auto-confirm 的 order 改 currentNode?.order、章节命名 curTitle 改 currentNode?.title；标量字段访问安全保留",
-  "v1.6.32 诚实边界（必需桥接）：仅在 prisma.storyNode.update 的 reviewLogs 写入边界保留 as any——根因是 reviewLogs 在 Prisma 是 Json 列（JsonValue），手动 StoryNode.reviewLogs: ReviewLog[] 无字符串索引签名，不满足 Prisma InputJsonValue，与 context-loader 的 currentNode as any 同源 Json↔强类型鸿沟；仅在「写入数据库」这一处桥接，标量读取（content/wordCount/revisionCount/order/title）一律不加 as any，收窄桥接面",
-  "v1.6.32 收口意义：post-processor 是 write/continue/refine 三路由共享的生成后处理单点（存正文、审校、摘要、伏笔、自动确认），本次收口后该文件不再有因 currentNode 类型不明导致的误读，与 v1.6.27/29/31 的类型债总清形成闭环（generate 编排侧 + 读取侧 + 写入侧三端收口）",
-  "v1.6.32 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化，纯类型层收口",
+  "v1.6.33 game-engine nodeForConfirm 类型收口（消除 to-one 关系冗余 as any）：endGameAndExport 的 session 来自 prisma.gameSession.findUnique({ include: { node: true } })，session.node 被 Prisma 自动推断为 StoryNode|null（含 order 字段，非 Json 列），故 L676 的 (nodeForConfirm as any)?.order 是纯冗余 as any，消除为 nodeForConfirm?.order ?? 0——与 v1.6.32 的 currentNode 写入端收口同源（node 已是确定 StoryNode 类型）",
+  "v1.6.33 诚实边界（纠正前序 memo 误判）：v1.6.31 记忆曾判定 game-engine 的 (nodeForConfirm as any)「源参数 session:any 未定型、去 as any 需先定型参数属范围蔓延」——实测推翻该判断：session 是 Prisma 查询结果（node 已定型 StoryNode|null），非 any，故该 as any 可零风险消除；trust-but-verify 的价值即在于实测推翻 subagent/记忆的估算式结论",
+  "v1.6.33 诚实边界（Json 列桥接必需保留）：game-engine 其余约 15 处 as any（L198/204/207/226/250/257/419/445-459 等）全是 gameState.entities/items/options 的 Prisma Json 列桥接（JsonValue 直转 GameEntity[]/GameItem[]/GameOption[] 不满足 InputJsonValue，与 reviewLogs 同源鸿沟），必需保留，不强行消除——已逐处 grep 核实来源字段均为 Json 列，非惰性绕过",
+  "v1.6.33 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化，纯类型层收口",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.33",
+    date: "2026-08-08",
+    title: "v1.6.33 game-engine nodeForConfirm 类型收口（消除 to-one 关系冗余 as any + 纠正前序误判）",
+    sections: [
+      {
+        label: "game-engine nodeForConfirm 类型收口（工程/类型安全）",
+        items: [
+          "endGameAndExport 的 session 来自 prisma.gameSession.findUnique({ include: { node: true } })，session.node 被 Prisma 自动推断为 StoryNode|null（含 order 字段，非 Json 列）；L676 的 (nodeForConfirm as any)?.order 是纯冗余 as any，消除为 nodeForConfirm?.order ?? 0",
+          "与 v1.6.32 的 currentNode 写入端收口同源：node 已是确定 StoryNode 类型，as any 纯历史胶带，撕掉后 TS 真正检查 order 访问",
+        ],
+      },
+      {
+        label: "诚实边界（纠正前序误判 + Json 列桥接）",
+        items: [
+          "纠正 v1.6.31 记忆的误判：原判定 session:any 未定型、去 as any 需先定型参数——实测 session 是 Prisma 查询结果（node 已定型 StoryNode|null），该 as any 可零风险消除；这是 trust-but-verify 推翻估算式结论的实证",
+          "game-engine 其余约 15 处 as any 逐项 grep 核实：gameState.entities/items/options 全是 Prisma Json 列，其 as unknown as any[] / as any 是 JsonValue→强类型数组的必需桥接（与 reviewLogs 同源 InputJsonValue 鸿沟），保留不消除",
+          "验证：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.32",
     date: "2026-08-08",

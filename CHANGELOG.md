@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.33 — 2026-08-08
+**v1.6.33 game-engine nodeForConfirm 类型收口（消除 to-one 关系冗余 as any + 纠正前序误判）**
+
+- **game-engine nodeForConfirm 类型收口（工程 / 类型安全）**：`endGameAndExport` 的 `session` 来自 `prisma.gameSession.findUnique({ include: { node: true } })`，`session.node` 被 Prisma 自动推断为 `StoryNode | null`（含 `order` 字段，非 Json 列）；L676 的 `(nodeForConfirm as any)?.order` 是纯冗余 `as any`，消除为 `nodeForConfirm?.order ?? 0`。与 v1.6.32 的 currentNode 写入端收口同源——node 已是确定 `StoryNode` 类型，`as any` 纯历史胶带，撕掉后 TS 真正检查 `order` 访问。
+- **诚实边界（纠正前序误判 + Json 列桥接）**：纠正 v1.6.31 记忆的误判——原判定「session:any 未定型、去 as any 需先定型参数属范围蔓延」，实测 `session` 是 Prisma 查询结果（`node` 已定型 `StoryNode | null`），该 `as any` 可零风险消除，这是 trust-but-verify 推翻估算式结论的实证。game-engine 其余约 15 处 `as any`（L198/204/207/226/250/257/419/445-459 等）逐项 grep 核实：`gameState.entities`/`items`/`options` 全是 Prisma `Json` 列，其桥接与 `reviewLogs` 同源 `InputJsonValue` 鸿沟，必需保留，不强行消除。tsc 0 错误 + vitest 309/309 全绿；运行时零行为变化。
+
+---
+
 ## v1.6.32 — 2026-08-08
 **v1.6.32 post-processor currentNode 类型收口（消除写入端 as any 绕过）**
 

@@ -673,7 +673,7 @@ export async function endGameAndExport(sessionId: string): Promise<{
         id: session.nodeId,
         projectId: session.projectId,
         content: finalContent,
-        order: (nodeForConfirm as any)?.order ?? 0,
+        order: nodeForConfirm?.order ?? 0,
       });
       autoConfirmed = true;
       // IMP-003：记录导出是否真的回填了设定库，供前端给出明确提示（避免静默改动世界观）
