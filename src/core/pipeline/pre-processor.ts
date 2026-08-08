@@ -48,6 +48,7 @@ export async function handleNewCharacters(
         abilities: [],
         tags: [`🆕 ${context}自建`],
         currentStatus: "alive",
+        reviewStatus: "pending",
       } as any,
     });
     allChars.push(created as any);

@@ -221,6 +221,7 @@ export async function syncChapterEntities(
             currentStatus: "alive",
             relationships: newRels as any,
             tags: ["🆕 自动发现"],
+            reviewStatus: "pending",
           } as any,
         });
         result.createdChars.push(name);

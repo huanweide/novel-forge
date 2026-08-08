@@ -508,6 +508,7 @@ export async function ensureItemLorebook(projectId: string, itemName: string, ow
       insertionOrder: 60,
       enabled: true,
       relatedEntryIds: [],
+      reviewStatus: "pending",
     },
   });
 }

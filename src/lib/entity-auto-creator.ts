@@ -377,6 +377,7 @@ export async function autoCreateEntities(
             abilities: [],
             tags: ["🆕 自动发现"],
             currentStatus: "alive",
+            reviewStatus: "pending",
           } as any,
         });
         created.push({
@@ -401,6 +402,7 @@ export async function autoCreateEntities(
             insertionOrder: 50,
             enabled: true,
             relatedEntryIds: [],
+            reviewStatus: "pending",
           },
         });
         created.push({

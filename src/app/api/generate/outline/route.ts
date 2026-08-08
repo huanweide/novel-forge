@@ -53,6 +53,7 @@ export async function POST(request: Request) {
               abilities: [],
               tags: ["🆕 大纲自建"],
               currentStatus: "alive",
+              reviewStatus: "pending",
             } as any,
           });
           allChars.push(created as any);

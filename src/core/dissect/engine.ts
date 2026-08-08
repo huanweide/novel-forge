@@ -758,6 +758,7 @@ export async function convertToProject(
         appearance: (c.appearance || {}) as any,
         dialogueStyle: (c.dialogueStyle || {}) as any,
         tags: fromFallback ? ["📥拆书导入", "🤖AI补全"] : ["📥拆书导入"],
+        reviewStatus: "pending",
       },
     });
   }

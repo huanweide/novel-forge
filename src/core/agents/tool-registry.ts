@@ -236,6 +236,7 @@ toolRegistry.register({
         relationships: [],
         tags: ["🆕 Agent创建"],
         timeline: [],
+        reviewStatus: "pending",
       },
     });
     return ok("character_create", {
@@ -425,6 +426,7 @@ toolRegistry.register({
         insertionOrder: (args.insertionOrder as number) || 50,
         enabled: true,
         relatedEntryIds: [],
+        reviewStatus: "pending",
       },
     });
     return ok("lore_create", {

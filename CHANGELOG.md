@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.18 — 2026-08-08
+**v1.6.17 复验修复（待审隔离根治 + 自动建卡入口待审隔离统一）**
+
+- **待审隔离根治（复验 · 高）**：`context-loader` 角色卡 `findMany` 补 `reviewStatus: approved` 过滤——此前角色卡 section 仅 `where: { projectId }` 无任何 `reviewStatus` 过滤，无论 `pending` 还是 `approved` 都被注入正文 Prompt，证实 v1.6.17 给 `apply-extraction` 角色卡加 `pending` 仅是表面修复（UI 徽标变了但卡仍注入正文）；根治后角色卡与 worldbook 一致走 `approved` 闸门，AI 自动抽取的待审角色卡必须经人工确认才进正文注入链路。
+- **自动建卡入口待审隔离统一（复验 · 中）**：补齐 9 类 AI 自动生成卡漏传 `reviewStatus` 的建卡入口统一补 `pending`：`entity-sync` 角色卡 L209 / `characters-expand` 三处拆解发现 L290·L462·L528 / `entity-auto-creator` 角色 L370 与世界卡 L394 / `sync-relations` 两处关系卡 L177·L208 / `game-engine` 物品卡 L501（真实路径 `src/core/game/game-engine.ts`）/ `tool-registry` 角色 L222 与世界卡 L418 / `generate-outline` 大纲角色 L46 / `dissect-engine` 拆书角色 L747 / `pre-processor` 预处理角色 L41；手动建卡与导入（`characters/route`、`explore`、`import`、`seed`、`presets`、`parse-settings` 用户主动粘贴设定）保持 `approved`，不阻断用户主动操作。
+- **双门禁收口（质量门）**：tsc 0 错误 + vitest 286/286 全绿；`game-engine` 真实路径修正为 `src/core/game/game-engine.ts`（前序复核 summary 路径误写为 `src/core`）。
+
+---
+
 ## v1.6.17 — 2026-08-08
 **v1.6.16 复验修复（待审隔离泄漏修复 + order 计算漏 deletedAt 补全）**
 

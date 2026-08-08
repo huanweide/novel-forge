@@ -182,6 +182,7 @@ ${existingSummary}
                 keys,
                 content: content.slice(0, 5000),
                 enabled: true,
+                reviewStatus: "pending",
               },
             });
             created++;
@@ -213,6 +214,7 @@ ${existingSummary}
                 keys,
                 content: content.slice(0, 5000),
                 enabled: true,
+                reviewStatus: "pending",
               },
             });
             created++;

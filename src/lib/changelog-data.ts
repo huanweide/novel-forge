@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.17";
+export const LATEST_VERSION = "v1.6.18";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.17 待审隔离泄漏修复（复验·中）：apply-extraction 角色卡/世界卡/关系卡三处 create 补 reviewStatus:pending，与 entity-sync 一致；此前漏传字段落 schema 默认 approved 被 context-loader 的 reviewStatus:approved 过滤直注入正文，绕过 v1.6.13 待审隔离",
-  "v1.6.17 order/maxOrder/lastNode 计算漏 deletedAt 补全（复验·中低）：generate/outline L335 lastNode + generate/continue L73/L299 maxOrder + generate/refine L293 maxOrder + story/batch-write L121 maxOrder 共 5 处「最新/最大章节序号」计算补 deletedAt:null，已删章节不再干扰新建序号与续写/精修「是否最新章」判定",
-  "v1.6.17 双门禁收口：tsc 0 + vitest 286 全绿",
-  "v1.6.17 遗留 #6（undo 不回滚 babylore 副作用）确认属实留 v1.6.18+ 产品线处理；#5 修复已让 apply-extraction 建卡转 pending，间接缩小危害面",
+  "v1.6.18 待审隔离根治（复验·高）：context-loader 角色卡 findMany 补 reviewStatus:approved 过滤——此前角色卡 section 仅 where: { projectId } 无任何 reviewStatus 过滤，无论 pending/approved 都被注入正文，证实 v1.6.17 给 apply-extraction 角色卡加 pending 仅是表面修复（UI 徽标变了但卡仍注入）；根治后角色卡与 worldbook 一致走 approved 闸门",
+  "v1.6.18 自动建卡入口待审隔离统一（复验·中）：补齐 9 类 AI 自动生成卡漏传 reviewStatus 的入口（entity-sync 角色卡 / characters-expand 三处拆解发现 / entity-auto-creator 角色与世界卡 / sync-relations 两处关系卡 / game-engine 物品卡 / tool-registry 角色与世界卡 / generate-outline 大纲角色 / dissect-engine 拆书角色 / pre-processor 预处理角色）统一补 pending，与 entity-sync、apply-extraction 对齐；手动建卡与导入（characters/route、explore、import、seed、presets、parse-settings 用户主动粘贴设定）保持 approved，不阻断用户主动操作",
+  "v1.6.18 双门禁收口（质量门）：tsc 0 错误 + vitest 286/286 全绿；game-engine 真实路径修正为 src/core/game/game-engine.ts（前序复核 summary 路径误写为 src/core）",
+  "v1.6.18 复查范围：parse-settings 三处建卡为单行 helper 调用且语义属用户主动粘贴设定导入，保持 approved 不补 pending；#6 undo 不回滚 babylore 副作用确认属实，留 v1.6.19+ 产品线处理",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.18",
+    date: "2026-08-08",
+    title: "v1.6.17 复验修复（待审隔离根治 + 自动建卡入口待审隔离统一）",
+    sections: [
+      {
+        label: "待审隔离根治（复验 · 高）",
+        items: [
+          "context-loader 角色卡 findMany 补 reviewStatus:approved 过滤——此前角色卡 section 仅 where: { projectId } 无任何 reviewStatus 过滤，无论 pending 还是 approved 都被注入正文 Prompt，证实 v1.6.17 给 apply-extraction 角色卡加 pending 仅是表面修复（UI 徽标变了但卡仍注入正文）；根治后角色卡与 worldbook 一致走 approved 闸门，AI 自动抽取的待审角色卡必须经人工确认才进正文注入链路",
+          "schema.prisma 的 CharacterCard.reviewStatus 默认 approved 是该漏洞的根因放大器：任何漏过滤的读取入口都会直注入，本次在 context-loader 读取侧补齐 approved 闸门，与 worldbook 对称",
+        ],
+      },
+      {
+        label: "自动建卡入口待审隔离统一（复验 · 中）",
+        items: [
+          "补齐 9 类 AI 自动生成卡漏传 reviewStatus 的建卡入口，统一补 pending：entity-sync 角色卡 L209 / characters-expand 三处拆解发现 L290·L462·L528 / entity-auto-creator 角色 L370 与世界卡 L394 / sync-relations 两处关系卡 L177·L208 / game-engine 物品卡 L501（真实路径 src/core/game/game-engine.ts）/ tool-registry 角色 L222 与世界卡 L418 / generate-outline 大纲角色 L46 / dissect-engine 拆书角色 L747 / pre-processor 预处理角色 L41",
+          "手动建卡与导入入口保持 approved 不补 pending：characters/route（手动新建）、explore create/adopt（探索采纳）、import quick/commit 与 projects/import（导入自有数据）、seed 样例（demo）、presets apply（应用预设）、parse-settings（用户主动粘贴设定导入，语义等同手动导入）——避免打断用户主动操作预期",
+        ],
+      },
+      {
+        label: "双门禁收口（质量门）",
+        items: [
+          "tsc 0 错误 + vitest 286/286 全绿；game-engine 真实路径修正为 src/core/game/game-engine.ts（前序复核 summary 路径误写为 src/core，已核实真实文件在 src/core/game）",
+          "复查范围说明：parse-settings 三处建卡为单行 helper 调用（toLorebookCreateParams / toCharacterCreateParams）且语义属用户主动粘贴设定导入，保持 approved；#6 undo 不回滚 babylore 副作用确认属实，留 v1.6.19+ 产品线处理",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.17",
     date: "2026-08-08",

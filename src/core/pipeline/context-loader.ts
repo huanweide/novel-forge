@@ -55,7 +55,7 @@ export async function loadGenerationContext(
       // (matchLoreEntries/recall) 实际消费 background/aliases/personality/appearance/
       // storyLine/timeline/relationships 及 keys/depth/insertionOrder，窄列会破坏功能。
       prisma.characterCard.findMany({
-        where: { projectId },
+        where: { projectId, reviewStatus: "approved" },
         take: 50,
       }),
       prisma.lorebookEntry.findMany({

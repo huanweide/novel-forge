@@ -298,6 +298,7 @@ export async function POST(request: Request) {
                 personality: srcChar?.personality || ({} as any),
                 tags: ["🆕 自动拆分"],
                 currentStatus: "alive",
+                reviewStatus: "pending",
               } as any,
             });
             splitNewLog.push(nc.name);
@@ -471,6 +472,7 @@ ${charListForAudit}
                   personality: c.personality || ({} as any),
                   tags: ["🆕 自动拆分"],
                   currentStatus: "alive",
+                  reviewStatus: "pending",
                 } as any,
               });
               splitLog.push(`${originalName}→${trimmed}(新建)`);
@@ -534,9 +536,10 @@ ${charListForAudit}
                   background: `[自动发现] 从角色扩展分析中检测到的新人物`,
                   abilities: [],
                   hiddenMotives: [],
-                  tags: ["🆕 自动发现"],
-                  currentStatus: "alive",
-                } as any,
+                tags: ["🆕 自动发现"],
+                currentStatus: "alive",
+                reviewStatus: "pending",
+              } as any,
               });
               newCharLog.push(newName);
             } catch { /* 重名跳过 */ }
