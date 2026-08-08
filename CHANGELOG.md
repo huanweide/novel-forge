@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.16 — 2026-08-08
+**v1.6.15 复验修复（软删读泄漏补全 12 处 + MemoryDecayDialog 文案统一 + DrawCards 误报核实）**
+
+- **软删读泄漏补全（复验 · 高 / 中）**：12 处 StoryNode 读取补 `deletedAt: null`——tool-registry 的 outline_list（大纲树）/ outline_create（新节点 order 计算跳过软删 siblings）/ chapter_get（最新章取用）/ project_info count 与 `_sum` aggregate（章节数与总字数统计去虚高）/ analyze_chapter（AI 章节分析语料）/ analyze_relationships（关系抽取章节清单）/ relation_sync（关系同步语料）+ extract-chapter 下一章衔接（order gt 跳过回收站节点）+ memory-decay 衰减基准最新章判定 + story GET isLatest 判定（aggregate `_max` order 排除软删）+ story collectSubtreeIds 级联子树收集；已软删章节不再渗进大纲树、最新章取用、章节数与总字数统计、AI 章节分析与关系抽取语料、下一章衔接、记忆衰减基准、最新章判定与级联子树收集。
+- **文案统一 + 误报核实（复验 · 低）**：MemoryDecayDialog 用户可见「伏笔」→「未收尾线索」，符合 v1.6.13 防爆半径约定（底层 keys 与 prompt 语义保留不动）；DrawCards:33 复验核实为误报不改——OutlinePreview 6 小节统一用 meta.key（带【】括号，如【伏笔】）渲染标题，与【场景】【事件】格式统一，改 meta.label 会破坏统一格式且 key 保留【伏笔】是 v1.6.13 既定大纲文本切分原则。
+- **双门禁收口（质量门）**：tsc 0 错误 + vitest 286/286 全绿；全仓 `prisma.storyNode.*` 穷举 grep 确认仅 StoryNode 有 `deletedAt`，其余模型无，泄漏面精准收窄。
+
+---
+
 ## v1.6.15 — 2026-08-08
 **v1.6.14 复验修复（软删读泄漏闭合 + 写回 410 补全 + apply-extraction 防护）**
 

@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.15";
+export const LATEST_VERSION = "v1.6.16";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.15 写回 410 补全（复验·高）：chapter-outline / game start·concept / story PUT·PATCH / rollback / game-outline-generate / game-engine 导出 / tool-registry outline_update 共 9 处写回入口加 deletedAt 410 或抛错，回收站节点无法被任何写回路径复活",
-  "v1.6.15 读泄漏闭合（复验·高/中）：preview-context / pre-write-cards / foreshadowing / confirm-guard / babylore-fill / post-processor / stats-monitor / memory-decay / narrative-energy / analyze-relationships / 整本交付确认 / summarize / character-dedupe 共 13 处 StoryNode 读取补 deletedAt:null，已删章节不再渗进写作上下文、统计、去重语料与确认判定",
-  "v1.6.15 apply-extraction 写回防护（复验·中）：下章衔接写 nextNode.outline 前补 currentNode / nextNode deletedAt 过滤，AI 建议章首不再写进回收站节点",
-  "v1.6.15 双门禁收口：tsc 0 错误 + vitest 286 全绿；门禁额外捕获并修复前序遗留 2 处 select 漏 deletedAt 的类型错误（rollback / story PUT）",
+  "v1.6.16 软删读泄漏补全 12 处 StoryNode 查询（复验·高/中）：tool-registry 的 outline_list / outline_create / chapter_get / project_info count 与 aggregate / analyze_chapter / analyze_relationships / relation_sync + extract-chapter 下一章衔接 + memory-decay 衰减基准 + story GET isLatest 判定 + story collectSubtreeIds 级联——已软删章节不再渗进大纲树、最新章取用、章节数与总字数统计、AI 分析与关系抽取语料、下一章衔接、衰减基准、最新章判定与级联子树收集",
+  "v1.6.16 MemoryDecayDialog 文案统一（复验·低）：用户可见「伏笔」→「未收尾线索」，符合 v1.6.13 防爆半径约定（keys 保留，仅 UI 文案改）",
+  "v1.6.16 DrawCards:33 复验核实为误报不改（复验·低）：meta.key 是 6 小节统一渲染约定（带【】括号），改 meta.label 会破坏统一格式且 key 保留【伏笔】是 v1.6.13 既定大纲切分原则",
+  "v1.6.16 双门禁收口：tsc 0 错误 + vitest 286 全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.16",
+    date: "2026-08-08",
+    title: "v1.6.15 复验修复（软删读泄漏补全 12 处 + MemoryDecayDialog 文案统一 + DrawCards 误报核实）",
+    sections: [
+      {
+        label: "软删读泄漏补全（复验 · 高 / 中）",
+        items: [
+          "12 处 StoryNode 读取补 deletedAt:null：tool-registry 的 outline_list（大纲树）/ outline_create（新节点 order 计算跳过软删 siblings）/ chapter_get（最新章取用）/ project_info count 与 _sum aggregate（章节数与总字数统计去虚高）/ analyze_chapter（AI 章节分析语料）/ analyze_relationships（关系抽取章节清单）/ relation_sync（关系同步语料）+ extract-chapter 下一章衔接（order gt 跳过回收站节点）+ memory-decay 衰减基准最新章判定 + story GET isLatest 判定（aggregate _max order 排除软删）+ story collectSubtreeIds 级联子树收集",
+          "已软删章节不再渗进大纲树、最新章取用、章节数与总字数统计、AI 章节分析与关系抽取语料、下一章衔接、记忆衰减基准、最新章判定与级联子树收集，彻底切断前序 v1.6.15 漏列的 12 处读取泄漏面",
+        ],
+      },
+      {
+        label: "文案统一 + 误报核实（复验 · 低）",
+        items: [
+          "MemoryDecayDialog 用户可见「伏笔」→「未收尾线索」，符合 v1.6.13 防爆半径约定（底层 keys 与 prompt 语义保留不动）",
+          "DrawCards:33 复验核实为误报不改：OutlinePreview 6 小节统一用 meta.key（带【】括号，如【伏笔】）渲染标题，与【场景】【事件】格式统一；改 meta.label 会破坏统一格式，且 key 保留【伏笔】是 v1.6.13 既定大纲文本切分原则",
+        ],
+      },
+      {
+        label: "双门禁收口（质量门）",
+        items: [
+          "tsc 0 错误 + vitest 286/286 全绿",
+          "通过全仓 prisma.storyNode.* 穷举 grep 确认仅 StoryNode 模型有 deletedAt 字段，CharacterCard / LorebookEntry / ChapterSummary / PendingCommitment 均无，泄漏面精准收窄到 StoryNode 读查询",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.15",
     date: "2026-08-08",

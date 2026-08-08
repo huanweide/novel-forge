@@ -178,7 +178,7 @@ export async function PATCH(
           let isLatestChapter = false;
           try {
             const agg = await prisma.storyNode.aggregate({
-              where: { projectId: node.projectId },
+              where: { projectId: node.projectId, deletedAt: null },
               _max: { order: true },
             });
             isLatestChapter = node.order === (agg._max.order ?? node.order);
@@ -268,7 +268,7 @@ export async function PATCH(
 // 收集某节点整棵子树（含自身）的全部 id —— 用于软删/彻底删的级联
 async function collectSubtreeIds(projectId: string, rootId: string): Promise<string[]> {
   const all = await prisma.storyNode.findMany({
-    where: { projectId },
+    where: { projectId, deletedAt: null },
     select: { id: true, parentId: true },
   });
   const childrenMap = new Map<string | null, string[]>();

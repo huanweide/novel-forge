@@ -517,7 +517,7 @@ toolRegistry.register({
   },
   execute: async (args, ctx) => {
     const nodes = await ctx.prisma.storyNode.findMany({
-      where: { projectId: ctx.projectId },
+      where: { projectId: ctx.projectId, deletedAt: null },
       orderBy: { order: "asc" },
     });
     // 构建树形结构
@@ -558,7 +558,7 @@ toolRegistry.register({
     let order = args.order as number | undefined;
     if (order === undefined) {
       const siblings = await ctx.prisma.storyNode.findMany({
-        where: { projectId: ctx.projectId, parentId: (args.parentId as string) || null },
+        where: { projectId: ctx.projectId, parentId: (args.parentId as string) || null, deletedAt: null },
         orderBy: { order: "desc" }, take: 1,
       });
       order = siblings.length > 0 ? siblings[0].order + 1 : 1;
@@ -783,7 +783,7 @@ toolRegistry.register({
       node = await ctx.prisma.storyNode.findUnique({ where: { id: String(args.nodeId) } });
     } else {
       const nodes = await ctx.prisma.storyNode.findMany({
-        where: { projectId: ctx.projectId, type: "chapter" },
+        where: { projectId: ctx.projectId, type: "chapter", deletedAt: null },
         orderBy: { order: "desc" }, take: 1,
       });
       node = nodes[0] || null;
@@ -872,11 +872,11 @@ toolRegistry.register({
       ctx.prisma.project.findUnique({ where: { id: ctx.projectId } }),
       ctx.prisma.characterCard.count({ where: { projectId: ctx.projectId } }),
       ctx.prisma.lorebookEntry.count({ where: { projectId: ctx.projectId, enabled: true } }),
-      ctx.prisma.storyNode.count({ where: { projectId: ctx.projectId } }),
+      ctx.prisma.storyNode.count({ where: { projectId: ctx.projectId, deletedAt: null } }),
     ]);
     if (!project) return fail("project_info", "项目不存在");
     const totalWords = await ctx.prisma.storyNode.aggregate({
-      where: { projectId: ctx.projectId },
+      where: { projectId: ctx.projectId, deletedAt: null },
       _sum: { wordCount: true },
     });
     return ok("project_info", {
@@ -1005,7 +1005,7 @@ toolRegistry.register({
       });
     } else {
       chapter = await ctx.prisma.storyNode.findFirst({
-        where: { projectId: ctx.projectId, type: "chapter", content: { not: null } },
+        where: { projectId: ctx.projectId, type: "chapter", content: { not: null }, deletedAt: null },
         orderBy: { updatedAt: "desc" },
         select: { id: true, title: true, content: true, wordCount: true },
       });
@@ -1049,7 +1049,7 @@ toolRegistry.register({
   },
   execute: async (args, ctx) => {
     const chapters = await ctx.prisma.storyNode.findMany({
-      where: { projectId: ctx.projectId, type: "chapter", content: { not: null } },
+      where: { projectId: ctx.projectId, type: "chapter", content: { not: null }, deletedAt: null },
       select: { id: true, title: true },
       orderBy: { order: "asc" },
     });
@@ -1093,7 +1093,7 @@ toolRegistry.register({
       });
     } else {
       chapter = await ctx.prisma.storyNode.findFirst({
-        where: { projectId: ctx.projectId, type: "chapter", content: { not: null } },
+        where: { projectId: ctx.projectId, type: "chapter", content: { not: null }, deletedAt: null },
         orderBy: { updatedAt: "desc" },
         select: { id: true, title: true, content: true, wordCount: true },
       });

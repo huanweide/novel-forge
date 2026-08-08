@@ -105,7 +105,7 @@ export function MemoryDecayDialog({
         </div>
 
         <p className="mb-4 text-xs leading-relaxed text-[var(--nv-text-secondary)]">
-          模拟人类遗忘曲线：越久远的楼层记忆越模糊，按重要度自动降级或清理。S 级核心记忆永久保留。衰减只影响章节摘要里的重要性事件，不改动正文与伏笔。
+          模拟人类遗忘曲线：越久远的楼层记忆越模糊，按重要度自动降级或清理。S 级核心记忆永久保留。衰减只影响章节摘要里的重要性事件，不改动正文与未收尾线索。
         </p>
 
         {loadingPreview && <div className="text-xs text-[var(--nv-text-muted)]">加载预览…</div>}

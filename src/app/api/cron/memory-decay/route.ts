@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     if (dryRun) {
       const summaryCount = await prisma.chapterSummary.count({ where: { projectId } });
       const latestNode = await prisma.storyNode.findFirst({
-        where: { projectId },
+        where: { projectId, deletedAt: null },
         orderBy: { order: "desc" },
         select: { order: true, title: true },
       });

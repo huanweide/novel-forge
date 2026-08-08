@@ -167,7 +167,7 @@ export async function POST(request: Request) {
       });
       if (currentNode) {
         nextNode = await prisma.storyNode.findFirst({
-          where: { projectId, type: "chapter", order: { gt: currentNode.order } },
+          where: { projectId, type: "chapter", order: { gt: currentNode.order }, deletedAt: null },
           orderBy: { order: "asc" },
           select: { id: true, title: true, outline: true },
         });
