@@ -25,14 +25,14 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.25";
+export const LATEST_VERSION = "v1.6.26";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.25 项目自检 UI（中）：打开「项目设定」弹窗底部新增「项目自检」分区，点「运行自检」一键跑 7 项健康检查——数据库连通 / LLM 配置 / 内容规模（章节·角色·世界书·故事线）/ 回收站残留 / 待审卡（不注入生成）/ 生成缓存 globalPrompt / 重名角色，每项标通过·注意·异常三态徽标并给总体结论",
-  "v1.6.25 纯逻辑引擎（工程）：src/core/diagnostics.ts 的 runProjectDiagnostics 可单测（mock prisma + getSettings），API 路由 GET /api/projects/[id]/diagnostics 返回结构化报告，前端 ProjectDiagnostics 组件自带按钮拉取展示，单点检查失败不拖垮整体",
-  "v1.6.25 质量门（诚实边界）：diagnostics.test.ts 8 用例钉死 7 项检查 + 项目不存在 + 错误聚合，tsc 0 错误 + vitest 307/307 全绿（较 v1.6.24 +8）；UI 接入 ProjectSettingsDialog，经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测）",
-  "v1.6.25 安全（设计）：自检仅读取统计、不修改任何数据，可反复运行；重名角色走角色名小写去重，回收站走 deletedAt 非空计数",
+  "v1.6.26 sync-global-prompt 实时性闭环（高）：发现 globalPrompt 预编译缓存漏同步——quick 导入 / 整库导入 / 角色标签 / 章节抽取四类用户主动建改卡动作此前漏调 syncGlobalPrompt，导致新导入或改过的 approved 角色·世界书不进后续生成上下文（定义了没用），直到别的动作顺带触发才刷新",
+  "v1.6.26 补齐四处同步（高）：import/quick（dbMerge 后）/ projects/import（事务外整库导入后）/ characters/apply-tags（标签写入——sync-global-prompt 渲染「标签」段落）/ agent/apply-extraction（抽取更新既有 approved 角色卡 timeline·abilities——sync-global-prompt 渲染这两段），全部 fire-and-forget 不阻塞主流程",
+  "v1.6.26 验证（质量门）：tsc 0 错误 + vitest 307/307 全绿；检测用 Bash grep 穷举全部 syncGlobalPrompt 调用点 × 全部 characterCard/lorebookEntry 增删改路由交叉比对，逐条确认漏口（Trust but verify），与 pending 新卡不进缓存的设计不冲突",
+  "v1.6.26 检测方法论（工程）：靠「调用点清单 × 突变路由清单」交叉比对定位漏同步，比凭记忆可靠；apply-extraction 抽取更新 timeline 确会被 sync-global-prompt 渲染进全局提示词，同步确有必要",
 ];
 
 /** 完整版本历史（最新在前） */
@@ -55,6 +55,27 @@ export const VERSIONS: VersionEntry[] = [
           "components/workspace/types.ts 的 CharacterData 接口补 reviewStatus? 字段（此前仅 LorebookData 有），消除 tsc 报错并让前端识别待审角色卡",
           "世界卡审批 UI 早已存在（WorldPanel PUT /api/lorebook/[id] 带 reviewStatus 并重算 globalPrompt），本次让角色卡与世界卡获得对称能力，待审隔离在两类卡上完整闭环",
           "tsc 0 错误 + vitest 299/299 全绿；UI 变更经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测，留 agent-browser 复检）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v1.6.26",
+    date: "2026-08-08",
+    title: "v1.6.26 sync-global-prompt 实时性闭环（补齐漏同步路由）",
+    sections: [
+      {
+        label: "生成缓存实时性闭环（高）",
+        items: [
+          "发现 globalPrompt 预编译缓存的实时性漏口：此前仅 characters/lorebook 增删改与若干设定路由触发 syncGlobalPrompt 重算，但 quick 导入、整库导入、角色标签、章节抽取四类用户主动建/改卡动作漏调，导致新导入或改过的 approved 角色·世界书不进后续生成上下文（定义了没用），直到别的动作顺带触发才刷新",
+          "补齐四处同步调用：import/quick（dbMerge 建改后）、projects/import（事务外、整库导入新建卡后）、characters/apply-tags（标签写入——sync-global-prompt 渲染「标签」段落，改标签必须刷新）、agent/apply-extraction（抽取更新既有 approved 角色卡 timeline/abilities——sync-global-prompt 渲染这两段，与 characters/[id] 改卡即同步范式一致）；全部 fire-and-forget 不阻塞主流程",
+        ],
+      },
+      {
+        label: "工程 / 验证（诚实边界）",
+        items: [
+          "tsc 0 错误 + vitest 307/307 全绿（无新增测试，四处均为路由层 fire-and-forget 调用，靠双门禁 + 源码核实 + 与既有同步范式一致性保证）；pending 新建卡经 apply-extraction 仍不进缓存（设计使然，sync 只重算 approved）",
+          "检测方法论：用 Bash grep 穷举全部 syncGlobalPrompt 调用点，与全部 characterCard/lorebookEntry 增删改路由交叉比对，逐条确认哪些是用户主动改 approved 卡却漏同步——比凭记忆更可靠（Trust but verify）",
         ],
       },
     ],

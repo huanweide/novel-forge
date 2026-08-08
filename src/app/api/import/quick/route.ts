@@ -19,6 +19,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 300; // 无角色数量上限，200+人批量导入充裕
 
@@ -349,6 +350,10 @@ export async function POST(request: Request) {
         send({ type: "progress", stage: "write", message: `💾 对比已有角色...`, pct: 60 });
 
         const { created, updated, mergeLog } = await dbMerge(projectId as string, merged);
+
+        // v1.6.26 实时性：quick 导入建/改 approved 角色卡后刷新 globalPrompt 缓存，
+        // 否则新导入角色不会进入后续生成上下文（同步范式对齐 characters/[id] 路由）。
+        syncGlobalPrompt(projectId as string).catch(() => {});
 
         const sec = ((Date.now() - t0) / 1000).toFixed(1);
 

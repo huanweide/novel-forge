@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.26 — 2026-08-08
+**v1.6.26 sync-global-prompt 实时性闭环（补齐漏同步路由）**
+
+- **生成缓存实时性闭环（高）**：发现 `globalPrompt` 预编译缓存的实时性漏口——此前仅 `characters`/`lorebook` 增删改与若干设定路由触发 `syncGlobalPrompt` 重算，但 quick 导入、整库导入、角色标签、章节抽取四类用户主动建/改卡动作漏调，导致新导入或改过的 approved 角色·世界书不进后续生成上下文（定义了没用），直到别的动作顺带触发才刷新。
+- **补齐四处同步调用（高）**：`import/quick`（dbMerge 建改后）、`projects/import`（事务外、整库导入新建卡后）、`characters/apply-tags`（标签写入——`sync-global-prompt` 渲染「标签」段落，改标签必须刷新）、`agent/apply-extraction`（抽取更新既有 approved 角色卡 `timeline`/`abilities`——`sync-global-prompt` 渲染这两段，与 `characters/[id]` 改卡即同步范式一致）；全部 `fire-and-forget` 不阻塞主流程。
+- **检测方法论（工程）**：用 Bash grep 穷举全部 `syncGlobalPrompt` 调用点，与全部 `characterCard`/`lorebookEntry` 增删改路由交叉比对，逐条确认漏口（Trust but verify）；`pending` 新建卡经 `apply-extraction` 仍不进缓存（设计使然，sync 只重算 approved）。
+- **验证（质量门）**：tsc 0 错误 + vitest 307/307 全绿（无新增测试，四处均为路由层 fire-and-forget 调用，靠双门禁 + 源码核实 + 与既有同步范式一致性保证）。
+
+---
+
 ## v1.6.25 — 2026-08-08
 **v1.6.25 项目自检 UI（一键健康检查）**
 

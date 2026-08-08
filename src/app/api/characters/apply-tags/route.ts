@@ -8,6 +8,7 @@ import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -57,6 +58,10 @@ export async function POST(request: Request) {
       });
       updated++;
     }
+
+    // v1.6.26 实时性：角色标签写入 globalPrompt（sync-global-prompt 渲染「标签」段落），
+    // 改标签后必须刷新缓存，否则生成上下文不反映新分类标签。
+    syncGlobalPrompt(projectId).catch(() => {});
 
     return NextResponse.json({ ok: true, updated, skipped, total: assignments.length });
   } catch (err) {

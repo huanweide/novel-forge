@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeRelationships } from "@/lib/relations";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // P2-②：.nfproject 还原可能含大量章节/词条，放宽函数执行时长上限（对照 import/commit 已设 300）
 export const maxDuration = 300;
@@ -283,6 +284,10 @@ export async function POST(request: Request) {
 
       return { pid, idempotent: false, lostForks };
     }, { timeout: 120000 });
+
+    // v1.6.26 实时性：整库导入新建 approved 角色/世界书/风格卡后刷新 globalPrompt 缓存，
+    // 否则导入项目首次生成时上下文不含导入设定（事务外调用，避免长事务内重算）。
+    syncGlobalPrompt(importResult.pid).catch(() => {});
 
     // W1 修复：选择性仅导入 branches 时，分叉点可能因未导入章节而丢失，回执标注提示（不静默丢）
     const warnings = (importResult.lostForks && importResult.lostForks.length)

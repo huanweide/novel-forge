@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { enrichForeshadow } from "@/core/foreshadowing";
 import { isSimilarName } from "@/lib/entity-auto-creator";
 import { NextResponse } from "next/server";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 export const maxDuration = 60;
 
@@ -482,6 +483,10 @@ export async function POST(request: Request) {
       experiencesSaved++;
     }
     if (experiencesSaved > 0) results.push(`保存 ${experiencesSaved} 条角色经历 → timeline`);
+
+    // v1.6.26 实时性：apply-extraction 更新既有 approved 角色卡 timeline/abilities（sync-global-prompt 渲染这两段），
+    // 抽取后刷新 globalPrompt，确保下一章生成看到最新角色出场记录（与 characters/[id] 改卡即同步范式一致）。
+    syncGlobalPrompt(projectId).catch(() => {});
 
     return NextResponse.json({
       success: true,
