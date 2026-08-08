@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   ]
 }`;
 
-    const buildConfig = (project as any).buildConfig || {};
+    const buildConfig = (project.buildConfig || {}) as Record<string, unknown>;
     const pace = buildConfig.stitchPace || "steady";
     const paceDesc =
       pace === "fast"

@@ -20,16 +20,16 @@ export async function DELETE(
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
 
-    const list: any[] = Array.isArray((project as any).appliedPresets)
-      ? ((project as any).appliedPresets as any[])
+    const list: any[] = Array.isArray(project.appliedPresets)
+      ? (project.appliedPresets as any[])
       : [];
     const target = list.find((p) => p.presetId === presetId);
     const remaining = list.filter((p) => p.presetId !== presetId);
 
     const data: any = { appliedPresets: remaining };
     if (target?.ruleNames?.length) {
-      const rules: any[] = Array.isArray((project as any).postProcessingRules)
-        ? ((project as any).postProcessingRules as any[])
+      const rules: any[] = Array.isArray(project.postProcessingRules)
+        ? (project.postProcessingRules as any[])
         : [];
       const nameSet = new Set(target.ruleNames as string[]);
       data.postProcessingRules = rules.filter((r) => !nameSet.has(r.name));

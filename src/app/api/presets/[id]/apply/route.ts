@@ -178,8 +178,8 @@ export async function POST(
         }
       }
       const project = await prisma.project.findUnique({ where: { id: projectId } });
-      const existing: any[] = Array.isArray((project as any)?.postProcessingRules)
-        ? ((project as any).postProcessingRules as any[])
+      const existing: any[] = Array.isArray(project?.postProcessingRules)
+        ? (project.postProcessingRules as any[])
         : [];
       const existingNames = new Set(existing.map((r) => r.name));
       const merged = [...existing];

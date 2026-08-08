@@ -117,7 +117,7 @@ export async function loadGenerationContext(
   //         并做多卷感知——窗口下限至少下探到「当前卷起始章」+「上一卷尾部衔接章」，
   //         避免跨卷断崖；不再用单一「最近 5 章」一刀切导致跨卷丢失。
   //   - 两窗口取并集补拉正文；合并时按 id 回填到按 order 升序的骨架列表，章序号 1:1 对齐、不重排。
-  const keepChapters = ((project as any)?.contextKeepChapters as number) ?? 4;
+  const keepChapters = project?.contextKeepChapters ?? 4;
   const keepWindow = Math.max(keepChapters, 5); // 覆盖 continue 硬编码的 -5
 
   const allLight = allNodesLight as any[];

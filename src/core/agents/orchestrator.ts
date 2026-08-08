@@ -651,7 +651,7 @@ export function buildPromptContext(params: {
     : "";
 
   // ── 预缓存：从 project.globalPrompt 读取已编译的三卡数据，避免重复查库 ──
-  const cachedCards = (project as any).globalPrompt as string | undefined;
+  const cachedCards = project.globalPrompt;
   const cardContext = cachedCards && cachedCards.length > 100
     ? `\n# 系统设定（已预编译——角色卡+世界书+风格卡）\n${cachedCards}\n`
     : "";

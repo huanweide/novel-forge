@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.27 — 2026-08-08
+**v1.6.27 核心 Project 类型收口（消除 (project as any) 绕过）**
+
+- **核心类型收口（工程 / 类型安全）**：发现 `@/core/types` 的 `Project` interface 仅含 10 个字段（id/name/description/genre/targetWordCount/synopsis/toneKeywords/llmConfig/createdAt/updatedAt），缺 `globalPrompt`/`authorNote`/`buildConfig`/`postProcessingRules`/`appliedPresets`/`contextKeepChapters`/`deletedAt`/`confirmedAt`/`autoConfirmEnabled`/`autoDeliverEnabled`/`importSource` 等，导致 `orchestrator` 等 7 个文件共 11 处被迫用 `(project as any)` 绕过类型系统访问这些字段——字段名改了也不报错，是静默坏味道。
+- **补齐字段 + 移除 as any（工程）**：`Project` interface 字段对齐 Prisma（新增字段全部可选 ?；`llmConfig` 保留 `LLMConfig` 类型不动：运行时为 Prisma `Json` 原始对象、与接口类型不一致，单独立项更稳）；移除 `orchestrator` 的 `(project as any).globalPrompt`、`chapter-outline` 与 `refine` 的 `authorNote`、`context-loader` 的 `contextKeepChapters`、`storylines/generate` 的 `buildConfig`（断言 `Record`）、`presets apply` 与 `applied-presets` 的 `postProcessingRules`/`appliedPresets` 共 11 处 `as any` 绕过。
+- **验证与边界（质量门 / 诚实）**：tsc 0 错误 + vitest 307/307 全绿；本修复运行时无任何行为变化（as any 原本就能读到字段），纯类型层收口，价值在于防止未来误改字段名而静默通过 tsc。保留的 `as any`：`llmConfig` 取用端（类型不一致待专项）、workspace 页的关系字段 `storyNodes`/`characters`/`lorebookEntries`（不该进 `Project` interface，`as any` 合理）；本版未重排 VERSIONS 历史 24/26/25 错位（前序遗留，留待专项）。
+
+---
+
 ## v1.6.26 — 2026-08-08
 **v1.6.26 sync-global-prompt 实时性闭环（补齐漏同步路由）**
 

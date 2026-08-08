@@ -424,7 +424,22 @@ export interface Project {
   targetWordCount: number;        // 目标字数
   synopsis: string;               // 主线总纲（浓缩版）
   toneKeywords: string[];         // 基调关键词
-  llmConfig: LLMConfig;           // 模型配置
+  llmConfig: LLMConfig;           // 模型配置（注：运行时为 Prisma Json 原始对象，非解析实例；取用端仍走 as any）
+  // ── 与 Prisma Project 对齐的补充字段（v1.6.27 类型收口，统一消除 (project as any) 绕过）──
+  globalPrompt?: string;          // 三卡预编译缓存（编排直接注入，原 (project as any).globalPrompt）
+  authorNote?: string;            // 作者指令（各生成端点统一读取）
+  buildConfig?: Record<string, unknown> | null; // 探讨模式布置配置
+  postProcessingRules?: unknown;  // 正则后处理规则（Json）
+  appliedPresets?: unknown;       // 已应用创意工坊预设（Json）
+  autoFillEnabled?: boolean;      // 自动填表总开关
+  fillFrequency?: number;         // 每 N 章填一次表
+  skipLatestChapter?: boolean;    // 当前章也填
+  contextKeepChapters?: number;   // 上下文保留最近 N 章（context-loader 取用）
+  deletedAt?: Date | null;        // 软删除（回收站）
+  confirmedAt?: Date | null;      // 整本交付时间戳
+  autoConfirmEnabled?: boolean;   // 智能审阅（auto-confirm）开关
+  autoDeliverEnabled?: boolean;   // 智能交付开关
+  importSource?: string | null;   // 导入来源标识（幂等）
   createdAt: Date;
   updatedAt: Date;
 }

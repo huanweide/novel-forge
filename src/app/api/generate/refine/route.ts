@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const activeChars = filterByConfirmedCards(allChars as any, confirmedCardIds);
 
     // ── 3. 作者指令 ──
-    const effectiveAuthorNote = authorNote || (data.project as any).authorNote || "";
+    const effectiveAuthorNote = authorNote || data.project.authorNote || "";
     const finalAuthorNote = await prepareAuthorNote(effectiveAuthorNote, cardNotes, allChars as any, projectId);
 
     // ── 4. LLM 配置 ──

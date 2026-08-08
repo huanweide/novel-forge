@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const characterList = buildCharacterList(characters, false);
     const recentSummary = formatSummaries(summaries);
     const nodeIndex = allNodes.findIndex((n: any) => n.id === nodeId);
-    const effectiveAuthorNote = explicitAuthorNote?.trim() || (project as any).authorNote?.trim() || "";
+    const effectiveAuthorNote = explicitAuthorNote?.trim() || project.authorNote?.trim() || "";
 
     // ═══════════════════════════════════════════════
     // Step 2: AI 选角——根据章纲目标 + 前文 + 作者指令 → 决定谁出场

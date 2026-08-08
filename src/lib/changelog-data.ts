@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.26";
+export const LATEST_VERSION = "v1.6.27";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.26 sync-global-prompt 实时性闭环（高）：发现 globalPrompt 预编译缓存漏同步——quick 导入 / 整库导入 / 角色标签 / 章节抽取四类用户主动建改卡动作此前漏调 syncGlobalPrompt，导致新导入或改过的 approved 角色·世界书不进后续生成上下文（定义了没用），直到别的动作顺带触发才刷新",
-  "v1.6.26 补齐四处同步（高）：import/quick（dbMerge 后）/ projects/import（事务外整库导入后）/ characters/apply-tags（标签写入——sync-global-prompt 渲染「标签」段落）/ agent/apply-extraction（抽取更新既有 approved 角色卡 timeline·abilities——sync-global-prompt 渲染这两段），全部 fire-and-forget 不阻塞主流程",
-  "v1.6.26 验证（质量门）：tsc 0 错误 + vitest 307/307 全绿；检测用 Bash grep 穷举全部 syncGlobalPrompt 调用点 × 全部 characterCard/lorebookEntry 增删改路由交叉比对，逐条确认漏口（Trust but verify），与 pending 新卡不进缓存的设计不冲突",
-  "v1.6.26 检测方法论（工程）：靠「调用点清单 × 突变路由清单」交叉比对定位漏同步，比凭记忆可靠；apply-extraction 抽取更新 timeline 确会被 sync-global-prompt 渲染进全局提示词，同步确有必要",
+  "v1.6.27 核心 Project 类型收口（工程/类型安全）：发现 @/core/types 的 Project interface 仅含 10 字段，漏掉 globalPrompt/authorNote/buildConfig/postProcessingRules/appliedPresets/contextKeepChapters/deletedAt/confirmedAt/autoConfirmEnabled/autoDeliverEnabled/importSource 等，迫使 orchestrator 等 7 文件共 11 处用 (project as any) 绕过类型系统——字段名改了也不报错，是静默坏味道",
+  "v1.6.27 补齐字段 + 移除 as any：Project interface 对齐 Prisma（新增字段全可选 ?，llmConfig 保留 LLMConfig 类型不动——运行时是 Prisma Json 原始对象、类型不一致单独立项）；移除 orchestrator 的 globalPrompt、chapter-outline/refine 的 authorNote、context-loader 的 contextKeepChapters、storylines/generate 的 buildConfig、presets apply 与 applied-presets 的 postProcessingRules/appliedPresets 共 11 处绕过",
+  "v1.6.27 验证（质量门/诚实）：tsc 0 错误 + vitest 307/307 全绿；本修复运行时无任何行为变化（as any 原本就能读到字段），纯类型层收口，价值在防止未来误改字段名静默通过 tsc",
+  "v1.6.27 边界：保留 llmConfig 取用端 as any（类型不一致待专项）、workspace 页关系字段 storyNodes/characters/lorebookEntries 的 as any（不该进 Project interface，合理）；未重排 VERSIONS 历史 24/26/25 错位（前序遗留，留待专项）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.27",
+    date: "2026-08-08",
+    title: "v1.6.27 核心 Project 类型收口（消除 (project as any) 绕过）",
+    sections: [
+      {
+        label: "核心类型收口（工程 / 类型安全）",
+        items: [
+          "发现真实类型缺陷：@/core/types 的 Project interface 仅含 10 个字段（id/name/description/genre/targetWordCount/synopsis/toneKeywords/llmConfig/createdAt/updatedAt），缺 globalPrompt/authorNote/buildConfig/postProcessingRules/appliedPresets/contextKeepChapters/deletedAt/confirmedAt/autoConfirmEnabled/autoDeliverEnabled/importSource 等，导致 orchestrator 等 7 个文件共 11 处被迫用 (project as any) 绕过类型系统访问这些字段——字段名改了也不报错，是静默坏味道",
+          "补 Project interface 字段对齐 Prisma（新增字段全部可选 ?；llmConfig 保留 LLMConfig 类型不动：运行时为 Prisma Json 原始对象、与接口类型不一致，单独立项更稳）；移除 orchestrator 的 (project as any).globalPrompt、chapter-outline 与 refine 的 authorNote、context-loader 的 contextKeepChapters、storylines/generate 的 buildConfig（断言 Record）、presets apply 与 applied-presets 的 postProcessingRules/appliedPresets 共 11 处 as any 绕过",
+        ],
+      },
+      {
+        label: "验证与边界（质量门 / 诚实）",
+        items: [
+          "tsc 0 错误 + vitest 307/307 全绿；本修复运行时无任何行为变化（as any 原本就能读到字段），纯类型层收口，价值在于防止未来误改字段名而静默通过 tsc",
+          "保留的 as any：llmConfig 取用端（类型不一致待专项）、workspace 页的关系字段 storyNodes/characters/lorebookEntries（不该进 Project interface，as any 合理）；本版未重排 VERSIONS 历史 24/26/25 错位（前序遗留，留待专项）",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.24",
     date: "2026-08-08",
