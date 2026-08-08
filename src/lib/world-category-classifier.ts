@@ -48,10 +48,10 @@ export const ALL_WORLD_CATEGORIES: WorldCategory[] = [
 export const WORLD_CATEGORY_LABELS: Record<WorldCategory, string> = {
   geography: "🗺 地理",
   faction: "🏛 势力",
-  item: "💎 器物",
+  item: "💎 物品",
   magic_system: "⚙️ 力量体系",
   technique: "📘 功法体系",
-  creature: "🐉 生物",
+  creature: "🐉 生物种族",
   culture: "🎭 文化",
   history: "📜 历史",
   law: "⚖️ 规则法则",

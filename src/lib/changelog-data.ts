@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.44";
+export const LATEST_VERSION = "v1.6.45";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.44 UI 复检世界书/结构化表格页：agent-browser 无头 Chrome 实跑 workspace/[projectId]/tables（Babylore 章节事实表）正常渲染，项目表格「章节事实表 auto_facts」7 行数据、按钮齐全；workspace 主页世界卡 chip 云（角色/势力/物品/地点/法术/功法/生灵/文化/历史/法则/货币/自定义）与详情弹窗交互正常",
-  "v1.6.44 修复世界卡中文标签碎片化：同一数据类型 magic_system 在正文高亮 chip 云图例显示「法术」、正文高亮 title/aria-label 显示「法术体系」，但 WorldPanel 侧栏显示「力量体系」；creature 在 chip 云/rehype 显示「生灵」，但侧栏显示「生物种族」——用户看到同一类世界卡出现多个名字",
-  "v1.6.44 统一收敛中文标签：src/core/entity-highlighter.ts 的 LORE_COLORS 注释、ENTITY_LEGEND 图例 label 与 src/lib/rehype-entity-highlight.ts 的 categoryLabel 全部改为「力量体系」/「生物种族」，与 worldPanelData.ts 模块名及 types.ts 的 categoryLabel 完全一致，消除命名漂移",
-  "v1.6.44 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；仅改中文展示标签，不碰底层 LoreCategory 类型、分类器关键词、worldPanelData 15 模块结构，零行为回归；马斯克 CEO 子 Agent 拍板本轮复检世界书面板，IP 仍归瑞宝宝",
+  "v1.6.45 世界卡分类中文标签单一权威源收口：把 entity-highlighter 的 ENTITY_LEGEND 图例、rehype 正文高亮 title/aria-label、types.ts 的 categoryLabel 三处散落手抄中文名，改为统一引用分类器权威源 WORLD_CATEGORY_LABELS 的纯中文派生（WORLD_CATEGORY_SECTIONS[cat].label），与 sync-global-prompt 的 catLabel、游戏侧 engine.ts 同一真相源",
+  "v1.6.45 权威源对齐用户惯用名：WORLD_CATEGORY_LABELS 的 item 由「器物」改为「物品」、creature 由「生物」改为「生物种族」，使权威源 15 类中文名与用户侧栏核心词完全一致（v1.6.44 只局部对齐、未接权威源，根因仍在）",
+  "v1.6.45 根除 4 套手抄漂移：世界卡中文名此前在权威源 / worldPanelData 侧栏 / types.ts / ENTITY_LEGEND / rehype 至少 4 套互不一致（物品 vs 器物、地点 vs 地理、功法 vs 功法体系、法则 vs 规则法则）。本轮后全项目世界卡中文名 = 单一权威源，新增/改名类编译期强制 1:1 对齐（Record<WorldCategory,string>）",
+  "v1.6.45 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；world-category-classifier.test.ts 断言 15 类 label 非空随改名仍通过；纯字符串等价替换、零行为回归。诚实边界：agent-browser 复检因 CLI 损坏+Chromium 未下载未执行，以双门禁+改动等价性放行，世界卡 UI 渲染健康基线见 v1.6.43/44",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.45",
+    date: "2026-08-09",
+    title: "v1.6.45 世界卡分类中文标签单一权威源收口（根除 4 套手抄漂移）",
+    sections: [
+      {
+        label: "世界卡中文标签单一权威源收口（破除冗余·第一性原理）",
+        items: [
+          "根因：世界卡 15 个分类的中文显示名在全项目至少 4 套手抄且互不一致——分类器权威源 WORLD_CATEGORY_LABELS、worldPanelData 侧栏、types.ts 的 categoryLabel、entity-highlighter 的 ENTITY_LEGEND、rehype 的 categoryLabel。v1.6.44 只把 ENTITY_LEGEND/rehype 对齐到侧栏、未接权威源，根因（多重手抄必然漂移）仍在",
+          "收口：把 entity-highlighter 的 ENTITY_LEGEND 图例、rehype 正文高亮的 title/aria-label、types.ts 的 categoryLabel 三处散落手抄，改为统一引用分类器权威源 WORLD_CATEGORY_LABELS 的纯中文派生 WORLD_CATEGORY_SECTIONS[cat].label——与 sync-global-prompt 的 catLabel、游戏侧 engine.ts 同一真相源（Round-4/5 已接入）",
+          "权威源对齐用户惯用名：WORLD_CATEGORY_LABELS 的 item 由「器物」改为「物品」、creature 由「生物」改为「生物种族」，使权威源 15 类中文名与用户侧栏核心词完全一致（地理/势力/物品/力量体系/功法体系/生物种族/文化/历史/规则法则/货币体系/自定义），worldPanelData 侧栏保留「地图/阵营/列表」展示后缀不动",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；world-category-classifier.test.ts 断言 15 类 label 非空，权威源改名后仍通过；ENTITY_LEGEND 改为 ...map 派生、rehype/types 的 categoryLabel 改为权威源查询+fallback，均为 string 等价替换，零行为回归",
+          "马斯克人格执行 CEO 子 Agent 拍板本轮做 A（最小彻底收口：改权威源 2 处 + 3 处散落引用权威源），拒 B（仅收口 2 处仍漂移）、拒 C（避开根因）；个人 IP 仍归瑞宝宝，本轮只迭代不立新",
+          "诚实边界：agent-browser 复检未执行（CLI 启动报错 + Chromium 未下载，环境不可用），以 tsc 0 + vitest 323 全绿 + 改动等价性分析放行；世界卡 UI 渲染健康基线见 v1.6.43/44；建议后续在 agent-browser 就绪环境补一次世界卡页复检确认标签显示统一",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.44",
     date: "2026-08-09",

@@ -6,6 +6,7 @@
  */
 
 import type { EntityHighlight } from "@/core/entity-highlighter";
+import { WORLD_CATEGORY_SECTIONS, type WorldCategory } from "@/lib/world-category-classifier";
 import { findEntitiesInText } from "@/core/entity-highlighter";
 
 // HAST 节点类型（兼容 unified 生态）
@@ -21,21 +22,11 @@ interface HastNode {
 const SKIP_TAGS = new Set(["code", "pre", "a", "script", "style", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"]);
 
 /** 分类中文标签（用于 title/aria 非颜色线索，WCAG 1.4.1） */
+// 中文标签单一来源：引用分类器权威源 WORLD_CATEGORY_LABELS 纯中文派生，
+// 与 ENTITY_LEGEND、sync-global-prompt catLabel、游戏侧 engine.ts 同一权威源。
 function categoryLabel(category?: string): string {
-  const labels: Record<string, string> = {
-    faction: "势力",
-    item: "物品",
-    geography: "地点",
-    magic_system: "力量体系",
-    technique: "功法",
-    creature: "生物种族",
-    culture: "文化",
-    history: "历史",
-    law: "法则",
-    currency: "货币",
-    custom: "自定义",
-  };
-  return (category && labels[category]) || "词条";
+  if (!category) return "词条";
+  return WORLD_CATEGORY_SECTIONS[category as WorldCategory]?.label || "词条";
 }
 
 /**

@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.45 — 2026-08-09
+**v1.6.45 世界卡分类中文标签单一权威源收口（根除 4 套手抄漂移）**
+
+- **世界卡中文标签单一权威源收口（破除冗余·第一性原理）**：根因——世界卡 15 类中文显示名在全项目至少 4 套手抄互不一致（权威源 WORLD_CATEGORY_LABELS / worldPanelData 侧栏 / types.ts categoryLabel / entity-highlighter ENTITY_LEGEND / rehype categoryLabel），v1.6.44 只局部对齐未接权威源。收口——entity-highlighter 的 ENTITY_LEGEND 图例、rehype 正文高亮 title/aria-label、types.ts 的 categoryLabel 三处散落手抄改为统一引用权威源纯中文派生 WORLD_CATEGORY_SECTIONS[cat].label（与 sync-global-prompt catLabel、游戏侧 engine.ts 同一真相源）。权威源对齐用户惯用名：item「器物」→「物品」、creature「生物」→「生物种族」，使 15 类中文名与侧栏核心词完全一致；worldPanelData 保留展示后缀不动。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 35 文件 323/323 全绿；world-category-classifier.test.ts 断言 15 类 label 非空随改名仍通过；纯字符串等价替换、零行为回归。马斯克 CEO 子 Agent 拍板做 A（最小彻底收口），IP 仍归瑞宝宝。诚实边界：agent-browser 复检因 CLI 损坏+Chromium 未下载未执行，以双门禁+改动等价性放行，世界卡 UI 渲染健康基线见 v1.6.43/44，建议后续补复检。
+
+---
+
 ## v1.6.44 — 2026-08-09
 **v1.6.44 UI 复检世界书/结构化表格页 + 修复世界卡中文标签碎片化**
 

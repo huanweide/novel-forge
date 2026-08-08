@@ -1,3 +1,4 @@
+import { WORLD_CATEGORY_SECTIONS } from "@/lib/world-category-classifier";
 /**
  * 实体颜色高亮引擎（客户端安全——不导入 prisma）
  *
@@ -286,17 +287,19 @@ export function findEntitiesInText(
 // ═══════════════════════════════════════════
 
 /** 表头图例条目：{ 语义键, 中文标签, 固定色 } */
+// 中文标签单一来源：直接引用分类器权威源 WORLD_CATEGORY_LABELS 的纯中文派生
+//（WORLD_CATEGORY_SECTIONS[cat].label），消灭 ENTITY_LEGEND 手抄中文名漂移根因
+//（与 sync-global-prompt 的 catLabel、游戏侧 engine.ts 同一权威源）。
+const WORLD_LEGEND_CATS = [
+  "faction", "item", "geography", "magic_system", "technique",
+  "creature", "culture", "history", "law", "currency", "custom",
+] as const;
+
 export const ENTITY_LEGEND: Array<{ key: string; label: string; color: string }> = [
   { key: "character", label: "角色", color: CHARACTER_COLOR },
-  { key: "faction", label: "势力", color: LORE_COLORS.faction },
-  { key: "item", label: "物品", color: LORE_COLORS.item },
-  { key: "geography", label: "地点", color: LORE_COLORS.geography },
-  { key: "magic_system", label: "力量体系", color: LORE_COLORS.magic_system },
-  { key: "technique", label: "功法", color: LORE_COLORS.technique },
-  { key: "creature", label: "生物种族", color: LORE_COLORS.creature },
-  { key: "culture", label: "文化", color: LORE_COLORS.culture },
-  { key: "history", label: "历史", color: LORE_COLORS.history },
-  { key: "law", label: "法则", color: LORE_COLORS.law },
-  { key: "currency", label: "货币", color: LORE_COLORS.currency },
-  { key: "custom", label: "自定义", color: LORE_COLORS.custom },
+  ...WORLD_LEGEND_CATS.map((cat) => ({
+    key: cat,
+    label: WORLD_CATEGORY_SECTIONS[cat].label,
+    color: LORE_COLORS[cat],
+  })),
 ];

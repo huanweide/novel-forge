@@ -1,3 +1,4 @@
+import { WORLD_CATEGORY_SECTIONS, type WorldCategory } from "@/lib/world-category-classifier";
 /**
  * Workspace 共享类型
  * 从 page.tsx 内联类型提取，供各子组件复用。
@@ -149,12 +150,8 @@ export interface SSEEvent {
   mode?: string;
 }
 
+// 中文标签单一来源：引用分类器权威源 WORLD_CATEGORY_LABELS 纯中文派生，
+// 与 ENTITY_LEGEND、rehype categoryLabel、sync-global-prompt catLabel 同一权威源。
 export function categoryLabel(cat: string): string {
-  const map: Record<string, string> = {
-    geography: "地理", faction: "势力组织", magic_system: "力量体系",
-    technique: "功法体系", history: "历史", culture: "文化风俗",
-    creature: "生物种族", item: "器物法宝", law: "规则法则",
-    currency: "货币体系", custom: "自定义",
-  };
-  return map[cat] || cat;
+  return WORLD_CATEGORY_SECTIONS[cat as WorldCategory]?.label || cat;
 }
