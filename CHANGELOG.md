@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.35 — 2026-08-08
+**v1.6.35 全仓 as any 诚实分级审计（诊断产出）+ 实测推翻 continue 路由同源可消除预估**
+
+- **全仓 as any 诚实分级审计（工程 / 技术债地图）**：排除测试文件后全仓 `as any` 共 432 处，按风险诚实四级分类——A 类文案假阳性（changelog-data.ts 32 处，字符串描述非代码债，零风险）；B 类 Prisma Json 列桥接（reviewLogs/gameState/activeCharacters 等，JsonValue↔强类型鸿沟，强删触发 TS2352，必需保留）；C 类 Prisma 字段类型鸿沟（continue 路由 nextNode.type 是 Prisma string，与应用层 StoryNodeType 不兼容）；D 类上游参数 any 逼出（buildGenerationContext 的 data 各字段，需先定型参数）。产出 `PROCESS/as-any-audit-v1.6.35.md` 为后续消除路线图。
+- **实测推翻 v1.6.34 同源预估（诚实边界）**：v1.6.34 声称 continue 路由 currentNode 透传与 write/refine 同源可消除；v1.6.35 实测把 `currentNode: nextNode as any` 改为 `currentNode: nextNode` 后 tsc 报 TS2322（`Type 'string' is not assignable to type 'StoryNodeType'`）——nextNode 来自 `prisma.storyNode.create`（type: string），而 write/refine 的 `data.currentNode` 来源已是定型 StoryNodeType，二者不可一概而论。故 continue 的 `nextNode as any` 是必需桥接，恢复保留；v1.6.34 的「同源」措辞仅对 write/refine/pre-processor 成立，对 continue 不成立，特此纠正。
+- **策略结论**：全仓 as any 绝大多数是诚实桥接（B+C+D），真正纯冗余极少且零星；逐处消除收益低、风险高（盲去触发 TS2322 或误删 Json 桥接）。正确路径是源头桥接集中化（toAppStoryNode + Json 列读取收窄），列为 v1.6.36+ 候选。本版为诊断产出，不含代码行为变更，运行时零影响。
+
+---
+
 ## v1.6.34 — 2026-08-08
 **v1.6.34 docx 真流式导出（兑现 v1.6.30 递延诚实边界）+ 路由端 currentNode as any 冗余收口（纠正类型债谎言）**
 

@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.34";
+export const LATEST_VERSION = "v1.6.35";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.34 docx 真流式导出（兑现 v1.6.30 递延诚实边界）：epub.ts 新增通用 streamZip(dest,entries) helper（从已测 buildEpubStream 抽取的流式 ZIP 写入，push 背压 + writeEntry 30B/46B + CRC32 + 末尾 central/end record），零回归保留 buildEpubStream；docx.ts 复用 streamZip 新增 buildDocxStream（与 buildDocx 同源 7-part entries）；导出路由 docx 分支改 PassThrough 流式响应（与 epub 同源）。诚实边界：OOXML 强制 word/document.xml 单文件（所有章节拼进一个 XML），不能像 epub 逐章拆 entry——仅去 ZIP 层整本 Buffer.concat 内存峰值 + 改流式响应，不谎称章节级真流式",
-  "v1.6.34 路由端 currentNode as any 冗余收口：write 路由 L363、refine 路由 L264、pre-processor L172 共 3 处 currentNode: data.currentNode as any 纯历史胶带——data.currentNode 在 GenerationData 已定型 StoryNode、PostPipelineParams.currentNode 为 StoryNode，消除为 data.currentNode，TS 真正校验该字段访问",
-  "v1.6.34 诚实边界（纠正 v1.6.31 假宣称）：v1.6.31 changelog 宣称路由消除 (data.currentNode as any) 惰性绕过，实测 grep 仍查到 L363/L264/L172 三处存活；v1.6.34 实测推翻前序宣称、补齐类型债谎言，即 trust-but-verify 对估算式结论的纠偏",
-  "v1.6.34 验证（质量门）：tsc 0 错误 + vitest 32 文件 311/311 全绿（新增 docx.stream.test.ts 2 用例）；运行时零行为变化，纯类型层收口 + 导出流式化",
+  "v1.6.35 全仓 as any 诚实分级审计（诊断产出）：排除测试后共 432 处，四级分类——A 文案假阳性（changelog-data.ts 32，字符串描述非代码债）；B Prisma Json 列桥接（reviewLogs/gameState/activeCharacters，JsonValue↔强类型鸿沟必需保留）；C Prisma 字段鸿沟（continue nextNode.type 是 string 与应用层 StoryNodeType 不兼容）；D 上游参数 any 逼出（buildGenerationContext 的 data 字段）。产出 PROCESS/as-any-audit-v1.6.35.md 路线图",
+  "v1.6.35 实测推翻 v1.6.34 同源预估：把 continue 路由 currentNode: nextNode as any 改为 nextNode 后 tsc 报 TS2322（string 不赋 StoryNodeType）——nextNode 来自 prisma.storyNode.create（type:string），而 write/refine 的 data.currentNode 来源已定型 StoryNodeType，二者不可一概而论；continue 的 as any 是必需桥接恢复保留，纠正 v1.6.34 对 continue 的同源措辞",
+  "v1.6.35 策略结论：as any 绝大多数是诚实桥接（B+C+D），逐处消除收益低风险高（盲去触发 TS2322 或误删 Json 桥接）；正确路径是源头桥接集中化（toAppStoryNode + Json 列收窄），列为 v1.6.36+ 候选",
+  "v1.6.35 验证（质量门）：tsc 0 错误 + vitest 311/311 全绿（本版不含代码行为变更，仅诊断文档 + 审计；continue 路由已还原至 v1.6.34 状态确保类型门不破）；运行时零影响",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.35",
+    date: "2026-08-08",
+    title: "v1.6.35 全仓 as any 诚实分级审计（诊断产出）+ 实测推翻 continue 路由同源可消除预估",
+    sections: [
+      {
+        label: "全仓 as any 诚实分级审计（工程/技术债地图）",
+        items: [
+          "排除测试文件后全仓 as any 共 432 处，按风险诚实四级分类：A 类文案假阳性（changelog-data.ts 32 处，字符串描述非代码债零风险）；B 类 Prisma Json 列桥接（reviewLogs/gameState.entities·items·options/activeCharacters/activeLoreIds/babylore 溯源，JsonValue↔强类型数组鸿沟强删触发 TS2352 必需保留）；C 类 Prisma 字段类型鸿沟（continue 路由 nextNode.type 是 Prisma string 与应用层 StoryNodeType 不兼容）；D 类上游参数 any 逼出（buildGenerationContext 的 data 各字段需先定型参数）",
+          "产出 PROCESS/as-any-audit-v1.6.35.md：为 v1.6.36+ 提供消除路线图（源头桥接集中化 toAppStoryNode + Json 列读取收窄，治本消除 C+D 类散落 as any；E 类残裕项逐个 tsc 实证）",
+        ],
+      },
+      {
+        label: "实测推翻 v1.6.34 同源预估（诚实边界）",
+        items: [
+          "v1.6.34 声称 continue 路由 currentNode 透传与 write/refine 同源可消除；v1.6.35 实测把 currentNode: nextNode as any 改为 nextNode 后 tsc 报 TS2322（Type 'string' is not assignable to type 'StoryNodeType'）——nextNode 来自 prisma.storyNode.create（type: string），而 write/refine 的 data.currentNode 来源已是定型 StoryNodeType，二者不可一概而论",
+          "故 continue 的 nextNode as any 是必需桥接，已还原保留（git checkout 恢复至 v1.6.34 状态）；v1.6.34 的同源措辞仅对 write/refine/pre-processor 成立、对 continue 不成立，特此纠正——trust-but-verify 推翻自身预估的实证",
+        ],
+      },
+      {
+        label: "策略结论（诚实边界）",
+        items: [
+          "全仓 as any 绝大多数是诚实桥接（B+C+D 三类），真正纯冗余（E 类经 tsc 验证部分）极少且零星；逐处 as any 消除收益低（仅让 TS 多查一字段、运行时零变化）、风险高（盲去触发 TS2322 或误删 Json 桥接破坏构建）",
+          "验证：tsc 0 错误 + vitest 32 文件 311/311 全绿（本版不含代码行为变更，仅诊断文档 + 审计；continue 路由已还原确保类型门不破）；运行时零影响",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.34",
     date: "2026-08-08",
