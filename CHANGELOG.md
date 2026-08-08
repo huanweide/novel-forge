@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.38 — 2026-08-09
+**v1.6.38 大书导出流式分块（markdown/txt 防 OOM）**
+
+- **大书导出流式分块（工程/稳定性）**：导出路由 markdown/txt 分支从「整本字符串一次性 new Response 返回」改为「async generator + Readable.from 逐章 yield」，沿用 epub/docx 既有 PassThrough 流式模式；内存峰值从「整本字符串」降到「单章 + ~16KB buffer」，彻底防几十万字大书导出 OOM 崩溃。删除仅本文件自递归的 buildMarkdownNode/buildTextNode 旧同步拼接函数；流式版与原逻辑逐字等价（目录锚点、空节提示一致），用户无感。
+- **验证与范围克制**：双门禁实证 tsc 0 错误（流式生成器类型自洽）+ vitest 32 文件 311/311 全绿；运行时零行为变化，用户无感。html 单次拼接重构成本高、回归风险大，留后续专项；本轮只收口最常用的 markdown/txt 流式。
+
+---
+
 ## v1.6.37 — 2026-08-08
 **v1.6.37 源头桥接集中化推广（context-loader + preview-context 主关口 toAppStoryNode 收口）**
 

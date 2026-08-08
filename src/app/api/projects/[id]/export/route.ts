@@ -183,50 +183,18 @@ export async function GET(
       });
     }
 
-    let output = "";
-
-    if (format === "markdown") {
-      output += `# ${project.name}\n\n`;
-      if (author) output += `**作者：${author}**\n\n`;
-
-      // 目录
-      output += "## 目录\n\n";
-      for (const root of roots) {
-        const children = childrenMap.get(root.id) || [];
-        output += `- [${root.title}](#${slugify(root.title)})`;
-        if (root.wordCount) output += ` (${root.wordCount}字)`;
-        output += "\n";
-        for (const child of children) {
-          output += `  - [${child.title}](#${slugify(child.title)})`;
-          if (child.wordCount) output += ` (${child.wordCount}字)`;
-          output += "\n";
-        }
-      }
-      output += "\n---\n\n";
-
-      // 正文
-      for (const root of roots) {
-        output += buildMarkdownNode(root, childrenMap, includeOutline, 1);
-      }
-    } else {
-      // 纯文本
-      output += `${project.name}\n${"=".repeat(project.name.length)}\n\n`;
-      if (author) output += `作者：${author}\n\n`;
-
-      for (const root of roots) {
-        output += buildTextNode(root, childrenMap, includeOutline);
-      }
-    }
-
-    output += `\n\n---\n\n`;
-    output += `*共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字*\n`;
-    output += `*由 Novel Forge 生成*\n`;
-
-    const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.${format === "markdown" ? "md" : "txt"}`;
-
-    return new Response(output, {
+    // v1.6.38 大书导出流式分块（F4 收口）：markdown/txt 改为 async generator + Readable.from，
+    // 逐章 yield 单章内容，由 Readable 背压调度（内部 buffer 满自动暂停生成器），
+    // 内存峰值从「整本字符串」降到「单章 + ~16KB buffer」，彻底防几十万字大书导出 OOM。
+    // 与原同步拼接逻辑逐字等价（目录锚点、空节提示一致），仅传输方式改流式。
+    const isMd = format === "markdown";
+    const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.${isMd ? "md" : "txt"}`;
+    const exportStream = Readable.from(
+      buildExportStream(isMd, project, roots, childrenMap, includeOutline, author, totalWords, completedNodes)
+    );
+    return new Response(Readable.toWeb(exportStream) as unknown as BodyInit, {
       headers: {
-        "Content-Type": format === "markdown" ? "text/markdown" : "text/plain",
+        "Content-Type": isMd ? "text/markdown" : "text/plain",
         "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       },
     });
@@ -245,54 +213,85 @@ function slugify(title: string): string {
     .replace(/[^\p{L}\p{N}_-]/gu, "");
 }
 
-function buildMarkdownNode(
+async function* buildExportStream(
+  isMd: boolean,
+  project: { name: string },
+  roots: any[],
+  childrenMap: Map<string, any[]>,
+  includeOutline: boolean,
+  author: string | undefined,
+  totalWords: number,
+  completedNodes: number
+): AsyncGenerator<string> {
+  if (isMd) {
+    yield `# ${project.name}\n\n`;
+    if (author) yield `**作者：${author}**\n\n`;
+    yield "## 目录\n\n";
+    for (const root of roots) {
+      const children = childrenMap.get(root.id) || [];
+      yield `- [${root.title}](#${slugify(root.title)})`;
+      if (root.wordCount) yield ` (${root.wordCount}字)`;
+      yield "\n";
+      for (const child of children) {
+        yield `  - [${child.title}](#${slugify(child.title)})`;
+        if (child.wordCount) yield ` (${child.wordCount}字)`;
+        yield "\n";
+      }
+    }
+    yield "\n---\n\n";
+    for (const root of roots) {
+      yield* markdownNodeGen(root, childrenMap, includeOutline, 1);
+    }
+  } else {
+    yield `${project.name}\n${"=".repeat(project.name.length)}\n\n`;
+    if (author) yield `作者：${author}\n\n`;
+    for (const root of roots) {
+      yield* textNodeGen(root, childrenMap, includeOutline);
+    }
+  }
+  yield `\n\n---\n\n`;
+  yield `*共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字*\n`;
+  yield `*由 Novel Forge 生成*\n`;
+}
+
+async function* markdownNodeGen(
   node: any,
   childrenMap: Map<string, any[]>,
   includeOutline: boolean,
   depth: number
-): string {
+): AsyncGenerator<string> {
   const prefix = "#".repeat(Math.min(depth + 1, 6));
-  let result = "";
-
   const slug = slugify(node.title);
-  result += `${prefix} <a id="${slug}"></a>${node.title}\n\n`;
-
+  yield `${prefix} <a id="${slug}"></a>${node.title}\n\n`;
   if (includeOutline && node.outline) {
-    result += `> *大纲：${node.outline}*\n\n`;
+    yield `> *大纲：${node.outline}*\n\n`;
   }
-
   if (node.content) {
-    result += node.content + "\n\n";
+    yield node.content + "\n\n";
   } else {
-    result += `*（此节暂无内容）*\n\n`;
+    yield `*（此节暂无内容）*\n\n`;
   }
-
-  // 子节点
   const children = childrenMap.get(node.id) || [];
   for (const child of children) {
-    result += buildMarkdownNode(child, childrenMap, includeOutline, depth + 1);
+    yield* markdownNodeGen(child, childrenMap, includeOutline, depth + 1);
   }
-
-  return result;
 }
 
-function buildTextNode(node: any, childrenMap: Map<string, any[]>, includeOutline: boolean): string {
-  let result = "";
-
-  result += `${node.title}\n${"-".repeat(node.title.length)}\n\n`;
-
+async function* textNodeGen(
+  node: any,
+  childrenMap: Map<string, any[]>,
+  includeOutline: boolean
+): AsyncGenerator<string> {
+  yield `${node.title}\n${"-".repeat(node.title.length)}\n\n`;
   if (includeOutline && node.outline) {
-    result += `[大纲：${node.outline}]\n\n`;
+    yield `[大纲：${node.outline}]\n\n`;
   }
-
   if (node.content) {
-    result += node.content + "\n\n";
+    yield node.content + "\n\n";
   }
-
   const children = childrenMap.get(node.id) || [];
   for (const child of children) {
-    result += buildTextNode(child, childrenMap, includeOutline);
+    yield* textNodeGen(child, childrenMap, includeOutline);
   }
-
-  return result;
 }
+

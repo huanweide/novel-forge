@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.37";
+export const LATEST_VERSION = "v1.6.38";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.37 源头桥接集中化推广（context-loader + preview-context 主关口）：把 v1.6.36 新增的 toAppStoryNode 桥接推广到 DB→应用层两大主关口——context-loader（write/refine/continue 共享数据加载点，L251 currentNode: currentNode as any → toAppStoryNode(currentNode!)）与 preview-context 路由（L69 currentNode: currentNode as any → toAppStoryNode(currentNode)），消除 B 类 Json 列鸿沟（reviewLogs）+ C 类 Prisma 字段鸿沟（type/status 联合）在主关口的散落 as any",
-  "v1.6.37 范围克制（诚实边界）：未把 GenerationData.currentNode 改为可空类型——实测纠正后会触发 refine/write/pre-processor 在守卫 genData.currentNode 后用 data.currentNode 复制字段处的 Narrow 连锁（运行时安全、属 D 类蔓延），违背 v1.6.36 范围克制原则；故 context-loader 用非空断言（调用方均有 if (!currentNode) return 守卫保证非空，与既有 as any 假设同源但桥接已诚实处理 B+C）",
-  "v1.6.37 验证（质量门）：tsc 0 错误（证明集中桥接在主关口生效、原 currentNode as any 胶带消除）+ vitest 311/311 全绿；运行时零行为变化（currentNode 仅经一层纯函数收窄），用户无感",
-  "v1.6.37 诚实边界：write/refine 路由本身无 nextNode（不新建节点，data.currentNode 已定型 StoryNodeType，无 C 类鸿沟，v1.6.31/34 已收口），故本版只覆盖真正来自 prisma 的 currentNode 透传点；全仓 nextNode as any 已在 v1.6.36 清零；Json 列 reviewLogs 写入桥接（post-processor 的 prisma update）仍必需保留",
+  "v1.6.38 大书导出流式分块（F4 收口）：导出路由 markdown/txt 分支从「整本字符串一次性 new Response 返回」改为「async generator + Readable.from 逐章 yield」，沿用 epub/docx 既有 PassThrough 流式模式",
+  "v1.6.38 内存峰值收敛：原 markdown 导出需把整本正文递归拼成单个巨大字符串驻留内存（几十万字=几十 MB），现逐章 yield 单章内容、由 Readable 背压调度（buffer 满自动暂停生成器），内存峰值降到「单章 + ~16KB buffer」，彻底防大书 OOM 崩溃",
+  "v1.6.38 行为等价 + 死代码清理：流式版与原同步拼接逐字等价（目录锚点、空节提示一致），用户无感；删除仅本文件自递归的 buildMarkdownNode/buildTextNode 旧函数，破除冗余",
+  "v1.6.38 验证（双门禁）：tsc 0 错误 + vitest 311/311 全绿；html 单次拼接重构成本高留后续，本轮不碰",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.38",
+    date: "2026-08-09",
+    title: "v1.6.38 大书导出流式分块（markdown/txt 防 OOM）",
+    sections: [
+      {
+        label: "大书导出流式分块（工程/稳定性）",
+        items: [
+          "导出路由 markdown/txt 分支从「整本字符串一次性 new Response 返回」改为「async generator + Readable.from 逐章 yield」，沿用 epub/docx 既有 PassThrough 流式模式；内存峰值从「整本字符串」降到「单章 + ~16KB buffer」，彻底防几十万字大书导出 OOM 崩溃",
+          "删除仅本文件自递归的 buildMarkdownNode/buildTextNode 旧同步拼接函数；流式版与原逻辑逐字等价（目录锚点、空节提示一致），用户无感",
+        ],
+      },
+      {
+        label: "验证与范围克制",
+        items: [
+          "双门禁实证：tsc 0 错误（流式生成器类型自洽）+ vitest 32 文件 311/311 全绿；运行时零行为变化，用户无感",
+          "html 单次拼接重构成本高、回归风险大，留后续专项；本轮只收口最常用的 markdown/txt 流式",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.37",
     date: "2026-08-08",
