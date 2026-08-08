@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.44 — 2026-08-09
+**v1.6.44 UI 复检世界书/结构化表格页 + 修复世界卡中文标签碎片化**
+
+- **UI 复检世界书/结构化表格页（agent-browser 无头 Chrome）**：马斯克 CEO 子 Agent 拍板 v1.6.44 首选复检目标为 workspace/[projectId]/tables 世界书/结构化表格页（世界卡类型碎片化热点）。实跑 tables 页（Babylore 宝宝流数据库）正常渲染、无 React 报错；项目表格「章节事实表（auto_facts · auto）」显示 7 行数据，按钮齐全（新建表格/运行自动填表/预览召回/一键填表/查看编辑/删除）。实跑 workspace 主页世界卡系统：顶部 chip 云显示角色/势力/物品/地点/法术/功法/生灵/文化/历史/法则/货币/自定义共 12 类，JS 精确点击「沈星河」chip 后正常弹出详情弹窗（含「沈星河/编辑/角色」），交互健康。
+- **修复世界卡中文标签碎片化（单一真相源）**：碎片化现场——magic_system 在 src/core/entity-highlighter.ts ENTITY_LEGEND 显示「法术」、在 src/lib/rehype-entity-highlight.ts categoryLabel 显示「法术体系」，但 WorldPanel 侧栏（worldPanelData.ts）显示「力量体系」；creature 在 entity-highlighter/rehype 显示「生灵」，但侧栏显示「生物种族」，同一数据类型在 UI 上出现多个中文名。收敛修复：把 entity-highlighter.ts 的 LORE_COLORS 注释、ENTITY_LEGEND 图例 label 与 rehype-entity-highlight.ts 的 categoryLabel 全部统一为「力量体系」/「生物种族」，对齐 worldPanelData.ts 模块名与 src/components/workspace/types.ts 的 categoryLabel。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 35 文件 323/323 全绿；仅改中文展示标签，零行为回归。诚实边界：不碰底层 LoreCategory 类型、分类器关键词、worldPanelData 15 模块结构；更深层统一（如 legend 直接接入 WORLD_CATEGORY_LABELS 权威源）留后续重构；IP 仍归瑞宝宝，只迭代不立新。
+
+---
+
 ## v1.6.43 — 2026-08-09
 **v1.6.43 UI 复检（agent-browser 无头实跑）+ 修复 stale client 项目加载 503 + 增强 api-error schema 不匹配诊断**
 

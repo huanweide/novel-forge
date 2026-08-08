@@ -20,9 +20,9 @@ export const LORE_COLORS: Record<string, string> = {
   faction:      "#22C55E", // 🟢 鲜绿 — 势力
   item:         "#FACC15", // 🟡 亮金 — 物品
   geography:    "#38BDF8", // 🔵 天蓝 — 地点
-  magic_system: "#A855F7", // 🟣 紫   — 法术体系
+  magic_system: "#A855F7", // 🟣 紫   — 力量体系
   technique:    "#EF4444", // 🔴 红   — 功法
-  creature:     "#EC4899", // 🩷 粉   — 生灵
+  creature:     "#EC4899", // 🩷 粉   — 生物种族
   culture:      "#14B8A6", // 🩵 青   — 文化
   history:      "#818CF8", // 🔷 靛   — 历史
   law:          "#F59E0B", // 🟠 琥珀 — 法则
@@ -291,9 +291,9 @@ export const ENTITY_LEGEND: Array<{ key: string; label: string; color: string }>
   { key: "faction", label: "势力", color: LORE_COLORS.faction },
   { key: "item", label: "物品", color: LORE_COLORS.item },
   { key: "geography", label: "地点", color: LORE_COLORS.geography },
-  { key: "magic_system", label: "法术", color: LORE_COLORS.magic_system },
+  { key: "magic_system", label: "力量体系", color: LORE_COLORS.magic_system },
   { key: "technique", label: "功法", color: LORE_COLORS.technique },
-  { key: "creature", label: "生灵", color: LORE_COLORS.creature },
+  { key: "creature", label: "生物种族", color: LORE_COLORS.creature },
   { key: "culture", label: "文化", color: LORE_COLORS.culture },
   { key: "history", label: "历史", color: LORE_COLORS.history },
   { key: "law", label: "法则", color: LORE_COLORS.law },

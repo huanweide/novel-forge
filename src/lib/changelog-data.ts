@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.43";
+export const LATEST_VERSION = "v1.6.44";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.43 UI 复检（agent-browser 无头 Chrome 实跑 novel-forge）：首次真用浏览器验证核心创作流程——首页导航/项目星海/我的作品列表渲染正常；进入星辰项目工作台后章节树（角色6/世界26/3节点）、30万字正文编辑器、角色·物品·地点标签联动、生成/重写/微调/批量写作/目标字数/作者指令等创作工具全部正常",
-  "v1.6.43 复检发现真实阻塞：stale Prisma client 导致项目加载 HTTP 503——dev server 旧进程（8/8 01:12 启动）加载不含 confirmed_at 列（v1.6.23 加）的旧 client；首页轻量列表查询不涉及该列故正常，但 /api/projects/[id] 的 include:{storyNodes}（含 confirmedAt）触发旧 client 查询未知列 → Prisma 抛错 → 503。任何用户在改 schema 后点进项目都会长期「项目加载失败」",
-  "v1.6.43 修复：重启 dev server 加载新 client（503→200，星辰项目完整 JSON 返回）；并增强 src/lib/api-error.ts 的 classifyError——对 Prisma schema 不匹配类错误（Unknown arg/Invalid prisma invocation/column does not exist）返回准确 hint「重启 dev server 或 npx prisma generate」，不再误报「请检查数据库已启动」（DB 连通却误导用户查库，正是实踩坑）",
-  "v1.6.43 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；诚实边界：UI 复检用真实无头 Chrome 跑通，但生成类功能（调 DeepSeek）因偶发 503 未实测，留后续；IP 仍归瑞宝宝，只迭代不立新",
+  "v1.6.44 UI 复检世界书/结构化表格页：agent-browser 无头 Chrome 实跑 workspace/[projectId]/tables（Babylore 章节事实表）正常渲染，项目表格「章节事实表 auto_facts」7 行数据、按钮齐全；workspace 主页世界卡 chip 云（角色/势力/物品/地点/法术/功法/生灵/文化/历史/法则/货币/自定义）与详情弹窗交互正常",
+  "v1.6.44 修复世界卡中文标签碎片化：同一数据类型 magic_system 在正文高亮 chip 云图例显示「法术」、正文高亮 title/aria-label 显示「法术体系」，但 WorldPanel 侧栏显示「力量体系」；creature 在 chip 云/rehype 显示「生灵」，但侧栏显示「生物种族」——用户看到同一类世界卡出现多个名字",
+  "v1.6.44 统一收敛中文标签：src/core/entity-highlighter.ts 的 LORE_COLORS 注释、ENTITY_LEGEND 图例 label 与 src/lib/rehype-entity-highlight.ts 的 categoryLabel 全部改为「力量体系」/「生物种族」，与 worldPanelData.ts 模块名及 types.ts 的 categoryLabel 完全一致，消除命名漂移",
+  "v1.6.44 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；仅改中文展示标签，不碰底层 LoreCategory 类型、分类器关键词、worldPanelData 15 模块结构，零行为回归；马斯克 CEO 子 Agent 拍板本轮复检世界书面板，IP 仍归瑞宝宝",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.44",
+    date: "2026-08-09",
+    title: "v1.6.44 UI 复检世界书/结构化表格页 + 修复世界卡中文标签碎片化",
+    sections: [
+      {
+        label: "UI 复检世界书/结构化表格页（agent-browser 无头 Chrome）",
+        items: [
+          "马斯克 CEO 子 Agent 拍板 v1.6.44 首选复检目标：workspace/[projectId]/tables 世界书/结构化表格页（因世界卡类型碎片化技术债，最易「编译过、渲染崩」）",
+          "实跑 tables 页（Babylore 宝宝流数据库）：正常渲染、无 React 报错；项目表格「章节事实表（auto_facts · auto）」显示 7 行数据，按钮齐全（新建表格/运行自动填表/预览召回/一键填表/查看编辑/删除）",
+          "实跑 workspace 主页世界卡系统：顶部 chip 云显示角色/势力/物品/地点/法术/功法/生灵/文化/历史/法则/货币/自定义共 12 类，JS 精确点击「沈星河」chip 后正常弹出详情弹窗（检测到 modal 元素，含「沈星河/编辑/角色」），交互健康",
+        ],
+      },
+      {
+        label: "修复世界卡中文标签碎片化（单一真相源）",
+        items: [
+          "碎片化现场：magic_system 在 src/core/entity-highlighter.ts ENTITY_LEGEND 显示「法术」、在 src/lib/rehype-entity-highlight.ts categoryLabel 显示「法术体系」，但 WorldPanel 侧栏（worldPanelData.ts）显示「力量体系」；creature 在 entity-highlighter/rehype 显示「生灵」，但侧栏显示「生物种族」——同一数据类型在 UI 上出现多个中文名",
+          "收敛修复：把 entity-highlighter.ts 的 LORE_COLORS 注释、ENTITY_LEGEND 图例 label 与 rehype-entity-highlight.ts 的 categoryLabel 全部统一为「力量体系」/「生物种族」，对齐 worldPanelData.ts 模块名与 src/components/workspace/types.ts 的 categoryLabel",
+          "范围克制：仅改中文展示标签，不碰 src/core/types/index.ts 的 LoreCategory 类型、不碰 src/lib/world-category-classifier.ts 分类器关键词、不碰 worldPanelData.ts 的 15 模块结构与字段模板；零行为回归",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；无现成测试断言原中文标签文本，改动零回归",
+          "诚实边界：本轮只解决 UI 展示层命名漂移；更深层的世界卡类型统一（如把 entity-highlighter 的 legend 直接接入 WORLD_CATEGORY_LABELS 权威源）留后续重构；IP 仍归瑞宝宝，只迭代不立新",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.43",
     date: "2026-08-09",
