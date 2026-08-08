@@ -15,7 +15,7 @@ export async function POST(
     if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
 
     const nodes = await prisma.storyNode.findMany({
-      where: { projectId: id, type: { in: ["chapter", "section", "scene"] } },
+      where: { projectId: id, type: { in: ["chapter", "section", "scene"] }, deletedAt: null },
       select: { id: true, title: true, status: true },
     });
 

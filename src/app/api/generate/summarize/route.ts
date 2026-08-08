@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     // 获取章节内容
     const chapter = await prisma.storyNode.findFirst({
-      where: { id: chapterId, projectId },
+      where: { id: chapterId, projectId, deletedAt: null },
     });
 
     if (!chapter) {

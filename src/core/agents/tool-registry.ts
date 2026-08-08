@@ -602,6 +602,8 @@ toolRegistry.register({
     const id = String(args.nodeId || "");
     const existing = await ctx.prisma.storyNode.findUnique({ where: { id } });
     if (!existing) return fail("outline_update", `节点不存在（ID: ${id}）`);
+    // #123 软删防复活：已移入回收站的节点不允许更新，避免污染 tombstone
+    if (existing.deletedAt) return fail("outline_update", "节点已被删除（回收站），无法更新。如需操作请先从回收站恢复");
     const data: any = {};
     if (args.title) data.title = String(args.title);
     if (args.outline !== undefined) data.outline = String(args.outline);

@@ -42,10 +42,14 @@ export async function PUT(
     // BE-1：手动保存前快照当前正文（去重由 helper 处理）
     const existingNode = await prisma.storyNode.findUnique({
       where: { id },
-      select: { content: true, wordCount: true, projectId: true, editVersion: true },
+      select: { content: true, wordCount: true, projectId: true, editVersion: true, deletedAt: true },
     });
     if (!existingNode) {
       return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+    }
+    // #123 软删防复活：已移入回收站的节点不允许手动保存覆盖正文，避免污染 tombstone
+    if (existingNode.deletedAt) {
+      return NextResponse.json({ error: "该节点已被删除（回收站），无法保存。如需操作请先从回收站恢复" }, { status: 410 });
     }
 
     // FE-N8：编辑期间节点已被改写（如 AI 流式改写 outline）→ 409 冲突，返回库里当前快照
@@ -142,6 +146,8 @@ export async function PATCH(
 
     const node = await prisma.storyNode.findUnique({ where: { id } });
     if (!node) return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+    // #123 软删防复活：已移入回收站的节点不允许确认/提交/回退等动作，避免污染 tombstone
+    if (node.deletedAt) return NextResponse.json({ error: "该节点已被删除（回收站），无法执行该操作。如需操作请先从回收站恢复" }, { status: 410 });
 
     const now = new Date();
     const prevLogs: any[] = Array.isArray(node.reviewLogs) ? node.reviewLogs : [];

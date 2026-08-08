@@ -84,7 +84,7 @@ export async function computeNarrativeEnergy(
   try {
     // 1) 章节顺序：StoryNode(type=chapter) 按 order 排序，建立 id → 序号
     const chapters = await prisma.storyNode.findMany({
-      where: { projectId, type: "chapter" },
+      where: { projectId, type: "chapter", deletedAt: null },
       select: { id: true, order: true },
       orderBy: { order: "asc" },
     });

@@ -25,18 +25,52 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.14";
+export const LATEST_VERSION = "v1.6.15";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.14 软删防复活补全（复验#A/#B/#C·高）：write/continue 路由加 deletedAt 410 拦截，幽灵复活漏洞在 write/refine/continue 三兄弟路由全闭环",
-  "v1.6.14 待审隔离补漏（复验#E·高）：outline 路由绕过 context-loader 自取世界卡，已补 reviewStatus:approved 过滤，AI 待审猜测不再渗进大纲 Prompt",
-  "v1.6.14 Agent 删除改软删（复验#D·高）：tool-registry 的 outline_delete 由硬删改 updateMany 软删，与前端/API 删除一致，不再绕过回收站",
-  "v1.6.14 伏笔改名收尾 + undo 精确回滚（复验#G/#H·中）：7 处遗留 UI 文案统一为「未收尾线索」；撤销精修只还原正文不再回退 revisionCount 等元数据",
+  "v1.6.15 写回 410 补全（复验·高）：chapter-outline / game start·concept / story PUT·PATCH / rollback / game-outline-generate / game-engine 导出 / tool-registry outline_update 共 9 处写回入口加 deletedAt 410 或抛错，回收站节点无法被任何写回路径复活",
+  "v1.6.15 读泄漏闭合（复验·高/中）：preview-context / pre-write-cards / foreshadowing / confirm-guard / babylore-fill / post-processor / stats-monitor / memory-decay / narrative-energy / analyze-relationships / 整本交付确认 / summarize / character-dedupe 共 13 处 StoryNode 读取补 deletedAt:null，已删章节不再渗进写作上下文、统计、去重语料与确认判定",
+  "v1.6.15 apply-extraction 写回防护（复验·中）：下章衔接写 nextNode.outline 前补 currentNode / nextNode deletedAt 过滤，AI 建议章首不再写进回收站节点",
+  "v1.6.15 双门禁收口：tsc 0 错误 + vitest 286 全绿；门禁额外捕获并修复前序遗留 2 处 select 漏 deletedAt 的类型错误（rollback / story PUT）",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.15",
+    date: "2026-08-08",
+    title: "v1.6.14 复验修复（软删读泄漏闭合 + 写回 410 补全 + apply-extraction 防护）",
+    sections: [
+      {
+        label: "写回 410 补全（复验 · 高）",
+        items: [
+          "9 处写回入口补 deletedAt 410 或抛错：chapter-outline / game start / game concept / story PUT 与 PATCH / rollback / game-outline-generate（节点 410 + allNodes deletedAt:null）/ game-engine 导出 / tool-registry outline_update——回收站节点无法被任何写回路径复活，软删 tombstone 在生成、游戏、确认、Agent 工具全链路闭环",
+          "tool-registry 的 outline_update 此前仅判 !existing 就 update，会改写回收站节点——已加 deletedAt 判定直接 fail，与 outline_delete 的软删语义对齐",
+        ],
+      },
+      {
+        label: "读泄漏闭合（复验 · 高 / 中）",
+        items: [
+          "13 处 StoryNode 读取补 deletedAt:null：preview-context（当前节点 + allNodes）、pre-write-cards（当前节点 + allNodes×2）、foreshadowing、confirm-guard（findUnique + aggregate）、babylore/fill（nodes×2）、post-processor（currentNodeOrder + prevNode）、stats/monitor、memory-decay、narrative-energy、agent/analyze-relationships、整本交付确认、summarize、character-dedupe",
+          "已软删章节不再渗进写作上下文、统计面板、记忆衰减最新章判定、叙事能量曲线、关系抽取语料、整本交付确认判定与角色去重语料，彻底切断已删内容被读回的泄漏面",
+        ],
+      },
+      {
+        label: "apply-extraction 写回防护（复验 · 中）",
+        items: [
+          "下章衔接写 nextNode.outline 前补 currentNode / nextNode 的 deletedAt 过滤：当前章或下一章已进回收站时不再写入 AI 建议章首，避免污染 tombstone",
+        ],
+      },
+      {
+        label: "双门禁收口（质量门）",
+        items: [
+          "tsc 0 错误 + vitest 286/286 全绿",
+          "门禁额外捕获并修复前序遗留 2 处 select 漏 deletedAt 的类型错误（rollback / story PUT 的 findUnique select），杜绝编译期隐患",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.14",
     date: "2026-08-08",

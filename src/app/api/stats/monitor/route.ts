@@ -103,7 +103,7 @@ export async function GET(request: Request) {
     } else {
       [nodes, summaries, beats, commitments] = await Promise.all([
         prisma.storyNode.findMany({
-          where: { projectId },
+          where: { projectId, deletedAt: null },
           select: { id: true, title: true, type: true, status: true, wordCount: true, order: true, updatedAt: true, reviewLogs: true },
           orderBy: { order: "asc" },
         }),

@@ -650,7 +650,7 @@ export async function babyloreFillAll(
   const dbTables = await prisma.loreTable.findMany({ where });
 
   const nodes = await prisma.storyNode.findMany({
-    where: { projectId, content: { not: null } },
+    where: { projectId, content: { not: null }, deletedAt: null },
     orderBy: { order: "asc" },
   });
   const chapters = nodes.filter((n) => (n.content || "").trim().length > 0);
@@ -810,7 +810,7 @@ export async function babyloreFillAll(
 export async function selfCheckFill(projectId: string): Promise<SelfCheckResult> {
   const dbTables = await prisma.loreTable.findMany({ where: { projectId } });
   const nodes = await prisma.storyNode.findMany({
-    where: { projectId, content: { not: null } },
+    where: { projectId, content: { not: null }, deletedAt: null },
     orderBy: { order: "asc" },
   });
   const corpus = nodes.map((n) => (n.content || "")).join("\n").toLowerCase();

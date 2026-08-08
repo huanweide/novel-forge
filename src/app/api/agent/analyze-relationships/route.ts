@@ -72,6 +72,7 @@ export async function POST(request: Request) {
     const chapters = await prisma.storyNode.findMany({
       where: {
         projectId,
+        deletedAt: null,
         type: "chapter",
         content: { not: null },
       },

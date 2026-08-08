@@ -32,7 +32,7 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
       },
     }),
     prisma.storyNode.findMany({
-      where: { projectId, content: { not: null } },
+      where: { projectId, content: { not: null }, deletedAt: null },
       select: { content: true },
     }),
   ]);

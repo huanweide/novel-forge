@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       prisma.characterCard.findMany({ where: { projectId }, take: 30 }),
       prisma.lorebookEntry.findMany({ where: { projectId, enabled: true }, take: 20 }),
       prisma.storyNode.findMany({
-        where: { projectId },
+        where: { projectId, deletedAt: null },
         orderBy: { order: "asc" },
         select: { id: true, title: true, order: true, type: true, status: true, outline: true },
       }),
@@ -81,6 +81,10 @@ export async function POST(req: Request) {
 
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
+    }
+    // #123 软删防复活：已移入回收站的节点不允许生成游戏章纲，避免污染 tombstone
+    if (node.deletedAt) {
+      return NextResponse.json({ error: "该节点已被删除（回收站），无法生成章纲。如需操作请先从回收站恢复" }, { status: 410 });
     }
 
     // 2. 组装上下文

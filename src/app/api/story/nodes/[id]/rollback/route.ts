@@ -21,10 +21,14 @@ export async function POST(
 
     const node = await prisma.storyNode.findUnique({
       where: { id },
-      select: { content: true, wordCount: true, projectId: true },
+      select: { content: true, wordCount: true, projectId: true, deletedAt: true },
     });
     if (!node) {
       return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+    }
+    // #123 软删防复活：已移入回收站的节点不允许回滚正文，避免污染 tombstone
+    if (node.deletedAt) {
+      return NextResponse.json({ error: "该节点已被删除（回收站），无法回滚。如需操作请先从回收站恢复" }, { status: 410 });
     }
 
     const revision = await prisma.storyNodeRevision.findUnique({

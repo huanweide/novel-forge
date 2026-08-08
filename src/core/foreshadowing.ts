@@ -212,6 +212,7 @@ export async function detectPayoffs(projectId: string): Promise<PayoffStats> {
       prisma.storyNode.findMany({
         where: {
           projectId,
+          deletedAt: null,
           type: { in: ["chapter", "section", "scene"] },
           createdAt: { gte: new Date(minAnchor) },
         },

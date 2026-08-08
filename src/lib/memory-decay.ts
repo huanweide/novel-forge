@@ -230,10 +230,10 @@ function applyDecayToSummary(
  */
 export async function cleanupExpiredMemories(projectId: string): Promise<CleanupStats> {
   // 1. 获取最新章号
-  const latestNode = await prisma.storyNode.findFirst({
-    where: { projectId },
-    orderBy: { order: "desc" },
-    select: { order: true, title: true },
+    const latestNode = await prisma.storyNode.findFirst({
+      where: { projectId, deletedAt: null },
+      orderBy: { order: "desc" },
+      select: { order: true, title: true },
   });
 
   const latestChapter = latestNode ? (latestNode.order as number) + 1 : 1;

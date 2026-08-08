@@ -31,6 +31,10 @@ export async function POST(req: Request) {
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
+    // #123 软删防复活：已移入回收站的节点不允许开始游戏，避免污染 tombstone
+    if (node.deletedAt) {
+      return NextResponse.json({ error: "该节点已被删除（回收站），无法开始游戏。如需操作请先从回收站恢复" }, { status: 410 });
+    }
 
     // 3. 组装起始提示词（v0.46.58：带上本章已有正文——游戏从已有内容之后继续，不再从零开始）
     const existingContent = (node.content || "").trim();

@@ -113,7 +113,7 @@ export async function applyConfirm(node: {
 }): Promise<string> {
   const now = new Date();
   const existing = await prisma.storyNode.findUnique({
-    where: { id: node.id },
+    where: { id: node.id, deletedAt: null },
     select: { reviewLogs: true, status: true },
   });
   const prevLogs: Prisma.JsonArray = Array.isArray(existing?.reviewLogs) ? existing.reviewLogs : [];
@@ -134,7 +134,7 @@ export async function applyConfirm(node: {
     let isLatestChapter = false;
     try {
       const agg = await prisma.storyNode.aggregate({
-        where: { projectId: node.projectId },
+        where: { projectId: node.projectId, deletedAt: null },
         _max: { order: true },
       });
       isLatestChapter = node.order === (agg._max.order ?? node.order);

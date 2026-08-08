@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.15 — 2026-08-08
+**v1.6.14 复验修复（软删读泄漏闭合 + 写回 410 补全 + apply-extraction 防护）**
+
+- **写回 410 补全（复验 · 高）**：9 处写回入口补 `deletedAt` 410 或抛错——chapter-outline / game start / game concept / story PUT 与 PATCH / rollback / game-outline-generate（节点 410 + allNodes `deletedAt: null`）/ game-engine 导出 / tool-registry `outline_update`；回收站节点无法被任何写回路径复活，`outline_update` 此前仅判 `!existing` 就 `update` 会改写回收站节点，现已加 `deletedAt` 判定直接 `fail`。
+- **读泄漏闭合（复验 · 高 / 中）**：13 处 StoryNode 读取补 `deletedAt: null`——preview-context、pre-write-cards、foreshadowing、confirm-guard、babylore/fill、post-processor、stats/monitor、memory-decay、narrative-energy、agent/analyze-relationships、整本交付确认、summarize、character-dedupe；已软删章节不再渗进写作上下文、统计面板、记忆衰减最新章判定、叙事能量曲线、关系抽取语料、整本交付确认判定与角色去重语料。
+- **apply-extraction 写回防护（复验 · 中）**：下章衔接写 `nextNode.outline` 前补 currentNode / nextNode 的 `deletedAt` 过滤，当前章或下一章已进回收站时不再写入 AI 建议章首，避免污染 tombstone。
+- **双门禁收口（质量门）**：tsc 0 错误 + vitest 286/286 全绿；门禁额外捕获并修复前序遗留 2 处 `select` 漏 `deletedAt` 的类型错误（rollback / story PUT 的 findUnique select）。
+
+---
+
 ## v1.6.14 — 2026-08-08
 **v1.6.13 复验修复（软删防复活补全 + 待审隔离补漏 + Agent 删除改软删 + 伏笔改名收尾）**
 

@@ -33,10 +33,10 @@ export async function GET(request: Request) {
     let totalChapters = 1;
 
     if (nodeId) {
-      currentNode = await prisma.storyNode.findUnique({ where: { id: nodeId } });
+      currentNode = await prisma.storyNode.findUnique({ where: { id: nodeId, deletedAt: null } });
       if (!currentNode) return NextResponse.json({ error: "节点不存在" }, { status: 404 });
       allNodes = await prisma.storyNode.findMany({
-        where: { projectId, content: { not: null } },
+        where: { projectId, content: { not: null }, deletedAt: null },
         orderBy: { order: "asc" },
       });
       chapterOrder = currentNode.order;
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     } else {
       // 无节点模式——用于大纲生成，用作品总纲代替章节大纲
       allNodes = await prisma.storyNode.findMany({
-        where: { projectId, content: { not: null } },
+        where: { projectId, content: { not: null }, deletedAt: null },
         orderBy: { order: "asc" },
       });
       totalChapters = allNodes.length + 1;

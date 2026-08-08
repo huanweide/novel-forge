@@ -361,13 +361,14 @@ export async function POST(request: Request) {
     if (selected.nextChapter?.aiOpening && nodeId) {
       // 找下一章
       const currentNode = await prisma.storyNode.findUnique({
-        where: { id: nodeId },
+        where: { id: nodeId, deletedAt: null },
         select: { order: true, parentId: true, projectId: true },
       });
       if (currentNode) {
         const nextNode = await prisma.storyNode.findFirst({
           where: {
             projectId,
+            deletedAt: null,
             order: { gt: currentNode.order },
             type: "chapter",
           },

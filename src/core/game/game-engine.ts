@@ -555,6 +555,10 @@ export async function endGameAndExport(sessionId: string): Promise<{
   });
   if (!session) throw new Error("游戏会话不存在");
   if (session.status !== "active") throw new Error("游戏已结束");
+  // #123 软删防复活：已移入回收站的节点不允许导出游戏叙事，避免污染 tombstone
+  if (session.node?.deletedAt) {
+    throw new Error("该节点已被删除（回收站），无法导出游戏。如需操作请先从回收站恢复");
+  }
 
   // 1. 拼接已有叙事
   // IMP-001 修复：游戏导出须保留写作原正文作为第 0 段前置，否则已有正文章节开启游戏并导出后

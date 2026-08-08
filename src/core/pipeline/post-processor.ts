@@ -784,12 +784,12 @@ export async function runPostGenerationPipeline(
     // 5.2 时间线连续
     if (nodeId) {
       const currentNodeOrder = await prisma.storyNode.findUnique({
-        where: { id: nodeId },
+        where: { id: nodeId, deletedAt: null },
         select: { order: true },
       });
       if (currentNodeOrder) {
         const prevNode = await prisma.storyNode.findFirst({
-          where: { projectId, type: "chapter", order: { lt: currentNodeOrder.order } },
+          where: { projectId, type: "chapter", deletedAt: null, order: { lt: currentNodeOrder.order } },
           orderBy: { order: "desc" },
           select: { title: true, content: true },
         });
