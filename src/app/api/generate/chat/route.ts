@@ -26,12 +26,12 @@ function buildToolContext(projectId: string): ToolContext {
     projectId, prisma,
     findCharacters: async (query: string) => {
       return await prisma.characterCard.findMany({
-        where: { projectId, OR: [{ name: { contains: query, mode: "insensitive" } }, { aliases: { has: query } }] },
+        where: { projectId, reviewStatus: "approved", OR: [{ name: { contains: query, mode: "insensitive" } }, { aliases: { has: query } }] },
       }) as any;
     },
     findLore: async (keywords: string[]) => {
       return await prisma.lorebookEntry.findMany({
-        where: { projectId, enabled: true, OR: keywords.map((kw) => ({
+        where: { projectId, enabled: true, reviewStatus: "approved", OR: keywords.map((kw) => ({
           OR: [{ title: { contains: kw, mode: "insensitive" } }, { content: { contains: kw, mode: "insensitive" } }, { keys: { has: kw } }],
         })) }, take: 10,
       }) as any;
@@ -43,8 +43,8 @@ function buildToolContext(projectId: string): ToolContext {
     },
     detectEntities: async (text: string) => {
       const [chars, lore] = await Promise.all([
-        prisma.characterCard.findMany({ where: { projectId } }),
-        prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
+            prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } }),
+            prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" } }),
       ]);
       const results: Array<{ name: string; type: string; confidence: number }> = [];
       const lower = text.toLowerCase();

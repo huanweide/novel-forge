@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       // 大纲生成没有单个节点——用项目概要覆盖
     }
 
-    const characters = await prisma.characterCard.findMany({ where: { projectId } });
+    const characters = await prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } });
 
     // ── 复用智能调度器逻辑 ──
 
@@ -217,7 +217,7 @@ export async function GET(request: Request) {
     );
 
     const lorebookEntries = await prisma.lorebookEntry.findMany({
-      where: { projectId, enabled: true },
+      where: { projectId, enabled: true, reviewStatus: "approved" },
     });
     const categories: Record<string, boolean> = {};
     const missingLoreCategories: string[] = [];

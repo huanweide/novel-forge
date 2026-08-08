@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.21 — 2026-08-08
+**v1.6.20 复验修复（待审隔离漏口全量收口 + 复验清单核实）**
+
+- **待审隔离漏口全量收口（复验 · 高）**：Explore-2 复验发现 v1.6.20 仅修 4 处取用端，仍有 7 个生成/游戏入口的 16 处角色卡/世界卡 `findMany` 漏 `reviewStatus` 过滤（`generate/chat` 的 findCharacters/findLore/detectEntities、`generate/pre-write-cards`、`generate/preview-context`、`game/concept`、`game/start`、`game/outline/generate`、`game/outline/chat`）；待审卡经这些入口直进 AI 助手对话、写前分析、预览上下文与游戏开场，绕过既有闸门——本轮全量补 `reviewStatus: approved`（世界卡叠加 `enabled: true`），与已修 4 处对齐。
+- **复验清单核实（复验 · 中）**：同步核实软删 `deletedAt` 漏口已全部收口（export/pre-write-cards/preview-context/outline/confirm/analyze-relationships/memory-decay/stats/monitor/[id] 均带 `deletedAt:null`）；F2（update 精确还原）、大书导出流式、Project 手动 interface 类型缺口留后续。
+- **验证（质量门）**：tsc 0 错误 + vitest 293/293 全绿；Chair 用 Bash grep 亲核 16 处 `findMany` 逐条属实，无工具假阴性漏判。
+- **路线图（诚实边界）**：根因是待审隔离为散布式手动过滤、极易漏；v1.6.22 规划统一收敛 `getApprovedCards`/`getApprovedLore` helper 一劳永逸，并补全入口负向门禁。
+
+---
+
 ## v1.6.20 — 2026-08-08
 **v1.6.19 复验修复（待审隔离收口 + 负向回归固化）**
 

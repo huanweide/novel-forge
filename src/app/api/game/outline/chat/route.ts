@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     if (projectId && nodeId) {
       const [node, characters] = await Promise.all([
         prisma.storyNode.findUnique({ where: { id: nodeId } }),
-        prisma.characterCard.findMany({ where: { projectId }, take: 20 }),
+        prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 20 }),
       ]);
       if (node && characters.length > 0) {
         characterContext = `\n## 角色白名单（只能使用以下角色）\n${characters.map(c => `- ${c.name}（${c.role}）`).join("\n")}`;

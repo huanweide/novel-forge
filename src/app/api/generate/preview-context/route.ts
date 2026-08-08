@@ -32,9 +32,9 @@ export async function POST(request: Request) {
           where: { projectId, content: { not: null }, deletedAt: null },
           orderBy: { order: "asc" },
         }),
-        prisma.characterCard.findMany({ where: { projectId } }),
+        prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } }),
         prisma.lorebookEntry.findMany({
-          where: { projectId, enabled: true },
+          where: { projectId, enabled: true, reviewStatus: "approved" },
         }),
         prisma.chapterSummary.findMany({
           where: { projectId },

@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.20";
+export const LATEST_VERSION = "v1.6.21";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.20 待审隔离收口（复验·高）：`sync-global-prompt` 主生成链路把角色卡/世界卡预编译进 `Project.globalPrompt`，取用端此前仅 `where:{projectId}` 无 `reviewStatus` 过滤，待审卡经全局缓存旁路直进每次生成，证实 v1.6.13/18 仅在 context-loader 加闸门仍漏此主路径（高危）；已补 `reviewStatus: approved`",
-  "v1.6.20 章纲/游戏取用端补漏（复验·中）：`outline-context` 章纲生成、`game-engine` 游戏生成两处角色卡/世界卡取用端补 `reviewStatus: approved`，与 context-loader 闸门对齐",
-  "v1.6.20 负向回归固化（质量门）：新增 `sync-global-prompt.test.ts` 构造 pending 卡断言不进 `globalPrompt`，把「阻断优于补救」钉进 CI 而非依赖会议",
-  "v1.6.20 双门禁收口（质量门）：tsc 0 错误 + vitest 293/293 全绿（新增 1 条负向门禁）；会议决议 F2（update 精确撤销）独立立项、F4（大书流式）暂缓",
+  "v1.6.21 待审隔离漏口全量收口（复验·高）：Explore-2 复验发现 v1.6.20 仅修 4 处取用端，仍有 7 个生成/游戏入口的 16 处角色卡/世界卡 `findMany` 漏 `reviewStatus` 过滤（`generate/chat`/`pre-write-cards`/`preview-context`/`game/*`）；待审卡直进 AI 助手对话/写前分析/预览上下文/游戏开场——本轮全量补 `reviewStatus: approved`（世界卡叠 `enabled: true`），与已修 4 处对齐",
+  "v1.6.21 复验清单核实（复验·中）：软删 `deletedAt` 漏口已全部收口（export/pre-write-cards/preview-context/outline/confirm/analyze-relationships/memory-decay/stats/monitor/[id] 均带 deletedAt:null）；F2（update 精确还原）/大书流式/Project interface 类型缺口留后续",
+  "v1.6.21 验证（质量门）：tsc 0 错误 + vitest 293/293 全绿；Chair 用 Bash grep 亲核 16 处 `findMany` 逐条属实，无工具假阴性漏判",
+  "v1.6.21 路线图（诚实边界）：根因是待审隔离散布式手动过滤易漏；v1.6.22 规划统一收敛 `getApprovedCards`/`getApprovedLore` helper 一劳永逸 + 补入口负向门禁",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.21",
+    date: "2026-08-08",
+    title: "v1.6.20 复验修复（待审隔离漏口全量收口 + 复验清单核实）",
+    sections: [
+      {
+        label: "待审隔离漏口全量收口（复验 · 高）",
+        items: [
+          "Explore-2 复验发现 v1.6.20 仅修 4 处取用端，仍有 7 个生成/游戏入口的 16 处角色卡/世界卡 `findMany` 漏 `reviewStatus` 过滤：`generate/chat`（findCharacters/findLore/detectEntities）、`generate/pre-write-cards`、`generate/preview-context`、`game/concept`、`game/start`、`game/outline/generate`、`game/outline/chat`",
+          "待审卡（AI 自动抽取 pending）经这些入口直进 AI 助手对话、写前卡片分析、预览上下文与游戏开场白，绕过 v1.6.13/18/20 的闸门；本轮全量补 `reviewStatus: approved`（世界卡叠加 `enabled: true`），与 context-loader/sync-global-prompt/outline-context/game-engine 对齐",
+          "Chair 用 Bash grep 亲核 16 处 `findMany` 逐条属实（含 `enabled: true` 但缺 `reviewStatus` 的证据），杜绝 Grep/Glob 工具假阴性导致的漏判",
+        ],
+      },
+      {
+        label: "复验清单核实 + 路线图（复验 · 中 / 诚实边界）",
+        items: [
+          "同步核实软删 `deletedAt` 漏口已全部收口（export/pre-write-cards/preview-context/outline/confirm/analyze-relationships/memory-decay/stats/monitor/[id] 均带 `deletedAt:null`）；F2（update 精确还原）、大书导出流式、Project 手动 interface 类型缺口确认留后续",
+          "根因是待审隔离为散布式手动过滤、极易漏——v1.6.22 规划统一收敛 `getApprovedCards`/`getApprovedLore` helper（一劳永逸，所有取用端调用 helper），并补全入口负向门禁，比逐入口补丁更优",
+          "tsc 0 错误 + vitest 293/293 全绿（本轮未新增测试，靠双门禁 + 源码亲核 + 路线图承诺根因修复）",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.20",
     date: "2026-08-08",

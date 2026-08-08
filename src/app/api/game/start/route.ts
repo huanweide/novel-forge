@@ -24,8 +24,8 @@ export async function POST(req: Request) {
     const [project, node, characters, loreEntries] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
-      prisma.characterCard.findMany({ where: { projectId }, take: 20 }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true }, take: 15 }),
+      prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 20 }),
+      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" }, take: 15 }),
     ]);
 
     if (!project || !node) {
