@@ -13,6 +13,7 @@ import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import type { GenerationData } from "./types";
 import { STORYLINE_STATUS, COMMITMENT_STATUS } from "@/core/story-status";
 import type { Project, StoryNodeLight } from "@/core/types";
+import { toAppStoryNode } from "@/core/story-node-bridge";
 
 /**
  * 加载单章生成所需的所有上下文数据。
@@ -248,7 +249,11 @@ export async function loadGenerationContext(
 
   return {
     project: project as Project,
-    currentNode: currentNode as any,
+    // currentNode 来自 prisma.storyNode.findUnique（可空），但 loadGenerationContext 的全部调用方
+    // （write/refine/continue 路由）均在解构后 `if (!currentNode) return` 守卫，运行时保证此处非空；
+    // 故用非空断言桥接 toAppStoryNode（集中处理 type/status 联合 + reviewLogs Json 鸿沟），
+    // 不把 GenerationData.currentNode 改为可空（避免波及下游复制字段的 Narrow 连锁，属 D 类蔓延）。
+    currentNode: toAppStoryNode(currentNode!),
     allNodes: allNodes as any,
     characters: characters as any,
     loreEntries: loreEntries as any,

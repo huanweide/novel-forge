@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.36";
+export const LATEST_VERSION = "v1.6.37";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.36 源头桥接集中化（工程/类型安全）：根治 C 类 Prisma 字段鸿沟——新增 src/core/story-node-bridge.ts 的 toAppStoryNode(raw: PrismaStoryNode): StoryNode，把 Prisma 返回的 StoryNode（type/status 是 String、reviewLogs 是 Json）一次性收窄为应用层强类型 StoryNode（StoryNodeType 联合 / ContentStatus 联合 / ReviewLog[]），下游 continue 路由两处 currentNode: nextNode as any 改为 toAppStoryNode(nextNode)，撕掉 C 类胶带，type/status 访问在编译期真正受联合类型保护",
-  "v1.6.36 Json 列诚实桥接（B 类）：reviewLogs 是 Prisma Json 值时，toAppStoryNode 内必须用 as unknown as ReviewLog[] 桥接——经 unknown 比 as any 更诚实（明确承诺此 JSON 即 ReviewLog[] 且保留目标类型检查），代码注释标明 B 类鸿沟；activeCharacters/activeLoreIds 在 schema 已是 String[]，与应用层 string[] 一致直接透传，不需桥接",
-  "v1.6.36 信任但验证（v1.6.35 路线图落地）：v1.6.35 诊断产出 toAppStoryNode 路线图，v1.6.36 实地落地——tsc 实测 0 错误（证明集中桥接生效、原 continue 的 TS2322 消失）、vitest 311/311 全绿；continue 路由运行时行为零变化（nextNode 仅经一层纯函数收窄，无副作用）",
-  "v1.6.36 诚实边界（消除路线图首项落地）：本轮仅消除 C 类（continue nextNode 字段鸿沟），不扩散 D 类（buildGenerationContext 的 data 字段 any 逼出，需先定型参数属范围蔓延）与 E 类残裕项（逐个 tsc 实证）；Json 列 reviewLogs 写入桥接（post-processor 的 prisma update）仍必需保留，不强行消除；v1.6.36 是 v1.6.35→v1.8 路线图的第一块基石",
+  "v1.6.37 源头桥接集中化推广（context-loader + preview-context 主关口）：把 v1.6.36 新增的 toAppStoryNode 桥接推广到 DB→应用层两大主关口——context-loader（write/refine/continue 共享数据加载点，L251 currentNode: currentNode as any → toAppStoryNode(currentNode!)）与 preview-context 路由（L69 currentNode: currentNode as any → toAppStoryNode(currentNode)），消除 B 类 Json 列鸿沟（reviewLogs）+ C 类 Prisma 字段鸿沟（type/status 联合）在主关口的散落 as any",
+  "v1.6.37 范围克制（诚实边界）：未把 GenerationData.currentNode 改为可空类型——实测纠正后会触发 refine/write/pre-processor 在守卫 genData.currentNode 后用 data.currentNode 复制字段处的 Narrow 连锁（运行时安全、属 D 类蔓延），违背 v1.6.36 范围克制原则；故 context-loader 用非空断言（调用方均有 if (!currentNode) return 守卫保证非空，与既有 as any 假设同源但桥接已诚实处理 B+C）",
+  "v1.6.37 验证（质量门）：tsc 0 错误（证明集中桥接在主关口生效、原 currentNode as any 胶带消除）+ vitest 311/311 全绿；运行时零行为变化（currentNode 仅经一层纯函数收窄），用户无感",
+  "v1.6.37 诚实边界：write/refine 路由本身无 nextNode（不新建节点，data.currentNode 已定型 StoryNodeType，无 C 类鸿沟，v1.6.31/34 已收口），故本版只覆盖真正来自 prisma 的 currentNode 透传点；全仓 nextNode as any 已在 v1.6.36 清零；Json 列 reviewLogs 写入桥接（post-processor 的 prisma update）仍必需保留",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.37",
+    date: "2026-08-08",
+    title: "v1.6.37 源头桥接集中化推广（context-loader + preview-context 主关口 toAppStoryNode 收口）",
+    sections: [
+      {
+        label: "源头桥接集中化推广（工程/类型安全）",
+        items: [
+          "把 v1.6.36 新增的 toAppStoryNode 桥接推广到 DB→应用层两大主关口：context-loader（write/refine/continue 共享数据加载点，L251 原 currentNode: currentNode as any → currentNode: toAppStoryNode(currentNode!)）+ preview-context 路由（L69 原 currentNode: currentNode as any → currentNode: toAppStoryNode(currentNode)），彻底消除 B 类 Json 列鸿沟（reviewLogs Json→ReviewLog[]）+ C 类 Prisma 字段鸿沟（type/status String→联合）在这些主关口的散落 as any",
+          "write/refine 路由本身无 nextNode（不新建节点，data.currentNode 来源 loadGenerationContext 已定型 StoryNodeType，无 C 类鸿沟，v1.6.31/34 已收口），故本版只覆盖真正来自 prisma findUnique 的 currentNode 透传点；全仓 nextNode as any 已在 v1.6.36 清零",
+        ],
+      },
+      {
+        label: "范围克制 + 验证与诚实边界",
+        items: [
+          "未把 GenerationData.currentNode 改为可空类型——实测纠正后会触发 refine/write/pre-processor 在守卫 genData.currentNode 后用 data.currentNode 复制字段处的 Narrow 连锁报错（运行时安全，因调用方均有 if (!currentNode) return 守卫，但 TS 不知 data.currentNode 与 genData.currentNode 同值），属 D 类范围蔓延，违背 v1.6.36 范围克制原则；故 context-loader 用非空断言（与既有 as any 假设同源，但 type/status/reviewLogs 已诚实桥接）",
+          "双门禁实证：tsc 0 错误（证明集中桥接在主关口生效）+ vitest 32 文件 311/311 全绿；运行时零行为变化（currentNode 仅经一层纯函数收窄），用户无感；Json 列 reviewLogs 写入桥接（post-processor 的 prisma update）仍必需保留，不强行消除",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.36",
     date: "2026-08-08",

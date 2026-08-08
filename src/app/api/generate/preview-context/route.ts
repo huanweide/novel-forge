@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { buildPromptContext } from "@/core/agents";
 import { assemblePrompt, countTokens } from "@/core/assembly";
 import { getTemplate } from "@/core/templates";
+import { toAppStoryNode } from "@/core/story-node-bridge";
 
 /**
  * POST /api/generate/preview-context
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     // 构建上下文
     const promptContext = buildPromptContext({
       project: project as any,
-      currentNode: currentNode as any,
+      currentNode: toAppStoryNode(currentNode),
       previousNodes: previousNodes as any,
       characters: characters as any,
       loreEntries: loreEntries as any,

@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.37 — 2026-08-08
+**v1.6.37 源头桥接集中化推广（context-loader + preview-context 主关口 toAppStoryNode 收口）**
+
+- **源头桥接集中化推广（工程 / 类型安全）**：把 v1.6.36 新增的 `toAppStoryNode` 桥接推广到 DB→应用层两大主关口——`context-loader`（write/refine/continue 共享数据加载点，L251 原 `currentNode: currentNode as any` → `currentNode: toAppStoryNode(currentNode!)`）+ `preview-context` 路由（L69 原 `currentNode: currentNode as any` → `currentNode: toAppStoryNode(currentNode)`），彻底消除 B 类 Json 列鸿沟（reviewLogs Json→ReviewLog[]）+ C 类 Prisma 字段鸿沟（type/status String→联合）在这些主关口的散落 `as any`。write/refine 路由本身无 `nextNode`（不新建节点，data.currentNode 来源已定型 StoryNodeType，无 C 类鸿沟，v1.6.31/34 已收口），故本版只覆盖真正来自 prisma `findUnique` 的 currentNode 透传点。
+- **范围克制（诚实边界）**：未把 `GenerationData.currentNode` 改为可空类型——实测纠正后会触发 refine/write/pre-processor 在「守卫 `genData.currentNode` 后用 `data.currentNode` 复制字段」处的 Narrow 连锁报错（运行时安全，因调用方均有 `if (!currentNode) return` 守卫，但 TS 不知 `data.currentNode` 与 `genData.currentNode` 同值），属 D 类范围蔓延，违背 v1.6.36 范围克制原则；故 `context-loader` 用非空断言（与既有 `as any` 假设同源，但 type/status/reviewLogs 已诚实桥接）。
+- **验证与诚实边界**：双门禁实证 tsc 0 错误 + vitest 32 文件 311/311 全绿；运行时零行为变化（currentNode 仅经一层纯函数收窄），用户无感。Json 列 reviewLogs 写入桥接（post-processor 的 prisma update）仍必需保留，不强行消除。v1.6.37 是 v1.6.35→v1.8 路线图的第二块基石（集中桥接覆盖主关口）。
+
+---
+
 ## v1.6.36 — 2026-08-08
 **v1.6.36 源头桥接集中化 toAppStoryNode（治本消除 C 类 Prisma 字段鸿沟 + B 类 Json 诚实桥接）**
 
