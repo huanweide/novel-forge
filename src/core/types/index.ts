@@ -143,6 +143,7 @@ export interface StoryNode {
 
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;       // #123 软删除（tombstone）：非空=在回收站
 }
 
 export type StoryNodeType =

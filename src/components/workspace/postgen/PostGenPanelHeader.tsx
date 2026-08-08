@@ -32,7 +32,7 @@ export function PostGenPanelHeader({
             <span title="角色" className="flex items-center gap-0.5"><Icon name="user" size={11} />{extractionData.counts?.characters || 0}</span>
             <span title="场景" className="flex items-center gap-0.5"><Icon name="mapPin" size={11} />{extractionData.counts?.locations || 0}</span>
             <span title="道具" className="flex items-center gap-0.5"><Icon name="gem" size={11} />{extractionData.counts?.items || 0}</span>
-            <span title="伏笔" className="flex items-center gap-0.5"><Icon name="zap" size={11} />{extractionData.counts?.foreshadowings || 0}</span>
+            <span title="未收尾线索" className="flex items-center gap-0.5"><Icon name="zap" size={11} />{extractionData.counts?.foreshadowings || 0}</span>
             <span title="关系" className="flex items-center gap-0.5"><Icon name="share" size={11} />{extractionData.counts?.relationshipChanges || 0}</span>
           </div>
         )}

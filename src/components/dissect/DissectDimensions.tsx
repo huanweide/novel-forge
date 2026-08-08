@@ -173,7 +173,7 @@ export function DissectDimensions({
                 { key: "currency", label: "货币体系" },
                 { key: "items", label: "重要物品" },
                 { key: "plot_thread", label: "情节脉络" },
-                { key: "foreshadowing", label: "伏笔系统" },
+                { key: "foreshadowing", label: "未收尾线索" },
                 { key: "outline_summary", label: "大纲摘要" },
               ]
                 .filter((d) => {

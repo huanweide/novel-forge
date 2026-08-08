@@ -134,11 +134,11 @@ export function ExtractionTab({ extractionData, adopt, importanceStars }: Extrac
         </details>
       )}
 
-      {/* 伏笔 */}
+      {/* 未收尾线索 */}
       {extractionData.foreshadowings.length > 0 && (
         <details className="group">
           <summary className="flex items-center gap-1.5 text-sm font-medium text-[var(--nv-text-primary)] cursor-pointer hover:text-[var(--nv-primary)]">
-            <Icon name="zap" size={14} className="text-[var(--nv-creative)]" /> 伏笔线索 ({extractionData.foreshadowings.length})
+            <Icon name="zap" size={14} className="text-[var(--nv-creative)]" /> 未收尾线索 ({extractionData.foreshadowings.length})
           </summary>
           <div className="mt-2 space-y-1.5">
             {extractionData.foreshadowings.map((f: any, i: number) => {

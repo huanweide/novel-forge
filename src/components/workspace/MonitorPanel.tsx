@@ -200,7 +200,7 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
         <div className="space-y-1">
           <Row label="章节摘要" value={String(data.dataStats.chapterSummaries)} />
           <Row label="故事转折点" value={String(data.dataStats.storyBeats)} />
-          <Row label="伏笔/承诺" value={String(data.dataStats.pendingCommitments)} />
+          <Row label="未收尾线索" value={String(data.dataStats.pendingCommitments)} />
         </div>
       </div>
 

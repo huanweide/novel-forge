@@ -13,7 +13,7 @@ const OUTLINE_SECTIONS = [
   { key: "【事件】", label: "事件" },
   { key: "【人物】", label: "人物" },
   { key: "【悬念/钩子】", label: "悬念/钩子" },
-  { key: "【伏笔】", label: "伏笔" },
+  { key: "【伏笔】", label: "未收尾线索" },
   { key: "【情绪】", label: "情绪" },
 ];
 

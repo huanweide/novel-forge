@@ -42,7 +42,7 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   characters: "角色",
   plot_thread: "情节脉络",
   outline_summary: "大纲摘要",
-  foreshadowing: "伏笔",
+  foreshadowing: "未收尾线索",
   map: "地图",
   factions: "势力阵营",
   power_system: "力量体系",

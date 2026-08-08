@@ -157,7 +157,7 @@ export function RightPanel(props: RightPanelProps) {
                 className={`flex-1 py-1.5 text-[10px] transition-colors ${
                   entitySubTab === "foreshadowing" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
-              ><Icon name="gem" size={15} className="inline-block align-text-bottom shrink-0" /> 伏笔</button>
+              ><Icon name="gem" size={15} className="inline-block align-text-bottom shrink-0" /> 未收尾线索</button>
             </div>
 
             {/* 子内容 */}

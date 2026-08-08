@@ -781,7 +781,7 @@ export async function convertToProject(
     { dimKey: "currency", title: "货币体系", category: "economy", keys: ["货币", "灵石", "金币", "交易", "价格", "购买", "经济"], order: 30 },
     { dimKey: "items", title: "重要物品", category: "items", keys: ["物品", "法宝", "神器", "丹药", "兵器", "材料", "宝物"], order: 35 },
     { dimKey: "plot_thread", title: "情节脉络", category: "plot", keys: ["情节", "剧情", "转折", "发展", "高潮", "线索"], order: 48 },
-    { dimKey: "foreshadowing", title: "伏笔系统", category: "plot", keys: ["伏笔", "悬念", "铺垫", "回收", "暗示"], order: 46 },
+    { dimKey: "foreshadowing", title: "未收尾线索", category: "plot", keys: ["伏笔", "悬念", "铺垫", "回收", "暗示"], order: 46 },
     { dimKey: "outline_summary", title: "大纲摘要", category: "plot", keys: ["大纲", "摘要", "章节", "概要", "结构"], order: 44 },
   ];
 

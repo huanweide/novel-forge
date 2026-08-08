@@ -59,7 +59,7 @@ export async function loadGenerationContext(
         take: 50,
       }),
       prisma.lorebookEntry.findMany({
-        where: { projectId, enabled: true },
+        where: { projectId, enabled: true, reviewStatus: "approved" },
         take: 50,
       }),
       // 摘要：先多拉一些，再按时间线过滤（ChapterSummary 无 chapterOrder 字段，需关联 node）

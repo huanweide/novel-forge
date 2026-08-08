@@ -28,7 +28,7 @@ export function DistillTab({ distillSummary }: DistillTabProps) {
             )}
             {distillSummary.foreshadowCount > 0 && (
               <div className="bg-[var(--nv-surface-2)] rounded px-3 py-2">
-                <span className="flex items-center gap-1 text-[var(--nv-text-tertiary)]"><Icon name="zap" size={11} /> 伏笔信号</span>
+                <span className="flex items-center gap-1 text-[var(--nv-text-tertiary)]"><Icon name="zap" size={11} /> 线索信号</span>
                 <p className="text-[var(--nv-text-primary)] font-medium">{distillSummary.foreshadowCount} 个</p>
               </div>
             )}
@@ -40,13 +40,13 @@ export function DistillTab({ distillSummary }: DistillTabProps) {
             )}
             {distillSummary.foreshadowCreated > 0 && (
               <div className="bg-[var(--nv-surface-2)] rounded px-3 py-2">
-                <span className="flex items-center gap-1 text-[var(--nv-text-tertiary)]"><Icon name="check" size={11} /> 新增伏笔</span>
+                <span className="flex items-center gap-1 text-[var(--nv-text-tertiary)]"><Icon name="check" size={11} /> 新增线索</span>
                 <p className="text-[var(--nv-success)] font-medium">{distillSummary.foreshadowCreated} 个</p>
               </div>
             )}
             {distillSummary.foreshadowUpdated > 0 && (
               <div className="bg-[var(--nv-surface-2)] rounded px-3 py-2">
-                <span className="flex items-center gap-1 text-[var(--nv-text-tertiary)]"><Icon name="refresh" size={11} /> 伏笔更新</span>
+                <span className="flex items-center gap-1 text-[var(--nv-text-tertiary)]"><Icon name="refresh" size={11} /> 线索更新</span>
                 <p className="text-[var(--nv-accent)] font-medium">{distillSummary.foreshadowUpdated} 个</p>
               </div>
             )}

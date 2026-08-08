@@ -55,7 +55,7 @@ export function ConflictPanel({
   };
 
   const copyOne = async (o: ConflictOption) => {
-    const text = `【${o.title}】\n触发：${o.trigger}\n张力：${o.tension}\n走向：${o.outcome}\n风险/伏笔：${o.caution}`;
+    const text = `【${o.title}】\n触发：${o.trigger}\n张力：${o.tension}\n走向：${o.outcome}\n风险/未收尾线索：${o.caution}`;
     try {
       await navigator.clipboard.writeText(text);
       toastSuccess("已复制到剪贴板");
@@ -69,7 +69,7 @@ export function ConflictPanel({
     if (o.trigger) parts.push(`触发：${o.trigger}`);
     if (o.tension) parts.push(`张力：${o.tension}`);
     if (o.outcome) parts.push(`走向：${o.outcome}`);
-    if (o.caution) parts.push(`风险 / 伏笔：${o.caution}`);
+    if (o.caution) parts.push(`风险 / 未收尾线索：${o.caution}`);
     parts.push(`（本节点由「冲突推演」AI 生成，仅供参考）`);
     try {
       const res = await fetch("/api/story/nodes", {
@@ -182,7 +182,7 @@ export function ConflictPanel({
                   )}
                   {o.caution && (
                     <p className="text-xs text-[var(--nv-text-secondary)] leading-relaxed mt-1">
-                      <span className="text-[var(--nv-text-tertiary)]">风险 / 伏笔：</span>{o.caution}
+                      <span className="text-[var(--nv-text-tertiary)]">风险 / 未收尾线索：</span>{o.caution}
                     </p>
                   )}
                   {o.characters && o.characters.length > 0 && (

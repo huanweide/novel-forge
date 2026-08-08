@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.12";
+export const LATEST_VERSION = "v1.6.13";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.12 删节点硬删改软删（#123）：StoryNode 加 tombstone（deletedAt）+ 撤销期，删除仅标记不物理删，可经回收站恢复或彻底清空；前端删除后 toast 带「撤销」按钮即时恢复，回收站新增节点回收区，杜绝误删丢稿",
-  "v1.6.12 精修补 diff 预览与撤销（#124）：精修完成后弹出原/新正文对照预览，显式「应用」或「撤销（保留原正文）」；预算超上限（已有正文+续写 > 5000 字）时明确告警并建议「分段精修」，不再静默截断丢前文",
-  "v1.6.12 自动填表加待审区（#122）：AI 自动抽取的世界卡默认进 pending 待审态，卡片显示「待审」徽标，作者确认后才转正入档，防止 AI 猜测误写入世界观设定；伏笔检测改名「未收尾线索」降低误解（#121）",
-  "v1.6.12 LLM 重试优雅退避（#119）+ 导出格式分层（#120）：客户端解析供应商 Retry-After 头透传为退避时长覆盖默认指数退避；导出对话框拆基础格式（md/txt/html，默认 md）与进阶格式（docx/epub 折叠），交互更清晰",
+  "v1.6.13 导出过滤软删节点（复验#1）：导出查询加 deletedAt:null，已删章节不再泄漏到 md/txt/html/epub/docx 成书产物",
+  "v1.6.13 精修拦截软删节点（复验#2）：refine 路由加 deletedAt 判定，回收站节点无法精修，杜绝覆写已删正文致「幽灵复活」",
+  "v1.6.13 待审世界卡隔离生成上下文（复验#3）：AI 自动填表的 pending 卡不再注入写作上下文，仅 approved 卡参与正文生成",
+  "v1.6.13 伏笔改名残留 UI 统一（复验#4）：拆书/监控/冲突/抽卡/蒸馏等 13 处用户可见标签统一为「未收尾线索」，底层不动",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.13",
+    date: "2026-08-08",
+    title: "v1.6.12 复验修复（软删泄漏两高 + 待审隔离 + 伏笔改名收尾）",
+    sections: [
+      {
+        label: "软删泄漏修复（复验 #1 / #2 · 高）",
+        items: [
+          "导出查询加 deletedAt:null 过滤：已软删的章节不再被拼进导出的 md/txt/html/epub/docx，软删「防丢稿」名副其实",
+          "refine 路由加 deletedAt 拦截：对已软删节点发起精修直接返回 410，杜绝覆写已删正文导致节点「幽灵复活」",
+        ],
+      },
+      {
+        label: "待审世界卡隔离生成上下文（复验 #3 · 中）",
+        items: [
+          "context-loader 的 lorebookEntry.findMany 加 reviewStatus:approved 过滤：AI 自动填表写入的 pending 待审卡不再注入写作上下文，只有作者确认后的 approved 卡参与正文生成",
+          "CharacterCard 无需过滤（entity-sync 只对 LorebookEntry 写 pending，角色卡默认 approved）",
+        ],
+      },
+      {
+        label: "伏笔改名残留 UI 统一（复验 #4 · 低）",
+        items: [
+          "拆书维度、监控面板、右栏 tab、冲突推演、抽卡面板、蒸馏面板、后处理头等 13 处用户可见标签统一为「未收尾线索」",
+          "底层 DB 字段 foreshadowing/PendingCommitment、API /api/foreshadowing/*、prompt 文学语义、intent-parser 正则关键词保留不动（防爆半径）",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.11",
     date: "2026-08-07",

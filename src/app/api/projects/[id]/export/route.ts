@@ -45,7 +45,7 @@ export async function GET(
 
     // 获取所有节点，按树结构排序
     let allNodes = await prisma.storyNode.findMany({
-      where: { projectId: id },
+      where: { projectId: id, deletedAt: null },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     });
 
