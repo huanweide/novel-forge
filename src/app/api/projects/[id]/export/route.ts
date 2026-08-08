@@ -2,7 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { scanBannedWords } from "@/lib/banned-words";
 import { NextResponse } from "next/server";
-import { buildChapterList, buildHtmlDoc, buildEpub, buildEpubStream } from "@/core/epub";
+import { buildChapterList, buildHtmlDocStream, buildEpub, buildEpubStream } from "@/core/epub";
 import { buildDocx, buildDocxStream } from "@/core/docx";
 import { PassThrough, Readable } from "stream";
 
@@ -138,12 +138,15 @@ export async function GET(
     const totalWords = allNodes.reduce((sum, n) => sum + (n.wordCount || 0), 0);
     const completedNodes = allNodes.filter((n) => n.content).length;
 
-    // HTML 单文件导出：自带轻量散文→HTML 转换，可直接浏览器打开 / 被 Word 导入
+    // HTML 单文件导出（v1.6.39 流式化，与 markdown/txt/epub/docx 同源）：
+    // 自带轻量散文→HTML 转换，逐章 yield 单章内容，由 Readable 背压调度，防大书 OOM
     if (format === "html") {
       const chapters = buildChapterList(roots, allNodes, includeOutline);
-      const htmlDoc = buildHtmlDoc(project.name, chapters, totalWords, completedNodes, author);
+      const stream = Readable.from(
+        buildHtmlDocStream(project.name, chapters, totalWords, completedNodes, author)
+      );
       const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.html`;
-      return new Response(htmlDoc, {
+      return new Response(Readable.toWeb(stream) as unknown as BodyInit, {
         headers: {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,

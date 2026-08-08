@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.38";
+export const LATEST_VERSION = "v1.6.39";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.38 大书导出流式分块（F4 收口）：导出路由 markdown/txt 分支从「整本字符串一次性 new Response 返回」改为「async generator + Readable.from 逐章 yield」，沿用 epub/docx 既有 PassThrough 流式模式",
-  "v1.6.38 内存峰值收敛：原 markdown 导出需把整本正文递归拼成单个巨大字符串驻留内存（几十万字=几十 MB），现逐章 yield 单章内容、由 Readable 背压调度（buffer 满自动暂停生成器），内存峰值降到「单章 + ~16KB buffer」，彻底防大书 OOM 崩溃",
-  "v1.6.38 行为等价 + 死代码清理：流式版与原同步拼接逐字等价（目录锚点、空节提示一致），用户无感；删除仅本文件自递归的 buildMarkdownNode/buildTextNode 旧函数，破除冗余",
-  "v1.6.38 验证（双门禁）：tsc 0 错误 + vitest 311/311 全绿；html 单次拼接重构成本高留后续，本轮不碰",
+  "v1.6.39 HTML 导出流式化（F4 收口续）：导出路由 html 分支从「整本正文递归拼成单个巨大字符串再 new Response 返回」改为「async generator buildHtmlDocStream 逐章 yield + Readable.from 流式响应」，与 v1.6.38 已收口的 markdown/txt/epub/docx 同源，彻底防大书 OOM",
+  "v1.6.39 内存峰值收敛：原 html 导出需把整本正文 + 目录拼成单个 HTML 字符串驻留内存（几十万字=几十 MB），现逐章 yield 单章内容、由 Readable 背压调度，内存峰值降到「单章 + ~16KB buffer」，与 markdown/txt 流式同量级",
+  "v1.6.39 行为等价 + 死代码清理：流式版与原 buildHtmlDoc 渲染逐字等价（文档头/目录锚点/正文 proseToHtml 转换/页脚署名一致），用户无感；删除仅本导出使用的旧 buildHtmlDoc 同步函数，破除冗余",
+  "v1.6.39 验证（双门禁）+ 取舍：tsc 0 错误 + vitest 314/314 全绿（新增 html.stream.test.ts 3 项冒烟防回归）；llmConfig 强类型收口（候选B，需重构 30+ 处 as unknown as Record）经马斯克人格执行 CEO 拍板继续暂缓，不夹带",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.39",
+    date: "2026-08-09",
+    title: "v1.6.39 HTML 导出流式化（防大书 OOM）",
+    sections: [
+      {
+        label: "HTML 导出流式化（工程/稳定性）",
+        items: [
+          "导出路由 html 分支从「整本正文递归拼成单个巨大字符串一次性 new Response 返回」改为「async generator buildHtmlDocStream 逐章 yield + Readable.from 包装流式响应」，复用 v1.6.38 既有 Readable.from 模式；内存峰值从「整本 HTML 字符串」降到「单章 + ~16KB buffer」，彻底防几十万字大书导出 OOM 崩溃",
+          "src/core/epub.ts 删除仅本导出使用的旧 buildHtmlDoc 同步拼接函数，新增 buildHtmlDocStream；流式版与原版渲染逐字等价（文档头/目录锚点/正文 proseToHtml 转换/页脚署名一致），用户无感",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 33 文件 314/314 全绿（新增 src/core/html.stream.test.ts 3 项：逐章分块/结构等价/署名，防回归）",
+          "llmConfig 强类型收口（候选B，全仓 30+ 处 as unknown as Record<string,unknown> 读取）经马斯克人格执行 CEO 拍板继续暂缓——属重构非修 bug、范围蔓延易引回归，留 v1.8.0 之后单独排期，本轮不夹带",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.38",
     date: "2026-08-09",

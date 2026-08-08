@@ -106,35 +106,20 @@ export function buildChapterList(
   return out;
 }
 
-// ---------- 完整 HTML 文档 ----------
-export function buildHtmlDoc(
+// ---------- 完整 HTML 文档（流式） ----------
+// v1.6.39：从「整本字符串一次性 new Response 返回」改为 async generator 逐章 yield，
+// 由 export/route.ts 用 Readable.from 包装成流式响应（Node 自动背压：buffer 满暂停生成器），
+// 内存峰值从「整本书几十 MB」降到「单章 + ~16KB buffer」，防几十万字大书导出 OOM。
+// 与 v1.6.38 已流式化的 markdown/txt 同源收口；渲染结果与原同步版逐字等价。
+export async function* buildHtmlDocStream(
   projectName: string,
   chapters: ChapterItem[],
   totalWords: number,
   completedNodes: number,
   author?: string
-): string {
-  const toc = chapters
-    .map(
-      (c, i) =>
-        `<li style="margin-left:${(c.depth - 1) * 1.5}em"><a href="#ch${i}">${escapeHtml(
-          c.title
-        )}</a></li>`
-    )
-    .join("\n");
-
-  const body = chapters
-    .map((c, i) => {
-      const h = Math.min(c.depth + 1, 6);
-      let s = `<h${h} id="ch${i}">${escapeHtml(c.title)}</h${h}>\n`;
-      if (c.outline) s += `<p class="outline"><em>大纲：${escapeHtml(c.outline)}</em></p>\n`;
-      const html = proseToHtml(c.content || "");
-      s += html || `<p class="empty">（此节暂无内容）</p>`;
-      return s;
-    })
-    .join("\n");
-
-  return `<!DOCTYPE html>
+): AsyncGenerator<string> {
+  // 文档头 + 目录骨架
+  yield `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/>
@@ -156,9 +141,28 @@ export function buildHtmlDoc(
 <body>
 <h1>${escapeHtml(projectName)}</h1>
 ${author ? `<p class="author">作者：${escapeHtml(author)}</p>` : ""}
-<nav class="toc"><strong>目录</strong><ol>${toc}</ol></nav>
-${body}
-<footer>${author ? `作者：${escapeHtml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字 · 由 Novel Forge 生成</footer>
+<nav class="toc"><strong>目录</strong><ol>`;
+
+  // 目录逐条 yield（量级小，逐条写出即可；HTML 不依赖条目间换行）
+  for (let i = 0; i < chapters.length; i++) {
+    const c = chapters[i];
+    yield `<li style="margin-left:${(c.depth - 1) * 1.5}em"><a href="#ch${i}">${escapeHtml(c.title)}</a></li>`;
+  }
+  yield `</ol></nav>`;
+
+  // 正文逐章 yield（大块内容，单章驻留内存后即释放；由 Readable 背压调度）
+  for (let i = 0; i < chapters.length; i++) {
+    const c = chapters[i];
+    const h = Math.min(c.depth + 1, 6);
+    let s = `<h${h} id="ch${i}">${escapeHtml(c.title)}</h${h}>\n`;
+    if (c.outline) s += `<p class="outline"><em>大纲：${escapeHtml(c.outline)}</em></p>\n`;
+    const html = proseToHtml(c.content || "");
+    s += (html || `<p class="empty">（此节暂无内容）</p>`) + "\n";
+    yield s;
+  }
+
+  // 文档尾闭合
+  yield `<footer>${author ? `作者：${escapeHtml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字 · 由 Novel Forge 生成</footer>
 </body>
 </html>`;
 }

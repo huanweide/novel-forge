@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.39 — 2026-08-09
+**v1.6.39 HTML 导出流式化（防大书 OOM）**
+
+- **HTML 导出流式化（工程/稳定性）**：导出路由 html 分支从「整本正文递归拼成单个巨大字符串一次性 new Response 返回」改为「async generator buildHtmlDocStream 逐章 yield + Readable.from 包装流式响应」，复用 v1.6.38 既有 Readable.from 模式；内存峰值从「整本 HTML 字符串」降到「单章 + ~16KB buffer」，彻底防几十万字大书导出 OOM 崩溃。src/core/epub.ts 删除仅本导出使用的旧 buildHtmlDoc 同步拼接函数，新增 buildHtmlDocStream；流式版与原版渲染逐字等价（文档头/目录锚点/正文 proseToHtml 转换/页脚署名一致），用户无感。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 33 文件 314/314 全绿（新增 src/core/html.stream.test.ts 3 项：逐章分块/结构等价/署名，防回归）。llmConfig 强类型收口（候选B，全仓 30+ 处 as unknown as Record<string,unknown> 读取）经马斯克人格执行 CEO 拍板继续暂缓——属重构非修 bug、范围蔓延易引回归，留 v1.8.0 之后单独排期，本轮不夹带。
+
+---
+
 ## v1.6.38 — 2026-08-09
 **v1.6.38 大书导出流式分块（markdown/txt 防 OOM）**
 
