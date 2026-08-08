@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.19";
+export const LATEST_VERSION = "v1.6.20";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.19 #6 撤销填表回滚（修复·中）：新增 BabyloreFillBatch 溯源表，写章/续写/微调后自动填表记录本次新增 row_id 并锚定 nodeId；撤销路由（PUT /nodes/:id 带 undo:true）调 revertBabyloreFill 仅清除该章新增表格行、不动既有行与后续章节数据（零数据丢失），覆盖最常见的新增行残留痛点",
-  "v1.6.19 全本导出零正文 400 友好提示（修复·低）：导出路由此前只在选章导出拦截空正文，全本导出（无 chapterIds）静默产空白文件；v1.6.19 补整本书所有节点均无正文则返回 400，与选章拦截对齐，避免误判导出成功",
-  "v1.6.19 双门禁收口（质量门）：tsc 0 错误 + vitest 292/292 全绿（新增 6 条 #6 撤销填表单测）；BabyloreFillBatch 模型已落库",
-  "v1.6.19 诚实边界：#6 的 update 类精确还原因需操作变换（OT）且沙箱无 Chromium 端到端验证，本轮先做安全子集（删新增行），保留 update 残留为已知局限、定后续专项",
+  "v1.6.20 待审隔离收口（复验·高）：`sync-global-prompt` 主生成链路把角色卡/世界卡预编译进 `Project.globalPrompt`，取用端此前仅 `where:{projectId}` 无 `reviewStatus` 过滤，待审卡经全局缓存旁路直进每次生成，证实 v1.6.13/18 仅在 context-loader 加闸门仍漏此主路径（高危）；已补 `reviewStatus: approved`",
+  "v1.6.20 章纲/游戏取用端补漏（复验·中）：`outline-context` 章纲生成、`game-engine` 游戏生成两处角色卡/世界卡取用端补 `reviewStatus: approved`，与 context-loader 闸门对齐",
+  "v1.6.20 负向回归固化（质量门）：新增 `sync-global-prompt.test.ts` 构造 pending 卡断言不进 `globalPrompt`，把「阻断优于补救」钉进 CI 而非依赖会议",
+  "v1.6.20 双门禁收口（质量门）：tsc 0 错误 + vitest 293/293 全绿（新增 1 条负向门禁）；会议决议 F2（update 精确撤销）独立立项、F4（大书流式）暂缓",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.20",
+    date: "2026-08-08",
+    title: "v1.6.19 复验修复（待审隔离收口 + 负向回归固化）",
+    sections: [
+      {
+        label: "待审隔离收口（复验 · 高）",
+        items: [
+          "`sync-global-prompt` 主生成链路补 `reviewStatus: approved` 过滤——该文件把角色卡与世界卡预编译进 `Project.globalPrompt`，`orchestrator` 每次生成直接读缓存注入；此前取用端仅 `where:{projectId}` 无 `reviewStatus` 过滤，AI 自动抽取的待审卡经 `globalPrompt` 旁路直进每次生成，证实 v1.6.13/18 仅在 context-loader 加闸门仍漏这一主路径旁路（高危）",
+          "`outline-context` 章纲生成、`game-engine` 游戏生成两处角色卡/世界卡取用端补 `reviewStatus: approved`，与 context-loader 闸门对齐，待审卡不进章纲/游戏 Prompt",
+          "本轮为七人评审会（马斯克/Karpathy/Ilya/塔勒布/费曼/PG/乔布斯）一致裁定头号优先级：约 6 行改动、主路径、可回归、零功能损失",
+        ],
+      },
+      {
+        label: "负向回归固化（质量门）",
+        items: [
+          "新增 `sync-global-prompt.test.ts`：mock prisma 构造 approved 与 pending 双角色卡，断言 pending 卡不进 `globalPrompt`、落库缓存不含 pending 名、查询 `where` 含 `reviewStatus: approved`",
+          "把「阻断优于补救」钉进 CI 而非依赖会议纪要——回归测试在过滤被回退时立即变红，杜绝会议结论被后续提交悄悄推翻",
+        ],
+      },
+      {
+        label: "双门禁收口（质量门）",
+        items: [
+          "tsc 0 错误 + vitest 293/293 全绿（新增 1 条待审隔离负向门禁）",
+          "会议决议：F2（#6 update 类精确还原）独立立项（需 BabyloreFillBatch 加 `beforeValues` 字段 + update 回滚单测，非快速 fix）、F4（大书导出流式分块）暂缓",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.19",
     date: "2026-08-08",

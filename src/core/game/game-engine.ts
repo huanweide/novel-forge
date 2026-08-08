@@ -233,8 +233,8 @@ async function loadGameContext(projectId: string, nodeId: string, session: any):
   const [project, node, characters, loreEntries, states] = await Promise.all([
     prisma.project.findUnique({ where: { id: projectId } }),
     prisma.storyNode.findUnique({ where: { id: nodeId } }),
-    prisma.characterCard.findMany({ where: { projectId }, take: 20 }),
-    prisma.lorebookEntry.findMany({ where: { projectId, enabled: true }, take: 15 }),
+    prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 20 }),
+    prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" }, take: 15 }),
     prisma.gameState.findMany({
       where: { sessionId: session.id },
       orderBy: { round: "asc" },

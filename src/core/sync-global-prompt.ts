@@ -18,8 +18,8 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
   try {
     const [project, characters, loreEntries, styleCard] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId }, select: { name: true, genre: true, synopsis: true, toneKeywords: true, authorNote: true, llmConfig: true } }),
-      prisma.characterCard.findMany({ where: { projectId } }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
+      prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } }),
+      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" } }),
       prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
     ]);
 

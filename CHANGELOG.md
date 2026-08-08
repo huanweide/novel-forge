@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.20 — 2026-08-08
+**v1.6.19 复验修复（待审隔离收口 + 负向回归固化）**
+
+- **待审隔离收口（复验 · 高）**：`sync-global-prompt` 主生成链路把角色卡/世界卡预编译进 `Project.globalPrompt`，`orchestrator` 每次生成直接读缓存注入；此前取用端仅 `where:{projectId}` 无 `reviewStatus` 过滤，AI 自动抽取的待审卡经 `globalPrompt` 旁路直进每次生成，证实 v1.6.13/18 仅在 `context-loader` 加闸门仍漏此主路径（高危）——已补 `reviewStatus: approved`，待审卡不进主生成链路。
+- **章纲/游戏取用端补漏（复验 · 中）**：`outline-context` 章纲生成、`game-engine` 游戏生成两处角色卡/世界卡取用端补 `reviewStatus: approved`，与 `context-loader` 闸门对齐。
+- **负向回归固化（质量门）**：新增 `sync-global-prompt.test.ts`，mock prisma 构造 approved 与 pending 双角色卡，断言 pending 卡不进 `globalPrompt`、落库缓存不含 pending 名、查询 `where` 含 `reviewStatus: approved`；把「阻断优于补救」钉进 CI 而非依赖会议纪要。
+- **双门禁收口（质量门）**：tsc 0 错误 + vitest 293/293 全绿（新增 1 条待审隔离负向门禁）；会议决议 F2（#6 update 类精确还原）独立立项、F4（大书导出流式分块）暂缓。
+
+---
+
 ## v1.6.19 — 2026-08-08
 **v1.6.18 复验修复（#6 撤销填表回滚 + 全本导出零正文 400）**
 
