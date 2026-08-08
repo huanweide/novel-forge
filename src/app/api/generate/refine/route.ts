@@ -137,11 +137,11 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
     // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig / postProcessingRules），直接复用，避免重复 DB 查询
-    const projLlm = (data.project as any)?.llmConfig;
+    const projLlm = data.project?.llmConfig;
     const projectRules = (data.project as any)?.postProcessingRules;
     const orchestrator = await AgentOrchestrator.fromSettings(
       { defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP },
-      projLlm as Record<string, unknown> | null,
+      projLlm as unknown as Record<string, unknown> | null,
     );
 
     // ── 9. SSE 流 ──
@@ -301,7 +301,7 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             isLatestChapter: refineIsLatest,
             nodeId,
             source: "refine",
-            projectLlmConfig: projLlm as Record<string, unknown> | null,
+            projectLlmConfig: projLlm as unknown as Record<string, unknown> | null,
           });
 
           const tokenCount = countTokens(newContent);

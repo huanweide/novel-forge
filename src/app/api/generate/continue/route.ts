@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     const finalAuthorNote = await prepareAuthorNote(authorNote || "", cardNotes, allChars as any, projectId);
 
     // ── LLM 配置 ──
-    const llmConfig = ((project as any).llmConfig || {}) as Record<string, unknown>;
+    const llmConfig = ((project.llmConfig || {}) as unknown as Record<string, unknown>);
     const effectiveStyleId = styleTemplateId || (llmConfig.styleTemplateId as string) || "";
     const template = effectiveStyleId ? getTemplate(effectiveStyleId) : undefined;
     const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];

@@ -129,7 +129,7 @@ export async function prepareAuthorNote(
  * 优先级：项目自定义 > 文风模板默认值 > 硬编码兜底。
  */
 export function extractLLMConfig(data: GenerationData): LLMExtract {
-  const llmConfig = ((data.project as any).llmConfig || {}) as Record<string, unknown>;
+  const llmConfig = ((data.project.llmConfig || {}) as unknown as Record<string, unknown>);
   const templateId = (llmConfig.styleTemplateId as string) || "";
   const template = getTemplate(templateId);
   const customForbidden = (llmConfig.customForbiddenPatterns as string[]) || [];

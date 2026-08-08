@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.27";
+export const LATEST_VERSION = "v1.6.28";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.27 核心 Project 类型收口（工程/类型安全）：发现 @/core/types 的 Project interface 仅含 10 字段，漏掉 globalPrompt/authorNote/buildConfig/postProcessingRules/appliedPresets/contextKeepChapters/deletedAt/confirmedAt/autoConfirmEnabled/autoDeliverEnabled/importSource 等，迫使 orchestrator 等 7 文件共 11 处用 (project as any) 绕过类型系统——字段名改了也不报错，是静默坏味道",
-  "v1.6.27 补齐字段 + 移除 as any：Project interface 对齐 Prisma（新增字段全可选 ?，llmConfig 保留 LLMConfig 类型不动——运行时是 Prisma Json 原始对象、类型不一致单独立项）；移除 orchestrator 的 globalPrompt、chapter-outline/refine 的 authorNote、context-loader 的 contextKeepChapters、storylines/generate 的 buildConfig、presets apply 与 applied-presets 的 postProcessingRules/appliedPresets 共 11 处绕过",
-  "v1.6.27 验证（质量门/诚实）：tsc 0 错误 + vitest 307/307 全绿；本修复运行时无任何行为变化（as any 原本就能读到字段），纯类型层收口，价值在防止未来误改字段名静默通过 tsc",
-  "v1.6.27 边界：保留 llmConfig 取用端 as any（类型不一致待专项）、workspace 页关系字段 storyNodes/characters/lorebookEntries 的 as any（不该进 Project interface，合理）；未重排 VERSIONS 历史 24/26/25 错位（前序遗留，留待专项）",
+  "v1.6.28 sync-global-prompt 漏同步复查（中）：用 Bash grep 穷举全仓 syncGlobalPrompt 调用点（30+ 处）与全部 characterCard/lorebookEntry 增删改路由交叉比对，确认 extract-chapter/classify/entities-highlight 纯读排除、sync-relations 建 pending 卡排除（设计使然），唯 explore/create 建项目播种世界书/角色卡/风格卡后漏调 syncGlobalPrompt——与 seed/genre-project·sample-project 同类播种路由不对称，补 syncGlobalPrompt(project.id).catch 闭合",
+  "v1.6.28 llmConfig 类型绕过收口（工程/类型安全）：发现 7 处 (project as any).llmConfig 绕过根因——GenerationData.project 已是 Project 类型（含 llmConfig: LLMConfig），conflict/continue/refine/write/applied-presets/orchestrator/pre-processor 的 project 实为 Project 或 Prisma Project（含 llmConfig: JsonValue），外层 as any 纯历史遗留，去掉即合法",
+  "v1.6.28 内层桥接：去掉外层 (project as any) 后，LLMConfig→Record 改用 as unknown as Record 精确桥接（TS 报错 LLMConfig 无索引签名不能直转 Record、需 unknown 中转）——比模糊 any 更诚实，明确「理想类型 LLMConfig 桥接到运行时 Json 的 Record 视角」",
+  "v1.6.28 验证（质量门/诚实）：tsc 0 错误 + vitest 30 文件 307/307 全绿（无新增测试，靠双门禁 + 源码逐处核实）；运行时零行为变化；llmConfig 彻底类型统一（Project.llmConfig 放宽需重构前端 ProjectConfigPanel 类型假设）与 context-loader/outline-context 的 project: any 留 v1.6.29 专项；VERSIONS 历史 24/26/25 错位如实标注未重排",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.28",
+    date: "2026-08-08",
+    title: "v1.6.28 sync 漏同步复查 + llmConfig 类型绕过收口",
+    sections: [
+      {
+        label: "sync-global-prompt 漏同步复查（中）",
+        items: [
+          "用 Bash grep 穷举全仓 syncGlobalPrompt 调用点（30+ 处）与全部 characterCard/lorebookEntry 增删改路由交叉比对，逐条核实「用户主动改 approved 卡却漏同步」的漏口——比凭记忆可靠",
+          "确认三处非漏口：extract-chapter/classify/entities-highlight 全是 findMany 纯读无建卡；sync-relations 建/改的是 pending 关系卡（reviewStatus:pending），sync 只重算 approved 无效（设计使然）",
+          "发现真实漏口：explore/create 建项目时播种世界书/角色卡/风格卡（lorebookEntry/characterCard/styleCard.create），却漏调 syncGlobalPrompt——而同类播种路由 seed/genre-project、seed/sample-project 都调了，明显不对称；播种卡属用户主动 approved（默认 approved），sync 必要。补 syncGlobalPrompt(project.id).catch(()=>{}) 闭合，与 v1.6.26 import/quick 同形态",
+        ],
+      },
+      {
+        label: "llmConfig 类型绕过收口（工程/类型安全）",
+        items: [
+          "发现 7 处 (project as any).llmConfig 绕过根因：GenerationData.project 已是 @/core/types 的 Project 类型（含 llmConfig: LLMConfig），conflict/continue/refine/write/applied-presets/orchestrator/pre-processor 的 project 实为 Project 或 Prisma Project（含 llmConfig: JsonValue），外层 (project as any) 纯属 v1.6.27 之前的遗留，去掉即合法",
+          "修复：去掉 7 处外层 (project as any)，内层 LLMConfig→Record 改用 as unknown as Record 精确桥接（TS 报错 LLMConfig 无索引签名不能直转 Record，需 unknown 中转）——比模糊 any 更诚实，明确「理想类型 LLMConfig 桥接到运行时 Json 的 Record 视角」",
+        ],
+      },
+      {
+        label: "验证 / 诚实边界",
+        items: [
+          "tsc 0 错误 + vitest 30 文件 307/307 全绿（无新增测试，靠双门禁 + 源码逐处核实）；运行时零行为变化",
+          "llmConfig 彻底类型统一（Project.llmConfig 从 LLMConfig 改 JsonValue/放宽，需重构前端 ProjectConfigPanel 类型假设）留 v1.6.29 专项；context-loader:249/outline-context:27 的 project: any 参数标注非 llmConfig 访问、属宽松接收，留专项；VERSIONS 历史 24/26/25 错位仍如实标注未重排",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.27",
     date: "2026-08-08",

@@ -157,10 +157,10 @@ export async function POST(request: Request) {
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
     // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig），直接复用，避免重复 DB 查询
-    const projLlm = (data.project as any)?.llmConfig;
+    const projLlm = data.project?.llmConfig;
     const orchestrator = await AgentOrchestrator.fromSettings(
       { defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP },
-      projLlm as Record<string, unknown> | null,
+      projLlm as unknown as Record<string, unknown> | null,
     );
 
     // ── 9. SSE 流 ──

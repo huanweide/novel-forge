@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.28 — 2026-08-08
+**v1.6.28 sync 漏同步复查 + llmConfig 类型绕过收口**
+
+- **sync-global-prompt 漏同步复查（中）**：用 Bash grep 穷举全仓 syncGlobalPrompt 调用点（30+ 处）与全部 characterCard/lorebookEntry 增删改路由交叉比对，确认 extract-chapter/classify/entities-highlight 纯读排除、sync-relations 建 pending 卡排除（设计使然），唯 explore/create 建项目播种世界书/角色卡/风格卡后漏调 syncGlobalPrompt——与 seed/genre-project·sample-project 同类播种路由不对称，补 syncGlobalPrompt(project.id).catch 闭合。
+- **llmConfig 类型绕过收口（工程 / 类型安全）**：发现 7 处 (project as any).llmConfig 绕过根因——GenerationData.project 已是 Project 类型（含 llmConfig: LLMConfig），conflict/continue/refine/write/applied-presets/orchestrator/pre-processor 的 project 实为 Project 或 Prisma Project（含 llmConfig: JsonValue），外层 as any 纯历史遗留；去掉外层 as any，内层 LLMConfig→Record 改用 as unknown as Record 精确桥接。
+- **验证与边界（质量门 / 诚实）**：tsc 0 错误 + vitest 307/307 全绿；运行时零行为变化。llmConfig 彻底类型统一（Project.llmConfig 放宽需重构前端 ProjectConfigPanel 类型假设）与 context-loader/outline-context 的 project: any 留 v1.6.29 专项；VERSIONS 历史 24/26/25 错位如实标注未重排。
+
+---
+
 ## v1.6.27 — 2026-08-08
 **v1.6.27 核心 Project 类型收口（消除 (project as any) 绕过）**
 

@@ -18,6 +18,7 @@ import type { BuildConfig, AdoptedItem } from "@/core/explore/types";
 import { STEP_LABELS } from "@/core/explore/types";
 import { stepToCategory, extractKeysFromText } from "@/core/explore/utils";
 import { buildGlobalPromptFromExplore } from "@/core/explore/build-prompt";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { jsonError } from "@/lib/api-error";
 
 export const maxDuration = 120;
@@ -116,6 +117,9 @@ export async function POST(req: NextRequest) {
 
     // ── 自动生成默认写作规则 ──
     await generateDefaultRules(project.id, config);
+
+    // ── 刷新全局提示词缓存（播种的世界书/角色卡/风格卡需进入生成上下文）──
+    syncGlobalPrompt(project.id).catch(() => {});
 
     return NextResponse.json({
       success: true,

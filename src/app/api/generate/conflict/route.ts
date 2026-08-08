@@ -121,7 +121,7 @@ export async function POST(request: Request) {
   {"title":"xxx","trigger":"...","tension":"...","outcome":"...","caution":"...","characters":[]}
 ]`;
 
-    const config = await getEffectiveConfig(buildProjectOverrides((project as any).llmConfig));
+    const config = await getEffectiveConfig(buildProjectOverrides(project.llmConfig as unknown as Record<string, unknown> | null));
     const client = createLLMClient(config);
 
     const messages = [

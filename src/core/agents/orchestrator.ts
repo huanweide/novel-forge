@@ -644,7 +644,7 @@ export function buildPromptContext(params: {
     colloquialism: "口语化", humorLevel: "幽默感",
     violenceLevel: "暴力程度", eroticLevel: "暧昧程度",
   };
-  const llmCfg = (project as any).llmConfig as Record<string, unknown> | undefined;
+  const llmCfg = project.llmConfig as unknown as Record<string, unknown> | undefined;
   const dims = llmCfg?.dimensions as Record<string, number> | undefined;
   const styleBlock = dims && Object.keys(dims).length > 0
     ? `\n## 12维风格参数（精确调校——必须体现在正文中）\n${Object.entries(dims).map(([k, v]) => `- ${DIM_LABELS[k] || k}: ${v}/10`).join("\n")}\n\n上述参数是作者对本章文风的精确设定，请在写作时严格执行：\n- 描写密度、环境描写、心理描写决定段落的画面感比例\n- 对话比例、口语化决定角色台词的风格和频次\n- 节奏速度决定情节推进的快慢\n- 修辞手法、词汇丰富度决定语言的华丽程度\n- 幽默感、暴力程度、暧昧程度是内容过滤器\n`

@@ -35,7 +35,7 @@ export async function DELETE(
       data.postProcessingRules = rules.filter((r) => !nameSet.has(r.name));
     }
     if (target?.configKeys?.length) {
-      const cfg: any = (project as any).llmConfig || {};
+      const cfg: any = (project.llmConfig as Record<string, unknown>) || {};
       for (const k of target.configKeys as string[]) delete cfg[k];
       data.llmConfig = cfg;
     }
