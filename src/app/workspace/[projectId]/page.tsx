@@ -737,7 +737,7 @@ export default function WorkspacePage() {
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: target.old, wordCount: (target.old || "").length }),
+        body: JSON.stringify({ content: target.old, wordCount: (target.old || "").length, undo: true }),
       });
       if (res.ok) toastSuccess("已撤销，恢复原正文");
       else toastError("撤销失败");

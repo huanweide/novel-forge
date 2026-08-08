@@ -602,6 +602,23 @@ model LoreTable {
   @@index([key])
 }
 
+// ─── 自动填表批次溯源（v1.6.19 #6 修复）──────────────
+// 记录每次「写章/续写/微调后自动填表」实际新增了哪些结构化表格行（row_id 列表），
+// 供撤销章节时精确清理该章自动填入的表格行，避免撤销正文后表格行残留。
+// 仅记录 insert 类新增行（update/delete 因需操作变换且沙箱无端到端验证，留后续专项）。
+model BabyloreFillBatch {
+  id              String   @id @default(uuid())
+  projectId       String
+  nodeId          String           // 来源章节节点 ID（撤销的精确锚点）
+  loreTableId     String           // 受影响的结构化表格
+  insertedRowIds  Json    @default("[]") // 本次填表实际 insert 的 row_id 数组
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+  @@index([nodeId])
+  @@index([loreTableId])
+}
+
 // ─── 预设 (Preset) —— 创意工坊/共创社区资产 ─────────────
 // 把「参考资料本身就是个预设」实体化：表格模板预设 + 剧情推进预设 + 文风 + 世界观 + 角色卡
 // 用户可在创意工坊上传/共享/Fork 这些预设（免费、非商业）。

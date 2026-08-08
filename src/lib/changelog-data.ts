@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.18";
+export const LATEST_VERSION = "v1.6.19";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.18 待审隔离根治（复验·高）：context-loader 角色卡 findMany 补 reviewStatus:approved 过滤——此前角色卡 section 仅 where: { projectId } 无任何 reviewStatus 过滤，无论 pending/approved 都被注入正文，证实 v1.6.17 给 apply-extraction 角色卡加 pending 仅是表面修复（UI 徽标变了但卡仍注入）；根治后角色卡与 worldbook 一致走 approved 闸门",
-  "v1.6.18 自动建卡入口待审隔离统一（复验·中）：补齐 9 类 AI 自动生成卡漏传 reviewStatus 的入口（entity-sync 角色卡 / characters-expand 三处拆解发现 / entity-auto-creator 角色与世界卡 / sync-relations 两处关系卡 / game-engine 物品卡 / tool-registry 角色与世界卡 / generate-outline 大纲角色 / dissect-engine 拆书角色 / pre-processor 预处理角色）统一补 pending，与 entity-sync、apply-extraction 对齐；手动建卡与导入（characters/route、explore、import、seed、presets、parse-settings 用户主动粘贴设定）保持 approved，不阻断用户主动操作",
-  "v1.6.18 双门禁收口（质量门）：tsc 0 错误 + vitest 286/286 全绿；game-engine 真实路径修正为 src/core/game/game-engine.ts（前序复核 summary 路径误写为 src/core）",
-  "v1.6.18 复查范围：parse-settings 三处建卡为单行 helper 调用且语义属用户主动粘贴设定导入，保持 approved 不补 pending；#6 undo 不回滚 babylore 副作用确认属实，留 v1.6.19+ 产品线处理",
+  "v1.6.19 #6 撤销填表回滚（修复·中）：新增 BabyloreFillBatch 溯源表，写章/续写/微调后自动填表记录本次新增 row_id 并锚定 nodeId；撤销路由（PUT /nodes/:id 带 undo:true）调 revertBabyloreFill 仅清除该章新增表格行、不动既有行与后续章节数据（零数据丢失），覆盖最常见的新增行残留痛点",
+  "v1.6.19 全本导出零正文 400 友好提示（修复·低）：导出路由此前只在选章导出拦截空正文，全本导出（无 chapterIds）静默产空白文件；v1.6.19 补整本书所有节点均无正文则返回 400，与选章拦截对齐，避免误判导出成功",
+  "v1.6.19 双门禁收口（质量门）：tsc 0 错误 + vitest 292/292 全绿（新增 6 条 #6 撤销填表单测）；BabyloreFillBatch 模型已落库",
+  "v1.6.19 诚实边界：#6 的 update 类精确还原因需操作变换（OT）且沙箱无 Chromium 端到端验证，本轮先做安全子集（删新增行），保留 update 残留为已知局限、定后续专项",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.19",
+    date: "2026-08-08",
+    title: "v1.6.18 复验修复（#6 撤销填表回滚 + 全本导出零正文 400）",
+    sections: [
+      {
+        label: "#6 撤销章节回滚自动填表（修复 · 中）",
+        items: [
+          "撤销精修（undoRefine）原先只还原 storyNode.content，不碰结构化表格，导致 AI 自动填入的世界/角色/地点行残留——这是多轮复验确认属实的遗留项（#6）",
+          "新增 BabyloreFillBatch 溯源表（projectId / nodeId / loreTableId / insertedRowIds）：每次写章/续写/微调后自动填表时，在 babyloreFill 调用前后对每张表做 before/after 行级 diff，把本次实际新增的 row_id 记到该表并锚定 nodeId",
+          "撤销路由（PUT /nodes/:id，前端 undoRefine 带 undo:true 标志）调用 revertBabyloreFill：仅删除该章新增的表格行（insertedRowIds），不动被 update 的既有行、也不动后续章节新增/修改的行，零数据丢失；撤销幂等，批次一次清除",
+          "诚实边界：update 类精确还原（把某角色被该章改的状态还原）需要操作变换（OT）以正确处理后续章节对同一行的修改，且沙箱无 Chromium 无法端到端验证撤销交互；本轮先做安全子集覆盖最常见的新增行残留痛点，update 残留定为后续专项，不假装全修好",
+        ],
+      },
+      {
+        label: "全本导出零正文 400 友好提示（修复 · 低）",
+        items: [
+          "导出路由此前只在选章导出（chapterIds 存在）时拦截空正文，全本导出（无 chapterIds）漏判，静默产出空白文件误导作者",
+          "v1.6.19 补：全本导出且整本书所有节点均无正文时返回 400 提示（整本书还没有任何正文可导出），与选章的（所选范围无可导出正文）拦截对齐",
+        ],
+      },
+      {
+        label: "双门禁收口（质量门）",
+        items: [
+          "tsc 0 错误 + vitest 292/292 全绿（新增 6 条 #6 撤销填表单测：溯源记录 + 安全清理 + 不动他人数据 + 幂等）",
+          "BabyloreFillBatch 模型已 prisma db push 落库本地 PG17，prisma generate 已刷新客户端",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.18",
     date: "2026-08-08",

@@ -548,7 +548,7 @@ function buildWarnings(appliedNames: { table: string; value: string }[], chapter
 export async function babyloreFill(
   projectId: string,
   chapterText: string,
-  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null; chapterOrder?: number; batchId?: string; source?: string },
+  options?: { tableKeys?: string[]; projectLlmConfig?: Record<string, unknown> | null; chapterOrder?: number; batchId?: string; source?: string; nodeId?: string },
 ): Promise<FillResult> {
   // 空内容守卫（P2-④）：正文为空则不触发 LLM 填表，避免空跑/误插空行。
   // safeFillAfterWriting 经本入口调用，故一并覆盖，无需重复判断。
@@ -590,9 +590,30 @@ export async function babyloreFill(
     rows: (t.rows as any) || [],
   }));
 
+  // v1.6.19 #6 修复：填表前深拷贝各表 rows 作为 before 快照，
+  // 填表后 diff 出本次实际新增的 row_id，记录到 BabyloreFillBatch（锚定 nodeId），
+  // 供撤销章节时精确清理该章自动填入的结构化表格行。
+  const beforeRowsById = new Map<string, any[]>(
+    dbTables.map((t: any) => [t.id, JSON.parse(JSON.stringify(t.rows || []))]),
+  );
+
   const llm: LlmCreds = { baseURL, apiKey, model };
   const srcLabel = `ch${options?.chapterOrder ?? "?"}:batch${options?.batchId ?? "manual"}${options?.source ? ":" + options.source : ""}`;
   const r = await runFillForText(chapterText, tables, llm, options?.tableKeys, srcLabel, projectId);
+
+  // v1.6.19 #6 修复：仅当本次填表有落地（applied>0）且携带 nodeId 时才记录溯源批次。
+  // diff 逻辑：after（tables[i].rows 已被 applyOps 原地改写）中存在、before 快照中不存在 row_id 的行 = 本次新增。
+  if (r.applied > 0 && options?.nodeId) {
+    for (const t of tables) {
+      const beforeIds = new Set((beforeRowsById.get(t.id) || []).map((row: any) => row.row_id));
+      const inserted = ((t.rows as any[]) || []).filter((row: any) => !beforeIds.has(row.row_id)).map((row: any) => row.row_id);
+      if (inserted.length > 0) {
+        await prisma.babyloreFillBatch.create({
+          data: { projectId, nodeId: options.nodeId, loreTableId: t.id, insertedRowIds: inserted },
+        }).catch(() => null); // 记录失败不影响正文/填表交付
+      }
+    }
+  }
   // v1.2.1：同步抽取角色/世界书实体——角色卡、世界卡内容也能自动填写（查重兜底，失败不影响表格结果）
   await syncChapterEntities(projectId, chapterText, llm).catch(() => null);
   // P1-B（墨白）：落库后跑 selfCheckFill，把疑似问题（地名/空值/跨表/表内异体）合并进结果，供 UI/诊断。
@@ -944,4 +965,40 @@ export async function selfCheckFill(projectId: string): Promise<SelfCheckResult>
     crossTableIssues,
     issues: issues.slice(0, 200),
   };
+}
+
+/**
+ * v1.6.19 #6 修复：撤销章节时清理该章自动填入的结构化表格行。
+ *
+ * 仅删除「本次填表实际新增」的行（BabyloreFillBatch.insertedRowIds 记录），
+ * 不动被 update 的既有行、也不动其他章节后续新增/修改的行，避免数据丢失。
+ * 返回清理掉的行数。无该 nodeId 的溯源批次时直接返回 { removed: 0 }（幂等）。
+ */
+export async function revertBabyloreFill(projectId: string, nodeId: string): Promise<{ removed: number }> {
+  const batches = await prisma.babyloreFillBatch.findMany({ where: { projectId, nodeId } });
+  if (batches.length === 0) return { removed: 0 };
+
+  // 按 loreTableId 归并本次需删除的 row_id 集合
+  const byTable = new Map<string, Set<number>>();
+  for (const b of batches) {
+    const ids = (b.insertedRowIds as number[]) || [];
+    if (!byTable.has(b.loreTableId)) byTable.set(b.loreTableId, new Set());
+    for (const id of ids) byTable.get(b.loreTableId)!.add(id);
+  }
+
+  let removed = 0;
+  for (const [loreTableId, idSet] of byTable) {
+    const t = await prisma.loreTable.findUnique({ where: { id: loreTableId } });
+    if (!t) continue;
+    const rows = (t.rows as any[]) || [];
+    const kept = rows.filter((r) => !idSet.has(r.row_id));
+    const delta = rows.length - kept.length;
+    if (delta > 0) {
+      await prisma.loreTable.update({ where: { id: loreTableId }, data: { rows: kept } });
+      removed += delta;
+    }
+  }
+  // 清理该 nodeId 的溯源批次，避免重复撤销（撤销一次即清除，幂等）
+  await prisma.babyloreFillBatch.deleteMany({ where: { projectId, nodeId } });
+  return { removed };
 }

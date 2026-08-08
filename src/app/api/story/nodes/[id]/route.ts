@@ -6,6 +6,7 @@ import { snapshotRevision } from "@/lib/versions";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 import { maybeAutoDeliver, triggerForeshadowDetect } from "@/core/confirm-guard";
+import { revertBabyloreFill } from "@/core/babylore/fill";
 
 // GET /api/story/nodes/[id]
 export async function GET(
@@ -107,6 +108,19 @@ export async function PUT(
         editVersion: { increment: 1 },
       },
     });
+
+    // v1.6.19 #6 修复：撤销章节（前端 undoRefine 带 undo:true）时，同步清理该章自动填入的
+    // 结构化表格行（仅删本次填表新增的行，不动他人数据），避免撤销正文后表格行残留。
+    if (body.undo === true) {
+      try {
+        const removed = await revertBabyloreFill(existingNode.projectId, id);
+        if (removed.removed > 0) console.log(`[undo] 章节 ${id} 撤销清理了 ${removed.removed} 行自动填表数据`);
+      } catch (e) {
+        // 填表回滚失败不影响正文撤销本身（正文已还原），仅记录告警
+        console.error(`[undo] 清理自动填表失败 node=${id}:`, e);
+      }
+    }
+
     return NextResponse.json(node);
   } catch (err) {
     // FE-N8：并发窗口（预检后、更新前）节点又被改 → P2025，降级为 409 冲突
