@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.29";
+export const LATEST_VERSION = "v1.6.30";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.29 类型债总清（工程/类型安全）：马斯克 CEO 拍板做 (1)+(2) 合并——核心管线 project:any 收口 + Project.llmConfig 放宽；消除 orchestrator 的 genre、refine/write 的 postProcessingRules·contextKeepChapters、presets apply 的 llmConfig 外层、context-loader/outline-context 的 project（Prisma Project → Project 桥接）共 7 处遗留 (project as any) 绕过",
-  "v1.6.29 Project.llmConfig 根因修复：从 LLMConfig 放宽为 Record<string, unknown> | null，与运行时 Prisma Json 原始对象对齐——这是 v1.6.27/28 全部 llmConfig as any / as unknown as Record 桥接异味的总根因（理想类型 LLMConfig vs 运行时 Json 的鸿沟）；补 3 处类型 import",
-  "v1.6.29 诚实边界（修正马斯克拍板）：原拍板「放宽到 JsonValue 并重构前端」经实测评估未采纳——前端 ProjectData 不含 llmConfig（grep 空）、core 层消费全是 as unknown as Record 桥接、放宽到 JsonValue 无法消除桥接且带来 Prisma 导出依赖风险（@prisma/client 未导出 JsonValue），故用 Record 更稳；桥接仍保留（Json → Record 必须 unknown 中转，非绕过）",
-  "v1.6.29 验证（质量门）：tsc 0 错误 + vitest 30 文件 307/307 全绿；运行时零行为变化；残留 project 维度 as any 归零，前端关系字段 storyNodes/.characters/.lorebookEntries 的 as any 合理保留（不该进 Project interface）；VERSIONS 历史 24/26/25 错位仍如实标注未重排",
+  "v1.6.30 大书流式导出（性能/稳定性）：马斯克 CEO 拍板选 C——手写零依赖流式 ZIP（不引第三方），epub.ts 新增 buildEpubStream(dest, …) 边生成章节边写入流，章节 Buffer 写完即释放；导出路由 epub 分支改 PassThrough 流式响应，内存峰值从「整本 Buffer」降到「单章最大 Buffer」+ 轻量中央目录元数据，根治大书（数百章）整本 Buffer.concat 的 OOM 风险",
+  "v1.6.30 字节产物守恒：buildEpubStream 的 local header / 中央目录 / crc32 逐字段与同步版 makeZip 完全一致（stored 不压缩、mimetype 首条、entry 顺序相同）；新增 epub.stream.test.ts 2 用例——结构等价（逐 entry 比对，仅 OPF 时间戳行豁免）+ 大书 300 章 ZIP 合法性（end record 签名、entry 数 = 章节+5、mimetype 首条 stored）钉死",
+  "v1.6.30 诚实边界（docx 未做真流式）：DOCX 所有章节拼进单个 document.xml（OOXML 物理限制，难拆独立文件流式），本轮仅 epub 真流式；docx 分支本轮未动，大书 docx 导出仍为整本 Buffer.concat——标注为已知边界，留后续立项",
+  "v1.6.30 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿（新增 2）；运行时 epub 导出行为不变（仅传输方式从整本 Buffer 响应改成流式响应），客户端下载字节结构等价",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.30",
+    date: "2026-08-08",
+    title: "v1.6.30 大书流式导出（epub 零依赖流式 ZIP，防 OOM）",
+    sections: [
+      {
+        label: "大书流式导出（性能/稳定性）",
+        items: [
+          "根因：epub.ts/docx.ts 是零依赖手写 stored ZIP（makeZip 把整本 entries 数组 Buffer.concat 成单 Buffer），非 package.json 声明的 jszip 死依赖；大书（数百章）整本 Buffer.concat 是 OOM 真根因",
+          "马斯克 CEO 拍板选 C——手写零依赖流式 ZIP（不引人 yazl 等第三方规避沙箱 npm 网络风险），epub.ts 新增 buildEpubStream(dest: Writable, projectName, chapters, totalWords, completedNodes, author?)：带背压 push（write 返回 false 时 await drain）逐章写 stored-local-header+nameBuf+data，累积中央目录，最后写中央目录 + end record，dest.end()",
+          "导出路由 epub 分支改 PassThrough 流式响应（Readable.toWeb），替代整本 Buffer 响应；字节产物与同步 buildEpub 完全一致（mimetype 首条 stored、中央目录顺序相同），entry 数 = 章节 + 5（mimetype/container/opf/nav/colophon）",
+        ],
+      },
+      {
+        label: "测试与诚实边界",
+        items: [
+          "新增 epub.stream.test.ts 2 用例：结构等价（逐 entry 比对，仅 content.opf 时间戳行豁免——OPF 内嵌 Date.now() uuid 与 dcterms:modified，同步/流式各自生成必不同，故比对时剔除这两行）+ 大书 300 章 ZIP 合法性（尾部 end record 签名 PK\\x05\\x06、entry 数 = big.length+5、首个 local header 是 mimetype 且压缩方法 0 stored）",
+          "诚实边界：DOCX 所有章节拼进单个 document.xml（OOXML 物理限制，难拆独立文件流式），本轮仅 epub 真流式；docx 分支未动，大书 docx 导出仍为整本 Buffer.concat——标注为已知边界留后续立项",
+          "验证：tsc 0 错误 + vitest 31 文件 309/309 全绿（新增 2）；运行时 epub 导出行为不变，仅传输方式改变",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.29",
     date: "2026-08-08",

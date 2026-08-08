@@ -2,8 +2,9 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { scanBannedWords } from "@/lib/banned-words";
 import { NextResponse } from "next/server";
-import { buildChapterList, buildHtmlDoc, buildEpub } from "@/core/epub";
+import { buildChapterList, buildHtmlDoc, buildEpub, buildEpubStream } from "@/core/epub";
 import { buildDocx } from "@/core/docx";
+import { PassThrough, Readable } from "stream";
 
 /**
  * GET /api/projects/[id]/export?format=markdown|txt|html|epub&includeOutline=true|false
@@ -150,13 +151,15 @@ export async function GET(
       });
     }
 
-    // EPUB 电子书导出（零依赖 stored ZIP + CRC32）
+    // EPUB 电子书导出（零依赖 stored ZIP + CRC32）——流式写入响应，章节 Buffer 写完即释放，防大书 OOM
     if (format === "epub") {
       const chapters = buildChapterList(roots, allNodes, includeOutline);
-      const epubBuf = buildEpub(project.name, chapters, totalWords, completedNodes, author);
-      const epubBlob = new Blob([new Uint8Array(epubBuf)], { type: "application/epub+zip" });
+      const stream = new PassThrough();
+      buildEpubStream(stream, project.name, chapters, totalWords, completedNodes, author).catch(
+        (e) => stream.destroy(e)
+      );
       const filename = `${project.name}_${new Date().toISOString().slice(0, 10)}.epub`;
-      return new Response(epubBlob, {
+      return new Response(Readable.toWeb(stream) as unknown as BodyInit, {
         headers: {
           "Content-Type": "application/epub+zip",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`,

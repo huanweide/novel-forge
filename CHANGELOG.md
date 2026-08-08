@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.30 — 2026-08-08
+**v1.6.30 大书流式导出（epub 零依赖流式 ZIP，防 OOM）**
+
+- **大书流式导出（性能 / 稳定性）**：根因——epub.ts/docx.ts 是零依赖手写 stored ZIP（makeZip 把整本 entries 数组 Buffer.concat 成单 Buffer），非 package.json 声明的 jszip 死依赖；大书（数百章）整本 Buffer.concat 是 OOM 真根因。马斯克 CEO 拍板选 C——手写零依赖流式 ZIP（不引人 yazl 等第三方规避沙箱 npm 网络风险），epub.ts 新增 buildEpubStream(dest, projectName, chapters, totalWords, completedNodes, author?)：带背压 push（write 返回 false 时 await drain）逐章写 stored-local-header+nameBuf+data，累积中央目录，最后写中央目录 + end record，dest.end()。导出路由 epub 分支改 PassThrough 流式响应（Readable.toWeb），字节产物与同步 buildEpub 完全一致（mimetype 首条 stored、中央目录顺序相同），entry 数 = 章节 + 5。
+- **测试与诚实边界**：新增 epub.stream.test.ts 2 用例——结构等价（逐 entry 比对，仅 content.opf 时间戳行豁免，OPF 内嵌 Date.now() uuid 与 dcterms:modified 同步/流式各自生成必不同）+ 大书 300 章 ZIP 合法性（end record 签名、entry 数 = 章节+5、mimetype 首条 stored）。诚实边界——DOCX 所有章节拼进单个 document.xml（OOXML 物理限制难拆），本轮仅 epub 真流式，docx 分支未动，大书 docx 仍为整本 Buffer.concat，标注为已知边界留后续立项。tsc 0 错误 + vitest 309/309 全绿（新增 2）。
+
+---
+
 ## v1.6.29 — 2026-08-08
 **v1.6.29 类型债总清（核心管线 project:any 收口 + Project.llmConfig 放宽）**
 

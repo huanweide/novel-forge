@@ -7,6 +7,8 @@
  *   兼容所有主流阅读器；无需 archiver/jszip。
  */
 
+import { Writable } from "stream";
+
 // ---------- HTML 转义 ----------
 export function escapeHtml(s: string): string {
   return s
@@ -379,4 +381,109 @@ export function buildEpub(
   entries.push({ name: "OEBPS/colophon.xhtml", data: Buffer.from(colophon, "utf8") });
 
   return makeZip(entries);
+}
+
+/**
+ * 流式构建 EPUB（零依赖 stored ZIP）——边生成章节边写入目标流，章节内容 Buffer 写完即释放，
+ * 内存峰值从「整本 Buffer」降到「单章最大 Buffer」+ 轻量中央目录元数据数组，用于大书导出防 OOM。
+ * 字节产物与 buildEpub（同步版）完全一致（mimetype 首条 stored、中央目录顺序相同），由单测钉死。
+ */
+export async function buildEpubStream(
+  dest: Writable,
+  projectName: string,
+  chapters: ChapterItem[],
+  totalWords: number,
+  completedNodes: number,
+  author?: string
+): Promise<void> {
+  const central: Buffer[] = [];
+  let offset = 0;
+
+  // 带背压的写入：write 返回 false 时等待 drain，避免 PassThrough 无限缓冲吞噬内存
+  const push = (buf: Buffer): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      if (dest.write(buf)) return resolve();
+      dest.once("drain", resolve);
+      dest.once("error", reject);
+    });
+
+  const writeEntry = async (name: string, data: Buffer) => {
+    const nameBuf = Buffer.from(name, "utf8");
+    const crc = crc32(data);
+    const size = data.length;
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0); // 签名
+    local.writeUInt16LE(20, 4); // 版本
+    local.writeUInt16LE(0, 6); // 标志
+    local.writeUInt16LE(0, 8); // 压缩方法 0 = stored
+    local.writeUInt16LE(0, 10); // 修改时间
+    local.writeUInt16LE(0, 12); // 修改日期
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(size, 18); // 压缩后大小
+    local.writeUInt32LE(size, 22); // 未压缩大小
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28); // 额外字段长度
+
+    await push(local);
+    await push(nameBuf);
+    await push(data);
+
+    const cd = Buffer.alloc(46);
+    cd.writeUInt32LE(0x02014b50, 0);
+    cd.writeUInt16LE(20, 4); // 版本生成
+    cd.writeUInt16LE(20, 6); // 版本需要
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt16LE(0, 10);
+    cd.writeUInt16LE(0, 12);
+    cd.writeUInt16LE(0, 14);
+    cd.writeUInt32LE(crc, 16);
+    cd.writeUInt32LE(size, 20);
+    cd.writeUInt32LE(size, 24);
+    cd.writeUInt16LE(nameBuf.length, 28);
+    cd.writeUInt16LE(0, 30); // 额外
+    cd.writeUInt16LE(0, 32); // 注释
+    cd.writeUInt16LE(0, 34); // 磁盘号
+    cd.writeUInt16LE(0, 36); // 内部属性
+    cd.writeUInt32LE(0, 38); // 外部属性
+    cd.writeUInt32LE(offset, 42); // 本地头偏移
+
+    central.push(cd, nameBuf);
+
+    offset += local.length + nameBuf.length + data.length;
+  };
+
+  // 固定 entries（mimetype 必须首条且 stored，顺序与 buildEpub 完全一致）
+  await writeEntry("mimetype", Buffer.from("application/epub+zip", "utf8"));
+  await writeEntry("META-INF/container.xml", Buffer.from(epubContainerXml(), "utf8"));
+  await writeEntry("OEBPS/content.opf", Buffer.from(epubContentOpf(projectName, chapters, author), "utf8"));
+  await writeEntry("OEBPS/nav.xhtml", Buffer.from(epubNavXhtml(projectName, chapters, author), "utf8"));
+
+  for (let i = 0; i < chapters.length; i++) {
+    const c = chapters[i];
+    await writeEntry(`OEBPS/ch${i}.xhtml`, Buffer.from(epubChapterXhtml(c.title, c), "utf8"));
+  }
+
+  const colophon = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN">
+<head><title>版权信息</title></head>
+<body><p>${author ? `作者：${escapeXml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Forge 生成。</p></body>
+</html>`;
+  await writeEntry("OEBPS/colophon.xhtml", Buffer.from(colophon, "utf8"));
+
+  const centralBuf = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(0, 4);
+  end.writeUInt16LE(0, 6);
+  end.writeUInt16LE(chapters.length + 5, 8); // 章节 + 5 固定（mimetype/container/opf/nav/colophon）
+  end.writeUInt16LE(chapters.length + 5, 10);
+  end.writeUInt32LE(centralBuf.length, 12);
+  end.writeUInt32LE(offset, 16);
+  end.writeUInt16LE(0, 20);
+
+  await push(centralBuf);
+  await push(end);
+  dest.end();
 }
