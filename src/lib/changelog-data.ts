@@ -25,18 +25,41 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.31";
+export const LATEST_VERSION = "v1.6.32";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.31 StoryNode 类型收口（消除读取端 as any 绕过）：延续 v1.6.27/29 类型债总清主题，诚实引入 StoryNodeLight 轻量类型（对齐 select 子集，不含 content，避免假类型信心），替换 context-loader 的 allLight as any[] 与节点字段 as any；continue/write/pre-processor 路由的 (currentNode/nextNode/data.currentNode as any) 惰性绕过全部消除（currentNode 经 null 守卫已 Narrow 为 StoryNode、nextNode 是全字段 Prisma 对象、(n:any) 回调定型 StoryNode）",
-  "v1.6.31 诚实边界（必需桥接保留）：context-loader 返回 GenerationData.currentNode 处仍保留 currentNode as any——根因是 prisma.storyNode.findUnique 的 reviewLogs 是 Prisma JsonValue，与手动 StoryNode.reviewLogs: ReviewLog[] 不兼容（与 v1.6.27/29 的 as unknown as Record 同源 Json↔强类型桥接问题），as StoryNode 会触发 TS2352 不兼容，故该处 as any 是诚实桥接非惰性绕过；另 allNodes 是「窗口补全文 full 节点 + 轻量 n」混合数组，本就 (any[]) 合理，未强行定型",
-  "v1.6.31 诚实边界（范围克制）：post-processor 的 (currentNode as any) 与 game-engine 的 (nodeForConfirm as any) 源未显式定型（参数为 any / session:any），去 as any 需先定型参数属范围蔓延+风险，本轮如实留后续；sync-global-prompt 全仓覆盖率经两轮穷举已完整，再扫属边际收益，不空耗版本",
-  "v1.6.31 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化，纯类型层收口降低后续维护误读",
+  "v1.6.32 post-processor currentNode 类型收口（消除写入端 as any 绕过）：延续 StoryNode 类型债总清主题，post-processor 的 PostPipelineParams.currentNode 已定型为 StoryNode（非 null），故 6 处 (currentNode as any) 惰性绕过全部消除——prevContent/prevWordCount 改 currentNode?.content/wordCount、existingReviewLogs 改 currentNode.reviewLogs、revisionCount 改 currentNode.revisionCount、auto-confirm 的 order 改 currentNode?.order、章节命名 curTitle 改 currentNode?.title；标量字段访问安全保留",
+  "v1.6.32 诚实边界（必需桥接）：仅在 prisma.storyNode.update 的 reviewLogs 写入边界保留 as any——根因是 reviewLogs 在 Prisma 是 Json 列（JsonValue），手动 StoryNode.reviewLogs: ReviewLog[] 无字符串索引签名，不满足 Prisma InputJsonValue，与 context-loader 的 currentNode as any 同源 Json↔强类型鸿沟；仅在「写入数据库」这一处桥接，标量读取（content/wordCount/revisionCount/order/title）一律不加 as any，收窄桥接面",
+  "v1.6.32 收口意义：post-processor 是 write/continue/refine 三路由共享的生成后处理单点（存正文、审校、摘要、伏笔、自动确认），本次收口后该文件不再有因 currentNode 类型不明导致的误读，与 v1.6.27/29/31 的类型债总清形成闭环（generate 编排侧 + 读取侧 + 写入侧三端收口）",
+  "v1.6.32 验证（质量门）：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化，纯类型层收口",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.32",
+    date: "2026-08-08",
+    title: "v1.6.32 post-processor currentNode 类型收口（消除写入端 as any 绕过）",
+    sections: [
+      {
+        label: "post-processor currentNode 类型收口（工程/类型安全）",
+        items: [
+          "PostPipelineParams.currentNode 已定型为 StoryNode（非 null），post-processor 内 6 处 (currentNode as any) 惰性绕过全部消除：prevContent/prevWordCount 改 currentNode?.content/.wordCount、existingReviewLogs 改 currentNode.reviewLogs、revisionCount 改 currentNode.revisionCount、auto-confirm 入参 order 改 currentNode?.order、章节命名 curTitle 改 currentNode?.title",
+          "标量字段读取（content/wordCount/reviewLogs/revisionCount/order/title）一律不加 as any，直接走 StoryNode 强类型访问，收窄类型绕过面",
+          "post-processor 是 write/continue/refine 三路由共享的生成后处理单点（存正文、审校、摘要、伏笔检测、自动确认），收口后该文件不再有因 currentNode 类型不明导致的误读",
+        ],
+      },
+      {
+        label: "诚实边界（Json 列写入桥接）",
+        items: [
+          "仅在 prisma.storyNode.update 的 reviewLogs 写入边界保留 as any：reviewLogs 在 Prisma 是 Json 列（JsonValue），手动 StoryNode.reviewLogs: ReviewLog[] 无字符串索引签名，不满足 Prisma InputJsonValue，与 context-loader 的 currentNode as any 同源 Json↔强类型鸿沟",
+          "桥接面严格收窄到「写入数据库」这一处，不污染读取路径；代码注释标明 Json 列不兼容根因，避免后人误删",
+          "验证：tsc 0 错误 + vitest 31 文件 309/309 全绿；运行时零行为变化",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.31",
     date: "2026-08-08",

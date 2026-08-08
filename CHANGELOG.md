@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.32 — 2026-08-08
+**v1.6.32 post-processor currentNode 类型收口（消除写入端 as any 绕过）**
+
+- **post-processor currentNode 类型收口（工程 / 类型安全）**：`PostPipelineParams.currentNode` 已定型为 `StoryNode`（非 null），post-processor 内 6 处 `(currentNode as any)` 惰性绕过全部消除——prevContent/prevWordCount 改 `currentNode?.content`/`.wordCount`、existingReviewLogs 改 `currentNode.reviewLogs`、revisionCount 改 `currentNode.revisionCount`、auto-confirm 入参 order 改 `currentNode?.order`、章节命名 curTitle 改 `currentNode?.title`；标量字段读取一律走 `StoryNode` 强类型，收窄类型绕过面。post-processor 是 write/continue/refine 三路由共享的生成后处理单点（存正文、审校、摘要、伏笔检测、自动确认），收口后该文件不再有因 currentNode 类型不明导致的误读。
+- **诚实边界（Json 列写入桥接）**：仅在 `prisma.storyNode.update` 的 `reviewLogs` 写入边界保留 `as any`——`reviewLogs` 在 Prisma 是 `Json` 列（JsonValue），手动 `StoryNode.reviewLogs: ReviewLog[]` 无字符串索引签名，不满足 Prisma `InputJsonValue`，与 `context-loader` 的 `currentNode as any` 同源 Json↔强类型鸿沟；桥接面严格收窄到「写入数据库」这一处，不污染读取路径，代码注释标明 Json 列不兼容根因。tsc 0 错误 + vitest 309/309 全绿；运行时零行为变化。
+
+---
+
 ## v1.6.31 — 2026-08-08
 **v1.6.31 StoryNode 类型收口（消除读取端 as any 绕过）**
 

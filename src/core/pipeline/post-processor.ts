@@ -164,8 +164,8 @@ export async function runPostGenerationPipeline(
 
   // ── 3. 保存到 storyNode ──
   // BE-1：写前快照——把被覆盖的上一版正文存入版本历史（AI 写/重写/润色/自动填表均经此单点）
-  const prevContent = (currentNode as any)?.content;
-  const prevWordCount = (currentNode as any)?.wordCount;
+  const prevContent = currentNode?.content;
+  const prevWordCount = currentNode?.wordCount;
   if (prevContent && String(prevContent).trim()) {
     await snapshotRevision({
       nodeId,
@@ -176,7 +176,7 @@ export async function runPostGenerationPipeline(
     });
   }
 
-  const existingReviewLogs = (currentNode as any).reviewLogs || [];
+  const existingReviewLogs = currentNode.reviewLogs || [];
   const reviewLogEntry = reviewLog
     ? {
         id: crypto.randomUUID(),
@@ -208,13 +208,15 @@ export async function runPostGenerationPipeline(
       qualityScore: qualityReport?.overallScore ?? null,
       ...(reviewLogEntry
         ? {
+            // reviewLogs 在 Prisma 是 Json 列，手动 StoryNode.reviewLogs: ReviewLog[] 无字符串索引签名，
+            // 不满足 Prisma InputJsonValue，写入需 Json 桥接（与 context-loader currentNode as any 同源）。
             reviewLogs: [
               ...(Array.isArray(existingReviewLogs) ? existingReviewLogs : []),
               reviewLogEntry,
-            ],
+            ] as any,
           }
         : {}),
-      revisionCount: ((currentNode as any).revisionCount || 0) + 1,
+      revisionCount: (currentNode.revisionCount || 0) + 1,
     },
   });
 
@@ -239,7 +241,7 @@ export async function runPostGenerationPipeline(
           id: nodeId,
           projectId,
           content,
-          order: (currentNode as any)?.order ?? 0,
+          order: currentNode?.order ?? 0,
           skipDetect: true,
         });
         send({ type: "auto_confirm", content: "智能审阅：质量达标，已自动确认" });
@@ -625,7 +627,7 @@ export async function runPostGenerationPipeline(
         // v1.6.2 修复：summary 可能自带「第N章」前缀（正文首行本身即章节标题时，
         // 摘要会原样摘到「第一章 · 龙髓石」），此处先剥离，避免拼接出「第N章：第N章：xxx」重复标题。
         let titleBase = cleanSummary.slice(0, 40).trim().replace(/^第\s*\d+\s*章[\s:：·]*/, "");
-        const curTitle = String((currentNode as any)?.title || "").trim();
+        const curTitle = String(currentNode?.title || "").trim();
         const isPlaceholder = !curTitle || /^第\s*\d+\s*章$/.test(curTitle);
         // 守卫：仅当正文非空时才回填标题。正文为空（模型偶发空返回）时摘要 LLM 会对空内容胡说，
         // 此时不该写标题，保留占位，交由上层错误流程处理。
