@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.25 — 2026-08-08
+**v1.6.25 项目自检 UI（一键健康检查）**
+
+- **项目自检 UI（中）**：打开「项目设定」弹窗底部新增「项目自检」分区，点「运行自检」一键跑 7 项健康检查——数据库连通 / LLM 配置 / 内容规模（章节·角色·世界书·故事线）/ 回收站残留 / 待审卡（不注入生成）/ 生成缓存 globalPrompt / 重名角色，每项标通过·注意·异常三态徽标并给总体结论。
+- **纯逻辑引擎（工程）**：`src/core/diagnostics.ts` 的 `runProjectDiagnostics` 可单测（mock prisma + getSettings），API 路由 `GET /api/projects/[id]/diagnostics` 返回结构化报告 JSON；前端 `ProjectDiagnostics` 组件自带「运行自检」按钮拉取并展示，单点检查失败不拖垮整体。
+- **质量门（诚实边界）**：`diagnostics.test.ts` 8 用例钉死 7 项检查 + 项目不存在 + 错误聚合（error>warn>ok），tsc 0 错误 + vitest 307/307 全绿（较 v1.6.24 +8）；UI 接入 `ProjectSettingsDialog` 设置枢纽，经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测，留 agent-browser 复检）。
+- **安全（设计）**：自检仅读取统计、不修改任何数据，安全可反复运行；重名角色走角色名小写去重，回收站走 `deletedAt` 非空计数。
+
+---
+
 ## v1.6.24 — 2026-08-08
 **v1.6.24 角色卡待审审批闭环（补齐 v1.6.18/22 缺口）**
 

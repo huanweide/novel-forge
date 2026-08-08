@@ -3,6 +3,7 @@
 import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/icons";
 import { ChapterConfirmBar } from "@/components/workspace/ChapterConfirmBar";
+import { ProjectDiagnostics } from "@/components/workspace/ProjectDiagnostics";
 
 interface Props {
   projectId: string;
@@ -97,6 +98,16 @@ export function ProjectSettingsDialog({
               先在大纲里选中一个章节，即可在这里对它确认定稿、AI 审校，或对全书一键智能交付。
             </div>
           )}
+        </div>
+
+        <div className="mt-5 border-t border-[var(--nv-border-2)] pt-4">
+          <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
+            <Icon name="search" size={15} className="text-[var(--nv-primary)]" /> 项目自检
+          </h3>
+          <p className="text-xs text-[var(--nv-text-muted)] mb-2">
+            一键跑一组健康检查：数据库 / LLM 配置 / 内容规模 / 回收站 / 待审卡 / 生成缓存 / 重名角色，帮你快速定位项目异常。
+          </p>
+          <ProjectDiagnostics projectId={projectId} />
         </div>
       </div>
     </Modal>

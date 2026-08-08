@@ -25,14 +25,14 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.24";
+export const LATEST_VERSION = "v1.6.25";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.24 角色卡待审审批闭环（高）：v1.6.18 自动转 pending + v1.6.22 强制 approved 后，角色卡此前无任何审批入口、永久卡在 pending 无法注入生成——本次补齐。后端 characters/[id] PUT 增加 reviewStatus 透传（审批落地并自动重算 globalPrompt），前端 CharacterRow 加「待审」徽标 + 勾选批准按钮（仿世界卡 WorldEntryCard），LeftPanel 接线 onConfirm 审批后刷新",
-  "v1.6.24 类型补全（工程）：components/workspace/types.ts 的 CharacterData 接口补 reviewStatus? 字段（此前仅 LorebookData 有），消除 tsc 报错并确保前端能识别待审角色卡",
-  "v1.6.24 与世界卡审批对称（一致性）：世界卡早已在 WorldPanel 有审批 UI（PUT /api/lorebook/[id] 带 reviewStatus），本次让角色卡获得同等能力，待审隔离在两类卡上闭环",
-  "v1.6.24 验证（质量门）：tsc 0 错误 + vitest 299/299 全绿；UI 变更经源码阅读 + 类型门禁核实（沙箱无 Chromium，未做端到端点击实测，留 agent-browser 复检）",
+  "v1.6.25 项目自检 UI（中）：打开「项目设定」弹窗底部新增「项目自检」分区，点「运行自检」一键跑 7 项健康检查——数据库连通 / LLM 配置 / 内容规模（章节·角色·世界书·故事线）/ 回收站残留 / 待审卡（不注入生成）/ 生成缓存 globalPrompt / 重名角色，每项标通过·注意·异常三态徽标并给总体结论",
+  "v1.6.25 纯逻辑引擎（工程）：src/core/diagnostics.ts 的 runProjectDiagnostics 可单测（mock prisma + getSettings），API 路由 GET /api/projects/[id]/diagnostics 返回结构化报告，前端 ProjectDiagnostics 组件自带按钮拉取展示，单点检查失败不拖垮整体",
+  "v1.6.25 质量门（诚实边界）：diagnostics.test.ts 8 用例钉死 7 项检查 + 项目不存在 + 错误聚合，tsc 0 错误 + vitest 307/307 全绿（较 v1.6.24 +8）；UI 接入 ProjectSettingsDialog，经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测）",
+  "v1.6.25 安全（设计）：自检仅读取统计、不修改任何数据，可反复运行；重名角色走角色名小写去重，回收站走 deletedAt 非空计数",
 ];
 
 /** 完整版本历史（最新在前） */
@@ -55,6 +55,27 @@ export const VERSIONS: VersionEntry[] = [
           "components/workspace/types.ts 的 CharacterData 接口补 reviewStatus? 字段（此前仅 LorebookData 有），消除 tsc 报错并让前端识别待审角色卡",
           "世界卡审批 UI 早已存在（WorldPanel PUT /api/lorebook/[id] 带 reviewStatus 并重算 globalPrompt），本次让角色卡与世界卡获得对称能力，待审隔离在两类卡上完整闭环",
           "tsc 0 错误 + vitest 299/299 全绿；UI 变更经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测，留 agent-browser 复检）",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v1.6.25",
+    date: "2026-08-08",
+    title: "v1.6.25 项目自检 UI（一键健康检查）",
+    sections: [
+      {
+        label: "项目自检 UI（中）",
+        items: [
+          "新增项目健康自检：打开「项目设定」弹窗底部「项目自检」分区，点「运行自检」一键跑 7 项检查——数据库连通 / LLM 配置 / 内容规模（章节·角色·世界书·故事线）/ 回收站残留 / 待审卡（不注入生成）/ 生成缓存 globalPrompt / 重名角色，每项标通过·注意·异常三态徽标并给总体结论",
+          "纯逻辑引擎 src/core/diagnostics.ts 的 runProjectDiagnostics 可单测（mock prisma + getSettings），API 路由 GET /api/projects/[id]/diagnostics 返回结构化报告 JSON；前端 ProjectDiagnostics 组件自带「运行自检」按钮拉取并展示，单点检查失败不拖垮整体",
+        ],
+      },
+      {
+        label: "工程 / 质量门（诚实边界）",
+        items: [
+          "diagnostics.test.ts 8 用例钉死 7 项检查 + 项目不存在 + 错误聚合（error>warn>ok），tsc 0 错误 + vitest 307/307 全绿（较 v1.6.24 +8）；UI 接入 ProjectSettingsDialog 设置枢纽，经源码阅读 + 类型门禁核实（沙箱无 Chromium，未端到端点击实测，留 agent-browser 复检）",
+          "自检仅读取统计、不修改任何数据，安全可反复运行；重名角色走角色名小写去重，回收站走 deletedAt 非空计数",
         ],
       },
     ],
