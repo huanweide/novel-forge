@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.23 — 2026-08-08
+**v1.6.23 自动填表 update 类精确还原（F2 修复）**
+
+- **自动填表 update 精确还原（高）**：`BabyloreFillBatch` 新增 `updatedRowsBefore` 字段（Json 默认「{}」）；`babyloreFill` 填表时以 `beforeRowsById` 前后快照 diff，捕获「被 update 改写的既有行」更新前整行快照，与 `insertedRowIds` 一并写入溯源批次。`revertBabyloreFill` 撤销章节时既删新增行、又把被 update 的既有行精确还原到填表前状态（此前 v1.6.19 仅删新增行，update 改写无法撤销，F2 缺口闭合）。
+- **后续章节数据安全（中）**：回滚引入「后续批次 touched 集合」——若同一 `row_id` 被创建时间更晚的其他章节批次触及（新增或更新），撤销较早章节时不还原 / 不误删该行，避免覆盖后续真实编辑（数据安全优先于单章还原）。
+- **零侵入实现（工程）**：不动 `applyOps` 核心，仅 `babyloreFill` 前后快照 diff + revert 去重合并 / 命中更新两类 update 统一覆盖。
+- **验证（质量门）**：tsc 0 错误 + vitest 299/299 全绿（较 v1.6.22 的 297 +2，新增 update 还原 + 后续保护单测）；schema 已 `db push` 同步本地 PG17。
+
+---
+
 ## v1.6.22 — 2026-08-08
 **v1.6.21 根因修复（待审隔离统一收敛 helper + 负向门禁）**
 

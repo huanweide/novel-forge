@@ -41,10 +41,14 @@ vi.mock("@/lib/prisma", () => ({
         batchStore.push(args.data);
         return { id: "b" + batchStore.length, ...args.data };
       }),
-      findMany: vi.fn(
-        async (args: any) =>
-          batchStore.filter((b) => b.projectId === args.where.projectId && b.nodeId === args.where.nodeId),
-      ),
+      findMany: vi.fn(async (args: any) => {
+        const w = (args.where || {}) as any;
+        return batchStore.filter(
+          (b) =>
+            (w.projectId === undefined || b.projectId === w.projectId) &&
+            (w.nodeId === undefined || b.nodeId === w.nodeId),
+        );
+      }),
       deleteMany: vi.fn(async (args: any) => {
         const before = batchStore.length;
         batchStore = batchStore.filter(
@@ -172,5 +176,41 @@ describe("#6 revertBabyloreFill 撤销章节精确清理表格行", () => {
     const res = await revertBabyloreFill("p", "nX");
     expect(res).toEqual({ removed: 0 });
     expect(updateCalls.length).toBe(0);
+  });
+
+  it("还原该章被 update 的既有行到更新前，不删行", async () => {
+    // 填表后 row 1 的 related 被改为「新关联」，updatedRowsBefore 记录更新前「旧关联」
+    loreTables = [{ id: "t1", rows: [{ row_id: 1, name: "青龙镇", related: "新关联" }] }];
+    batchStore = [
+      {
+        projectId: "p",
+        nodeId: "n1",
+        loreTableId: "t1",
+        insertedRowIds: [],
+        updatedRowsBefore: { "1": { row_id: 1, name: "青龙镇", related: "旧关联" } },
+      },
+    ];
+    const res = await revertBabyloreFill("p", "n1");
+    expect(res.removed).toBe(0); // update 还原不算「删除」
+    const kept = updateCalls[0].data.rows;
+    expect(kept).toEqual([{ row_id: 1, name: "青龙镇", related: "旧关联" }]); // 精确还原更新前
+    expect(batchStore.length).toBe(0);
+  });
+
+  it("后续章节也 update 同一行 → 撤销该章时不还原（保护后续数据）", async () => {
+    loreTables = [{ id: "t1", rows: [{ row_id: 1, name: "青龙镇", related: "终值" }] }];
+    const t0 = new Date(1000);
+    const t1 = new Date(2000);
+    batchStore = [
+      { projectId: "p", nodeId: "n1", loreTableId: "t1", insertedRowIds: [], updatedRowsBefore: { "1": { row_id: 1, name: "青龙镇", related: "旧值" } }, createdAt: t0 },
+      { projectId: "p", nodeId: "n2", loreTableId: "t1", insertedRowIds: [], updatedRowsBefore: { "1": { row_id: 1, name: "青龙镇", related: "中值" } }, createdAt: t1 },
+    ];
+    const res = await revertBabyloreFill("p", "n1");
+    expect(res.removed).toBe(0);
+    // n2 后续修改过 row 1，故 n1 撤销时不得还原，row 1 保持终值且不写库
+    expect(updateCalls.length).toBe(0);
+    expect(loreTables[0].rows).toEqual([{ row_id: 1, name: "青龙镇", related: "终值" }]);
+    // n1 批次被清，n2 保留
+    expect(batchStore.length).toBe(1);
   });
 });

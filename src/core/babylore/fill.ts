@@ -605,11 +605,32 @@ export async function babyloreFill(
   // diff 逻辑：after（tables[i].rows 已被 applyOps 原地改写）中存在、before 快照中不存在 row_id 的行 = 本次新增。
   if (r.applied > 0 && options?.nodeId) {
     for (const t of tables) {
-      const beforeIds = new Set((beforeRowsById.get(t.id) || []).map((row: any) => row.row_id));
-      const inserted = ((t.rows as any[]) || []).filter((row: any) => !beforeIds.has(row.row_id)).map((row: any) => row.row_id);
-      if (inserted.length > 0) {
+      const beforeArr = beforeRowsById.get(t.id) || [];
+      const beforeIds = new Set(beforeArr.map((row: any) => row.row_id));
+      const beforeById = new Map(beforeArr.map((row: any) => [row.row_id, row]));
+      const afterRows = (t.rows as any[]) || [];
+      const inserted: number[] = [];
+      const updatedBefore: Record<string, any> = {};
+      for (const row of afterRows) {
+        if (!beforeIds.has(row.row_id)) {
+          inserted.push(row.row_id);
+        } else {
+          // v1.6.23 F2：既有行被改写（去重合并/命中更新）→ 记录更新前整行快照，供撤销时精确还原
+          const beforeRow = beforeById.get(row.row_id);
+          if (JSON.stringify(beforeRow) !== JSON.stringify(row)) {
+            updatedBefore[String(row.row_id)] = beforeRow;
+          }
+        }
+      }
+      if (inserted.length > 0 || Object.keys(updatedBefore).length > 0) {
         await prisma.babyloreFillBatch.create({
-          data: { projectId, nodeId: options.nodeId, loreTableId: t.id, insertedRowIds: inserted },
+          data: {
+            projectId,
+            nodeId: options.nodeId,
+            loreTableId: t.id,
+            insertedRowIds: inserted,
+            updatedRowsBefore: updatedBefore,
+          },
         }).catch(() => null); // 记录失败不影响正文/填表交付
       }
     }
@@ -978,22 +999,51 @@ export async function revertBabyloreFill(projectId: string, nodeId: string): Pro
   const batches = await prisma.babyloreFillBatch.findMany({ where: { projectId, nodeId } });
   if (batches.length === 0) return { removed: 0 };
 
-  // 按 loreTableId 归并本次需删除的 row_id 集合
-  const byTable = new Map<string, Set<number>>();
+  // v1.6.23 F2：计算「后续批次 touched 集合」——本项目内、创建时间晚于本批、且触及了同 row_id 的批次，
+  // 用于保护「后续章节也修改过同一行」的数据不被误还原/误删（数据安全优先）。
+  const allBatches = await prisma.babyloreFillBatch.findMany({ where: { projectId } });
+  const laterTouched = new Set<number>();
   for (const b of batches) {
-    const ids = (b.insertedRowIds as number[]) || [];
-    if (!byTable.has(b.loreTableId)) byTable.set(b.loreTableId, new Set());
-    for (const id of ids) byTable.get(b.loreTableId)!.add(id);
+    const bCreated = (b as any).createdAt?.getTime?.() ?? 0;
+    for (const other of allBatches) {
+      if (other === b) continue;
+      const oCreated = (other as any).createdAt?.getTime?.() ?? 0;
+      if (oCreated <= bCreated) continue; // 仅考虑「晚于本批创建」的后续批次
+      const oIns = (other.insertedRowIds as number[]) || [];
+      const oUpd = (other.updatedRowsBefore as any) || {};
+      for (const id of oIns) laterTouched.add(id);
+      for (const k of Object.keys(oUpd)) laterTouched.add(Number(k));
+    }
+  }
+
+  // 按 loreTableId 归并：del=本次需删除的新增行；restore=需还原为更新前的既有行
+  const byTable = new Map<string, { del: Set<number>; restore: Map<number, any> }>();
+  for (const b of batches) {
+    const ins = (b.insertedRowIds as number[]) || [];
+    const upd = (b.updatedRowsBefore as any) || {};
+    if (!byTable.has(b.loreTableId)) byTable.set(b.loreTableId, { del: new Set(), restore: new Map() });
+    const entry = byTable.get(b.loreTableId)!;
+    for (const id of ins) if (!laterTouched.has(id)) entry.del.add(id);
+    for (const k of Object.keys(upd)) {
+      const id = Number(k);
+      if (!laterTouched.has(id)) entry.restore.set(id, upd[k]);
+    }
   }
 
   let removed = 0;
-  for (const [loreTableId, idSet] of byTable) {
+  for (const [loreTableId, plan] of byTable) {
     const t = await prisma.loreTable.findUnique({ where: { id: loreTableId } });
     if (!t) continue;
     const rows = (t.rows as any[]) || [];
-    const kept = rows.filter((r) => !idSet.has(r.row_id));
+    // 先删新增行
+    let kept = rows.filter((r) => !plan.del.has(r.row_id));
     const delta = rows.length - kept.length;
-    if (delta > 0) {
+    // 再还原被 update 的既有行（用更新前快照替换当前行）
+    if (plan.restore.size > 0) {
+      const restoreById = plan.restore;
+      kept = kept.map((r) => (restoreById.has(r.row_id) ? restoreById.get(r.row_id) : r));
+    }
+    if (delta > 0 || plan.restore.size > 0) {
       await prisma.loreTable.update({ where: { id: loreTableId }, data: { rows: kept } });
       removed += delta;
     }

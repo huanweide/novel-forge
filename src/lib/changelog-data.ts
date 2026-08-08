@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.22";
+export const LATEST_VERSION = "v1.6.23";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.22 待审隔离根因修复（高）：新增 src/lib/approved-cards.ts 单一事实来源——getApprovedCharacters / getApprovedLore 强制 reviewStatus: approved（世界卡叠 enabled: true），全仓 26 处生成 / LLM 上下文注入端点（14 角色卡 + 12 世界书）统一改调 helper，含已修 11 处内联与未修 6 处（tool-registry 的 character_list / character_get / lore_list、storylines/generate、babylore/recall）；散布式手动过滤彻底收敛，单一负向门禁覆盖全部注入点",
-  "v1.6.22 负向门禁固化（中）：approved-cards.test.ts 钉死「helper 永远强制 approved 过滤」——即使调用方漏传 reviewStatus 也自动补上，调用方 where / take / orderBy 合并不覆盖审批过滤；lore 的 includeDisabled 仅管理视图取消 enabled 约束、审批过滤始终强制",
-  "v1.6.22 语义分类（诚实边界）：dedup / 管理类取用端（entity-sync、import/commit、parse-settings、entity-auto-creator、characters/classify | expand | apply-tags、agent/*、post-processor、game-engine 物品卡去重）保持不过滤 pending，避免破坏去重与作者管理视图；generate/outline 的嵌套 include 已自带 approved 过滤、形态不符 helper，保留",
-  "v1.6.22 验证（质量门）：tsc 0 错误 + vitest 297/297 全绿（较 v1.6.21 的 293 +4，新增 helper 负向门禁）；Chair 亲核迁移后无内联 reviewStatus 残留（仅 helper / 测试 / 前端写入 / 嵌套 include 四处例外均合法）",
+  "v1.6.23 自动填表 update 类精确还原（F2 修复，高）：BabyloreFillBatch 新增 updatedRowsBefore 字段，填表时 diff 捕获「被 update 改写的既有行」更新前整行快照；revertBabyloreFill 撤销章节时既删新增行、又把这些行精确还原到填表前状态（此前仅删新增行，update 改写无法撤销）",
+  "v1.6.23 后续章节数据安全保护（中）：回滚引入「后续批次 touched 集合」——若同一行被更晚的章节也改过，撤销较早章节时不还原 / 不误删该行，避免覆盖后续章节的真实编辑（数据安全优先于单章还原）",
+  "v1.6.23 零侵入实现（工程）：不改动 applyOps 核心，仅在 babyloreFill 填表前后快照 diff 出 updated 行；revert 逻辑去重合并 + 命中更新两类 update 统一覆盖",
+  "v1.6.23 验证（质量门）：tsc 0 错误 + vitest 299/299 全绿（较 v1.6.22 的 297 +2，新增 update 还原 + 后续保护两单测）；schema 已 db push 同步本地 PG17",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.23",
+    date: "2026-08-08",
+    title: "v1.6.23 自动填表 update 类精确还原（F2 修复）",
+    sections: [
+      {
+        label: "自动填表 update 精确还原（高）",
+        items: [
+          "BabyloreFillBatch 新增 updatedRowsBefore 字段（Json 默认『{}』）：babyloreFill 填表时以 beforeRowsById 前后快照 diff，捕获「被 update 改写的既有行」更新前整行快照，与 insertedRowIds 一并写入溯源批次",
+          "revertBabyloreFill 撤销章节时既删新增行、又把被 update 的既有行精确还原到填表前状态（此前 v1.6.19 仅删新增行，update 改写无法撤销，F2 缺口闭合）",
+        ],
+      },
+      {
+        label: "后续章节数据安全 + 工程（中 / 诚实边界）",
+        items: [
+          "引入「后续批次 touched 集合」：若同一 row_id 被创建时间更晚的其他章节批次触及（新增或更新），撤销较早章节时不还原 / 不误删该行，避免覆盖后续真实编辑",
+          "零侵入：不动 applyOps 核心，仅 babyloreFill 前后快照 diff + revert 去重合并 / 命中更新两类 update 统一覆盖；tsc 0 错误 + vitest 299/299 全绿（较 v1.6.22 +2，新增 update 还原 + 后续保护单测）；schema 已 db push 同步本地 PG17",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.22",
     date: "2026-08-08",
