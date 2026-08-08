@@ -7,6 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getActiveRules, injectRules } from "@/core/rules";
+import type { Project } from "@/core/types";
 
 // ─── 角色标签映射 ──────────────────────────────────────────────
 
@@ -24,7 +25,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── 数据加载 ──────────────────────────────────────────────────
 
 export interface OutlineContextData {
-  project: any;
+  project: Project;
   node: any;
   allNodes: any[];
   characters: any[];
@@ -56,7 +57,7 @@ export async function loadOutlineData(
     }),
   ]);
   return {
-    project, node, allNodes: allNodes as any[], characters: characters as any[],
+    project: project as unknown as Project, node, allNodes: allNodes as any[], characters: characters as any[],
     summaries: summaries as any[], storylines: storylines as any[],
   };
 }

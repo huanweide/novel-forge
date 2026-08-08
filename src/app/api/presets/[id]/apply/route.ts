@@ -230,7 +230,7 @@ export async function POST(
     } else if (preset.type === "api_config") {
       // API 参数预设：按白名单逐层深合并到项目 llmConfig（N5：仅已知子键、对象型子键深合并、剔除未知键）
       const project = await prisma.project.findUnique({ where: { id: projectId } });
-      const current = ((project as any)?.llmConfig || {}) as Record<string, unknown>;
+      const current = ((project?.llmConfig || {}) as unknown as Record<string, unknown>);
       const incoming = (isPlainObject(content) ? content : {}) as Record<string, unknown>;
       const merged = deepMergeLLMConfig(current, incoming);
       await prisma.project.update({

@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.28";
+export const LATEST_VERSION = "v1.6.29";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.28 sync-global-prompt 漏同步复查（中）：用 Bash grep 穷举全仓 syncGlobalPrompt 调用点（30+ 处）与全部 characterCard/lorebookEntry 增删改路由交叉比对，确认 extract-chapter/classify/entities-highlight 纯读排除、sync-relations 建 pending 卡排除（设计使然），唯 explore/create 建项目播种世界书/角色卡/风格卡后漏调 syncGlobalPrompt——与 seed/genre-project·sample-project 同类播种路由不对称，补 syncGlobalPrompt(project.id).catch 闭合",
-  "v1.6.28 llmConfig 类型绕过收口（工程/类型安全）：发现 7 处 (project as any).llmConfig 绕过根因——GenerationData.project 已是 Project 类型（含 llmConfig: LLMConfig），conflict/continue/refine/write/applied-presets/orchestrator/pre-processor 的 project 实为 Project 或 Prisma Project（含 llmConfig: JsonValue），外层 as any 纯历史遗留，去掉即合法",
-  "v1.6.28 内层桥接：去掉外层 (project as any) 后，LLMConfig→Record 改用 as unknown as Record 精确桥接（TS 报错 LLMConfig 无索引签名不能直转 Record、需 unknown 中转）——比模糊 any 更诚实，明确「理想类型 LLMConfig 桥接到运行时 Json 的 Record 视角」",
-  "v1.6.28 验证（质量门/诚实）：tsc 0 错误 + vitest 30 文件 307/307 全绿（无新增测试，靠双门禁 + 源码逐处核实）；运行时零行为变化；llmConfig 彻底类型统一（Project.llmConfig 放宽需重构前端 ProjectConfigPanel 类型假设）与 context-loader/outline-context 的 project: any 留 v1.6.29 专项；VERSIONS 历史 24/26/25 错位如实标注未重排",
+  "v1.6.29 类型债总清（工程/类型安全）：马斯克 CEO 拍板做 (1)+(2) 合并——核心管线 project:any 收口 + Project.llmConfig 放宽；消除 orchestrator 的 genre、refine/write 的 postProcessingRules·contextKeepChapters、presets apply 的 llmConfig 外层、context-loader/outline-context 的 project（Prisma Project → Project 桥接）共 7 处遗留 (project as any) 绕过",
+  "v1.6.29 Project.llmConfig 根因修复：从 LLMConfig 放宽为 Record<string, unknown> | null，与运行时 Prisma Json 原始对象对齐——这是 v1.6.27/28 全部 llmConfig as any / as unknown as Record 桥接异味的总根因（理想类型 LLMConfig vs 运行时 Json 的鸿沟）；补 3 处类型 import",
+  "v1.6.29 诚实边界（修正马斯克拍板）：原拍板「放宽到 JsonValue 并重构前端」经实测评估未采纳——前端 ProjectData 不含 llmConfig（grep 空）、core 层消费全是 as unknown as Record 桥接、放宽到 JsonValue 无法消除桥接且带来 Prisma 导出依赖风险（@prisma/client 未导出 JsonValue），故用 Record 更稳；桥接仍保留（Json → Record 必须 unknown 中转，非绕过）",
+  "v1.6.29 验证（质量门）：tsc 0 错误 + vitest 30 文件 307/307 全绿；运行时零行为变化；残留 project 维度 as any 归零，前端关系字段 storyNodes/.characters/.lorebookEntries 的 as any 合理保留（不该进 Project interface）；VERSIONS 历史 24/26/25 错位仍如实标注未重排",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.29",
+    date: "2026-08-08",
+    title: "v1.6.29 类型债总清（核心管线 project:any 收口 + Project.llmConfig 放宽）",
+    sections: [
+      {
+        label: "核心管线 project:any 收口（工程/类型安全）",
+        items: [
+          "消除 7 处遗留 (project as any) 绕过：orchestrator 的 genre（Project 已含 string[]，纯历史冗余）、refine/write 的 postProcessingRules 与 contextKeepChapters（Project 已含对应可选字段）、presets apply 的 llmConfig 外层 as any、context-loader 的 project 返回值（Prisma Project → GenerationData.project 桥接）、outline-context 的 OutlineContextData.project 接口（any → Project，return 处 as unknown as Project 桥接 null）",
+          "补 3 处类型 import（types/index.ts 不需 Prisma JsonValue——改用 Record<string, unknown> | null 与 core 层 as unknown as Record 桥接完全对齐；outline-context/context-loader 补 import Project），消除「未定义类型」隐患",
+        ],
+      },
+      {
+        label: "Project.llmConfig 类型放宽（根因修复）",
+        items: [
+          "Project.llmConfig 从 LLMConfig 放宽为 Record<string, unknown> | null，与运行时 Prisma Json 原始对象对齐（此前 LLMConfig 理想类型 vs 运行时 Json 的类型鸿沟是 v1.6.27/28 全部 llmConfig as any/ as unknown as Record 桥接异味的总根因）",
+          "诚实边界：放宽后桥接仍保留 as unknown as Record（JsonValue → Record 必须中转，非绕过），core 层 buildProjectOverrides/getEffectiveConfig 的 LLMConfig 强类型契约不动——马斯克 CEO 原拍板「放宽到 JsonValue 并重构前端」经实测评估未采纳：前端 ProjectData 不含 llmConfig（grep 空）、core 层消费全是 Record 桥接，放宽到 JsonValue 无法消除桥接且会带来 Prisma 导出依赖风险，故用 Record 更稳",
+        ],
+      },
+      {
+        label: "验证（质量门/诚实）",
+        items: [
+          "tsc 0 错误 + vitest 30 文件 307/307 全绿（无新增测试，靠双门禁 + 源码逐处核实）；运行时零行为变化，纯类型层收口",
+          "残留 as any 已归零（project 维度）；前端 workspace/[projectId]/page.tsx 的 (project as any).storyNodes/.characters/.lorebookEntries 属关系字段、明确不该进 Project interface，合理保留；VERSIONS 历史 24/26/25 错位仍如实标注未重排",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.28",
     date: "2026-08-08",

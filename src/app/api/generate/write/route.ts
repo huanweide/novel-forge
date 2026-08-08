@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
     // ── 5. 上下文窗口 ──
     const currentNodeIndex = data.allNodes.findIndex((n: any) => n.id === nodeId);
-    const keepChapters = ((data.project as any).contextKeepChapters as number) ?? 4;
+    const keepChapters = data.project?.contextKeepChapters ?? 4;
     const previousNodes = data.allNodes.slice(
       Math.max(0, currentNodeIndex - keepChapters),
       currentNodeIndex,
@@ -278,7 +278,7 @@ export async function POST(request: Request) {
           }
 
           // ── 正则后处理（来自酒馆 regex 预设）──
-          const projectRules = (data.project as any)?.postProcessingRules;
+          const projectRules = data.project?.postProcessingRules;
           if (Array.isArray(projectRules) && projectRules.length > 0) {
             const cleaned = applyRegexRules(fullContent, projectRules);
             if (cleaned !== fullContent) {

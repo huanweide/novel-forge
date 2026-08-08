@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import type { GenerationData } from "./types";
 import { STORYLINE_STATUS, COMMITMENT_STATUS } from "@/core/story-status";
+import type { Project } from "@/core/types";
 
 /**
  * 加载单章生成所需的所有上下文数据。
@@ -246,7 +247,7 @@ export async function loadGenerationContext(
     .slice(0, 20);
 
   return {
-    project: project as any,
+    project: project as Project,
     currentNode: currentNode as any,
     allNodes: allNodes as any,
     characters: characters as any,

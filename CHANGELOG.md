@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.29 — 2026-08-08
+**v1.6.29 类型债总清（核心管线 project:any 收口 + Project.llmConfig 放宽）**
+
+- **核心管线 project:any 收口（工程 / 类型安全）**：消除 7 处遗留 (project as any) 绕过——orchestrator 的 genre（Project 已含 string[]，纯历史冗余）、refine/write 的 postProcessingRules 与 contextKeepChapters（Project 已含对应可选字段）、presets apply 的 llmConfig 外层 as any、context-loader 的 project 返回值（Prisma Project → GenerationData.project 桥接）、outline-context 的 OutlineContextData.project 接口（any → Project，return 处 as unknown as Project 桥接 null）；补 3 处类型 import。
+- **Project.llmConfig 根因修复**：从 LLMConfig 放宽为 Record<string, unknown> | null，与运行时 Prisma Json 原始对象对齐——这是 v1.6.27/28 全部 llmConfig as any / as unknown as Record 桥接异味的总根因（理想类型 LLMConfig vs 运行时 Json 的鸿沟）。
+- **诚实边界（修正马斯克拍板）**：原拍板「放宽到 JsonValue 并重构前端」经实测评估未采纳——前端 ProjectData 不含 llmConfig（grep 空）、core 层消费全是 as unknown as Record 桥接、放宽到 JsonValue 无法消除桥接且带来 Prisma 导出依赖风险（@prisma/client 未导出 JsonValue），故用 Record 更稳；桥接仍保留（Json → Record 必须 unknown 中转，非绕过）。tsc 0 错误 + vitest 307/307 全绿；残留 project 维度 as any 归零。
+
+---
+
 ## v1.6.28 — 2026-08-08
 **v1.6.28 sync 漏同步复查 + llmConfig 类型绕过收口**
 

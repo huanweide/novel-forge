@@ -138,7 +138,7 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
     // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig / postProcessingRules），直接复用，避免重复 DB 查询
     const projLlm = data.project?.llmConfig;
-    const projectRules = (data.project as any)?.postProcessingRules;
+    const projectRules = data.project?.postProcessingRules;
     const orchestrator = await AgentOrchestrator.fromSettings(
       { defaultTemperature: effectiveTemperature, defaultTopP: effectiveTopP },
       projLlm as unknown as Record<string, unknown> | null,

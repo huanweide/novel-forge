@@ -680,7 +680,7 @@ export function buildPromptContext(params: {
   //   //   //   // 构建系统提示——白金修仙模拟引擎 v8.0 + 逍遥散仙创作方法论
   // 体裁适配：修仙/玄幻类沿用"白金修仙模拟引擎"；其他体裁走通用作家角色，
   // 避免硬编码修仙网文风压制用户在创意工坊设定的文风预设（如古风·严谨文笔）。
-  const isXianxia = Array.isArray((project as any).genre) && (project as any).genre.some((g: string) => /修仙|玄幻|仙侠|武侠|洪荒|奇幻|末世/.test(g));
+  const isXianxia = Array.isArray(project.genre) && project.genre.some((g: string) => /修仙|玄幻|仙侠|武侠|洪荒|奇幻|末世/.test(g));
   const activeStorylines = filterActiveStorylines(storylines || []);
   const storylineBlock = activeStorylines.length > 0
     ? `\n## 故事线进度（必须持续推进，避免偏离主线/支线设定）\n${formatStorylines(activeStorylines)}\n`
@@ -1252,7 +1252,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
 正在撰写《${project.name}》——一部${project.genre.join("、")}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`
     : `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}${storylineBlock}# Role: 资深小说作家
 
-你正在创作一部《${project.name}》——体裁为${((project as any).genre || []).join("、") || "通用"}。
+你正在创作一部《${project.name}》——体裁为${(project.genre || []).join("、") || "通用"}。
 
 ## 文风权威声明（最高优先级）
 上方「系统设定」中的风格卡 / 文风预设（叙事视角、句长、对话/描写/动作比例、语气与词汇特征）是本章文风的最高权威，必须严格执行。

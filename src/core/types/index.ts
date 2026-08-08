@@ -424,7 +424,7 @@ export interface Project {
   targetWordCount: number;        // 目标字数
   synopsis: string;               // 主线总纲（浓缩版）
   toneKeywords: string[];         // 基调关键词
-  llmConfig: LLMConfig;           // 模型配置（注：运行时为 Prisma Json 原始对象，非解析实例；取用端仍走 as any）
+  llmConfig: Record<string, unknown> | null;  // 模型配置（运行时为 Prisma Json 原始对象；取用端统一走 as unknown as Record 桥接，已消除 (project as any) 绕过）
   // ── 与 Prisma Project 对齐的补充字段（v1.6.27 类型收口，统一消除 (project as any) 绕过）──
   globalPrompt?: string;          // 三卡预编译缓存（编排直接注入，原 (project as any).globalPrompt）
   authorNote?: string;            // 作者指令（各生成端点统一读取）
