@@ -1,5 +1,6 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 import { recallContext } from "@/core/babylore/recall";
 
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "缺少 projectId 或 context" }, { status: 400 });
     }
     const [lore, tables] = await Promise.all([
-      prisma.lorebookEntry.findMany({ where: { projectId } }),
+      getApprovedLore(prisma, projectId),
       prisma.loreTable.findMany({ where: { projectId } }),
     ]);
     const items = recallContext(context, lore as any, tables as any);

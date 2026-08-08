@@ -9,6 +9,7 @@ export const maxDuration = 120;
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 
 import { completeText } from "@/core/llm/client";
@@ -21,8 +22,8 @@ export async function POST(request: Request) {
 
     const [project, characters, loreEntries, existingStorylines] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
-      prisma.characterCard.findMany({ where: { projectId } }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true } }),
+      getApprovedCharacters(prisma, projectId),
+      getApprovedLore(prisma, projectId),
       prisma.storyline.findMany({ where: { projectId } }),
     ]);
 

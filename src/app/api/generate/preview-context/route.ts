@@ -1,5 +1,6 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 import { buildPromptContext } from "@/core/agents";
 import { assemblePrompt, countTokens } from "@/core/assembly";
@@ -32,10 +33,8 @@ export async function POST(request: Request) {
           where: { projectId, content: { not: null }, deletedAt: null },
           orderBy: { order: "asc" },
         }),
-        prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } }),
-        prisma.lorebookEntry.findMany({
-          where: { projectId, enabled: true, reviewStatus: "approved" },
-        }),
+        getApprovedCharacters(prisma, projectId),
+        getApprovedLore(prisma, projectId),
         prisma.chapterSummary.findMany({
           where: { projectId },
           orderBy: { createdAt: "desc" },

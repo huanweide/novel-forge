@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { buildGameSystemPrompt } from "@/core/game/game-prompts";
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 
 export async function POST(req: Request) {
   try {
@@ -18,8 +19,8 @@ export async function POST(req: Request) {
     const [project, node, characters, loreEntries] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
-      prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 12 }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" }, take: 10 }),
+      getApprovedCharacters(prisma, projectId, { take: 12 }),
+      getApprovedLore(prisma, projectId, { take: 10 }),
     ]);
 
     if (!project || !node) {

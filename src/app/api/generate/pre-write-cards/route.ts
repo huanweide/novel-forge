@@ -8,6 +8,7 @@ export const maxDuration = 30;
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 import { ALL_WORLD_CATEGORIES } from "@/lib/world-category-classifier";
 import { WORLD_MODULES } from "@/components/workspace/worldPanelData";
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       // 大纲生成没有单个节点——用项目概要覆盖
     }
 
-    const characters = await prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } });
+    const characters = await getApprovedCharacters(prisma, projectId);
 
     // ── 复用智能调度器逻辑 ──
 
@@ -216,9 +217,7 @@ export async function GET(request: Request) {
       (c) => c !== "character_relationship" && c !== "custom",
     );
 
-    const lorebookEntries = await prisma.lorebookEntry.findMany({
-      where: { projectId, enabled: true, reviewStatus: "approved" },
-    });
+    const lorebookEntries = await getApprovedLore(prisma, projectId);
     const categories: Record<string, boolean> = {};
     const missingLoreCategories: string[] = [];
     for (const c of LORE_CHECK_CATEGORIES) {

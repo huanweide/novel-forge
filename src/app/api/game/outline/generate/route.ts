@@ -9,6 +9,7 @@ import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { formatStorylines, filterActiveStorylines } from "@/core/pipeline/outline-context";
 
@@ -59,8 +60,8 @@ export async function POST(req: Request) {
     const [project, node, characters, loreEntries, allNodes, summaries, storylines] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId } }),
       prisma.storyNode.findUnique({ where: { id: nodeId } }),
-      prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 30 }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" }, take: 20 }),
+      getApprovedCharacters(prisma, projectId, { take: 30 }),
+      getApprovedLore(prisma, projectId, { take: 20 }),
       prisma.storyNode.findMany({
         where: { projectId, deletedAt: null },
         orderBy: { order: "asc" },

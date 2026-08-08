@@ -10,6 +10,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING } from "@/core/story-status";
@@ -233,8 +234,8 @@ async function loadGameContext(projectId: string, nodeId: string, session: any):
   const [project, node, characters, loreEntries, states] = await Promise.all([
     prisma.project.findUnique({ where: { id: projectId } }),
     prisma.storyNode.findUnique({ where: { id: nodeId } }),
-    prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 20 }),
-    prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" }, take: 15 }),
+    getApprovedCharacters(prisma, projectId, { take: 20 }),
+    getApprovedLore(prisma, projectId, { take: 15 }),
     prisma.gameState.findMany({
       where: { sessionId: session.id },
       orderBy: { round: "asc" },

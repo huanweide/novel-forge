@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import type { GenerationData } from "./types";
 import { STORYLINE_STATUS, COMMITMENT_STATUS } from "@/core/story-status";
 
@@ -54,14 +55,8 @@ export async function loadGenerationContext(
       // 注意：此处保留完整字段——下游编排器(buildPromptContext)与 lorebook 触发匹配
       // (matchLoreEntries/recall) 实际消费 background/aliases/personality/appearance/
       // storyLine/timeline/relationships 及 keys/depth/insertionOrder，窄列会破坏功能。
-      prisma.characterCard.findMany({
-        where: { projectId, reviewStatus: "approved" },
-        take: 50,
-      }),
-      prisma.lorebookEntry.findMany({
-        where: { projectId, enabled: true, reviewStatus: "approved" },
-        take: 50,
-      }),
+      getApprovedCharacters(prisma, projectId, { take: 50 }),
+      getApprovedLore(prisma, projectId, { take: 50 }),
       // 摘要：先多拉一些，再按时间线过滤（ChapterSummary 无 chapterOrder 字段，需关联 node）
       prisma.chapterSummary.findMany({
         where: { projectId },

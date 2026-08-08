@@ -5,6 +5,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getActiveRules, injectRules } from "@/core/rules";
 
 // ─── 角色标签映射 ──────────────────────────────────────────────
@@ -43,7 +44,7 @@ export async function loadOutlineData(
       where: { projectId, parentId: null, type: { not: "volume" }, deletedAt: null },
       orderBy: { order: "asc" },
     }),
-    prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 50 }),
+    getApprovedCharacters(prisma, projectId, { take: 50 }),
     prisma.chapterSummary.findMany({
       where: { projectId },
       orderBy: { createdAt: "desc" },

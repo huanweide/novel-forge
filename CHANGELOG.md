@@ -2,6 +2,16 @@
 
 ---
 
+## v1.6.22 — 2026-08-08
+**v1.6.21 根因修复（待审隔离统一收敛 helper + 负向门禁）**
+
+- **待审隔离根因修复（高）**：新增 `src/lib/approved-cards.ts` 单一事实来源：`getApprovedCharacters` / `getApprovedLore` 强制 `reviewStatus: approved`（世界卡叠加 `enabled: true`），调用方额外 `where` / `take` / `orderBy` / `include` 安全合并、绝不覆盖审批过滤。
+- **全仓注入端点统一收敛（高）**：26 处生成 / LLM 上下文注入端点（14 角色卡 + 12 世界书）统一改调 helper，含 v1.6.20/21 已修的 11 处内联 + 此前漏闸的 6 处（tool-registry 的 `character_list` / `character_get` / `lore_list`、`storylines/generate`、`babylore/recall`）；散布式手动过滤彻底收敛，单一负向门禁覆盖全部注入点。`babylore/recall` 改造后只召回 approved+enabled 世界书，顺带修掉禁用条目误注入。
+- **负向门禁固化（中）**：`approved-cards.test.ts` 钉死「helper 永远强制 approved 过滤」——调用方漏传也自动补上；lore 的 `includeDisabled` 仅管理视图取消 `enabled` 约束、审批过滤始终强制。
+- **语义分类（诚实边界）**：dedup / 管理类取用端（entity-sync、import/commit、parse-settings、entity-auto-creator、characters/classify | expand | apply-tags、agent/*、post-processor、game-engine 物品卡去重）保持不过滤 pending，避免破坏去重与作者管理视图；`generate/outline` 的嵌套 include 已自带 approved 过滤、形态不符 helper，保留。tsc 0 错误 + vitest 297/297 全绿（较 v1.6.21 的 293 +4，新增 helper 负向门禁）。
+
+---
+
 ## v1.6.21 — 2026-08-08
 **v1.6.20 复验修复（待审隔离漏口全量收口 + 复验清单核实）**
 

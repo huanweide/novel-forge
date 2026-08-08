@@ -9,6 +9,7 @@ import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 
 const CHAT_SYSTEM_PROMPT = `你是一位资深小说架构顾问，正在与作者进行"章纲多轮对话确认"。
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
     if (projectId && nodeId) {
       const [node, characters] = await Promise.all([
         prisma.storyNode.findUnique({ where: { id: nodeId } }),
-        prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" }, take: 20 }),
+        getApprovedCharacters(prisma, projectId, { take: 20 }),
       ]);
       if (node && characters.length > 0) {
         characterContext = `\n## 角色白名单（只能使用以下角色）\n${characters.map(c => `- ${c.name}（${c.role}）`).join("\n")}`;

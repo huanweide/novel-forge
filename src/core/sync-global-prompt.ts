@@ -7,6 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getTemplate } from "@/core/templates";
 import { ALL_WORLD_CATEGORIES, WORLD_CATEGORY_LABELS } from "@/lib/world-category-classifier";
 
@@ -18,8 +19,8 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
   try {
     const [project, characters, loreEntries, styleCard] = await Promise.all([
       prisma.project.findUnique({ where: { id: projectId }, select: { name: true, genre: true, synopsis: true, toneKeywords: true, authorNote: true, llmConfig: true } }),
-      prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } }),
-      prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" } }),
+      getApprovedCharacters(prisma, projectId),
+      getApprovedLore(prisma, projectId),
       prisma.styleCard.findFirst({ where: { projectId }, orderBy: { updatedAt: "desc" } }),
     ]);
 

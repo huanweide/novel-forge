@@ -13,6 +13,7 @@
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { toolRegistry } from "@/core/agents/tool-registry";
@@ -25,15 +26,16 @@ function buildToolContext(projectId: string): ToolContext {
   return {
     projectId, prisma,
     findCharacters: async (query: string) => {
-      return await prisma.characterCard.findMany({
-        where: { projectId, reviewStatus: "approved", OR: [{ name: { contains: query, mode: "insensitive" } }, { aliases: { has: query } }] },
+      return await getApprovedCharacters(prisma, projectId, {
+        where: { OR: [{ name: { contains: query, mode: "insensitive" } }, { aliases: { has: query } }] },
       }) as any;
     },
     findLore: async (keywords: string[]) => {
-      return await prisma.lorebookEntry.findMany({
-        where: { projectId, enabled: true, reviewStatus: "approved", OR: keywords.map((kw) => ({
+      return await getApprovedLore(prisma, projectId, {
+        where: { OR: keywords.map((kw) => ({
           OR: [{ title: { contains: kw, mode: "insensitive" } }, { content: { contains: kw, mode: "insensitive" } }, { keys: { has: kw } }],
-        })) }, take: 10,
+        })) },
+        take: 10,
       }) as any;
     },
     findForeshadowing: async (description: string) => {
@@ -43,8 +45,8 @@ function buildToolContext(projectId: string): ToolContext {
     },
     detectEntities: async (text: string) => {
       const [chars, lore] = await Promise.all([
-            prisma.characterCard.findMany({ where: { projectId, reviewStatus: "approved" } }),
-            prisma.lorebookEntry.findMany({ where: { projectId, enabled: true, reviewStatus: "approved" } }),
+            getApprovedCharacters(prisma, projectId),
+            getApprovedLore(prisma, projectId),
       ]);
       const results: Array<{ name: string; type: string; confidence: number }> = [];
       const lower = text.toLowerCase();

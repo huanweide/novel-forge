@@ -8,6 +8,7 @@
  */
 
 import type { CharacterCard, LorebookEntry, PendingCommitment } from "@/core/types";
+import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -128,9 +129,10 @@ toolRegistry.register({
   },
   execute: async (args, ctx) => {
     const role = args.role as string | undefined;
-    const where: any = { projectId: ctx.projectId };
-    if (role) where.role = role;
-    const chars = await ctx.prisma.characterCard.findMany({ where, orderBy: { updatedAt: "desc" } });
+    const chars = await getApprovedCharacters(ctx.prisma, ctx.projectId, {
+      where: role ? { role } : {},
+      orderBy: { updatedAt: "desc" },
+    });
     const list = chars.map((c: any) => ({
       id: c.id, name: c.name, role: c.role, aliases: c.aliases,
       currentStatus: c.currentStatus, arcProgress: clip(c.arcProgress || "", 80),
@@ -154,13 +156,13 @@ toolRegistry.register({
   execute: async (args, ctx) => {
     const query = String(args.query || "").trim().toLowerCase();
     if (!query) return fail("character_get", "查询为空");
-    const chars = await ctx.prisma.characterCard.findMany({ where: { projectId: ctx.projectId } });
+    const chars = await getApprovedCharacters(ctx.prisma, ctx.projectId);
     // 精确匹配优先，然后模糊
     let found = chars.find((c: any) => c.name.toLowerCase() === query);
     if (!found) found = chars.find((c: any) => c.name.toLowerCase().includes(query));
     if (!found) found = chars.find((c: any) => (c.aliases || []).some((a: string) => a.toLowerCase().includes(query)));
     if (!found) return ok("character_get", { found: false, message: `未找到匹配"${query}"的角色` });
-    const c = found;
+    const c = found as any;
     return ok("character_get", {
       found: true,
       character: {
@@ -330,10 +332,11 @@ toolRegistry.register({
     },
   },
   execute: async (args, ctx) => {
-    const where: any = { projectId: ctx.projectId };
-    if (args.category) where.category = String(args.category);
-    if (args.enabled !== false) where.enabled = true;
-    const entries = await ctx.prisma.lorebookEntry.findMany({ where, orderBy: { updatedAt: "desc" } });
+    const entries = await getApprovedLore(ctx.prisma, ctx.projectId, {
+      where: args.category ? { category: String(args.category) } : {},
+      includeDisabled: args.enabled === false,
+      orderBy: { updatedAt: "desc" },
+    });
     const list = entries.map((e: any) => ({
       id: e.id, title: e.title, category: e.category, keys: e.keys,
       content: clip(e.content || "", 150), enabled: e.enabled, insertionOrder: e.insertionOrder,
