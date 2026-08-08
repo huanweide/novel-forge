@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.40 — 2026-08-09
+**v1.6.40 修复 PATCH 路由漏同步 globalPrompt（防生成读旧提示词）**
+
+- **PATCH 漏同步修复（数据一致性/生成质量）**：项目设置页 PATCH /api/projects/[id] 允许更新 synopsis/genre/toneKeywords/authorNote（均为 globalPrompt 系统提示词渲染源），但更新后未调 syncGlobalPrompt()，导致作者改了类型/基调/总纲/作者指令后，下一章 AI 生成仍读取旧的全局提示词；PATCH 成功后若改了作品信息字段且未手动覆盖 globalPrompt，则自动 syncGlobalPrompt(projectId) 刷新。受控守卫：仅当请求体改了 synopsis/genre/toneKeywords/authorNote 之一、且未显式传 globalPrompt 覆盖时才同步，避免清掉作者手动编辑的全局提示词；零行为回归（确定性重渲染，与 characters/explore/lorebook 既有同步范式一致）。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 34 文件 320/320 全绿（新增 src/app/api/projects/[id]/route.test.ts 6 项断言防回归）。马斯克人格执行 CEO 子 Agent 拍板本轮只做 A（PATCH 漏同步修复），拒 B（agent-browser UI 复检，纯只读无代码改动不当迭代驱动器）与 C（llmConfig 强类型收口，前轮已拍板暂缓、范围蔓延易引回归）；个人 IP 仍归瑞宝宝，本轮只迭代不立新。
+
+---
+
 ## v1.6.39 — 2026-08-09
 **v1.6.39 HTML 导出流式化（防大书 OOM）**
 

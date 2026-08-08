@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // GET /api/projects/[id]
 export async function GET(
@@ -58,6 +59,17 @@ export async function PATCH(
         autoDeliverEnabled: body.autoDeliverEnabled,
       },
     });
+    // v1.6.40 修复：PATCH 若改了 globalPrompt 渲染源（作品信息字段 synopsis/genre/toneKeywords/authorNote），
+    // 且未显式手动覆盖 globalPrompt，则刷全局系统提示词，避免「作者改了类型/基调/总纲，下一章生成仍读旧提示词」的失真。
+    const touchedWorkInfo =
+      body.genre !== undefined ||
+      body.synopsis !== undefined ||
+      body.toneKeywords !== undefined ||
+      body.authorNote !== undefined;
+    const manualGlobalPrompt = body.globalPrompt !== undefined;
+    if (touchedWorkInfo && !manualGlobalPrompt) {
+      syncGlobalPrompt(id).catch(() => {});
+    }
     return NextResponse.json(updated);
   } catch (err) {
     return jsonError(err);

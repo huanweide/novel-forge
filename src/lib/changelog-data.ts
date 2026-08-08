@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.39";
+export const LATEST_VERSION = "v1.6.40";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.39 HTML 导出流式化（F4 收口续）：导出路由 html 分支从「整本正文递归拼成单个巨大字符串再 new Response 返回」改为「async generator buildHtmlDocStream 逐章 yield + Readable.from 流式响应」，与 v1.6.38 已收口的 markdown/txt/epub/docx 同源，彻底防大书 OOM",
-  "v1.6.39 内存峰值收敛：原 html 导出需把整本正文 + 目录拼成单个 HTML 字符串驻留内存（几十万字=几十 MB），现逐章 yield 单章内容、由 Readable 背压调度，内存峰值降到「单章 + ~16KB buffer」，与 markdown/txt 流式同量级",
-  "v1.6.39 行为等价 + 死代码清理：流式版与原 buildHtmlDoc 渲染逐字等价（文档头/目录锚点/正文 proseToHtml 转换/页脚署名一致），用户无感；删除仅本导出使用的旧 buildHtmlDoc 同步函数，破除冗余",
-  "v1.6.39 验证（双门禁）+ 取舍：tsc 0 错误 + vitest 314/314 全绿（新增 html.stream.test.ts 3 项冒烟防回归）；llmConfig 强类型收口（候选B，需重构 30+ 处 as unknown as Record）经马斯克人格执行 CEO 拍板继续暂缓，不夹带",
+  "v1.6.40 修复 PATCH 路由漏同步 globalPrompt（真实一致性 bug）：项目设置页改类型/基调/总纲/作者指令（synopsis/genre/toneKeywords/authorNote，均为 globalPrompt 系统提示词渲染源）后，下一章 AI 生成仍读旧的全局提示词；PATCH 成功后若改了作品信息字段且未手动覆盖 globalPrompt，则自动 syncGlobalPrompt(projectId) 刷新",
+  "v1.6.40 受控守卫：仅当请求体改了 synopsis/genre/toneKeywords/authorNote 之一、且未显式传 globalPrompt 覆盖时才同步，避免清掉作者手动编辑的全局提示词；零行为回归（确定性重渲染，与 characters/explore/lorebook 既有同步范式一致）",
+  "v1.6.40 双门禁实证：tsc 0 错误 + vitest 34 文件 320/320 全绿（新增 src/app/api/projects/[id]/route.test.ts 6 项：改 genre/synopsis/toneKeywords/authorNote→触发同步；显式传 globalPrompt→不触发且保留；仅改 name→不触发）",
+  "v1.6.40 取舍：马斯克人格执行 CEO 子 Agent 拍板本轮只做 A（PATCH 漏同步修复），拒 B（agent-browser UI 复检，纯只读无代码改动不当迭代驱动器）与 C（llmConfig 强类型收口，前轮已拍板暂缓、范围蔓延易引回归）；个人 IP 仍归瑞宝宝，本轮只迭代不立新",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.40",
+    date: "2026-08-09",
+    title: "v1.6.40 修复 PATCH 路由漏同步 globalPrompt（防生成读旧提示词）",
+    sections: [
+      {
+        label: "PATCH 漏同步修复（数据一致性/生成质量）",
+        items: [
+          "项目设置页 PATCH /api/projects/[id] 允许更新 synopsis/genre/toneKeywords/authorNote（均为 globalPrompt 系统提示词渲染源），但更新后未调 syncGlobalPrompt()，导致作者改了类型/基调/总纲/作者指令后，下一章 AI 生成仍读取旧的全局提示词；PATCH 成功后若改了作品信息字段且未手动覆盖 globalPrompt，则自动 syncGlobalPrompt(projectId) 刷新",
+          "受控守卫：仅当请求体改了 synopsis/genre/toneKeywords/authorNote 之一、且未显式传 globalPrompt 覆盖时才同步，避免清掉作者手动编辑的全局提示词；零行为回归（确定性重渲染，与 characters/explore/lorebook 等既有同步范式一致）",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 34 文件 320/320 全绿（新增 src/app/api/projects/[id]/route.test.ts 6 项断言防回归）",
+          "马斯克人格执行 CEO 子 Agent 拍板本轮只做 A（PATCH 漏同步修复），拒 B（agent-browser UI 复检，纯只读无代码改动不当迭代驱动器）与 C（llmConfig 强类型收口，前轮已拍板暂缓、范围蔓延易引回归）；个人 IP 仍归瑞宝宝，本轮只迭代不立新",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.39",
     date: "2026-08-09",
