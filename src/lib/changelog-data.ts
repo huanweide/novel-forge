@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.42";
+export const LATEST_VERSION = "v1.6.43";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.42 修复 expand 路由直写残缺 globalPrompt——角色批量扩展接口（/api/characters/expand）旧逻辑用 includes(`世界观(${loreCount}条)`) 判重，但该标记与 sync 实际输出「世界书（共N条）」全角格式永不匹配 → 检查恒 false → 每次展开都用 slimContext 残缺版（缺角色段/风格卡/POV比例/探讨布置）覆盖 sync 渲染的完整 globalPrompt，单一真相源（v1.6.40/41 铁律）形同虚设",
-  "v1.6.42 改为 globalPrompt 非空直接复用（零覆盖风险）；为空才 await syncGlobalPrompt 重建完整版；sync 仍空（项目尚无任何世界书/角色/风格数据）才用 slimContext 局部兜底且不落库；末尾扩展完成后的 syncGlobalPrompt 保留为唯一出口",
-  "v1.6.42 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿（收敛性删除覆盖逻辑，既有测试全量通过，无新增测试路径）",
-  "v1.6.42 取舍：马斯克人格执行 CEO 子 Agent 拍板做 A（闭合 expand 唯一确凿旁路），拒 B（llmConfig 强类型收口，v1.6.41 已拍板暂缓）与 C（19/21 处非阻塞 sync 是 v1.6.40 起的刻意性能权衡、非缺陷不动）；个人 IP 仍归瑞宝宝，只迭代不立新",
+  "v1.6.43 UI 复检（agent-browser 无头 Chrome 实跑 novel-forge）：首次真用浏览器验证核心创作流程——首页导航/项目星海/我的作品列表渲染正常；进入星辰项目工作台后章节树（角色6/世界26/3节点）、30万字正文编辑器、角色·物品·地点标签联动、生成/重写/微调/批量写作/目标字数/作者指令等创作工具全部正常",
+  "v1.6.43 复检发现真实阻塞：stale Prisma client 导致项目加载 HTTP 503——dev server 旧进程（8/8 01:12 启动）加载不含 confirmed_at 列（v1.6.23 加）的旧 client；首页轻量列表查询不涉及该列故正常，但 /api/projects/[id] 的 include:{storyNodes}（含 confirmedAt）触发旧 client 查询未知列 → Prisma 抛错 → 503。任何用户在改 schema 后点进项目都会长期「项目加载失败」",
+  "v1.6.43 修复：重启 dev server 加载新 client（503→200，星辰项目完整 JSON 返回）；并增强 src/lib/api-error.ts 的 classifyError——对 Prisma schema 不匹配类错误（Unknown arg/Invalid prisma invocation/column does not exist）返回准确 hint「重启 dev server 或 npx prisma generate」，不再误报「请检查数据库已启动」（DB 连通却误导用户查库，正是实踩坑）",
+  "v1.6.43 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；诚实边界：UI 复检用真实无头 Chrome 跑通，但生成类功能（调 DeepSeek）因偶发 503 未实测，留后续；IP 仍归瑞宝宝，只迭代不立新",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.43",
+    date: "2026-08-09",
+    title: "v1.6.43 UI 复检（agent-browser 无头实跑）+ 修复 stale client 项目加载 503 + 增强 api-error schema 不匹配诊断",
+    sections: [
+      {
+        label: "UI 复检发现 stale client 项目加载 503（真实阻塞）",
+        items: [
+          "首次用 agent-browser 无头 Chrome 真跑 novel-forge 核心创作流程：首页导航/项目星海/我的作品列表渲染正常；进入星辰项目工作台后章节树（角色6/世界26/3节点）、30万字正文编辑器、角色·物品·地点标签联动、生成/重写/微调/批量写作/目标字数/作者指令等创作工具全部正常——这是 v1.6.x 全系列首次真用浏览器验证 UI",
+          "复检暴露真实阻塞：/api/projects/[id] 返回 HTTP 503「项目加载失败」，星辰项目打不开。根因 = stale Prisma client：dev server 旧进程（8/8 01:12 启动）内存加载的是 v1.6.23 加 confirmed_at 列（8/8 20:11）之前的旧 @generated client；首页轻量列表查询不涉及该列故正常，但单项目 include:{storyNodes}（含 confirmedAt）触发旧 client 校验未知列 → Prisma 抛错 → 503。任何用户在改 schema 后未重启 dev server 都会长期踩中",
+          "修复：杀旧 dev server 进程树 + 重启（node next dev -p 3001）加载新 client；curl 复现确认 /api/projects/[id] 由 503 变 200、完整 JSON（含 name:星辰 + 全部关联）返回；浏览器重载工作台错误页消失、正常渲染",
+        ],
+      },
+      {
+        label: "增强 api-error schema 不匹配诊断（防御性 UX）",
+        items: [
+          "src/lib/api-error.ts classifyError 第 2 类（未知 Prisma 错误）原为统一 hint「请确认数据库已启动且已执行 npx prisma db push 建表」——stale client 场景下 DB 明明连通却被误导查库，南辕北辙",
+          "新增 2.1 子分支：message 匹配 /Unknown arg|Invalid `prisma|does not exist|Unknown field|column .* does not exist/ 时，返回 code:PRISMA_SCHEMA_MISMATCH + 准确 hint「数据库已连接，但本地 Prisma 客户端版本与数据库表结构不一致（常见于改了 schema 后未重启 dev server）。请重启 dev server 或执行 npx prisma generate 后重试」",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；无现成测试断言原 hint 文本，改动零回归",
+          "诚实边界：UI 复检用真实无头 Chrome 跑通渲染，但生成类功能（调 DeepSeek 实跑续写/精修）因 DeepSeek 偶发 503 未实测，留后续专项；IP 仍归瑞宝宝，只迭代不立新",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.42",
     date: "2026-08-09",

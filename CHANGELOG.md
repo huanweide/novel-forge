@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.43 — 2026-08-09
+**v1.6.43 UI 复检（agent-browser 无头实跑）+ 修复 stale client 项目加载 503 + 增强 api-error schema 不匹配诊断**
+
+- **UI 复检发现 stale client 项目加载 503（真实阻塞）**：首次用 agent-browser 无头 Chrome 真跑核心创作流程，首页/星海/作品列表渲染正常，进入星辰项目工作台后章节树（角色6/世界26/3节点）、30万字正文编辑器、角色·物品·地点标签联动、生成/重写/微调/批量写作/目标字数/作者指令等创作工具全部正常（v1.6.x 首次真用浏览器验证 UI）。复检暴露真实阻塞：/api/projects/[id] 返回 HTTP 503「项目加载失败」。根因 = stale Prisma client——dev server 旧进程（8/8 01:12 启动）内存加载的是 v1.6.23 加 confirmed_at 列（8/8 20:11）之前的旧 @generated client；首页轻量列表查询不涉及该列故正常，但单项目 include:{storyNodes}（含 confirmedAt）触发旧 client 校验未知列 → Prisma 抛错 → 503。杀旧进程树 + 重启 dev server 加载新 client 后，curl 复现由 503 变 200、完整 JSON 返回，浏览器重载工作台错误页消失、正常渲染。
+- **增强 api-error schema 不匹配诊断（防御性 UX）**：src/lib/api-error.ts classifyError 第 2 类（未知 Prisma 错误）原统一 hint「请确认数据库已启动且已执行 npx prisma db push 建表」——stale client 场景下 DB 明明连通却被误导查库。新增 2.1 子分支：message 匹配 /Unknown arg|Invalid `prisma|does not exist|Unknown field|column .* does not exist/ 时返回 code:PRISMA_SCHEMA_MISMATCH + 准确 hint「数据库已连接，但本地 Prisma 客户端版本与数据库表结构不一致（常见于改了 schema 后未重启 dev server）。请重启 dev server 或执行 npx prisma generate 后重试」。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 35 文件 323/323 全绿；无现成测试断言原 hint 文本，零回归。诚实边界：UI 复检用真实无头 Chrome 跑通渲染，但生成类功能（调 DeepSeek）因偶发 503 未实测，留后续专项；IP 仍归瑞宝宝，只迭代不立新。
+
+---
+
 ## v1.6.42 — 2026-08-09
 **v1.6.42 修复 expand 路由直写残缺 globalPrompt（闭合单一真相源最后旁路）**
 

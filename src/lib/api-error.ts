@@ -74,6 +74,19 @@ export function classifyError(e: unknown): ApiErrorInfo {
 
   // 2) 其它 Prisma 错误（未知 code 但以 Prisma 开头）
   if (code?.startsWith("P") || /PrismaClient/i.test(err.name) || /Prisma/i.test(err.message)) {
+    // 2.1) schema 不匹配（stale client）：数据库连通，但本地 Prisma 客户端版本
+    // 与表结构不一致（常见于改了 schema 后未重启 dev server / 未重新 generate）。
+    // 此时若仍提示「请检查数据库已启动」会南辕北辙——DB 没问题，是 client 旧。
+    // v1.6.38 UI 复检实踩：dev server 旧进程加载不含 confirmed_at 列的旧 client，
+    // 单项目 include 重查询抛 client 侧校验错误，前端长期显示「项目加载失败（HTTP 503）」。
+    if (/Unknown arg|Invalid `prisma|does not exist|Unknown field|column .* does not exist|unknown field/i.test(err.message)) {
+      return {
+        status: 503,
+        code: code || "PRISMA_SCHEMA_MISMATCH",
+        error: "Prisma 客户端与数据库结构不匹配",
+        hint: "数据库已连接，但本地 Prisma 客户端版本与数据库表结构不一致（常见于改了 schema 后未重启 dev server）。请重启 dev server 或执行 `npx prisma generate` 后重试。",
+      };
+    }
     return {
       status: 503,
       code: code || "PRISMA",
