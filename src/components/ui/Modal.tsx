@@ -22,6 +22,7 @@
  */
 
 import React, { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
@@ -132,7 +133,7 @@ export function Modal({
     ? "surface-floating relative rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-spring"
     : "surface-floating relative rounded-2xl shadow-2xl max-h-[88vh] overflow-y-auto custom-scrollbar animate-spring";
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={() => closeOnOverlay && onClose()}
@@ -195,6 +196,7 @@ export function Modal({
       </div>
     </div>
   );
+  return typeof document !== "undefined" ? createPortal(modal, document.body) : null;
 }
 
 export function ModalFooter({ children }: { children: ReactNode }) {

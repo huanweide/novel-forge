@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.1";
+export const LATEST_VERSION = "v1.8.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.1 一致性引擎收口（护栏+解析健壮性）——dedupeFacts 去重 key 分隔符「|」碰撞真 bug 修复 + 三处 LLM 解析 fence 剥离统一 json|text|markdown，全链路更稳",
-  "v1.8.1 修 dedupeFacts：key 由「subject|attribute」改为 JSON.stringify([subject, attribute])，subject/attribute 含「|」时不再误判重複丢事实；零 schema 变更、纯函数",
-  "v1.8.1 三处 LLM 解析（extractFacts/detectConflicts/suggestFix）fence 剥离统一 json|text|markdown，消除不一致、兼容更多返回形态；零新依赖",
-  "v1.8.1 双门禁 tsc 0 + vitest 358 全绿（新增 1 例去重碰撞回归）；马斯克拍板做 A+B、C 暂缓；IP 归瑞宝宝，只迭代 novel-forge",
+  "v1.8.2 故事线工作台重构：点击主线/支线后弹出居中玻璃面板，左侧导航 + 右侧查看/编辑整合，告别左栏缩成一团",
+  "v1.8.2 Modal 组件支持 React Portal 挂到 body，修复被父容器 transform 裁剪无法真正居中的问题，全站 Modal 受益",
+  "v1.8.2 故事线七要素以网格卡片呈现，章节进展时间轴内置；删除重复的旧 StorylinesModal.tsx",
+  "v1.8.2 双门禁 SAFE_DELETE_DISABLE=1 tsc --noEmit 0 错 + vitest 358/358 全绿；经无头截图多轮自测验证",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.2",
+    date: "2026-08-09",
+    title: "故事线工作台重构（居中 Modal + 编辑查看整合 + 时间轴）",
+    sections: [
+      {
+        label: "功能",
+        items: [
+          "主线/支线工作台重做：点击后居中玻璃弹窗，左侧导航 + 右侧查看/编辑整合在同一面板，告别左侧窄栏缩成一团的旧体验",
+          "七要素以网格卡片呈现（欲望/阻碍/行动/结果/意外/转折/结局），章节进展时间轴内置，故事结构一目了然",
+        ],
+      },
+      {
+        label: "修复",
+        items: [
+          "Modal 组件改用 React Portal 挂载到 document.body，修复被父容器 transform 裁剪导致无法真正居中、甚至被内部元素遮挡点击的问题，全站 Modal 统一受益",
+        ],
+      },
+      {
+        label: "工程",
+        items: [
+          "删除重复的旧 StorylinesModal.tsx，故事线入口统一收进 StorylineList + StorylineWorkbench",
+          "双门禁 tsc 0 错 + vitest 358/358 全绿；经 headless 浏览器多轮截图自测验证 UI 居中、编辑查看整合、导航无遮挡",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.1",
     date: "2026-08-09",
