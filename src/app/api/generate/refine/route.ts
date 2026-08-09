@@ -14,6 +14,7 @@ import { AgentOrchestrator } from "@/core/agents";
 import { applyRegexRules } from "@/core/post-process/regex";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { collectForbiddenPatterns } from "@/lib/forbidden-checker";
+import { applyTargetedFixReplacement } from "@/lib/targeted-fix";
 import {
   loadGenerationContext,
   handleNewCharacters,
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     const {
       projectId, nodeId, instruction, targetWords = 500,
       confirmedCardIds, cardNotes, newCharacterRequests, authorNote,
+      selectedText,
     } = await request.json();
 
     if (!projectId || !nodeId) {
@@ -93,6 +95,8 @@ export async function POST(request: Request) {
     // 只让模型生成续写增量、不重输出已有正文，路由层拼回原正文，彻底消除「重输出全文撞 max_tokens 截断」。
     // 修改/精准修复类指令仍需模型看到全文并输出修改后全文，保持现有全文重输出契约不变。
     const isContinuationIntent = hasContent && !isTargetedFix && /(继续写|续写|接着写|往下写|补\s*\d*\s*字|加\s*\d*\s*字|延长|展开|后续|推进剧情|往下)/.test(refineInstruction);
+    // v1.6.51：选中原文片段存在即启用「局部替换」模式（比指令含「精准修复」更通用、更可靠——锚点来自用户真实选中文本，避免模型幻觉；无选中时保持现有全文重输出契约不变）
+    const hasSelectedText = !!(selectedText && selectedText.trim());
 
     const cardNotesText = cardNotes
       ? Object.entries(cardNotes as Record<string, string>)
@@ -139,6 +143,24 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 - 续写字数约${targetWords}字。`}`;
     } else {
       writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
+    }
+    // v1.6.51（#124 长章修改类防截断真实修复）：当存在选中原文片段时，覆盖为「局部替换」prompt，
+    // 只让模型生成该片段的改写版（路由层精确匹配替换回原正文），从根上消除长章全文重输出撞 max_tokens 截断。
+    // 放在 if/else 链之后、以「最后赋值胜出」覆盖 hasContent 分支已生成的「全文重输出」prompt，不动原多行模板。
+    if (hasContent && hasSelectedText) {
+      writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}【局部精准修改任务——只输出「被选中片段」按指令改写后的完整片段，严禁重输出全文】
+用户选中的原文片段（必须严格基于它改写，保持与前后文衔接）：
+---
+${selectedText.trim()}
+---
+
+用户指令：${refineInstruction}
+
+【铁律】
+1. 只输出改写后的「那一段」完整内容（即替换掉上面选中片段的新文本），不要复述前文后文、不要加「以下是修改」等开场白。
+2. 文风、人称、视角必须与选中片段及前后文完全一致。
+3. 长度应与选中片段大致相当，除非指令明确要求扩写或缩写。
+4. 严禁输出说明性文字，只输出替换片段本身。`;
     }
 
     // ── 7.5 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──
@@ -264,6 +286,15 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
               return;
             }
             newContent = existingContent.replace(/\s+$/, "") + "\n\n" + newContent.replace(/^\s+/, "");
+          } else if (hasSelectedText) {
+            // v1.6.51 局部替换：精确匹配 selectedText → 替换为模型输出的改写片段（锚点命中失败/过短则回退保留原文）
+            const fix = applyTargetedFixReplacement(existingContent, selectedText, newContent);
+            if (!fix.ok) {
+              send({ type: "done", content: "", nodeId, status: data.currentNode.status, mode: "refine",
+                wordCount: existingContent.length, truncated: true, warning: fix.warning });
+              return;
+            }
+            newContent = fix.content!;
           } else {
             // ── L5-02：微调截断保护 ──
             // finish_reason==='length' 表示新正文被 max_tokens 截断。不覆盖线上节点为残片：

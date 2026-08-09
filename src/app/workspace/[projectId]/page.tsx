@@ -718,7 +718,7 @@ export default function WorkspacePage() {
     // #124：精修的「续写字数」收敛为合理增量（≤1500），避免传入全本 targetWordCount（星辰=30万）导致预算恒超上限、
     // 长章静默失效。仅当章节本身已很长（>上限-增量）时才触发 cap 告警，提示用户「分段精修」。
     const refineTarget = Math.min(targetWordCount, 1500);
-    await streamSSE("/api/generate/refine", { projectId: project.id, nodeId: selectedNode.id, instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情", targetWords: refineTarget, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, authorNote: finalAuthorNote || authorNote || undefined });
+    await streamSSE("/api/generate/refine", { projectId: project.id, nodeId: selectedNode.id, instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情", targetWords: refineTarget, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, selectedText: selectedText || undefined, authorNote: finalAuthorNote || authorNote || undefined });
     setIsGenerating(false);
   };
 
