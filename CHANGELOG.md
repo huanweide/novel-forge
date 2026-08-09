@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.51.4 — 2026-08-09
+
+**主动矛盾检测（B 任务·标红不改写）**
+
+- **功能**：后处理管线章摘要落库后 fire-and-forget 调 `detectConsistencyConflicts`，把新章正文与「一致性事实基线」比对，找出前后矛盾落库 `ConsistencyConflict`；只标红不自动改写（创作主权归作者）。
+- **UI 与端点**：`ConsistencyPanel` 事实列表下新增「冲突（需处理）」红色区块（冲突说明 + 摘录 + 关联基线 + 已修正/忽略按钮）；`GET/POST /api/projects/[id]/consistency/conflicts` 列表与状态更新（含 project 归属校验）。
+- **最小裁剪**：砍 severity、factId 可选、status 三态（open/resolved/ignored）；检测幂等（清同章旧 open 再建新）；复用既有 LLM 客户端与 fire-and-forget，零新依赖；双门禁 tsc 0 + vitest（新增 `parseConflictsFromLLM` 单测）全绿；`prisma db push` 已建 `ConsistencyConflict` 表。
+- **诚实边界**：真实 LLM 检测效果留待可联网时端到端校验；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.51.3 — 2026-08-09
 
 **一致性事实基线最小 UI（作者可见·手动重抽）**
