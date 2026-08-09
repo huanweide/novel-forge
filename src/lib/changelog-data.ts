@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.5";
+export const LATEST_VERSION = "v1.8.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.5 UI 自查优化闭环：无头 Chrome 复用系统 Chrome 截图 8 个关键页面（workspace/故事线/工作台/tables/settings/workshop/explore/dissect/recycle/changelog），无报错、无遮挡、布局正常",
-  "v1.8.5 故事线工作台可访问性打磨：关闭/删除图标按钮补充 title 与 aria-label；支线进度条从低对比 text-tertiary 改为 primary，有进度时仍可清晰辨识",
-  "v1.8.5 修复截图辅助脚本 shot2.cjs 的 onboarding 弹窗兜底逻辑，移除误触页面其他按钮的兜底选择器，避免 tables 页等被误点出新建弹窗",
-  "v1.8.5 双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 42 文件 365/365 全绿；仅改前端组件，零 schema 变更",
+  "v1.8.6 真后台 AI 生成落地：故事线「AI 生成」改为创建 GenerationTask，服务端异步跑 LLM，关掉页面任务继续跑，前端轮询拿结果后再进中间态编辑。",
+  "v1.8.6 前端轮询 UI：生成按钮实时显示「生成中… X%」，任务失败显示错误原因；重开工作台可再次发起，服务端任务不受影响。",
+  "v1.8.6 抽取故事线生成核心 src/core/storyline/generate.ts 与后台执行器 execute-task.ts，新增 generation-tasks API（创建/列表/单条轮询），关闭 #174。",
+  "v1.8.6 验证：双门禁 tsc 0 错 + vitest 43 文件 368/368 全绿；端到端实跑创建任务→服务端跑通 LLM→done+4 条建议、七要素齐全。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.6",
+    date: "2026-08-10",
+    title: "真后台 AI 生成（GenerationTask 轮询 + 关页面继续）",
+    sections: [
+      {
+        label: "功能·真后台 AI 生成",
+        items: [
+          "故事线「AI 生成」从同步等待改为真后台：点击后创建 GenerationTask（pending），服务端进程内异步调用 LLM 生成故事线建议，与前端页面生命周期解耦——用户关掉页面任务仍在服务端继续，稍后轮询即可拿结果。",
+          "新增后台执行器 src/core/storyline/execute-task.ts：running → done（result 含 suggestions）或 failed（error），任何异常都被捕获写入任务，绝不抛出到无人 await 的 fire-and-forget 协程。",
+        ],
+      },
+      {
+        label: "功能·前端轮询 UI",
+        items: [
+          "StorylineWorkbench 的 handleGenerate 改为「创建任务 → 轮询 /api/generation-tasks/[id] → 拿 result.suggestions → 中间态编辑 → 落库」，保留原有可编辑草稿交互。",
+          "生成按钮实时显示「生成中… X%」，任务失败显示错误原因；组件卸载时仅清理轮询定时器（服务端任务不受影响），重开工作台可再次发起。",
+        ],
+      },
+      {
+        label: "测试·质量门",
+        items: [
+          "新增 execute-task.test.ts：mock prisma + completeText，验证状态机两条路径（LLM 成功→done+result；失败→failed+error 且不抛出）与任务不存在静默退出。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "双门禁：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错；`npx vitest run` 43 文件 368/368 全绿（较基线 365 新增 3 项执行器单测）。",
+          "端到端实跑：星辰项目创建生成任务→服务端异步跑通 LLM（约 30s）→状态 done、progress 100→轮询拿到 4 条故事线建议、七要素齐全，真后台链路全通。零 schema 变更（复用 v1.8.4 已落地的 GenerationTask 模型）。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v1.8.5",
     date: "2026-08-10",

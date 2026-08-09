@@ -2,6 +2,17 @@
 
 ---
 
+## v1.8.6 — 2026-08-10
+
+**真后台 AI 生成（GenerationTask 轮询 + 关页面继续）**
+
+- **功能·真后台 AI 生成**：故事线「AI 生成」从同步等待改为真后台——点击后创建 GenerationTask（pending），服务端进程内异步调用 LLM 生成故事线建议，与前端页面生命周期解耦；用户关掉页面任务仍在服务端继续，稍后轮询即可拿结果（关闭 #174）。
+- **功能·后台执行器**：新增 src/core/storyline/execute-task.ts，状态机 running → done（result 含 suggestions）或 failed（error），任何异常都被捕获写入任务，绝不抛出到无人 await 的 fire-and-forget 协程。
+- **功能·前端轮询 UI**：StorylineWorkbench 改为「创建任务 → 轮询 /api/generation-tasks/[id] → 拿 result.suggestions → 中间态编辑 → 落库」，生成按钮实时显示「生成中… X%」，失败显示错误原因，重开工作台可再次发起。
+- **验证**：双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 43 文件 368/368 全绿；端到端实跑星辰项目创建任务→服务端跑通 LLM→done+4 条建议、七要素齐全。零 schema 变更（复用 v1.8.4 落地的 GenerationTask 模型）。
+
+---
+
 ## v1.8.5 — 2026-08-10
 
 **UI 自查优化闭环（故事线工作台可访问性 + 截图证据链）**

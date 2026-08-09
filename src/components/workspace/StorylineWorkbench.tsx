@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,17 @@ export function StorylineWorkbench({
   const [genExtra, setGenExtra] = useState("");
   const [committing, setCommitting] = useState(false);
 
+  // 真后台生成任务轮询态（v1.8.6 #174）：创建 task 后轮询，关页面不影响服务端任务
+  const [genTask, setGenTask] = useState<{ taskId: string; status: string; progress: number; error?: string } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 组件卸载（关闭工作台）时清理轮询定时器，避免泄漏（服务端任务不受影响，继续跑）
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -127,26 +138,58 @@ export function StorylineWorkbench({
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setGenTask(null);
     try {
-      const res = await fetch("/api/storylines/generate", {
+      const res = await fetch("/api/generation-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({ projectId, prompt: genExtra }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toastError(`生成失败：${data.error}`);
+        toastError(`创建生成任务失败：${data.error ?? "未知错误"}`);
+        setGenerating(false);
         return;
       }
-      if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-        setGenSuggestions(data.suggestions as StorylineSuggestion[]);
-        setGenExtra("");
-      } else {
-        toastError("生成结果为空，请重试");
-      }
+      const taskId = data.taskId as string;
+      setGenTask({ taskId, status: "pending", progress: 0 });
+
+      // 轮询任务直到 done / failed（关页面不影响服务端任务，重新进页面可再次轮询）
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/generation-tasks/${taskId}`);
+          const t = await r.json();
+          if (!r.ok) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setGenTask({ taskId, status: "failed", progress: 0, error: t.error ?? "轮询失败" });
+            setGenerating(false);
+            toastError(`生成任务失败：${t.error ?? "轮询失败"}`);
+            return;
+          }
+          setGenTask({ taskId, status: t.status, progress: t.progress, error: t.error });
+          if (t.status === "done") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            const suggestions = (t.result?.suggestions as StorylineSuggestion[] | undefined) ?? [];
+            if (suggestions.length > 0) {
+              setGenSuggestions(suggestions);
+              setGenExtra("");
+            } else {
+              toastError("生成结果为空，请重试");
+            }
+            setGenTask(null);
+            setGenerating(false);
+          } else if (t.status === "failed") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            toastError(`生成失败：${t.error ?? "未知错误"}`);
+            setGenTask(null);
+            setGenerating(false);
+          }
+        } catch {
+          // 网络抖动：继续保持轮询，下一拍再试
+        }
+      }, 1500);
     } catch (err) {
       toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
-    } finally {
       setGenerating(false);
     }
   };
@@ -341,7 +384,8 @@ export function StorylineWorkbench({
           >
             {generating ? (
               <>
-                <Icon name="loader" size={14} className="animate-spin" /> 生成中…
+                <Icon name="loader" size={14} className="animate-spin" />
+                {genTask?.status === "running" ? `生成中… ${genTask.progress}%` : "生成中…"}
               </>
             ) : (
               <>
