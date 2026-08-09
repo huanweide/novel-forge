@@ -66,5 +66,6 @@
 - 真浏览器降级复检中抓到确凿数据 bug：changelog-data.ts 的 VERSIONS 数组腐烂——v1.6.49/50/51 三个幽灵条目（声称 agent-browser 无头实跑 A 序列复检，实则 Chromium 未下载、git 无对应 commit，系虚假交付残留）+ 错标重复 v1.6.48（dissect 复检）；根 CHANGELOG.md 头条干净（仅 v1.6.48）。
 - 修复：sed 删 4 个幽灵/重复对象 + Python 由 __file__ 推导真实根精确插入新 v1.6.49 条目；改 LATEST_VERSION=v1.6.49、重写 CHANGELOG_BRIEF 4 条；CHANGELOG.md 头条插 v1.6.49。VERSIONS 恢复严格倒序 49→48→47。
 - 验证：tsc 0 错 + vitest 36 文件 329/329 全绿（纯 changelog 文本治理，无代码逻辑改动）。
-- 交付：费曼报告 PROCESS/WORK_REPORT-ui-review-game-v1.6.49-2026-08-09.md；commit + 代理推送 origin/main。IP 归瑞宝宝，只迭代 novel-forge。
-- 下一轮候选：B llmConfig 强类型收口（仍暂缓）、其余真实 bug；空转红线不变。
+- 交付：费曼报告 PROCESS/WORK_REPORT-ui-review-game-v1.6.49-2026-08-09.md 已生成；本地 commit a06065b（4 文件 +183/-121）已完成。代理推送 origin/main 失败——探测确认仅 7897 端口响应（返 400）、对 GitHub 的 CONNECT 隧道超时（exit=28）、其余 Clash 端口与直连均不通，属外部网络硬阻塞，非代码问题；不空转重试，留待网络/代理恢复后补推。
+- IP 铁律：全程仅 novel-forge 工程迭代，无新 IP/品牌/引流。
+- 下一轮候选：B llmConfig 强类型收口（仍暂缓）、其余真实 bug；空转红线不变。补推 v1.6.49 到 origin/main（待代理恢复）。
