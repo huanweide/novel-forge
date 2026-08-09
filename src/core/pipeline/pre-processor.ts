@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { getActiveRules, injectRules } from "@/core/rules";
 import { buildPromptContext } from "@/core/agents";
+import { getConsistencyBaselineText } from "@/core/consistency/extractFacts";
 import { getTemplate } from "@/core/templates";
 import { classifyEvents } from "@/lib/memory-classifier";
 import type { CharacterCard, StoryNode } from "@/core/types";
@@ -147,7 +148,7 @@ export function extractLLMConfig(data: GenerationData): LLMExtract {
  * 构建统一的 PromptContext（委托给 orchestrator 中的 buildPromptContext）。
  * 这是一个薄封装，确保所有路由用同一套参数。
  */
-export function buildGenerationContext(params: {
+export async function buildGenerationContext(params: {
   data: GenerationData;
   activeCharacters: CharacterCard[];
   authorNote: string;
@@ -167,6 +168,11 @@ export function buildGenerationContext(params: {
     currentChapter,
   );
 
+  // v1.6.51.1：取一致性事实基线（来自 ConsistencyFact 表）；DB 读失败降级为空字符串，不影响生成主流程
+  const consistencyBaseline = await getConsistencyBaselineText(
+    (data.project as any)?.id ?? "",
+  ).catch(() => "");
+
   return buildPromptContext({
     project: data.project as any,
     currentNode: data.currentNode,
@@ -182,5 +188,6 @@ export function buildGenerationContext(params: {
     pendingItems,
     tieredMemory,
     loreTables: data.loreTables as any,
+    consistencyBaseline,
   });
 }

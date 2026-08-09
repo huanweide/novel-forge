@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 import { buildPromptContext } from "@/core/agents";
+import { getConsistencyBaselineText } from "@/core/consistency/extractFacts";
 import { assemblePrompt, countTokens } from "@/core/assembly";
 import { getTemplate } from "@/core/templates";
 import { toAppStoryNode } from "@/core/story-node-bridge";
@@ -64,7 +65,8 @@ export async function POST(request: Request) {
       currentNodeIndex
     );
 
-    // 构建上下文
+    // 构建上下文（v1.6.51.1：同步注入一致性事实基线，预览与真实生成口径一致）
+    const consistencyBaseline = await getConsistencyBaselineText(project.id).catch(() => "");
     const promptContext = buildPromptContext({
       project: project as any,
       currentNode: toAppStoryNode(currentNode),
@@ -74,6 +76,7 @@ export async function POST(request: Request) {
       chapterSummaries: summaries as any,
       authorNote: effectiveAuthorNote,
       loreTables: loreTables as any,
+      consistencyBaseline,
     });
 
     // ── 注入文风模板（与 write 路由保持一致）──

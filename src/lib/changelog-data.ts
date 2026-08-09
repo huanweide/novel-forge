@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51";
+export const LATEST_VERSION = "v1.6.51.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51 新功能支柱·跨章一致性事实基线（最小垂直切片）：新增 ConsistencyFact 模型，从归档章节摘要 + 角色卡 + 世界书缓存抽取事实清单，专打长篇小说前后不一致痛点",
-  "v1.6.51 后端闭环：extractConsistencyFacts 幂等落库（先清后插）+ GET/POST /api/projects/[id]/consistency 出口；parseFactsFromLLM 容错解析（剥 code fence / 截数组 / 缺字段过滤 / 类别回退 world / confidence 夹紧）单测 7/7",
-  "v1.6.51 双门禁：tsc 0 错误 + vitest 37 文件 336/336 全绿（新增 consistency 模块 7 例）；生成客户端已含 ConsistencyFact 类型",
-  "v1.6.51 诚实边界——运行时表需对可达 Postgres 执行 prisma db push 创建（当前沙箱 5432 关闭无本地 PG，路由暂连接失败）；prompt 注入留 v1.6.51.1 接进 buildPromptContext；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51.1 一致性事实基线闭环——getConsistencyBaselineText 接进 buildPromptContext，continue/refine/write/preview 四端点生成提示词现在注入「一致性事实基线」，强制 AI 前后不矛盾",
+  "v1.6.51.1 最小回归面：buildPromptContext 增可选 consistencyBaseline 参数（同步追加到 systemPrompt 末尾）；buildGenerationContext 变 async 内部取基线（DB 读失败降级为空，不影响生成）；三路由 await、preview 同步注入",
+  "v1.6.51.1 双门禁：tsc 0 + vitest 37 文件 336/336 全绿（无回归）；抽取向 POST /api/projects/[id]/consistency 触发，落库 ConsistencyFact",
+  "v1.6.51.1 诚实边界：基线需先触发抽取才有内容（空时静默不注入）；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.1",
+    date: "2026-08-09",
+    title: "v1.6.51.1 一致性事实基线注入生成提示词（功能闭环）",
+    sections: [
+      {
+        label: "功能闭环：基线真正作用于生成",
+        items: [
+          "把 v1.6.51 备好的 getConsistencyBaselineText（生成注入文本块）接进 buildPromptContext——continue/refine/write 三生成端点 + preview-context 预览，现在都会把「一致性事实基线」注入 systemPrompt 末尾，强制 AI 写作前后不矛盾",
+          "手法：buildPromptContext 增可选 consistencyBaseline 参数（同步函数内部 systemPrompt += 该块，零结构改动）；buildGenerationContext 变 async，内部 await getConsistencyBaselineText(projectId) 取出后透传（DB 读失败 .catch 降级为空字符串，绝不拖垮生成主流程）",
+        ],
+      },
+      {
+        label: "最小回归面与验证",
+        items: [
+          "三路由（write/refine/continue）仅把 buildGenerationContext 调用加 await；preview-context 同步 fetch 后传入——调用点改动极小，不改生成关键路径语义",
+          "双门禁：tsc 0 错误 + vitest 37 文件 336/336 全绿（无业务代码回归）；基线为空时静默不注入（if (consistencyBaseline) 守卫）",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "基线内容需先对目标项目 POST /api/projects/[id]/consistency 触发抽取才会非空；未抽取时生成提示词不含基线块（符合预期，非缺陷）",
+          "IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51",
     date: "2026-08-09",

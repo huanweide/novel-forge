@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     const isLatestChapter = currentNodeIndex === data.allNodes.length - 1;
 
     // ── 6. 构建 Prompt 上下文 ──
-    const promptContext = buildGenerationContext({
+    const promptContext = await buildGenerationContext({
       data,
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote,

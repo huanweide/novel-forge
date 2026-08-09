@@ -610,8 +610,10 @@ export function buildPromptContext(params: {
   authorNote?: string;
   /** 结构化表格（LoreTable）——Round8 P0：供 matchLoreEntries 吞并更长名候选，灭3字 lorebook key 在表值前缀内误召回 */
   loreTables?: Array<{ name: string; columns: any[]; rows: any[] }>;
+  /** v1.6.51.1：一致性事实基线文本块（来自 ConsistencyFact 表，POST /api/projects/[id]/consistency 触发抽取），注入 systemPrompt 强制前后不矛盾 */
+  consistencyBaseline?: string;
 }): PromptContext {
-  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], tieredMemory, styleCard, authorNote, loreTables } = params;
+  const { project, currentNode, previousNodes, characters, loreEntries, chapterSummaries, storyBeats = [], storylines = [], pendingCommitments = [], pendingItems = [], tieredMemory, styleCard, authorNote, loreTables, consistencyBaseline } = params;
 
   // 主角极简卡
   const protagonist = characters.find((c) => c.role === "protagonist") || characters[0];
@@ -1540,6 +1542,11 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
       return `【${relatedChars.join(" ↔ ")}】${l.title}：${(l.content || "").slice(0, 200)}`;
     });
     systemPrompt += `\n\n【🕸️ 角色关系网——本章涉及角色之间的关系，生成对话/互动时必须参考】\n${relLines.join("\n")}`;
+  }
+
+  // v1.6.51.1：一致性事实基线——强制前后不矛盾（来自 ConsistencyFact 表，POST /api/projects/[id]/consistency 触发抽取）
+  if (consistencyBaseline) {
+    systemPrompt += `\n\n${consistencyBaseline}`;
   }
 
   return {

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const previousNodes = data.allNodes.slice(Math.max(0, currentNodeIndex - 4), currentNodeIndex);
 
     // ── 6. Prompt 上下文 ──
-    const promptContext = buildGenerationContext({
+    const promptContext = await buildGenerationContext({
       data,
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote,

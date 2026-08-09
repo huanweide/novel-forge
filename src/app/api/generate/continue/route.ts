@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     };
 
     // ── Prompt 上下文 ──
-    const promptContext = buildGenerationContext({
+    const promptContext = await buildGenerationContext({
       data,
       activeCharacters: activeChars as any,
       authorNote: finalAuthorNote || undefined as any,

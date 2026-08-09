@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.51.1 — 2026-08-09
+
+**一致性事实基线注入生成提示词（功能闭环）**
+
+- **闭环**：把 v1.6.51 备好的 `getConsistencyBaselineText` 接进 `buildPromptContext`，`continue`/`refine`/`write` 三生成端点 + `preview-context` 预览现在都会把「一致性事实基线」注入 `systemPrompt` 末尾，强制 AI 写作前后不矛盾。
+- **最小回归面**：`buildPromptContext` 增可选 `consistencyBaseline` 参数（同步 `systemPrompt +=` 该块，零结构改动）；`buildGenerationContext` 变 `async` 内部 `await getConsistencyBaselineText(projectId)` 取出后透传（DB 读失败 `.catch` 降级为空，不拖垮生成）；三路由调用加 `await`、`preview` 同步注入。
+- **双门禁**：tsc 0 错误 + vitest 37 文件 336/336 全绿（无业务代码回归）；基线为空时静默不注入（`if` 守卫）。
+- **诚实边界**：基线需先对目标项目 `POST /api/projects/[id]/consistency` 触发抽取才非空；未抽取时提示词不含基线块（符合预期，非缺陷）；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.51 — 2026-08-09
 
 **跨章一致性事实基线（新功能支柱·最小垂直切片）**
