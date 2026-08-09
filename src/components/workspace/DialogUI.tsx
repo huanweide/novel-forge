@@ -26,12 +26,14 @@ export function DialogInput({
   placeholder,
   autoFocus,
   rows,
+  className,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
   rows?: number;
+  className?: string;
 }) {
   if (rows && rows > 1) {
     return (
@@ -41,13 +43,13 @@ export function DialogInput({
         placeholder={placeholder}
         rows={rows}
         autoFocus={autoFocus}
-        className="input-glass w-full rounded-lg px-3 py-2 text-xs resize-none focus:border-[var(--nv-primary)] placeholder:text-[var(--nv-text-tertiary)]"
+        className={`input-glass w-full rounded-lg px-3 py-2 text-xs resize-none focus:border-[var(--nv-primary)] placeholder:text-[var(--nv-text-tertiary)] ${className ?? ""}`}
       />
     );
   }
   return (
     <input
-      className="input-glass w-full rounded px-3 py-2 text-sm focus:border-[var(--nv-primary)]"
+      className={`input-glass w-full rounded px-3 py-2 text-sm focus:border-[var(--nv-primary)] ${className ?? ""}`}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

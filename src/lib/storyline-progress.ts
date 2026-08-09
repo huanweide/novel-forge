@@ -1,57 +1,44 @@
-// 故事线进度量化（v1.6.3）
+// 故事线进度量化（v1.8.4 重构）
 // ───────────────────────────────────────────────────────────────
-// 把一条故事线的「七要素填充度」+「章节进展数」折算为可展示的进度，
-// 供故事线列表卡片下的进度条使用。
+// 把一条故事线的「七要素填充度」折算为可展示的进度，供故事线列表卡片下的进度条使用。
 //
-// 进度获取方式（明确、可复现）：
-// - 七要素：desire(欲望)/obstacle(阻碍)/action(行动)/result(结果)/twist(意外)/turn(转折)/ending(结局)
-//   任意一项为非空字符串即记 1 分；填充率 = 已填 / 7。
-// - 章节进展：storyline.chapterBindings（写章/规划时回填的已绑定章节数组）长度；
-//   以经验预期 12 章为完整故事线，封顶 100%。
-// - 综合进度 = 七要素 60% + 章节 40%（七要素是「设定完整度」主权重，章节是「推进度」）。
+// v1.8.4 变更：
+// - 七要素从独立列（desire/obstacle/...）迁移为 Storyline.sevenElements JSON 字段；
+// - 结局（ending）不计入填充度（用户要求结局不可预填，仅作「待收束/已收束」标记）；
+// - 不再依赖 chapterBindings（已废弃），章节推进改由 StorylineEvent 时间轴记录。
 
-export const SEVEN_ELEMENT_KEYS = [
-  "desire", "obstacle", "action", "result", "twist", "turn", "ending",
+export const SEVEN_ELEMENT_FILL_KEYS = [
+  "desire", "obstacle", "action", "result", "twist", "turn",
 ] as const;
 
-export type SevenElementKey = (typeof SEVEN_ELEMENT_KEYS)[number];
-
-export const EXPECTED_CHAPTERS_PER_STORYLINE = 12;
+export type SevenElementFillKey = (typeof SEVEN_ELEMENT_FILL_KEYS)[number];
 
 export interface StorylineProgress {
   elementFilled: number;
   elementTotal: number;
   elementPercent: number; // 0-100
-  chapterCount: number;
-  chapterPercent: number; // 0-100
-  overallPercent: number; // 0-100
+  overallPercent: number; // 0-100（v1.8.4 起与 elementPercent 一致）
+  hasEnding: boolean; // 结局是否已收束
   label: string;
 }
 
 export function computeStorylineProgress(s: any): StorylineProgress {
-  const filled = SEVEN_ELEMENT_KEYS.filter(
-    (k) => s && typeof s[k] === "string" && (s[k] as string).trim().length > 0,
+  const se = s?.sevenElements && typeof s.sevenElements === "object" ? s.sevenElements : {};
+  const filled = SEVEN_ELEMENT_FILL_KEYS.filter(
+    (k) => typeof se[k] === "string" && (se[k] as string).trim().length > 0,
   ).length;
-  const elementTotal = SEVEN_ELEMENT_KEYS.length;
+  const elementTotal = SEVEN_ELEMENT_FILL_KEYS.length;
   const elementPercent = Math.round((filled / elementTotal) * 100);
-
-  const bindings = Array.isArray(s?.chapterBindings) ? (s.chapterBindings as unknown[]) : [];
-  const chapterCount = bindings.length;
-  const chapterPercent = Math.min(
-    100,
-    Math.round((chapterCount / EXPECTED_CHAPTERS_PER_STORYLINE) * 100),
-  );
-
-  const overallPercent = Math.round(elementPercent * 0.6 + chapterPercent * 0.4);
-  const label = `七要素 ${filled}/${elementTotal} · 已绑定 ${chapterCount} 章`;
+  const hasEnding = typeof se.ending === "string" && se.ending.trim().length > 0;
+  const overallPercent = elementPercent;
+  const label = `七要素 ${filled}/${elementTotal}${hasEnding ? " · 已收束" : ""}`;
 
   return {
     elementFilled: filled,
     elementTotal,
     elementPercent,
-    chapterCount,
-    chapterPercent,
     overallPercent,
+    hasEnding,
     label,
   };
 }

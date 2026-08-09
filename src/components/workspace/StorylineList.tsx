@@ -4,8 +4,18 @@ import { useState, useEffect, useCallback } from "react";
 import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
 import { toastError, toastCreated } from "@/components/ui/toast";
-import { StorylineWorkbench } from "@/components/workspace/StorylineWorkbench";
+import { StorylineWorkbench, type StorylineSuggestion } from "@/components/workspace/StorylineWorkbench";
 import { computeStorylineProgress, groupStorylinesByMain } from "@/lib/storyline-progress";
+
+export interface StorylineEventData {
+  id: string;
+  kind: "MILESTONE" | "EVENT" | "CLUE";
+  tag: string;
+  title: string;
+  content: string;
+  position: number;
+  sourceRefs: unknown[];
+}
 
 export interface StorylineData {
   id: string;
@@ -16,14 +26,16 @@ export interface StorylineData {
   order: number;
   status: string;
   description: string;
-  desire: string;
-  obstacle: string;
-  action: string;
-  result: string;
-  twist: string;
-  turn: string;
-  ending: string;
-  chapterBindings: { element: string; chapterId: string; note: string }[];
+  sevenElements: {
+    desire?: string;
+    obstacle?: string;
+    action?: string;
+    result?: string;
+    twist?: string;
+    turn?: string;
+    ending?: string | null;
+  } | null;
+  events: StorylineEventData[];
 }
 
 export function StorylineList({ projectId, onRefresh }: { projectId: string; onRefresh: () => void }) {
@@ -32,6 +44,8 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [workbenchId, setWorkbenchId] = useState<string | null>(null); // v1.8 居中工作台
+  const [genSuggestions, setGenSuggestions] = useState<StorylineSuggestion[] | null>(null); // AI 生成中间态草稿
+  const [expandedMains, setExpandedMains] = useState<Set<string>>(new Set()); // 支线默认收起
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +71,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const handleGenerate = async () => {
     setGenerating(true);
     try {
+      // v1.8.4：默认不落库，拿 suggestions 进入工作台中间编辑态
       const res = await fetch("/api/storylines/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,15 +82,26 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         toastError(`生成失败：${data.error}`);
         return;
       }
-      setStorylines(data.storylines);
-      const mainTitle = (data.storylines as StorylineData[] | undefined)?.find((s) => s.type === "main")?.title || "故事线";
-      toastCreated(mainTitle, "故事线");
-      onRefresh();
+      if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        setGenSuggestions(data.suggestions as StorylineSuggestion[]);
+        setWorkbenchId("__gen__"); // 占位，打开工作台并进入生成态
+      } else {
+        toastError("生成结果为空，请重试");
+      }
     } catch (err) {
       toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const toggleExpand = (mainId: string) => {
+    setExpandedMains((prev) => {
+      const next = new Set(prev);
+      if (next.has(mainId)) next.delete(mainId);
+      else next.add(mainId);
+      return next;
+    });
   };
 
   const { mains: mainLines, sides: sideLines, resolveParent } = groupStorylinesByMain(storylines);
@@ -92,7 +118,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
             onClick={handleGenerate}
             disabled={generating}
             className="flex items-center gap-1 rounded border border-[var(--nv-creative)]/40 bg-[var(--nv-creative-soft)] px-2 py-1 text-[10px] text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-creative-soft)] disabled:opacity-50"
-            title="AI 自动生成主线/支线"
+            title="AI 自动生成主线/支线（生成后可在工作台编辑再落库）"
           >
             {generating ? (
               <>
@@ -133,22 +159,32 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         <div className="space-y-1.5">
           {mainLines.map((mainLine) => {
             const childLines = sideLines.filter((s) => resolveParent(s)?.id === mainLine.id);
+            const expanded = expandedMains.has(mainLine.id);
             const p = computeStorylineProgress(mainLine);
             return (
               <div key={mainLine.id} className="overflow-hidden rounded-lg border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
-                <button
-                  onClick={() => {
-                    setWorkbenchId(mainLine.id);
-                  }}
-                  className="flex w-full items-center gap-1 px-2 py-1.5 text-left transition-colors hover:bg-[var(--nv-accent)]/10"
-                >
-                  <Icon name="star" size={11} className="shrink-0 text-[var(--nv-accent)]" />
-                  <span className="flex-1 truncate text-xs font-medium text-[var(--nv-accent)]">{mainLine.title}</span>
-                  {mainLine.status === "completed" && (
-                    <span className="rounded bg-[var(--nv-success)]/15 px-1 text-[9px] text-[var(--nv-success)]">已完结</span>
+                <div className="flex w-full items-center gap-1 px-2 py-1.5">
+                  <button
+                    onClick={() => setWorkbenchId(mainLine.id)}
+                    className="flex flex-1 items-center gap-1 text-left transition-colors hover:bg-[var(--nv-accent)]/10"
+                  >
+                    <Icon name="star" size={11} className="shrink-0 text-[var(--nv-accent)]" />
+                    <span className="flex-1 truncate text-xs font-medium text-[var(--nv-accent)]">{mainLine.title}</span>
+                    {mainLine.status === "completed" && (
+                      <span className="rounded bg-[var(--nv-success)]/15 px-1 text-[9px] text-[var(--nv-success)]">已完结</span>
+                    )}
+                  </button>
+                  {/* 支线收起/展开（默认收起） */}
+                  {childLines.length > 0 && (
+                    <button
+                      onClick={() => toggleExpand(mainLine.id)}
+                      className="shrink-0 rounded px-1 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-accent)]"
+                      title={expanded ? "收起支线" : `展开 ${childLines.length} 条支线`}
+                    >
+                      <Icon name={expanded ? "chevronDown" : "chevronRight"} size={12} />
+                    </button>
                   )}
-                  <Icon name="chevronRight" size={11} className="shrink-0 text-[var(--nv-text-tertiary)]" />
-                </button>
+                </div>
                 <div className="px-2 pb-1.5">
                   <div className="flex items-center justify-between text-[9px] text-[var(--nv-text-tertiary)]">
                     <span>主线进度</span>
@@ -158,7 +194,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
                     <div className="h-full rounded-full" style={{ width: `${p.overallPercent}%`, background: "var(--nv-accent)" }} />
                   </div>
                 </div>
-                {childLines.length > 0 && (
+                {expanded && childLines.length > 0 && (
                   <div className="space-y-1 px-2 pb-1.5">
                     {childLines.map((s) => {
                       const cp = computeStorylineProgress(s);
@@ -171,7 +207,6 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
                           <Icon name="arrowRight" size={10} className="shrink-0 text-[var(--nv-accent)]/70" />
                           <span className="flex-1 truncate text-[10px] text-[var(--nv-text-primary)]">{s.title}</span>
                           <span className="text-[9px] text-[var(--nv-text-tertiary)]">{cp.overallPercent}%</span>
-                          <Icon name="chevronRight" size={10} className="shrink-0 text-[var(--nv-text-tertiary)]" />
                         </button>
                       );
                     })}
@@ -195,19 +230,22 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
                   <Icon name="arrowRight" size={11} className="shrink-0 text-[var(--nv-text-tertiary)]" />
                   <span className="flex-1 truncate text-xs text-[var(--nv-text-primary)]">{s.title}</span>
                   <span className="text-[9px] text-[var(--nv-text-tertiary)]">{cp.overallPercent}%</span>
-                  <Icon name="chevronRight" size={11} className="shrink-0 text-[var(--nv-text-tertiary)]" />
                 </button>
               );
             })}
         </div>
       )}
 
-      {/* v1.8 居中工作台（点击列表项打开） */}
+      {/* v1.8 居中工作台（点击列表项打开；AI 生成进入中间态） */}
       {workbenchId && (
         <StorylineWorkbench
           projectId={projectId}
-          initialId={workbenchId}
-          onClose={() => setWorkbenchId(null)}
+          initialId={workbenchId === "__gen__" ? null : workbenchId}
+          initialSuggestions={workbenchId === "__gen__" ? genSuggestions ?? undefined : undefined}
+          onClose={() => {
+            setWorkbenchId(null);
+            setGenSuggestions(null);
+          }}
           onRefresh={() => {
             void load();
             onRefresh();

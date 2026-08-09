@@ -1,48 +1,47 @@
 import { describe, it, expect } from "vitest";
-import { computeStorylineProgress, SEVEN_ELEMENT_KEYS, groupStorylinesByMain } from "./storyline-progress";
+import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain } from "./storyline-progress";
 
-describe("故事线进度量化", () => {
-  it("空故事线：进度全 0", () => {
+describe("故事线进度量化（v1.8.4 · sevenElements）", () => {
+  it("空故事线：进度全 0、未收束", () => {
     const p = computeStorylineProgress({});
     expect(p.elementFilled).toBe(0);
     expect(p.elementPercent).toBe(0);
-    expect(p.chapterCount).toBe(0);
-    expect(p.chapterPercent).toBe(0);
     expect(p.overallPercent).toBe(0);
+    expect(p.hasEnding).toBe(false);
+    expect(p.label).toContain("七要素 0/6");
   });
 
-  it("七要素全填 + 无章节：elementPercent=100，overall=60", () => {
-    const full = Object.fromEntries(SEVEN_ELEMENT_KEYS.map((k) => [k, `内容-${k}`]));
-    const p = computeStorylineProgress(full);
-    expect(p.elementFilled).toBe(7);
+  it("六要素全填：elementPercent=100，结局不计入", () => {
+    const full = Object.fromEntries(SEVEN_ELEMENT_FILL_KEYS.map((k) => [k, `内容-${k}`]));
+    const p = computeStorylineProgress({ sevenElements: full });
+    expect(p.elementFilled).toBe(6);
     expect(p.elementPercent).toBe(100);
-    expect(p.chapterCount).toBe(0);
-    expect(p.overallPercent).toBe(60);
+    expect(p.hasEnding).toBe(false);
+    expect(p.overallPercent).toBe(100);
   });
 
-  it("章节进展：12 章封顶 100%，超出不越界", () => {
-    const p = computeStorylineProgress({ chapterBindings: new Array(20).fill({}) });
-    expect(p.chapterCount).toBe(20);
-    expect(p.chapterPercent).toBe(100);
+  it("六要素全填 + 结局：仍 100，但标记已收束", () => {
+    const full = Object.fromEntries(SEVEN_ELEMENT_FILL_KEYS.map((k) => [k, `内容-${k}`]));
+    full.ending = "主角归于田园";
+    const p = computeStorylineProgress({ sevenElements: full });
+    expect(p.elementPercent).toBe(100);
+    expect(p.hasEnding).toBe(true);
+    expect(p.label).toContain("已收束");
   });
 
-  it("综合权重：七要素 60% + 章节 40%", () => {
-    const p = computeStorylineProgress({
-      desire: "想复仇",
-      obstacle: "强敌环伺",
-      chapterBindings: new Array(6).fill({}),
-    });
-    // element 2/7 ≈ 28.57→29；chapter 6/12=50；overall = 29*0.6+50*0.4 = 17.4+20 = 37
-    expect(p.elementPercent).toBe(29);
-    expect(p.chapterPercent).toBe(50);
-    expect(p.overallPercent).toBe(37);
-    expect(p.label).toContain("七要素 2/7");
+  it("部分填充：正确折算百分比", () => {
+    const p = computeStorylineProgress({ sevenElements: { desire: "想复仇", obstacle: "强敌" } });
+    // 2/6 ≈ 33.33 → 33
+    expect(p.elementFilled).toBe(2);
+    expect(p.elementPercent).toBe(33);
   });
 
-  it("chapterBindings 缺失/非数组不报错", () => {
-    expect(() => computeStorylineProgress({ chapterBindings: "bad" })).not.toThrow();
-    const p = computeStorylineProgress({ chapterBindings: "bad" });
-    expect(p.chapterCount).toBe(0);
+  it("sevenElements 缺失 / 非对象 / 旧七列字段 安全降级", () => {
+    expect(computeStorylineProgress({}).elementFilled).toBe(0);
+    expect(computeStorylineProgress({ sevenElements: "bad" }).elementFilled).toBe(0);
+    expect(computeStorylineProgress({ sevenElements: null }).elementFilled).toBe(0);
+    // 旧独立列字段不再计入（数据模型已迁移）
+    expect(computeStorylineProgress({ desire: "旧列" }).elementFilled).toBe(0);
   });
 });
 

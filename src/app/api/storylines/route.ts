@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     const storylines = await prisma.storyline.findMany({
       where: { projectId },
       orderBy: [{ type: "asc" }, { order: "asc" }],
+      include: { events: { orderBy: { position: "asc" } } },
     });
     return NextResponse.json(storylines);
   } catch (err) {
@@ -40,14 +41,7 @@ export async function POST(request: Request) {
         title: title.trim(),
         description: description || "",
         order: order ?? 0,
-        desire: rest.desire || "",
-        obstacle: rest.obstacle || "",
-        action: rest.action || "",
-        result: rest.result || "",
-        twist: rest.twist || "",
-        turn: rest.turn || "",
-        ending: rest.ending || "",
-        chapterBindings: rest.chapterBindings || [],
+        sevenElements: rest.sevenElements ?? null,
       },
     });
     return NextResponse.json(storyline, { status: 201 });

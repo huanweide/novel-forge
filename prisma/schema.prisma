@@ -364,31 +364,25 @@ model StoryBeat {
   @@index([projectId])
 }
 
-// ─── 故事线 (Storyline) —— 七要素事件线，主线+支线 ──────────
+// ─── 故事线 (Storyline) —— 主线/支线可互换，七要素收进 JSON，结局不预填 ──
 
 model Storyline {
   id        String @id @default(uuid())
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  type     String @default("side")  // "main" | "side"
-  parentId String?                   // 支线挂主线
-  title    String                    // 事件线名称，如"主角获得宝剑"
-  order    Int @default(0)
+  type     String @default("side")  // "main" | "side" —— 可互换：主线可改支线、支线可改主线
+  parentId String?                   // 支线挂主线；主线为 null
+  title    String                    // 事件线名称
+  order    Float @default(0)         // 浮点便于插序
   status   String @default("active") // "active" | "completed" | "abandoned"
-  description String @default("")    // 简要说明
+  description String @default("")    // 总纲（一句话概述）
 
-  // ── 七要素 ──
-  desire    String @default("")  // 欲望：主角想要什么
-  obstacle  String @default("")  // 阻碍：谁/什么挡着
-  action    String @default("")  // 行动：主角怎么做
-  result    String @default("")  // 结果：暂时成/败
-  twist     String @default("")  // 意外：突然转折
-  turn      String @default("")  // 转折：方向改变
-  ending    String @default("")  // 结局：本事件线收束
+  // 七要素框架（仅 MAIN 用作封面/总纲；结局 ending 默认 null —— 不预填，交给 LLM/作者收束）
+  // 结构: { desire, obstacle, action, result, twist, turn, ending }
+  sevenElements Json?
 
-  // 章节绑定——七要素各绑定到哪章 [{element: "desire", chapterId: "xxx", note: ""}]
-  chapterBindings Json @default("[]")
+  events StorylineEvent[]            // 时间轴大事件 + 线索集
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -397,7 +391,44 @@ model Storyline {
   @@index([parentId])
 }
 
-// ─── 游戏会话 (Game Session) —— 互动文本冒险 ──────────────────
+// ─── 故事线事件 (Storyline Event) —— 时间轴大事件 + 线索集 ──
+model StorylineEvent {
+  id          String   @id @default(uuid())
+  storylineId String
+  storyline   Storyline @relation(fields: [storylineId], references: [id], onDelete: Cascade)
+
+  kind        String   @default("EVENT")  // "MILESTONE" | "EVENT" | "CLUE"
+  tag         String   @default("")        // 线索集归类标签（CLUE 用）
+  title       String   @default("")
+  content     String   @default("")        // 事件/线索正文
+  position    Float    @default(0)         // 时间轴排序位（可总结性，不绑章节号）
+  sourceRefs  Json     @default("[]")      // 来源引用：[{type:"chapter"|"note"|"llm", ref:""}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([storylineId])
+  @@index([kind])
+}
+
+// ─── 后台生成任务 (Generation Task) —— 支撑 LLM 真后台（关页面继续）──
+model GenerationTask {
+  id         String   @id @default(uuid())
+  projectId  String
+  targetType String   @default("storyline")
+  targetId   String?
+  prompt     String   @default("")
+  status     String   @default("pending")   // "pending" | "running" | "done" | "failed"
+  progress   Int      @default(0)
+  result     Json?
+  error      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+// ─── 游戏会话 (Game Session) —— 互动文本冒险 ──────────────────// ─── 游戏会话 (Game Session) —— 互动文本冒险 ──────────────────
 
 model GameSession {
   id           String   @id @default(cuid())

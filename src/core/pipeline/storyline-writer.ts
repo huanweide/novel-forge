@@ -1,5 +1,5 @@
 /**
- * 故事线进度回写（v1.4.0）
+ * 故事线进度回写（v1.4.0 / v1.8.4 重构）
  *
  * 背景：orchestrator.summarizeChapter 会计算 threadProgress（每章主/支线进展，
  * Array<{ storylineId, stage, progressNote, impactScore }>），但 post-processor 只存了
@@ -9,27 +9,24 @@
  *  - stage 白名单：七要素 desire/obstacle/action/result/twist/turn/ending；
  *  - 仅 active 故事线；
  *  - impactScore < 4 跳过（orchestrator 语义：1-3 为日常过渡，4+ 才算大事）；
- *  - 覆写该七要素为 progressNote（一句话），并 push 进 chapterBindings 留痕（cap 200）。
+ *  - v1.8.4 起改为向 StorylineEvent 写入「时间轴大事件」（MILESTONE），
+ *    不再覆写 sevenElements 框架、不再维护 chapterBindings 数组，
+ *    满足用户「时间轴记录大事件」需求且不污染总纲七要素。
  *  - 非法 storylineId / 项目不匹配 / 单条失败 → 静默降级，不影响主流程。
  */
 
 import { prisma } from "@/lib/prisma";
 import { STORYLINE_STATUS, withStorylineLock } from "@/core/story-status";
 
-const STAGES = ["desire", "obstacle", "action", "result", "twist", "turn", "ending"] as const;
-
-// 统一 bindings 数据结构（L3-003）：applyChapterPlanToStorylines 与 writeStorylineProgress
-// 写入同形状，消除解析脆弱。两个函数各自只填自己关心的字段，其余补默认空值。
-export interface ChapterBinding {
-  storylineId: string;
-  chapterId: string | null;
-  chapterOrder: number | null;
-  element: string | null;
-  focus: string;
-  advance: string[];
-  note: string;
-  at: string;
-}
+const STAGE_LABELS: Record<string, string> = {
+  desire: "欲望推进",
+  obstacle: "障碍显现",
+  action: "行动展开",
+  result: "结果落定",
+  twist: "意外转折",
+  turn: "局势转向",
+  ending: "走向收束",
+};
 
 export interface ThreadProgressItem {
   storylineId?: string;
@@ -48,7 +45,7 @@ export async function writeStorylineProgress(
   for (const tp of threadProgress) {
     if (!tp || !tp.storylineId) continue;
     const stage = tp.stage;
-    if (!stage || !(STAGES as readonly string[]).includes(stage)) continue;
+    if (!stage || !(stage in STAGE_LABELS)) continue;
     const note = (tp.progressNote || "").trim();
     if (!note) continue;
     // 只记录大事：impactScore 4+（1-3 为日常过渡，用户明确不要细节）
@@ -59,22 +56,19 @@ export async function writeStorylineProgress(
       await withStorylineLock(storylineId, async () => {
         const sl = await prisma.storyline.findUnique({ where: { id: storylineId } });
         if (!sl || sl.projectId !== projectId || sl.status !== STORYLINE_STATUS.ACTIVE) return;
-        const updateData: Record<string, unknown> = { [stage]: note };
-        const bindings = Array.isArray(sl.chapterBindings) ? (sl.chapterBindings as unknown[]).slice() : [];
-        // L3-003：写入统一形状（其余字段补默认空值，消除两种形状混存的解析脆弱）
-        const binding: ChapterBinding = {
-          storylineId,
-          chapterId: nodeId,
-          chapterOrder: chapterOrder ?? null,
-          element: stage,
-          focus: "",
-          advance: [],
-          note,
-          at: new Date().toISOString(),
-        };
-        bindings.push(binding);
-        updateData.chapterBindings = bindings.slice(-200);
-        await prisma.storyline.update({ where: { id: sl.id }, data: updateData as any });
+        const label = STAGE_LABELS[stage] || "进展";
+        const position = typeof chapterOrder === "number" ? chapterOrder : 0;
+        await prisma.storylineEvent.create({
+          data: {
+            storylineId: sl.id,
+            kind: "MILESTONE",
+            tag: stage,
+            title: `${label}（第 ${position} 章）`,
+            content: note,
+            position,
+            sourceRefs: [{ nodeId, chapterOrder: position }],
+          },
+        });
       });
     } catch {
       /* 单条回写失败不影响主流程 */

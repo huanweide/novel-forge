@@ -1,8 +1,13 @@
 /**
  * POST /api/storylines/generate
  *
- * AI 自动生成故事线——基于项目总纲、角色卡、世界书，
- * 生成 1 条主线 + N 条支线，每条含七要素。
+ * AI 自动生成故事线——基于项目总纲、角色卡、世界书，生成主线 + 支线。
+ *
+ * v1.8.4 双模式：
+ *  - 默认（无 commit）：调 LLM 生成，返回 suggestions（不落库），供前端中间编辑态。
+ *  - commit=true：
+ *      · 请求体带 suggestions（前端编辑后回传）→ 直接落库，不再调 LLM；
+ *      · 否则（如 mode=newMain 缝合怪）→ 调 LLM 生成并落库。
  */
 
 export const maxDuration = 120;
@@ -17,7 +22,8 @@ import { getCompletedMainIds, isRehangTargetActiveMain } from "@/core/pipeline/o
 
 export async function POST(request: Request) {
   try {
-    const { projectId, mode } = await request.json();
+    const bodyJson: any = await request.json();
+    const { projectId, mode, commit, suggestions } = bodyJson;
     if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
     const [project, characters, loreEntries, existingStorylines] = await Promise.all([
@@ -29,7 +35,24 @@ export async function POST(request: Request) {
 
     if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
 
-    const system = `你是小说故事线架构师。你为小说设计事件线（Storylines）——每条事件线是一个完整的小故事单元，用"七要素"驱动。
+    // v1.8.4：前端编辑后回传 suggestions 且要求 commit → 直接落库，不调 LLM
+    const hasClientSuggestions = commit === true && Array.isArray(suggestions) && suggestions.length > 0;
+    const shouldCommit = commit === true || mode === "newMain";
+
+    let lines: Array<Record<string, unknown>>;
+    if (hasClientSuggestions) {
+      // 把前端带回的 sevenElements 展平回 LLM 输出形状，供 toSevenElements 读取
+      lines = (suggestions as Array<Record<string, unknown>>).map((s) => ({
+        type: s.type,
+        title: s.title,
+        description: s.description,
+        ...(s.sevenElements && typeof s.sevenElements === "object"
+          ? (s.sevenElements as Record<string, unknown>)
+          : {}),
+      }));
+    } else {
+      // —— 调 LLM 生成（原有逻辑）——
+      const system = `你是小说故事线架构师。你为小说设计事件线（Storylines）——每条事件线是一个完整的小故事单元，用"七要素"驱动。
 
 【七要素定义——每条事件线必须包含】
 1. 欲望：主角这条线想要什么（推动力）
@@ -59,16 +82,16 @@ export async function POST(request: Request) {
   ]
 }`;
 
-    const buildConfig = (project.buildConfig || {}) as Record<string, unknown>;
-    const pace = buildConfig.stitchPace || "steady";
-    const paceDesc =
-      pace === "fast"
-        ? "节奏快：高频事件、每章都有新变数与冲突升级，剧情快速推进"
-        : pace === "slow"
-          ? "节奏慢热：铺垫充分、伏笔密集，冲突逐步累积后爆发"
-          : "节奏均衡：稳步推进，隔章设置变数与阶段性小高潮";
+      const buildConfig = (project.buildConfig || {}) as Record<string, unknown>;
+      const pace = buildConfig.stitchPace || "steady";
+      const paceDesc =
+        pace === "fast"
+          ? "节奏快：高频事件、每章都有新变数与冲突升级，剧情快速推进"
+          : pace === "slow"
+            ? "节奏慢热：铺垫充分、伏笔密集，冲突逐步累积后爆发"
+            : "节奏均衡：稳步推进，隔章设置变数与阶段性小高潮";
 
-    const prompt = `【作品信息】
+      const prompt = `【作品信息】
 名称：${project.name}
 类型：${project.genre.join("、")}
 总纲：${project.synopsis || "（未设定总纲）"}
@@ -94,36 +117,53 @@ ${
       : "主线已存在，生成 3-5 条支线来丰富主线。"
 }`;
 
-    const raw = await completeText(system, prompt, { maxTokens: 8192, temperature: 0.5 });
+      const raw = await completeText(system, prompt, { maxTokens: 8192, temperature: 0.5 });
 
-    // 解析 JSON
-    let parsed: Record<string, unknown>;
-    try {
-      let s = raw.trim();
-      const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (md) s = md[1].trim();
-      const a = s.indexOf("{"), b = s.lastIndexOf("}");
-      if (a >= 0 && b > a) s = s.slice(a, b + 1);
-      parsed = JSON.parse(s) as Record<string, unknown>;
-    } catch {
-      return NextResponse.json({ error: "AI 返回格式解析失败", raw: raw.slice(0, 500) }, { status: 502 });
+      let parsed: Record<string, unknown>;
+      try {
+        let s = raw.trim();
+        const md = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (md) s = md[1].trim();
+        const a = s.indexOf("{"), b = s.lastIndexOf("}");
+        if (a >= 0 && b > a) s = s.slice(a, b + 1);
+        parsed = JSON.parse(s) as Record<string, unknown>;
+      } catch {
+        return NextResponse.json({ error: "AI 返回格式解析失败", raw: raw.slice(0, 500) }, { status: 502 });
+      }
+
+      const parsedLines = parsed.lines as Array<Record<string, unknown>> | undefined;
+      if (!Array.isArray(parsedLines) || parsedLines.length === 0) {
+        return NextResponse.json({ error: "AI 未生成任何故事线", raw: raw.slice(0, 500) }, { status: 502 });
+      }
+      lines = parsedLines;
     }
 
-    const lines = parsed.lines as Array<Record<string, unknown>> | undefined;
-    if (!Array.isArray(lines) || lines.length === 0) {
-      return NextResponse.json({ error: "AI 未生成任何故事线", raw: raw.slice(0, 500) }, { status: 502 });
+    const toSevenElements = (line: Record<string, unknown>) => ({
+      desire: (line.desire as string) || "",
+      obstacle: (line.obstacle as string) || "",
+      action: (line.action as string) || "",
+      result: (line.result as string) || "",
+      twist: (line.twist as string) || "",
+      turn: (line.turn as string) || "",
+      ending: null, // 结局不可预填，仅作待收束/已收束标记
+    });
+
+    // 非落库（草稿预览）→ 返回 suggestions 供前端中间编辑态
+    if (!shouldCommit) {
+      const suggestionView = lines.map((l, i) => ({
+        type: (l.type as string) === "main" ? "main" : "side",
+        title: (l.title as string) || `事件线${i + 1}`,
+        description: (l.description as string) || "",
+        sevenElements: toSevenElements(l),
+      }));
+      return NextResponse.json({ suggestions: suggestionView });
     }
 
-    // 找到已有最大 order
+    // ── 落库逻辑（buildData 改用 sevenElements）──
     const maxOrder = existingStorylines.reduce((max, s) => Math.max(max, s.order), 0);
-
-    // 解析主/支线（v1.6.4 #651：支线须挂主线 parentId）
     const mainLines = lines.filter((l) => (l.type as string) === "main");
     const sideLines = lines.filter((l) => (l.type as string) !== "main");
 
-    // 主线 id：优先复用【活跃】主线；若现有主线均非 active（已完结/已废弃，newMain 缝合怪·构造新主线），
-    // 则不接管旧主线，置 null 交由本次新建的主线接管，避免支线误挂到已完结/已废弃旧主线（R2-005 / R4-NEW-1）。
-    // 注意：必须用 status === "active" 而非 !== "completed"，否则 abandoned 主线会被误当目标（R4-NEW-1 同构复现 N8）。
     let mainId: string | null =
       existingStorylines.find((s) => s.type === "main" && s.status === "active")?.id ?? null;
 
@@ -140,13 +180,7 @@ ${
       title: (line.title as string) || `事件线${order}`,
       description: (line.description as string) || "",
       order,
-      desire: (line.desire as string) || "",
-      obstacle: (line.obstacle as string) || "",
-      action: (line.action as string) || "",
-      result: (line.result as string) || "",
-      twist: (line.twist as string) || "",
-      turn: (line.turn as string) || "",
-      ending: (line.ending as string) || "",
+      sevenElements: toSevenElements(line),
     });
 
     // 先建主线（如有），拿到 id 供支线挂载
@@ -158,14 +192,7 @@ ${
       if (!mainId) mainId = m.id;
     }
 
-    // N4 修复（R2-005 向后兼容）+ N8 回归加固：newMain 等场景下，把仍指向「已完结旧主线」的支线
-    // 重挂到当前活跃主线（mainId），避免旧支线隶属关系在新主线构造后静默丢失。
-    // 仅更新 parentId 命中旧已完结主线的支线，不影响已正确挂载的线。
-    // N8 加固（R4-NEW-1 收紧）：仅当 mainId 指向【活跃主线】时才重挂——绝不把旧支线重挂到 completed
-    // 或 abandoned 等任何非 active 终态主线，否则 formatStorylines 因 loadOutlineData 仅含活跃主线，
-    // 会让「隶属主线」前缀静默丢失（R2-006 冲突）。abandoned 与 completed 同构，已被 isRehangTargetActiveMain
-    // 的 status==="active" 判定一并排除。
-    // mainId 为新建主线（不在 existing 快照中）时默认 active，isRehangTargetActiveMain 会放行，N4 新建行为不回退。
+    // N4 修复 + N8 回归加固：newMain 场景下，把仍指向「已完结旧主线」的支线重挂到当前活跃主线。
     const oldCompletedMainIds = getCompletedMainIds(existingStorylines);
     if (mainId && oldCompletedMainIds.length > 0 && isRehangTargetActiveMain(mainId, existingStorylines)) {
       await prisma.storyline.updateMany({

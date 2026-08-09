@@ -12,7 +12,10 @@ import { STORYLINE_STATUS } from "@/core/story-status";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const storyline = await prisma.storyline.findUnique({ where: { id } });
+  const storyline = await prisma.storyline.findUnique({
+    where: { id },
+    include: { events: { orderBy: { position: "asc" } } },
+  });
   if (!storyline) return NextResponse.json({ error: "故事线不存在" }, { status: 404 });
   return NextResponse.json(storyline);
 }
@@ -25,23 +28,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const prev = await prisma.storyline.findUnique({ where: { id } });
     if (!prev) return NextResponse.json({ error: "故事线不存在" }, { status: 404 });
 
+    const nextType = body.type ?? prev.type;
     const storyline = await prisma.storyline.update({
       where: { id },
       data: {
-        type: body.type,
-        parentId: body.parentId,
+        type: nextType,
+        parentId: nextType === "main" ? null : (body.parentId ?? prev.parentId),
         title: body.title?.trim(),
         order: body.order,
         status: body.status,
         description: body.description,
-        desire: body.desire,
-        obstacle: body.obstacle,
-        action: body.action,
-        result: body.result,
-        twist: body.twist,
-        turn: body.turn,
-        ending: body.ending,
-        chapterBindings: body.chapterBindings,
+        sevenElements: body.sevenElements ?? prev.sevenElements,
       },
     });
 

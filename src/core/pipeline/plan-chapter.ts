@@ -10,7 +10,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings, recordLlmCall } from "@/lib/llm";
 import { STORYLINE_STATUS, withStorylineLock } from "@/core/story-status";
-import type { ChapterBinding } from "@/core/pipeline/storyline-writer";
 
 export interface ChapterPlan {
   /** 本章核心焦点（一句话） */
@@ -73,7 +72,9 @@ export async function planChapterStoryline(input: {
 
   const slText = active
     .map((s: any) => {
-      const progress = [s.desire, s.obstacle, s.action, s.result, s.twist, s.turn, s.ending]
+      const se = s.sevenElements && typeof s.sevenElements === "object" ? s.sevenElements : {};
+      const progress = ["desire", "obstacle", "action", "result", "twist", "turn", "ending"]
+        .map((k) => (typeof se[k] === "string" && se[k].trim() ? se[k] : null))
         .filter(Boolean)
         .join(" → ");
       return `【${s.type === "main" ? "主线" : "支线"}·${s.title}】当前进度：${progress || s.description || "暂无"}`;
@@ -159,35 +160,28 @@ export async function applyChapterPlanToStorylines(
   try {
     const active = await prisma.storyline.findMany({
       where: { projectId, status: STORYLINE_STATUS.ACTIVE },
-      select: { id: true },
+      select: { id: true, type: true },
     });
     for (const s of active) {
-      // L3-003：按 storylineId 串行化读改写；锁内重新读取最新 bindings，避免基于过期快照丢失更新
+      // L3-003：按 storylineId 串行化创建，避免并发写不同章时彼此覆盖
       try {
         await withStorylineLock(s.id, async () => {
-          const fresh = await prisma.storyline.findUnique({
-            where: { id: s.id },
-            select: { chapterBindings: true },
-          });
-          const bindings: any[] = Array.isArray(fresh?.chapterBindings)
-            ? [...(fresh.chapterBindings as any[])]
-            : [];
-          // L3-003：写入与 writeStorylineProgress 同形状的绑定，消除两种形状混存
-          const binding: ChapterBinding = {
-            storylineId: s.id,
-            chapterId: null,
-            chapterOrder,
-            element: null,
-            focus: plan.focus || "",
-            advance: plan.advance || [],
-            note: plan.note || "",
-            at: new Date().toISOString(),
-          };
-          bindings.push(binding);
-          const trimmed = bindings.slice(-50);
-          await prisma.storyline.update({
-            where: { id: s.id },
-            data: { chapterBindings: trimmed },
+          // v1.8.x：本章规划回写为时间轴大事件（StorylineEvent），保留"写作自动记录大事件"语义。
+          const summary = [
+            `推进：${(plan.advance || []).join("；") || "—"}`,
+            `障碍：${plan.obstacle || "—"}`,
+            plan.twist ? `转折：${plan.twist}` : "",
+            `执行提示：${plan.note || "—"}`,
+          ].filter(Boolean).join("\n");
+          await prisma.storylineEvent.create({
+            data: {
+              storylineId: s.id,
+              kind: s.type === "main" ? "MILESTONE" : "EVENT",
+              title: `第${(chapterOrder ?? 0) + 1}章 · 规划`,
+              content: summary,
+              position: typeof chapterOrder === "number" ? chapterOrder : 0,
+              sourceRefs: JSON.stringify([{ type: "chapter", ref: null, chapterOrder: chapterOrder ?? null }]),
+            },
           });
         });
       } catch (e) {
