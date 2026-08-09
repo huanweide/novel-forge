@@ -2,6 +2,17 @@
 
 ---
 
+## v1.8.5 — 2026-08-10
+
+**UI 自查优化闭环（故事线工作台可访问性 + 截图证据链）**
+
+- **优化·故事线工作台可访问性**：关闭/删除图标按钮补充 title 与 aria-label；`LineNav` 支线进度条颜色从低对比「nv-text-tertiary」改为「nv-primary」，避免支线有进度时进度条几乎不可见。
+- **工程·UI 自查闭环**：无头 Chrome 复用系统 Chrome 截图 8 个关键页面（workspace 默认页/故事线列表/故事线工作台/tables/settings/workshop/explore/dissect/recycle/changelog），验证无控制台报错、无 onboarding 弹窗遮挡、布局正常。
+- **修复·截图辅助脚本**：`shot2.cjs` 通过 `context.addInitScript` 预置 `nf_onboarded_v1` 标记，并移除误触页面其他按钮的兜底选择器，避免 tables 等页面被误点出新建弹窗。
+- **验证**：双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 42 文件 365/365 全绿；仅改动前端组件，零 schema 变更、零数据迁移。
+
+---
+
 ## v1.8.4 — 2026-08-09
 
 **故事线系统重构落地（总纲/时间轴/线索集/AI 中间态）+ 测试盲区关闭**

@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.4";
+export const LATEST_VERSION = "v1.8.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.4 故事线系统重构落地：七要素合并为「sevenElements」JSON（结局默认「null」不预填），新增「StorylineEvent」（时间轴大事件 + 线索集）与待启用「GenerationTask」模型，根治提前写死结局与章节绑定失效两大旧疾",
-  "v1.8.4 主线/支线可互换（编辑态切换类型 + 支线归属主线）；支线默认收起；工作台新增「总纲 + 章节时间轴（记录大事件，不锁死第几章）+ 可收起可编辑线索集」三块结构",
-  "v1.8.4 AI 生成改为中间态编辑：点击生成返回可编辑草稿（提示词 + 七要素逐项可改），确认后才落库，杜绝直接写死；时间轴由写作/规划管线自动回写大事件",
-  "v1.8.4 测试盲区关闭（vitest 纳入「[id]」动态路由目录 + 大书导出路由边界回归 7 项）+ 双门禁 tsc 0 错 + vitest 42 文件 365 全绿；端到端实跑验证新 schema/事件/CRUD 全链路",
+  "v1.8.5 UI 自查优化闭环：无头 Chrome 复用系统 Chrome 截图 8 个关键页面（workspace/故事线/工作台/tables/settings/workshop/explore/dissect/recycle/changelog），无报错、无遮挡、布局正常",
+  "v1.8.5 故事线工作台可访问性打磨：关闭/删除图标按钮补充 title 与 aria-label；支线进度条从低对比 text-tertiary 改为 primary，有进度时仍可清晰辨识",
+  "v1.8.5 修复截图辅助脚本 shot2.cjs 的 onboarding 弹窗兜底逻辑，移除误触页面其他按钮的兜底选择器，避免 tables 页等被误点出新建弹窗",
+  "v1.8.5 双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 42 文件 365/365 全绿；仅改前端组件，零 schema 变更",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.5",
+    date: "2026-08-10",
+    title: "UI 自查优化闭环（故事线工作台可访问性 + 截图证据链）",
+    sections: [
+      {
+        label: "优化·故事线工作台",
+        items: [
+          "关闭/删除图标按钮补充 title 与 aria-label，提升无障碍与悬停提示。",
+          "LineNav 支线进度条颜色从低对比「nv-text-tertiary」改为「nv-primary」，避免支线有进度时进度条几乎不可见。",
+        ],
+      },
+      {
+        label: "工程·UI 自查",
+        items: [
+          "无头 Chrome 复用系统 Chrome 截图 8 个关键页面：workspace 默认页、故事线列表、故事线工作台、tables、settings、workshop、explore、dissect、recycle、changelog，验证无控制台报错、无 onboarding 弹窗遮挡、布局正常。",
+          "修复截图辅助脚本 shot2.cjs：通过 context.addInitScript 预置 nf_onboarded_v1 标记，并移除误触页面其他按钮的兜底选择器，避免 tables 等页面被误点出新建弹窗。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "双门禁：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错；`npx vitest run` 42 文件 365/365 全绿。",
+          "仅改动前端组件，零 schema 变更、零数据迁移。",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.4",
     date: "2026-08-09",
