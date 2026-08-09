@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.45";
+export const LATEST_VERSION = "v1.6.46";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.45 世界卡分类中文标签单一权威源收口：把 entity-highlighter 的 ENTITY_LEGEND 图例、rehype 正文高亮 title/aria-label、types.ts 的 categoryLabel 三处散落手抄中文名，改为统一引用分类器权威源 WORLD_CATEGORY_LABELS 的纯中文派生（WORLD_CATEGORY_SECTIONS[cat].label），与 sync-global-prompt 的 catLabel、游戏侧 engine.ts 同一真相源",
-  "v1.6.45 权威源对齐用户惯用名：WORLD_CATEGORY_LABELS 的 item 由「器物」改为「物品」、creature 由「生物」改为「生物种族」，使权威源 15 类中文名与用户侧栏核心词完全一致（v1.6.44 只局部对齐、未接权威源，根因仍在）",
-  "v1.6.45 根除 4 套手抄漂移：世界卡中文名此前在权威源 / worldPanelData 侧栏 / types.ts / ENTITY_LEGEND / rehype 至少 4 套互不一致（物品 vs 器物、地点 vs 地理、功法 vs 功法体系、法则 vs 规则法则）。本轮后全项目世界卡中文名 = 单一权威源，新增/改名类编译期强制 1:1 对齐（Record<WorldCategory,string>）",
-  "v1.6.45 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；world-category-classifier.test.ts 断言 15 类 label 非空随改名仍通过；纯字符串等价替换、零行为回归。诚实边界：agent-browser 复检因 CLI 损坏+Chromium 未下载未执行，以双门禁+改动等价性放行，世界卡 UI 渲染健康基线见 v1.6.43/44",
+  "v1.6.46 马斯克 CEO 子 Agent 拍板 B：专项实测生成类功能端到端真跑（续写/精修/微调）——novel-forge 本质是「AI 写小说」，引擎从未端到端验证过；用真实无头环境打 continue/refine 两条 SSE 链路，验证「建节点→调 DeepSeek→流式写正文→后处理→宝宝流自动填表」全链路",
+  "v1.6.46 实测结论：continue 路径端到端跑通——HTTP 200、113s、758 token、0 error、自动建 order=3 节点生成 1206 字（沈星河/曦和号/资源委员会等世界卡被自然调用）、宝宝流填表 6 行全 applied、节点 confirmed 落库；refine 路径暴露两个真实断点",
+  "v1.6.46 断点1（已修）：DeepSeek 偶发空响应——流成功建立却返回 0 个正文 token，chatStream 已有的连接级重试不覆盖此场景，上层空响应守卫把整章判为失败（首次 refine 实测即撞中）。修复：在 writeSection 补空响应/0-token 指数退避重试（WRITE_MAX_RETRIES=2，封顶 8s），已产出 token 即成功结束、避免重复 yield 累积，鉴权/4xx fatal 直接报错不重试",
+  "v1.6.46 双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；验证性 refine 跑通（1161 token、无截断、填表 7 行 applied）确认重试逻辑不破坏正常流程；诚实边界：空响应重试依赖网关偶发无法确定性制造，靠代码审查+正常流程验证放行；refine 长章 max_tokens 截断（断点2）属「重输出全文+续写」契约固有风险，完整修复需改契约（高风险），本轮只记录留后续；测试节点已软删保持星辰干净",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.46",
+    date: "2026-08-09",
+    title: "v1.6.46 专项实测生成类功能端到端（续写/精修/微调）+ 修复 DeepSeek 偶发空响应重试",
+    sections: [
+      {
+        label: "生成类功能端到端实测（马斯克 CEO 拍板 B）",
+        items: [
+          "拍板理由：novel-forge 的本质价值是「AI 写小说」，生成引擎此前从未端到端验证过，修外观是空转；专项真跑 continue（自动建节点续章）/refine（在已有正文上精修微调）两条 SSE 链路",
+          "continue 实测跑通：HTTP 200、耗时 113s、758 个 token 事件、0 error、1 次宝宝流记忆召回；自动建 order=3 节点并生成 1206 字正文（沈星河/曦和号/资源委员会等世界卡被自然调用），宝宝流自动填表 ok=true 6 行全 applied，节点落库 confirmed——「建节点→调 DeepSeek→流式写→后处理→自动填表」全链路真实可用",
+          "refine 实测暴露两个真实断点：首次撞 DeepSeek 偶发空响应（token=0，error=「微调内容为空（模型未返回正文）」），二次成功但 357 token 被 max_tokens 截断（finish_reason=length），三次成功 1161 token 无截断——证明空响应与长度截断均属偶发概率性故障",
+        ],
+      },
+      {
+        label: "修复 DeepSeek 偶发空响应重试（断点1）",
+        items: [
+          "根因：chatStream 内部已有 DEFAULT_RETRIES=3 连接级重试 + 故障转移链，但只覆盖「连接建立失败」；「流成功建立却返回 0 个正文 token」不在其重试范围——那种情况下 chatStream 正常 return，上层 refine 空响应守卫把整章判为失败（首次 refine 实测即撞中，用户白等 50s 拿到失败）",
+          "修复：在 orchestrator.writeSection 补空响应/0-token 退避重试——WRITE_MAX_RETRIES=2，指数退避 600/1200ms…封顶 8s；仅当本次尝试未产出任何 token 才重试，已产出 token 则视为成功直接结束（避免重复 yield 导致上层 newContent 重复累积）；鉴权/4xx 类错误（401/403/api key/invalid key/未授权/forbidden）重试必败，直接报错",
+          "效果：DeepSeek 偶发空响应时自动退避重试，显著提升网关抖动下的续写/精修成功率，write/refine/continue 三条生成链路共享此保护",
+        ],
+      },
+      {
+        label: "验证与取舍",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 35 文件 323/323 全绿；验证性 refine 跑通（1161 token、wordCount=1838 即原 1206+续写 632、填表 7 行 applied、本次无截断）确认重试逻辑不破坏正常流程",
+          "断点2 取舍：refine 要求模型「重输出 1206 字原文 + 500 续写」逼近 max_tokens 预算上限，长章必被 length 截断；完整修复需改 refine 契约（改为「仅续写不重输出全文」），属高风险重构，本轮只记录留后续——且现有 L5-02 截断保护已在截断时保守保留原正文、不污染章节，安全",
+          "诚实边界：空响应重试无法确定性制造（依赖网关偶发），靠代码审查 + 正常流程验证放行；IP 仍归瑞宝宝，只迭代不立新",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.45",
     date: "2026-08-09",

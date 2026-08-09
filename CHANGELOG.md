@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.46 — 2026-08-09
+**v1.6.46 专项实测生成类功能端到端（续写/精修/微调）+ 修复 DeepSeek 偶发空响应重试**
+
+- **生成类功能端到端实测（马斯克 CEO 拍板 B）**：拍板理由——novel-forge 本质价值是「AI 写小说」，生成引擎此前从未端到端验证过，修外观是空转；专项真跑 continue（自动建节点续章）/refine（在已有正文上精修微调）两条 SSE 链路。continue 实测跑通——HTTP 200、113s、758 token、0 error、1 次宝宝流记忆召回；自动建 order=3 节点生成 1206 字（沈星河/曦和号/资源委员会等世界卡被自然调用），宝宝流填表 6 行全 applied，节点落库 confirmed。refine 实测暴露两个断点：首次撞 DeepSeek 偶发空响应（token=0），二次成功但 357 token 被 max_tokens 截断，三次成功 1161 token 无截断。
+- **修复 DeepSeek 偶发空响应重试（断点1）**：根因——chatStream 已有连接级重试 DEFAULT_RETRIES=3 只覆盖「连接建立失败」，「流成功建立却返回 0 正文 token」不在其范围，上层空响应守卫把整章判失败（首次 refine 实测即撞中）。修复——在 orchestrator.writeSection 补空响应/0-token 指数退避重试（WRITE_MAX_RETRIES=2，封顶 8s）；已产出 token 即成功结束、避免重复 yield 累积，鉴权/4xx fatal 直接报错不重试；write/refine/continue 三链路共享保护。
+- **验证与取舍**：双门禁实证 tsc 0 错误 + vitest 35 文件 323/323 全绿；验证性 refine 跑通（1161 token、无截断、填表 7 行 applied）确认不破坏正常流程。断点2（refine 长章 max_tokens 截断）属「重输出全文+续写」契约固有风险，完整修复需改契约（高风险），本轮只记录留后续；IP 仍归瑞宝宝，只迭代不立新。
+
+---
+
 ## v1.6.45 — 2026-08-09
 **v1.6.45 世界卡分类中文标签单一权威源收口（根除 4 套手抄漂移）**
 

@@ -219,27 +219,55 @@ ${loreBriefs}
       { distantSummaries }
     );
 
-    try {
-      for await (const chunk of client.chatStream({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-        temperature: temperatureOverride ?? this.config.defaultTemperature,
-        topP: topPOverride ?? this.config.defaultTopP,
-        maxTokens: this.config.maxTokensPerRequest,
-        // L5-01：按目标字数动态放大 max_tokens；L5-04：透传断连信号
-        targetWordCount,
-        signal,
-      })) {
-        yield chunk;
+    // v1.6.45：空响应/0-token 退避重试。
+    // chatStream 内部已对「连接建立失败」做 DEFAULT_RETRIES 重试 + 故障转移，但「流成功建立却
+    // 返回 0 个正文 token（DeepSeek 偶发空响应）」不在其重试范围——那种情况下 chatStream 正常
+    // return，上层空响应守卫会把整章判为失败（如 v1.6.45 实测首次 refine 撞空响应）。此处补一层：
+    // 仅当本次尝试未产出任何 token（空响应或连接中途断）才退避重试，已产出 token 则视为成功、
+    // 直接结束（避免重复 yield 导致上层 newContent 重复累积）。鉴权/4xx 类错误重试必败，直接报错。
+    const WRITE_MAX_RETRIES = 2;
+    const writeBackoff = async (a: number) => {
+      const ms = Math.min(8000, 600 * Math.pow(2, a - 1));
+      await new Promise((r) => setTimeout(r, ms));
+    };
+    let attempt = 0;
+    while (attempt <= WRITE_MAX_RETRIES) {
+      let gotToken = false;
+      let errMsg: string | null = null;
+      try {
+        for await (const chunk of client.chatStream({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          temperature: temperatureOverride ?? this.config.defaultTemperature,
+          topP: topPOverride ?? this.config.defaultTopP,
+          maxTokens: this.config.maxTokensPerRequest,
+          // L5-01：按目标字数动态放大 max_tokens；L5-04：透传断连信号
+          targetWordCount,
+          signal,
+        })) {
+          if (chunk.type === "token") gotToken = true;
+          yield chunk;
+        }
+      } catch (err) {
+        errMsg = err instanceof Error ? err.message : String(err);
       }
-    } catch (err) {
-      yield {
-        type: "error",
-        content: err instanceof Error ? err.message : String(err),
-      };
+      // 已产出正文 token：视为成功，done chunk 已随流 yield，直接结束（不重复重试）
+      if (gotToken) return;
+      // 0 token 产出：空响应或连接中断。鉴权/4xx 类错误重试必败，直接报错；
+      // 其余（网关抖动/偶发空响应）退避重试，提升 DeepSeek 偶发故障下的成功率。
+      const fatal = errMsg && /401|403|authentication|api[ _-]?key|invalid[ _-]?key|鉴权|未授权|forbidden/i.test(errMsg);
+      if (fatal || attempt >= WRITE_MAX_RETRIES) {
+        yield {
+          type: "error",
+          content: errMsg || "模型未返回任何正文（空响应），请稍后重试或检查 LLM 配置",
+        };
+        return;
+      }
+      attempt++;
+      await writeBackoff(attempt);
     }
   }
 
