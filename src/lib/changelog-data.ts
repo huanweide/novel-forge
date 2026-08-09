@@ -25,18 +25,50 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.7";
+export const LATEST_VERSION = "v1.8.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.7 成本/频率护栏（Next-3）——为一致性切片做生产级收口：抽取按 subject+attribute 去重防基线堆积重复；纯续写意图不自动重抽基线",
-  "v1.6.51.7 去重：extractFacts 抽出纯函数 dedupeFacts（key 大小写不敏感+忽略首尾空格），单次 LLM 抽取重复输出同一事实不再入库；新增 4 例单测",
-  "v1.6.51.7 触发闸门：post-processor 加 skipConsistencyExtract 开关，refine 路由在 isContinuationIntent（纯续写）时跳过全量重抽——续写高频且不改基线事实密度，避免 DeepSeek 浪费；手动「重抽」随时可补",
-  "v1.6.51.7 v1.8 印章条件（Next-1+Next-2 完成且全绿）早已满足；本版为发布前打磨，随后 mint v1.8.0；双门禁 tsc 0 + vitest 357 全绿；IP 归瑞宝宝",
+  "v1.8.0 跨章一致性引擎（里程碑）——小说前后设定自动对齐：抽取设定集→注入生成提示词→生成后主动找矛盾标红→给改写建议→作者可编辑/删除/手填设定，全链路闭环",
+  "v1.8.0 覆盖 v1.6.51~v1.6.51.7：ConsistencyFact 模型+抽取+注入；确认定稿自动抽取；右侧栏只读面板+手动重抽；生成后矛盾检测标红不改写；冲突修正建议（复制即用）；基线人工纠错（编辑/删除/新增）；成本护栏（去重+续写不重抽）",
+  "v1.8.0 创作主权铁律：AI 只标红/建议，绝不自动改正文；手动事实 source=manual 重抽保留；删除二次确认。双门禁 tsc 0 + vitest 357 全绿；零 schema 迁移风险",
+  "v1.8.0 诚实边界：LLM 实际抽取/建议效果待可联网端到端校验（逻辑与契约已对齐）；IP 永远归瑞宝宝（樊斯瑞），仅迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.0",
+    date: "2026-08-09",
+    title: "v1.8.0 跨章一致性引擎（里程碑·全链路闭环）",
+    sections: [
+      {
+        label: "主打：小说前后设定自动对齐",
+        items: [
+          "一句话：写长篇再也不怕「前面说主角灰眸、第20章写成黑眸」——工具自动抽设定、注入生成、生成后找矛盾标红、给改写建议、作者还能手改设定集，全闭环",
+          "创作主权铁律贯穿全程：AI 只标红 / 给建议，绝不自动改正文；手动事实重抽保留；删除二次确认",
+        ],
+      },
+      {
+        label: "全链路（v1.6.51~v1.6.51.7 汇总）",
+        items: [
+          "抽取与注入：ConsistencyFact 模型 + 抽取器（含去重纯函数）+ 确认定稿自动抽取 + 注入生成提示词",
+          "UI 与端点：右侧栏只读基线面板 + 手动重抽；生成后矛盾检测（ConsistencyConflict 标红不改写）+ 冲突修正建议（复制即用，不落库）",
+          "人工纠错：编辑 / 删除 / 手动新增事实（POST /consistency/manual + PATCH/DELETE /consistency/[factId]，带 project 归属校验）；手动事实 source=manual 重抽保留",
+          "成本护栏：抽取去重（防基线堆重复）+ 纯续写意图不自动重抽（省 DeepSeek 调用，手动重抽随时可补）",
+        ],
+      },
+      {
+        label: "工程与诚实边界",
+        items: [
+          "零 schema 迁移：复用 source 字段标记手动事实，avoid 新增迁移（线上 Neon 额度限制，靠本地 PG17 验证）",
+          "双门禁：tsc 0 错误 + vitest 357 测试全绿（含 parseFactsFromLLM / parseConflictsFromLLM / parseSuggestionFromLLM / validateFactInput / dedupeFacts 等多组纯函数单测）",
+          "LLM 实际抽取 / 建议效果待可联网时端到端校验（逻辑与契约已对齐，不谎报已跑通真模型）",
+          "IP 永远归瑞宝宝（樊斯瑞），仅迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.7",
     date: "2026-08-09",
