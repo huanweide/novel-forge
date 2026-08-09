@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.2";
+export const LATEST_VERSION = "v1.6.51.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.2 归档定稿自动触发一致性事实抽取——extractConsistencyFacts 挂进 applyConfirm（skipDetect=false 分支）、后处理管线（章摘要落库后）、手动确认路由三处确认路径；章节确认即幂等重抽基线，使 v1.6.51.1 注入提示词的基线第一次真正非空",
-  "v1.6.51.2 时序严谨：抽取读 chapterSummaries，后处理先在 applyConfirm 置 skipDetect=true 跳过、待章摘要落库后再补触发；手动/自动确认路径确认时序已保证本章摘要存在，避免抽到缺章基线",
-  "v1.6.51.2 最小回归面：三处均 fire-and-forget（void .catch 静默，不阻塞确认响应），镜像 triggerForeshadowDetect；抽取自带 deleteMany+createMany 幂等；双门禁 tsc 0 + vitest 336/336 全绿",
-  "v1.6.51.2 诚实边界：基线仍「确认后自动抽取」非实时，未确认章节不触发；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51.3 一致性事实基线最小 UI——右侧栏「实体」Tab 新增子 Tab「一致性基线」（与「未收尾线索」同构），按 人物/世界/情节/关系 分组列出事实（主体·属性=值·来源·置信度），作者第一次能在工作台肉眼看到自动抽取的基线",
+  "v1.6.51.3 手动重新抽取按钮——点按 POST /api/projects/[id]/consistency 即时重抽并刷新；与 v1.6.51.2 的「确认定稿自动抽取」互补，作者无需等技术自动跑也能主动生成；面板只读优先",
+  "v1.6.51.3 最小回归面：新建 ConsistencyPanel.tsx 镜像 ForeshadowingPanel 原生 fetch 模式（loading/empty/error + 取消保护）；RightPanel 扩展 EntitySubTab 联合加 consistency，零改动 page.tsx；双门禁 tsc 0 + vitest 336/336 全绿",
+  "v1.6.51.3 诚实边界：UI 仅展示/重抽，不编辑事实（编辑与主动矛盾检测标红留 B 任务，作为 v1.8 卖点）；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.3",
+    date: "2026-08-09",
+    title: "v1.6.51.3 一致性事实基线最小 UI（作者可见·手动重抽）",
+    sections: [
+      {
+        label: "功能：作者第一次能看见基线",
+        items: [
+          "右侧栏「实体」Tab 新增子 Tab「一致性基线」（与「未收尾线索」ForeshadowingPanel 同构），从 GET /api/projects/[id]/consistency 拉取基线，按 人物/世界/情节/关系 四组展示每条事实（主体·属性=值·来源·置信度）",
+          "顶部统计条显示事实条数与最近更新时间；「手动重新抽取」按钮 POST 同路径即时重抽并回拉刷新——与 v1.6.51.2 的「确认定稿自动抽取」互为补充，作者无需等技术自动跑也能主动生成",
+        ],
+      },
+      {
+        label: "最小回归面与验证",
+        items: [
+          "新建 ConsistencyPanel.tsx，镜像 ForeshadowingPanel 的原生 fetch 模式（loading/empty/error + cancelled 取消保护），不引入新状态库；RightPanel 仅扩展 EntitySubTab 联合类型加 consistency 并加子 Tab 按钮与渲染分支，零改动 page.tsx 与现有面板",
+          "双门禁：tsc 0 错误 + vitest 37 文件 336/336 全绿（UI 组件无单测但类型与既有模式一致）",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "面板锁定只读优先：仅展示与重抽，不编辑/删除事实（编辑与主动矛盾检测标红留 B 任务，作为 v1.8 卖点）",
+          "IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.2",
     date: "2026-08-09",
