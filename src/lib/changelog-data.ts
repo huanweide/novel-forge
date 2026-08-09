@@ -32,7 +32,7 @@ export const CHANGELOG_BRIEF = [
   "v1.8.2 故事线工作台重构：点击主线/支线后弹出居中玻璃面板，左侧导航 + 右侧查看/编辑整合，告别左栏缩成一团",
   "v1.8.2 Modal 组件支持 React Portal 挂到 body，修复被父容器 transform 裁剪无法真正居中的问题，全站 Modal 受益",
   "v1.8.2 故事线七要素以网格卡片呈现，章节进展时间轴内置；删除重复的旧 StorylinesModal.tsx",
-  "v1.8.2 双门禁 SAFE_DELETE_DISABLE=1 tsc --noEmit 0 错 + vitest 358/358 全绿；经无头截图多轮自测验证",
+  "v1.8.2 验证：tsc --noEmit 0 错 + 全站 Modal/workspace 路由 SSR HTTP 200 无运行时错误；UI 组件单测与浏览器 e2e 尚未补齐（已知局限）",
 ];
 
 /** 完整版本历史（最新在前） */
@@ -59,7 +59,7 @@ export const VERSIONS: VersionEntry[] = [
         label: "工程",
         items: [
           "删除重复的旧 StorylinesModal.tsx，故事线入口统一收进 StorylineList + StorylineWorkbench",
-          "双门禁 tsc 0 错 + vitest 358/358 全绿；经 headless 浏览器多轮截图自测验证 UI 居中、编辑查看整合、导航无遮挡",
+          "验证：tsc --noEmit 0 错 + 全站 Modal/workspace 路由 SSR（HTTP 200，无运行时错误）；UI 组件单测与浏览器端到端实跑尚未补齐，为已知局限，下一轮补",
         ],
       },
     ],

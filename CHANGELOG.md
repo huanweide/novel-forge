@@ -8,7 +8,7 @@
 
 - **功能·工作台重做**：点击主线/支线后弹出居中玻璃面板，左侧导航 + 右侧查看/编辑整合在同一面板，告别左侧窄栏缩成一团的旧体验；七要素以网格卡片呈现，章节进展时间轴内置。
 - **修复·Modal Portal**：`Modal` 组件改用 `React Portal` 挂载到 `document.body`，修复被父容器 `transform` 裁剪导致无法真正居中、甚至被内部元素遮挡点击的问题，全站 Modal 统一受益。
-- **工程**：删除重复的旧 `StorylinesModal.tsx`，故事线入口统一收进 `StorylineList` + `StorylineWorkbench`；双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 358/358 全绿；经 headless 浏览器多轮截图自测验证居中、整合、无遮挡。
+- **工程**：删除重复的旧 `StorylinesModal.tsx`，故事线入口统一收进 `StorylineList` + `StorylineWorkbench`；验证 `tsc --noEmit` 0 错 + 全站 Modal / workspace 路由 SSR（HTTP 200，无运行时错误）。UI 组件单测与浏览器端到端实跑尚未补齐，为已知局限，下一轮补。
 
 ## v1.8.1 — 2026-08-09
 
