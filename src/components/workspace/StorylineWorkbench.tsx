@@ -353,6 +353,7 @@ export function StorylineWorkbench({
             onClick={onClose}
             className="rounded-lg p-1.5 text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             aria-label="关闭"
+            title="关闭"
           >
             <Icon name="x" size={16} />
           </button>
@@ -634,6 +635,8 @@ export function StorylineWorkbench({
                       onClick={() => deleteStoryline(selected.id)}
                       disabled={deletingId === selected.id}
                       className="rounded-lg border border-[var(--nv-border-2)] px-2.5 py-1.5 text-xs text-[var(--nv-text-tertiary)] transition-colors hover:border-[var(--nv-danger)]/50 hover:text-[var(--nv-danger)] disabled:opacity-40"
+                      title="删除"
+                      aria-label="删除"
                     >
                       <Icon name="trash" size={14} />
                     </button>
@@ -814,7 +817,7 @@ function LineNav({
           className="h-full rounded-full"
           style={{
             width: `${p.overallPercent}%`,
-            background: s.type === "main" ? "var(--nv-accent)" : "var(--nv-text-tertiary)",
+            background: s.type === "main" ? "var(--nv-accent)" : "var(--nv-primary)",
           }}
         />
       </div>
