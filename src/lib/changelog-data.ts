@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.4";
+export const LATEST_VERSION = "v1.6.51.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.4 主动矛盾检测（B 任务）——生成新章节后自动比对「一致性事实基线」找前后矛盾，落库 ConsistencyConflict 供作者逐条「已修正/忽略」；只标红不自动改写（创作主权归作者）",
-  "v1.6.51.4 触发与落库：后处理管线章摘要落库后 fire-and-forget 调 detectConsistencyConflicts（与抽取同位置同模式），清同章旧 open 冲突再建新，幂等不堆积；无基线时不误报",
-  "v1.6.51.4 UI 与端点：ConsistencyPanel 事实列表下新增「冲突（需处理）」红色区块（冲突说明+摘录+关联基线+已修正/忽略按钮）；GET/POST /api/projects/[id]/consistency/conflicts 列表与更新（含 project 归属校验）",
-  "v1.6.51.4 最小裁剪与双门禁：砍 severity、factId 可选、status 三态（open/resolved/ignored）；tsc 0 + vitest（含 parseConflictsFromLLM 单测）全绿；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51.5 冲突修正建议（Next-1）——把 B 的「只标红」补成闭环：作者点「看修正建议」即按需生成 AI 改写文本（复制即用），仍只建议不自动改正文（创作主权归作者）",
+  "v1.6.51.5 实现：新建 suggestFix.ts（suggestConflictFix + 纯函数 parseSuggestionFromLLM 容错解析）+ POST /api/projects/[id]/consistency/conflicts/suggest（含 project 归属校验）；ConsistencyPanel 每条冲突加按钮+建议框+复制",
+  "v1.6.51.5 零 schema 变更、零迁移、零新依赖：纯复用既有 completeText + fetch + fire-and-forget 模式；双门禁 tsc 0 + vitest（含 parseSuggestionFromLLM 单测）全绿",
+  "v1.6.51.5 诚实边界：建议不落库（前端本地态持有），刷新即失；v1.8 印章 = 本项 + Next-2 基线人工纠错完成且全绿；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.5",
+    date: "2026-08-09",
+    title: "v1.6.51.5 冲突修正建议（Next-1·标红→给改法）",
+    sections: [
+      {
+        label: "功能：标红之后给改法",
+        items: [
+          "B 任务只标红不改正文，作者盯着红条没路走；本棒补闭环——每条 open 冲突加「看修正建议」按钮，点按按需生成 AI 改写文本（复制即用），仍只建议不自动改（创作主权归作者）",
+          "建议不落库：由前端本地态持有，刷新即失；属于「轻量辅助」，避免污染冲突表",
+        ],
+      },
+      {
+        label: "最小回归面与验证",
+        items: [
+          "新建 suggestFix.ts：suggestConflictFix(projectId, conflictId) 加载冲突+关联基线事实，拼 prompt 调既有 completeText（temperature 0.3, maxTokens 600）；纯函数 parseSuggestionFromLLM 容错（剥 code fence + 取首段）",
+          "POST /api/projects/[id]/consistency/conflicts/suggest（含 project 归属校验，冲突须属于路径 projectId），maxDuration 60",
+          "ConsistencyPanel 每条冲突加按钮 + 建议框 + 复制按钮，沿用 resolveConflict 的 fetch 与静默失败风格",
+          "零 schema 变更、零迁移、零新依赖；双门禁：tsc 0 错误 + vitest（新增 parseSuggestionFromLLM 单测 4 例）全绿",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "建议为按需生成、不持久化，未点按钮不消耗 token；真实 LLM 建议效果留待可联网时端到端校验（逻辑与契约已对齐）",
+          "v1.8.0 印章 = 本项 + Next-2（基线人工纠错/编辑）完成且全绿；IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.4",
     date: "2026-08-09",

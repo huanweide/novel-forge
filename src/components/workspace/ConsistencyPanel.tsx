@@ -46,6 +46,8 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
+  const [suggestions, setSuggestions] = useState<Record<string, string>>({});
+  const [loadingSuggestionId, setLoadingSuggestionId] = useState<string | null>(null);
 
   // 拉取基线（GET）+ 未处理冲突（GET）
   const load = () => {
@@ -107,6 +109,27 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
       }
     } catch {
       /* 失败静默：列表仍展示原冲突，作者可重试 */
+    }
+  };
+
+  // 获取某条冲突的改写建议（POST，按需生成，不落库）
+  const fetchSuggestion = async (conflictId: string) => {
+    if (loadingSuggestionId) return;
+    setLoadingSuggestionId(conflictId);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/consistency/conflicts/suggest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: conflictId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.suggestion) {
+        setSuggestions((prev) => ({ ...prev, [conflictId]: json.suggestion as string }));
+      }
+    } catch {
+      /* 静默失败：作者可重试 */
+    } finally {
+      setLoadingSuggestionId(null);
     }
   };
 
@@ -212,7 +235,7 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
                       冲突基线：{rel.subject} 的{rel.attribute} = {rel.value}
                     </div>
                   )}
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => resolveConflict(c.id, "resolved")}
                       className="rounded border border-[var(--nv-border-2)] px-1.5 py-0.5 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)]"
@@ -225,7 +248,26 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
                     >
                       忽略
                     </button>
+                    <button
+                      onClick={() => fetchSuggestion(c.id)}
+                      disabled={loadingSuggestionId === c.id}
+                      className="rounded border border-[var(--nv-border-2)] px-1.5 py-0.5 text-[10px] text-[var(--nv-primary)] hover:bg-[var(--nv-surface-3)] disabled:opacity-50"
+                    >
+                      {loadingSuggestionId === c.id ? "生成中…" : "看修正建议"}
+                    </button>
                   </div>
+                  {suggestions[c.id] && (
+                    <div className="mt-1 rounded border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-1.5">
+                      <div className="text-[10px] text-[var(--nv-text-tertiary)]">改写建议（复制即用）：</div>
+                      <div className="mt-0.5 text-xs text-[var(--nv-text-primary)]">{suggestions[c.id]}</div>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(suggestions[c.id] ?? "")}
+                        className="mt-1 rounded border border-[var(--nv-border-2)] px-1.5 py-0.5 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-3)]"
+                      >
+                        复制
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })

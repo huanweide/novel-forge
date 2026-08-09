@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.51.5 — 2026-08-09
+
+**冲突修正建议（Next-1·标红→给改法）**
+
+- **功能**：B 任务只标红不改正文，作者盯着红条没路走；本棒补闭环——每条 open 冲突加「看修正建议」按钮，点按按需生成 AI 改写文本（复制即用），仍只建议不自动改（创作主权归作者）；建议不落库，前端本地态持有。
+- **实现**：新建 `suggestFix.ts`（`suggestConflictFix` + 纯函数 `parseSuggestionFromLLM` 容错解析）；`POST /api/projects/[id]/consistency/conflicts/suggest`（含 project 归属校验，maxDuration 60）；`ConsistencyPanel` 每条冲突加按钮 + 建议框 + 复制。
+- **最小回归面**：零 schema 变更、零迁移、零新依赖，纯复用既有 `completeText` + `fetch` + fire-and-forget；双门禁 tsc 0 + vitest（新增 `parseSuggestionFromLLM` 单测）全绿。
+- **诚实边界**：建议按需生成不持久化；v1.8.0 印章 = 本项 + Next-2（基线人工纠错）完成且全绿；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.51.4 — 2026-08-09
 
 **主动矛盾检测（B 任务·标红不改写）**
