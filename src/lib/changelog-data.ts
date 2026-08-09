@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.6";
+export const LATEST_VERSION = "v1.6.51.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.6 基线人工纠错（Next-2）——作者可编辑/删除/手动新增一致性事实，把「AI 抽的基线」升级成「人机共维护的权威设定集」",
-  "v1.6.51.6 实现：新增 POST /consistency/manual（source 强制 manual）+ PATCH/DELETE /consistency/[factId]（带 project 归属校验，越权 404）；ConsistencyPanel 每条事实加编辑/删除按钮与行内表单，顶部加「新增」折叠表单",
-  "v1.6.51.6 关键修复：重抽（POST /consistency）改为只清自动抽取事实（source != manual），手动事实不被误删——否则「重抽」会把作者手填设定抹掉",
-  "v1.6.51.6 零 schema 变更：复用 source 字段标记手动事实；双门禁 tsc 0 + vitest（新增 factValidation 校验纯函数单测 7 例）全绿；v1.8 印章 = Next-2 完成且全绿",
+  "v1.6.51.7 成本/频率护栏（Next-3）——为一致性切片做生产级收口：抽取按 subject+attribute 去重防基线堆积重复；纯续写意图不自动重抽基线",
+  "v1.6.51.7 去重：extractFacts 抽出纯函数 dedupeFacts（key 大小写不敏感+忽略首尾空格），单次 LLM 抽取重复输出同一事实不再入库；新增 4 例单测",
+  "v1.6.51.7 触发闸门：post-processor 加 skipConsistencyExtract 开关，refine 路由在 isContinuationIntent（纯续写）时跳过全量重抽——续写高频且不改基线事实密度，避免 DeepSeek 浪费；手动「重抽」随时可补",
+  "v1.6.51.7 v1.8 印章条件（Next-1+Next-2 完成且全绿）早已满足；本版为发布前打磨，随后 mint v1.8.0；双门禁 tsc 0 + vitest 357 全绿；IP 归瑞宝宝",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.7",
+    date: "2026-08-09",
+    title: "v1.6.51.7 成本/频率护栏（Next-3·去重 + 触发闸门）",
+    sections: [
+      {
+        label: "功能：生产级收口一致性切片",
+        items: [
+          "抽取去重：单次 LLM 抽取若重复输出同一 (subject, attribute) 事实，只保留首条入库，避免基线堆积重复行",
+          "触发闸门：纯续写意图（isContinuationIntent）不自动全量重抽基线——续写高频、不改事实密度，跳过省 DeepSeek 调用；作者点「手动重新抽取」随时可补",
+        ],
+      },
+      {
+        label: "最小回归面与验证",
+        items: [
+          "抽出纯函数 dedupeFacts（key 大小写不敏感 + 忽略首尾空格 + 归一化），新增 4 例单测锁死",
+          "PostPipelineParams 加 skipConsistencyExtract 可选开关；post-processor 仅在 !skipConsistencyExtract 时触发 extractConsistencyFacts；refine 路由传 isContinuationIntent",
+          "零 schema 变更、零迁移、零新依赖；双门禁：tsc 0 错误 + vitest（41 文件 357 测试）全绿",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "闸门只跳过重抽、不跳冲突检测（detect 仍每次跑，比对新内容 vs 现有基线，成本低且有用）",
+          "v1.8.0 印章 = Next-1 + Next-2 完成且全绿（v1.6.51.6 已满足）；本版为发布前打磨，随后 mint v1.8.0；IP 归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.6",
     date: "2026-08-09",

@@ -53,6 +53,7 @@ export async function runPostGenerationPipeline(
     forbiddenPatterns,
     skipReview = false,
     skipSummarize = false,
+    skipConsistencyExtract = false,
   } = params;
 
   // ── 1. 废词扫描（v3.0 五类检测，始终运行——内置50+规则）──
@@ -750,7 +751,11 @@ export async function runPostGenerationPipeline(
       void triggerForeshadowDetect({ projectId });
       // v1.6.52：本章摘要已落库，同步触发一致性事实基线抽取（fire-and-forget），
       // 与 detect 同位置，确保基线读到最新章。
-      void extractConsistencyFacts(projectId).catch(() => {});
+      // Next-3 护栏：纯续写意图（skipConsistencyExtract）不自动重抽——续写不改基线事实密度，
+      // 每次全量重抽属高频浪费；作者可随时点「手动重新抽取」刷新。
+      if (!skipConsistencyExtract) {
+        void extractConsistencyFacts(projectId).catch(() => {});
+      }
       // v1.6.51.4：基线抽取完成后，立即比对本章正文与基线检测冲突（fire-and-forget，不阻塞响应）。
       // 与抽取同位置、同模式；只标红不自动改写，冲突落库供作者逐条「已修正 / 忽略」处理。
       void detectConsistencyConflicts(projectId, nodeId, content).catch(() => {});

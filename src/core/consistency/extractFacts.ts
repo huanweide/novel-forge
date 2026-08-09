@@ -32,6 +32,28 @@ const CATEGORIES: ConsistencyCategory[] = [
 ];
 
 /**
+ * 事实去重（Next-3 护栏）：同一 (subject, attribute) 只保留首条，避免 LLM 单次抽取
+ * 重复输出同一事实导致基线堆积重复行。key 大小写不敏感、忽略首尾空格；同时归一化
+ * subject/attribute/value 首尾空格。纯函数，单测锁死。
+ */
+export function dedupeFacts(facts: RawFact[]): RawFact[] {
+  const seen = new Set<string>();
+  const out: RawFact[] = [];
+  for (const f of facts) {
+    const key = `${f.subject.trim().toLowerCase()}|${f.attribute.trim().toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      ...f,
+      subject: f.subject.trim(),
+      attribute: f.attribute.trim(),
+      value: f.value.trim(),
+    });
+  }
+  return out;
+}
+
+/**
  * 从 LLM 返回文本中解析事实清单数组。容错策略：
  *  1. 剥掉 ```json ... ``` 代码围栏
  *  2. 截取第一个 [ 到最后一个 ] 之间的内容（容忍前后废话）
@@ -167,16 +189,20 @@ export async function extractConsistencyFacts(
 
   const facts = parseFactsFromLLM(text);
 
+  // 去重（Next-3 成本/频率护栏之一）：同一 (subject, attribute) 只保留首条，
+  // 避免 LLM 在单次抽取里重复输出同一事实导致基线堆积重复行（详见 dedupeFacts）。
+  const deduped = dedupeFacts(facts);
+
   // 幂等：先清后插，重复抽取不堆积。
   // 仅清除自动抽取的事实（source != "manual"），保留作者手动新增/编辑的事实，
   // 否则「手动重新抽取」会把作者在 Next-2 里手填的基线一并抹掉。
   await prisma.consistencyFact.deleteMany({ where: { projectId, source: { not: "manual" } } });
-  if (facts.length > 0) {
+  if (deduped.length > 0) {
     await prisma.consistencyFact.createMany({
-      data: facts.map((f) => ({ projectId, ...f })),
+      data: deduped.map((f) => ({ projectId, ...f })),
     });
   }
-  return { count: facts.length, facts };
+  return { count: deduped.length, facts: deduped };
 }
 
 /**

@@ -2,6 +2,14 @@
 
 ---
 
+## v1.6.51.7 — 2026-08-09
+
+**成本/频率护栏（Next-3·去重 + 触发闸门）**
+
+- **功能**：为一致性切片做生产级收口——抽取按 `subject|attribute` 去重（纯函数 `dedupeFacts`，key 大小写不敏感 + 忽略首尾空格），单次 LLM 重复输出同一事实不再入库；纯续写意图（`isContinuationIntent`）不自动全量重抽基线，省 DeepSeek 调用。
+- **实现**：`PostPipelineParams` 加 `skipConsistencyExtract` 开关，`post-processor` 仅在非续写时触发 `extractConsistencyFacts`；`refine` 路由传 `isContinuationIntent`；去重抽纯函数，新增 4 例单测。
+- **最小回归面**：零 schema 变更、零迁移、零新依赖；双门禁 tsc 0 + vitest（41 文件 357 测试）全绿；v1.8.0 印章（Next-1+Next-2 完成且全绿）早已满足，本版打磨后 mint v1.8.0；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.51.6 — 2026-08-09
 
 **基线人工纠错（Next-2·人机共维护设定集）**

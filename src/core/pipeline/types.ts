@@ -68,6 +68,8 @@ export interface PostPipelineParams {
   skipReview?: boolean;
   /** 跳过摘要（refine 用） */
   skipSummarize?: boolean;
+  /** 跳过一致性事实自动重抽（Next-3 护栏：纯续写意图不重抽基线，避免高频浪费；手动重抽仍可用） */
+  skipConsistencyExtract?: boolean;
 }
 
 export interface PostPipelineResult {

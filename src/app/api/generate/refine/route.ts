@@ -348,6 +348,8 @@ ${selectedText.trim()}
               forbiddenPatterns,
               skipReview: true,
               skipSummarize: true,
+              // Next-3 护栏：纯续写意图不自动重抽基线（高频浪费），作者可手动重抽
+              skipConsistencyExtract: isContinuationIntent,
             });
           } catch (e) {
             console.error("微调后处理失败（已降级为仅生成）:", e instanceof Error ? e.message : e);
