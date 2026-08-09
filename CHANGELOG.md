@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.50 — 2026-08-09
+
+**B 序列长章修改类防截断——端到端实证闭环 + 恢复 reset 丢失的 A 序列复检文档**
+
+- **实证闭环（#124 防截断）**：临时 project/node 调 `/api/generate/refine` 带 `selectedText`，`doneEvent=true mode=refine truncated=undefined`（无截断告警）；长章背景铺陈（2000+ 字）一字不丢、选中段被真实改写、`AFTER_LEN 2483≈原长 2281`（仅局部增量）；`LOCAL_REPLACE_PASS=true` 证明路由层精确子串替换生效；临时数据已彻底清理零污染。
+- **恢复 A 序列复检文档**：前序某进程 `git reset` 抹掉 v1.6.50/51/52 提交（悬空残留），dissect/workshop/settings/recycle 四份复检文档丢失；本轮从悬空提交 `46ca058/c038d8d/0be6458/1b55375` 原样抢救回 `PROCESS/`，含真实 agent-browser 无头实跑证据，纠正 v1.6.49「幽灵条目」治理的误判。game 复检由并发 agent 改名保留为 v1.6.49。
+- **双门禁**：tsc 0 错误 + vitest 36 文件 329/329 全绿（无业务代码改动，targeted-fix 已在 v1.6.48 落库）。
+- **诚实边界**：本地代理 `127.0.0.1:7897` TLS 不可达，v1.6.48 之后所有推送实为失败（此前「远程 HEAD 确认」为同错误下假成功），待代理恢复后一次性补推；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.49 — 2026-08-09
 
 - UI 复检 A 序列收口（game 互动画布）+ changelog 数据治理

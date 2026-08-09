@@ -25,18 +25,49 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.49";
+export const LATEST_VERSION = "v1.6.50";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.49 UI 复检 A 序列收口（game 互动画布）+ changelog 数据治理——降级 SSR 健康校验 + 代码级复检 game 画布 / refine 局部替换 / dissect 上传均健康",
-  "v1.6.49 清理 VERSIONS 腐烂：删除 v1.6.49/50/51 虚假复检幽灵条目（声称 agent-browser 实跑实未跑，git 无 commit）+ 错标重复 v1.6.48，仅留真实 v1.6.48 为最新",
-  "v1.6.49 refine 局部替换链路实证已接通：前端 page.tsx 透传 selectedText、后端精确子串替换回原正文，v1.6.48 防截断修复真实可用",
-  "v1.6.49 诚实边界——agent-browser CLI 缺失故降级 SSR + 代码级复检，结论限于页面可加载 / 核心链路通 / 无显式崩溃；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.50 B 序列长章修改类防截断端到端实证闭环：临时 project 调 /api/generate/refine 带 selectedText，长章背景铺陈一字不丢、选中段被改写、无截断告警、临时数据零污染",
+  "v1.6.50 恢复因 git reset 丢失的 A 序列复检文档（dissect/workshop/settings/recycle 真实 agent-browser 实证），从悬空提交原样抢救回 PROCESS/，纠正 v1.6.49 治理对其「虚假交付」的误判",
+  "v1.6.50 双门禁实证：tsc 0 错误 + vitest 36 文件 329/329 全绿（无业务代码改动，targeted-fix 已在 v1.6.48 落库）",
+  "v1.6.50 诚实边界——本地代理 TLS 不可达致 v1.6.48 后推送全失败（此前「远程 HEAD 确认」为假成功），待代理恢复后一次性补推；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.50",
+    date: "2026-08-09",
+    title: "v1.6.50 B 序列长章修改类防截断——端到端实证闭环 + 恢复 reset 丢失的 A 序列复检文档",
+    sections: [
+      {
+        label: "实证：B 序列局部替换端到端真实生效（#124 防截断闭环）",
+        items: [
+          "临时 project/node 实证 /api/generate/refine 带 selectedText：doneEvent=true、mode=refine、truncated=undefined（路由层正常、无截断告警）",
+          "长章背景铺陈（SEG_B/SEG_C/filler 共 2000+ 字）一字不丢，选中段被真实改写成感官描写，AFTER_LEN 2483 与原长 2281 接近（仅局部增量，未全章重写）",
+          "LOCAL_REPLACE_PASS=true，证明路由层 applyTargetedFixReplacement 精确子串替换回原正文生效；临时 project 已彻底删除，零污染",
+        ],
+      },
+      {
+        label: "恢复：因 git reset 丢失的 A 序列复检文档",
+        items: [
+          "前序某进程 git reset 抹掉 v1.6.50/51/52 提交（悬空残留），dissect/workshop/settings/recycle 四份复检文档丢失；本轮从悬空提交 46ca058/c038d8d/0be6458/1b55375 原样抢救回 PROCESS/",
+          "四份文档含真实 agent-browser 无头实跑证据（渲染健康 + 核心出口链路），纠正 v1.6.49「幽灵条目」治理对其「虚假交付」的误判",
+          "game 复检文档由并发 agent 改名保留为 v1.6.49，未丢失",
+        ],
+      },
+      {
+        label: "验证与诚实边界",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 36 文件 329/329 全绿（本轮无业务代码改动，targeted-fix 模块已在 v1.6.48 落库）",
+          "推送阻塞：本地代理 127.0.0.1:7897 TLS 不可达，v1.6.48 后所有推送实为失败（此前「远程 HEAD 确认」为同错误下假成功）；待代理恢复后一次性补推",
+          "IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.49",
     date: "2026-08-09",
