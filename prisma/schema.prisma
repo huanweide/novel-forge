@@ -64,6 +64,7 @@ model Project {
   rules         Rule[]
   pendingCommitments PendingCommitment[]
   consistencyFacts ConsistencyFact[]
+  consistencyConflicts ConsistencyConflict[]
   gameSessions  GameSession[]
   pendingItems  PendingItem[]
 }
@@ -279,6 +280,27 @@ model ConsistencyFact {
 
   @@index([projectId])
   @@index([projectId, category])
+}
+
+// 一致性冲突（v1.6.51.4 B 任务）：生成新章节后比对「一致性事实基线」发现的前后矛盾，
+// 落库供作者逐条「已修正 / 忽略」处理；只标红不自动改写（创作主权归作者）。
+model ConsistencyConflict {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  nodeId    String   // 触发检测的章节节点 id（同一章重抽时清旧建新，避免堆积）
+  factId    String?  // 关联的基线事实 id（可选，允许无关联的自由文本冲突）
+  category  String   @default("") // 冲突所属类别（透传基线事实类别或空）
+  description String // 冲突说明（人话：新章说 X，但基线记的是 Y）
+  excerpt   String   @default("") // 新章中引发冲突的摘录
+  status    String   @default("open") // open | resolved | ignored（应用层校验，规避 enum 迁移风险）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, nodeId, status])
 }
 
 // ─── 伏笔/承诺追踪 (Pending Commitment) ──────────────────

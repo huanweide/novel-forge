@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.3";
+export const LATEST_VERSION = "v1.6.51.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.3 一致性事实基线最小 UI——右侧栏「实体」Tab 新增子 Tab「一致性基线」（与「未收尾线索」同构），按 人物/世界/情节/关系 分组列出事实（主体·属性=值·来源·置信度），作者第一次能在工作台肉眼看到自动抽取的基线",
-  "v1.6.51.3 手动重新抽取按钮——点按 POST /api/projects/[id]/consistency 即时重抽并刷新；与 v1.6.51.2 的「确认定稿自动抽取」互补，作者无需等技术自动跑也能主动生成；面板只读优先",
-  "v1.6.51.3 最小回归面：新建 ConsistencyPanel.tsx 镜像 ForeshadowingPanel 原生 fetch 模式（loading/empty/error + 取消保护）；RightPanel 扩展 EntitySubTab 联合加 consistency，零改动 page.tsx；双门禁 tsc 0 + vitest 336/336 全绿",
-  "v1.6.51.3 诚实边界：UI 仅展示/重抽，不编辑事实（编辑与主动矛盾检测标红留 B 任务，作为 v1.8 卖点）；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51.4 主动矛盾检测（B 任务）——生成新章节后自动比对「一致性事实基线」找前后矛盾，落库 ConsistencyConflict 供作者逐条「已修正/忽略」；只标红不自动改写（创作主权归作者）",
+  "v1.6.51.4 触发与落库：后处理管线章摘要落库后 fire-and-forget 调 detectConsistencyConflicts（与抽取同位置同模式），清同章旧 open 冲突再建新，幂等不堆积；无基线时不误报",
+  "v1.6.51.4 UI 与端点：ConsistencyPanel 事实列表下新增「冲突（需处理）」红色区块（冲突说明+摘录+关联基线+已修正/忽略按钮）；GET/POST /api/projects/[id]/consistency/conflicts 列表与更新（含 project 归属校验）",
+  "v1.6.51.4 最小裁剪与双门禁：砍 severity、factId 可选、status 三态（open/resolved/ignored）；tsc 0 + vitest（含 parseConflictsFromLLM 单测）全绿；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.4",
+    date: "2026-08-09",
+    title: "v1.6.51.4 主动矛盾检测（B 任务·标红不改写）",
+    sections: [
+      {
+        label: "功能：生成后自动找前后矛盾",
+        items: [
+          "后处理管线章摘要落库后 fire-and-forget 调 detectConsistencyConflicts(projectId, nodeId, chapterContent)，把新章正文与「一致性事实基线」比对，找出真正矛盾（如「正文说主角左眼黑，基线记灰」），落库 ConsistencyConflict 供作者逐条处理",
+          "只标红不自动改写：创作主权归作者；检测到的是 open 冲突，作者在面板「已修正 / 忽略」两按钮处理，历史可追溯",
+        ],
+      },
+      {
+        label: "最小裁剪与验证",
+        items: [
+          "砍 severity 分级、factId 设为可选（允许无关联自由文本冲突）、status 仅三态（open/resolved/ignored）；复用既有 LLM 客户端与 fire-and-forget 模式，零新依赖",
+          "检测幂等：落库前 deleteMany 同章 open 冲突再 createMany，同一章重复检测不堆积；无基线时直接返回不误报",
+          "双门禁：tsc 0 错误 + vitest（新增 parseConflictsFromLLM 纯函数单测：命中/无/可选 factId/容错 5 例）全绿；schema 已 prisma db push 到本地 PG17，ConsistencyConflict 表已建",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "UI 仅展示与状态流转，不编辑基线事实本身；真实 LLM 检测效果留待可联网时端到端校验（逻辑与契约已对齐）",
+          "IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.3",
     date: "2026-08-09",

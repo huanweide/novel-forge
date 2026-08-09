@@ -21,6 +21,7 @@ import type { PostPipelineParams, PostPipelineResult } from "./types";
 import { snapshotRevision } from "@/lib/versions";
 import { evaluateConfirmEligibility, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
 import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
+import { detectConsistencyConflicts } from "@/core/consistency/detectConflicts";
 
 /**
  * 运行完整的生成后处理管线。
@@ -750,6 +751,9 @@ export async function runPostGenerationPipeline(
       // v1.6.52：本章摘要已落库，同步触发一致性事实基线抽取（fire-and-forget），
       // 与 detect 同位置，确保基线读到最新章。
       void extractConsistencyFacts(projectId).catch(() => {});
+      // v1.6.51.4：基线抽取完成后，立即比对本章正文与基线检测冲突（fire-and-forget，不阻塞响应）。
+      // 与抽取同位置、同模式；只标红不自动改写，冲突落库供作者逐条「已修正 / 忽略」处理。
+      void detectConsistencyConflicts(projectId, nodeId, content).catch(() => {});
     } catch (summaryErr) {
       // 摘要失败不阻塞主流程
       send({
