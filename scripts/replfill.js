@@ -1,4 +1,4 @@
-const key = "sk-5f1d310e04bf4eba9335ade23e637964";
+const key = "process.env.SILICONFLOW_API_KEY";
 const url = "https://api.deepseek.com/v1/chat/completions";
 const SYS = `你是小说数据库填表助手（宝宝流数据库·国模填表·DeepSeek篇）。
 任务：阅读【最新章节正文】，提取结构化事实，写入对应结构化表格。

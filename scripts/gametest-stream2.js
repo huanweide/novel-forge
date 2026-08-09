@@ -1,6 +1,6 @@
 const https = require("https");
 
-const key = "sk-5f1d310e04bf4eba9335ade23e637964";
+const key = "process.env.SILICONFLOW_API_KEY";
 const base = "https://api.deepseek.com";
 
 const systemPrompt = "你是一个互动小说游戏引擎。请生成开场叙事，然后给出3-4个编号选项（如 1. xxx）。";
