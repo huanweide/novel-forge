@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.1";
+export const LATEST_VERSION = "v1.6.51.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.1 一致性事实基线闭环——getConsistencyBaselineText 接进 buildPromptContext，continue/refine/write/preview 四端点生成提示词现在注入「一致性事实基线」，强制 AI 前后不矛盾",
-  "v1.6.51.1 最小回归面：buildPromptContext 增可选 consistencyBaseline 参数（同步追加到 systemPrompt 末尾）；buildGenerationContext 变 async 内部取基线（DB 读失败降级为空，不影响生成）；三路由 await、preview 同步注入",
-  "v1.6.51.1 双门禁：tsc 0 + vitest 37 文件 336/336 全绿（无回归）；抽取向 POST /api/projects/[id]/consistency 触发，落库 ConsistencyFact",
-  "v1.6.51.1 诚实边界：基线需先触发抽取才有内容（空时静默不注入）；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51.2 归档定稿自动触发一致性事实抽取——extractConsistencyFacts 挂进 applyConfirm（skipDetect=false 分支）、后处理管线（章摘要落库后）、手动确认路由三处确认路径；章节确认即幂等重抽基线，使 v1.6.51.1 注入提示词的基线第一次真正非空",
+  "v1.6.51.2 时序严谨：抽取读 chapterSummaries，后处理先在 applyConfirm 置 skipDetect=true 跳过、待章摘要落库后再补触发；手动/自动确认路径确认时序已保证本章摘要存在，避免抽到缺章基线",
+  "v1.6.51.2 最小回归面：三处均 fire-and-forget（void .catch 静默，不阻塞确认响应），镜像 triggerForeshadowDetect；抽取自带 deleteMany+createMany 幂等；双门禁 tsc 0 + vitest 336/336 全绿",
+  "v1.6.51.2 诚实边界：基线仍「确认后自动抽取」非实时，未确认章节不触发；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.2",
+    date: "2026-08-09",
+    title: "v1.6.51.2 归档定稿自动触发一致性事实抽取（基线首次真正非空）",
+    sections: [
+      {
+        label: "功能闭环：基线首次真正非空",
+        items: [
+          "把 extractConsistencyFacts 挂进三处确认定稿路径——applyConfirm（skipDetect=false 分支，覆盖自动/批量/游戏引擎确认）、后处理管线（章摘要落库后，与伏笔检测同位置）、手动确认路由（story/nodes/[id]）→ 章节一旦确认定稿即幂等重抽基线，使 v1.6.51.1 注入提示词的基线第一次有了真实内容",
+          "时序严谨：抽取读 chapterSummaries，后处理路径先在 applyConfirm 入参 skipDetect=true 跳过、待步骤4章摘要落库后再补触发，避免抽到缺本章的半成品基线；手动/自动确认路径确认时序已保证本章摘要存在",
+        ],
+      },
+      {
+        label: "最小回归面与验证",
+        items: [
+          "三处均为 fire-and-forget（void ... .catch 静默失败，不阻塞确认响应），与既有 triggerForeshadowDetect 同模式；抽取函数自带 deleteMany+createMany 幂等，并发确认不会堆积脏数据",
+          "双门禁：tsc 0 错误 + vitest 37 文件 336/336 全绿（confirm-guard 13 测试无回归）",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "基线内容仍是「确认后自动抽取」而非实时；未确认章节不触发，首次使用前需至少确认一章才会非空",
+          "IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.1",
     date: "2026-08-09",

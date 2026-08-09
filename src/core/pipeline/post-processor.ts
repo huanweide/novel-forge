@@ -20,6 +20,7 @@ import type { ReviewLog } from "@/core/types";
 import type { PostPipelineParams, PostPipelineResult } from "./types";
 import { snapshotRevision } from "@/lib/versions";
 import { evaluateConfirmEligibility, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
+import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
 
 /**
  * 运行完整的生成后处理管线。
@@ -746,6 +747,9 @@ export async function runPostGenerationPipeline(
       // 复用共享 helper（含失败日志 + 轻量重试 + 超时保护）；本轮确认（auto-confirm）只触发一次，无重复。
       // nodeId 为死参数已移除（detect 按 projectId 全量重算）。
       void triggerForeshadowDetect({ projectId });
+      // v1.6.52：本章摘要已落库，同步触发一致性事实基线抽取（fire-and-forget），
+      // 与 detect 同位置，确保基线读到最新章。
+      void extractConsistencyFacts(projectId).catch(() => {});
     } catch (summaryErr) {
       // 摘要失败不阻塞主流程
       send({

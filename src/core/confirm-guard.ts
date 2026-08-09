@@ -7,6 +7,7 @@ import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { analyzeQuality } from "@/lib/quality-analyzer";
 import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
 import { CONFIRMABLE_STATUSES, STATUS_CONFIRMED } from "@/core/story-status";
+import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
 
 // 共享阈值（单一真相源）：与 analyzeQuality 的 passed 口径一致
 export { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
@@ -188,6 +189,9 @@ export async function applyConfirm(node: {
   // R2-007 收口：复用共享 helper（含失败日志 + 轻量重试），不再静默吞错。
   if (!node.skipDetect) {
     void triggerForeshadowDetect({ projectId: node.projectId });
+    // v1.6.52：确认定稿即触发一致性事实基线抽取（fire-and-forget，不阻塞确认响应），
+    // 使已注入提示词的基线首次真正非空。抽取读 chapterSummaries，确认时序保证本章已落库。
+    void extractConsistencyFacts(node.projectId).catch(() => {});
   }
   return fillMsg;
 }

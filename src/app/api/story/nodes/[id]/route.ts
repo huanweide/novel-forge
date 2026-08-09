@@ -6,6 +6,7 @@ import { snapshotRevision } from "@/lib/versions";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_DRAFTING, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 import { maybeAutoDeliver, triggerForeshadowDetect } from "@/core/confirm-guard";
+import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
 import { revertBabyloreFill } from "@/core/babylore/fill";
 
 // GET /api/story/nodes/[id]
@@ -238,6 +239,9 @@ export async function PATCH(
         const fresh = await prisma.storyNode.findUnique({ where: { id } });
         // v1.1.0：手动确认刚定稿，尝试自动整本交付（fire-and-forget，红利不阻塞响应）
         void maybeAutoDeliver(node.projectId).catch(() => {});
+        // v1.6.52：手动确认定稿后触发一致性事实基线抽取（fire-and-forget，不阻塞响应），
+        // 与伏笔检测同链路，使基线随手动定稿同步更新。
+        void extractConsistencyFacts(node.projectId).catch(() => {});
         return NextResponse.json(fresh);
       }
       case "reject": {
