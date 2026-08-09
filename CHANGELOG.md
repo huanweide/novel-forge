@@ -2,6 +2,14 @@
 
 ---
 
+## v1.8.1 — 2026-08-09
+
+**一致性引擎收口（去重真 bug 修复 + 解析健壮性）**
+
+- **修复·去重碰撞**：`dedupeFacts` 去重 key 由「`subject|attribute`」改为 `JSON.stringify([subject, attribute])`，彻底消除「|」分隔符歧义——subject/attribute 本身含「|」时旧实现会把两条不同事实误判为重複、静默丢弃一条真实设定（零 schema 变更、纯函数）。
+- **修复·解析一致性**：三处 LLM 返回解析（`extractFacts`/`detectConflicts`/`suggestFix`）的代码围栏剥离统一为 `json|text|markdown`，此前前两处仅剥 `json`，消除代码不一致、兼容更多 LLM 返回形态；零新依赖。
+- **工程**：新增 1 例去重碰撞回归单测；双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 358/358 全绿；马斯克人格执行 CEO 拍板做 A+B、C（llmConfig 强类型收口）暂缓；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.8.0 — 2026-08-09
 
 **跨章一致性引擎（里程碑·全链路闭环）**

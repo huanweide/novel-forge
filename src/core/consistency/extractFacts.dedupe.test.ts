@@ -32,4 +32,10 @@ describe("dedupeFacts", () => {
   it("空输入返回空", () => {
     expect(dedupeFacts([])).toEqual([]);
   });
+
+  it("subject/attribute 含分隔符「|」时不误判为重複（key 用 JSON 序列化防歧义）", () => {
+    const r = dedupeFacts([mk("甲|乙", "x", "一"), mk("甲", "乙|x", "二")]);
+    // 旧实现 key=`甲|乙|x` 与 `甲|乙|x` 完全相撞，会误并为 1 条丢失真实事实
+    expect(r).toHaveLength(2);
+  });
 });

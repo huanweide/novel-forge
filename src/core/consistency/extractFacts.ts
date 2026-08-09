@@ -40,7 +40,10 @@ export function dedupeFacts(facts: RawFact[]): RawFact[] {
   const seen = new Set<string>();
   const out: RawFact[] = [];
   for (const f of facts) {
-    const key = `${f.subject.trim().toLowerCase()}|${f.attribute.trim().toLowerCase()}`;
+    const key = JSON.stringify([
+      f.subject.trim().toLowerCase(),
+      f.attribute.trim().toLowerCase(),
+    ]);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({
@@ -63,7 +66,7 @@ export function parseFactsFromLLM(text: string): RawFact[] {
   if (!text || typeof text !== "string") return [];
   let s = text.trim();
 
-  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const fence = s.match(/```(?:json|text|markdown)?\s*([\s\S]*?)```/i);
   if (fence) s = fence[1].trim();
 
   const start = s.indexOf("[");

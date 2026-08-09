@@ -25,18 +25,39 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.0";
+export const LATEST_VERSION = "v1.8.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.0 跨章一致性引擎（里程碑）——小说前后设定自动对齐：抽取设定集→注入生成提示词→生成后主动找矛盾标红→给改写建议→作者可编辑/删除/手填设定，全链路闭环",
-  "v1.8.0 覆盖 v1.6.51~v1.6.51.7：ConsistencyFact 模型+抽取+注入；确认定稿自动抽取；右侧栏只读面板+手动重抽；生成后矛盾检测标红不改写；冲突修正建议（复制即用）；基线人工纠错（编辑/删除/新增）；成本护栏（去重+续写不重抽）",
-  "v1.8.0 创作主权铁律：AI 只标红/建议，绝不自动改正文；手动事实 source=manual 重抽保留；删除二次确认。双门禁 tsc 0 + vitest 357 全绿；零 schema 迁移风险",
-  "v1.8.0 诚实边界：LLM 实际抽取/建议效果待可联网端到端校验（逻辑与契约已对齐）；IP 永远归瑞宝宝（樊斯瑞），仅迭代 novel-forge",
+  "v1.8.1 一致性引擎收口（护栏+解析健壮性）——dedupeFacts 去重 key 分隔符「|」碰撞真 bug 修复 + 三处 LLM 解析 fence 剥离统一 json|text|markdown，全链路更稳",
+  "v1.8.1 修 dedupeFacts：key 由「subject|attribute」改为 JSON.stringify([subject, attribute])，subject/attribute 含「|」时不再误判重複丢事实；零 schema 变更、纯函数",
+  "v1.8.1 三处 LLM 解析（extractFacts/detectConflicts/suggestFix）fence 剥离统一 json|text|markdown，消除不一致、兼容更多返回形态；零新依赖",
+  "v1.8.1 双门禁 tsc 0 + vitest 358 全绿（新增 1 例去重碰撞回归）；马斯克拍板做 A+B、C 暂缓；IP 归瑞宝宝，只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.1",
+    date: "2026-08-09",
+    title: "一致性引擎收口（去重真 bug 修复 + 解析健壮性）",
+    sections: [
+      {
+        label: "修复",
+        items: [
+          "dedupeFacts 去重 key 改用 JSON.stringify([subject, attribute])，消除「|」分隔符歧义——subject/attribute 含「|」时旧实现会误并为一条、静默丢真实事实（零 schema 变更、纯函数）",
+          "三处 LLM 解析 fence 剥离统一支持 json|text|markdown（extractFacts/detectConflicts 此前仅 json，与 suggestFix 同构），消除代码不一致、兼容更多 LLM 返回形态",
+        ],
+      },
+      {
+        label: "工程",
+        items: [
+          "新增 1 例去重碰撞回归单测；双门禁 SAFE_DELETE_DISABLE=1 tsc --noEmit 0 错 + vitest 358/358 全绿",
+          "马斯克人格执行 CEO 拍板做 A+B、C（llmConfig 强类型收口）暂缓；IP 归瑞宝宝，只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.0",
     date: "2026-08-09",

@@ -32,7 +32,7 @@ export function parseConflictsFromLLM(text: string): RawConflict[] {
   if (!text || typeof text !== "string") return [];
   let s = text.trim();
 
-  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const fence = s.match(/```(?:json|text|markdown)?\s*([\s\S]*?)```/i);
   if (fence) s = fence[1].trim();
 
   const start = s.indexOf("[");
