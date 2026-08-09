@@ -89,6 +89,10 @@ export async function POST(request: Request) {
       ? instruction.trim()
       : "请在现有正文基础上自然续写，保持文风一致，推进剧情。";
     const isTargetedFix = hasContent && refineInstruction.includes("精准修复");
+    // v1.6.47：续写意图识别——纯续写类指令（继续写/续写/接着写/补字/展开等）走「增量续写」模式：
+    // 只让模型生成续写增量、不重输出已有正文，路由层拼回原正文，彻底消除「重输出全文撞 max_tokens 截断」。
+    // 修改/精准修复类指令仍需模型看到全文并输出修改后全文，保持现有全文重输出契约不变。
+    const isContinuationIntent = hasContent && !isTargetedFix && /(继续写|续写|接着写|往下写|补\s*\d*\s*字|加\s*\d*\s*字|延长|展开|后续|推进剧情|往下)/.test(refineInstruction);
 
     const cardNotesText = cardNotes
       ? Object.entries(cardNotes as Record<string, string>)
@@ -97,8 +101,20 @@ export async function POST(request: Request) {
           .filter(Boolean).join("\n")
       : "";
 
-    let writingInstruction = hasContent
-      ? `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}【${isTargetedFix ? "精准修复" : "微调"}任务——在以下已有正文上进行${isTargetedFix ? "定点修改" : "修改/续写"}，不要从头重写】
+    let writingInstruction: string;
+    if (isContinuationIntent) {
+      // 增量续写模式：只生成续写增量，不重输出已有正文（从根上消除「重输出全文撞 max_tokens 截断」）
+      writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}【续写任务——只生成续写增量，不要复述已有正文】
+已有正文末尾（仅作衔接参考，严禁重复输出）：
+---
+${existingContent.slice(-600)}
+---
+
+用户指令：${refineInstruction}
+
+请从正文断点处无缝衔接，自然续写约${targetWords}字。只输出新增的续写内容本身，不要复述、不要总结、不要加「以下是续写」等开场白。`;
+    } else if (hasContent) {
+      writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}【${isTargetedFix ? "精准修复" : "微调"}任务——在以下已有正文上进行${isTargetedFix ? "定点修改" : "修改/续写"}，不要从头重写】
 
 已有正文（共${existingContent.length}字）：
 ---
@@ -120,8 +136,10 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
 - 如果是混合指令：先按修改要求调整，再从断点续写到目标字数。
 - 绝对不要改变已有正文中没要求修改的部分。
 - 保持文风、人称、节奏一致。
-- 续写字数约${targetWords}字。`}`
-      : `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
+- 续写字数约${targetWords}字。`}`;
+    } else {
+      writingInstruction = `${cardNotesText ? "\n【用户角色备注——最高优先级】\n" + cardNotesText : ""}此章节暂无正文。请按以下指令从零撰写：${refineInstruction}\n\n目标字数：约${targetWords}字。`;
+    }
 
     // ── 7.5 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──
     const { block: refineRecallBlock, items: refineRecallItems } = await buildRecallBlock({
@@ -174,9 +192,14 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
               mode: hasContent ? "refine" : "write",
             });
           }
+          // v1.6.47：增量续写模式预算只给续写字数（targetWords），不再叠加已有正文长，
+          // 从根上消除「重输出全文撞 max_tokens 截断」；全文重输出模式保持原预算逻辑。
+          const targetForModel = isContinuationIntent
+            ? targetWords
+            : (hasContent ? Math.min(existingContent.length + targetWords, BUDGET_CEILING) : targetWords);
           for await (const chunk of orchestrator.writeSection(
             promptContext, writingInstruction,
-            hasContent ? Math.min(existingContent.length + targetWords, BUDGET_CEILING) : targetWords,
+            targetForModel,
             undefined, undefined, effectiveTemperature, effectiveTopP,
             request.signal, // L5-04：客户端断连信号透传
           )) {
@@ -214,37 +237,64 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             return;
           }
 
-          // ── L5-02：微调截断保护 ──
-          // finish_reason==='length' 表示新正文被 max_tokens 截断。不覆盖线上节点为残片：
-          // 跳过管线（post-processor 在覆盖前已 snapshotRevision 存了上一版完整正文，可经版本历史恢复），
-          // 保留原完整正文，明确告警「草稿未完成」，用户重试即可恢复。
-          if (finishReason === "length") {
-            send({
-              type: "done",
-              content: "",
-              nodeId,
-              status: data.currentNode.status,
-              mode: hasContent ? "refine" : "write",
-              wordCount: (data.currentNode.content || "").length,
-              truncated: true,
-              warning: "⚠️ 微调被 max_tokens 截断（finish_reason=length），已保留原章节正文，未用残片覆盖，请重试。",
-            });
-            return;
-          }
-
-          // ── L5-06：微调完整性保护（防模型静默丢前文）──
-          // 模型偶发把「续写/修改」误解为「重写精简版」，输出显著短于原正文，导致静默丢内容。
-          // 当新输出 < 原正文 90% 且指令非主动缩写时，判定为未完成重输出，降级保留原正文 + 告警，
-          // 类比 L5-02，避免线上节点被缩短版覆盖。
+          // ── v1.6.47：增量续写模式保护 + 拼接 ──
+          // 增量模式：模型只生成续写增量，路由层拼回原正文。
+          // - 增量过短（模型几乎没写）→ 视为失败，保留原正文
+          // - 增量被 max_tokens 截断 → 丢弃不完整增量，保留原正文（不完整增量拼接会破坏衔接）
+          // - 正常 → 拼接（原正文去尾空白 + 双换行 + 增量去头空白），后续统一以 newContent 落库
+          // ── 全文重输出模式：保留原 L5-02 截断保护 + L5-06 缩短保护 ──
           const isShrinkIntent = /(缩写|精简|压缩|缩短|删减|提炼)/.test(refineInstruction);
-          if (hasContent && !isShrinkIntent && newContent.length < existingContent.length * 0.9) {
-            send({
-              type: "done", content: "", nodeId,
-              status: data.currentNode.status, mode: "refine",
-              wordCount: existingContent.length, truncated: true,
-              warning: "⚠️ 微调输出比原正文过短（可能未完整重输出前文），已保留原章节正文，请重试或调整指令。",
-            });
-            return;
+          if (isContinuationIntent) {
+            if (newContent.trim().length < Math.max(50, Math.floor(targetWords * 0.3))) {
+              send({
+                type: "done", content: "", nodeId,
+                status: data.currentNode.status, mode: "refine",
+                wordCount: existingContent.length, truncated: true,
+                warning: "⚠️ 续写增量过短（模型几乎未生成），已保留原章节正文，请重试。",
+              });
+              return;
+            }
+            if (finishReason === "length") {
+              send({
+                type: "done", content: "", nodeId,
+                status: data.currentNode.status, mode: "refine",
+                wordCount: existingContent.length, truncated: true,
+                warning: "⚠️ 续写被 max_tokens 截断（finish_reason=length），已保留原章节正文，请重试。",
+              });
+              return;
+            }
+            newContent = existingContent.replace(/\s+$/, "") + "\n\n" + newContent.replace(/^\s+/, "");
+          } else {
+            // ── L5-02：微调截断保护 ──
+            // finish_reason==='length' 表示新正文被 max_tokens 截断。不覆盖线上节点为残片：
+            // 跳过管线（post-processor 在覆盖前已 snapshotRevision 存了上一版完整正文，可经版本历史恢复），
+            // 保留原完整正文，明确告警「草稿未完成」，用户重试即可恢复。
+            if (finishReason === "length") {
+              send({
+                type: "done",
+                content: "",
+                nodeId,
+                status: data.currentNode.status,
+                mode: hasContent ? "refine" : "write",
+                wordCount: (data.currentNode.content || "").length,
+                truncated: true,
+                warning: "⚠️ 微调被 max_tokens 截断（finish_reason=length），已保留原章节正文，未用残片覆盖，请重试。",
+              });
+              return;
+            }
+            // ── L5-06：微调完整性保护（防模型静默丢前文）──
+            // 模型偶发把「续写/修改」误解为「重写精简版」，输出显著短于原正文，导致静默丢内容。
+            // 当新输出 < 原正文 90% 且指令非主动缩写时，判定为未完成重输出，降级保留原正文 + 告警，
+            // 类比 L5-02，避免线上节点被缩短版覆盖。
+            if (hasContent && !isShrinkIntent && newContent.length < existingContent.length * 0.9) {
+              send({
+                type: "done", content: "", nodeId,
+                status: data.currentNode.status, mode: "refine",
+                wordCount: existingContent.length, truncated: true,
+                warning: "⚠️ 微调输出比原正文过短（可能未完整重输出前文），已保留原章节正文，请重试或调整指令。",
+              });
+              return;
+            }
           }
 
           // 后处理管线（仅扫描+存储，跳过审校和摘要）
@@ -310,8 +360,8 @@ ${isTargetedFix ? `【精准修复铁律——违反即不合格】
             mode: hasContent ? "refine" : "write", wordCount: newContent.length,
             usage: { completionTokens: tokenCount, totalTokens: tokenCount },
             babylore,
-            // #124：透传预算上限信息，供前端判断是否需要提示用户
-            budgetCapped, budgetCeiling: BUDGET_CEILING, existingLen: existingContent.length, newLen: newContent.length,
+            // #124：透传预算上限信息，供前端判断是否需要提示用户（增量模式不受预算上限约束，强制 false 避免误导）
+            budgetCapped: isContinuationIntent ? false : budgetCapped, budgetCeiling: BUDGET_CEILING, existingLen: existingContent.length, newLen: newContent.length,
           });
         } catch (err) {
           // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
