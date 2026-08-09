@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.51.5";
+export const LATEST_VERSION = "v1.6.51.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.51.5 冲突修正建议（Next-1）——把 B 的「只标红」补成闭环：作者点「看修正建议」即按需生成 AI 改写文本（复制即用），仍只建议不自动改正文（创作主权归作者）",
-  "v1.6.51.5 实现：新建 suggestFix.ts（suggestConflictFix + 纯函数 parseSuggestionFromLLM 容错解析）+ POST /api/projects/[id]/consistency/conflicts/suggest（含 project 归属校验）；ConsistencyPanel 每条冲突加按钮+建议框+复制",
-  "v1.6.51.5 零 schema 变更、零迁移、零新依赖：纯复用既有 completeText + fetch + fire-and-forget 模式；双门禁 tsc 0 + vitest（含 parseSuggestionFromLLM 单测）全绿",
-  "v1.6.51.5 诚实边界：建议不落库（前端本地态持有），刷新即失；v1.8 印章 = 本项 + Next-2 基线人工纠错完成且全绿；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51.6 基线人工纠错（Next-2）——作者可编辑/删除/手动新增一致性事实，把「AI 抽的基线」升级成「人机共维护的权威设定集」",
+  "v1.6.51.6 实现：新增 POST /consistency/manual（source 强制 manual）+ PATCH/DELETE /consistency/[factId]（带 project 归属校验，越权 404）；ConsistencyPanel 每条事实加编辑/删除按钮与行内表单，顶部加「新增」折叠表单",
+  "v1.6.51.6 关键修复：重抽（POST /consistency）改为只清自动抽取事实（source != manual），手动事实不被误删——否则「重抽」会把作者手填设定抹掉",
+  "v1.6.51.6 零 schema 变更：复用 source 字段标记手动事实；双门禁 tsc 0 + vitest（新增 factValidation 校验纯函数单测 7 例）全绿；v1.8 印章 = Next-2 完成且全绿",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51.6",
+    date: "2026-08-09",
+    title: "v1.6.51.6 基线人工纠错（Next-2·人机共维护设定集）",
+    sections: [
+      {
+        label: "功能：人能改 AI 抽的基线",
+        items: [
+          "每条一致性事实新增「编辑 / 删除」按钮 + 行内表单（分类/主体/属性/事实值/置信度）；顶部「新增」折叠表单可手动录入一条事实",
+          "手动事实 source 强制标为 manual，面板显示「手动」徽标；作者主权事实，AI 重抽时不被覆盖",
+        ],
+      },
+      {
+        label: "最小回归面与验证",
+        items: [
+          "后端：POST /api/projects/[id]/consistency/manual（新建，source=manual，带项目存在校验）；PATCH/DELETE /api/projects/[id]/consistency/[factId]（带 fact.projectId === id 归属校验，否则 404）",
+          "抽出纯函数 validateFactInput（category 枚举 + subject/attribute/value 非空 + confidence 0~1），新建/编辑两路由复用，单测 7 例锁死",
+          "关键修复：extractConsistencyFacts 重抽改为 deleteMany({ projectId, source: { not: 'manual' } })，保留手动事实",
+          "零 schema 变更、零迁移、零新依赖；双门禁：tsc 0 错误 + vitest（新增 factValidation 单测）全绿",
+        ],
+      },
+      {
+        label: "诚实边界",
+        items: [
+          "编辑/删除/新增走真实 API 落库；删除带 window.confirm 二次确认，防误删",
+          "v1.8.0 印章 = 本项（Next-2）完成且全绿；Next-3（成本/频率护栏）为发布前可选打磨；IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.51.5",
     date: "2026-08-09",

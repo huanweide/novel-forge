@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.51.6 — 2026-08-09
+
+**基线人工纠错（Next-2·人机共维护设定集）**
+
+- **功能**：每条一致性事实新增「编辑 / 删除」按钮 + 行内表单（分类/主体/属性/事实值/置信度）；顶部「新增」折叠表单可手动录入一条事实；手动事实 `source` 强制 `manual`，面板显示「手动」徽标，AI 重抽时不被覆盖。
+- **实现**：`POST /api/projects/[id]/consistency/manual`（新建，带项目存在校验）；`PATCH/DELETE /api/projects/[id]/consistency/[factId]`（带 `fact.projectId === id` 归属校验，越权 404）；抽出纯函数 `validateFactInput`（category 枚举 + 非空 + confidence 0~1）供两路由复用，单测 7 例。
+- **关键修复**：`extractConsistencyFacts` 重抽改为 `deleteMany({ projectId, source: { not: 'manual' } })`，保留手动事实——否则「重抽」会把作者手填设定抹掉。
+- **最小回归面**：零 schema 变更、零迁移、零新依赖；双门禁 tsc 0 + vitest（新增 `factValidation` 单测）全绿；v1.8.0 印章 = 本项完成且全绿；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.51.5 — 2026-08-09
 
 **冲突修正建议（Next-1·标红→给改法）**

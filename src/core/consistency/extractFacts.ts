@@ -167,8 +167,10 @@ export async function extractConsistencyFacts(
 
   const facts = parseFactsFromLLM(text);
 
-  // 幂等：先清后插，重复抽取不堆积
-  await prisma.consistencyFact.deleteMany({ where: { projectId } });
+  // 幂等：先清后插，重复抽取不堆积。
+  // 仅清除自动抽取的事实（source != "manual"），保留作者手动新增/编辑的事实，
+  // 否则「手动重新抽取」会把作者在 Next-2 里手填的基线一并抹掉。
+  await prisma.consistencyFact.deleteMany({ where: { projectId, source: { not: "manual" } } });
   if (facts.length > 0) {
     await prisma.consistencyFact.createMany({
       data: facts.map((f) => ({ projectId, ...f })),
