@@ -63,6 +63,7 @@ model Project {
   styleCards    StyleCard[]
   rules         Rule[]
   pendingCommitments PendingCommitment[]
+  consistencyFacts ConsistencyFact[]
   gameSessions  GameSession[]
   pendingItems  PendingItem[]
 }
@@ -257,6 +258,27 @@ model ChapterSummary {
 
   @@index([projectId])
   @@index([chapterId])
+}
+
+// 一致性事实基线（v1.6.51 新功能支柱）：从归档章节摘要 + 角色卡 + 世界书抽取的事实清单，
+// 用于生成时注入提示词、打长篇小说前后不一致痛点。
+model ConsistencyFact {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  category  String   // character | world | plot | relationship
+  subject   String   // 主体（人名 / 地名 / 概念）
+  attribute String   // 属性（年龄 / 修为 / 发色 / 势力 / 关系…）
+  value     String   // 事实值
+  source    String   @default("") // 来源（章节标题 / 角色卡 / 世界书）
+  confidence Float   @default(1.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, category])
 }
 
 // ─── 伏笔/承诺追踪 (Pending Commitment) ──────────────────

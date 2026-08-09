@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.6.50";
+export const LATEST_VERSION = "v1.6.51";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.6.50 B 序列长章修改类防截断端到端实证闭环：临时 project 调 /api/generate/refine 带 selectedText，长章背景铺陈一字不丢、选中段被改写、无截断告警、临时数据零污染",
-  "v1.6.50 恢复因 git reset 丢失的 A 序列复检文档（dissect/workshop/settings/recycle 真实 agent-browser 实证），从悬空提交原样抢救回 PROCESS/，纠正 v1.6.49 治理对其「虚假交付」的误判",
-  "v1.6.50 双门禁实证：tsc 0 错误 + vitest 36 文件 329/329 全绿（无业务代码改动，targeted-fix 已在 v1.6.48 落库）",
-  "v1.6.50 诚实边界——本地代理 TLS 不可达致 v1.6.48 后推送全失败（此前「远程 HEAD 确认」为假成功），待代理恢复后一次性补推；IP 归瑞宝宝只迭代 novel-forge",
+  "v1.6.51 新功能支柱·跨章一致性事实基线（最小垂直切片）：新增 ConsistencyFact 模型，从归档章节摘要 + 角色卡 + 世界书缓存抽取事实清单，专打长篇小说前后不一致痛点",
+  "v1.6.51 后端闭环：extractConsistencyFacts 幂等落库（先清后插）+ GET/POST /api/projects/[id]/consistency 出口；parseFactsFromLLM 容错解析（剥 code fence / 截数组 / 缺字段过滤 / 类别回退 world / confidence 夹紧）单测 7/7",
+  "v1.6.51 双门禁：tsc 0 错误 + vitest 37 文件 336/336 全绿（新增 consistency 模块 7 例）；生成客户端已含 ConsistencyFact 类型",
+  "v1.6.51 诚实边界——运行时表需对可达 Postgres 执行 prisma db push 创建（当前沙箱 5432 关闭无本地 PG，路由暂连接失败）；prompt 注入留 v1.6.51.1 接进 buildPromptContext；IP 归瑞宝宝只迭代 novel-forge",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.6.51",
+    date: "2026-08-09",
+    title: "v1.6.51 跨章一致性事实基线（新功能支柱·最小垂直切片）",
+    sections: [
+      {
+        label: "新支柱：跨章一致性事实基线",
+        items: [
+          "马斯克 CEO 拍板引入，专打长篇小说前后不一致痛点：A/B 序列已夯实基础设施与防截断，再叠纯质量增量、用户零感知，一致性是 AI 辅助长篇小说唯一真实护城河",
+          "新增 ConsistencyFact 模型（category/subject/attribute/value/source/confidence），从归档章节摘要 + 角色卡 + 世界书缓存抽取事实清单",
+        ],
+      },
+      {
+        label: "后端闭环",
+        items: [
+          "extractConsistencyFacts 幂等落库（先 deleteMany 后 createMany，重复抽取不堆积）；GET /api/projects/[id]/consistency 读基线、POST 触发抽取，统一 jsonError（not found→404）",
+          "parseFactsFromLLM 容错纯函数：剥 code fence、截首个 [ 到末个 ]、JSON.parse 失败整体返回空、缺字段过滤、非法 category 回退 world、confidence 夹紧 [0,1]、支持 subject/name·attribute/key·value/fact 别名",
+          "getConsistencyBaselineText 已就绪（生成注入文本块），但注入进 buildPromptContext 需改同步生成关键路径——本回合不做赶工改动，留 v1.6.51.1 下一轮接进",
+        ],
+      },
+      {
+        label: "验证与诚实边界",
+        items: [
+          "双门禁实证：tsc 0 错误 + vitest 37 文件 336/336 全绿（新增 consistency 模块 7 例 parseFactsFromLLM 容错分支全过）",
+          "诚实边界：生成客户端 src/generated/prisma 已含 ConsistencyFact 类型（prisma generate 已落，故 tsc 通过）；prisma db push 已对本地 PG17（127.0.0.1:5432）执行、ConsistencyFact 表已创建，GET/POST 路由在本地 PG 可达时功能正常；prompt 注入（getConsistencyBaselineText 已就绪）留 v1.6.51.1 下一轮接进 buildPromptContext",
+          "IP 仍归瑞宝宝（樊斯瑞），只迭代 novel-forge",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.6.50",
     date: "2026-08-09",

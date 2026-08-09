@@ -2,6 +2,15 @@
 
 ---
 
+## v1.6.51 — 2026-08-09
+
+**跨章一致性事实基线（新功能支柱·最小垂直切片）**
+
+- **新支柱**：马斯克 CEO 拍板引入「一致性事实基线」专打长篇小说前后不一致痛点——A/B 序列已夯实基础设施与防截断，再叠纯质量增量、用户零感知，一致性是 AI 辅助长篇小说唯一真实护城河。
+- **后端闭环**：新增 `ConsistencyFact` 模型，从归档章节摘要 + 角色卡 + 世界书缓存抽取事实清单幂等落库（先清后插）；`GET/POST /api/projects/[id]/consistency` 出口；`parseFactsFromLLM` 容错解析（剥 code fence / 截数组 / 缺字段过滤 / 类别回退 world / confidence 夹紧）单测 7/7。
+- **双门禁**：tsc 0 错误 + vitest 37 文件 336/336 全绿（新增 consistency 模块 7 例）；生成客户端已含 `ConsistencyFact` 类型。
+- **诚实边界**：`prisma db push` 已对本地 PG17（127.0.0.1:5432）执行、`ConsistencyFact` 表已创建，GET/POST 路由在本地 PG 可达时功能正常；prompt 注入（`getConsistencyBaselineText` 已就绪）留 v1.6.51.1 下一轮接进 `buildPromptContext`（同步生成关键路径，本回合不做赶工改动）；IP 归瑞宝宝，只迭代 novel-forge。
+
 ## v1.6.50 — 2026-08-09
 
 **B 序列长章修改类防截断——端到端实证闭环 + 恢复 reset 丢失的 A 序列复检文档**
