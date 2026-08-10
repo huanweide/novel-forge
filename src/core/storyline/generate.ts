@@ -16,7 +16,7 @@ export type GenProject = {
 };
 export type GenCharacter = { name: string; role?: string | null; background?: string | null };
 export type GenLore = { title: string; content: string; enabled?: boolean };
-export type GenExisting = { type: string; title: string };
+export type GenExisting = { type: string; title: string; status?: string };
 
 export interface StorylineSuggestion {
   type: "main" | "side";
@@ -49,6 +49,14 @@ const SYSTEM = `你是小说故事线架构师。你为小说设计事件线（S
 - 支线必须服务于主线的"阻碍"或"转折"
 - 七要素要具体，不要"变强""克服困难"这种万金油
 - 事件线命名要像微型标题，如"获得灵剑认主"而非"主角获得宝剑"
+
+【主线与支线铁律（最高优先级，务必遵守）】
+- 主线 = 贯穿全书的核心目标线（像大树主干），必须能撑起数十章到数百章，牵动整个故事的命运与最终结局。一个项目通常只有 1 条主线。
+- 支线 = 由主线触发、服务主线、可独立收束的小故事（像树枝）。支线的产生和结束都为主线的"阻碍"或"转折"服务，绝不能盖过主线。
+- 判断法（拔剧情测试）：拔掉这段剧情故事还成立吗？能拔掉但很有趣→支线；拔掉就无法解释后续→主线。
+- 严禁把"发现一个东西觉得它可能有用""两个人一场对话""准备去某地"这类小事开成独立主线或支线——它们应作为主线时间轴上的事件节点（MILESTONE/CLUE），或并入已有支线，而不是新建一条线。
+- 如果已有主线存在（非前主线已完结的 newMain 场景），你只能生成支线，绝不能再开第二条主线。多开主线会被系统强制降级为支线。
+- 主线七要素默认留空：大主线不预填七要素，等主线全部推进完结后由系统/AI 自动回填；支线可正常填七要素。
 
 【输出格式——纯JSON】
 {
@@ -141,11 +149,23 @@ ${
     turn: (line.turn as string) || "",
     ending: null, // 结局不可预填，仅作待收束/已收束标记
   });
+  const emptySevenElements = () => ({
+    desire: "", obstacle: "", action: "", result: "", twist: "", turn: "", ending: null,
+  });
 
-  return parsedLines.map((l, i) => ({
-    type: (l.type as string) === "main" ? "main" : "side",
-    title: (l.title as string) || `事件线${i + 1}`,
-    description: (l.description as string) || "",
-    sevenElements: toSevenElements(l),
-  }));
+  // 治理铁律：已有活跃主线且非 newMain → 任何"主线"建议都降级为支线（双保险，落库层 route.ts 会再次强制）
+  const hasActiveMain = existingStorylines.some((s) => s.type === "main" && s.status === "active");
+  const isNewMainMode = mode === "newMain";
+
+  return parsedLines.map((l, i) => {
+    const rawType = (l.type as string) === "main" ? "main" : "side";
+    const effectiveType = rawType === "main" && hasActiveMain && !isNewMainMode ? "side" : rawType;
+    return {
+      type: effectiveType,
+      title: (l.title as string) || `事件线${i + 1}`,
+      description: (l.description as string) || "",
+      // 主线七要素留空；支线正常填充
+      sevenElements: effectiveType === "main" ? emptySevenElements() : toSevenElements(l),
+    };
+  });
 }

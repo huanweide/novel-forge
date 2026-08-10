@@ -44,7 +44,7 @@ async function loadProjectContext(projectId: string) {
     },
     characters: characters.map((c) => ({ name: c.name, role: c.role, background: c.background })),
     loreEntries: loreEntries.map((e) => ({ title: e.title, content: e.content, enabled: e.enabled })),
-    existingStorylines: existingStorylines.map((s) => ({ type: s.type, title: s.title })),
+    existingStorylines: existingStorylines.map((s) => ({ type: s.type, title: s.title, status: s.status })),
   };
   return ctx;
 }

@@ -69,6 +69,14 @@ export async function POST(request: Request) {
 - 七要素要具体，不要"变强""克服困难"这种万金油
 - 事件线命名要像微型标题，如"获得灵剑认主"而非"主角获得宝剑"
 
+【主线与支线铁律（最高优先级，务必遵守）】
+- 主线 = 贯穿全书的核心目标线（像大树主干），必须能撑起数十章到数百章，牵动整个故事的命运与最终结局。一个项目通常只有 1 条主线。
+- 支线 = 由主线触发、服务主线、可独立收束的小故事（像树枝）。支线的产生和结束都为主线的"阻碍"或"转折"服务，绝不能盖过主线。
+- 判断法（拔剧情测试）：拔掉这段剧情故事还成立吗？能拔掉但很有趣→支线；拔掉就无法解释后续→主线。
+- 严禁把"发现一个东西觉得它可能有用""两个人一场对话""准备去某地"这类小事开成独立主线或支线——它们应作为主线时间轴上的事件节点（MILESTONE/CLUE），或并入已有支线，而不是新建一条线。
+- 如果已有主线存在（非前主线已完结的 newMain 场景），你只能生成支线，绝不能再开第二条主线。多开主线会被系统强制降级为支线。
+- 主线七要素默认留空：大主线不预填七要素，等主线全部推进完结后由系统/AI 自动回填；支线可正常填七要素。
+
 【输出格式——纯JSON】
 {
   "lines": [
@@ -104,6 +112,11 @@ ${loreEntries.slice(0, 20).map(e => `- ${e.title}：${e.content.slice(0, 200)}`)
 
 【已有故事线——${existingStorylines.length}条（如有则在此基础上补充，主线已存在则只生成支线）】
 ${existingStorylines.map(s => `- [${s.type === "main" ? "主线" : "支线"}] ${s.title}`).join("\n")}
+${
+  existingStorylines.some(s => s.type === "main" && s.status === "active") && mode !== "newMain"
+    ? "\n⚠️ 当前已有活跃主线，本次只能生成支线，严禁再开主线。小事件（对话/发现/前往某地）不要建为支线，应作为主线时间轴事件或并入已有支线。"
+    : ""
+}
 
 【缝合怪节奏——构造新主线时按此节奏设计事件密度（v1.6.0）】
 ${paceDesc}
@@ -147,15 +160,22 @@ ${
       turn: (line.turn as string) || "",
       ending: null, // 结局不可预填，仅作待收束/已收束标记
     });
+    // 主线七要素默认留空（大主线不预填，等推进完结后由系统/AI 回填）
+    const emptySevenElements = () => ({
+      desire: "", obstacle: "", action: "", result: "", twist: "", turn: "", ending: null,
+    });
 
     // 非落库（草稿预览）→ 返回 suggestions 供前端中间编辑态
     if (!shouldCommit) {
-      const suggestionView = lines.map((l, i) => ({
-        type: (l.type as string) === "main" ? "main" : "side",
-        title: (l.title as string) || `事件线${i + 1}`,
-        description: (l.description as string) || "",
-        sevenElements: toSevenElements(l),
-      }));
+      const suggestionView = lines.map((l, i) => {
+        const isMain = (l.type as string) === "main";
+        return {
+          type: isMain ? "main" : "side",
+          title: (l.title as string) || `事件线${i + 1}`,
+          description: (l.description as string) || "",
+          sevenElements: isMain ? emptySevenElements() : toSevenElements(l),
+        };
+      });
       return NextResponse.json({ suggestions: suggestionView });
     }
 
@@ -163,6 +183,14 @@ ${
     const maxOrder = existingStorylines.reduce((max, s) => Math.max(max, s.order), 0);
     const mainLines = lines.filter((l) => (l.type as string) === "main");
     const sideLines = lines.filter((l) => (l.type as string) !== "main");
+
+    const hasActiveMain = existingStorylines.some((s) => s.type === "main" && s.status === "active");
+    const isNewMainMode = mode === "newMain";
+    // 治理铁律：已有活跃主线且非 newMain → 任何"主线"都降级为支线挂回主线，杜绝多条不明所以的主线
+    if (hasActiveMain && !isNewMainMode && mainLines.length > 0) {
+      sideLines.push(...mainLines);
+      mainLines.length = 0;
+    }
 
     let mainId: string | null =
       existingStorylines.find((s) => s.type === "main" && s.status === "active")?.id ?? null;
@@ -180,7 +208,8 @@ ${
       title: (line.title as string) || `事件线${order}`,
       description: (line.description as string) || "",
       order,
-      sevenElements: toSevenElements(line),
+      // 主线七要素留空；支线正常填充
+      sevenElements: type === "main" ? emptySevenElements() : toSevenElements(line),
     });
 
     // 先建主线（如有），拿到 id 供支线挂载
