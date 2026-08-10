@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { pickReassignMainId } from "@/core/pipeline/outline-context";
 import { STORYLINE_STATUS } from "@/core/story-status";
+import { completeStorylineElements } from "@/core/storyline/complete";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,10 +26,42 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const body = await request.json();
 
-    const prev = await prisma.storyline.findUnique({ where: { id } });
+    const prev = await prisma.storyline.findUnique({
+      where: { id },
+      include: { events: { orderBy: { position: "asc" } } },
+    });
     if (!prev) return NextResponse.json({ error: "故事线不存在" }, { status: 404 });
 
     const nextType = body.type ?? prev.type;
+    const willComplete =
+      body.status === STORYLINE_STATUS.COMPLETED && prev.status !== STORYLINE_STATUS.COMPLETED;
+
+    // #199 完结自动填写要素：基于已发生事件提炼，仅补全空白字段，绝不覆盖作者已填内容。
+    // 主线额外聚合所有子支线事件，使「总纲」真正汇聚本线与支线脉络。
+    let nextSevenElements = body.sevenElements ?? prev.sevenElements;
+    if (willComplete) {
+      let childEvents: {
+        kind?: string | null;
+        content?: string | null;
+        tag?: string | null;
+        title?: string | null;
+        position?: number | null;
+      }[] = [];
+      if (prev.type === "main") {
+        const children = await prisma.storyline.findMany({
+          where: { parentId: id },
+          include: { events: { orderBy: { position: "asc" } } },
+        });
+        childEvents = children.flatMap((c) => c.events);
+      }
+      nextSevenElements = completeStorylineElements(
+        prev.type as "main" | "side",
+        prev.sevenElements,
+        prev.events,
+        childEvents,
+      );
+    }
+
     const storyline = await prisma.storyline.update({
       where: { id },
       data: {
@@ -38,7 +71,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         order: body.order,
         status: body.status,
         description: body.description,
-        sevenElements: body.sevenElements ?? prev.sevenElements,
+        sevenElements: nextSevenElements,
       },
     });
 

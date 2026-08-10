@@ -183,6 +183,46 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
                 ))}
               </div>
             </div>
+            <div className="py-1">
+              <span className="block text-sm text-[var(--nv-text-primary)]">故事线风格</span>
+              <span className="block text-xs text-[var(--nv-text-muted)] mb-2">创意=大胆脑洞；平常=均衡常规；简约=克制少铺陈、主线先拟定起因/经过/结果三要素骨架</span>
+              <div className="flex gap-2">
+                {([
+                  ["creative", "创意", "大胆脑洞、元素可夸张"],
+                  ["normal", "平常", "均衡常规网文节奏、爽点清晰"],
+                  ["simple", "简约", "克制少铺陈、主线先拟定三要素"],
+                ] as const).map(([key, label, desc]) => (
+                  <button
+                    key={key}
+                    onClick={() => set("storylineStyle", key as any)}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors ${cfg.storylineStyle === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
+                  >
+                    <span className={`block text-xs font-medium ${cfg.storylineStyle === key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{label}</span>
+                    <span className="block text-[10px] text-[var(--nv-text-tertiary)] leading-snug mt-0.5">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="py-1">
+              <span className="block text-sm text-[var(--nv-text-primary)]">自动化程度</span>
+              <span className="block text-xs text-[var(--nv-text-muted)] mb-2">自动=生成即落库；自由=仅给建议、人工确认后应用；全权=AI 全权接管自动落库</span>
+              <div className="flex gap-2">
+                {([
+                  ["auto", "自动", "生成即落库应用"],
+                  ["free", "自由", "仅建议、人工编辑后再应用"],
+                  ["full", "全权", "AI 全权接管、自动落库"],
+                ] as const).map(([key, label, desc]) => (
+                  <button
+                    key={key}
+                    onClick={() => set("storylineAutomation", key as any)}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors ${cfg.storylineAutomation === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
+                  >
+                    <span className={`block text-xs font-medium ${cfg.storylineAutomation === key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{label}</span>
+                    <span className="block text-[10px] text-[var(--nv-text-tertiary)] leading-snug mt-0.5">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </Section>
         </div>
 

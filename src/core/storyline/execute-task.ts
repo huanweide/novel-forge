@@ -64,9 +64,11 @@ export async function runStorylineGenerationTask(taskId: string): Promise<void> 
     if (!task) return; // 任务已被删，静默退出
 
     const ctx = await loadProjectContext(task.projectId);
+    const style = (ctx.project.buildConfig?.storylineStyle as string) || "creative";
     const suggestions = await generateStorylineSuggestions({
       ...ctx,
       mode: "auto",
+      style,
       extra: task.prompt || undefined,
     });
 

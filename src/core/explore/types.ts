@@ -148,6 +148,10 @@ export interface BuildConfig {
   autoConstructNewMain: boolean;
   /** v1.6.0 缝合怪节奏：fast 高频事件/steady 均衡/slow 慢热（默认 steady） */
   stitchPace: "fast" | "steady" | "slow";
+  /** v1.8.13 故事线生成风格轴：creative 创意发散 / normal 平常均衡 / simple 简约克制（默认 creative） */
+  storylineStyle: "creative" | "normal" | "simple";
+  /** v1.8.13 故事线生成自动化轴：auto 自动落库 / free 仅建议不落库 / full 全权接管（默认 auto） */
+  storylineAutomation: "auto" | "free" | "full";
 }
 
 export const DEFAULT_BUILD_CONFIG: BuildConfig = {
@@ -167,6 +171,8 @@ export const DEFAULT_BUILD_CONFIG: BuildConfig = {
   autoGenerateStoryline: true,   // v1.4.0：默认开启——写作时按剧情推进自动维护故事线（与缝合怪推进联动）
   autoConstructNewMain: true,    // v1.4.0：默认开启——主线完结后自动构造承接的新主线
   stitchPace: "steady",          // v1.6.0：默认均衡节奏
+  storylineStyle: "creative",    // v1.8.13：默认创意风格
+  storylineAutomation: "auto",   // v1.8.13：默认自动落库
 };
 
 /** 对话消息 */

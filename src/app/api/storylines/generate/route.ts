@@ -19,6 +19,8 @@ import { NextResponse } from "next/server";
 
 import { completeText } from "@/core/llm/client";
 import { getCompletedMainIds, isRehangTargetActiveMain } from "@/core/pipeline/outline-context";
+import { storylineStyleDesc } from "@/core/storyline/generate";
+import { deriveMainElements } from "@/core/storyline/complete";
 
 export async function POST(request: Request) {
   try {
@@ -35,9 +37,16 @@ export async function POST(request: Request) {
 
     if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
 
+    // v1.8.13 故事线生成模式（风格轴 × 自动化轴），从 buildConfig 读取，缺省 creative/auto
+    const buildConfig = (project.buildConfig || {}) as Record<string, unknown>;
+    const storylineStyle = (buildConfig.storylineStyle as string) || "creative";
+    const automation = (buildConfig.storylineAutomation as string) || "auto";
+
     // v1.8.4：前端编辑后回传 suggestions 且要求 commit → 直接落库，不调 LLM
     const hasClientSuggestions = commit === true && Array.isArray(suggestions) && suggestions.length > 0;
-    const shouldCommit = commit === true || mode === "newMain";
+    // v1.8.13：自动化轴 free=仅建议不落库；auto/full=自动落库；commit/newMain 强制落库
+    const shouldCommit =
+      commit === true || mode === "newMain" || automation === "auto" || automation === "full";
 
     let lines: Array<Record<string, unknown>>;
     if (hasClientSuggestions) {
@@ -90,7 +99,6 @@ export async function POST(request: Request) {
   ]
 }`;
 
-      const buildConfig = (project.buildConfig || {}) as Record<string, unknown>;
       const pace = buildConfig.stitchPace || "steady";
       const paceDesc =
         pace === "fast"
@@ -120,6 +128,9 @@ ${
 
 【缝合怪节奏——构造新主线时按此节奏设计事件密度（v1.6.0）】
 ${paceDesc}
+
+【故事线风格——按此风格收敛设定密度（v1.8.13）】
+${storylineStyleDesc(storylineStyle)}
 
 请为这部小说生成故事线：
 ${
@@ -208,8 +219,23 @@ ${
       title: (line.title as string) || `事件线${order}`,
       description: (line.description as string) || "",
       order,
-      // 主线七要素留空；支线正常填充
-      sevenElements: type === "main" ? emptySevenElements() : toSevenElements(line),
+      // 主线用三要素（origin/process/result）：前端回传优先；否则按风格预填
+      // （简约/平常先把绝对主线的固线项拟定好，创意留空让 AI 发挥）
+      sevenElements:
+        type === "main"
+          ? line.origin || line.process || line.result
+            ? {
+                origin: (line.origin as string) || "",
+                process: (line.process as string) || "",
+                result: (line.result as string) || "",
+              }
+            : storylineStyle === "creative"
+              ? { origin: "", process: "", result: "" }
+              : deriveMainElements({
+                  title: line.title as string,
+                  description: line.description as string,
+                })
+          : toSevenElements(line),
     });
 
     // 先建主线（如有），拿到 id 供支线挂载

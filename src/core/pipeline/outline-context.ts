@@ -89,6 +89,12 @@ const SEVEN_ELEMENTS: Array<[key: string, label: string]> = [
   ["result", "结果"], ["twist", "意外"], ["turn", "转折"], ["ending", "结局"],
 ];
 
+// 主线三要素（#200）：主线线索密、事件多，七要素写不下，改用起因 / 经过 / 结果提纲挈领。
+// 续写 / 抽卡注入时按线的 type 选择对应要素集合，避免主线要素被静默丢失（此前只注入七要素）。
+const THREE_ELEMENTS: Array<[key: string, label: string]> = [
+  ["origin", "起因"], ["process", "经过"], ["result", "结果"],
+];
+
 /**
  * 过滤出应注入写作上下文的「活跃」剧情线（N1 修复）。
  *
@@ -179,28 +185,38 @@ export function formatStorylines(storylines: any[]): string {
       if (s.type !== "main" && s.parentId && mainTitleById.has(s.parentId)) {
         prefix += `（隶属主线 ${mainTitleById.get(s.parentId)}）`;
       }
+      // #200：主线续写优先推进时间轴上已规划但尚未充分展开的事件，不得另起孤立剧情
+      if (s.type === "main") {
+        prefix +=
+          "（续写提示：优先推进时间轴上已规划但尚未充分展开的事件节点，保持因果连续；确需发展新内容时再扩展，严禁另起孤立剧情）";
+      }
       parts.push(prefix);
       if (s.description) parts.push(`说明：${s.description}`);
       // N10 修复（P0）：七要素实际嵌套在 s.sevenElements（Json 字段），原代码读顶层 s[k]
       // 永远为 undefined，导致抽卡 + 主写作两条路径 100% 静默丢失七要素与「顺线推进」语义。
+      // #200：主线改用三要素（origin/process/result），按 type 选择对应要素集合注入，
+      // 避免主线要素被静默丢弃（此前只注入七要素），续写 / 抽卡才能感知主线总纲。
       const se = (s.sevenElements && typeof s.sevenElements === "object") ? s.sevenElements : {};
-      const elems = SEVEN_ELEMENTS
+      const elemDefs = s.type === "main" ? THREE_ELEMENTS : SEVEN_ELEMENTS;
+      const elems = elemDefs
         .map(([k, label]) => (se[k] ? `${label}:${se[k]}` : ""))
         .filter(Boolean);
-      if (elems.length) parts.push("七要素：" + elems.join(" | "));
-      // N10 修复（P0）：把线索集(CLUE)与已发生大事件(MILESTONE)注入写作上下文，
-      // 否则作者辛苦维护的伏笔/进展 AI 一个字也看不到。
+      if (elems.length) parts.push((s.type === "main" ? "三要素：" : "七要素：") + elems.join(" | "));
+      // N10 修复（P0）+ #200：把线索集(CLUE)与全部已规划 / 已发生事件(EVENT+MILESTONE)注入写作上下文，
+      // 否则作者辛苦维护的伏笔 / 进展 AI 一个字也看不到；主线续写据此才能「非孤立」地推进。
       const evs = Array.isArray(s.events) ? s.events : [];
       const clues = evs
         .filter((e: any) => e.kind === "CLUE")
         .slice(0, 8)
-        .map((e: any) => `线索[${e.tag || "未分类"}] ${e.title}`);
+        .map((e: any) => `线索[${e.tag || "未分类"}] ${e.title || e.content?.slice(0, 30) || ""}`);
       if (clues.length) parts.push("线索集：" + clues.join("；"));
-      const milestones = evs
-        .filter((e: any) => e.kind === "MILESTONE")
-        .slice(-5)
-        .map((e: any) => `已发生·${e.title || e.tag || "里程碑"}`);
-      if (milestones.length) parts.push("时间轴：" + milestones.join("；"));
+      const timeline = evs
+        .filter((e: any) => e.kind !== "CLUE")
+        .slice()
+        .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+        .slice(-15)
+        .map((e: any) => `${e.kind === "MILESTONE" ? "里程碑·" : "事件·"}${e.title || e.content?.slice(0, 40) || e.tag || "未命名"}`);
+      if (timeline.length) parts.push("时间轴（已规划/已发生）：" + timeline.join(" → "));
       return parts.join("\n");
     })
     .join("\n\n");

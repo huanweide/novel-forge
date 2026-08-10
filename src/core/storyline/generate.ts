@@ -33,6 +33,20 @@ export interface StorylineSuggestion {
   };
 }
 
+/**
+ * v1.8.13 故事线生成风格轴提示：creative 创意发散 / normal 平常均衡 / simple 简约克制。
+ * 抽出为纯函数，供 generateStorylineSuggestions（后台执行器）与 generate/route.ts（内联生成）共用，避免两套提示漂移。
+ */
+export function storylineStyleDesc(style: string | undefined): string {
+  if (style === "simple") {
+    return "风格=简约：设定简略克制、少铺陈；主线直接用「起因/经过/结果」三要素提纲挈领，不展开七要素；支线七要素也尽量精炼一两句。";
+  }
+  if (style === "normal") {
+    return "风格=平常：均衡、贴近主流网文节奏，七要素具体合理、爽点清晰，不刻意猎奇。";
+  }
+  return "风格=创意：鼓励大胆脑洞与非常规设定，七要素可以天马行空、夸张一些，制造记忆点。";
+}
+
 const SYSTEM = `你是小说故事线架构师。你为小说设计事件线（Storylines）——每条事件线是一个完整的小故事单元，用"七要素"驱动。
 
 【七要素定义——每条事件线必须包含】
@@ -82,8 +96,9 @@ export async function generateStorylineSuggestions(input: {
   existingStorylines: GenExisting[];
   mode?: string;
   extra?: string;
+  style?: string;
 }): Promise<StorylineSuggestion[]> {
-  const { project, characters, loreEntries, existingStorylines, mode = "auto" } = input;
+  const { project, characters, loreEntries, existingStorylines, mode = "auto", style = "creative" } = input;
 
   const buildConfig = (project.buildConfig || {}) as Record<string, unknown>;
   const pace = buildConfig.stitchPace || "steady";
@@ -110,6 +125,9 @@ ${existingStorylines.map((s) => `- [${s.type === "main" ? "主线" : "支线"}] 
 
 【缝合怪节奏——构造新主线时按此节奏设计事件密度（v1.6.0）】
 ${paceDesc}
+
+【故事线风格——按此风格收敛设定密度（v1.8.13）】
+${storylineStyleDesc(style)}
 
 请为这部小说生成故事线：
 ${

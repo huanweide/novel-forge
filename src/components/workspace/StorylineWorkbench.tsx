@@ -29,12 +29,25 @@ export interface StorylineSuggestion {
   };
 }
 
-const ELEMENT_META: {
-  key: "desire" | "obstacle" | "action" | "result" | "twist" | "turn" | "ending";
+type ElementKey =
+  | "desire" | "obstacle" | "action" | "result" | "twist" | "turn" | "ending"
+  | "origin" | "process";
+interface ElementMeta {
+  key: ElementKey;
   icon: IconName;
   label: string;
   hint: string;
-}[] = [
+}
+type SevenKey = "desire" | "obstacle" | "action" | "result" | "twist" | "turn" | "ending";
+interface SevenMeta {
+  key: SevenKey;
+  icon: IconName;
+  label: string;
+  hint: string;
+}
+
+// 支线：七要素（完整骨架）—— 支线盘子小，七要素写得下
+const ELEMENT_META: SevenMeta[] = [
   { key: "desire", icon: "gem", label: "欲望", hint: "这条线里角色最想要什么" },
   { key: "obstacle", icon: "shield", label: "阻碍", hint: "挡在欲望前面的力量或人" },
   { key: "action", icon: "sword", label: "行动", hint: "角色为越过阻碍做了什么" },
@@ -43,6 +56,30 @@ const ELEMENT_META: {
   { key: "turn", icon: "arrowRight", label: "转折", hint: "角色立场或局势的关键变化" },
   { key: "ending", icon: "check", label: "结局", hint: "收束时的最终状态（写时再定，不预填）" },
 ];
+
+// 主线：三要素（起因 / 经过 / 结果）—— 主线线索太多、事件太密，七要素写不下，改用三要素
+const THREE_ELEMENTS: ElementMeta[] = [
+  { key: "origin", icon: "gem", label: "起因", hint: "这条主线因何而起、最初的引子" },
+  { key: "process", icon: "arrowRight", label: "经过", hint: "主线推进的关键过程与转折" },
+  { key: "result", icon: "chart", label: "结果", hint: "主线目前的走向与阶段性结果" },
+];
+
+// 按类型返回要素集合：主线三要素、支线七要素
+function elementsFor(type: string | undefined): ElementMeta[] {
+  return type === "main" ? THREE_ELEMENTS : ELEMENT_META;
+}
+// 只保留当前类型允许的要素 key（主线清掉七要素残留，支线清掉三要素残留）
+function stripElements(
+  se: Record<string, string | null | undefined>,
+  type: string,
+): Record<string, string | null> {
+  const allowed = new Set(elementsFor(type).map((e) => e.key));
+  const out: Record<string, string | null> = {};
+  for (const k of Object.keys(se)) {
+    if (allowed.has(k as ElementKey)) out[k] = se[k] ?? "";
+  }
+  return out;
+}
 
 export function StorylineWorkbench({
   projectId,
@@ -202,7 +239,21 @@ export function StorylineWorkbench({
   const timelineEvents = events
     .filter((e) => e.kind !== "CLUE")
     .sort((a, b) => a.position - b.position);
-  const clues = events.filter((e) => e.kind === "CLUE");
+  const ownClues = events.filter((e) => e.kind === "CLUE");
+  // 主线线索集最深最大：自身 CLUE ∪ 所有子支线的 CLUE，按来源标注
+  const aggregatedClues: { clue: (typeof ownClues)[number]; source: string | null }[] =
+    selected && selected.type === "main"
+      ? [
+          ...ownClues.map((c) => ({ clue: c, source: null as string | null })),
+          ...list
+            .filter((s) => s.parentId === selected.id)
+            .flatMap((s) =>
+              (s.events || [])
+                .filter((e) => e.kind === "CLUE")
+                .map((e) => ({ clue: e, source: s.title })),
+            ),
+        ]
+      : ownClues.map((c) => ({ clue: c, source: null as string | null }));
 
   const updateField = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -281,19 +332,28 @@ export function StorylineWorkbench({
   const startEdit = (s: StorylineData) => {
     setEditing(true);
     const se = s.sevenElements && typeof s.sevenElements === "object" ? s.sevenElements : {};
+    const isMain = s.type === "main";
     setForm({
       title: s.title,
       description: s.description,
       status: s.status,
       type: s.type,
       parentId: s.parentId ?? "",
-      desire: se.desire || "",
-      obstacle: se.obstacle || "",
-      action: se.action || "",
-      result: se.result || "",
-      twist: se.twist || "",
-      turn: se.turn || "",
-      ending: se.ending || "",
+      ...(isMain
+        ? {
+            origin: (se as Record<string, string>).origin || "",
+            process: (se as Record<string, string>).process || "",
+            result: (se as Record<string, string>).result || "",
+          }
+        : {
+            desire: (se as Record<string, string>).desire || "",
+            obstacle: (se as Record<string, string>).obstacle || "",
+            action: (se as Record<string, string>).action || "",
+            result: (se as Record<string, string>).result || "",
+            twist: (se as Record<string, string>).twist || "",
+            turn: (se as Record<string, string>).turn || "",
+            ending: (se as Record<string, string>).ending || "",
+          }),
     });
   };
 
@@ -301,21 +361,29 @@ export function StorylineWorkbench({
     if (!selected) return;
     setSaving(true);
     try {
+      const isMain = form.type === "main";
+      const sevenElements = isMain
+        ? {
+            origin: form.origin || "",
+            process: form.process || "",
+            result: form.result || "",
+          }
+        : {
+            desire: form.desire || "",
+            obstacle: form.obstacle || "",
+            action: form.action || "",
+            result: form.result || "",
+            twist: form.twist || "",
+            turn: form.turn || "",
+            ending: form.ending ? form.ending : null,
+          };
       const payload = {
         title: form.title,
         description: form.description,
         status: form.status,
         type: form.type,
-        parentId: form.type === "main" ? null : form.parentId || null,
-        sevenElements: {
-          desire: form.desire || "",
-          obstacle: form.obstacle || "",
-          action: form.action || "",
-          result: form.result || "",
-          twist: form.twist || "",
-          turn: form.turn || "",
-          ending: form.ending ? form.ending : null,
-        },
+        parentId: isMain ? null : form.parentId || null,
+        sevenElements,
       };
       const res = await fetch(`/api/storylines/${selected.id}`, {
         method: "PUT",
@@ -420,6 +488,8 @@ export function StorylineWorkbench({
         ? (selected.sevenElements as Record<string, string | null>)
         : {};
     const next = { ...cur, [key]: val };
+    // 按类型过滤：主线只留三要素、支线只留七要素，清掉历史残留字段
+    const cleaned = stripElements(next, selected.type);
     try {
       const res = await fetch(`/api/storylines/${selected.id}`, {
         method: "PUT",
@@ -430,7 +500,7 @@ export function StorylineWorkbench({
           status: selected.status,
           type: selected.type,
           parentId: selected.type === "main" ? null : (selected.parentId ?? null),
-          sevenElements: next,
+          sevenElements: cleaned,
         }),
       });
       if (!res.ok) {
@@ -816,9 +886,9 @@ export function StorylineWorkbench({
                   <div className="flex gap-1">
                     {(["elements", "timeline", "clues"] as const).map((t) => {
                       const labels: Record<"elements" | "timeline" | "clues", string> = {
-                        elements: "总纲·七要素",
+                        elements: selected.type === "main" ? "总纲·三要素" : "总纲·七要素",
                         timeline: "章节时间轴",
-                        clues: `线索集 (${clues.length})`,
+                        clues: `线索集 (${aggregatedClues.length})`,
                       };
                       const active = activeTab === t;
                       return (
@@ -840,14 +910,21 @@ export function StorylineWorkbench({
 
                 {activeTab === "elements" && (
                   <div>
-                    <div className="mb-2 text-xs font-medium text-[var(--nv-text-tertiary)]">
-                      七要素 · 总纲（结局单独标记，不计入填充度）
+                    <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--nv-text-tertiary)]">
+                      <span>{selected.type === "main" ? "三要素 · 主线总纲" : "七要素 · 总纲"}</span>
+                      {selected.status === "completed" && (
+                        <span className="rounded-full border border-[var(--nv-success)] px-2 py-0.5 text-[11px] font-medium text-[var(--nv-success)]">
+                          已完结 · 要素已自动补齐 ✓
+                        </span>
+                      )}
                     </div>
                     <p className="mb-2 text-[11px] text-[var(--nv-text-tertiary)]">
-                      七要素是这条线的骨架。点任意卡片即可直接改，也可以先写几章、让 AI 在写作后自动回填进展。
+                      {selected.type === "main"
+                        ? "主线线索密、事件多，用起因 / 经过 / 结果三要素提纲挈领。点任意卡片即可直接改。"
+                        : "七要素是这条线的骨架。点任意卡片即可直接改，也可以先写几章、让 AI 在写作后自动回填进展。"}
                     </p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {ELEMENT_META.map(({ key, icon, label, hint }) => {
+                      {elementsFor(selected.type).map(({ key, icon, label, hint }) => {
                         const se =
                           selected.sevenElements && typeof selected.sevenElements === "object"
                             ? selected.sevenElements
@@ -929,22 +1006,46 @@ export function StorylineWorkbench({
                 {activeTab === "timeline" && (
                   <div>
                     <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
-                      <Icon name="history" size={14} /> 章节进展时间轴（写作自动记录关键情节节点）
+                      <Icon name="history" size={14} />
+                      {selected.type === "main"
+                        ? "主线时间轴（简略 · 可滚动浏览全貌）"
+                        : "章节进展时间轴（写作自动记录关键情节节点）"}
                     </div>
                     {timelineEvents.length > 0 ? (
-                      <ol className="relative space-y-3 border-l border-[var(--nv-border-2)] pl-4">
-                        {timelineEvents.map((b) => (
-                          <li key={b.id} className="relative">
-                            <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[var(--nv-accent)] ring-2 ring-[var(--nv-surface-1)]" />
-                            <div className="text-xs text-[var(--nv-text-tertiary)]">
-                              {b.title || (b.kind === "MILESTONE" ? "里程碑" : "事件")}
-                            </div>
-                            <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--nv-text-secondary)]">
-                              {b.content}
-                            </div>
-                          </li>
-                        ))}
-                      </ol>
+                      selected.type === "main" ? (
+                        // 主线：紧凑竖向、可滚动，只列发生了什么
+                        <ol className="max-h-[320px] space-y-1.5 overflow-y-auto pr-1">
+                          {timelineEvents.map((b) => (
+                            <li
+                              key={b.id}
+                              className="flex gap-2 border-l-2 border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 pl-2.5 text-xs leading-relaxed text-[var(--nv-text-secondary)]"
+                            >
+                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--nv-accent)]" />
+                              <span className="line-clamp-2">
+                                <span className="font-medium text-[var(--nv-text-primary)]">
+                                  {b.title || (b.kind === "MILESTONE" ? "里程碑" : "事件")}
+                                </span>
+                                {b.content ? `：${(b.content || "").slice(0, 60)}` : ""}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        // 支线：详细时间轴，完整呈现
+                        <ol className="relative space-y-3 border-l border-[var(--nv-border-2)] pl-4">
+                          {timelineEvents.map((b) => (
+                            <li key={b.id} className="relative">
+                              <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[var(--nv-accent)] ring-2 ring-[var(--nv-surface-1)]" />
+                              <div className="text-xs text-[var(--nv-text-tertiary)]">
+                                {b.title || (b.kind === "MILESTONE" ? "里程碑" : "事件")}
+                              </div>
+                              <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--nv-text-secondary)]">
+                                {b.content}
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      )
                     ) : (
                       <EmptyState
                         icon="history"
@@ -966,15 +1067,20 @@ export function StorylineWorkbench({
                   <div>
                     <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
                       <Icon name="tag" size={14} />
-                      线索集 · 你埋下的坑（伏笔/物证/人物备注）
-                      <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px]">{clues.length}</span>
+                      {selected.type === "main" ? "主线线索集 · 汇聚本线与所有支线" : "线索集 · 你埋下的坑（伏笔/物证/人物备注）"}
+                      <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px]">{aggregatedClues.length}</span>
                     </div>
-                    {clues.length === 0 && (
+                    {aggregatedClues.length === 0 && (
                       <p className="mb-2 text-xs text-[var(--nv-text-tertiary)]">还没埋线索。伏笔、物证、人物备注都可以记在这里——写的时候随时回看，别漏掉自己挖的坑。</p>
                     )}
                     <div className="space-y-2">
-                      {clues.map((c) => (
-                        <ClueRow key={c.id} clue={c} onPatch={handleCluePatch} onDelete={handleClueDelete} />
+                      {aggregatedClues.map(({ clue, source }) => (
+                        <div key={clue.id}>
+                          {source && (
+                            <div className="mb-1 text-[10px] text-[var(--nv-text-tertiary)]">来自支线：{source}</div>
+                          )}
+                          <ClueRow clue={clue} onPatch={handleCluePatch} onDelete={handleClueDelete} />
+                        </div>
                       ))}
                       {/* 新增线索 */}
                       <div className="rounded-xl border border-dashed border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3">
