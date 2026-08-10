@@ -33,14 +33,15 @@ const ELEMENT_META: {
   key: "desire" | "obstacle" | "action" | "result" | "twist" | "turn" | "ending";
   icon: IconName;
   label: string;
+  hint: string;
 }[] = [
-  { key: "desire", icon: "gem", label: "欲望" },
-  { key: "obstacle", icon: "shield", label: "阻碍" },
-  { key: "action", icon: "sword", label: "行动" },
-  { key: "result", icon: "chart", label: "结果" },
-  { key: "twist", icon: "sparkles", label: "意外" },
-  { key: "turn", icon: "arrowRight", label: "转折" },
-  { key: "ending", icon: "check", label: "结局" },
+  { key: "desire", icon: "gem", label: "欲望", hint: "这条线里角色最想要什么" },
+  { key: "obstacle", icon: "shield", label: "阻碍", hint: "挡在欲望前面的力量或人" },
+  { key: "action", icon: "sword", label: "行动", hint: "角色为越过阻碍做了什么" },
+  { key: "result", icon: "chart", label: "结果", hint: "行动带来的直接后果" },
+  { key: "twist", icon: "sparkles", label: "意外", hint: "打乱预期的反转事件" },
+  { key: "turn", icon: "arrowRight", label: "转折", hint: "角色立场或局势的关键变化" },
+  { key: "ending", icon: "check", label: "结局", hint: "收束时的最终状态（写时再定，不预填）" },
 ];
 
 export function StorylineWorkbench({
@@ -51,6 +52,7 @@ export function StorylineWorkbench({
   onClose,
   onRefresh,
   onTaskSettled,
+  onWriteChapter,
 }: {
   projectId: string;
   initialId?: string | null;
@@ -59,6 +61,7 @@ export function StorylineWorkbench({
   onClose: () => void;
   onRefresh: () => void;
   onTaskSettled?: () => void;
+  onWriteChapter?: (storylineId?: string) => void;
 }) {
   const [list, setList] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +71,9 @@ export function StorylineWorkbench({
   const [form, setForm] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [cluesExpanded, setCluesExpanded] = useState(true);
+  const [activeTab, setActiveTab] = useState<"elements" | "timeline" | "clues">("elements");
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
 
   // AI 生成中间态
   const [genSuggestions, setGenSuggestions] = useState<StorylineSuggestion[] | null>(initialSuggestions ?? null);
@@ -116,9 +121,9 @@ export function StorylineWorkbench({
           if (!r.ok) {
             if (pollRef.current) clearInterval(pollRef.current);
             pollRef.current = null;
-            setGenTask({ taskId, status: "failed", progress: 0, error: t.error ?? "轮询失败" });
+            setGenTask({ taskId, status: "failed", progress: 0, error: t.error ?? "获取生成结果失败" });
             setGenerating(false);
-            toastError(`生成任务失败：${t.error ?? "轮询失败"}`);
+            toastError(`生成任务失败：${t.error ?? "获取生成结果失败"}`);
             return;
           }
           setGenTask({ taskId, status: t.status, progress: t.progress, error: t.error });
@@ -407,6 +412,50 @@ export function StorylineWorkbench({
     }
   };
 
+  // 七要素 inline 单字段 PATCH：查看态点卡片即改，无需进入 11 字段大表单
+  const handleElementPatch = async (key: string, val: string | null) => {
+    if (!selected) return;
+    const cur =
+      selected.sevenElements && typeof selected.sevenElements === "object"
+        ? (selected.sevenElements as Record<string, string | null>)
+        : {};
+    const next = { ...cur, [key]: val };
+    try {
+      const res = await fetch(`/api/storylines/${selected.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: selected.title,
+          description: selected.description ?? "",
+          status: selected.status,
+          type: selected.type,
+          parentId: selected.type === "main" ? null : (selected.parentId ?? null),
+          sevenElements: next,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
+        toastError("保存失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        return;
+      }
+      void load();
+      onRefresh();
+    } catch (err) {
+      toastError("保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试"));
+    }
+  };
+
+  // 七要素卡片失焦 / ⌘Enter 提交当前编辑
+  const commitElement = () => {
+    const k = editingKey;
+    if (!k || k === "ending") {
+      setEditingKey(null);
+      return;
+    }
+    setEditingKey(null);
+    handleElementPatch(k, draft);
+  };
+
   // —— AI 中间态草稿编辑 ——
   const updateSuggestion = (idx: number, patch: Partial<StorylineSuggestion>) => {
     setGenSuggestions((prev) =>
@@ -443,7 +492,7 @@ export function StorylineWorkbench({
           <button
             onClick={handleGenerate}
             disabled={generating || !!genSuggestions}
-            className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-creative)] px-3 py-1.5 text-xs font-medium text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-creative-fill)] px-3 py-1.5 text-xs font-medium text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {generating ? (
               <>
@@ -471,7 +520,7 @@ export function StorylineWorkbench({
       {genSuggestions ? (
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--nv-creative)]">
-            <Icon name="bot" size={16} /> AI 生成结果 · 中间编辑态（可修改后再落库）
+            <Icon name="bot" size={16} /> AI 生成草稿（可改，确认后保存）
           </div>
           <DialogField label="对下一次生成的补充要求（可选，本次不发送）">
             <DialogInput value={genExtra} onChange={setGenExtra} placeholder="例如：增加一条感情支线" />
@@ -508,7 +557,7 @@ export function StorylineWorkbench({
                       // IMP-018：AI 中间态草稿的「结局」不可编辑——落库时被强制 null 静默丢弃，故改为只读提示
                       <DialogField key={key} label={label}>
                         <div className="rounded-lg border border-dashed border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-3 py-2 text-xs leading-relaxed text-[var(--nv-text-tertiary)]">
-                          结局不可在此填写，落库后可通过「标记收束」设定
+                          结局先不填——写完这章、确定走向后再「标记收束」
                         </div>
                       </DialogField>
                     ) : (
@@ -676,17 +725,8 @@ export function StorylineWorkbench({
                     </select>
                   </DialogField>
                 )}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {ELEMENT_META.map(({ key, label }) => (
-                    <DialogField key={key} label={label}>
-                      <DialogInput
-                        rows={2}
-                        value={form[key] || ""}
-                        onChange={(v) => updateField(key, v)}
-                      />
-                    </DialogField>
-                  ))}
-                </div>
+              {/* 七要素改走查看态 inline 编辑，编辑表单只保留元数据字段 */}
+
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setEditing(false)}>
                     取消
@@ -759,85 +799,180 @@ export function StorylineWorkbench({
                     >
                       <Icon name="trash" size={14} />
                     </button>
+                    {onWriteChapter && (
+                      <button
+                        onClick={() => onWriteChapter(selected.id)}
+                        className="flex items-center gap-1 rounded-lg border border-[var(--nv-primary)]/40 px-2.5 py-1.5 text-xs text-[var(--nv-primary)] transition-colors hover:bg-[var(--nv-primary-soft)]"
+                        title="据此续写一章"
+                      >
+                        <Icon name="pencil" size={14} /> 据此续写
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* 七要素网格（总纲） */}
-                <div>
-                  <div className="mb-2 text-xs font-medium text-[var(--nv-text-tertiary)]">
-                    七要素 · 总纲（结局单独标记，不计入填充度）
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {ELEMENT_META.map(({ key, icon, label }) => {
-                      const se = selected.sevenElements || {};
-                      const val = (se as Record<string, string | null | undefined>)[key];
+                {/* sticky 子标签导航：把三块变可切换视图，核心七要素常驻为默认标签，不再被埋在底部 */}
+                <div className="sticky top-0 z-10 -mx-5 mb-3 border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-5 py-2 backdrop-blur-md">
+                  <div className="flex gap-1">
+                    {(["elements", "timeline", "clues"] as const).map((t) => {
+                      const labels: Record<"elements" | "timeline" | "clues", string> = {
+                        elements: "总纲·七要素",
+                        timeline: "章节时间轴",
+                        clues: `线索集 (${clues.length})`,
+                      };
+                      const active = activeTab === t;
                       return (
-                        <div
-                          key={key}
-                          className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3"
+                        <button
+                          key={t}
+                          onClick={() => setActiveTab(t)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            active
+                              ? "bg-[var(--nv-primary)] text-white"
+                              : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-1)]"
+                          }`}
                         >
-                          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-secondary)]">
-                            <Icon name={icon} size={14} /> {label}
-                          </div>
-                          <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--nv-text-primary)]">
-                            {val ? (
-                              val
-                            ) : key === "ending" ? (
-                              <span className="text-[var(--nv-text-tertiary)]">待收束</span>
-                            ) : (
-                              <span className="text-[var(--nv-text-tertiary)]">—</span>
-                            )}
-                          </div>
-                        </div>
+                          {labels[t]}
+                        </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* 章节进展时间轴（自动记录大事件） */}
-                <div>
-                  <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
-                    <Icon name="history" size={14} /> 章节进展时间轴（写作自动记录关键情节节点）
+                {activeTab === "elements" && (
+                  <div>
+                    <div className="mb-2 text-xs font-medium text-[var(--nv-text-tertiary)]">
+                      七要素 · 总纲（结局单独标记，不计入填充度）
+                    </div>
+                    <p className="mb-2 text-[11px] text-[var(--nv-text-tertiary)]">
+                      七要素是这条线的骨架。点任意卡片即可直接改，也可以先写几章、让 AI 在写作后自动回填进展。
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {ELEMENT_META.map(({ key, icon, label, hint }) => {
+                        const se =
+                          selected.sevenElements && typeof selected.sevenElements === "object"
+                            ? selected.sevenElements
+                            : {};
+                        const val = (se as Record<string, string | null | undefined>)[key] || "";
+                        const isEnding = key === "ending";
+                        const isEditing = editingKey === key;
+                        return (
+                          <div
+                            key={key}
+                            className={`rounded-xl border bg-[var(--nv-surface-1)] p-3 ${
+                              isEditing ? "border-[var(--nv-primary)]" : "border-[var(--nv-border-2)]"
+                            }`}
+                          >
+                            <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-secondary)]">
+                              <Icon name={icon} size={14} /> {label}
+                            </div>
+                            {!isEnding && !isEditing && (
+                              <p className="mb-1 text-[11px] text-[var(--nv-text-tertiary)]">{hint}</p>
+                            )}
+                            {isEnding ? (
+                              <div className="flex items-center gap-2">
+                                {val ? (
+                                  <span className="text-sm text-[var(--nv-success)]">已收束 ✓</span>
+                                ) : (
+                                  <span className="text-sm text-[var(--nv-text-tertiary)]">待收束</span>
+                                )}
+                                <button
+                                  onClick={() => handleElementPatch("ending", val ? null : "已收束")}
+                                  className="ml-auto rounded-lg border border-[var(--nv-border-2)] px-2.5 py-1 text-xs text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-success)]/50 hover:text-[var(--nv-success)]"
+                                >
+                                  {val ? "取消收束" : "标记收束"}
+                                </button>
+                              </div>
+                            ) : isEditing ? (
+                              <textarea
+                                autoFocus
+                                value={draft}
+                                onChange={(e) => setDraft(e.target.value)}
+                                onBlur={commitElement}
+                                onKeyDown={(e) => {
+                                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                                    e.preventDefault();
+                                    commitElement();
+                                  } else if (e.key === "Escape") {
+                                    setEditingKey(null);
+                                  }
+                                }}
+                                rows={3}
+                                className="w-full resize-none rounded-md border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-2 text-sm leading-relaxed text-[var(--nv-text-primary)] outline-none focus:border-[var(--nv-primary)]"
+                              />
+                            ) : (
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
+                                  setEditingKey(key);
+                                  setDraft(val);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    setEditingKey(key);
+                                    setDraft(val);
+                                  }
+                                }}
+                                className="min-h-[1.5rem] cursor-text whitespace-pre-wrap rounded-md text-sm leading-relaxed text-[var(--nv-text-primary)]"
+                              >
+                                {val || <span className="text-[var(--nv-text-tertiary)]">点击填写</span>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {timelineEvents.length > 0 ? (
-                    <ol className="relative space-y-3 border-l border-[var(--nv-border-2)] pl-4">
-                      {timelineEvents.map((b) => (
-                        <li key={b.id} className="relative">
-                          <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[var(--nv-accent)] ring-2 ring-[var(--nv-surface-1)]" />
-                          <div className="text-xs text-[var(--nv-text-tertiary)]">
-                            {b.title || (b.kind === "MILESTONE" ? "里程碑" : "事件")}
-                          </div>
-                          <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--nv-text-secondary)]">
-                            {b.content}
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <EmptyState
-                      icon="history"
-                      title="还没有章节进展"
-                      description="写作时会自动回写关键情节节点"
-                    />
-                  )}
-                </div>
+                )}
 
-                {/* 线索集（CLUE） */}
-                <div>
-                  <button
-                    onClick={() => setCluesExpanded((v) => !v)}
-                    className="mb-2 flex w-full items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-secondary)]"
-                  >
-                    <Icon name="tag" size={14} />
-                    线索集（伏笔、物证、人物备注等）
-                    <Icon name={cluesExpanded ? "chevronDown" : "chevronRight"} size={12} className="ml-auto" />
-                    <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px]">{clues.length}</span>
-                  </button>
-                  {cluesExpanded && (
+                {activeTab === "timeline" && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
+                      <Icon name="history" size={14} /> 章节进展时间轴（写作自动记录关键情节节点）
+                    </div>
+                    {timelineEvents.length > 0 ? (
+                      <ol className="relative space-y-3 border-l border-[var(--nv-border-2)] pl-4">
+                        {timelineEvents.map((b) => (
+                          <li key={b.id} className="relative">
+                            <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[var(--nv-accent)] ring-2 ring-[var(--nv-surface-1)]" />
+                            <div className="text-xs text-[var(--nv-text-tertiary)]">
+                              {b.title || (b.kind === "MILESTONE" ? "里程碑" : "事件")}
+                            </div>
+                            <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--nv-text-secondary)]">
+                              {b.content}
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <EmptyState
+                        icon="history"
+                        title="还没写这一线的章节"
+                        description="时间轴会在你写作时自动记录关键情节节点——先去写一章，回来就能看到它长出来。"
+                        action={
+                          onWriteChapter ? (
+                            <button onClick={() => onWriteChapter()} className="btn-ghost text-xs">
+                              去写一章
+                            </button>
+                          ) : undefined
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "clues" && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
+                      <Icon name="tag" size={14} />
+                      线索集 · 你埋下的坑（伏笔/物证/人物备注）
+                      <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px]">{clues.length}</span>
+                    </div>
+                    {clues.length === 0 && (
+                      <p className="mb-2 text-xs text-[var(--nv-text-tertiary)]">还没埋线索。伏笔、物证、人物备注都可以记在这里——写的时候随时回看，别漏掉自己挖的坑。</p>
+                    )}
                     <div className="space-y-2">
-                      {clues.length === 0 && (
-                        <p className="text-xs text-[var(--nv-text-tertiary)]">暂无线索，可在下方添加。</p>
-                      )}
                       {clues.map((c) => (
                         <ClueRow key={c.id} clue={c} onPatch={handleCluePatch} onDelete={handleClueDelete} />
                       ))}
@@ -864,8 +999,8 @@ export function StorylineWorkbench({
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -888,9 +1023,19 @@ function LineNav({
 }) {
   const p = computeStorylineProgress(s);
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      aria-label={`${s.title}${selected ? "，已选中" : ""}`}
       onClick={onSelect}
-      className={`group w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={`group w-full cursor-pointer rounded-lg border px-2.5 py-2 text-left transition-colors ${
         selected
           ? "border-[var(--nv-accent)]/50 bg-[var(--nv-accent-soft)]"
           : "border-transparent hover:bg-[var(--nv-surface-2)]"
@@ -907,8 +1052,8 @@ function LineNav({
             selected
               ? "font-medium text-[var(--nv-accent)]"
               : s.type === "main"
-                ? "font-medium text-[var(--nv-text-primary)]"
-                : "text-[var(--nv-text-primary)]"
+                ? "font-semibold text-[var(--nv-text-primary)]"
+                : "font-normal text-[var(--nv-text-secondary)]"
           }`}
         >
           {s.title}
@@ -944,7 +1089,7 @@ function LineNav({
           }}
         />
       </div>
-    </button>
+    </div>
   );
 }
 

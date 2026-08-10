@@ -40,7 +40,7 @@ export interface StorylineData {
   events: StorylineEventData[];
 }
 
-export function StorylineList({ projectId, onRefresh }: { projectId: string; onRefresh: () => void }) {
+export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projectId: string; onRefresh: () => void; onWriteChapter?: (storylineId?: string) => void }) {
   const [storylines, setStorylines] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="flex items-center gap-1 rounded bg-[var(--nv-creative)] px-2 py-1 text-[10px] text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1 rounded bg-[var(--nv-creative-fill)] px-2 py-1 text-[10px] text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
             title="AI 自动生成主线/支线（生成后可在工作台编辑再落库）"
           >
             {generating ? (
@@ -196,7 +196,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
                 </div>
                 <div className="px-2 pb-1.5">
                   <div className="flex items-center justify-between text-[9px] text-[var(--nv-text-tertiary)]">
-                    <span>主线进度</span>
+                    <span>故事线进度</span>
                     <span>{p.overallPercent}%</span>
                   </div>
                   <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
@@ -261,6 +261,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
             void load();
             onRefresh();
           }}
+          onWriteChapter={onWriteChapter}
         />
       )}
     </div>

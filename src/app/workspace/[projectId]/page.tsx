@@ -563,6 +563,14 @@ export default function WorkspacePage() {
   const handleRefine = async () => { if (!selectedNode || !project) return; setGenStep("confirming"); setPreGenMode("refine"); setPreGenOpen(true); };
   const handleContinue = async () => { if (!selectedNode || !project) return; setGenStep("confirming"); setPreGenMode("continue"); setPreGenOpen(true); };
 
+  // MaxLoop R2 #34：故事线工作台「据此续写 / 去写一章」→ 复用既有写作流（PreGen 确认）
+  // 优先已选中章节节点；否则仅打开写作入口，storylineId 作 UX 聚焦提示（不改服务端）
+  const writeFromStorylineId = useRef<string | null>(null);
+  const handleWriteFromStoryline = (storylineId?: string) => {
+    writeFromStorylineId.current = storylineId ?? null;
+    setGenStep("confirming"); setPreGenMode("write"); setPreGenOpen(true);
+  };
+
   // 本地蒸馏累计数据（在 SSE 流中逐步累积）
   const distillAccum = useRef<{
     entityCount: number; stateChangeCount: number; foreshadowCount: number;
@@ -1042,7 +1050,7 @@ export default function WorkspacePage() {
           selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
           onSelectAll={selectAllChapters} onClearSelection={clearSelection}
           batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onBatchConfirm={handleBatchConfirm} batchConfirming={batchConfirming} onDeleteNode={deleteNode} deletingNodeId={deletingId}
-          onLoadSample={loadSample} />
+          onLoadSample={loadSample} onWriteChapter={handleWriteFromStoryline} />
         </ErrorBoundary>
         </div>
 

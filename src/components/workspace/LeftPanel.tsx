@@ -17,7 +17,7 @@ export function LeftPanel({
   viewMode, onSetViewMode, batchMode, onToggleBatchMode,
   selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
   batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId, onLoadSample,
-  onBatchConfirm, batchConfirming,
+  onBatchConfirm, batchConfirming, onWriteChapter,
 }: {
   activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules") => void;
@@ -32,6 +32,7 @@ export function LeftPanel({
   onDeleteNode?: (id: string) => void;
   deletingNodeId?: string | null;
   onLoadSample?: () => void;
+  onWriteChapter?: (storylineId?: string) => void;
 }) {
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
@@ -44,7 +45,7 @@ export function LeftPanel({
     { key: "outline", label: "大纲" },
     { key: "characters", label: `角色 (${project.characters?.length || 0})` },
     { key: "world", label: `世界 (${project.lorebookEntries?.length || 0})` },
-    { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
+    { key: "storylines", label: `故事线（${project.storylines?.length || 0}）` },
   ] as const;
   const moreTabs = [
     { key: "rules", label: "规则" },
@@ -122,7 +123,7 @@ export function LeftPanel({
           </>
         )}
         {activeTab === "storylines" && (
-          <StorylineList projectId={project.id} onRefresh={loadProject} />
+          <StorylineList projectId={project.id} onRefresh={loadProject} onWriteChapter={onWriteChapter} />
         )}
 
         {activeTab === "characters" && (

@@ -103,8 +103,9 @@
   --nv-warning-soft: oklch(0.74 0.16 85 / 0.14);
   --nv-danger:       oklch(0.62 0.22 18);        /* 玫瑰 —— 删除/危险 */
   --nv-danger-soft:  oklch(0.62 0.22 18 / 0.14);
-  --nv-creative:     oklch(0.62 0.21 295);       /* 紫罗兰 —— AI/魔法 */
+  --nv-creative:     oklch(0.50 0.18 295);       /* 紫罗兰 —— AI/魔法（加深以保浅色文字对比 ≥4.5:1） */
   --nv-creative-soft:oklch(0.62 0.21 295 / 0.14);
+  --nv-creative-fill:#4A2E8C;                    /* R2-P1-1：更深的紫——AI 按钮填充，浅字 #F0EEE8 对比度≈7.5:1(≥4.5 AA) */
   --nv-info:         oklch(0.66 0.15 230);       /* 青 —— 提示/信息 */
   --nv-info-soft:    oklch(0.66 0.15 230 / 0.14);
   --nv-accent:       oklch(0.78 0.14 95);        /* 金色 —— 强调/高亮 */
@@ -277,8 +278,9 @@
   --nv-warning-soft: oklch(0.72 0.16 85 / 0.14);
   --nv-danger:       oklch(0.55 0.22 18);
   --nv-danger-soft:  oklch(0.55 0.22 18 / 0.12);
-  --nv-creative:     oklch(0.55 0.21 295);
+  --nv-creative:     oklch(0.50 0.18 295);
   --nv-creative-soft:oklch(0.55 0.21 295 / 0.12);
+  --nv-creative-fill:#4A2E8C;                    /* R2-P1-1：更深的紫——AI 按钮填充（深色主题） */
   --nv-info:         oklch(0.55 0.15 230);
   --nv-info-soft:    oklch(0.55 0.15 230 / 0.12);
   --nv-accent:       oklch(0.68 0.14 95);
@@ -374,7 +376,7 @@
   border-color: rgba(15, 18, 30, 0.14);
   color: var(--nv-text-primary);
 }
-.light .input-glass::placeholder { color: var(--nv-text-muted); }
+.light .input-glass::placeholder { color: var(--nv-text-tertiary); }
 .light .input-glass:hover { border-color: rgba(15, 18, 30, 0.22); background: #FFFFFF; }
 .light .input-glass:focus {
   border-color: oklch(0.55 0.17 270 / 0.45);
@@ -1200,6 +1202,7 @@ html.azure {
   --nv-danger-soft:  oklch(0.62 0.20 20 / 0.14);
   --nv-creative:     oklch(0.64 0.15 175);
   --nv-creative-soft:oklch(0.64 0.15 175 / 0.14);
+  --nv-creative-fill:#1F6F60;                    /* R2-P1-1：更深的青——AI 按钮填充（青色主题） */
   --nv-info:         oklch(0.66 0.13 215);
   --nv-info-soft:    oklch(0.66 0.13 215 / 0.14);
   --nv-accent:       oklch(0.80 0.12 160);

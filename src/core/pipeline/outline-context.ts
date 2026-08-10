@@ -56,9 +56,29 @@ export async function loadOutlineData(
       orderBy: { order: "asc" },
     }),
   ]);
+  // N10：单独取各线的事件(CLUE/MILESTONE)再挂回，供 formatStorylines 注入写作上下文。
+  // 不直接在 storyline.findMany 用 include —— Prisma 生成 client 在 include 类型推断上
+  // 会把 storyline 误判为 StoryNode，导致 events 报错；批量查后合并更稳。
+  const storylineIds = (storylines as any[]).map((s) => s.id);
+  const storylineEvents = storylineIds.length
+    ? await prisma.storylineEvent.findMany({
+        where: { storylineId: { in: storylineIds } },
+        orderBy: { position: "asc" },
+      })
+    : [];
+  const eventsByLine = new Map<string, any[]>();
+  for (const e of storylineEvents) {
+    const arr = eventsByLine.get(e.storylineId) ?? [];
+    arr.push(e);
+    eventsByLine.set(e.storylineId, arr);
+  }
+  const storylinesWithEvents = (storylines as any[]).map((s) => ({
+    ...s,
+    events: eventsByLine.get(s.id) ?? [],
+  }));
   return {
     project: project as unknown as Project, node, allNodes: allNodes as any[], characters: characters as any[],
-    summaries: summaries as any[], storylines: storylines as any[],
+    summaries: summaries as any[], storylines: storylinesWithEvents as any[],
   };
 }
 
@@ -161,10 +181,26 @@ export function formatStorylines(storylines: any[]): string {
       }
       parts.push(prefix);
       if (s.description) parts.push(`说明：${s.description}`);
+      // N10 修复（P0）：七要素实际嵌套在 s.sevenElements（Json 字段），原代码读顶层 s[k]
+      // 永远为 undefined，导致抽卡 + 主写作两条路径 100% 静默丢失七要素与「顺线推进」语义。
+      const se = (s.sevenElements && typeof s.sevenElements === "object") ? s.sevenElements : {};
       const elems = SEVEN_ELEMENTS
-        .map(([k, label]) => (s[k] ? `${label}:${s[k]}` : ""))
+        .map(([k, label]) => (se[k] ? `${label}:${se[k]}` : ""))
         .filter(Boolean);
-      if (elems.length) parts.push(elems.join(" | "));
+      if (elems.length) parts.push("七要素：" + elems.join(" | "));
+      // N10 修复（P0）：把线索集(CLUE)与已发生大事件(MILESTONE)注入写作上下文，
+      // 否则作者辛苦维护的伏笔/进展 AI 一个字也看不到。
+      const evs = Array.isArray(s.events) ? s.events : [];
+      const clues = evs
+        .filter((e: any) => e.kind === "CLUE")
+        .slice(0, 8)
+        .map((e: any) => `线索[${e.tag || "未分类"}] ${e.title}`);
+      if (clues.length) parts.push("线索集：" + clues.join("；"));
+      const milestones = evs
+        .filter((e: any) => e.kind === "MILESTONE")
+        .slice(-5)
+        .map((e: any) => `已发生·${e.title || e.tag || "里程碑"}`);
+      if (milestones.length) parts.push("时间轴：" + milestones.join("；"));
       return parts.join("\n");
     })
     .join("\n\n");
