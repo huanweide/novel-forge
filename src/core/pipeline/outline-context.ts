@@ -169,8 +169,46 @@ export function pickReassignMainId(siblings: any[]): string | null {
   return null;
 }
 
+export interface FormatStorylinesOptions {
+  /** 指定本条线为「核心推进线」，会在 prefix 中强调并附加针对性续写策略 */
+  targetStorylineId?: string;
+  /**  true = 强制按「已完结→扩散」模式提示（用于用户取消完结后继续续写） */
+  diffuseCompleted?: boolean;
+}
+
+/** 加载项目剧情线（默认排除 abandoned，可包含已完结线），并挂载 events */
+export async function loadStorylinesWithEvents(
+  projectId: string,
+  opts: { includeCompleted?: boolean } = {},
+): Promise<any[]> {
+  const where: any = { projectId, status: { not: "abandoned" } };
+  if (!opts.includeCompleted) {
+    // 默认只加载 active + completed（用于续写扩散），废弃线永远排除
+    where.status = { in: ["active", "completed"] };
+  }
+  const storylines = await prisma.storyline.findMany({
+    where,
+    orderBy: { type: "asc" },
+  });
+  const ids = storylines.map((s) => s.id);
+  const events = ids.length
+    ? await prisma.storylineEvent.findMany({
+        where: { storylineId: { in: ids } },
+        orderBy: { position: "asc" },
+      })
+    : [];
+  const byLine = new Map<string, any[]>();
+  for (const e of events) {
+    const arr = byLine.get(e.storylineId) ?? [];
+    arr.push(e);
+    byLine.set(e.storylineId, arr);
+  }
+  return storylines.map((s) => ({ ...s, events: byLine.get(s.id) ?? [] }));
+}
+
 /** 活跃剧情线摘要：每条线的 title + description + 非空七要素；支线标注隶属主线（R2-006） */
-export function formatStorylines(storylines: any[]): string {
+export function formatStorylines(storylines: any[], options: FormatStorylinesOptions = {}): string {
+  const { targetStorylineId, diffuseCompleted } = options;
   if (!storylines || storylines.length === 0) return "";
   // 主线 id -> title 映射，用于支线隶属解析（仅本批注入的 active 线，约束保持）
   const mainTitleById = new Map<string, string>();
@@ -180,15 +218,30 @@ export function formatStorylines(storylines: any[]): string {
   return storylines
     .map((s: any) => {
       const parts: string[] = [];
+      const isTarget = !!(targetStorylineId && s.id === targetStorylineId);
+      const isCompleted = s.status === "completed";
       // 支线标注从属主线：让 AI 感知「支线 X 隶属于主线 Y」（基于 parentId 解析）
       let prefix = `【剧情线：${s.title}】${s.type === "main" ? "（主线）" : "（支线）"}`;
       if (s.type !== "main" && s.parentId && mainTitleById.has(s.parentId)) {
         prefix += `（隶属主线 ${mainTitleById.get(s.parentId)}）`;
       }
+      if (isTarget) prefix += "【核心推进线】";
       // #200：主线续写优先推进时间轴上已规划但尚未充分展开的事件，不得另起孤立剧情
       if (s.type === "main") {
+        if (isTarget && (isCompleted || diffuseCompleted)) {
+          prefix +=
+            "（续写提示：该主线已标记完结，现有结局仅作为阶段性终点。请基于结局继续向外扩散——可连接到其他故事线、打开更大可能性、或揭示结局背后的新危机；禁止简单重复已有结局）";
+        } else if (isTarget) {
+          prefix +=
+            "（续写提示：优先推进时间轴上已规划但尚未充分展开的事件节点，保持因果连续；确需发展新内容时再扩展，严禁另起孤立剧情）";
+        } else {
+          prefix += "（参考线：保持与核心推进线的因果关联，不要喧宾夺主）";
+        }
+      } else if (isTarget && (isCompleted || diffuseCompleted)) {
         prefix +=
-          "（续写提示：优先推进时间轴上已规划但尚未充分展开的事件节点，保持因果连续；确需发展新内容时再扩展，严禁另起孤立剧情）";
+          "（续写提示：该支线已完结。请基于现有结局向外扩散，连接到主线或其他支线，或揭示结局引出的新伏笔；禁止重复已有结局）";
+      } else if (isTarget) {
+        prefix += "（续写提示：按当前进展与线索自然推进，最终与主线收束呼应）";
       }
       parts.push(prefix);
       if (s.description) parts.push(`说明：${s.description}`);

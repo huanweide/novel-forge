@@ -40,7 +40,7 @@ export interface StorylineData {
   events: StorylineEventData[];
 }
 
-export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projectId: string; onRefresh: () => void; onWriteChapter?: (storylineId?: string) => void }) {
+export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projectId: string; onRefresh: () => void; onWriteChapter?: (storylineId?: string, opts?: { diffuseCompleted?: boolean }) => void }) {
   const [storylines, setStorylines] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -118,27 +118,9 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
 
   return (
     <div className="space-y-2 p-1">
-      {/* 工具栏 */}
+      {/* 工具栏：只显示统计，AI 生成入口收敛到每条主线/支线的工作台右上角 */}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] text-[var(--nv-text-tertiary)]">{storylines.length} 条故事线</span>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="flex items-center gap-1 rounded bg-[var(--nv-creative-fill)] px-2 py-1 text-[10px] text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
-            title="AI 自动生成主线/支线（生成后可在工作台编辑再落库）"
-          >
-            {generating ? (
-              <>
-                <Icon name="loader" size={11} className="animate-spin" /> 生成中…
-              </>
-            ) : (
-              <>
-                <Icon name="bot" size={11} /> AI 生成
-              </>
-            )}
-          </button>
-        </div>
       </div>
 
       {loadError && !loading && (
@@ -154,10 +136,10 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
         <EmptyState
           icon="bookmarked"
           title="还没有故事线"
-          description="让 AI 基于你的大纲自动规划主线与支线，填充七要素框架"
+          description="打开任意主线/支线，点击工作台右上角的「AI 生成」基于大纲自动规划。"
           action={
             <button onClick={handleGenerate} disabled={generating} className="btn-ghost text-[11px]">
-              {generating ? "AI 生成中…" : "点击 AI 自动生成"}
+              {generating ? "AI 生成中…" : "AI 自动生成第一条"}
             </button>
           }
         />

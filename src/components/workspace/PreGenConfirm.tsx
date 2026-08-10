@@ -14,11 +14,13 @@ export interface ScheduledCard {
 // 只留「人物（可选）」+ 作者指令 + 确认。onConfirm 签名不变以兼容父组件。
 export function PreGenConfirm({
   projectId, nodeId, authorNote, title, onAuthorNoteChange, onConfirm, onCancel, presetCharacterIds,
+  storylineId,
 }: {
   projectId: string; nodeId?: string; authorNote: string; title?: string;
   presetCharacterIds?: string[];
+  storylineId?: string;
   onAuthorNoteChange: (v: string) => void;
-  onConfirm: (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => void;
+  onConfirm: (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string) => void;
   onCancel: () => void;
 }) {
   const [loading, setLoading] = useState(true);
@@ -99,7 +101,7 @@ export function PreGenConfirm({
     const newChars = inputChars.filter((n) => !knownNames.has(n));
     // 留空则自动调度：默认带全部候选卡
     const confirmedIds = matchedIds.length > 0 ? matchedIds : cards.map((c) => c.id);
-    onConfirm(confirmedIds, {}, newChars, localAuthorNote);
+    onConfirm(confirmedIds, {}, newChars, localAuthorNote, storylineId);
   };
 
   return (

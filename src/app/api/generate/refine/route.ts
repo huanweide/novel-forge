@@ -23,6 +23,8 @@ import {
   extractLLMConfig,
   buildGenerationContext,
   runPostGenerationPipeline,
+  formatStorylines,
+  loadStorylinesWithEvents,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { triggerForeshadowDetect } from "@/core/confirm-guard";
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
     const {
       projectId, nodeId, instruction, targetWords = 500,
       confirmedCardIds, cardNotes, newCharacterRequests, authorNote,
-      selectedText,
+      selectedText, storylineId, diffuseCompleted,
     } = await request.json();
 
     if (!projectId || !nodeId) {
@@ -174,6 +176,19 @@ ${selectedText.trim()}
       loreEntries: data.loreEntries,
     });
     if (refineRecallBlock) writingInstruction += refineRecallBlock;
+
+    // #204：故事线「据此续写」——把主线/支线上下文注入精修/续写指令
+    const storylineCtx = await loadStorylinesWithEvents(projectId);
+    if (storylineCtx.length > 0) {
+      const formatted = formatStorylines(storylineCtx, {
+        targetStorylineId: storylineId,
+        diffuseCompleted: !!diffuseCompleted,
+      });
+      if (formatted) {
+        writingInstruction +=
+          "\n\n【剧情线上下文——本章必须呼应以下故事线，核心推进线为最高优先级】\n" + formatted;
+      }
+    }
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
     // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig / postProcessingRules），直接复用，避免重复 DB 查询

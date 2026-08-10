@@ -85,9 +85,31 @@ describe("formatStorylines（#200 续写非孤立 · 主线三要素）", () => 
     expect(out).not.toContain("七要素：");
   });
 
-  it("主线带续写引导语（优先推进已规划事件、不孤立）", () => {
+  it("无目标线时主线作为参考线，不喧宾夺主", () => {
     const out = formatStorylines([main]);
+    expect(out).toContain("参考线：保持与核心推进线的因果关联，不要喧宾夺主");
+  });
+
+  it("targetStorylineId 命中主线时带推进提示", () => {
+    const out = formatStorylines([main], { targetStorylineId: "m1" });
+    expect(out).toContain("【核心推进线】");
     expect(out).toContain("续写提示：优先推进时间轴上已规划但尚未充分展开的事件节点");
+  });
+
+  it("targetStorylineId 命中已完结主线时触发扩散提示", () => {
+    const completedMain = { ...main, status: "completed" };
+    const out = formatStorylines([completedMain], { targetStorylineId: "m1" });
+    expect(out).toContain("【核心推进线】");
+    expect(out).toContain("现有结局仅作为阶段性终点");
+    expect(out).toContain("向外扩散");
+  });
+
+  it("targetStorylineId 命中已完结支线时触发扩散提示", () => {
+    const completedSide = { ...side, status: "completed" };
+    const out = formatStorylines([main, completedSide], { targetStorylineId: "s1" });
+    expect(out).toContain("【剧情线：盗取龙元】（支线）");
+    expect(out).toContain("【核心推进线】");
+    expect(out).toContain("基于现有结局向外扩散");
   });
 
   it("支线注入七要素并解析隶属主线", () => {

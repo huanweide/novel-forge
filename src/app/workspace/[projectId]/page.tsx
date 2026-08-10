@@ -566,8 +566,10 @@ export default function WorkspacePage() {
   // MaxLoop R2 #34：故事线工作台「据此续写 / 去写一章」→ 复用既有写作流（PreGen 确认）
   // 优先已选中章节节点；否则仅打开写作入口，storylineId 作 UX 聚焦提示（不改服务端）
   const writeFromStorylineId = useRef<string | null>(null);
-  const handleWriteFromStoryline = (storylineId?: string) => {
+  const writeFromStorylineOpts = useRef<{ diffuseCompleted?: boolean }>({});
+  const handleWriteFromStoryline = (storylineId?: string, opts?: { diffuseCompleted?: boolean }) => {
     writeFromStorylineId.current = storylineId ?? null;
+    writeFromStorylineOpts.current = opts ?? {};
     setGenStep("confirming"); setPreGenMode("write"); setPreGenOpen(true);
   };
 
@@ -713,20 +715,20 @@ export default function WorkspacePage() {
     finally { abortRef.current = null; }
   };
 
-  const handleWriteConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
+  const handleWriteConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string, diffuseCompleted?: boolean) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); setStreamContent(""); setReviewResult(null);
-    await streamSSE("/api/generate/write", { projectId: project.id, nodeId: selectedNode.id, authorNote: finalAuthorNote || undefined, targetWordCount, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars });
+    await streamSSE("/api/generate/write", { projectId: project.id, nodeId: selectedNode.id, authorNote: finalAuthorNote || undefined, targetWordCount, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, storylineId, diffuseCompleted: !!diffuseCompleted });
     setIsGenerating(false);
   };
 
-  const handleRefineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
+  const handleRefineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string, diffuseCompleted?: boolean) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); setStreamContent(""); setReviewResult(null);
     // #124：精修的「续写字数」收敛为合理增量（≤1500），避免传入全本 targetWordCount（星辰=30万）导致预算恒超上限、
     // 长章静默失效。仅当章节本身已很长（>上限-增量）时才触发 cap 告警，提示用户「分段精修」。
     const refineTarget = Math.min(targetWordCount, 1500);
-    await streamSSE("/api/generate/refine", { projectId: project.id, nodeId: selectedNode.id, instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情", targetWords: refineTarget, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, selectedText: selectedText || undefined, authorNote: finalAuthorNote || authorNote || undefined });
+    await streamSSE("/api/generate/refine", { projectId: project.id, nodeId: selectedNode.id, instruction: refineInstruction || "续写本章，补充细节和描写，自然推进剧情", targetWords: refineTarget, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, selectedText: selectedText || undefined, authorNote: finalAuthorNote || authorNote || undefined, storylineId, diffuseCompleted: !!diffuseCompleted });
     setIsGenerating(false);
   };
 
@@ -756,10 +758,10 @@ export default function WorkspacePage() {
     }
   };
 
-  const handleContinueConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string) => {
+  const handleContinueConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string, diffuseCompleted?: boolean) => {
     if (!selectedNode || !project) return;
     setPreGenOpen(false); setGenStep("generating"); setContinueLoading(true); setStreamContent(""); setReviewResult(null);
-    await streamSSE("/api/generate/continue", { projectId: project.id, currentNodeId: selectedNode.id, styleTemplateId, authorNote: finalAuthorNote || authorNote || undefined, autoOutline: true, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars }, () => setContextRefreshKey((k) => k + 1));
+    await streamSSE("/api/generate/continue", { projectId: project.id, currentNodeId: selectedNode.id, styleTemplateId, authorNote: finalAuthorNote || authorNote || undefined, autoOutline: true, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, storylineId, diffuseCompleted: !!diffuseCompleted }, () => setContextRefreshKey((k) => k + 1));
     setContinueLoading(false);
   };
 
@@ -1367,9 +1369,10 @@ export default function WorkspacePage() {
       {preGenOpen && (
         <PreGenConfirm projectId={project.id} nodeId={preGenMode === "outline" ? undefined : selectedNode?.id} presetCharacterIds={drawSelectedCharIds}
           authorNote={authorNote}
+          storylineId={writeFromStorylineId.current ?? undefined}
           title={preGenMode === "write" ? "生成前确认——角色调度" : preGenMode === "refine" ? "微调前确认——角色调度" : preGenMode === "continue" ? "续写前确认——角色调度" : "大纲生成前确认——角色调度"}
           onAuthorNoteChange={handleAuthorNoteChange}
-          onConfirm={(cards, notes, newChars, finalAuthorNote) => {
+          onConfirm={(cards, notes, newChars, finalAuthorNote, storylineId) => {
             // R2-004：单章 PreGen 确认后，把用户选定的角色卡 / 新角色请求持久化到 localStorage，
             // 作为「批量生成」(handleBatchGenerate) 角色约束的默认来源。此前全代码库无写入端，
             // 批量章恒为空约束（confirmedCardIds 退回 drawSelectedCharIds、newCharacterRequests 恒为空）。
@@ -1384,10 +1387,11 @@ export default function WorkspacePage() {
                 /* localStorage 不可用（隐私模式等）时静默降级，批量退回 drawSelectedCharIds */
               }
             }
+            const diffuseCompleted = writeFromStorylineOpts.current?.diffuseCompleted ?? false;
             switch (preGenMode) {
-              case "write": handleWriteConfirmed(cards, notes, newChars, finalAuthorNote); break;
-              case "refine": handleRefineConfirmed(cards, notes, newChars, finalAuthorNote); break;
-              case "continue": handleContinueConfirmed(cards, notes, newChars, finalAuthorNote); break;
+              case "write": handleWriteConfirmed(cards, notes, newChars, finalAuthorNote, storylineId, diffuseCompleted); break;
+              case "refine": handleRefineConfirmed(cards, notes, newChars, finalAuthorNote, storylineId, diffuseCompleted); break;
+              case "continue": handleContinueConfirmed(cards, notes, newChars, finalAuthorNote, storylineId, diffuseCompleted); break;
               case "outline": handleOutlineConfirmed(cards, notes, newChars, finalAuthorNote); break;
             }
           }}

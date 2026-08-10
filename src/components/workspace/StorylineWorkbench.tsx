@@ -98,7 +98,7 @@ export function StorylineWorkbench({
   onClose: () => void;
   onRefresh: () => void;
   onTaskSettled?: () => void;
-  onWriteChapter?: (storylineId?: string) => void;
+  onWriteChapter?: (storylineId?: string, opts?: { diffuseCompleted?: boolean }) => void;
 }) {
   const [list, setList] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -871,7 +871,11 @@ export function StorylineWorkbench({
                     </button>
                     {onWriteChapter && (
                       <button
-                        onClick={() => onWriteChapter(selected.id)}
+                        onClick={() =>
+                          onWriteChapter(selected.id, {
+                            diffuseCompleted: selected.status === "completed",
+                          })
+                        }
                         className="flex items-center gap-1 rounded-lg border border-[var(--nv-primary)]/40 px-2.5 py-1.5 text-xs text-[var(--nv-primary)] transition-colors hover:bg-[var(--nv-primary-soft)]"
                         title="据此续写一章"
                       >

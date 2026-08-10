@@ -16,6 +16,9 @@ export {
   buildCharacterList,
   prepareOutlineDirective,
   formatSummaries,
+  formatStorylines,
+  loadStorylinesWithEvents,
+  filterActiveStorylines,
 } from "./outline-context";
-export type { OutlineContextData } from "./outline-context";
+export type { OutlineContextData, FormatStorylinesOptions } from "./outline-context";
 export type { GenerationData, LLMExtract, PostPipelineParams, PostPipelineResult } from "./types";

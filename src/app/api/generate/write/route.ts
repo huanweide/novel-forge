@@ -13,6 +13,8 @@ import {
   extractLLMConfig,
   buildGenerationContext,
   runPostGenerationPipeline,
+  formatStorylines,
+  loadStorylinesWithEvents,
 } from "@/core/pipeline";
 import type { StoryNode } from "@/core/types";
 import { buildRecallBlock } from "@/core/babylore/loop";
@@ -41,6 +43,8 @@ export async function POST(request: Request) {
       confirmedCardIds,
       cardNotes,
       newCharacterRequests,
+      storylineId,
+      diffuseCompleted,
     } = body;
 
     if (!projectId || !nodeId) {
@@ -101,6 +105,20 @@ export async function POST(request: Request) {
     writingInstruction += data.currentNode.outline
       ? `【本节大纲】${data.currentNode.outline}`
       : "根据上下文自然推进剧情，撰写本节正文。";
+
+    // #204：故事线「据此续写」——把主线/支线上下文注入写作指令
+    const storylineCtx = await loadStorylinesWithEvents(projectId);
+    if (storylineCtx.length > 0) {
+      const formatted = formatStorylines(storylineCtx, {
+        targetStorylineId: storylineId,
+        diffuseCompleted: !!diffuseCompleted,
+      });
+      if (formatted) {
+        writingInstruction +=
+          "\n\n【剧情线上下文——本章必须呼应以下故事线，核心推进线为最高优先级】\n" + formatted;
+      }
+    }
+
     writingInstruction +=
       "\n\n【格式铁律】绝不在正文首行或任意位置写「第X章」「第X节」或章节标题。章节标题由系统管理，正文直接切入动作/对话。";
 

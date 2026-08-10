@@ -14,6 +14,8 @@ import {
   prepareAuthorNote,
   buildGenerationContext,
   runPostGenerationPipeline,
+  formatStorylines,
+  loadStorylinesWithEvents,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
   try {
     const {
       projectId, currentNodeId, styleTemplateId, authorNote, autoOutline = true,
-      confirmedCardIds, cardNotes, newCharacterRequests,
+      confirmedCardIds, cardNotes, newCharacterRequests, storylineId, diffuseCompleted,
     } = await request.json();
 
     if (!projectId || !currentNodeId) {
@@ -169,6 +171,19 @@ ${lastParagraphs}
 【本节大纲】${nextOutline || "基于前文剧情自然推进"}
 
 注意：与上文无缝衔接，保持叙事视角一致。`;
+
+    // #204：故事线「据此续写」——把主线/支线上下文注入续写指令
+    const storylineCtx = await loadStorylinesWithEvents(projectId);
+    if (storylineCtx.length > 0) {
+      const formatted = formatStorylines(storylineCtx, {
+        targetStorylineId: storylineId,
+        diffuseCompleted: !!diffuseCompleted,
+      });
+      if (formatted) {
+        writingInstruction +=
+          "\n\n【剧情线上下文——本章必须呼应以下故事线，核心推进线为最高优先级】\n" + formatted;
+      }
+    }
 
     // ── 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──
     const { block: contRecallBlock, items: contRecallItems } = await buildRecallBlock({
