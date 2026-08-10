@@ -186,7 +186,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
               <Button variant="outline" onClick={() => { setShowForm(false); setEditing(null); }} className="btn-ghost h-7 text-xs">取消</Button>
               <Button onClick={handleSave} disabled={saving || !form.name.trim() || !form.content.trim()}
                 className="btn-primary h-7 text-xs disabled:opacity-50">
-                {saving ? "保存中..." : editing ? "保存修改" : "创建规则"}
+                {saving ? "保存中…" : editing ? "保存修改" : "创建规则"}
               </Button>
             </div>
           </div>

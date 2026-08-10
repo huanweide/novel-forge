@@ -14,7 +14,7 @@ const IMPORT_ITEMS: { key: string; label: string; desc: string }[] = [
   { key: "lorebook", label: "世界书词条", desc: "世界观/势力/宝物等词条" },
   { key: "chapters", label: "章节正文", desc: "全部章节（含大纲与正文）" },
   { key: "branches", label: "分支", desc: "故事分支节点" },
-  { key: "storylines", label: "剧情线", desc: "主线/支线及七要素" },
+  { key: "storylines", label: "故事线", desc: "主线/支线及七要素" },
   { key: "style", label: "文风卡", desc: "文风模板与风格卡" },
   { key: "tables", label: "世界表", desc: "结构化表格（宝宝流）" },
   { key: "rules", label: "正则规则", desc: "写作后处理正则" },

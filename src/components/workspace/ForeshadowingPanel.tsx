@@ -287,7 +287,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
     return (
       <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">
         <p>暂无未收尾线索</p>
-        <p className="mt-1 text-[var(--nv-text-tertiary)]">写完章节后 AI 会自动整理未收尾的剧情线</p>
+        <p className="mt-1 text-[var(--nv-text-tertiary)]">写完章节后 AI 会自动整理未收尾的故事线</p>
       </div>
     );
   }

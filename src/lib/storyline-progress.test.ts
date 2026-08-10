@@ -8,7 +8,7 @@ describe("故事线进度量化（v1.8.4 · sevenElements）", () => {
     expect(p.elementPercent).toBe(0);
     expect(p.overallPercent).toBe(0);
     expect(p.hasEnding).toBe(false);
-    expect(p.label).toContain("七要素 0/6");
+    expect(p.label).toContain("要素 0/6");
   });
 
   it("六要素全填：elementPercent=100，结局不计入", () => {

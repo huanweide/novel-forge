@@ -31,7 +31,7 @@ export function computeStorylineProgress(s: any): StorylineProgress {
   const elementPercent = Math.round((filled / elementTotal) * 100);
   const hasEnding = typeof se.ending === "string" && se.ending.trim().length > 0;
   const overallPercent = elementPercent;
-  const label = `七要素 ${filled}/${elementTotal}${hasEnding ? " · 已收束" : ""}`;
+  const label = `要素 ${filled}/${elementTotal}（不含结局）${hasEnding ? " · 已收束" : ""}`;
 
   return {
     elementFilled: filled,

@@ -52,7 +52,7 @@ export function LeftPanel({
   const moreActive = moreTabs.some((t) => t.key === activeTab);
 
   return (
-    <aside className="w-64 border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
+    <aside className="w-64 h-full border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
       <div className="flex border-b border-[var(--nv-border-2)]">
         {visibleTabs.map((t) => (
           <button key={t.key} onClick={() => onTabChange(t.key)}
@@ -60,7 +60,7 @@ export function LeftPanel({
               activeTab === t.key ? "text-[var(--nv-primary)] border-b border-[var(--nv-primary)] bg-[var(--nv-primary-soft)]" : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
             }`}>{t.label}</button>
         ))}
-        {/* 更多▾：故事线 / 规则 收起，避免低频 tab 占据常显密度 */}
+        {/* 更多▾：规则收起，故事线已置顶常显 */}
         <div className="relative z-50">
           <button onClick={() => setMoreMenuOpen((o) => !o)}
             className={`text-xs py-2 px-2 text-center transition-colors border-b ${

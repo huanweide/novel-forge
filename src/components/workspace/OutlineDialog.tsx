@@ -106,7 +106,7 @@ export function OutlineDialog({
           {/* 生成按钮 */}
           <div className="flex items-center gap-3">
             <Button onClick={onGenerate} disabled={isGenerating || (chapterCount === -1 && !customChapterCount)} className="btn-primary text-[var(--nv-text-primary)]">
-              {isGenerating ? <><Icon name="loader" size={14} className="animate-spin" /> 生成中...</> : <><Icon name="sparkles" size={14} /> 生成大纲预览</>}
+              {isGenerating ? <><Icon name="loader" size={14} className="animate-spin" /> 生成中…</> : <><Icon name="sparkles" size={14} /> 生成大纲预览</>}
             </Button>
           </div>
           {/* 总览文本 */}
@@ -128,7 +128,7 @@ export function OutlineDialog({
                         <input className="input-glass w-full rounded px-2 py-1 text-sm text-[var(--nv-text-primary)] focus:border-[var(--nv-primary)]"
                           value={ch.title} onChange={(e) => handleUpdateChapter(i, "title", e.target.value)} autoFocus />
                         <textarea className="input-glass w-full rounded px-2 py-1 text-sm text-[var(--nv-text-secondary)] resize-none focus:border-[var(--nv-primary)]"
-                          rows={3} value={ch.summary} onChange={(e) => handleUpdateChapter(i, "summary", e.target.value)} placeholder="本章梗概..." />
+                          rows={3} value={ch.summary} onChange={(e) => handleUpdateChapter(i, "summary", e.target.value)} placeholder="本章梗概…" />
                         <div className="flex gap-2">
                           <input className="input-glass flex-1 rounded px-2 py-1 text-xs text-[var(--nv-text-secondary)] focus:border-[var(--nv-primary)]"
                             value={ch.coreConflict} onChange={(e) => handleUpdateChapter(i, "coreConflict", e.target.value)} placeholder="核心冲突（可选）" />

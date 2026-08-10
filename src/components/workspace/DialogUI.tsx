@@ -49,7 +49,7 @@ export function DialogInput({
   }
   return (
     <input
-      className={`input-glass w-full rounded px-3 py-2 text-sm focus:border-[var(--nv-primary)] ${className ?? ""}`}
+      className={`input-glass w-full rounded px-3 py-2 text-sm focus:border-[var(--nv-primary)] placeholder:text-[var(--nv-text-tertiary)] ${className ?? ""}`}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

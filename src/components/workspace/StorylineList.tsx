@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
 import { toastError, toastCreated } from "@/components/ui/toast";
 import { StorylineWorkbench, type StorylineSuggestion } from "@/components/workspace/StorylineWorkbench";
 import { computeStorylineProgress, groupStorylinesByMain } from "@/lib/storyline-progress";
+
+const UNKNOWN_ERROR = "请求失败，请稍后重试";
 
 export interface StorylineEventData {
   id: string;
@@ -47,6 +49,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [genSuggestions, setGenSuggestions] = useState<StorylineSuggestion[] | null>(null); // AI 生成中间态草稿（保留，向后兼容）
   const [genTaskId, setGenTaskId] = useState<string | null>(null); // v1.8.7：统一真后台任务 ID
   const [expandedMains, setExpandedMains] = useState<Set<string>>(new Set()); // 支线默认收起
+  const generatingRef = useRef(false); // IMP-011：防止连点创建多个游离生成任务
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,7 +58,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       const res = await fetch(`/api/storylines?projectId=${projectId}`);
       if (res.ok) setStorylines(await res.json());
       else {
-        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
         setLoadError((d as { error?: string }).error || `加载失败（HTTP ${res.status}）`);
       }
     } catch (err) {
@@ -70,6 +73,9 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   }, [load]);
 
   const handleGenerate = async () => {
+    // IMP-011：连点锁——任务创建是异步的，批处理窗口内连点会创建多个游离任务
+    if (generatingRef.current) return;
+    generatingRef.current = true;
     setGenerating(true);
     try {
       // v1.8.7：收敛为统一真后台异步路径（与工作台内 AI 生成一致），不再走同步 generate
@@ -80,7 +86,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       });
       const data = await res.json();
       if (!res.ok) {
-        toastError(`创建生成任务失败：${data.error ?? "未知错误"}`);
+        toastError(`创建生成任务失败：${data.error ?? UNKNOWN_ERROR}`);
         return;
       }
       if (typeof data.taskId === "string" && data.taskId.length > 0) {
@@ -93,6 +99,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
     } finally {
       setGenerating(false);
+      generatingRef.current = false;
     }
   };
 
@@ -118,7 +125,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="flex items-center gap-1 rounded border border-[var(--nv-creative)]/40 bg-[var(--nv-creative-soft)] px-2 py-1 text-[10px] text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-creative-soft)] disabled:opacity-50"
+            className="flex items-center gap-1 rounded bg-[var(--nv-creative)] px-2 py-1 text-[10px] text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
             title="AI 自动生成主线/支线（生成后可在工作台编辑再落库）"
           >
             {generating ? (
@@ -127,7 +134,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
               </>
             ) : (
               <>
-                <Icon name="bot" size={11} /> AI生成
+                <Icon name="bot" size={11} /> AI 生成
               </>
             )}
           </button>
@@ -137,7 +144,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       {loadError && !loading && (
         <div className="px-4 py-6 text-center text-xs text-[var(--nv-danger)]">
           <p className="mb-2">{loadError}</p>
-          <button onClick={() => void load()} className="text-[10px] text-[var(--nv-primary)] hover:text-[var(--nv-creative)]">
+          <button onClick={() => void load()} className="text-[10px] text-[var(--nv-text-primary)] hover:underline">
             重试
           </button>
         </div>
@@ -147,6 +154,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         <EmptyState
           icon="bookmarked"
           title="还没有故事线"
+          description="让 AI 基于你的大纲自动规划主线与支线，填充七要素框架"
           action={
             <button onClick={handleGenerate} disabled={generating} className="btn-ghost text-[11px]">
               {generating ? "AI 生成中…" : "点击 AI 自动生成"}
@@ -219,7 +227,7 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
 
           {/* 无父支线 */}
           {sideLines
-            .filter((s) => !resolveParent(s) || resolveParent(s)?.id === s.id)
+            .filter((s) => !resolveParent(s))
             .map((s) => {
               const cp = computeStorylineProgress(s);
               return (
@@ -242,12 +250,13 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
         <StorylineWorkbench
           projectId={projectId}
           initialId={workbenchId === "__task__" ? null : workbenchId}
-          initialTaskId={workbenchId === "__task__" ? genTaskId ?? undefined : undefined}
+          initialTaskId={genTaskId ?? undefined}
           onClose={() => {
             setWorkbenchId(null);
             setGenSuggestions(null);
-            setGenTaskId(null);
+            // IMP-010：保留 genTaskId，关闭仅卸载 UI；重开工作台若仍有未完成任务则自动恢复轮询
           }}
+          onTaskSettled={() => setGenTaskId(null)}
           onRefresh={() => {
             void load();
             onRefresh();

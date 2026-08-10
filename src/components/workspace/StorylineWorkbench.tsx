@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/States";
+import { EmptyState, ErrorState } from "@/components/ui/States";
 import { toastError, toastSuccess, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { computeStorylineProgress, groupStorylinesByMain } from "@/lib/storyline-progress";
 import type { StorylineData } from "./StorylineList";
 import { DialogField, DialogInput } from "./DialogUI";
+
+const UNKNOWN_ERROR = "请求失败，请稍后重试";
+const MAX_POLLS = 240; // 轮询兜底上限（≈6min，1.5s/次）
 
 export interface StorylineSuggestion {
   type: "main" | "side";
@@ -37,7 +40,7 @@ const ELEMENT_META: {
   { key: "result", icon: "chart", label: "结果" },
   { key: "twist", icon: "sparkles", label: "意外" },
   { key: "turn", icon: "arrowRight", label: "转折" },
-  { key: "ending", icon: "check", label: "结局（待收束）" },
+  { key: "ending", icon: "check", label: "结局" },
 ];
 
 export function StorylineWorkbench({
@@ -47,6 +50,7 @@ export function StorylineWorkbench({
   initialTaskId,
   onClose,
   onRefresh,
+  onTaskSettled,
 }: {
   projectId: string;
   initialId?: string | null;
@@ -54,6 +58,7 @@ export function StorylineWorkbench({
   initialTaskId?: string | null;
   onClose: () => void;
   onRefresh: () => void;
+  onTaskSettled?: () => void;
 }) {
   const [list, setList] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +78,8 @@ export function StorylineWorkbench({
   // 真后台生成任务轮询态（v1.8.6 #174）：创建 task 后轮询，关页面不影响服务端任务
   const [genTask, setGenTask] = useState<{ taskId: string; status: string; progress: number; error?: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const netErrCount = useRef(0); // IMP-008：连续网络错误计数
+  const pollCount = useRef(0); // IMP-008：轮询次数计数（兜底上限）
 
   // 组件卸载（关闭工作台）时清理轮询定时器，避免泄漏（服务端任务不受影响，继续跑）
   useEffect(() => {
@@ -84,14 +91,31 @@ export function StorylineWorkbench({
   // v1.8.7：把内联轮询逻辑抽成独立回调，供「工作台内 AI 生成」与「列表入口挂载即轮询」共用
   const startPolling = useCallback(
     async (taskId: string) => {
+      // IMP-009：开新轮询前先清理可能残留的旧 interval，避免双重轮询叠加
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      netErrCount.current = 0;
+      pollCount.current = 0;
       setGenerating(true);
       // 轮询任务直到 done / failed（关页面不影响服务端任务，重新进页面可再次轮询）
       pollRef.current = setInterval(async () => {
+        pollCount.current += 1;
+        // IMP-008：最大轮询次数兜底（≈6min），防止极端情况下无限轮询
+        if (pollCount.current > MAX_POLLS) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setGenerating(false);
+          toastError("生成状态同步超时，请重试");
+          return;
+        }
         try {
           const r = await fetch(`/api/generation-tasks/${taskId}`);
           const t = await r.json();
           if (!r.ok) {
             if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
             setGenTask({ taskId, status: "failed", progress: 0, error: t.error ?? "轮询失败" });
             setGenerating(false);
             toastError(`生成任务失败：${t.error ?? "轮询失败"}`);
@@ -100,6 +124,7 @@ export function StorylineWorkbench({
           setGenTask({ taskId, status: t.status, progress: t.progress, error: t.error });
           if (t.status === "done") {
             if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
             const suggestions = (t.result?.suggestions as StorylineSuggestion[] | undefined) ?? [];
             if (suggestions.length > 0) {
               setGenSuggestions(suggestions);
@@ -109,14 +134,24 @@ export function StorylineWorkbench({
             }
             setGenTask(null);
             setGenerating(false);
+            onTaskSettled?.(); // IMP-010：任务已结算，通知父级清理 genTaskId，避免陈旧 id 残留
           } else if (t.status === "failed") {
             if (pollRef.current) clearInterval(pollRef.current);
-            toastError(`生成失败：${t.error ?? "未知错误"}`);
+            pollRef.current = null;
+            toastError(`生成失败：${t.error ?? UNKNOWN_ERROR}`);
             setGenTask(null);
             setGenerating(false);
+            onTaskSettled?.(); // IMP-010：同上
           }
         } catch {
-          // 网络抖动：继续保持轮询，下一拍再试
+          // IMP-008：网络抖动累计计数，超阈值后停轮询并报错，避免无限空转卡死
+          netErrCount.current += 1;
+          if (netErrCount.current > 5) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = null;
+            setGenerating(false);
+            toastError("生成状态同步失败，请重试");
+          }
         }
       }, 1500);
     },
@@ -140,7 +175,7 @@ export function StorylineWorkbench({
         setList(data);
         setSelectedId((prev) => prev ?? data[0]?.id ?? null);
       } else {
-        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
         setError((d as { error?: string }).error || `加载失败（HTTP ${res.status}）`);
       }
     } catch (err) {
@@ -156,7 +191,7 @@ export function StorylineWorkbench({
 
   const selected = list.find((s) => s.id === selectedId) || null;
   const { mains, sides, resolveParent } = groupStorylinesByMain(list);
-  const orphanSides = sides.filter((s) => !resolveParent(s) || resolveParent(s)?.id === s.id);
+  const orphanSides = sides.filter((s) => !resolveParent(s));
 
   const events = selected?.events || [];
   const timelineEvents = events
@@ -175,7 +210,7 @@ export function StorylineWorkbench({
         body: JSON.stringify({ status: next }),
       });
       if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
         toastError("状态更新失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
         return;
       }
@@ -198,7 +233,7 @@ export function StorylineWorkbench({
       });
       const data = await res.json();
       if (!res.ok) {
-        toastError(`创建生成任务失败：${data.error ?? "未知错误"}`);
+        toastError(`创建生成任务失败：${data.error ?? UNKNOWN_ERROR}`);
         setGenerating(false);
         return;
       }
@@ -223,16 +258,16 @@ export function StorylineWorkbench({
       });
       const data = await res.json();
       if (!res.ok) {
-        toastError("落库失败：" + ((data as { error?: string }).error || `HTTP ${res.status}`));
+        toastError("保存失败：" + ((data as { error?: string }).error || `HTTP ${res.status}`));
         return;
       }
-      toastCreated("故事线", "故事线");
+      toastCreated("故事线");
       setGenSuggestions(null);
       setGenExtra("");
       void load();
       onRefresh();
     } catch (err) {
-      toastError("落库失败（网络错误）：" + (err instanceof Error ? err.message : "请重试"));
+      toastError("保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试"));
     } finally {
       setCommitting(false);
     }
@@ -283,7 +318,7 @@ export function StorylineWorkbench({
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
         toastError("保存失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
         return;
       }
@@ -303,7 +338,7 @@ export function StorylineWorkbench({
     deleteFn: async (id) => {
       const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
         throw new Error((d as { error?: string }).error || `HTTP ${res.status}`);
       }
     },
@@ -330,7 +365,7 @@ export function StorylineWorkbench({
         body: JSON.stringify({ kind: "CLUE", tag: newClueTag.trim(), content: newClueContent.trim() }),
       });
       if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
         toastError("新增线索失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
         return;
       }
@@ -343,11 +378,16 @@ export function StorylineWorkbench({
   };
   const handleCluePatch = async (id: string, patch: Record<string, string>) => {
     try {
-      await fetch(`/api/storyline-events/${id}`, {
+      const res = await fetch(`/api/storyline-events/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
+        toastError("更新线索失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        return;
+      }
       void load();
     } catch (err) {
       toastError("更新线索失败：" + (err instanceof Error ? err.message : "请重试"));
@@ -355,7 +395,12 @@ export function StorylineWorkbench({
   };
   const handleClueDelete = async (id: string) => {
     try {
-      await fetch(`/api/storyline-events/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/storyline-events/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
+        toastError("删除线索失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        return;
+      }
       void load();
     } catch (err) {
       toastError("删除线索失败：" + (err instanceof Error ? err.message : "请重试"));
@@ -398,7 +443,7 @@ export function StorylineWorkbench({
           <button
             onClick={handleGenerate}
             disabled={generating || !!genSuggestions}
-            className="flex items-center gap-1.5 rounded-lg border border-[var(--nv-creative)]/40 bg-[var(--nv-creative-soft)] px-3 py-1.5 text-xs font-medium text-[var(--nv-creative)] transition-colors hover:bg-[var(--nv-creative)]/20 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-creative)] px-3 py-1.5 text-xs font-medium text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {generating ? (
               <>
@@ -428,8 +473,8 @@ export function StorylineWorkbench({
           <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--nv-creative)]">
             <Icon name="bot" size={16} /> AI 生成结果 · 中间编辑态（可修改后再落库）
           </div>
-          <DialogField label="额外要求（可选，仅作提示，不影响已生成内容）">
-            <DialogInput value={genExtra} onChange={setGenExtra} placeholder="例如：增加一条复仇支线" />
+          <DialogField label="对下一次生成的补充要求（可选，本次不发送）">
+            <DialogInput value={genExtra} onChange={setGenExtra} placeholder="例如：增加一条感情支线" />
           </DialogField>
 
           <div className="mt-3 space-y-3">
@@ -458,15 +503,24 @@ export function StorylineWorkbench({
                   />
                 </DialogField>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {ELEMENT_META.map(({ key, label }) => (
-                    <DialogField key={key} label={label}>
-                      <DialogInput
-                        rows={2}
-                        value={s.sevenElements[key] || ""}
-                        onChange={(v) => updateSuggestionElement(idx, key, v)}
-                      />
-                    </DialogField>
-                  ))}
+                  {ELEMENT_META.map(({ key, label }) =>
+                    key === "ending" ? (
+                      // IMP-018：AI 中间态草稿的「结局」不可编辑——落库时被强制 null 静默丢弃，故改为只读提示
+                      <DialogField key={key} label={label}>
+                        <div className="rounded-lg border border-dashed border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-3 py-2 text-xs leading-relaxed text-[var(--nv-text-tertiary)]">
+                          结局不可在此填写，落库后可通过「标记收束」设定
+                        </div>
+                      </DialogField>
+                    ) : (
+                      <DialogField key={key} label={label}>
+                        <DialogInput
+                          rows={2}
+                          value={s.sevenElements[key] || ""}
+                          onChange={(v) => updateSuggestionElement(idx, key, v)}
+                        />
+                      </DialogField>
+                    ),
+                  )}
                 </div>
               </div>
             ))}
@@ -479,17 +533,16 @@ export function StorylineWorkbench({
                 setGenSuggestions(null);
                 setGenExtra("");
               }}
-              className="btn-ghost"
             >
               放弃
             </Button>
             <Button onClick={handleCommitGen} disabled={committing} className="btn-primary">
               {committing ? (
                 <>
-                  <Icon name="loader" size={14} className="animate-spin" /> 落库中…
+                  <Icon name="loader" size={14} className="animate-spin" /> 保存中…
                 </>
               ) : (
-                "采用并落库"
+                "保存到故事线"
               )}
             </Button>
           </div>
@@ -501,17 +554,17 @@ export function StorylineWorkbench({
           <div className="w-72 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5">
             {loading && <div className="py-8 text-center text-xs text-[var(--nv-text-tertiary)]">加载中…</div>}
             {error && !loading && (
-              <div className="py-6 text-center text-xs text-[var(--nv-danger)]">
-                <p className="mb-2">{error}</p>
-                <button onClick={() => void load()} className="text-[var(--nv-primary)]">
-                  重试
-                </button>
-              </div>
+              <ErrorState
+                title="加载失败"
+                description={error}
+                action={<Button variant="outline" onClick={() => void load()}>重试</Button>}
+              />
             )}
             {!loading && !error && list.length === 0 && (
               <EmptyState
                 icon="bookmarked"
                 title="还没有故事线"
+                description="让 AI 基于你的大纲自动规划主线与支线，填充七要素框架"
                 action={
                   <button onClick={handleGenerate} disabled={generating} className="btn-ghost text-xs">
                     {generating ? "生成中…" : "AI 自动生成"}
@@ -635,7 +688,7 @@ export function StorylineWorkbench({
                   ))}
                 </div>
                 <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="outline" onClick={() => setEditing(false)} className="btn-ghost">
+                  <Button variant="outline" onClick={() => setEditing(false)}>
                     取消
                   </Button>
                   <Button onClick={handleSave} disabled={saving} className="btn-primary">
@@ -679,7 +732,11 @@ export function StorylineWorkbench({
                     >
                       {selected.status === "completed" ? (
                         <>
-                          <Icon name="check" size={14} className="text-[var(--nv-success)]" /> 已完结
+                          <Icon name="check" size={14} className="text-[var(--nv-success)]" /> 重新开启
+                        </>
+                      ) : selected.status === "abandoned" ? (
+                        <>
+                          <Icon name="check" size={14} className="text-[var(--nv-success)]" /> 重新启用
                         </>
                       ) : (
                         <>
@@ -708,7 +765,7 @@ export function StorylineWorkbench({
                 {/* 七要素网格（总纲） */}
                 <div>
                   <div className="mb-2 text-xs font-medium text-[var(--nv-text-tertiary)]">
-                    七要素 · 总纲（结局不预填，仅标记收束）
+                    七要素 · 总纲（结局单独标记，不计入填充度）
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {ELEMENT_META.map(({ key, icon, label }) => {
@@ -740,7 +797,7 @@ export function StorylineWorkbench({
                 {/* 章节进展时间轴（自动记录大事件） */}
                 <div>
                   <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
-                    <Icon name="history" size={14} /> 章节进展时间轴（写作自动记录大事件）
+                    <Icon name="history" size={14} /> 章节进展时间轴（写作自动记录关键情节节点）
                   </div>
                   {timelineEvents.length > 0 ? (
                     <ol className="relative space-y-3 border-l border-[var(--nv-border-2)] pl-4">
@@ -757,9 +814,11 @@ export function StorylineWorkbench({
                       ))}
                     </ol>
                   ) : (
-                    <p className="text-xs text-[var(--nv-text-tertiary)]">
-                      暂无章节进展记录（写作时会自动回写大事件）
-                    </p>
+                    <EmptyState
+                      icon="history"
+                      title="还没有章节进展"
+                      description="写作时会自动回写关键情节节点"
+                    />
                   )}
                 </div>
 
@@ -770,7 +829,7 @@ export function StorylineWorkbench({
                     className="mb-2 flex w-full items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-secondary)]"
                   >
                     <Icon name="tag" size={14} />
-                    线索集 / 纸集（融合龙王寨、菜市场注释、尸检报告等）
+                    线索集（伏笔、物证、人物备注等）
                     <Icon name={cluesExpanded ? "chevronDown" : "chevronRight"} size={12} className="ml-auto" />
                     <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px]">{clues.length}</span>
                   </button>
@@ -788,7 +847,7 @@ export function StorylineWorkbench({
                           <DialogInput
                             value={newClueTag}
                             onChange={setNewClueTag}
-                            placeholder="标签（如：龙王寨 / 尸检报告）"
+                            placeholder="标签（如：关键道具 / 人物线索）"
                             className="w-40"
                           />
                         </div>
@@ -799,7 +858,7 @@ export function StorylineWorkbench({
                           placeholder="线索内容（可无限延伸、每条可编辑）"
                         />
                         <div className="mt-2 flex justify-end">
-                          <Button variant="outline" onClick={handleAddClue} className="btn-ghost text-[11px]">
+                          <Button variant="outline" onClick={handleAddClue} className="text-[11px]">
                             <Icon name="plus" size={12} /> 添加线索
                           </Button>
                         </div>
@@ -859,12 +918,14 @@ function LineNav({
             完结
           </span>
         )}
-        <span
+        <button
+          type="button"
+          aria-label={s.status === "completed" ? "取消完结" : "标记完结"}
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
           }}
-          className="shrink-0 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-accent)]"
+          className="shrink-0 rounded-full text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-accent)] focus-visible:ring-2 focus-visible:ring-ring/50"
           title="标记完结"
         >
           {s.status === "completed" ? (
@@ -872,7 +933,7 @@ function LineNav({
           ) : (
             <Icon name="circle" size={12} />
           )}
-        </span>
+        </button>
       </div>
       <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--nv-surface-2)]">
         <div
@@ -936,6 +997,7 @@ function ClueRow({
             <>
               <button
                 onClick={() => setEditing(true)}
+                aria-label="编辑线索"
                 className="rounded p-1 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-primary)]"
                 title="编辑线索"
               >
@@ -943,6 +1005,7 @@ function ClueRow({
               </button>
               <button
                 onClick={() => onDelete(clue.id)}
+                aria-label="删除线索"
                 className="rounded p-1 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)]"
                 title="删除线索"
               >

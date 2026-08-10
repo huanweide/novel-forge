@@ -1,0 +1,62 @@
+{
+  "openedItem": "龙陨之地·主线",
+  "dialog": {
+    "open": true,
+    "w": 1024,
+    "h": 803,
+    "maxW": "1024px",
+    "labelledby": "workbench-title",
+    "ariaLabel": null
+  },
+  "columns": [
+    {
+      "w": 122,
+      "h": 30,
+      "overflowY": "visible",
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "w": 288,
+      "h": 746,
+      "overflowY": "auto",
+      "bg": "rgba(255, 255, 255, 0.03)"
+    },
+    {
+      "w": 734,
+      "h": 746,
+      "overflowY": "auto",
+      "bg": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "headEls": {
+    "title": {
+      "w": 134,
+      "h": 28,
+      "t": "故事线工作台",
+      "aria": null
+    },
+    "aiBtn": {
+      "w": 86,
+      "h": 30,
+      "t": "AI 生成",
+      "aria": null
+    },
+    "lineNavCount": 20,
+    "detailH3": {
+      "w": 116,
+      "h": 28,
+      "t": "龙陨之地·主线",
+      "aria": null
+    },
+    "hasTimeline": false
+  },
+  "dialogAfterEsc": false,
+  "focusableInDialog": 22,
+  "afterAiGen": {
+    "dialog": true,
+    "hasGenResult": false,
+    "hasCommit": false,
+    "snippet": "故事线工作台 生成中… 10% 龙陨之地·主线 龙元裂缝的第七个白日 龙王在菜市场的注视 周远征的第三份尸检报告 过河兵的旧伤疤 美第奇的未寄出信 韩先生的名字叫韩叙 掩埋之钥 龙王誓约与背弃 共鸣之下的尸证 卒与兵的对弈 倒置的封印阵 空"
+  },
+  "logs": []
+}

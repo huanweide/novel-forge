@@ -611,7 +611,7 @@
               background var(--dur-standard) var(--ease-out-smooth);
 }
 .input-glass::placeholder {
-  color: var(--nv-text-muted);
+  color: var(--nv-text-tertiary);
 }
 .input-glass:hover {
   border-color: rgba(255, 255, 255, 0.12);
@@ -718,6 +718,11 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+@media (pointer: coarse) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 9px;
+  }
 }
 
 /* ═══════════════════════════════════════════

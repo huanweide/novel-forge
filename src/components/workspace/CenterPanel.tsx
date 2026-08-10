@@ -219,7 +219,7 @@ export function CenterPanel({
               {editingOutline ? (
                 <div className="flex gap-2">
                   <textarea className="input-glass flex-1 rounded px-2 py-1 text-xs resize-none" rows={2}
-                    value={outlineDraft} onChange={(e) => setOutlineDraft(e.target.value)} placeholder="输入本节点大纲..." />
+                    value={outlineDraft} onChange={(e) => setOutlineDraft(e.target.value)} placeholder="输入本节点大纲…" />
                   <div className="flex flex-col gap-1">
                     <button onClick={() => { onEditOutline(outlineDraft); setEditingOutline(false); }} className="text-xs text-[var(--nv-success)] hover:text-[var(--nv-success)]/70">保存</button>
                     <button onClick={() => setEditingOutline(false)} className="text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)]">取消</button>
@@ -243,13 +243,13 @@ export function CenterPanel({
                       onClick={() => { setOutlineDraft(selectedNode.outline || ""); setEditingOutline(true); }}
                       className="flex-1 min-w-0 text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] cursor-pointer italic truncate"
                     >
-                      {selectedNode.outline || "点击设置本节点大纲..."}
+                      {selectedNode.outline || "点击设置本节点大纲…"}
                     </div>
                   )}
                   {!isGenerating && (
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       {chapterOutlineStatus === "generating" ? (
-                        <span className="text-[10px] text-[var(--nv-primary)] animate-pulse px-1 flex items-center gap-0.5"><Icon name="loader" size={10} className="animate-spin" /> 章纲生成中...</span>
+                        <span className="text-[10px] text-[var(--nv-primary)] animate-pulse px-1 flex items-center gap-0.5"><Icon name="loader" size={10} className="animate-spin" /> 章纲生成中…</span>
                       ) : chapterOutlineStatus === "done" ? (
                         <span className="text-[10px] text-[var(--nv-success)] font-medium px-1 flex items-center gap-0.5"><Icon name="check" size={10} /> 章纲完成</span>
                       ) : chapterOutlineStatus === "error" ? (
@@ -305,7 +305,7 @@ export function CenterPanel({
                 <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 3000)}
                   className="input-glass w-16 rounded px-2 py-1 text-xs text-center" title="目标字数" />
                 <span className="text-xs text-[var(--nv-text-tertiary)]">字</span>
-                <input placeholder={refineMode ? "微调指令（改对话/加描写/续写500字）..." : "作者指令（高优先级）..."}
+                <input placeholder={refineMode ? "微调指令（改对话/加描写/续写500字）…" : "作者指令（高优先级）…"}
                   value={refineMode ? refineInstruction : authorNote}
                   onChange={(e) => refineMode ? onRefineInstructionChange(e.target.value) : onAuthorNoteChange(e.target.value)}
                   className="input-glass flex-1 min-w-0 rounded px-2 py-1 text-xs" />
@@ -371,7 +371,7 @@ export function CenterPanel({
                         : "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] border border-[var(--nv-primary)]/50"
                       }`}>
                         <span className="text-lg">{genStepLabels[genStep]?.icon}</span>
-                        <span className={genStep === "generating" ? "animate-pulse" : ""}>{genStepLabels[genStep]?.label || "处理中..."}</span>
+                        <span className={genStep === "generating" ? "animate-pulse" : ""}>{genStepLabels[genStep]?.label || "处理中…"}</span>
                       </div>
                     )}
                     {genStep && genStep !== "done" && genStep !== "error" && (
@@ -387,7 +387,7 @@ export function CenterPanel({
                         })}
                       </div>
                     )}
-                    {isGenerating && !genStep && <span className="animate-pulse">生成中...</span>}
+                    {isGenerating && !genStep && <span className="animate-pulse">生成中…</span>}
                   </div>
                 ) : (
                   <div className="text-center">

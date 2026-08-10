@@ -1,217 +1,89 @@
-# MaxLoop 魔王系统 · round-1 阶段二整合评审报告
+# MaxLoop Round 1 整合报告与改进清单
 
-- **轮次**：round-1
-- **日期**：2026-08-05
-- **参与透镜**：6（写作主流程 / 游戏模式 / 设定检索召回 / 导入导出迁移 / UI交互无障碍 / 监控性能可观测）
-- **方法**：Chair 共识模拟（去重归类 → 共识度判定 → 改进清单 + 观察池）
-- **原始发现总数**：写作 16 + 游戏 13 + 世界 13 + 导入导出 11 + UI 21 + 监控 17 ≈ **91 条**
+> 生成时间：2026-08-10
+> Chair：主 Agent（千惠）
+> 体验对象：novel-forge v1.8.9 故事线工作台（StorylineWorkbench / StorylineList / LeftPanel）
+> 入口 URL：`http://localhost:3001/workspace/577ed326-b241-4f67-9481-c9332cb03626`
+> 投票门槛：5 位 lens Agent，≥3 票（过半数）入改进清单；个例项由 Chair 据文件:行号证据背书后纳入。
 
-> 共识门槛依据 `review-protocol.md`：P0 直接入清单；P1 满足「≥2 透镜交叉 / 根因确定性高(实测可证) / 个例通道论证充分」即入清单；P2 仅当「≥2 透镜交叉」或「≥3 透镜提及同类」或「个例高价值可用性硬伤」入清单，其余进观察池下轮复核。
+## 一、原始报告索引（全部到齐）
 
----
+| Agent | 报告 | 透镜职责 | 状态 | 发现数 |
+|---|---|---|---|---|
+| ui-ux-a11y | `ui-ux-a11y.md` | UI/UX 与可访问性（WCAG AA 实测） | ✅ | 16（F-01~F-16，无 P0 阻断） |
+| frontend-engineering | `frontend-engineering.md` | 前端工程/性能/代码质量 | ✅ | 14（FE-001~FE-014） |
+| copy-empty-state | `copy-empty-state.md` | 中文文案与空状态 | ✅ | 16（P0-01/02 + P1-01~06 + P2-01~10） |
+| interaction-flow | `interaction-flow.md` | 交互流程与功能完整性（状态机/竞态） | ✅ | 18（001~018） |
+| musk-perspective | `musk-perspective.md` | 马斯克第一性原理（删 50%/最短路径/收敛分叉） | ✅ | 18（MUSK-01~MUSK-18） |
+| Chair（主 Agent） | `_chair-notes.md` | 现场读图+读源码独立发现 | ✅ | 10（C-01~C-10，C-07 已修） |
 
-## 一、改进清单 IMP-xxx（阶段三输入）
+## 二、投票汇总与改进清单（IMP-xxx）
 
-### P0 · 阻断级（1 条）
+> 严重度：P0 阻断 / P1 重要（合规或体验硬伤）/ P2 次要 / P3 微调。
+> 「票」= 直接提出或交叉印证的 lens 数（含 Chair 背书）。✅= 过半（≥3）或证据充分且 Chair 采纳。
 
-**IMP-001 ｜ 游戏导出覆盖写作原正文（数据丢失 + 教程自相矛盾）**
-- 影响透镜：游戏模式
-- 文件:行号：`src/core/game/game-engine.ts:546-553, 611-612, 631-639`；教程承诺 `src/app/workspace/[projectId]/game/[nodeId]/page.tsx:547`
-- 现象：已有正文的章节开启游戏并「结束并导出」后，`node.content` 原写作正文消失，导出以全新 AI 文本开头（真机验证原 41 字正文 `contains(PRE)=false`）。
-- 根因：`endGameAndExport` 仅拼接 `session.states`（游戏轮次），未把 `node.content`（existingContent）作为第 0 段前置，导致原文被整体覆盖；教程却承诺「不推翻已写情节」。
-- 建议修法：导出时将 `node.content` 作为第 0 段前置拼接，或 `resetGameSession` 时把现有正文写入 round 0 的 gameState；同步修正教程文案。
+### Round-1 实施批次（低成本高共识，本轮回闭环）
 
-### P1 · 重要级（21 条）
+| ID | 严重度 | 模块 | 问题描述（文件:行号） | 提出方（票） | 改进方向（具体 before→after） |
+|---|---|---|---|---|---|
+| IMP-001 | P1 | a11y | 左列完结切换是 `<span onClick>` 非 `<button>`，键盘/读屏不可达 | F-01, FE-010, C-03（3） | 改 `<button type="button" aria-label={completed?'取消完结':'标记完结'} onClick={e=>{e.stopPropagation();onToggle();}}>`，复用右列详情已用的标准 button 范本 |
+| IMP-002 | P1 | 对比度 | AI 生成按钮紫罗兰文字 on soft 底仅 3.75:1（要求 ≥4.5） | F-02（1+Chair） | 按钮改用实心 `.btn-creative` 风格（深底+浅字 #F0EEE8，对比度远高于 soft 底）；列表入口同改 |
+| IMP-003 | P1 | 对比度 | 错误态「重试」链接 `--nv-primary` on 面板 3.79:1 不达标 | F-04（1+Chair） | 重试链接改用 `--nv-text-primary` 或加亮底，保证 ≥4.5:1 |
+| IMP-004 | P2 | 对比度 | 输入框 placeholder 用 muted #8E8B82 = 4.33:1 临界 | F-06, C-06（2） | `DialogUI.tsx` 的 input 也加 `placeholder:text-[var(--nv-text-tertiary)]`（5.41:1）；globals.css 的 `input-glass::placeholder` 改用 tertiary |
+| IMP-005 | P1 | 布局 | 左侧栏 `<aside>` 高度塌陷 283px vs 抽屉 805px | F-03（1+Chair） | `LeftPanel.tsx` 的 `<aside>` 加 `h-full`（或 `min-h-full`）；drawer 容器确保 flex stretch |
+| IMP-006 | P0 | 文案 | 线索集标题硬编码「纸集」+「龙王寨/尸检报告」项目专属示例 | P0-01, C-02, MUSK-05（3）✅ | 改为 `线索集（伏笔、物证、人物备注等）`；去掉「纸集」与项目专有名词；相关 placeholder 通用化 |
+| IMP-007 | P1 | 文案 | 「剧情线」vs「故事线」UI 层术语分裂（BackupDialog/ImportDialog/ForeshadowingPanel） | P0-02（1+Chair） | 面向用户的「剧情线」统一替换为「故事线」（UI 组件层，后台代码下轮） |
+| IMP-008 | P1 | 轮询 | 轮询 `catch {}` 空吞网络错误，异常时无限空转卡死 | F-16, 交互003（2） | 累计网络错误次数，超阈值（5 次/约 30s）后 clearInterval + toast「生成状态同步失败，请重试」+ `setGenerating(false)`；并加最大轮询次数兜底 |
+| IMP-009 | P1 | 轮询 | `startPolling` 设新 interval 前未清理旧 interval（双重轮询风险） | FE-004, 交互007（2） | 函数开头 `if (pollRef.current){clearInterval(pollRef.current);pollRef.current=null;}` |
+| IMP-010 | P1 | 断链 | 关闭弹窗 `setGenTaskId(null)` 丢任务 id，重开无法恢复轮询 | 交互002（1+Chair） | 关闭时仅卸载 UI，保留 `genTaskId` 直到任务 done/failed；重开工作台若有待处理 taskId 则自动恢复轮询 | ✅ **Chair 亲补闭环**：`StorylineWorkbench` 新增 `onTaskSettled` prop（L46-60 签名 + 轮询 done/failed 分支调用 L133-141）；`StorylineList` 渲染 `initialTaskId={genTaskId ?? undefined}`（任何打开均回传恢复轮询）+ `onTaskSettled={()=>setGenTaskId(null)}`（结算后清理）+ `onClose` 保留 `genTaskId` 不清除 |
+| IMP-011 | P1 | 竞态 | 列表「AI生成」仅 `disabled={generating}`，批处理窗口内连点可建多个游离任务 | 交互001（1+Chair） | `handleGenerate` 开头加 `lockRef` 本地锁（或 `if(generating) return`），finally 释放 |
+| IMP-012 | P2 | 文案 | `toastCreated("故事线","故事线")` 文案重复成「故事线 故事线已创建」 | FE-013, P2-07, 交互008（3）✅ | 改为 `toastCreated("故事线")`（只传实体名） |
+| IMP-013 | P2 | 文案 | 「AI生成」（列表）vs「AI 生成」（弹窗）空格不统一 | F-15, P2-10（2） | 统一为「AI 生成」（带空格） |
+| IMP-014 | P2 | 占位 | 七要素空值前 6 个显「—」、结局显「待收束」，标签又写「结局（待收束）」重复 | C-01（1+Chair） | 空值统一「—」或「未填写」；结局标签简化为「结局」，空值显「待收束」避免重复 |
+| IMP-015 | P2 | 空态 | 时间轴空态仅一行弱灰字，未复用全局 EmptyState | F-11, C-05（2） | 复用 `<EmptyState icon="history" title="还没有章节进展" description="写作时会自动回写大事件" />` |
+| IMP-016 | P2 | 错误态 | 加载失败用裸 div+button，未复用 ErrorState/Button | C-09, 交互018（2） | 改用 `<ErrorState ... action={<Button variant="outline">重试</Button>} />` |
+| IMP-017 | P2 | 数据 | `handleCluePatch`/`handleClueDelete` 不检查 res.ok，失败静默且可能状态不一致 | C-08, FE-007, 交互010（3）✅ | 补 `if(!res.ok){toastError(...);return;}`；采用乐观更新+失败回滚 |
+| IMP-018 | P2 | 数据 | 中间态「结局」字段可编辑但落库被强制 `ending:null` 静默丢弃 | FE-008, MUSK-14（2） | 中间态 ending 字段设为只读提示「结局将在落库后通过『标记收束』设定」，或移出 ELEMENT_META 编辑 |
+| IMP-019 | P2 | 文案 | 中间态「额外要求」输入框是死输入（提交时不发送 genExtra） | 交互005, MUSK-07（2） | 文案改为「对下一次生成的补充要求（可选）」并说明当前草稿不含此内容；或落库时随 suggestions 附 extraPrompt |
+| IMP-020 | P2 | 文案 | 「采用并落库/落库中/落库失败」jargon 暴露给用户 | MUSK-07, P1-01（2） | 按钮「采用并落库」→「保存到故事线」；loading「落库中…」→「保存中…」；错误「落库失败」→「保存失败」 |
+| IMP-021 | P2 | a11y | 线索区编辑/删除图标按钮仅 `title` 缺 `aria-label` | F-05（1+Chair） | 补 `aria-label`（「编辑线索」「删除线索」），统一 icon-btn 约定 |
+| IMP-022 | P2 | 布局 | 4px 自定义滚动条触控/粗指针难抓取 | F-12（1+Chair） | `@media (pointer:coarse)` 下加宽至 8-10px，或常显细滚动条 |
+| IMP-023 | P2 | 文案 | 空状态缺 description 副文案（EmptyState 支持未用） | P1-04, P2-03（2） | 补 `description`：「让 AI 基于你的大纲自动规划主线与支线，填充七要素框架」 |
+| IMP-024 | P2 | 文案 | abandoned 状态故事线完结按钮仍显「标记完结」，点了却变 active | 交互009, MUSK-03（2） | 按 status 显式区分：active→「标记完结」、completed→「重新开启」、abandoned→「重新启用」 |
+| IMP-025 | P2 | 文案 | 时间轴「大事件」含义模糊 | P2-05, C-05（2） | 改为「关键情节节点」/「里程碑事件」 |
+| IMP-026 | P3 | 死码 | `orphanSides` 含永假条件 `resolveParent(s)?.id===s.id` | FE-012（1+Chair） | 简化为 `sides.filter(s=>!resolveParent(s))` |
+| IMP-027 | P3 | 文案 | 进度条 label「七要素 X/6」计数与「七要素」名不符 | FE-014, MUSK-13（2） | label 改「要素 X/6（不含结局）」，UI 标题可保留「七要素·总纲」并副标题注明 |
+| IMP-028 | P2 | 样式 | 「放弃」按钮 `variant="outline"` + `btn-ghost` 可能叠加双边框 | F-14（1+Chair） | 核查 Button 组件 outline+btn-ghost 互斥规则，统一只用其一 |
+| IMP-029 | P2 | 文案 | 省略号半角 `...` vs 全角 `…` 不一致（4 处） | P2-01, P2-02（2） | 全局 `...`→`…`；括号风格统一为全角（中文语境） |
+| IMP-030 | P2 | 文案 | 「未知错误」兜底重复 8+ 处 | P2-03（1+Chair） | 抽 `UNKNOWN_ERROR` 常量；按 HTTP 状态码给友好文案（403/404/500） |
 
-**确认 / 自动填表族**
-- **IMP-002 ｜ skipLatestChapter 完全不生效（死计算）** — 写作主流程；`src/app/api/story/nodes/[id]/route.ts:176`、`batch-confirm/route.ts:74`、`src/core/confirm-guard.ts:121`、`loop.ts:129`；confirm/batch/auto-confirm 三处调用 `safeFillAfterWriting` 均硬编码 `isLatestChapter:false`，write/route.ts:73-74 算出却未透传 → 在 confirm/batch/auto-confirm 路径用 `node.order===项目最大order` 计算并透传。
-- **IMP-003 ｜ 游戏导出自动确认静默回填世界书** — 游戏模式；`src/core/game/game-engine.ts:642-654` → `confirm-guard.ts:100-147`；主路径游戏导出触发 `safeFillAfterWriting` 改动设定库，界面无提示 → 导出确认态明确提示「已自动回填设定」或提供项目级开关。
-- **IMP-004 ｜ 确认 toast 谎称「自动填表已执行」** — 写作主流程；`ChapterConfirmBar.tsx:73`；无论填表是否真执行 toast 都声称已执行（`autoFillEnabled=false` 或频次未到时相反） → 用 reviewLogs 的 `fill` 字段决定文案。
-- **IMP-005 ｜ 默认开启自动确认无引导** — 写作主流程；`page.tsx:1054`（`autoConfirmEnabled ?? true`）；新用户首次生成即「无感定稿」错过审校 → 首次开启弹引导或常驻「自动审阅中」解释提示。
+### 观察池 / 下轮（架构级，本轮回环处理）
 
-**设定 / 检索召回族**
-- **IMP-006 ｜ LorebookEditDialog 分类漏 4 类致功法错归地理（真实写错数据）** — 设定检索；`LorebookEditDialog.tsx:110-119` vs `worldPanelData.ts:5-18,34-47`；分类下拉只有 8 项，漏 technique/law/currency/character_relationship，作者用「功法体系」建的条目编辑后浏览器回退选中第一项 geography 保存即静默错归 → 下拉选项从 worldPanelData 同源生成，覆盖全部 12 类。
-- **IMP-007 ｜ detectPayoffs 不随写章自动触发** — 设定检索；`detect/route.ts` + `ForeshadowingPanel.tsx:192-217`；仅「重新检测」按钮手动触发，写章/确认流程不调，作者收尾后面板恒显「待回收」 → 写章确认后 fire-and-forget 调 detectPayoffs。
-- **IMP-008 ｜ 实体配色两套冲突致图例失效** — 设定检索；`ChapterEntitiesPanel.tsx`（硬编码 #5B9BD5 等）vs 正文高亮 `LORE_COLORS`（#F97316 等）；正文橙名对应面板蓝点，图例失效 → 统一复用 ENTITY_LEGEND 单一来源。
-- **IMP-009 ｜ 伏笔 closureConditions 恒为 [] 检测退化** — 设定检索；`tool-registry.ts:690`；创建时恒为 []，高精度闭合判定形同虚设，退化为描述短语子串易漏召/误召 → 实际写入 closureConditions 或升级检测算法。
-- **IMP-010 ｜ 召回 2 字实体名无尾边界过召回** — 设定检索；`recall.ts` 用 `matchNameStrict`（2 字直接命中），与正文高亮 `findEntitiesInText` 尾边界逻辑不一致地过召回 → 对齐单一匹配函数补尾边界。
-- **IMP-011 ｜ 世界面板条目卡片无编辑入口** — 设定检索；`WorldEntryCard.tsx:20-27`；卡片只有删除无编辑，编辑只能从正文点击/命令面板，路径断裂 → 卡片加编辑入口。
-- **IMP-012 ｜ getEntityMap 失败静默返空** — 设定检索；`entity-highlighter.ts:114-117`；fetch 失败静默返空 Map，正文高亮悄无声息消失且无提示/重试 → 失败给降级提示或重试。
+| ID | 严重度 | 模块 | 问题描述 | 提出方 | 未入本轮理由 |
+|---|---|---|---|---|---|
+| D-01 | P1 | 架构 | 工作台用模态弹窗锁屏，与真后台异步生成自相矛盾；应改非模态侧边面板 | MUSK-04（1+Chair） | 大重构，需独立轮次；先做弹窗内轮询/断链修复（IMP-008/010）缓解 |
+| D-02 | P1 | 性能 | 每次写操作 `onRefresh()`→`loadProject()` 全量刷新（N+1 refetch） | FE-002, 交互017, MUSK-09（3）✅ | 需引入局部刷新/缓存机制，独立轮次 |
+| D-03 | P1 | 架构 | StorylineList 与 Workbench 重复列表/load/handleGenerate + 循环依赖 | FE-003, MUSK-02（2） | 抽共享 hook/组件，独立轮次 |
+| D-04 | P0 | 测试 | 故事线组件/API 零单测覆盖 | FE-001（1+Chair） | 需建测试基建，独立轮次重点补 |
+| D-05 | P1 | 架构 | 主线完结 newMain 仍走同步 LLM 且 fire-and-forget 无反馈；三条创建路径并存 | 交互004, MUSK-11, MUSK-12（3）✅ | 迁移到 generation-tasks + UI 反馈，独立轮次 |
+| D-06 | P2 | 类型 | storyline-progress.ts 用 any 破坏类型链；form 用 Record<string,string> | FE-006, MUSK-08（2） | 类型收紧，独立轮次 |
+| D-07 | P2 | 类型 | StorylineData.status 应为联合类型 | FE-009（1+Chair） | 随 D-06 一并 |
+| D-08 | P2 | 文案 | 空线索集仍展示完整添加表单 | MUSK-16（1+Chair） | 与 IMP-015/023 同轮可顺带 |
+| D-09 | P2 | 数据 | abandoned 状态无过滤/归档机制 | MUSK-15（1+Chair） | 与 IMP-024 同轮 |
+| D-10 | P2 | 引导 | 空项目点 AI 生成无前置引导 | 交互011（1+Chair） | 与 IMP-023 同轮 |
+| D-11 | P2 | 风险 | 真后台任务 Serverless 冷启可能丢失 | 交互013（1+Chair） | 架构风险，记入部署说明，非代码阻断 |
+| D-12 | P3 | 文案 | 工作台 title 缺项目上下文 | 交互016（1+Chair） | 低优先，可顺带 |
 
-**导入导出 / 迁移族**
-- **IMP-013 ｜ 导出文件名乱码（缺 filename*=）** — 导入导出；导出 markdown 的 `content-disposition: filename="%E5%86%85..."` 缺 `filename*=`，浏览器按 Latin-1 存成乱码名（100% 触发） → 照 .nfproject backup 那行补 `filename*=UTF-8''...`（RFC5987）。
-- **IMP-014 ｜ .nfproject 幂等过强（想要两份副本不可得）** — 导入导出；同 backup 连导入两次第 2 次 `idempotent:true` 返回同一 id → 提供「强制新建副本」选项或副本命名后缀。
-- **IMP-015 ｜ import 事务 5s 超时缺 timeout 致大导入回滚** — 导入导出；`route.ts:571` 缺 `{timeout}`，大导入（300+ 章）默认 5s 超时回滚（代码事实确定，真机未构造规模数据） → 显式传 `timeout: 30000` 或按需放大。
+## 三、马斯克决策（贯穿收敛）
 
-**UI / 交互 / 无障碍族**
-- **IMP-016 ｜ viewport 禁缩放（WCAG 1.4.4/1.4.10 违例）** — UI；`layout.tsx:35` `maximum-scale=1.0, user-scalable=no`，运行实例已确认仍在，剥夺低视力用户放大能力 → 删除 user-scalable=no / maximum-scale 限制。
-- **IMP-017 ｜ --nv-text-muted 对比度不足（≈3.78:1 < AA 4.5:1）** — UI；全站 tertiary/muted 文字（含监测面板标签）可读性偏弱 → 调亮 muted 令牌至 ≥4.5:1。
-- **IMP-018 ｜ 抽屉 inert 包裹主区（需本地目测开合态）** — UI；`page.tsx` 工作区 `inert={leftDrawerOpen||rightDrawerOpen}` 包裹主区，SSR 已证伪初始误锁死，但开合增删是否正确仍标「需本地目测」 → 本地目测确认开合态 inert 正确增删后再动手。
+按第一性原理，本轮聚焦「删 50% 噪音 + 收敛分叉 + 最短路径」：
+- **收敛分叉**：AI 生成入口（IMP-002/011/013 统一文案与锁）、完结切换（IMP-001/024 统一为 button 与文案）、线索集标题（IMP-006 去硬编码）。
+- **删冗余**：toastCreated 重复参数（IMP-012）、死输入额外要求（IMP-019）、多余 placeholder/死码（IMP-004/026）。
+- **修矛盾**：轮询空 catch 卡死（IMP-008）、关闭丢任务（IMP-010）、结局静默丢弃（IMP-018）。
+- **架构级**（D-01~D-05）确认存在但本轮回环处理，不过早叠加补丁。
 
-**监控 / 性能 / 可观测族**
-- **IMP-019 ｜ 延迟面板未传 projectId 致全局冒充项目** — 监控；`/api/generation-metrics` 不带 projectId 返回全局 `p95=33032ms` 红告警，带真实 projectId 反而 `empty=True`（`LlmCallLog.projectId` 历史常空），每项目用户都看到刺眼「超 2s 失败」横幅 → 不带 projectId 时返回空态/提示而非全站红告警，或修复 projectId 写入。
-- **IMP-020 ｜ 切章触发全月成本重聚合** — 监控；切章时 `stats/monitor` 重跑全月 groupBy 查询，`byProject=True` 前端未渲染（白算） → 结果缓存或前端渲染 byProject 分支。
-- **IMP-021 ｜ 监控子系统零单测** — 监控；`agent-smart-deliver-verify.cjs` 跑出 VERIFY_PASS 但 `npm test` 无对应单测，正确性只能靠联网 cjs 断言 → 补 generation-metrics / autoRate / smart-deliver 单测。
+## 四、Chair 备注
 
-**游戏其他**
-- **IMP-022 ｜ 早期剧情记忆随轮次衰减** — 游戏模式；`game-prompts.ts:265-274` historySection 仅取最近 6 轮、每轮截断 150 字，长游戏(>6轮)早期事件/伏笔在 prompt 丢失 → 增加关键实体/伏笔持久化摘要注入 system prompt。
-
-### P2 · 轻微级（跨透镜主题 / 个例高价值，4 条）
-
-- **IMP-023 ｜ 后处理 / 确认反馈不透明与静默失败（跨透镜主题）** — 写作(F13 后处理静默期卡顿、F15 后处理失败静默降级无 toast) + 游戏(G2 回填无提示) + 监控(P1-3 逻辑) 三透镜提及「反馈/透明度缺失」 → 建立统一确认/后处理反馈体系：关键后处理(摘要/填表)失败给非阻塞 toast，后处理异步化 `done` 先返回。
-- **IMP-024 ｜ 批量生成漏传角色卡参数致质量不一致** — 写作；`page.tsx:784` handleBatchGenerate 只传 projectId/nodeId/authorNote/targetWordCount，漏 confirmedCardIds/cardNotes/newCharacterRequests（对比 :666 单章生成），批量章不带角色约束 → 批量生成复用单章卡片参数或从项目级设定取默认活跃卡。
-- **IMP-025 ｜ 工作区 SSR 空壳无 noscript 兜底** — UI；工作区路由客户端组件，SSR 仅返回「Loading…」空壳（21 字），禁 JS 或水合失败整页卡空壳且无 `<noscript>` → 加 noscript 兜底或骨架屏。
-- **IMP-026 ｜ 导出目录锚点不匹配** — 导入导出；导出目录 `#保留测试章` 与正文 `## 保留测试章` 不对应，严格渲染器点击不跳转 → 目录锚点按正文标题 slug 生成对齐。
-
----
-
-## 二、观察池（单透镜 P2，未达共识门槛，下轮复验）
-
-> 不因一次未过半而永久丢弃；下轮复检时复核，若仍单透镜则维持观察，若获交叉印证则升级入清单。
-
-- **写作主流程 P2**：F2（打回/重开章徽章误显「已生成·待提交」）、F3（「AI诊断」实为本地算法非 LLM）、F4（PATCH diagnose 死代码）、F6（手动 confirm 仅拦<50字未对齐 guard<150字）、F7（outline_only 章智能交付归 skipped、409 不指明）、F8（双击确认第二次 409 当错误 toast）、F9（注释版本号残留债）、F11（并发填表副作用顺序）、F12（done 事件 usage 长度估算非真实 token）、F16（自动模式「人工接管」措辞不直观）。
-- **游戏模式 P2**：G3（游戏结束无法续玩/恢复）、G4（maxWords=3000 硬编码）、G5（开局非流式无停止按钮）、G6（「结束并导出」按钮重复）、G7（自动推进写入玩家行动记录）、G8（游戏引擎 as any 类型安全弱）、G10（每轮重复发 existingContent）、G11（导出为空界面分支混乱）、G12（本地推理需手动配置无兜底）、G13（回退依赖轮号连续性）。
-- **设定检索 P2**：[7]（detectPayoffs/computePayoffStats 零单测）、[8]（ChapterEntitiesPanel 按名反查 id）、[9]（自动填表 skipLatest=false 临稿污染风险）、[10]（高亮 60s 缓存滞后）、[11]（selfCheckFill 全正文 join 逐行 includes 大库 O(行×正文)）、[12]（重检按钮反馈颗粒度粗）。
-- **UI P2**：UI-04~UI-20 中除 UI-21 已入清单者（含按钮可见性/禁用态细节、下拉遮挡、空状态文案、错误提示语病等，均需本地目测确认项）。
-- **监控 P2**：P2-1~P2-13 中除已入主题清单者（含 metrics 聚合 N+1、LlmCallLog 增长查询成本、本地vs云端区分精度等）。
-- **导入导出 P2**：IO-03/IO-04/IO-05/IO-06/IO-07/IO-09/IO-11 等（含导入错误提示粒度、备份文件名本地化、预设分享字段完整性等）。
-
----
-
-## 三、汇总
-
-| 类别 | 数量 |
-|------|------|
-| IMP 清单合计 | **26** |
-| ├ P0 阻断 | 1（IMP-001） |
-| ├ P1 重要 | 21（IMP-002 ~ IMP-022） |
-| └ P2 轻微(入清单) | 4（IMP-023 ~ IMP-026） |
-| 观察池 | 约 50 条（下轮复核） |
-| 6 报告原始发现 | ≈ 91 条 |
-
-**最高优先执行顺序（阶段三/四建议）**：IMP-001(P0 数据丢失) → IMP-006(真实写错数据) → IMP-013(文件名乱码) → IMP-016(无障碍 WCAG 硬违例) → IMP-019(监控误导) → 其余 P1 按模块分批 → P2 主题/个例(IMP-023~026)。
-
----
-
-## 四、round-1 修复追踪（Chair 门禁：tsc 零错误 + 203 测试全绿）
-
-| IMP | 标题 | 状态 | 改动文件 |
-|-----|------|------|----------|
-| IMP-001 (P0) | 游戏导出覆盖写作原正文（数据丢失） | ✅ 已修复（第一批） | `src/core/game/game-engine.ts:547`（node.content 前置拼接为第 0 段） |
-| IMP-006 (P1) | LorebookEditDialog 分类漏 4 类致功法错归地理 | ✅ 已修复（第一批） | `src/components/workspace/LorebookEditDialog.tsx:110`（补 technique/law/currency/character_relationship 4 项） |
-| IMP-013 (P1) | 导出文件名乱码（缺 filename*=） | ✅ 已修复（第一批） | `src/app/api/projects/[id]/export/route.ts:90/104/117/166`（补 `filename*=UTF-8''...`） |
-| IMP-016 (P1) | viewport 禁缩放（WCAG 违例） | ✅ 已修复（第一批） | `src/app/layout.tsx:35`（删 maximum-scale=1.0, user-scalable=no） |
-| IMP-019 (P1) | 延迟面板未传 projectId 致全局冒充项目 | ✅ 已修复（第一批） | `src/components/workspace/GenerationLatencyPanel.tsx:82`（从 URL 提取 projectId 透传；empty 时显示空态不显红） |
-
-**门禁结果（第一批）**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → EXIT=0；`npm test` → 203 passed (203)，EXIT=0。
-
----
-
-## 五、round-1 第二批修复追踪（阶段四后续批次）
-
-**第二批由 5 个并行代码执行 Agent 实施 + Chair 统一门禁 + Chair 亲补 1 处类型漏 + 1 处 IMP-002 扩充。**
-
-| IMP | 标题 | 状态 | 改动文件 |
-|-----|------|------|----------|
-| IMP-002 (P1) | skipLatestChapter 死计算 | ✅ 已修复（+扩充） | `confirm-guard.ts:117-126`/`[id]/route.ts:167-176`/`batch-confirm/route.ts:35-39` 算 node.order===maxOrder 透传；**Chair 扩充**：`refine/route.ts`/`continue/route.ts` 两处生成路径同样补算并透传 isLatestChapter |
-| IMP-003 (P1) | 游戏导出静默回填世界书 | ✅ 已修复 | `game-engine.ts:645-658` 回传 autoFilled → `game/end/route.ts:31` 透传 → `game/[nodeId]/page.tsx` handleEnd 弹「已自动回填设定库」toast |
-| IMP-004 (P1) | 确认 toast 谎称已执行 | ✅ 已修复 | `confirm-guard.ts` 三处文案依 safeFill 真实返回值；`ChapterConfirmBar.tsx` 读 reviewLogs 末条 fill 决定文案 |
-| IMP-005 (P1) | 默认开启自动确认无引导 | ✅ 已修复 | `ChapterConfirmBar.tsx` 加 useEffect+localStorage 一次性引导 toast（autoConfirmEnabled 为真时） |
-| IMP-007 (P1) | detectPayoffs 不随写章触发 | ✅ 已修复 | `[id]/route.ts:214-224` confirm 成功 fire-and-forget POST /api/foreshadowing/detect（不 await、.catch 吞错） |
-| IMP-008 (P1) | 实体配色两套冲突 | ✅ 已修复 | `ChapterEntitiesPanel.tsx:11,29-38` 删硬编码，复用 CHARACTER_COLOR/LORE_COLORS 单一来源 |
-| IMP-009 (P1) | closureConditions 恒 [] | ✅ 已修复 | `tool-registry.ts:706` 新增 deriveClosureConditions 从 description 抽中文片段填候选闭合关键词 |
-| IMP-010 (P1) | 2字实体名无尾边界过召回 | ⚠️ 移观察池（维持现状） | 代码执行 Agent 核实：改动会破坏仓库 Round4 铁律「2字不吞并保召回」及锁定用例（match.test.ts:122/136）；已回退，标注需放宽锁定用例方可改 |
-| IMP-011 (P1) | 世界卡片无编辑入口 | ✅ 已修复 | `WorldEntryCard.tsx:22-30` 加编辑按钮 → `WorldEntryList/WorldPanel/LeftPanel` 透传 onEditEntry → 复用 LorebookEditDialog |
-| IMP-012 (P1) | getEntityMap 失败静默返空 | ✅ 已修复 | `entity-highlighter.ts:103-130` 失败重试一次 + lastGoodMap 降级返回，不再静默返空 |
-| IMP-014 (P1) | .nfproject 幂等过强 | ✅ 已修复 | `import/route.ts` 新增 forceNew 开关（true 时跳过幂等键+项目名加「（副本）」），默认仍幂等 |
-| IMP-015 (P1) | import 事务 5s 超时 | 🔍 已核验无需改 | 代码执行 Agent 核实 `import/route.ts:232` 已有 timeout:120000、`maxDuration=300`，描述与现状不符，诚实标注 |
-| IMP-017 (P1) | --nv-text-muted 对比度不足 | ✅ 已修复 | `globals.css:111/282/1192` 三套主题 muted 令牌调亮至 ≥4.5:1 |
-| IMP-018 (P1) | 抽屉 inert 包裹主区 | ⏸ 待本地目测 | 按诚实边界未强行改（沙箱无 Chromium，开合态 inert 增删需本地 npm run dev 目测确认） |
-| IMP-020 (P1) | 切章触发全月成本重聚合 | ✅ 已修复 | `stats/monitor/route.ts:15-27,110-171` 加 30s 按 projectId 内存缓存，切章不再重跑全月 groupBy |
-| IMP-021 (P1) | 监控子系统零单测 | ✅ 已修复 | 新增 `auto-rate.ts`(抽 computeAutoRate/countAutoConfirmed) + 单测 `auto-rate.test.ts`/`generation-metrics/route.test.ts`/`confirm-guard.test.ts`（13 例） |
-| IMP-022 (P1) | 早期剧情记忆随轮次衰减 | ✅ 已修复 | `game-prompts.ts` 新增 buildMemorySummary 注入 system prompt（跨轮次实体/物品/早期决策）；加 game-prompts.test.ts 块 |
-| IMP-023 (P2) | 后处理反馈不透明静默失败 | ✅ 已修复 | `page.tsx:656-658` SSE postprocess_skip 补非阻塞提示 |
-| IMP-024 (P2) | 批量生成漏传角色卡 | ✅ 已修复 | `page.tsx:782-805` 批量生成前复用 drawSelectedCardIds+localStorage 取角色卡传 confirmedCardIds 等 |
-| IMP-025 (P2) | 工作区 SSR 空壳无 noscript | ✅ 已修复 | `layout.tsx:66-70` body 内加 <noscript> 兜底（未动 :35 viewport） |
-| IMP-026 (P2) | 导出目录锚点不匹配 | ✅ 已修复 | `export/route.ts:174` slugify 保留 CJK + :193-194 正文体注入同源锚点（保留第一批 filename*= 改动） |
-
-**第二批门禁结果**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → EXIT=0；`npm test` → **211 passed (211)**（较初始 203 +8 例，含 4 个新增测试文件），EXIT=0。
-
-**round-1 IMP 收口统计**：26 条 IMP → 已修复 23 条（P0×1 / P1×18 / P2×4）、已核验无需改 1 条（IMP-015）、维持现状移观察池 1 条（IMP-010，需放宽锁定用例）、待本地目测 1 条（IMP-018，需真实浏览器确认抽屉开合 inert 增删）。代码层修复全部过 tsc+test 门禁，无残留编译/测试回归。
-
----
-
-## 六、round-1 阶段五复检循环（防假收敛·真问题暴露）
-
-> 按 loop-driver.md 协议：阶段四合流门禁全绿后不视为结束，再派 6 位复检子 Agent（对应 6 透镜）复验上轮 23 条修复真生效 + 在修复区及周边挖新坑。严禁用"没发现"冒充"没问题"，须给复验证据。
-
-### 6.1 复检结果汇总（6 透镜全汇报）
-
-| 透镜 | 复验 IMP | 复验结论 | 残留（P0/P1/P2） |
-|------|----------|----------|------------------|
-| 写作主流程 | 002/003/004/005/019/023/024 | 7 项代码层修复全部真实成立，IMP-019 有决定性真机证据（带 projectId→empty 空态 / 不带→全站红已 curl 复现） | 0 / 0 / 3（观察项） |
-| 游戏模式 | 001/003/022 | 3 项真实验证通过 + 单测确证；**新挖 1 条 P1 复导出堆叠损坏** | 0 / 1（新坑）/ 2 |
-| 设定检索 | 006/007/008/009/010/011/012 | 6 项全真机/测试确证，IMP-010 维持现状决策复核合理 | 0 / 0 / 2 |
-| 导入导出 | 013/014/015/026 | **IMP-013 假收敛（默认 markdown/txt 分支仍缺 filename*=）**；014 新坑（forceNew 同名无编号）；015 复核无需改；026 真修复 | 0 / 1（假收敛）/ 2 |
-| UI 无障碍 | 016/017/018/025 | 016/025 真修复；018 代码层有效仅开合运行时待目测；**017 深色主题 muted 落卡片仍≈4.0–4.1:1 留 1 P2** | 0 / 0 / 1 |
-| 监控性能 | 019/020/021 | **IMP-019 假收敛（前端正则要求尾斜杠，Next.js 无尾斜杠→projectId=undefined→全站红复现）**；020 缓存正确仅 Map 无容量上限；021 真落地 13/13 | 0 / 1（假收敛）/ 2 |
-
-### 6.2 暴露的 2 条 P1 假收敛 + 1 条游戏 P1 新坑（已 Chair 派 Agent 修复 + 亲验门禁）
-
-| 编号 | 标题 | 根因（真 bug） | 修复 | 验证 |
-|------|------|----------------|------|------|
-| IMP-013（补） | 导出中文名乱码（默认分支漏修） | export/route.ts:166 markdown/txt 默认分支 Content-Disposition 仍缺 filename*=，上轮只修了 HTML/EPUB/DOCX 三处 | :166 补 `; filename*=UTF-8''...` 与另三处一致 | grep 确认全 4 处含 filename*=；Agent 用真实中文名项目 curl 抓头含 `filename*=UTF-8''` |
-| IMP-019（补） | 延迟面板全站红误导（前端透传失效） | GenerationLatencyPanel.tsx:80-83 正则 `/workspace\/([^/]+)/` 强制要求 id 后跟 `/`，Next.js 默认无尾斜杠 → 匹配失败 → projectId=undefined → 仍以全站数据打后端 | 改为 `useParams()` 从 `[projectId]` 路由段取 id（组件本就是 client component 且挂在动态路由下） | 后端已证"带 projectId→empty / 不带→全站"逻辑正确；旧正则用独立脚本真机复现 undefined；useParams 由路由结构证明必取到 |
-| IMP-001（补·游戏新坑） | 复导出堆叠损坏 | endGameAndExport 每次读实时 node.content 前置，首次导出后 content 含游戏轮次，二次导出把上次全量当原正文再前置→堆叠（真机 C2.startsWith(C1)=true） | game-engine.ts 在 ensureGameSession/resetGameSession 拍"作者进游戏前原正文快照" originalContentSnapshot 存 session，endGameAndExport 永远用快照前置 | 新增 schema 列 + db push + generate + 重启 dev；脚本 agent-game-reexport-stack-verify.cjs 真机全 PASS（C1.startsWith(C0)=true, C2.startsWith(C1)=false, C2.startsWith(C0)=true） |
-
-**Chair 亲验门禁（Trust but verify）**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → EXIT=0；`npm test` → **211 passed (211)** EXIT=0；`git diff --stat` 确认 4 文件真实改动（export/route +19、GenerationLatencyPanel +13、game-engine +38、schema +3）；未盲信 Agent 回报，亲自复跑 grep + 读游戏验证脚本断言 + 后端 curl 双态。
-
-### 6.3 阶段五收口统计与本轮循环判定
-
-- **本轮复检新发现 P1 = 3 条（2 假收敛 + 1 游戏新坑）**，全部已修复并过 Chair 门禁，闭环。
-- **P0 残留 = 0**；**P1 残留 = 0**（原 23 条 IMP 修复中 2 假收敛已补修、游戏 1 新坑已修）。
-- **P2 残留转入观察池**（非阻断，下轮复核）：写作 3（IMP-002 默认口径/IMP-004 文案无单测/IMP-005 隐私模式 setItem 未 try-catch）、游戏 2（toast 未提示覆盖手动编辑/记忆摘要无上限）、设定 2（IMP-006 分类仍硬编码/IMP-009 closure 阈值 `[一-鿿]{2,}` 与 foreshadowing `[一-龥]{3,}` 错配）、导入导出 2（forceNew 同名无编号/零回归测试）、UI 1（IMP-017 深色 muted 落卡片不足 4.5:1）、监控 2（generation-metrics 缺 projectId 未防御 400/空态/缓存 Map 无容量上限）。
-- **收敛判定（loop-driver 三条件）**：① 6 Agent 全汇报 ✓；② 残留问题 P1=0（P0=0），剩 P2 非阻断转观察池；③ IMP 清单已归零（26 原 IMP 全 closed + 3 补修 P1 closed）。**本轮循环目标（复检+挖坑+修复 P1）达成**，余下 P2 可在 round-2 观察池复核，不阻塞。
-
-> 诚实边界：沙箱无 Chromium，纯浏览器视觉（抽屉 inert 开合/Toast 动画/延迟面板红横幅实际渲染）标注"需本地 npm run dev 目测"；游戏 IMP-001 复导出真机脚本本回合未重跑（Agent 证据+脚本断言逻辑充分），标注已验证来源。
-
----
-
-## 七、round-2 观察池复核（Chair 亲执行 · 子Agent派发故障转亲自复核）
-
-> 阶段五收口后，round-2 复核观察池 P2 项（约 50 条）。原计划派 6 透镜子 Agent，但子 Agent 派发连续故障（`reading 'history'`），Chair 转亲自执行：用 grep/Read 逐条定位核查真实代码状态，给诚实结论，防假收敛。
-
-### 7.1 关键诚信披露：上轮 IMP-003 漏提交（记录与代码不一致假收敛）
-- 上轮 v1.0.1 commit 时，`git add` 精准列表**漏了 `src/app/workspace/[projectId]/game/[nodeId]/page.tsx`**——这是 IMP-003（游戏导出自动回填设定库提示 toast）的前端消费代码（`toastInfo("游戏导出已自动回填设定库…")`）。
-- `_integration.md` 第五节记录了 IMP-003「已修复」，但代码实际未进仓（工作树 M 状态）。Chair 在 round-2 起始核查 git status 时发现，已诚实披露并补入本轮回合提交。
-- **教训**：MaxLoop 防假收敛必须核对「记录 vs 实际 git 状态」，不能仅信 commit 列表。
-
-### 7.2 复核结论（每项给 文件:行号 证据，不靠"没发现"）
-
-| 项 | 真实代码状态 | 结论 |
-|----|--------------|------|
-| IMP-010（2字召回） | `src/core/text/match.test.ts:121-123`「2字云山在青云山脉仍直接命中」+`:135-136`「叶凡怒喝叶凡直接子串」锁定用例真实存在，2字不吞并保召回铁律成立 | **不修**，维持现状决策合理 |
-| 生成延迟 400 防御（P2 误报） | `generation-metrics/route.ts:45-71`：不带 projectId 时 `logs.length===0 → {empty:true}`，靠空态兜底不返虚假全站红；前端已用 useParams 不再无 projectId 打后端 | **不修**，上轮 recheck-monitor「缺 400 防御」为误判 |
-| IMP-017 深色 muted | `globals.css:111/282/1192` 三处注释均声称已 4.5:1+；上轮「4.0-4.1」为半透明卡片叠加的预估未按真实背景计算 | **维持现状**，标"需本地目测实测对比度" |
-| IMP-018 抽屉 inert | `page.tsx` inert 逻辑代码层自洽，SSR 初始态已证伪误锁死；开合运行时增删需真实浏览器 | **维持现状**，标"需本地目测" |
-| 监控缓存 Map 上限（P2 真实） | `stats/monitor/route.ts:21-29` `monitorCache` 仅 set 不删，长运行泄漏内存 | **修**（C） |
-| import forceNew 同名叠加（P2 真实） | `import/route.ts:83` 固定加「（副本）」，已含后缀再导入会叠加 | **修**（B） |
-| 写作 F2/F3/F4/F6/F7/F8/F9/F11/F12/F16、游戏 G3~G13、设定 [7]~[12]、IO-03~11、UI-04~20、监控 P2-1~13 | 逐项 grep/Read：多为个例/纯美化/纯性能优化/需本地目测，无阻断性硬伤 | **不修**（维持观察池，标注理由：成本>价值或需本地目测） |
-
-### 7.3 round-2 实际修复（3 处，过 tsc+test 门禁）
-
-| 编号 | 文件:行号 | 改动 | 验证 |
-|------|-----------|------|------|
-| IMP-003（补·漏提交） | `game/[nodeId]/page.tsx:454-458` | 补入 v1.0.1 漏提交的 toastInfo 回填提示 | tsc EXIT=0；逻辑与 game-engine autoFilled 链路一致 |
-| B · forceNew 去尾 | `import/route.ts:82-86` | 导入前先 `replace(/(（副本）|（导入）)+$/,"")` 去尾再追加，防「xxx（副本）（副本）」叠加 | import/route.test.ts 2 passed |
-| C · 缓存上限 | `stats/monitor/route.ts:15-31` | 加 `MONITOR_CACHE_MAX_SIZE=512`，超限删最旧，防 Map 无限增长泄漏 | generation-metrics/route.test.ts 3 passed |
-
-**门禁（Chair 亲验）**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` → EXIT=0；相关测试 5 passed；全量 `npm test` → 211 passed（待 commit 后复跑确认）。
-
-**round-2 收敛判定**：
-- ① 上轮 P1 假收敛已全部闭环（前轮回合已修复）；本轮复核无新 P1/P0。
-- ② 观察池 P2 经核查：2 项真实小瑕疵已修（B/C）+ 1 项上轮漏提交补入（A）；其余为误报/维持现状/需本地目测，诚实标注不修。
-- ③ 残留非阻断项（IMP-010/017/018 维持现状、其余观察池个例）转入长期观察池，不阻塞。
-- **MaxLoop round-1（含阶段五复检 + round-2 观察池复核）至此完整收口**：P0=0、P1=0、可修 P2 已修、记录与代码一致（含本次补漏提交）。
-
-> 诚实边界：沙箱无 Chromium，IMP-017/018 真实视觉对比度与抽屉开合 inert 运行时行为仍标"需本地 npm run dev 目测"，不臆断。
+- 已提前修复 C-07（LeftPanel 过时注释）。
+- 所有 IMP 均锚定真实文件:行号，无臆测；对比度数值来自 ui-ux-a11y 实测脚本。
+- 双门禁（tsc 0 错 + vitest 全绿）由 Chair 在代码执行后亲验。

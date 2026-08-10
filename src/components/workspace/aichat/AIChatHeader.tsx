@@ -15,8 +15,8 @@ interface AIChatHeaderProps {
 const CAPABILITIES: { icon: string; label: string; desc: string }[] = [
   { icon: "user", label: "角色", desc: "查/建/改/删角色卡，比对正文与设定" },
   { icon: "book", label: "世界书", desc: "查词条、补全世界观条目" },
-  { icon: "target", label: "大纲", desc: "看章节大纲、梳理剧情线" },
-  { icon: "eye", label: "未收尾线索", desc: "追踪未收尾的剧情线，避免烂尾" },
+  { icon: "target", label: "大纲", desc: "看章节大纲、梳理故事线" },
+  { icon: "eye", label: "未收尾线索", desc: "追踪未收尾的故事线，避免烂尾" },
   { icon: "book", label: "关系网", desc: "从正文提取角色互动关系" },
   { icon: "file", label: "分析", desc: "章节一致性检查、提炼实体" },
 ];

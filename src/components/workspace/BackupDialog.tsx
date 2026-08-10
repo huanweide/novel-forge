@@ -15,7 +15,7 @@ const EXPORT_ITEMS: { key: string; label: string; desc: string }[] = [
   { key: "lorebook", label: "世界书词条", desc: "世界观/势力/宝物等词条" },
   { key: "chapters", label: "章节正文", desc: "全部章节（含大纲与正文）" },
   { key: "branches", label: "分支", desc: "故事分支节点" },
-  { key: "storylines", label: "剧情线", desc: "主线/支线及七要素" },
+  { key: "storylines", label: "故事线", desc: "主线/支线及七要素" },
   { key: "style", label: "文风卡", desc: "文风模板与风格卡" },
   { key: "tables", label: "世界表", desc: "结构化表格（宝宝流）" },
   { key: "rules", label: "正则规则", desc: "写作后处理正则" },
@@ -95,7 +95,7 @@ export function BackupDialog({
         </p>
 
         <p className="mt-2 text-[10px] leading-relaxed text-[var(--nv-text-muted)]">
-          本次备份包含：章节/角色/世界书/规则/文风/分支/剧情线/文风卡/世界表；不含：游戏进度/版本历史/记忆摘要/未收尾线索追踪/待兑现事项（请用文本导出迁移设定）。
+          本次备份包含：章节/角色/世界书/规则/文风/分支/故事线/文风卡/世界表；不含：游戏进度/版本历史/记忆摘要/未收尾线索追踪/待兑现事项（请用文本导出迁移设定）。
         </p>
 
         <div className="mt-4 flex gap-2">

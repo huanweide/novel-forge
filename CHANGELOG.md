@@ -1,5 +1,17 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.10 — 2026-08-10
+
+**MaxLoop 多智能体评审闭环 + 马斯克决策落地（故事线工作台 30 项优化）**
+
+- **评审·MaxLoop 六阶段闭环**：5 位 lens Agent（ui-ux-a11y / frontend-engineering / copy-empty-state / interaction-flow / musk-perspective）并行深度体验，92 条原始发现经 Chair 去重投票 → 30 条 Round-1 实施批次（IMP-001~030）+ 12 条架构观察池（D-01~D-12 下轮回环）；马斯克第一性原理贯穿收敛——删 50% 噪音、收敛分叉、修矛盾。
+- **修复·断链恢复（IMP-010）**：关闭工作台不再 `setGenTaskId(null)` 丢任务 id；新增 `onTaskSettled` 契约，轮询 done/failed 后父级清理陈旧 id；重开工作台若有待处理 taskId 自动恢复轮询，杜绝 AI 生成任务在途丢失（配套连点锁 IMP-011、轮询空 catch 卡死修复 IMP-008、双重轮询防护 IMP-009）。
+- **优化·对比度与可访问性（IMP-002/001/003/004/021）**：AI 生成按钮改实心紫罗兰深底浅字达 WCAG AA ≥4.5:1；左列完结切换 `<span onClick>`→标准 `<button>`+aria-label；重试链接改 `--nv-text-primary`；placeholder 改 tertiary；线索编辑/删除按钮补 aria-label。
+- **优化·文案与交互收口（IMP-006/020/019/025/027/029 等）**：线索集标题去项目硬编码「纸集/龙王寨/尸检报告」→「线索集（伏笔、物证、人物备注等）」；「采用并落库/落库中/落库失败」jargon→「保存到故事线/保存中/保存失败」；「剧情线」→「故事线」统一；省略号半角→全角；七要素进度计数修正「要素 X/6（不含结局）」；时间轴「大事件」→「关键情节节点」。
+- **验证**：双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 43 文件 368/368 全绿；独立复检 Agent 逐条核对 IMP-001~030 全部源码层面落地、IMP-010 完整闭环、无新回归。
+
+---
+
 ## v1.8.9 — 2026-08-10
 
 **马斯克检验后细节收口**
