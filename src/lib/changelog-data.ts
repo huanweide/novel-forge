@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.6";
+export const LATEST_VERSION = "v1.8.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.6 真后台 AI 生成落地：故事线「AI 生成」改为创建 GenerationTask，服务端异步跑 LLM，关掉页面任务继续跑，前端轮询拿结果后再进中间态编辑。",
-  "v1.8.6 前端轮询 UI：生成按钮实时显示「生成中… X%」，任务失败显示错误原因；重开工作台可再次发起，服务端任务不受影响。",
-  "v1.8.6 抽取故事线生成核心 src/core/storyline/generate.ts 与后台执行器 execute-task.ts，新增 generation-tasks API（创建/列表/单条轮询），关闭 #174。",
-  "v1.8.6 验证：双门禁 tsc 0 错 + vitest 43 文件 368/368 全绿；端到端实跑创建任务→服务端跑通 LLM→done+4 条建议、七要素齐全。",
+  "v1.8.7 全面自查：v1.8.4/1.8.5/1.8.6 三轮新功能与优化全部正确落地、无 regression。",
+  "v1.8.7 截图验证：12 个核心页面无头截图全部通过，对比度/布局/空状态/可访问性均达标，console 0 错误。",
+  "v1.8.7 双门禁复核：tsc 0 错 + vitest 43 文件 368/368 全绿。",
+  "v1.8.7 已知待统一项：StorylineList 仍走 v1.8.4 同步 /api/storylines/generate，StorylineWorkbench 已走 v1.8.6 异步 /api/generation-tasks；双路径功能均正常，统一为真后台列为后续优化。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.7",
+    date: "2026-08-09",
+    title: "全面自查收口（v1.8.4/1.8.5/1.8.6 复核 + 截图证据链）",
+    sections: [
+      {
+        label: "自查",
+        items: [
+          "全面复核 v1.8.4（故事线重构）、v1.8.5（UI 自查）、v1.8.6（真后台 AI）全部改动点，确认各功能文件均正确落地、无遗漏无 regression。",
+          "12 个核心页面无头截图（首页、changelog、explore、recycle、settings、workshop、dissect、workspace×2、故事线工作台、角色编辑弹窗、世界书编辑弹窗）全部通过视觉质量检查，console 0 错误。",
+          "双门禁复核：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 43 文件 368 测试全绿。"
+        ],
+      },
+      {
+        label: "已知项",
+        items: [
+          "双 AI 生成路径并存：StorylineList 仍使用 v1.8.4 同步 /api/storylines/generate（阻塞等待后打开工作台中间态），StorylineWorkbench 已使用 v1.8.6 异步 /api/generation-tasks（创建任务→轮询进度）。两者功能均正常，统一为真后台路径为后续优化项。"
+        ],
+      },
+    ],
+  },
+
   {
     version: "v1.8.6",
     date: "2026-08-10",

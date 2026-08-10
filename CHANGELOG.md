@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.7 — 2026-08-09
+
+**全面自查收口（v1.8.4/1.8.5/1.8.6 复核 + 截图证据链）**
+
+- **自查·三轮成果复核**：全面复核 v1.8.4（故事线重构）、v1.8.5（UI 自查）、v1.8.6（真后台 AI）全部改动点，确认各功能文件均正确落地、无遗漏无 regression。
+- **自查·截图证据链**：12 个核心页面无头截图（首页、changelog、explore、recycle、settings、workshop、dissect、workspace×2、故事线工作台、角色编辑弹窗、世界书编辑弹窗）全部通过视觉质量检查，console 0 错误。
+- **自查·双门禁复核**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 43 文件 368 测试全绿。
+- **已知项·双生成路径待统一**：`StorylineList` 仍使用 v1.8.4 同步 `/api/storylines/generate`，`StorylineWorkbench` 已使用 v1.8.6 异步 `/api/generation-tasks`。两者功能均正常，统一为真后台路径为后续优化项。
+
 ---
 
 ## v1.8.6 — 2026-08-10
