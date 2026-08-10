@@ -77,7 +77,12 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* 玻璃拟态：强制最小模糊 40px（规范禁止 backdrop-blur-sm 弱模糊）——一处覆盖，全局 backdrop-blur-sm 自动达标 */
+  --backdrop-blur-sm: 40px;
 }
+
+/* 玻璃拟态：所有 backdrop-blur-sm 补充 saturate(180%)，杜绝"省略 backdrop-saturate"违规（一处覆盖全局） */
+.backdrop-blur-sm { backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); }
 
 /* ═══════════════════════════════════════════
    CSS 自定义属性 — Novel Forge 虚空玻璃令牌
@@ -85,7 +90,7 @@
 
 :root {
   /* ── 虚空色彩（功能语义）—— 整体提亮、对比加强 ── */
-  --nv-void:        #0E1424;   /* 最深底色——页背景（提亮） */
+  --nv-void:        #0B1322;   /* 最深底色——页背景（玻璃拟态·深墨夜景 #0B1322） */
   --nv-abyss:       #161E34;   /* 次级底色——容器背景（提亮） */
   --nv-surface-1:   rgba(255, 255, 255, 0.03);  /* 基底面——行/分组 */
   --nv-surface-2:   rgba(255, 255, 255, 0.055);  /* 抬升面——卡片 */
@@ -103,13 +108,14 @@
   --nv-warning-soft: oklch(0.74 0.16 85 / 0.14);
   --nv-danger:       oklch(0.62 0.22 18);        /* 玫瑰 —— 删除/危险 */
   --nv-danger-soft:  oklch(0.62 0.22 18 / 0.14);
-  --nv-creative:     oklch(0.50 0.18 295);       /* 紫罗兰 —— AI/魔法（加深以保浅色文字对比 ≥4.5:1） */
-  --nv-creative-soft:oklch(0.62 0.21 295 / 0.14);
-  --nv-creative-fill:#4A2E8C;                    /* R2-P1-1：更深的紫——AI 按钮填充，浅字 #F0EEE8 对比度≈7.5:1(≥4.5 AA) */
+  --nv-creative:     oklch(0.74 0.13 95);        /* 香槟金 —— AI/魔法（收敛为唯一强调色，去除紫粉） */
+  --nv-creative-soft:oklch(0.74 0.13 95 / 0.16);
+  --nv-creative-fill:#8A6A2E;                    /* 香槟金暗调——AI 按钮填充，浅字 #F0EEE8 对比度达标 */
   --nv-info:         oklch(0.66 0.15 230);       /* 青 —— 提示/信息 */
   --nv-info-soft:    oklch(0.66 0.15 230 / 0.14);
   --nv-accent:       oklch(0.78 0.14 95);        /* 金色 —— 强调/高亮 */
   --nv-accent-soft:  oklch(0.78 0.14 95 / 0.12);
+  --nv-gold:         #E4B863;                     /* 玻璃拟态·唯一强调色（香槟金纯色，便于边框/文字/光晕精确控制） */
 
   /* ── 文字层级（4级明度 + 功能色）—— 更亮、对比更强 ── */
   --nv-text-primary:   #F8F7F2;   /* L1 主文字——近白，对比度 17:1 */
@@ -139,9 +145,9 @@
   --shadow-hover-sm:  0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-hover-md:  0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-hover-lg:  0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow-indigo:   0 0 16px oklch(0.62 0.19 270 / 0.15);
+  --shadow-glow-accent:   0 0 18px rgba(228, 184, 99, 0.22);
   --shadow-glow-success:  0 0 16px oklch(0.65 0.18 160 / 0.15);
-  --shadow-glow-creative: 0 0 16px oklch(0.58 0.21 295 / 0.15);
+  --shadow-glow-creative: 0 0 18px rgba(228, 184, 99, 0.20);
 
   /* ── 动画曲线 ── */
   --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -150,17 +156,25 @@
   --ease-in-expo:    cubic-bezier(0.7, 0, 0.84, 0);
   --ease-out-smooth: cubic-bezier(0.22, 0.7, 0, 1);
 
-  /* ── 动画时长 ── */
-  --dur-micro:   150ms;
-  --dur-standard: 250ms;
-  --dur-emphasis: 400ms;
+  /* ── 玻璃拟态 · 方向性阴影令牌（受光顶边 + 背光底边） ── */
+  --shadow-glass-top:  inset 0 1px 0 rgba(255, 255, 255, 0.14);                 /* 顶部受光边 */
+  --shadow-glass-rest: 0 10px 30px rgba(2, 6, 18, 0.45),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.14);                 /* 静息：下投影 + 顶受光 */
+  --shadow-glass-hover:0 18px 46px rgba(2, 6, 18, 0.55),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.18);                 /* 悬停：更深下投影 + 顶受光增强 */
+  --glow-gold:         0 0 18px rgba(228, 184, 99, 0.22);                       /* 香槟金光晕（唯一强调色） */
+
+  /* ── 动画时长（玻璃拟态：统一 spring 500ms 节奏） ── */
+  --dur-micro:   150ms;   /* 仅用于 :active 按压快速触感反馈 */
+  --dur-standard: 500ms;  /* 交互过渡主节奏 */
+  --dur-emphasis: 500ms;
   --dur-page:    600ms;
 
   /* ── 圆角 ── */
-  --radius: 0.625rem;
+  --radius: 0.875rem;
 
   /* ── Shadcn 变量映射到虚空体系（提亮） ── */
-  --background: #0E1424;
+  --background: #0B1322;
   --foreground: #F8F7F2;
   --card: rgba(255, 255, 255, 0.045);
   --card-foreground: #F8F7F2;
@@ -219,7 +233,7 @@
 }
 
 .dark {
-  --background: #0E1424;
+  --background: #0B1322;
   --foreground: #F8F7F2;
   --card: rgba(255, 255, 255, 0.045);
   --card-foreground: #F8F7F2;
@@ -236,20 +250,20 @@
   --destructive: oklch(0.62 0.22 18);
   --border: rgba(255, 255, 255, 0.11);
   --input: rgba(255, 255, 255, 0.08);
-  --ring: oklch(0.62 0.19 270 / 0.5);
-  --chart-1: oklch(0.62 0.19 270);
-  --chart-2: oklch(0.65 0.18 160);
-  --chart-3: oklch(0.72 0.16 85);
-  --chart-4: oklch(0.58 0.22 18);
-  --chart-5: oklch(0.58 0.21 295);
+  --ring: rgba(228, 184, 99, 0.5);
+  --chart-1: oklch(0.70 0.11 230);
+  --chart-2: oklch(0.72 0.13 95);
+  --chart-3: oklch(0.78 0.14 95);
+  --chart-4: oklch(0.55 0.22 18);
+  --chart-5: oklch(0.64 0.15 175);
   --sidebar: #080810;
   --sidebar-foreground: #F0EEE8;
-  --sidebar-primary: oklch(0.62 0.19 270);
-  --sidebar-primary-foreground: #F0EEE8;
+  --sidebar-primary: var(--nv-accent);
+  --sidebar-primary-foreground: #0B1322;
   --sidebar-accent: rgba(255, 255, 255, 0.03);
   --sidebar-accent-foreground: #F0EEE8;
   --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: oklch(0.62 0.19 270 / 0.5);
+  --sidebar-ring: rgba(228, 184, 99, 0.5);
 }
 
 /* ═════════════════════════════════════════
@@ -278,9 +292,9 @@
   --nv-warning-soft: oklch(0.72 0.16 85 / 0.14);
   --nv-danger:       oklch(0.55 0.22 18);
   --nv-danger-soft:  oklch(0.55 0.22 18 / 0.12);
-  --nv-creative:     oklch(0.50 0.18 295);
-  --nv-creative-soft:oklch(0.55 0.21 295 / 0.12);
-  --nv-creative-fill:#4A2E8C;                    /* R2-P1-1：更深的紫——AI 按钮填充（深色主题） */
+  --nv-creative:     oklch(0.72 0.13 95);
+  --nv-creative-soft:oklch(0.72 0.13 95 / 0.14);
+  --nv-creative-fill:#8A6A2E;                    /* 香槟金——AI 按钮填充（浅色主题） */
   --nv-info:         oklch(0.55 0.15 230);
   --nv-info-soft:    oklch(0.55 0.15 230 / 0.12);
   --nv-accent:       oklch(0.68 0.14 95);
@@ -293,9 +307,9 @@
   --nv-text-muted:     #696C75;   /* 浅色主题：对比度 4.6:1，达 WCAG AA */
   --nv-text-muted-on-surface-3: #5A5D67;  /* Round-4 补修：浅色 surface-3 合成 #E1DDD8 上，原复用 #696C75 仅 3.881:1(<4.5 AA)；改用浅色 muted-foreground #5A5D67，surface-3 上 4.860:1(≥4.5 AA)。注：浅色 tertiary 已随 NEW-UI-WC-2 改为 #5E616B（surface-3 上 ≈4.577:1 ≥ AA），且弱于本专用 muted(4.860)，层级不再倒挂；原 #6B6E78(3.767:1) 已废弃 */
 
-  --shadow-glow-indigo:   0 0 16px oklch(0.55 0.17 270 / 0.15);
+  --shadow-glow-accent:   0 0 18px rgba(228, 184, 99, 0.28);
   --shadow-glow-success:  0 0 16px oklch(0.55 0.16 160 / 0.15);
-  --shadow-glow-creative: 0 0 16px oklch(0.55 0.21 295 / 0.15);
+  --shadow-glow-creative: 0 0 18px rgba(228, 184, 99, 0.26);
 
   /* ── Shadcn 变量 → 浅色 ── */
   --background: #F3EFE8;
@@ -338,9 +352,9 @@
 .light body {
   background-color: #F3EFE8;
   background-image:
-    radial-gradient(ellipse 70% 50% at 50% -10%, oklch(0.55 0.17 270 / 0.10), transparent 70%),
-    radial-gradient(ellipse 50% 45% at 88% 8%, oklch(0.55 0.21 295 / 0.07), transparent 70%),
-    radial-gradient(ellipse 55% 45% at 8% 95%, oklch(0.55 0.16 160 / 0.05), transparent 70%);
+    radial-gradient(ellipse 70% 50% at 22% -10%, oklch(0.60 0.10 230 / 0.10), transparent 70%),
+    radial-gradient(ellipse 50% 45% at 88% 8%, rgba(184, 137, 58, 0.10), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 8% 95%, oklch(0.70 0.09 160 / 0.05), transparent 70%);
   color-scheme: light;
 }
 
@@ -388,6 +402,16 @@
 .light .markdown-body { color: #2A2C33; }
 .light .btn-ghost { color: var(--nv-text-secondary); border-color: var(--nv-border-2); }
 .light .btn-ghost:hover { background: var(--nv-surface-2); border-color: rgba(15, 18, 30, 0.2); color: var(--nv-text-primary); }
+/* 浅色主题：按钮统一无色玻璃 + 香槟金/语义描边（与 dark 同构，文字加深保对比） */
+.light .btn-primary,
+.light .btn-creative { color: var(--nv-accent-text-on-light, #9A6E22); border-color: rgba(184, 137, 58, 0.55); box-shadow: var(--shadow-glass-rest), 0 0 18px rgba(184, 137, 58, 0.16); }
+.light .btn-primary:hover,
+.light .btn-creative:hover { border-color: rgba(184, 137, 58, 0.8); box-shadow: var(--shadow-glass-hover), 0 0 26px rgba(184, 137, 58, 0.28); }
+.light .btn-success { color: oklch(0.42 0.13 160); border-color: oklch(0.55 0.16 160 / 0.55); }
+.light .btn-success:hover { border-color: oklch(0.55 0.16 160 / 0.8); }
+.light .btn-danger { color: oklch(0.42 0.20 18); border-color: oklch(0.55 0.22 18 / 0.55); }
+.light .btn-danger:hover { border-color: oklch(0.55 0.22 18 / 0.8); }
+.light .input-glass:focus { border-color: rgba(184, 137, 58, 0.55); box-shadow: 0 0 0 3px rgba(184, 137, 58, 0.12); }
 .light .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(15, 18, 30, 0.18); }
 .light .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(15, 18, 30, 0.3); }
 .light .tooltip-trigger::after {
@@ -408,7 +432,7 @@
 
   /* 全局按钮交互基线：所有按钮（含裸 Tailwind 按钮）统一拥有过渡、按压回弹、禁用态、聚焦环 */
   button {
-    @apply transition-all duration-150 outline-none;
+    @apply transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] outline-none;
   }
   button:active:not(:disabled) {
     @apply scale-[0.98];
@@ -423,13 +447,23 @@
 
   body {
     @apply bg-background text-foreground;
-    background-color: #0E1424;
+    background-color: #0B1322;
     background-image:
-      radial-gradient(ellipse 70% 50% at 50% -10%, oklch(0.66 0.19 270 / 0.20), transparent 70%),
-      radial-gradient(ellipse 50% 45% at 88% 8%, oklch(0.62 0.21 295 / 0.14), transparent 70%),
-      radial-gradient(ellipse 55% 45% at 8% 95%, oklch(0.68 0.18 160 / 0.08), transparent 70%);
+      /* 玻璃拟态·柔和光源光斑：月光蓝（左上）+ 香槟金（右上）+ 淡青（底部）—— 去紫粉，无色光 */
+      radial-gradient(ellipse 68% 48% at 18% -8%, oklch(0.70 0.11 230 / 0.16), transparent 70%),
+      radial-gradient(ellipse 52% 44% at 86% 6%, rgba(228, 184, 99, 0.12), transparent 70%),
+      radial-gradient(ellipse 58% 46% at 8% 96%, oklch(0.75 0.10 175 / 0.07), transparent 70%);
     background-attachment: fixed;
     min-height: 100vh;
+  }
+  /* 全屏噪点颗粒（2.5%）——玻璃拟态微纹理，固定覆盖于内容之上、不拦截点击 */
+  body::after {
+    content: "";
+    position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+    background-repeat: repeat;
   }
   html {
     @apply font-sans;
@@ -461,20 +495,22 @@
   pointer-events: none;
 }
 
-/* L2 抬升面 —— 卡片/面板 */
+/* L2 抬升面 —— 卡片/面板（无色玻璃 + 顶部受光 + 方向性投影） */
 .surface-elevated {
-  background: var(--nv-surface-2);
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.12), transparent 50%),
+    var(--nv-surface-2);
   border: 1px solid var(--nv-border-2);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  transition: border-color var(--dur-standard) var(--ease-out-smooth),
-              box-shadow var(--dur-standard) var(--ease-out-smooth),
-              transform var(--dur-standard) var(--ease-out-smooth);
+  backdrop-filter: blur(60px) saturate(180%);
+  -webkit-backdrop-filter: blur(60px) saturate(180%);
+  box-shadow: var(--shadow-glass-rest);
+  transition: border-color var(--dur-standard) var(--ease-out-expo),
+              box-shadow var(--dur-standard) var(--ease-out-expo),
+              transform var(--dur-standard) var(--ease-out-expo);
 }
 .surface-elevated:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: var(--shadow-hover-md),
-              0 0 0 1px rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--shadow-glass-hover);
 }
 .surface-elevated:active {
   transform: scale(0.985);
@@ -482,119 +518,136 @@
 
 /* L3 浮起面 —— 模态/弹窗/下拉 */
 .surface-floating {
-  background: rgba(255, 255, 255, 0.055);
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.12), transparent 50%),
+    rgba(255, 255, 255, 0.08);
   border: 1px solid var(--nv-border-3);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5),
-              0 0 0 1px rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(60px) saturate(180%);
+  -webkit-backdrop-filter: blur(60px) saturate(180%);
+  box-shadow: 0 22px 60px rgba(2, 6, 18, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 /* ── 旧版兼容别名（已广泛使用的类名，保留） ── */
 .glass-surface {
-  background: var(--nv-surface-2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.12), transparent 50%),
+    var(--nv-surface-2);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid var(--nv-border-2);
+  box-shadow: var(--shadow-glass-rest);
 }
 .glass-surface-strong {
-  background: var(--nv-surface-3);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.14), transparent 50%),
+    var(--nv-surface-3);
+  backdrop-filter: blur(50px) saturate(180%);
+  -webkit-backdrop-filter: blur(50px) saturate(180%);
   border: 1px solid var(--nv-border-3);
+  box-shadow: var(--shadow-glass-hover);
 }
 
 /* ═══════════════════════════════════════════
    功能色彩按钮变体
    ═══════════════════════════════════════════ */
 
-/* 主操作（靛蓝渐变） */
-.btn-primary {
-  background: linear-gradient(135deg, oklch(0.62 0.19 270), oklch(0.55 0.22 278));
-  color: #F0EEE8;
-  box-shadow: 0 2px 12px oklch(0.62 0.19 270 / 0.25);
-  transition: all var(--dur-standard) var(--ease-out-smooth);
-}
-.btn-primary:hover {
-  background: linear-gradient(135deg, oklch(0.67 0.18 265), oklch(0.60 0.21 273));
-  box-shadow: 0 4px 20px oklch(0.62 0.19 270 / 0.4);
-  transform: translateY(-1px);
-}
-.btn-primary:active {
-  transform: scale(0.97);
-  /* 按压凹陷：额外 inset 阴影叠加（沿用 --dur-micro 150ms 快速触感反馈），与外投影并存 */
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35), 0 1px 6px oklch(0.62 0.19 270 / 0.2);
-}
+/* ─────────────────────────────────────────────
+   功能色彩按钮变体 · 玻璃拟态重写
+   统一原则：无色玻璃底（白 8–10% 半透明）+ backdrop-blur[40px] saturate[180%]
+            + 受光顶边 inset + 背光底边投影
+            + 香槟金/语义色只作描边·文字·光晕（不填实色渐变，无紫粉）
+   ───────────────────────────────────────────── */
 
-/* 确认（翠绿渐变） */
-.btn-success {
-  background: linear-gradient(135deg, oklch(0.58 0.18 160), oklch(0.50 0.20 155));
-  color: #F0EEE8;
-  box-shadow: 0 2px 12px oklch(0.65 0.18 160 / 0.2);
-  transition: all var(--dur-standard) var(--ease-out-smooth);
-}
-.btn-success:hover {
-  background: linear-gradient(135deg, oklch(0.63 0.17 158), oklch(0.55 0.19 153));
-  box-shadow: 0 4px 20px oklch(0.65 0.18 160 / 0.35);
-  transform: translateY(-1px);
-}
-.btn-success:active {
-  transform: scale(0.97);
-}
-
-/* 危险（玫瑰渐变） */
-.btn-danger {
-  background: linear-gradient(135deg, oklch(0.52 0.24 18), oklch(0.45 0.26 15));
-  color: #F0EEE8;
-  box-shadow: 0 2px 12px oklch(0.58 0.22 18 / 0.2);
-  transition: all var(--dur-standard) var(--ease-out-smooth);
-}
-.btn-danger:hover {
-  background: linear-gradient(135deg, oklch(0.57 0.23 16), oklch(0.50 0.25 13));
-  box-shadow: 0 4px 20px oklch(0.58 0.22 18 / 0.35);
-  transform: translateY(-1px);
-}
-.btn-danger:active {
-  transform: scale(0.97);
-}
-
-/* 创意/AI（紫罗兰渐变） */
+/* 主操作 / AI 创意：香槟金强调（唯一强调色，AI 不再用紫） */
+.btn-primary,
 .btn-creative {
-  background: linear-gradient(135deg, oklch(0.53 0.22 295), oklch(0.46 0.24 300));
-  color: #F0EEE8;
-  box-shadow: 0 2px 12px oklch(0.58 0.21 295 / 0.25);
-  transition: all var(--dur-standard) var(--ease-out-smooth);
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--nv-gold);
+  border: 1px solid rgba(228, 184, 99, 0.45);
+  border-radius: 1rem;            /* rounded-2xl */
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-glass-rest), 0 0 18px rgba(228, 184, 99, 0.18);
+  transition: all var(--dur-standard) var(--ease-out-expo);
 }
+.btn-primary:hover,
 .btn-creative:hover {
-  background: linear-gradient(135deg, oklch(0.58 0.21 292), oklch(0.51 0.23 298));
-  box-shadow: 0 4px 20px oklch(0.58 0.21 295 / 0.4);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(228, 184, 99, 0.72);
+  box-shadow: var(--shadow-glass-hover), 0 0 26px rgba(228, 184, 99, 0.30);
+  transform: translateY(-2px);
 }
+.btn-primary:active,
 .btn-creative:active {
   transform: scale(0.97);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35), 0 1px 6px rgba(228, 184, 99, 0.15);
 }
 
-/* 次要（幽灵按钮） */
+/* 确认（翠绿）—— 语义色只作描边/文字/光晕 */
+.btn-success {
+  background: rgba(255, 255, 255, 0.10);
+  color: oklch(0.80 0.16 160);
+  border: 1px solid oklch(0.68 0.18 160 / 0.45);
+  border-radius: 1rem;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-glass-rest), 0 0 18px oklch(0.68 0.18 160 / 0.16);
+  transition: all var(--dur-standard) var(--ease-out-expo);
+}
+.btn-success:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: oklch(0.68 0.18 160 / 0.72);
+  box-shadow: var(--shadow-glass-hover), 0 0 26px oklch(0.68 0.18 160 / 0.28);
+  transform: translateY(-2px);
+}
+.btn-success:active { transform: scale(0.97); }
+
+/* 危险（玫瑰）—— 语义色只作描边/文字/光晕 */
+.btn-danger {
+  background: rgba(255, 255, 255, 0.10);
+  color: oklch(0.74 0.20 18);
+  border: 1px solid oklch(0.62 0.22 18 / 0.45);
+  border-radius: 1rem;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-glass-rest), 0 0 18px oklch(0.62 0.22 18 / 0.16);
+  transition: all var(--dur-standard) var(--ease-out-expo);
+}
+.btn-danger:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: oklch(0.62 0.22 18 / 0.72);
+  box-shadow: var(--shadow-glass-hover), 0 0 26px oklch(0.62 0.22 18 / 0.28);
+  transform: translateY(-2px);
+}
+.btn-danger:active { transform: scale(0.97); }
+
+/* 次要（幽灵按钮）：无色玻璃 + 细描边 */
 .btn-ghost {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--nv-text-secondary);
   border: 1px solid var(--nv-border-2);
-  transition: all var(--dur-standard) var(--ease-out-smooth);
+  border-radius: 1rem;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-glass-top);
+  transition: all var(--dur-standard) var(--ease-out-expo);
 }
 .btn-ghost:hover {
-  background: var(--nv-surface-2);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
   color: var(--nv-text-primary);
+  box-shadow: var(--shadow-glass-rest);
 }
 .btn-ghost:active {
-  background: var(--nv-surface-3);
+  background: rgba(255, 255, 255, 0.12);
   transform: scale(0.97);
 }
 
 /* 基础按压反馈（兼容旧 btn-press） */
 .btn-press {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
-              box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform var(--dur-micro) cubic-bezier(0.2, 0, 0, 1),
+              box-shadow var(--dur-micro) cubic-bezier(0.2, 0, 0, 1);
 }
 .btn-press:active {
   transform: scale(0.97);
@@ -605,12 +658,16 @@
    ═══════════════════════════════════════════ */
 
 .input-glass {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   color: var(--nv-text-primary);
-  transition: border-color var(--dur-standard) var(--ease-out-smooth),
-              box-shadow var(--dur-standard) var(--ease-out-smooth),
-              background var(--dur-standard) var(--ease-out-smooth);
+  border-radius: 0.875rem;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-glass-top);
+  transition: border-color var(--dur-standard) var(--ease-out-expo),
+              box-shadow var(--dur-standard) var(--ease-out-expo),
+              background var(--dur-standard) var(--ease-out-expo);
 }
 .input-glass::placeholder {
   color: var(--nv-text-tertiary);
@@ -621,9 +678,9 @@
 }
 .input-glass:focus {
   outline: none;
-  border-color: oklch(0.62 0.19 270 / 0.4);
-  box-shadow: 0 0 0 3px oklch(0.62 0.19 270 / 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(228, 184, 99, 0.55);
+  box-shadow: 0 0 0 3px rgba(228, 184, 99, 0.12), var(--shadow-glass-top);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ═══════════════════════════════════════════
@@ -661,8 +718,8 @@
 
 /* 渐变边框呼吸 */
 @keyframes border-breathe {
-  0%, 100% { border-color: oklch(0.62 0.19 270 / 0.1); }
-  50%      { border-color: oklch(0.62 0.19 270 / 0.25); }
+  0%, 100% { border-color: rgba(228, 184, 99, 0.12); }
+  50%      { border-color: rgba(228, 184, 99, 0.30); }
 }
 
 /* 微光扫描（生成中效果） */
@@ -673,9 +730,9 @@
 .shimmer-line {
   background: linear-gradient(90deg,
     transparent 0%,
-    oklch(0.62 0.19 270 / 0.06) 30%,
-    oklch(0.62 0.19 270 / 0.12) 50%,
-    oklch(0.62 0.19 270 / 0.06) 70%,
+    rgba(228, 184, 99, 0.06) 30%,
+    rgba(228, 184, 99, 0.12) 50%,
+    rgba(228, 184, 99, 0.06) 70%,
     transparent 100%
   );
   background-size: 200% 100%;
@@ -762,7 +819,7 @@
 
 /* ── 悬停色彩过渡 ── */
 .hover-glow:hover {
-  box-shadow: var(--shadow-glow-indigo);
+  box-shadow: var(--glow-gold);
 }
 
 /* ── 链接悬停下划线动画 ── */
@@ -856,12 +913,11 @@
   to   { width: 0%; }
 }
 
-/* ── 文本渐变（霓虹标题） ── */
+/* ── 文本渐变（霓虹标题 · 玻璃拟态重写：白字 + 香槟金发光，禁止 background-clip:text） ── */
 .text-gradient {
-  background: linear-gradient(120deg, var(--nv-primary), var(--nv-creative) 55%, var(--nv-accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--nv-text-primary);
+  text-shadow: 0 0 22px rgba(228, 184, 99, 0.30), 0 0 48px rgba(228, 184, 99, 0.14);
+  letter-spacing: 0.01em;
 }
 
 /* ── 英雄区光晕装饰 ── */
@@ -971,30 +1027,30 @@
 .nf-header::after {
   content: "";
   position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-  background: linear-gradient(90deg, transparent, oklch(0.62 0.19 270 / 0.32), transparent);
+  background: linear-gradient(90deg, transparent, rgba(228, 184, 99, 0.38), transparent);
   pointer-events: none;
 }
 .light .nf-header {
   background: linear-gradient(180deg, rgba(250, 251, 253, 0.92), rgba(240, 242, 246, 0.72)) !important;
 }
 .light .nf-header::after {
-  background: linear-gradient(90deg, transparent, oklch(0.55 0.17 270 / 0.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(184, 137, 58, 0.30), transparent);
 }
 
 /* 品牌 LOGO 星形 */
 .nf-logo {
   width: 30px; height: 30px; border-radius: 9px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, oklch(0.62 0.19 270 / 0.25), oklch(0.58 0.21 295 / 0.18));
-  border: 1px solid oklch(0.62 0.19 270 / 0.35);
-  box-shadow: 0 0 14px oklch(0.62 0.19 270 / 0.22), inset 0 0 10px oklch(0.62 0.19 270 / 0.12);
-  color: #dbe6ff;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(228, 184, 99, 0.45);
+  box-shadow: 0 0 14px rgba(228, 184, 99, 0.22), inset 0 0 10px rgba(255, 255, 255, 0.10);
+  color: var(--nv-gold);
 }
 
 /* 标题：均衡断行 + 发光 */
 .nf-home h1, .nf-home h2, .nf-home h3 { text-wrap: balance; }
 .nf-hero-title .text-gradient {
-  filter: drop-shadow(0 0 20px oklch(0.62 0.19 270 / 0.32)) drop-shadow(0 0 44px oklch(0.58 0.21 295 / 0.16));
+  filter: drop-shadow(0 0 20px rgba(228, 184, 99, 0.30)) drop-shadow(0 0 44px rgba(228, 184, 99, 0.14));
 }
 .nf-hero-sub { color: #B7B4AC !important; }
 .light .nf-hero-sub { color: var(--nv-text-secondary) !important; }
@@ -1015,12 +1071,12 @@
   border: 1px solid rgba(130, 180, 255, 0.08);
 }
 .nf-orb .d1, .nf-orb .d2, .nf-orb .d3 {
-  position: absolute; border-radius: 9999px; background: oklch(0.62 0.19 270 / 0.8);
-  box-shadow: 0 0 12px oklch(0.62 0.19 270 / 0.9);
+  position: absolute; border-radius: 9999px; background: oklch(0.72 0.11 230 / 0.8);
+  box-shadow: 0 0 12px oklch(0.72 0.11 230 / 0.9);
 }
 .nf-orb .d1 { width: 5px; height: 5px; top: 12%; left: 62%; }
-.nf-orb .d2 { width: 3px; height: 3px; top: 55%; left: 8%; background: oklch(0.58 0.21 295 / 0.8); box-shadow: 0 0 10px oklch(0.58 0.21 295 / 0.9); }
-.nf-orb .d3 { width: 4px; height: 4px; top: 78%; left: 44%; background: oklch(0.75 0.14 95 / 0.75); box-shadow: 0 0 10px oklch(0.75 0.14 95 / 0.85); }
+.nf-orb .d2 { width: 3px; height: 3px; top: 55%; left: 8%; background: rgba(228, 184, 99, 0.85); box-shadow: 0 0 10px rgba(228, 184, 99, 0.9); }
+.nf-orb .d3 { width: 4px; height: 4px; top: 78%; left: 44%; background: rgba(228, 184, 99, 0.75); box-shadow: 0 0 10px rgba(228, 184, 99, 0.85); }
 @keyframes nf-orb-spin { to { transform: rotate(360deg); } }
 
 /* 主 CTA 流光扫过 */
@@ -1040,7 +1096,7 @@
 .nf-book::before {
   content: "";
   position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, var(--spine, oklch(0.62 0.19 270)), transparent 80%);
+  background: linear-gradient(90deg, var(--spine, oklch(0.70 0.11 230)), transparent 80%);
   opacity: 0.95; transition: height 0.25s var(--ease-out-smooth), opacity 0.25s var(--ease-out-smooth);
   z-index: 1;
 }
@@ -1049,7 +1105,7 @@
 .nf-bookmark {
   position: absolute; right: 12px; bottom: -14px; z-index: 0;
   font-size: 84px; font-weight: 800; line-height: 1; letter-spacing: -0.05em;
-  color: var(--spine, oklch(0.62 0.19 270)); opacity: 0.06;
+  color: var(--spine, oklch(0.70 0.11 230)); opacity: 0.06;
   pointer-events: none; user-select: none;
 }
 .light .nf-bookmark { opacity: 0.05; }
@@ -1066,7 +1122,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 40px rgba(2, 6, 18, 0.35);
 }
 .nf-book3d {
-  --spine: oklch(0.62 0.19 270);
+  --spine: oklch(0.70 0.11 230);
   position: relative;
   height: 100%;
   border-radius: 3px 14px 14px 3px;
@@ -1158,17 +1214,17 @@
 .nf-genre-card .gi {
   width: 38px; height: 38px; border-radius: 11px;
   display: flex; align-items: center; justify-content: center; font-size: 20px;
-  background: linear-gradient(135deg, oklch(0.62 0.19 270 / 0.16), oklch(0.58 0.21 295 / 0.10));
-  border: 1px solid oklch(0.62 0.19 270 / 0.18);
-  box-shadow: inset 0 0 12px oklch(0.62 0.19 270 / 0.10);
-  transition: transform 0.25s var(--ease-out-smooth);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(228, 184, 99, 0.30);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.08);
+  transition: transform var(--dur-standard) var(--ease-out-expo);
 }
 .nf-genre-card:hover .gi { transform: translateY(-2px) scale(1.06); }
 
 /* 空状态引导：分隔光 */
 .nf-glow-line {
   height: 1px; border: none; margin: 26px auto; width: min(420px, 70%);
-  background: linear-gradient(90deg, transparent, oklch(0.62 0.19 270 / 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(228, 184, 99, 0.32), transparent);
 }
 
 /* 移动端：轨道装饰隐藏 */
@@ -1200,12 +1256,12 @@ html.azure {
   --nv-warning-soft: oklch(0.74 0.15 90 / 0.14);
   --nv-danger:       oklch(0.62 0.20 20);
   --nv-danger-soft:  oklch(0.62 0.20 20 / 0.14);
-  --nv-creative:     oklch(0.64 0.15 175);
-  --nv-creative-soft:oklch(0.64 0.15 175 / 0.14);
-  --nv-creative-fill:#1F6F60;                    /* R2-P1-1：更深的青——AI 按钮填充（青色主题） */
+  --nv-creative:     oklch(0.78 0.12 95);
+  --nv-creative-soft:oklch(0.78 0.12 95 / 0.16);
+  --nv-creative-fill:#9A7530;                    /* 香槟金——AI 按钮填充（苍青主题） */
   --nv-info:         oklch(0.66 0.13 215);
   --nv-info-soft:    oklch(0.66 0.13 215 / 0.14);
-  --nv-accent:       oklch(0.80 0.12 160);
+  --nv-accent:       oklch(0.80 0.13 95);
   --nv-accent-soft:  oklch(0.80 0.12 160 / 0.12);
 
   --nv-text-primary:   #E9F2F0;
@@ -1230,8 +1286,11 @@ html.azure {
   --border: rgba(190, 230, 235, 0.10);
   --input: rgba(190, 230, 235, 0.12);
 }
-/* 苍青主题下按钮主色与浅色强调回退 */
-html.azure .btn-primary { color: #04201F; }
+/* 苍青主题下按钮统一无色玻璃 + 香槟金/语义描边（与 dark 同构） */
+html.azure .btn-primary,
+html.azure .btn-creative { color: var(--nv-gold); border-color: rgba(228, 184, 99, 0.5); }
+html.azure .btn-success { color: oklch(0.82 0.14 165); border-color: oklch(0.68 0.16 165 / 0.55); }
+html.azure .btn-danger { color: oklch(0.76 0.18 20); border-color: oklch(0.62 0.20 20 / 0.55); }
 
 /* ═══════════════════════════════════════════
    我的作品区 · 交互/视觉增强（v0.46.50）

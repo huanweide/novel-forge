@@ -37,7 +37,7 @@ export function ChatMessageList({ messages, onAdoptSuggestion }: ChatMessageList
                 {msg.role === "user" ? (
                   <span className="text-[10px] font-medium text-[var(--nv-text-secondary)]">你</span>
                 ) : (
-                  <span className="text-[10px] font-bold bg-gradient-to-r from-[var(--nv-creative)] to-[var(--nv-accent)] bg-clip-text text-transparent">墨灵</span>
+                  <span className="text-[10px] font-bold text-gradient">墨灵</span>
                 )}
                 {msg.trace && msg.trace.length > 0 && (
                   <span className="text-[10px] text-[var(--nv-text-tertiary)]">

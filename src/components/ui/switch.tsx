@@ -63,7 +63,7 @@ export function Switch({
       >
         <span
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-sm transition-transform duration-200",
+            "absolute top-1/2 -translate-y-1/2 rounded-full bg-[var(--nv-text-primary)] shadow-sm transition-transform duration-200",
             thumbSize,
             translate
           )}

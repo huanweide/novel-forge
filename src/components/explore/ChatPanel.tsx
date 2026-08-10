@@ -241,7 +241,7 @@ export function ChatPanel({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-5 py-2.5 bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-xl text-sm font-medium hover:from-[var(--nv-primary)] hover:to-[var(--nv-primary)] disabled:opacity-40 transition-all duration-200 active:scale-95 shadow-lg shadow-[var(--nv-primary)]/20 hover:shadow-[var(--nv-primary)]/30"
+            className="btn-primary px-5 py-2.5 text-sm font-medium disabled:opacity-40"
           >
             发送
           </button>

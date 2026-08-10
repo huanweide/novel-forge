@@ -107,17 +107,17 @@ export function AdoptedContentPanel({
             </div>
             <Link
               href={`/workspace/${createdProjectId}`}
-              className="block w-full py-3 rounded-xl bg-gradient-to-r from-success to-success text-[var(--nv-text-primary)] text-xs font-semibold text-center hover:from-success hover:to-success shadow-lg shadow-success/20 hover:shadow-success/30 transition-all duration-200 active:scale-[0.98]"
+              className="btn-success w-full py-3 text-xs font-semibold text-center block rounded-xl active:scale-[0.98]"
             >
               进入工作区 →
             </Link>
             <button
               onClick={() => onCreateProject("ai_refine")}
               disabled={creating || adopted.length === 0}
-              className={`w-full py-2.5 rounded-xl text-xs font-medium transition-all duration-200 active:scale-[0.98] border ${
+              className={`w-full py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] ${
                 creating || adopted.length === 0
-                  ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border-[var(--nv-border-2)] cursor-not-allowed"
-                  : "bg-purple-500/10 text-purple-300 border-purple-400/20 hover:bg-purple-500/15 hover:border-purple-400/30"
+                  ? "btn-ghost opacity-60 cursor-not-allowed"
+                  : "btn-creative"
               }`}
             >
               {creating ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 完善中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> AI补充缺失设定</span>}
@@ -131,10 +131,10 @@ export function AdoptedContentPanel({
             <button
               onClick={() => onCreateProject("direct")}
               disabled={creating || adopted.length === 0}
-              className={`w-full py-3 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-[0.98] ${
+              className={`w-full py-3 rounded-xl text-xs font-semibold active:scale-[0.98] ${
                 creating || adopted.length === 0
-                  ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border border-[var(--nv-border-2)] cursor-not-allowed"
-                  : "bg-gradient-to-r from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] shadow-lg shadow-[var(--nv-primary)]/20 hover:shadow-[var(--nv-primary)]/30 hover:from-[var(--nv-primary)] hover:to-[var(--nv-primary)]"
+                  ? "btn-ghost opacity-60 cursor-not-allowed"
+                  : "btn-primary"
               }`}
             >
               {creating ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 创建中...</span> : <span className="flex items-center gap-1"><Icon name="package" size={13} /> 手动创建项目</span>}

@@ -31,8 +31,7 @@ export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
         <div className="flex items-center gap-2.5">
           <div className="relative shrink-0">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--nv-creative)] via-[var(--nv-accent)] to-[var(--nv-info)]"
-              style={{ boxShadow: "0 0 16px color-mix(in oklch, var(--nv-creative) 55%, transparent)" }}
+              className="btn-creative w-9 h-9 rounded-xl flex items-center justify-center"
             >
               <Icon name="bot" size={18} className="text-white" />
             </div>
@@ -46,8 +45,7 @@ export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span
-                className="text-sm font-bold bg-gradient-to-r from-[var(--nv-creative)] via-[var(--nv-accent)] to-[var(--nv-info)] bg-clip-text text-transparent"
-                style={{ filter: "drop-shadow(0 0 6px color-mix(in oklch, var(--nv-creative) 35%, transparent))" }}
+                className="text-sm font-bold text-gradient"
               >
                 墨灵
               </span>

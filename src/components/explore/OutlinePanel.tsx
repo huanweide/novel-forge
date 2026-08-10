@@ -112,7 +112,7 @@ export function OutlinePanel({
             {outlineProgress.total != null && outlineProgress.current != null && (
               <div className="w-full bg-[var(--nv-surface-2)] rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-warning to-warning h-full rounded-full transition-all duration-700 ease-out"
+                  className="bg-warning h-full rounded-full transition-all duration-700 ease-out"
                   style={{
                     width: `${Math.round(
                       (outlineProgress.current / outlineProgress.total) * 100,
@@ -127,10 +127,10 @@ export function OutlinePanel({
         <button
           onClick={onSubmit}
           disabled={outlineLoading || !outlineText.trim()}
-          className={`w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
+          className={`w-full py-3 rounded-xl text-sm font-semibold active:scale-[0.98] ${
             outlineLoading || !outlineText.trim()
-              ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border border-[var(--nv-border-2)] cursor-not-allowed"
-              : "bg-gradient-to-r from-warning to-warning text-[var(--nv-text-primary)] shadow-lg shadow-warning/20 hover:shadow-warning/30 hover:from-warning hover:to-warning"
+              ? "btn-ghost opacity-60 cursor-not-allowed"
+              : "btn-primary"
           }`}
         >
           {outlineLoading ? (
@@ -155,10 +155,10 @@ export function OutlinePanel({
             <button
               onClick={onConfirm}
               disabled={creating}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 ${
+              className={`px-4 py-2 rounded-xl text-xs font-semibold active:scale-95 ${
                 creating
-                  ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] border border-[var(--nv-border-2)] cursor-not-allowed"
-                  : "bg-gradient-to-r from-success to-success text-[var(--nv-text-primary)] shadow-lg shadow-success/20 hover:shadow-success/30 hover:from-success hover:to-success"
+                  ? "btn-ghost opacity-60 cursor-not-allowed"
+                  : "btn-success"
               }`}
             >
               {creating ? "⏳ 写入中..." : "✅ 确认写入项目"}

@@ -67,7 +67,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
         onClick={() => setOpen((v) => !v)}
         aria-label="切换界面风格"
         title={`界面风格：${cur.name}（${cur.desc}）`}
-        className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] transition-all duration-150 active:scale-[0.97] px-2.5 py-1.5"
+        className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] transition-all duration-300 active:scale-[0.97] px-2.5 py-1.5"
       >
         <Icon name={cur.icon} size={15} />
         <span className="text-xs font-medium">{cur.name}</span>

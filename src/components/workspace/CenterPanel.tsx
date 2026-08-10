@@ -341,7 +341,7 @@ export function CenterPanel({
                 <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-4 text-[10px] text-[var(--nv-text-tertiary)]">
                   {ENTITY_LEGEND.map((it) => (
                     <span key={it.key} className="inline-flex items-center gap-1">
-                      <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: it.color }} aria-hidden="true" />
+                      <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: it.color }} aria-hidden="true" />
                       {it.label}
                     </span>
                   ))}

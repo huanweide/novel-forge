@@ -43,8 +43,7 @@ export function ChatInput({ message, loading, selectedText, onMessageChange, onS
           <button
             onClick={onSend}
             disabled={!message.trim()}
-            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-accent)] text-white transition-all hover:scale-105 active:scale-95 disabled:from-[var(--nv-surface-1)] disabled:to-[var(--nv-surface-1)] disabled:text-[var(--nv-text-tertiary)] disabled:scale-100 disabled:cursor-not-allowed"
-            style={message.trim() ? { boxShadow: "0 0 12px color-mix(in oklch, var(--nv-primary) 45%, transparent)" } : undefined}
+            className="btn-primary w-8 h-8 rounded-lg flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
             title="发送"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

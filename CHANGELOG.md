@@ -1,5 +1,22 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.15 — 2026-08-10
+
+**玻璃拟态（Glassmorphism）全面 UI 大修——严格对齐 STYLEKIT_STYLE_REFERENCE 规范**
+
+- **根设计系统严格玻璃化（`src/app/globals.css`）**：
+  - 三档主题（dark / light / azure）统一唯一强调色为香槟金 `#E4B863`；移除所有紫 / 青 / 绿偏色的强调，AI 按钮也回归金色。
+  - 全部按钮 token（`.btn-primary` / `.btn-creative` / `.btn-success` / `.btn-danger` / `.btn-ghost`）改为无色玻璃：`bg-white/10`、`backdrop-blur-[40px]`、`backdrop-saturate-[180%]`、`border-white/20`、`rounded-2xl`、方向性阴影、500ms spring 缓动；禁用彩色实色渐变填充。
+  - body 背景改为深墨夜景 `#0B1322` + 月光蓝/香槟金柔和光斑 + 全屏 2.5% SVG 噪点 overlay；移除紫粉光斑与 `background-clip:text` 渐变文字，标题改用纯白 + 香槟金发光。
+  - shadcn token（`--ring` / `--sidebar-primary` / `--chart-*`）去靛蓝紫，统一香槟金/月光蓝。
+  - `--radius` 提至 14px 级，动画主节奏 `--dur-standard` 延至 500ms，新增 `--ease-spring` / `--shadow-glass-*` 方向性阴影 token。
+- **全局模糊弱项一处覆盖**：在 `@theme inline` 中将 `--backdrop-blur-sm` 重映射为 `40px`，并追加全局 `.backdrop-blur-sm { blur(40px) saturate(180%) }`——全站 50+ 处原本 4px 弱模糊的元素自动达标，无需逐文件改动。
+- **组件层硬禁止项清零**：修复 `page.tsx` 无效 `shadow-glow-indigo` 类为香槟金光晕；`settings/page.tsx` 与 `switch.tsx` 的开关滑块 `bg-white` 改语义近白变量；`ThemeToggle` 的 `duration-150` 改 300ms；`CenterPanel` 的 `rounded-sm` 改 `rounded`；`explore/page.tsx`「一键AI构建所有设定」按钮改为 `.btn-creative` 标准玻璃按钮。
+- **主题 meta 对齐**：`src/app/layout.tsx` 的 `theme-color` 从 `#4f46e5` 改为 `#0B1322`。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 45 文件 390/390 全绿；无头 Chrome 截取首页 / explore / changelog / dissect 核心页面确认玻璃拟态生效。
+
+---
+
 ## v1.8.14 — 2026-08-10
 
 **收口：关闭列表级 AI 生成 + 取消完结扩散 + 写作界面 UI 美化 + 《新城·龙陨之地》实测验证**

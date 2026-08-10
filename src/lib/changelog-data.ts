@@ -25,18 +25,54 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.10";
+export const LATEST_VERSION = "v1.8.15";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.10 MaxLoop 多智能体评审闭环：5 透镜 Agent 投票 92→30 项改进，马斯克第一性原理收敛（删 50% 噪音、收敛分叉、修矛盾）。",
-  "v1.8.10 断链恢复（IMP-010）：关闭工作台保留任务 id，重开自动恢复轮询，杜绝 AI 生成任务在途丢失；配套连点锁 / 轮询超时 / 防双重轮询。",
-  "v1.8.10 对比度与可访问性：AI 生成按钮实心紫罗兰达 WCAG AA ≥4.5:1；完结切换改标准 button+aria-label；线索按钮补 aria-label。",
-  "v1.8.10 文案收口：线索集去项目硬编码、落库→「保存到故事线」、剧情线→故事线、省略号全角、七要素计数修正。",
+  "v1.8.15 玻璃拟态全面 UI 大修：严格对齐 STYLEKIT 规范，三档主题统一唯一强调色香槟金 #E4B863，移除全部紫/青/绿偏色，AI 按钮回归金色。",
+  "v1.8.15 根设计系统玻璃化：全部按钮 token 改无色玻璃（bg-white/10、backdrop-blur-[40px]、saturate-[180%]、圆角 2xl、方向性阴影、500ms spring）；背景改深墨夜景 + 光斑 + 2.5% 噪点。",
+  "v1.8.15 全局弱模糊一处覆盖：@theme 重映射 --backdrop-blur-sm 为 40px + 全局 .backdrop-blur-sm 补 saturate(180%)，全站 50+ 处元素自动达标，无需逐文件改。",
+  "v1.8.15 组件层硬禁止项清零 + 主题 meta 对齐；双门禁 tsc 0 错 + vitest 45 文件 390/390 全绿 + 无头截图四页确认玻璃拟态生效。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.15",
+    date: "2026-08-10",
+    title: "玻璃拟态（Glassmorphism）全面 UI 大修——严格对齐 STYLEKIT_STYLE_REFERENCE 规范",
+    sections: [
+      {
+        label: "根设计系统严格玻璃化",
+        items: [
+          "三档主题（dark / light / azure）统一唯一强调色为香槟金 #E4B863；移除所有紫/青/绿偏色强调，AI 按钮回归金色。",
+          "全部按钮 token（.btn-primary/.btn-creative/.btn-success/.btn-danger/.btn-ghost）改无色玻璃：bg-white/10、backdrop-blur-[40px]、backdrop-saturate-[180%]、border-white/20、rounded-2xl、方向性阴影、500ms spring 缓动；禁用彩色实色渐变填充。",
+          "body 背景改深墨夜景 #0B1322 + 月光蓝/香槟金光斑 + 全屏 2.5% SVG 噪点 overlay；标题改纯白 + 香槟金发光，移除 background-clip:text 渐变文字。",
+          "shadcn token（--ring/--sidebar-primary/--chart-*）去靛蓝紫，统一香槟金/月光蓝；--radius 提至 14px 级，--dur-standard 延至 500ms，新增 --ease-spring 与 --shadow-glass-* 方向性阴影 token。",
+        ],
+      },
+      {
+        label: "全局弱模糊一处覆盖",
+        items: [
+          "在 @theme inline 中将 --backdrop-blur-sm 重映射为 40px，并追加全局 .backdrop-blur-sm { blur(40px) saturate(180%) }，全站 50+ 处原本 4px 弱模糊元素自动达标，无需逐文件改动。",
+        ],
+      },
+      {
+        label: "组件层硬禁止项清零 + 主题 meta",
+        items: [
+          "修复 page.tsx 无效 shadow-glow-indigo 为香槟金光晕；settings/switch 开关滑块 bg-white 改语义近白变量；ThemeToggle duration-150→300ms；CenterPanel rounded-sm→rounded；explore「一键AI构建」按钮改 .btn-creative 标准玻璃按钮。",
+          "layout.tsx 的 theme-color 由 #4f46e5 改为 #0B1322。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "双门禁 SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错 + npx vitest run 45 文件 390/390 全绿。",
+          "无头 Chrome 截取 home/explore/changelog/dissect 四页，确认深墨夜景、无色玻璃、香槟金唯一强调、大圆角生效，紫粉清零。",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.10",
     date: "2026-08-10",

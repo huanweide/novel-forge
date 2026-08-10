@@ -564,11 +564,7 @@ export default function ExplorePage() {
             <button
               onClick={handleGenerateAll}
               disabled={generatingAll}
-              className={`rounded-xl border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
-                generatingAll
-                  ? "cursor-not-allowed border-[var(--nv-border-1)] bg-[var(--nv-surface-1)] text-[var(--nv-text-muted)]"
-                  : "border-[var(--nv-creative)]/30 bg-[var(--nv-creative-soft)] text-[var(--nv-creative)] hover:border-[var(--nv-creative)]/50 hover:bg-[var(--nv-creative-soft)]"
-              }`}
+              className="btn-creative px-3.5 py-1.5 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 生成中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> 一键AI构建所有设定</span>}
             </button>

@@ -1093,7 +1093,7 @@ export function ImportWizard({
                   <Button
                     onClick={handleCommit}
                     disabled={selectedChapters.size === 0 && selectedChars.size === 0 && selectedLore.size === 0}
-                    className="bg-gradient-to-r from-[var(--nv-primary)] to-purple-600 hover:from-[var(--nv-primary)] hover:to-purple-500 text-xs"
+                    className="btn-primary text-xs px-3 py-1.5 disabled:opacity-60"
                   >
                     <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 确认选中（{selectedChapters.size}章 {selectedChars.size}角色 {selectedLore.size}词条）
                   </Button>

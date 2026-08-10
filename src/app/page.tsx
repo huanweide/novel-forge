@@ -226,7 +226,7 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex shrink-0 gap-3">
-              <Link href="/explore" className="btn-primary nf-btn-flow text-sm px-7 py-3.5 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
+              <Link href="/explore" className="btn-primary nf-btn-flow text-sm px-7 py-3.5 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-[0_0_24px_rgba(228,184,99,0.30)]">
                 <Icon name="sparkles" size={15} /> 开始创作
               </Link>
               <Link href="/dissect" className="btn-ghost text-sm px-5 py-3.5 rounded-xl inline-flex items-center gap-1.5">
@@ -302,7 +302,7 @@ export default function Dashboard() {
             <hr className="nf-glow-line" />
             <div className="mt-2 flex flex-col items-center gap-4">
               <button onClick={loadSample} disabled={loadingSample}
-                className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-glow-indigo">
+                className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-[0_0_24px_rgba(228,184,99,0.30)]">
                 <Icon name="sparkles" size={15} /> {loadingSample ? "正在载入示例…" : "一键载入示例项目（仙侠）"}
               </button>
               <button onClick={() => setShowGenres((v) => !v)} disabled={loadingSample}
