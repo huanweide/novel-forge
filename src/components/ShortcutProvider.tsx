@@ -114,19 +114,8 @@ export function ShortcutProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // 首次使用：若未看过速查，且当前页面已有注册的快捷键，挂载后弹一次（localStorage 记忆）
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem("nf-shortcuts-seen")) {
-        const t = setTimeout(() => {
-          if (registryRef.current.size > 0) setHelpOpen(true);
-        }, 800);
-        return () => clearTimeout(t);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  // 马斯克检验后：不再自动弹出快捷键速查，避免首次进入工作台即被打扰。
+  // 用户仍可通过设置页「键盘快捷键」板块或主动调用 openHelp() 查看。
 
   const value = useMemo<ShortcutContextValue>(
     () => ({ register, list, openHelp, closeHelp, helpOpen }),

@@ -44,12 +44,14 @@ export function StorylineWorkbench({
   projectId,
   initialId,
   initialSuggestions,
+  initialTaskId,
   onClose,
   onRefresh,
 }: {
   projectId: string;
   initialId?: string | null;
   initialSuggestions?: StorylineSuggestion[] | null;
+  initialTaskId?: string | null;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -78,6 +80,55 @@ export function StorylineWorkbench({
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  // v1.8.7：把内联轮询逻辑抽成独立回调，供「工作台内 AI 生成」与「列表入口挂载即轮询」共用
+  const startPolling = useCallback(
+    async (taskId: string) => {
+      setGenerating(true);
+      // 轮询任务直到 done / failed（关页面不影响服务端任务，重新进页面可再次轮询）
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/generation-tasks/${taskId}`);
+          const t = await r.json();
+          if (!r.ok) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setGenTask({ taskId, status: "failed", progress: 0, error: t.error ?? "轮询失败" });
+            setGenerating(false);
+            toastError(`生成任务失败：${t.error ?? "轮询失败"}`);
+            return;
+          }
+          setGenTask({ taskId, status: t.status, progress: t.progress, error: t.error });
+          if (t.status === "done") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            const suggestions = (t.result?.suggestions as StorylineSuggestion[] | undefined) ?? [];
+            if (suggestions.length > 0) {
+              setGenSuggestions(suggestions);
+              setGenExtra("");
+            } else {
+              toastError("生成结果为空，请重试");
+            }
+            setGenTask(null);
+            setGenerating(false);
+          } else if (t.status === "failed") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            toastError(`生成失败：${t.error ?? "未知错误"}`);
+            setGenTask(null);
+            setGenerating(false);
+          }
+        } catch {
+          // 网络抖动：继续保持轮询，下一拍再试
+        }
+      }, 1500);
+    },
+    [toastError],
+  );
+
+  // 从列表点「AI 生成」后：组件挂载时若已带任务 ID，则立即开始轮询（等价原同步路径的可感知行为）
+  useEffect(() => {
+    if (initialTaskId) {
+      void startPolling(initialTaskId);
+    }
+  }, [initialTaskId, startPolling]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -153,41 +204,8 @@ export function StorylineWorkbench({
       }
       const taskId = data.taskId as string;
       setGenTask({ taskId, status: "pending", progress: 0 });
-
-      // 轮询任务直到 done / failed（关页面不影响服务端任务，重新进页面可再次轮询）
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await fetch(`/api/generation-tasks/${taskId}`);
-          const t = await r.json();
-          if (!r.ok) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            setGenTask({ taskId, status: "failed", progress: 0, error: t.error ?? "轮询失败" });
-            setGenerating(false);
-            toastError(`生成任务失败：${t.error ?? "轮询失败"}`);
-            return;
-          }
-          setGenTask({ taskId, status: t.status, progress: t.progress, error: t.error });
-          if (t.status === "done") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            const suggestions = (t.result?.suggestions as StorylineSuggestion[] | undefined) ?? [];
-            if (suggestions.length > 0) {
-              setGenSuggestions(suggestions);
-              setGenExtra("");
-            } else {
-              toastError("生成结果为空，请重试");
-            }
-            setGenTask(null);
-            setGenerating(false);
-          } else if (t.status === "failed") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            toastError(`生成失败：${t.error ?? "未知错误"}`);
-            setGenTask(null);
-            setGenerating(false);
-          }
-        } catch {
-          // 网络抖动：继续保持轮询，下一拍再试
-        }
-      }, 1500);
+      // 收敛为统一轮询入口（与列表入口挂载即轮询共用 startPolling）
+      startPolling(taskId);
     } catch (err) {
       toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
       setGenerating(false);

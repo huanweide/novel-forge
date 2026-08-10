@@ -1,5 +1,24 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.9 — 2026-08-10
+
+**马斯克检验后细节收口**
+
+- **优化·截图与首屏体验**：`shot2.cjs` 动态读取 `LATEST_VERSION` 并预置 localStorage，关闭 onboarding / 更新公告 / 快捷键速查自动弹窗；移除 `ShortcutProvider` 首次进入工作台自动弹速查，避免首屏被打扰（设置页入口与 `openHelp()` 仍保留）。
+- **优化·导航信息架构**：工作台左栏将「故事线」从「更多」菜单移出，与「大纲」「角色」「世界」并列顶部标签，核心创作路径直接可见。
+- **修复**：v1.8.8 日期修正为 2026-08-10。
+- **验证**：主 Agent 亲自完成 13 页核心 UI + 交互态无头截图，0 console 错误；双门禁 `tsc 0 错 + vitest 43 文件 368/368 全绿`。
+
+## v1.8.8 — 2026-08-10
+
+**双 AI 生成路径统一为真后台异步 + 全站自查清理**
+
+- **优化·双生成路径统一**：StorylineList 左栏「AI生成」改为复用 StorylineWorkbench 的 v1.8.6 真后台异步链路（POST /api/generation-tasks → 传 initialTaskId → 挂载即轮询 → done 进中间编辑态），移除 v1.8.4 同步阻塞分叉；功能等价（列表生成→中间态编辑→采用并落库），仅剩 commit 落库路径与服务端 fire-and-forget 调用。
+- **优化·全站自查清理**：删除 CharacterList.tsx 三处 SSE 残留 console.log 调试日志；记录后续项——CharacterList SSE 解析重复可抽共享函数、全仓 as any 多为 Prisma Json↔强类型桥接（盲删会 TS2322，保留）。
+- **验证**：双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 43 文件 368/368 全绿（主 Agent 亲跑）；零 schema 变更、零数据迁移。
+
+---
+
 ## v1.8.7 — 2026-08-09
 
 **全面自查收口（v1.8.4/1.8.5/1.8.6 复核 + 截图证据链）**

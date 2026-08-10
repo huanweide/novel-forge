@@ -25,18 +25,82 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.7";
+export const LATEST_VERSION = "v1.8.9";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.7 全面自查：v1.8.4/1.8.5/1.8.6 三轮新功能与优化全部正确落地、无 regression。",
-  "v1.8.7 截图验证：12 个核心页面无头截图全部通过，对比度/布局/空状态/可访问性均达标，console 0 错误。",
-  "v1.8.7 双门禁复核：tsc 0 错 + vitest 43 文件 368/368 全绿。",
-  "v1.8.7 已知待统一项：StorylineList 仍走 v1.8.4 同步 /api/storylines/generate，StorylineWorkbench 已走 v1.8.6 异步 /api/generation-tasks；双路径功能均正常，统一为真后台列为后续优化。",
+  "v1.8.9 马斯克检验后细节收口：主 Agent 亲自跑 13 页核心 UI + 交互态无头截图，0 console 错误；据此修复首屏打扰与导航层级。",
+  "v1.8.9 截图工具闭环：shot2.cjs 动态读取 LATEST_VERSION 并预置 localStorage，关闭 onboarding / 更新公告 / 快捷键速查自动弹窗，保证截图验收稳定。",
+  "v1.8.9 首屏零打扰：移除 ShortcutProvider 首次进入工作台自动弹速查；用户仍可在设置页查看快捷键。",
+  "v1.8.9 导航信息架构：故事线入口从「更多」菜单移出，与大纲 / 角色 / 世界并列于左栏顶部，核心创作路径直接可见。",
+  "v1.8.9 双门禁复核：tsc 0 错 + vitest 43 文件 368/368 全绿；v1.8.8 日期修正为 2026-08-10。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.9",
+    date: "2026-08-10",
+    title: "马斯克检验后细节收口",
+    sections: [
+      {
+        label: "优化·截图与首屏体验",
+        items: [
+          "shot2.cjs 动态读取 src/lib/changelog-data.ts 的 LATEST_VERSION，预置 localStorage 关闭 onboarding、更新公告与快捷键速查，保证无头截图验收不被弹窗遮挡。",
+          "移除 ShortcutProvider 首次进入工作台自动弹出快捷键速查（localStorage nf-shortcuts-seen 逻辑），避免新用户/回归测试首屏即被打扰；设置页「键盘快捷键」板块与 openHelp() 调用仍保留。",
+        ],
+      },
+      {
+        label: "优化·导航信息架构",
+        items: [
+          "工作台左栏将「故事线」从「更多」收起菜单移出，与「大纲」「角色」「世界」并列顶部标签；核心创作路径直接可见，降低发现成本。",
+        ],
+      },
+      {
+        label: "修复",
+        items: [
+          "v1.8.8 版本日期由 2026-08-09 修正为 2026-08-10，与真实发布日一致。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "主 Agent 亲自完成 13 页核心 UI + 交互态无头截图（home / changelog / explore / recycle / settings / workshop / dissect / workspace / 大纲生成弹窗 / 角色面板 / 世界面板 / 故事线列表 / 故事线工作台），均无 console 错误。",
+          "双门禁 `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错 + `npx vitest run` 43 文件 368/368 全绿。",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v1.8.8",
+    date: "2026-08-10",
+    title: "双 AI 生成路径统一为真后台异步 + 全站自查清理",
+    sections: [
+      {
+        label: "优化·双生成路径统一",
+        items: [
+          "StorylineList 左栏「AI生成」原走 v1.8.4 同步 /api/storylines/generate（阻塞等 LLM 打开中间态），现改为复用 StorylineWorkbench 的 v1.8.6 真后台异步链路：POST /api/generation-tasks 创建任务 → 传 initialTaskId → 工作台挂载即轮询 → done 进中间编辑态。",
+          "新增 startPolling(taskId) useCallback 抽离轮询逻辑，StorylineWorkbench 新增 initialTaskId prop 与挂载即轮询 useEffect；原同步分叉彻底移除，全仓仅剩 commit 落库路径与服务端 fire-and-forget 调用。",
+          "功能等价验证：列表生成 → 中间态编辑 → 「采用并落库」用户可感知行为不变；关页面不影响服务端任务，重开可再次轮询。"
+        ],
+      },
+      {
+        label: "优化·全站自查清理",
+        items: [
+          "删除 CharacterList.tsx 三处 SSE 处理中的残留 console.log 调试日志（无行为变化）。",
+          "扫描记录后续项（未硬改）：CharacterList.tsx SSE 的 progress/done/error 解析在 residual 块与 main chunk 块重复可抽共享函数；全仓 as any 多为 Prisma Json↔强类型桥接，盲删会触发 TS2322，保留为诚实类型桥接。"
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "双门禁：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 43 文件 368 测试全绿（主 Agent 亲跑验证，与基线一致）。",
+          "仅改动前端组件，零 schema 变更、零数据迁移。"
+        ],
+      },
+    ],
+  },
+
   {
     version: "v1.8.7",
     date: "2026-08-09",

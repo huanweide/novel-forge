@@ -44,9 +44,9 @@ export function LeftPanel({
     { key: "outline", label: "大纲" },
     { key: "characters", label: `角色 (${project.characters?.length || 0})` },
     { key: "world", label: `世界 (${project.lorebookEntries?.length || 0})` },
+    { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
   ] as const;
   const moreTabs = [
-    { key: "storylines", label: `故事线 (${project.storylines?.length || 0})` },
     { key: "rules", label: "规则" },
   ] as const;
   const moreActive = moreTabs.some((t) => t.key === activeTab);

@@ -279,7 +279,6 @@ export function CharacterList({
             for (const dataLine of lines) {
               try {
                 const ev = JSON.parse(dataLine.trim().slice(6));
-                console.log("[classify SSE residual]", ev.type, ev);
                 if (ev.type === "progress") {
                   setClassifyMsg(ev.message as string);
                   if (ev.pct !== undefined) { setClassifyDone(Math.round(ev.pct as number)); setClassifyTotal(100); }
@@ -312,7 +311,6 @@ export function CharacterList({
           if (!dataLine) continue;
           try {
             const ev = JSON.parse(dataLine.trim().slice(6));
-            console.log("[classify SSE]", ev.type, ev);
 
             if (ev.type === "progress") {
               setClassifyMsg(ev.message as string);
@@ -325,7 +323,6 @@ export function CharacterList({
                 category: string; label: string; description: string;
                 members: string[]; memberIds: string[];
               }>;
-              console.log("[classify] groups received:", groups.length, groups);
               if (groups.length > 0) {
                 setClassifyGroups(groups);
                 const sel = new Map<string, Set<string>>();

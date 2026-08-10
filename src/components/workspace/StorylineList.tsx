@@ -44,7 +44,8 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [workbenchId, setWorkbenchId] = useState<string | null>(null); // v1.8 居中工作台
-  const [genSuggestions, setGenSuggestions] = useState<StorylineSuggestion[] | null>(null); // AI 生成中间态草稿
+  const [genSuggestions, setGenSuggestions] = useState<StorylineSuggestion[] | null>(null); // AI 生成中间态草稿（保留，向后兼容）
+  const [genTaskId, setGenTaskId] = useState<string | null>(null); // v1.8.7：统一真后台任务 ID
   const [expandedMains, setExpandedMains] = useState<Set<string>>(new Set()); // 支线默认收起
 
   const load = useCallback(async () => {
@@ -71,22 +72,22 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      // v1.8.4：默认不落库，拿 suggestions 进入工作台中间编辑态
-      const res = await fetch("/api/storylines/generate", {
+      // v1.8.7：收敛为统一真后台异步路径（与工作台内 AI 生成一致），不再走同步 generate
+      const res = await fetch("/api/generation-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toastError(`生成失败：${data.error}`);
+        toastError(`创建生成任务失败：${data.error ?? "未知错误"}`);
         return;
       }
-      if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-        setGenSuggestions(data.suggestions as StorylineSuggestion[]);
-        setWorkbenchId("__gen__"); // 占位，打开工作台并进入生成态
+      if (typeof data.taskId === "string" && data.taskId.length > 0) {
+        setGenTaskId(data.taskId);
+        setWorkbenchId("__task__"); // 占位，打开工作台并由其挂载即轮询
       } else {
-        toastError("生成结果为空，请重试");
+        toastError("创建生成任务失败：未返回任务 ID");
       }
     } catch (err) {
       toastError(`网络错误：${err instanceof Error ? err.message : "请重试"}`);
@@ -240,11 +241,12 @@ export function StorylineList({ projectId, onRefresh }: { projectId: string; onR
       {workbenchId && (
         <StorylineWorkbench
           projectId={projectId}
-          initialId={workbenchId === "__gen__" ? null : workbenchId}
-          initialSuggestions={workbenchId === "__gen__" ? genSuggestions ?? undefined : undefined}
+          initialId={workbenchId === "__task__" ? null : workbenchId}
+          initialTaskId={workbenchId === "__task__" ? genTaskId ?? undefined : undefined}
           onClose={() => {
             setWorkbenchId(null);
             setGenSuggestions(null);
+            setGenTaskId(null);
           }}
           onRefresh={() => {
             void load();
