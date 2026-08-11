@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { toastError, toastSuccess, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
-import { computeStorylineProgress, groupStorylinesByMain, sortChildrenByStatusThenOrder } from "@/lib/storyline-progress";
+import { computeStorylineProgress, groupStorylinesByMain, sortChildrenByStatusThenOrder, buildCausalChain } from "@/lib/storyline-progress";
 import type { StorylineData } from "./StorylineList";
 import { DialogField, DialogInput } from "./DialogUI";
 
@@ -113,7 +113,7 @@ export function StorylineWorkbench({
   const [form, setForm] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"elements" | "timeline" | "clues">("elements");
+  const [activeTab, setActiveTab] = useState<"elements" | "timeline" | "clues" | "causal">("elements");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
@@ -262,6 +262,14 @@ export function StorylineWorkbench({
             ),
         ]
       : ownClues.map((c) => ({ clue: c, source: null as string | null }));
+
+  // ── v1.9 因果链：选中线的事件按时间轴串成因果叙事链（纯函数见 storyline-progress） ──
+  const causalNodes = buildCausalChain(list, selectedId);
+  const causalClues = selected
+    ? selected.type === "main"
+      ? aggregatedClues
+      : ownClues.map((c) => ({ clue: c, source: null as string | null }))
+    : [];
 
   const updateField = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -955,11 +963,12 @@ export function StorylineWorkbench({
                 {/* sticky 子标签导航：把三块变可切换视图，核心七要素常驻为默认标签，不再被埋在底部 */}
                 <div className="sticky top-0 z-10 -mx-5 mb-3 border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-5 py-2 backdrop-blur-md">
                   <div className="flex gap-1">
-                    {(["elements", "timeline", "clues"] as const).map((t) => {
-                      const labels: Record<"elements" | "timeline" | "clues", string> = {
+                    {(["elements", "timeline", "clues", "causal"] as const).map((t) => {
+                      const labels: Record<"elements" | "timeline" | "clues" | "causal", string> = {
                         elements: selected.type === "main" ? "总纲·三要素" : "总纲·七要素",
                         timeline: "章节时间轴",
                         clues: `线索集 (${aggregatedClues.length})`,
+                        causal: `因果链 (${causalNodes.length})`,
                       };
                       const active = activeTab === t;
                       return (
@@ -1176,6 +1185,108 @@ export function StorylineWorkbench({
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {activeTab === "causal" && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
+                      <Icon name="gitBranch" size={14} />
+                      {selected.type === "main"
+                        ? "因果链 · 汇聚本线与所有支线/伏笔的事件流向"
+                        : "因果链 · 本条线的事件因果流向"}
+                    </div>
+                    <p className="mb-3 text-[11px] leading-relaxed text-[var(--nv-text-tertiary)]">
+                      把写作自动记录的关键节点按时间串成一条因果叙事：上一个是「因」、下一个是「果」。跨线事件标注归属，可见主线如何牵动支线、伏笔如何兑现。
+                    </p>
+
+                    {/* 悬而未决的因：未兑现线索 */}
+                    {causalClues.length > 0 && (
+                      <div className="mb-3 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5">
+                        <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-warning)]">
+                          <Icon name="link" size={13} /> 悬而未决的因 · 未兑现线索 ({causalClues.length})
+                        </div>
+                        <ul className="space-y-1">
+                          {causalClues.map(({ clue, source }) => (
+                            <li key={clue.id} className="flex items-start gap-1.5 text-xs leading-relaxed text-[var(--nv-text-secondary)]">
+                              <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-[var(--nv-warning)]" />
+                              <span>
+                                {clue.tag && <span className="text-[var(--nv-text-muted)]">[{clue.tag}] </span>}
+                                <span className="text-[var(--nv-text-primary)]">{clue.title || "（未命名线索）"}</span>
+                                {source && <span className="text-[var(--nv-text-muted)]"> · 来自 {source}</span>}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 因果链主体 */}
+                    {causalNodes.length > 0 ? (
+                      <ol className="relative space-y-0 border-l-2 border-[var(--nv-border-2)] pl-4">
+                        {causalNodes.map((node, i) => (
+                          <li key={node.event.id} className="relative pb-4 last:pb-0">
+                            <span
+                              className={`absolute -left-[23px] top-1 h-3 w-3 rounded-full ring-2 ring-[var(--nv-surface-1)] ${
+                                node.isMain
+                                  ? "bg-[var(--nv-primary)]"
+                                  : node.lineType === "thread"
+                                    ? "bg-[var(--nv-info)]"
+                                    : "bg-[var(--nv-accent)]"
+                              }`}
+                            />
+                            <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5">
+                              <div className="mb-1 flex items-center gap-1.5">
+                                <span
+                                  className={`rounded bg-[var(--nv-surface-2)] px-1.5 py-0.5 text-[10px] font-medium ${
+                                    node.isMain
+                                      ? "text-[var(--nv-primary)]"
+                                      : node.lineType === "thread"
+                                        ? "text-[var(--nv-info)]"
+                                        : "text-[var(--nv-accent)]"
+                                  }`}
+                                >
+                                  {node.isMain ? "主线" : node.lineType === "thread" ? "伏笔" : "支线"}
+                                </span>
+                                <span className="truncate text-xs text-[var(--nv-text-muted)]">{node.lineTitle}</span>
+                                <span className="ml-auto shrink-0 font-mono text-[10px] text-[var(--nv-text-muted)]">#{i + 1}</span>
+                              </div>
+                              <div className="text-sm font-medium text-[var(--nv-text-primary)]">
+                                <Icon
+                                  name={node.event.kind === "MILESTONE" ? "star" : "arrowRight"}
+                                  size={12}
+                                  className="inline-block align-text-bottom"
+                                />{" "}
+                                {node.event.title || (node.event.kind === "MILESTONE" ? "里程碑" : "事件")}
+                              </div>
+                              {node.event.content && (
+                                <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-[var(--nv-text-secondary)]">
+                                  {node.event.content}
+                                </p>
+                              )}
+                            </div>
+                            {i < causalNodes.length - 1 && (
+                              <div className="ml-1 mt-1 flex items-center gap-1 text-[10px] text-[var(--nv-text-muted)]">
+                                <Icon name="arrowDown" size={11} /> 因 → 果
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <EmptyState
+                        icon="gitBranch"
+                        title="这条线还没有事件"
+                        description="写一章，写作会自动记录关键情节节点，因果链就会长出来。"
+                        action={
+                          onWriteChapter ? (
+                            <button onClick={() => onWriteChapter()} className="btn-ghost text-xs">
+                              去写一章
+                            </button>
+                          ) : undefined
+                        }
+                      />
+                    )}
                   </div>
                 )}
               </div>

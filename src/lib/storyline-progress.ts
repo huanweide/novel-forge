@@ -102,3 +102,32 @@ export function groupStorylinesByMain(storylines: any[]): StorylineGroup {
 
   return { mains, sides, threads, fallbackMain, resolveParent, childrenOf };
 }
+
+// ─── v1.9 因果链：把选中线（主线含所有子支线+伏笔）的事件按 position 串成因果叙事链 ──
+export interface CausalNode {
+  event: any;
+  lineTitle: string;
+  lineType: string;
+  isMain: boolean;
+}
+export function buildCausalChain(storylines: any[], selectedId: string | null): CausalNode[] {
+  const list = Array.isArray(storylines) ? storylines : [];
+  const selected = list.find((s: any) => s.id === selectedId) || null;
+  if (!selected) return [];
+  const lines =
+    selected.type === "main"
+      ? [selected, ...list.filter((s: any) => s.parentId === selected.id)]
+      : [selected];
+  return lines
+    .flatMap((s: any) =>
+      ((s.events as any[]) || [])
+        .filter((e: any) => e.kind !== "CLUE")
+        .map((e: any) => ({
+          event: e,
+          lineTitle: s.title,
+          lineType: s.type,
+          isMain: s.type === "main",
+        })),
+    )
+    .sort((a, b) => a.event.position - b.event.position);
+}

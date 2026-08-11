@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain, sortChildrenByStatusThenOrder } from "./storyline-progress";
+import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain, sortChildrenByStatusThenOrder, buildCausalChain } from "./storyline-progress";
 
 describe("故事线进度量化（v1.8.4 · sevenElements）", () => {
   it("空故事线：进度全 0、未收束", () => {
@@ -110,5 +110,58 @@ describe("thread 伏笔分类与完结沉底（#223）", () => {
       { id: "c", status: "active", order: 2 },
     ];
     expect(sortChildrenByStatusThenOrder(arr).map((x: any) => x.id)).toEqual(["c", "b", "a"]);
+  });
+});
+
+describe("v1.9 buildCausalChain（因果链聚合）", () => {
+  const lines = [
+    {
+      id: "main", type: "main", status: "active", title: "龙陨主线",
+      events: [
+        { id: "m-e1", kind: "EVENT", title: "主线事件A", position: 1 },
+        { id: "m-c1", kind: "CLUE", title: "主线线索", position: 2 },
+        { id: "m-e2", kind: "MILESTONE", title: "主线里程碑", position: 5 },
+      ],
+    },
+    {
+      id: "s1", type: "side", status: "active", title: "支线X", parentId: "main",
+      events: [{ id: "s-e1", kind: "EVENT", title: "支线事件", position: 3 }],
+    },
+    {
+      id: "t1", type: "thread", status: "active", title: "伏笔Y", parentId: "main",
+      events: [{ id: "t-e1", kind: "EVENT", title: "伏笔事件", position: 4 }],
+    },
+  ];
+
+  it("选中主线：聚合本线+所有子线/伏笔事件，排除 CLUE，按 position 全局排序", () => {
+    const nodes = buildCausalChain(lines, "main");
+    expect(nodes.map((n) => n.event.id)).toEqual(["m-e1", "s-e1", "t-e1", "m-e2"]);
+    expect(nodes.find((n) => n.event.id === "m-c1")).toBeUndefined();
+  });
+
+  it("节点带来源线标题与类型标识，主线事件 isMain=true", () => {
+    const nodes = buildCausalChain(lines, "main");
+    const mainNode = nodes.find((n) => n.event.id === "m-e1")!;
+    const sideNode = nodes.find((n) => n.event.id === "s-e1")!;
+    const threadNode = nodes.find((n) => n.event.id === "t-e1")!;
+    expect(mainNode.isMain).toBe(true);
+    expect(mainNode.lineTitle).toBe("龙陨主线");
+    expect(sideNode.isMain).toBe(false);
+    expect(sideNode.lineType).toBe("side");
+    expect(sideNode.lineTitle).toBe("支线X");
+    expect(threadNode.lineType).toBe("thread");
+    expect(threadNode.lineTitle).toBe("伏笔Y");
+  });
+
+  it("选中支线：仅返回该线事件，不串入主线", () => {
+    const nodes = buildCausalChain(lines, "s1");
+    expect(nodes.map((n) => n.event.id)).toEqual(["s-e1"]);
+    expect(nodes[0].isMain).toBe(false);
+  });
+
+  it("找不到选中线 / 空输入：安全返回空数组", () => {
+    expect(buildCausalChain(lines, "not-exist")).toEqual([]);
+    expect(buildCausalChain([], "main")).toEqual([]);
+    expect(buildCausalChain(undefined as any, "main")).toEqual([]);
   });
 });
