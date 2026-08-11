@@ -27,6 +27,7 @@ import {
   loadStorylinesWithEvents,
   formatDigest,
   formatStage,
+  injectContextBlocks,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { triggerForeshadowDetect } from "@/core/confirm-guard";
@@ -192,16 +193,10 @@ ${selectedText.trim()}
       }
     }
 
-    // v1.8.23：摘要大纲注入（时间线 + 故事线长期记忆）
+    // v1.8.23 + v1.8.24：长期记忆摘要 + 全书节奏阶段（防抢跑指令）统一注入尾部
     const digestBlock = formatDigest(data.project as any);
-    if (digestBlock) {
-      writingInstruction += "\n\n" + digestBlock;
-    }
-    // v1.8.24：全书写作节奏阶段（防抢跑指令）
     const stageBlock = formatStage(data.narrativeStage);
-    if (stageBlock) {
-      writingInstruction += "\n\n" + stageBlock;
-    }
+    writingInstruction = injectContextBlocks(writingInstruction, [digestBlock, stageBlock]);
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──
     // L1-005：loadGenerationContext 已加载完整 project（含 llmConfig / postProcessingRules），直接复用，避免重复 DB 查询

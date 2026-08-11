@@ -25,4 +25,5 @@ export { rebuildProjectDigest, formatDigest } from "./digest";
 export type { ProjectDigest } from "./digest";
 export { computeNarrativeStage, formatStage } from "./narrative-stage";
 export type { NarrativeStage, NarrativeStageKey } from "./narrative-stage";
+export { injectContextBlocks } from "./instruction-context";
 export type { GenerationData, LLMExtract, PostPipelineParams, PostPipelineResult } from "./types";

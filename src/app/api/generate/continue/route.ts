@@ -18,6 +18,7 @@ import {
   loadStorylinesWithEvents,
   formatDigest,
   formatStage,
+  injectContextBlocks,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
@@ -189,16 +190,10 @@ ${lastParagraphs}
       }
     }
 
-    // v1.8.23：摘要大纲注入（时间线 + 故事线长期记忆）
+    // v1.8.23 + v1.8.24：长期记忆摘要 + 全书节奏阶段（防抢跑指令）统一注入尾部
     const digestBlock = formatDigest(data.project as any);
-    if (digestBlock) {
-      writingInstruction += "\n\n" + digestBlock;
-    }
-    // v1.8.24：全书写作节奏阶段（防抢跑指令）
     const stageBlock = formatStage(data.narrativeStage);
-    if (stageBlock) {
-      writingInstruction += "\n\n" + stageBlock;
-    }
+    writingInstruction = injectContextBlocks(writingInstruction, [digestBlock, stageBlock]);
 
     // ── 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──
     const { block: contRecallBlock, items: contRecallItems } = await buildRecallBlock({

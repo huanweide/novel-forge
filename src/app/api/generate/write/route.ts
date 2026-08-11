@@ -17,6 +17,7 @@ import {
   loadStorylinesWithEvents,
   formatDigest,
   formatStage,
+  injectContextBlocks,
 } from "@/core/pipeline";
 import type { StoryNode } from "@/core/types";
 import { buildRecallBlock } from "@/core/babylore/loop";
@@ -121,16 +122,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // v1.8.23：摘要大纲注入（时间线 + 故事线长期记忆——"此前各章发生了什么""主线大事件"）
+    // v1.8.23 + v1.8.24：长期记忆摘要 + 全书节奏阶段（防抢跑指令）统一注入尾部
     const digestBlock = formatDigest(data.project as any);
-    if (digestBlock) {
-      writingInstruction += "\n\n" + digestBlock;
-    }
-    // v1.8.24：全书写作节奏阶段（防抢跑指令）——写正文前让 AI 知道当前处于开篇/发展/高潮/收尾哪一阶段
     const stageBlock = formatStage(data.narrativeStage);
-    if (stageBlock) {
-      writingInstruction += "\n\n" + stageBlock;
-    }
+    writingInstruction = injectContextBlocks(writingInstruction, [digestBlock, stageBlock]);
 
     writingInstruction +=
       "\n\n【格式铁律】绝不在正文首行或任意位置写「第X章」「第X节」或章节标题。章节标题由系统管理，正文直接切入动作/对话。";
