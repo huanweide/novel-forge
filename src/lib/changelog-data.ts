@@ -25,18 +25,56 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.25";
+export const LATEST_VERSION = "v1.9.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.25 全新「自动情节化」：PostGenPanel 新增常显 Tab「情节」，把每章抽取出的关键事件一键归纳进故事线主线，作家审完即收线。",
-  "v1.8.25 采纳经 apply-extraction 落库：勾选事件映射为 StorylineEvent（挂活跃主线、position 末尾、sourceRefs 记录来源章节），无主线自动建默认主线，同源同标题去重不污染。",
-  "v1.8.25 抽取 computePlotEventAdoptions 纯函数 + 7 单测，覆盖顺序 position、空串跳过、批次/跨章去重与 JSON 字符串兼容；逻辑可单测、不绑数据库。",
-  "v1.8.25 双门禁复跑：源码 tsc 0 错误 + vitest 50 文件 437/437 全绿；真实 星辰 库集成核验建事件 + 去重 + 清理，无头冒烟零控制台报错；零 schema 变更。",
+  "v1.9.0 角色对话 / 附身：关系图角色详情面板新增「对话 / 附身」入口，弹出角色扮演聊天，支持闲聊（dialogue）与写一段角色视角正文（possess）两模式。",
+  "v1.9.0 文风定制 Tab：PostGenPanel「高级」折叠区新增「文风」Tab，直接编辑项目 StyleCard（叙事视角、叙事距离、文风描述、叙事比例、风格样本），保存即时刷新 globalPrompt。",
+  "v1.9.0 内容安全审核：PostGenPanel「高级」折叠区新增「安全」Tab，本地规则库扫描安全分/风险点/修改建议；新增 10 单测覆盖空文本/干净文本/高中危命中/去重。",
+  "v1.9.0 验证与修复：双门禁 tsc 0 错 + vitest 52 文件 455/455 全绿；curl 实跑 #3/#4/#5 三条新路由；修复 stylecard PUT 因 `avgSentenceLength: null` 触发 PrismaClientValidationError（被 jsonError 误报成数据库连接错误）的根因。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.9.0",
+    date: "2026-08-11",
+    title: "v1.9 路线图 #3/#4/#5 落地：角色对话/附身、文风定制、内容安全审核",
+    sections: [
+      {
+        label: "角色对话 / 附身（#3）",
+        items: [
+          "关系图角色详情面板新增「对话 / 附身」按钮（messageCircle 图标），点击弹出 CharacterChatDialog 浮层",
+          "新增 /api/agent/character-chat 路由：按 projectId + characterId 隔离会话记忆（getRecentContext/appendExchange，复合 key），注入角色档案与扮演铁律后调 LLM；支持 dialogue 闲聊与 possess 附身写作两模式",
+          "新增 src/core/pipeline/character-chat.ts 纯函数层（buildCharacterSystemPrompt）+ character-chat.test.ts 8 单测，覆盖角色字段拼入、对话限制、附身指令、缺字段降级、铁律注入",
+        ],
+      },
+      {
+        label: "文风定制 Tab（#4）",
+        items: [
+          "PostGenPanel「高级」折叠区新增「文风」Tab：暴露并编辑项目 StyleCard（叙事视角、叙事距离、文风描述、叙事比例、风格样本），保存后即时 syncGlobalPrompt，下次生成生效",
+          "新增 /api/projects/[id]/stylecard GET/PUT 路由：GET 读最新文风卡；PUT 做 upsert 并校验 POV 取值、钳制比例到 [0,1]；非可空字段不再传 null，省略即回落 @default",
+          "修复 stylecard PUT 失败根因：原代码对 `avgSentenceLength` 等无默认值的可空 Float 字段传 null，触发 PrismaClientValidationError，被 jsonError 误判为「数据库无法连接」",
+        ],
+      },
+      {
+        label: "内容安全审核（#5）",
+        items: [
+          "PostGenPanel「高级」折叠区新增「安全」Tab：进入自动检测当前章节，展示安全分、passed 状态、风险点分类/命中词/上下文/修改建议",
+          "新增 /api/agent/content-safety 路由 + core/pipeline/content-safety.ts 纯函数 analyzeContentSafety：零 LLM、零 token，本地规则库覆盖暴力/血腥/色情/违法/仇恨等分类",
+          "新增 content-safety.test.ts 10 单测覆盖空文本满分、干净文本、高中危命中、同词去重、严重度扣分",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 52 文件 455/455 全绿",
+          "curl 实测 /api/agent/character-chat 校验路径、/api/projects/{id}/stylecard GET/PUT 落库回读、/api/agent/content-safety 高中危文本；摘要大纲无头检测回归 PASS 零控制台报错",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.25",
     date: "2026-08-11",

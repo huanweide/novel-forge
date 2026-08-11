@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v1.9.0 — 2026-08-11
+
+**v1.9 路线图 #3/#4/#5 落地：角色对话/附身、文风定制、内容安全审核**
+
+- **角色对话 / 附身（#3）**：关系图角色详情面板新增「对话 / 附身」入口，点击弹出 CharacterChatDialog；新增 `/api/agent/character-chat` 路由，按 `projectId + characterId` 隔离会话记忆，注入完整角色档案与扮演铁律后调 LLM，支持 `dialogue` 闲聊与 `possess` 附身写作两模式。新增 `core/pipeline/character-chat.ts` 纯函数层与 8 单测。
+- **文风定制 Tab（#4）**：PostGenPanel「高级」折叠区新增「文风」Tab，直接编辑项目 StyleCard（叙事视角、叙事距离、文风描述、叙事比例、风格样本），保存后即时 `syncGlobalPrompt`，下次生成生效。新增 `/api/projects/[id]/stylecard` GET/PUT 路由。修复 `stylecard` PUT 因对非可空 `avgSentenceLength` 字段传 `null` 触发 `PrismaClientValidationError`、被 `jsonError` 误报为「数据库连接失败」的根因，改为省略未传字段、回落 `@default`。
+- **内容安全审核（#5）**：PostGenPanel「高级」折叠区新增「安全」Tab，进入即自动扫描当前章节，展示安全分、风险点分类/命中词/上下文/修改建议。新增 `/api/agent/content-safety` 路由与 `core/pipeline/content-safety.ts` 纯函数，零 LLM、零 token。新增 10 单测。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 52 文件 455/455 全绿；curl 实测三条新路由均正常；摘要大纲无头检测回归 PASS、零控制台报错。
+
+---
+
 ## v1.8.25 — 2026-08-11
 
 **自动情节化：抽取关键事件一键归纳进故事线**

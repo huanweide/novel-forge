@@ -65,7 +65,7 @@ export type LogicScanResult = {
 };
 
 // ── Tab 定义 ──
-export type TabKey = "extraction" | "plot" | "forbidden" | "logic" | "distill" | "review";
+export type TabKey = "extraction" | "plot" | "forbidden" | "logic" | "distill" | "review" | "style" | "safety";
 
 export const TABS: Array<{ key: TabKey; icon: IconName; label: string }> = [
   { key: "extraction", icon: "chart", label: "章节提取" },
@@ -74,6 +74,8 @@ export const TABS: Array<{ key: TabKey; icon: IconName; label: string }> = [
   { key: "logic", icon: "search", label: "逻辑自查" },
   { key: "distill", icon: "sparkles", label: "本地蒸馏" },
   { key: "review", icon: "clipboard", label: "审校" },
+  { key: "style", icon: "palette", label: "文风" },
+  { key: "safety", icon: "shield", label: "安全" },
 ];
 
 // ── 提取结果采纳控制（6 类可逐条切换），由父组件注入 ──

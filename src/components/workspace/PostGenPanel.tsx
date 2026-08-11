@@ -34,6 +34,8 @@ import { ForbiddenTab } from "./postgen/ForbiddenTab";
 import { LogicTab } from "./postgen/LogicTab";
 import { DistillTab } from "./postgen/DistillTab";
 import { ReviewTab } from "./postgen/ReviewTab";
+import { StyleTab } from "./postgen/StyleTab";
+import { SafetyTab } from "./postgen/SafetyTab";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -224,6 +226,12 @@ export function PostGenPanel({
         )}
         {tab === "review" && (
           <ReviewTab reviewResult={reviewResult} />
+        )}
+        {tab === "style" && (
+          <StyleTab projectId={projectId} />
+        )}
+        {tab === "safety" && (
+          <SafetyTab projectId={projectId} chapterContent={chapterContent} />
         )}
       </div>
     </div>

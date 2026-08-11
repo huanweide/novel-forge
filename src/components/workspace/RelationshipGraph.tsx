@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Icon } from "@/components/ui/icons";
+import { CharacterChatDialog } from "./CharacterChatDialog";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -219,6 +220,7 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showStale, setShowStale] = useState(false);
+  const [chatChar, setChatChar] = useState<{ id: string; name: string } | null>(null);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{ id: string; moved: boolean; startX: number; startY: number; originX: number; originY: number } | null>(null);
@@ -518,11 +520,28 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
             <div className="text-[9px] text-[var(--nv-text-tertiary)]">暂无关系</div>
           )}
           {knownIds.has(focusNode.id) && (
-            <button onClick={() => onEditCharacter?.(focusNode.id)} className="mt-2 text-[9px] text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70">
-              编辑角色卡 →
-            </button>
+            <div className="mt-2 flex items-center gap-3">
+              <button onClick={() => onEditCharacter?.(focusNode.id)} className="text-[9px] text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70">
+                编辑角色卡 →
+              </button>
+              <button
+                onClick={() => setChatChar({ id: focusNode.id, name: focusNode.name })}
+                className="text-[9px] text-[var(--nv-creative)] hover:text-[var(--nv-creative)]/70 flex items-center gap-0.5"
+              >
+                <Icon name="messageCircle" size={9} /> 对话 / 附身
+              </button>
+            </div>
           )}
         </div>
+      )}
+
+      {chatChar && (
+        <CharacterChatDialog
+          projectId={projectId}
+          characterId={chatChar.id}
+          characterName={chatChar.name}
+          onClose={() => setChatChar(null)}
+        />
       )}
     </div>
   );

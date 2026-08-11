@@ -32,7 +32,9 @@ export function PostGenPanelTabs({
       (key === "forbidden" && forbiddenScanResult) ||
       (key === "logic" && logicCheckResult) ||
       (key === "distill" && distillSummary) ||
-      (key === "review" && reviewResult);
+      (key === "review" && reviewResult) ||
+      (key === "style") || // 文风卡随项目常驻，面板出现即可用
+      (key === "safety"); // 安全审核对当前章节常驻，面板出现即可用
     const hasIssues =
       (key === "forbidden" && forbiddenScanResult && !forbiddenScanResult.passed) ||
       (key === "logic" && logicCheckResult && !logicCheckResult.passed) ||
