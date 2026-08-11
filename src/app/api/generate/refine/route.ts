@@ -26,6 +26,7 @@ import {
   formatStorylines,
   loadStorylinesWithEvents,
   formatDigest,
+  formatStage,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { triggerForeshadowDetect } from "@/core/confirm-guard";
@@ -195,6 +196,11 @@ ${selectedText.trim()}
     const digestBlock = formatDigest(data.project as any);
     if (digestBlock) {
       writingInstruction += "\n\n" + digestBlock;
+    }
+    // v1.8.24：全书写作节奏阶段（防抢跑指令）
+    const stageBlock = formatStage(data.narrativeStage);
+    if (stageBlock) {
+      writingInstruction += "\n\n" + stageBlock;
     }
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──

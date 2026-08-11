@@ -14,6 +14,7 @@ import type { GenerationData } from "./types";
 import { STORYLINE_STATUS, COMMITMENT_STATUS } from "@/core/story-status";
 import type { Project, StoryNodeLight } from "@/core/types";
 import { toAppStoryNode } from "@/core/story-node-bridge";
+import { computeNarrativeStage } from "./narrative-stage";
 
 /**
  * 加载单章生成所需的所有上下文数据。
@@ -247,6 +248,17 @@ export async function loadGenerationContext(
     .filter((b) => b.chapterNumber <= chapterNum)
     .slice(0, 20);
 
+  // v1.8.24：全书写作节奏阶段——基于当前章在章节列表中的位置 / 已存在章节总数估算进度。
+  // 直接用本函数已算好的 chapterNodes（chapter||section 全量）与 curChIdx，零额外查询。
+  const stageTotalChapters = chapterNodes.length;
+  let stageChapterIndex = curChIdx;
+  if (stageChapterIndex < 0) {
+    // 当前节点不是 chapter/section 类型（如卷/幕节点）时的回退：用全局 order 估算相对位置。
+    const maxOrder = allLight.reduce((m, n) => Math.max(m, (n as any).order ?? 0), 0);
+    stageChapterIndex = Math.min(currentOrder, maxOrder);
+  }
+  const narrativeStage = computeNarrativeStage(stageChapterIndex, stageTotalChapters);
+
   return {
     project: project as Project,
     // currentNode 来自 prisma.storyNode.findUnique（可空），但 loadGenerationContext 的全部调用方
@@ -267,5 +279,7 @@ export async function loadGenerationContext(
     // v1.8.23：项目级摘要大纲（时间线 + 故事线），供写作上下文注入"此前发生了什么"
     timelineDigest: (project as any)?.timelineDigest ?? "",
     storylineDigest: (project as any)?.storylineDigest ?? "",
+    // v1.8.24：全书写作节奏阶段，供写作上下文注入防抢跑指令
+    narrativeStage,
   };
 }

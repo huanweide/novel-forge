@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.24 — 2026-08-11
+
+**全书写作节奏控制：6 阶段渐进 + 防抢跑注入**
+
+- **新增「全书进度阶段」推导**：`src/core/pipeline/narrative-stage.ts` 新增纯函数 `computeNarrativeStage` / `formatStage`，基于「当前章 0-based 索引 / 已存在章节总数」推导全书进度百分比，再映射到 6 个阶段：开篇(≤8%)→早期发展(≤30%)→中期发展(≤55%)→后期发展(≤78%)→高潮(≤92%)→收尾(≤100%)，越界自动夹紧到合法区间。设计来自竞品 ai-novel-writer 的渐进节奏控制，novel-forge 此前完全没有「全书进度」概念。
+- **每个阶段「防抢跑」约束**：阶段指令聚焦「该阶段不该做什么」而非规定「必须写什么」——开篇严禁揭晓终局 / 提前引爆主线决战 / 让主角获终极力量；中期严禁透支高潮；收尾严禁开启新重大情节线。堵住 AI 写几十章后提前剧透、过早决战、结尾又开新线的长线节奏破坏。
+- **注入写作 / 章纲上下文（增强 v1.8.23 链路）**：`context-loader.ts` / `outline-context.ts` 两加载器在返回前算 `narrativeStage` 并透传；`write` / `refine` / `continue` / `chapter-outline` 四路由在「长期记忆摘要」之后追加 `formatStage` 阶段指令块，空 stage 时跳过注入。零 schema 变更、零新增 UI、零新依赖。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 48 文件 423/423 全绿；新增 `narrative-stage.test.ts` 11 用例覆盖 6 阶段边界、越界夹紧、空 stage 与文本格式。
+
+---
+
 ## v1.8.23 — 2026-08-11
 
 **摘要大纲：长期记忆融入世界卡与上下文**

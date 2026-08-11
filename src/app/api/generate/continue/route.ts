@@ -17,6 +17,7 @@ import {
   formatStorylines,
   loadStorylinesWithEvents,
   formatDigest,
+  formatStage,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
@@ -140,6 +141,8 @@ export async function POST(request: Request) {
       summaries: summaries as any,
       storyBeats: storyBeats as any,
       styleCard: styleCard as any,
+      // v1.8.24：复用 loadGenerationContext 已算好的全书节奏阶段（防抢跑指令）
+      narrativeStage: genData.narrativeStage,
     };
 
     // ── Prompt 上下文 ──
@@ -190,6 +193,11 @@ ${lastParagraphs}
     const digestBlock = formatDigest(data.project as any);
     if (digestBlock) {
       writingInstruction += "\n\n" + digestBlock;
+    }
+    // v1.8.24：全书写作节奏阶段（防抢跑指令）
+    const stageBlock = formatStage(data.narrativeStage);
+    if (stageBlock) {
+      writingInstruction += "\n\n" + stageBlock;
     }
 
     // ── 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──

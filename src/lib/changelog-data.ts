@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.23";
+export const LATEST_VERSION = "v1.8.24";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.23 全新「摘要大纲」功能：每章摘要 + 主线大事件自动聚合成项目级时间线 / 故事线大纲，写入 Project 两字段，既是「更多▾ → 摘要大纲」可读面板，也被写作 / 章纲上下文「全部读取」。",
-  "v1.8.23 摘要大纲自动重建：写完一章（后处理摘要落库）或「重新摘要」确认后自动触发聚合；并提供「重新生成」按钮手动按需重算（POST /api/generate/digest/rebuild）。",
-  "v1.8.23 长期记忆注入写作 / 章纲：写下一章、续写、微调、写章纲时，formatDigest 把「此前各章发生了什么 + 主线大事件」注入指令，AI 不再只看最近 3 章。",
-  "v1.8.23 双门禁复跑：源码 tsc 0 错误 + vitest 47 文件 412/412 全绿；无头检测「更多▾ → 摘要大纲」可点击、渲染、重新生成均通过，零控制台报错。",
+  "v1.8.24 全新「全书写作节奏控制」：基于「当前章序号 / 已存在章节总数」推导全书进度阶段（开篇→早期→中期→后期→高潮→收尾），把「防抢跑」指令注入写作 / 章纲上下文。",
+  "v1.8.24 每个阶段有专属约束：开篇不得揭晓终局、中期不得提前发动决战、收尾不得开启新大线——堵住 AI 写几十章后提前剧透、过早决战、结尾又开新线的长线节奏破坏。",
+  "v1.8.24 直接增强 v1.8.23 注入链路：write / refine / continue / chapter-outline 四路由在「长期记忆摘要」之后追加阶段指令块，零 schema 变更、零新 UI、零新依赖。",
+  "v1.8.24 双门禁复跑：源码 tsc 0 错误 + vitest 48 文件 423/423 全绿；纯函数 computeNarrativeStage / formatStage 配 11 单测覆盖 6 阶段边界与越界夹紧。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.24",
+    date: "2026-08-11",
+    title: "全书写作节奏控制：6 阶段渐进 + 防抢跑注入",
+    sections: [
+      {
+        label: "全书写作节奏控制（新增能力）",
+        items: [
+          "src/core/pipeline/narrative-stage.ts 新增纯函数 computeNarrativeStage / formatStage：基于「当前章 0-based 索引 / 已存在章节总数」推导全书进度百分比",
+          "6 阶段阈值：开篇(≤8%)→早期发展(≤30%)→中期发展(≤55%)→后期发展(≤78%)→高潮(≤92%)→收尾(≤100%)，越界自动夹紧到合法区间",
+          "每个阶段 directive 以「防抢跑」为核心：开篇不揭终局、早期不引爆决战、中期不透支高潮、后期不提前对决、高潮可兑现铺垫、收尾不开新线",
+        ],
+      },
+      {
+        label: "注入写作 / 章纲上下文",
+        items: [
+          "context-loader.ts / outline-context.ts 两加载器在返回前算 narrativeStage 并透传；GenerationData / OutlineContextData 加 narrativeStage 字段",
+          "write / refine / continue / chapter-outline 四路由在「长期记忆摘要」之后追加 formatStage 阶段指令块；空 stage 时 formatStage 返回空串、跳过注入",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "新增 narrative-stage.test.ts 11 用例覆盖 6 阶段边界、越界夹紧、空 stage 与 formatStage 文本",
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 48 文件 423/423 全绿；零 schema 变更、零新增 UI、零新依赖",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.23",
     date: "2026-08-11",

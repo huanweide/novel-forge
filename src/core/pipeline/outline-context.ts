@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getActiveRules, injectRules } from "@/core/rules";
 import type { Project } from "@/core/types";
+import { computeNarrativeStage } from "./narrative-stage";
+import type { NarrativeStage } from "./narrative-stage";
 
 // ─── 角色标签映射 ──────────────────────────────────────────────
 
@@ -34,6 +36,8 @@ export interface OutlineContextData {
   /** v1.8.23：项目级摘要大纲（时间线 + 故事线） */
   timelineDigest?: string;
   storylineDigest?: string;
+  /** v1.8.24：全书写作节奏阶段（开篇/发展/高潮/收尾），供章纲上下文注入防抢跑指令 */
+  narrativeStage?: NarrativeStage;
 }
 
 export async function loadOutlineData(
@@ -79,12 +83,31 @@ export async function loadOutlineData(
     ...s,
     events: eventsByLine.get(s.id) ?? [],
   }));
+
+  // v1.8.24：全书写作节奏阶段——基于当前章在「章节节点列表（chapter||section 全量）」中的位置估算进度。
+  // 单独查一份章节全量列表（loadOutlineData 的 allNodes 仅取顶层非卷节点，不能代表完整章节规模）。
+  const chapterNodesForStage = await prisma.storyNode.findMany({
+    where: { projectId, deletedAt: null, type: { in: ["chapter", "section"] } },
+    orderBy: { order: "asc" },
+    select: { id: true, order: true },
+  });
+  const stageTotalChapters = chapterNodesForStage.length;
+  const stageChIdx = chapterNodesForStage.findIndex((n: any) => n.id === nodeId);
+  // 回退：当前节点查不到（理论上不会，node 即章节本身）时，用 order 相对位置估算。
+  const stageChapterIndex =
+    stageChIdx >= 0
+      ? stageChIdx
+      : chapterNodesForStage.filter((n: any) => (n.order ?? 0) <= ((node as any)?.order ?? 0)).length - 1;
+  const narrativeStage = computeNarrativeStage(stageChapterIndex, stageTotalChapters);
+
   return {
     project: project as unknown as Project, node, allNodes: allNodes as any[], characters: characters as any[],
     summaries: summaries as any[], storylines: storylinesWithEvents as any[],
     // v1.8.23：项目级摘要大纲（时间线 + 故事线），供章纲上下文注入"此前发生了什么"
     timelineDigest: (project as any)?.timelineDigest ?? "",
     storylineDigest: (project as any)?.storylineDigest ?? "",
+    // v1.8.24：全书写作节奏阶段，供章纲上下文注入防抢跑指令
+    narrativeStage,
   };
 }
 

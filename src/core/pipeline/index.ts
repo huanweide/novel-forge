@@ -23,4 +23,6 @@ export {
 export type { OutlineContextData, FormatStorylinesOptions } from "./outline-context";
 export { rebuildProjectDigest, formatDigest } from "./digest";
 export type { ProjectDigest } from "./digest";
+export { computeNarrativeStage, formatStage } from "./narrative-stage";
+export type { NarrativeStage, NarrativeStageKey } from "./narrative-stage";
 export type { GenerationData, LLMExtract, PostPipelineParams, PostPipelineResult } from "./types";

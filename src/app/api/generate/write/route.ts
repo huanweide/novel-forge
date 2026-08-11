@@ -16,6 +16,7 @@ import {
   formatStorylines,
   loadStorylinesWithEvents,
   formatDigest,
+  formatStage,
 } from "@/core/pipeline";
 import type { StoryNode } from "@/core/types";
 import { buildRecallBlock } from "@/core/babylore/loop";
@@ -124,6 +125,11 @@ export async function POST(request: Request) {
     const digestBlock = formatDigest(data.project as any);
     if (digestBlock) {
       writingInstruction += "\n\n" + digestBlock;
+    }
+    // v1.8.24：全书写作节奏阶段（防抢跑指令）——写正文前让 AI 知道当前处于开篇/发展/高潮/收尾哪一阶段
+    const stageBlock = formatStage(data.narrativeStage);
+    if (stageBlock) {
+      writingInstruction += "\n\n" + stageBlock;
     }
 
     writingInstruction +=

@@ -7,6 +7,7 @@
 
 import type { CharacterCard, LorebookEntry, ChapterSummary, StoryNode, StoryBeat, Project } from "@/core/types";
 import type { AgentOrchestrator } from "@/core/agents";
+import type { NarrativeStage } from "./narrative-stage";
 
 // ─── 数据加载 ─────────────────────────────────────────────
 
@@ -27,6 +28,8 @@ export interface GenerationData {
   /** v1.8.23：项目级摘要大纲（时间线 + 故事线），被写作上下文注入 */
   timelineDigest?: string;
   storylineDigest?: string;
+  /** v1.8.24：全书写作节奏阶段（开篇/发展/高潮/收尾），被写作上下文注入防抢跑指令 */
+  narrativeStage?: NarrativeStage;
 }
 
 // ─── 预处理 ───────────────────────────────────────────────
