@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
 import { rebuildProjectDigest } from "@/core/pipeline/digest";
+import { isGarbageSummary } from "@/core/pipeline/digest-aggregate";
 
 /**
  * POST /api/generate/summarize
@@ -56,6 +57,13 @@ export async function POST(request: Request) {
 
     // ── 模式 3：确认路径（前端已生成并确认/编辑，直接 upsert 落库，不跑 LLM）──
     if (summary !== undefined) {
+      // 防御性拦截：确认落库的摘要若仍是空模板 / 占位元应答，拒收，绝不写入脏数据
+      if (isGarbageSummary(summary)) {
+        return NextResponse.json(
+          { error: "摘要内容疑似空模板/占位文本，已拒收，请重新生成或编辑后再保存" },
+          { status: 422 },
+        );
+      }
       const saved = await persistSummary(projectId, chapterId, {
         summary,
         keyEvents: keyEvents ?? [],
@@ -92,6 +100,13 @@ export async function POST(request: Request) {
 
     // ── 模式 1：默认（生成 + upsert 落库）──
     const result = await runSummarize(projectId, chapter);
+    // 防御性拦截：AI 偶发返回空模板/占位元应答时，拒收、不落库、不重建大纲
+    if (isGarbageSummary(result.summary)) {
+      return NextResponse.json(
+        { error: "摘要生成结果疑似空模板/占位文本，已拒收，请重试" },
+        { status: 422 },
+      );
+    }
     const saved = await persistSummary(projectId, chapterId, result);
     // v1.8.23：摘要落库后重建项目级摘要大纲（失败静默降级，不影响本次摘要返回）
     try {

@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { enrichForeshadow } from "@/core/foreshadowing";
 import { writeStorylineProgress } from "@/core/pipeline/storyline-writer";
+import { isGarbageSummary } from "@/core/pipeline/digest-aggregate";
 import { scanForbiddenWordsEnhanced, type ForbiddenMatch } from "@/lib/forbidden-checker";
 import { runLocalDistillation } from "@/lib/distillation-runner";
 import { classifyAndConvert } from "@/lib/memory-classifier";
@@ -545,8 +546,14 @@ export async function runPostGenerationPipeline(
       // F8 修复：摘要最多 3 次重试仍连败（summarized=false / summary 为空）时，跳过空壳摘要写入，
       // 避免「chapterId=该节点、summary:""」的空壳进入后续章上下文（context-loader 的 order<=currentOrder 过滤）
       // 与 classifyAndConvert 流程。连败时仅回报事件、不落库；下游命名/分类因 latestSummary 为空已自守卫。
+      // 摘要大纲垃圾拦截（v1.9.x）：AI 偶发返回空模板/占位元应答（向用户索要正文）时，按垃圾处理，
+      // 不落库、不重建大纲——从源头杜绝脏数据进摘要大纲面板。
+      const summaryIsGarbage =
+        summarized && String(summary).trim().length > 0
+          ? isGarbageSummary(String(summary))
+          : false;
       let createdSummary: any = null;
-      if (summarized && String(summary).trim().length > 0) {
+      if (summarized && String(summary).trim().length > 0 && !summaryIsGarbage) {
         // L3-002 摘要去重：写入前清除本章已有摘要，确保每章唯一、不挤占 take 窗口
         await prisma.chapterSummary.deleteMany({ where: { projectId, chapterId: nodeId } });
         createdSummary = await prisma.chapterSummary.create({
@@ -570,7 +577,8 @@ export async function runPostGenerationPipeline(
 
       // v1.8.23：摘要落库后重建项目级摘要大纲（时间线 + 故事线），供写作 / 章纲上下文"全部读取"。
       // 失败静默降级——绝不阻断主流程（摘要本身已落库，大纲只是聚合派生数据）。
-      if (summarized && String(summary).trim().length > 0) {
+      // 垃圾摘要已在上游拦截，此处同样要求非垃圾才重建。
+      if (summarized && String(summary).trim().length > 0 && !summaryIsGarbage) {
         try {
           await rebuildProjectDigest(projectId);
         } catch (de) {

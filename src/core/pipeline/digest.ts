@@ -15,18 +15,25 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import {
+  buildTimelineDigest,
+  buildStorylineDigest,
+  type ChapterOrderMeta,
+  type RawStorylineEvent,
+} from "./digest-aggregate";
 
 export interface ProjectDigest {
   timelineDigest: string;
   storylineDigest: string;
 }
 
-const MAX_TIMELINE_CHAPTERS = 20; // 时间线摘要最多保留最近 20 章，保持精简
-
 /**
  * 重建项目级摘要大纲（时间线 + 故事线），落库 Project 两字段并返回。
  *
- * 时间线摘要：按章序聚合各章 ChapterSummary.summary（取最近 N 章）。
+ * 聚合逻辑已下沉到纯函数 digest-aggregate.ts（去重 + 垃圾过滤 + 排序），
+ * 本函数只负责「取数 → 调纯函数 → 落库」，因此面板不可能再吐模板残片。
+ *
+ * 时间线摘要：按章序聚合各章 ChapterSummary.summary（去重 + 过滤垃圾，取最近 N 章）。
  * 故事线摘要：主线(main)的里程碑 / 事件(非 CLUE)按 position 串联，标注角色(推进 / 卡点 / 分支)。
  */
 export async function rebuildProjectDigest(projectId: string): Promise<ProjectDigest> {
@@ -42,59 +49,38 @@ export async function rebuildProjectDigest(projectId: string): Promise<ProjectDi
     }),
   ]);
 
+  // 一次性取出本项目的全部主线事件，避免逐条主线 N+1 查询
+  const allEvents = await prisma.storylineEvent.findMany({
+    where: {
+      storylineId: { in: (mainLines as Array<{ id: string }>).map((l) => l.id) },
+    },
+  });
+
   // 章 id → {order, title} 映射，用于对摘要按章序排序
-  const orderMap = new Map<string, { order: number; title: string }>();
+  const orderMap = new Map<string, ChapterOrderMeta>();
   for (const n of nodes as Array<{ id: string; order: number; title: string }>) {
     orderMap.set(n.id, { order: n.order, title: n.title });
   }
 
-  const sortedSummaries = (summaries as any[])
-    .filter((s) => orderMap.has(s.chapterId))
-    .sort((a, b) => {
-      const oa = orderMap.get(a.chapterId)!.order;
-      const ob = orderMap.get(b.chapterId)!.order;
-      return oa - ob;
-    });
+  const timelineDigest = buildTimelineDigest(
+    (summaries as Array<{ chapterId: string; summary: string | null }>).map((s) => ({
+      chapterId: s.chapterId,
+      summary: s.summary,
+    })),
+    orderMap,
+  );
 
-  const timelineDigest = sortedSummaries
-    .slice(-MAX_TIMELINE_CHAPTERS)
-    .map((s) => {
-      const meta = orderMap.get(s.chapterId)!;
-      const chNo = meta.order + 1;
-      const titleText = meta.title || `第${chNo}章`;
-      // 避免标题已含"第X章"时重复前缀（如标题已是"第一章 启航"）
-      const prefixedTitle = /^第\s*\d+\s*章/.test(titleText)
-        ? titleText
-        : `第${chNo}章 ${titleText}`;
-      const text = String(s.summary || "").trim().slice(0, 220);
-      return `${prefixedTitle}：${text}`;
-    })
-    .join("\n");
-
-  // 故事线摘要：逐条主线聚合其大事件时间轴
-  const storylineDigestParts: string[] = [];
-  for (const line of mainLines as any[]) {
-    const events = await prisma.storylineEvent.findMany({
-      where: { storylineId: line.id, kind: { not: "CLUE" } },
-      orderBy: { position: "asc" },
-    });
-    const evText = (events as any[])
-      .slice(-24)
-      .map((e) => {
-        const role =
-          e.role === "advance" ? "[推进点]" :
-          e.role === "probe" ? "[卡点]" :
-          e.role === "vote" ? "[分支选择点]" : "";
-        const kindLabel = e.kind === "MILESTONE" ? "里程碑·" : "事件·";
-        const title =
-          e.title || (e.content ? String(e.content).slice(0, 40) : "") || "未命名";
-        return `${role}${kindLabel}${title}`;
-      })
-      .join(" → ");
-    const head = `【主线：${line.title}】${line.description ? ` ${line.description}` : ""}`;
-    storylineDigestParts.push(evText ? `${head}\n时间轴：${evText}` : head);
+  // 把事件按 storylineId 分组，喂给纯函数
+  const eventsByLine: Record<string, RawStorylineEvent[]> = {};
+  for (const e of allEvents as RawStorylineEvent[]) {
+    (eventsByLine[e.storylineId as string] ??= []).push(e);
   }
-  const storylineDigest = storylineDigestParts.join("\n\n");
+  const storylineDigest = buildStorylineDigest(
+    (mainLines as Array<{ id: string; title: string | null; description: string | null }>).map(
+      (l) => ({ id: l.id, title: l.title, description: l.description }),
+    ),
+    eventsByLine,
+  );
 
   await prisma.project.update({
     where: { id: projectId },
