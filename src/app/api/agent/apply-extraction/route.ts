@@ -7,6 +7,7 @@
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
+import { computePlotEventAdoptions } from "@/core/pipeline";
 import { enrichForeshadow } from "@/core/foreshadowing";
 import { isSimilarName } from "@/lib/entity-auto-creator";
 import { NextResponse } from "next/server";
@@ -42,6 +43,8 @@ interface ApplyRequest {
     summary?: CSE;
     nextChapter?: NCC;
     writingElements?: WE;
+    /** 自动情节化：用户审阅后勾选、要归纳进故事线主线的关键事件文本 */
+    plotEvents?: string[];
   };
 }
 
@@ -137,6 +140,7 @@ export async function POST(request: Request) {
     let foreshadowingsCreated = 0;
     let experiencesSaved = 0;
     let relationshipsSaved = 0;
+    let plotEventsAdopted = 0;
 
     // ═══════════════════════════════════════
     // 1. 角色卡处理
@@ -484,6 +488,58 @@ export async function POST(request: Request) {
     }
     if (experiencesSaved > 0) results.push(`保存 ${experiencesSaved} 条角色经历 → timeline`);
 
+    // ═══════════════════════════════════════
+    // 8. 情节事件 → StorylineEvent（自动情节化：抽取关键事件归纳到故事线）
+    //    挂活跃主线（无则建默认主线），position 末尾；纯函数算清单 + 落库；去重防重复采纳。
+    // ═══════════════════════════════════════
+
+    if (selected.plotEvents && selected.plotEvents.length > 0) {
+      // 找活跃主线；若无（极少数无主线项目），建一条默认「主线」作为归纳目标
+      let mainLine = await prisma.storyline.findFirst({
+        where: { projectId, type: "main", status: "active" },
+        orderBy: { order: "asc" },
+      });
+      if (!mainLine) {
+        mainLine = await prisma.storyline.create({
+          data: { projectId, type: "main", status: "active", title: "主线", order: 0, description: "" },
+        });
+      }
+
+      // 现有事件（去重用）+ 当前最大 position
+      const existingEvents = await prisma.storylineEvent.findMany({
+        where: { storylineId: mainLine.id },
+        select: { title: true, sourceRefs: true },
+      });
+      const maxPosEvt = await prisma.storylineEvent.findFirst({
+        where: { storylineId: mainLine.id },
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+
+      const { toCreate } = computePlotEventAdoptions({
+        plotEvents: selected.plotEvents,
+        existingEvents: existingEvents as any,
+        nodeId,
+        startPosition: maxPosEvt?.position ?? 0,
+      });
+
+      for (const ev of toCreate) {
+        await prisma.storylineEvent.create({
+          data: {
+            storylineId: mainLine.id,
+            kind: "EVENT",
+            title: ev.title,
+            content: ev.content,
+            position: ev.position,
+            role: null,
+            sourceRefs: ev.sourceRefs as any,
+          },
+        });
+      }
+      plotEventsAdopted = toCreate.length;
+      if (plotEventsAdopted > 0) results.push(`采纳 ${plotEventsAdopted} 个情节事件 → 故事线主线`);
+    }
+
     // v1.6.26 实时性：apply-extraction 更新既有 approved 角色卡 timeline/abilities（sync-global-prompt 渲染这两段），
     // 抽取后刷新 globalPrompt，确保下一章生成看到最新角色出场记录（与 characters/[id] 改卡即同步范式一致）。
     syncGlobalPrompt(projectId).catch(() => {});
@@ -497,6 +553,7 @@ export async function POST(request: Request) {
         foreshadowingsCreated,
         experiencesSaved,
         relationshipsSaved,
+        plotEventsAdopted,
       },
       details: results,
     });

@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.24";
+export const LATEST_VERSION = "v1.8.25";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.24 全新「全书写作节奏控制」：基于「当前章序号 / 已存在章节总数」推导全书进度阶段（开篇→早期→中期→后期→高潮→收尾），把「防抢跑」指令注入写作 / 章纲上下文。",
-  "v1.8.24 每个阶段有专属约束：开篇不得揭晓终局、中期不得提前发动决战、收尾不得开启新大线——堵住 AI 写几十章后提前剧透、过早决战、结尾又开新线的长线节奏破坏。",
-  "v1.8.24 直接增强 v1.8.23 注入链路：write / refine / continue / chapter-outline 四路由在「长期记忆摘要」之后追加阶段指令块，零 schema 变更、零新 UI、零新依赖。",
-  "v1.8.24 双门禁复跑：源码 tsc 0 错误 + vitest 48 文件 423/423 全绿；纯函数 computeNarrativeStage / formatStage 配 11 单测覆盖 6 阶段边界与越界夹紧。",
+  "v1.8.25 全新「自动情节化」：PostGenPanel 新增常显 Tab「情节」，把每章抽取出的关键事件一键归纳进故事线主线，作家审完即收线。",
+  "v1.8.25 采纳经 apply-extraction 落库：勾选事件映射为 StorylineEvent（挂活跃主线、position 末尾、sourceRefs 记录来源章节），无主线自动建默认主线，同源同标题去重不污染。",
+  "v1.8.25 抽取 computePlotEventAdoptions 纯函数 + 7 单测，覆盖顺序 position、空串跳过、批次/跨章去重与 JSON 字符串兼容；逻辑可单测、不绑数据库。",
+  "v1.8.25 双门禁复跑：源码 tsc 0 错误 + vitest 50 文件 437/437 全绿；真实 星辰 库集成核验建事件 + 去重 + 清理，无头冒烟零控制台报错；零 schema 变更。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.25",
+    date: "2026-08-11",
+    title: "自动情节化：抽取关键事件一键归纳进故事线",
+    sections: [
+      {
+        label: "自动情节化（新增能力）",
+        items: [
+          "PostGenPanel 新增第二个常显 Tab「情节」（gitBranch 图标）：展示本章抽取出的关键事件 summary.keyEvents，用户勾选后由全局「全部采纳」经 apply-extraction 归纳进故事线主线",
+          "apply-extraction 路由新增 plotEvents 落库分支：把勾选的关键事件映射为 StorylineEvent（kind=EVENT、role=null、sourceRefs 记录来源章节 nodeId），挂活跃主线、position 末尾",
+          "无活跃主线时自动建一条默认「主线」作为归纳目标；同源章节同标题去重，重复点击「全部采纳」不会污染故事线",
+        ],
+      },
+      {
+        label: "纯函数化与可测性",
+        items: [
+          "抽取 computePlotEventAdoptions 纯函数（core/pipeline/plot-event.ts）：算应新建事件清单 + 分配 position + 去重，兼容 sourceRefs 数组与 JSON 字符串两种存储形态",
+          "新增 plot-event.test.ts 7 用例覆盖空输入、顺序 position、跳过空串、批次内去重、同章节同标题去重、JSON 字符串形态兼容、跨章节同标题可采纳",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "零 schema 变更；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 50 文件 437/437 全绿",
+          "真实 星辰 库后端集成核验：首次采纳建 3 事件(position 1/2/3、sourceRefs 含章节)、二次采纳去重生效(仍 3 条)、测试数据已清理；无头冒烟工作区零控制台报错",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.24",
     date: "2026-08-11",

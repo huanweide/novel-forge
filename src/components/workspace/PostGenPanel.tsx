@@ -29,6 +29,7 @@ import {
 import { PostGenPanelHeader } from "./postgen/PostGenPanelHeader";
 import { PostGenPanelTabs } from "./postgen/PostGenPanelTabs";
 import { ExtractionTab } from "./postgen/ExtractionTab";
+import { PlotTab } from "./postgen/PlotTab";
 import { ForbiddenTab } from "./postgen/ForbiddenTab";
 import { LogicTab } from "./postgen/LogicTab";
 import { DistillTab } from "./postgen/DistillTab";
@@ -89,6 +90,7 @@ export function PostGenPanel({
   const [adoptedForeshadowings, setAdoptedForeshadowings] = useState<Set<string>>(new Set());
   const [adoptedExperiences, setAdoptedExperiences] = useState<Set<string>>(new Set());
   const [adoptedRelationships, setAdoptedRelationships] = useState<Set<string>>(new Set());
+  const [adoptedPlotEvents, setAdoptedPlotEvents] = useState<Set<string>>(new Set());
 
   // 初始化采纳状态——所有 suggestion !== "ignore" 的默认选中
   useEffect(() => {
@@ -114,6 +116,9 @@ export function PostGenPanel({
     setAdoptedRelationships(new Set(
       extractionData.relationshipChanges.map((_: any, i: number) => String(i))
     ));
+    // 情节：默认全选（用户可取消勾选），与抽取结果同源
+    const kes = (extractionData.summary?.keyEvents || []).filter((e: any) => typeof e === "string" && e.trim());
+    setAdoptedPlotEvents(new Set(kes.map((_: any, i: number) => String(i))));
   }, [extractionData]);
 
   // ── 保存（调用 apply-extraction API） ──
@@ -132,6 +137,9 @@ export function PostGenPanel({
         summary: extractionData.summary,
         nextChapter: extractionData.nextChapter,
         writingElements: extractionData.writingElements,
+        plotEvents: (extractionData.summary?.keyEvents || [])
+          .filter((e: any) => typeof e === "string" && e.trim())
+          .filter((_: any, i: number) => adoptedPlotEvents.has(String(i))),
       };
 
       const res = await fetch("/api/agent/apply-extraction", {
@@ -171,6 +179,7 @@ export function PostGenPanel({
     items: { set: adoptedItems, toggle: (i) => toggleAdopt(setAdoptedItems, i) },
     foreshadowings: { set: adoptedForeshadowings, toggle: (i) => toggleAdopt(setAdoptedForeshadowings, i) },
     relationships: { set: adoptedRelationships, toggle: (i) => toggleAdopt(setAdoptedRelationships, i) },
+    plotEvents: { set: adoptedPlotEvents, toggle: (i) => toggleAdopt(setAdoptedPlotEvents, i) },
   };
 
   // ── 渲染 ──
@@ -200,6 +209,9 @@ export function PostGenPanel({
       <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
         {tab === "extraction" && extractionData && (
           <ExtractionTab extractionData={extractionData} adopt={adopt} importanceStars={importanceStars} />
+        )}
+        {tab === "plot" && extractionData && (
+          <PlotTab extractionData={extractionData} adopt={adopt} />
         )}
         {tab === "forbidden" && (
           <ForbiddenTab forbiddenScanResult={forbiddenScanResult} />

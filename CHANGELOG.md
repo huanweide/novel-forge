@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.25 — 2026-08-11
+
+**自动情节化：抽取关键事件一键归纳进故事线**
+
+- **新增「情节」Tab（自动情节化）**：`PostGenPanel` 新增第二个常显 Tab「情节」（gitBranch 图标），展示本章抽取出的关键事件 `summary.keyEvents`；用户勾选后由全局「全部采纳」经 `apply-extraction` 归纳进故事线主线。这是 v1.9 路线图 #2 的落地项——把原本只存进章节摘要的「关键事件」真正接回故事线系统。
+- **采纳落库（apply-extraction 新增 plotEvents 分支）**：勾选事件映射为 `StorylineEvent`（kind=EVENT、role=null、sourceRefs 记录来源章节 nodeId），挂活跃主线、position 末尾；无活跃主线时自动建一条默认「主线」；同源章节同标题去重，重复点击「全部采纳」不会污染故事线。
+- **纯函数化 + 单测**：抽取 `computePlotEventAdoptions` 纯函数（`core/pipeline/plot-event.ts`）算应新建事件清单 + 分配 position + 去重，兼容 sourceRefs 数组与 JSON 字符串两种存储形态；新增 `plot-event.test.ts` 7 用例覆盖空输入、顺序 position、空串跳过、批次内/跨章去重、JSON 字符串兼容。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 50 文件 437/437 全绿；真实 星辰 库后端集成核验（首次采纳建 3 事件、position 1/2/3、sourceRefs 含章节；二次采纳去重生效；测试数据已清理）；无头冒烟工作区零控制台报错。零 schema 变更。
+
+---
+
 ## v1.8.24 — 2026-08-11
 
 **全书写作节奏控制：6 阶段渐进 + 防抢跑注入**

@@ -65,10 +65,11 @@ export type LogicScanResult = {
 };
 
 // ── Tab 定义 ──
-export type TabKey = "extraction" | "forbidden" | "logic" | "distill" | "review";
+export type TabKey = "extraction" | "plot" | "forbidden" | "logic" | "distill" | "review";
 
 export const TABS: Array<{ key: TabKey; icon: IconName; label: string }> = [
   { key: "extraction", icon: "chart", label: "章节提取" },
+  { key: "plot", icon: "gitBranch", label: "情节" },
   { key: "forbidden", icon: "alert", label: "废词检测" },
   { key: "logic", icon: "search", label: "逻辑自查" },
   { key: "distill", icon: "sparkles", label: "本地蒸馏" },
@@ -88,4 +89,5 @@ export interface AdoptControllers {
   items: AdoptGroup;
   foreshadowings: AdoptGroup;
   relationships: AdoptGroup;
+  plotEvents: AdoptGroup;
 }

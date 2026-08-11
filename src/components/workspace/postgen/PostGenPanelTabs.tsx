@@ -28,6 +28,7 @@ export function PostGenPanelTabs({
   const statusOf = (key: TabKey) => {
     const hasContent =
       (key === "extraction" && extractionData) ||
+      (key === "plot" && extractionData && (extractionData.summary?.keyEvents?.length || 0) > 0) ||
       (key === "forbidden" && forbiddenScanResult) ||
       (key === "logic" && logicCheckResult) ||
       (key === "distill" && distillSummary) ||
@@ -39,8 +40,8 @@ export function PostGenPanelTabs({
     return { hasContent, hasIssues };
   };
 
-  const primaryTabs = TABS.filter((t) => t.key === "extraction");
-  const advancedTabs = TABS.filter((t) => t.key !== "extraction");
+  const primaryTabs = TABS.filter((t) => t.key === "extraction" || t.key === "plot");
+  const advancedTabs = TABS.filter((t) => t.key !== "extraction" && t.key !== "plot");
   const advancedHasIssues = advancedTabs.some((t) => statusOf(t.key).hasIssues);
   const advancedActive = advancedTabs.some((t) => t.key === tab);
 
