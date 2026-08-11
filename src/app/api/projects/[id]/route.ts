@@ -53,6 +53,8 @@ export async function PATCH(
         globalPrompt: body.globalPrompt,
         llmConfig: body.llmConfig,
         postProcessingRules: body.postProcessingRules,
+        // 2.0 P2-1：用户可配置内容安全黑名单（增量叠加默认基线）
+        customSafetyRules: body.customSafetyRules,
         // Max Loop Round4·P8：智能审阅开关 API 写入入口（此前仅 DB/UI 可切，自动化/测试无法配置）
         autoConfirmEnabled: body.autoConfirmEnabled,
         // v1.1.0：全书智能交付自动执行开关 API 写入入口

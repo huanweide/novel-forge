@@ -8,6 +8,7 @@ import { ENTITY_LEGEND } from "@/core/entity-highlighter";
 import { Modal } from "@/components/ui/Modal";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
+import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
 
 export function CenterPanel({
   selectedNode, streamContent, isGenerating, reviewResult,
@@ -19,8 +20,9 @@ export function CenterPanel({
   genStep, genStepLabels, chapterOutlineStatus,
   onOpenGame,
   onBatchWrite,
-  onEditCharacter, onEditLore, todayWords = 0,
+  onEditCharacter, onEditLore,   todayWords = 0,
   loadProject,
+  narrativeStage,
 }: {
   selectedNode: StoryNodeData | null; streamContent: string; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
@@ -43,6 +45,7 @@ export function CenterPanel({
   onEditLore?: (id: string) => void;
   todayWords?: number;
   loadProject?: () => void | Promise<void>;
+  narrativeStage?: NarrativeStage | null;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [editingOutline, setEditingOutline] = useState(false);
@@ -204,7 +207,12 @@ export function CenterPanel({
           <div className="border-b border-[var(--nv-border-2)] px-4 py-3 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
-              <span className="text-xs text-[var(--nv-text-tertiary)] flex items-center gap-2">
+              <span className="text-xs text-[var(--nv-text-tertiary)] flex items-center gap-2 flex-wrap justify-end">
+                {narrativeStage && (
+                  <span className="flex items-center gap-1 rounded px-1.5 py-0.5 border border-[var(--nv-primary)]/30 bg-[var(--nv-primary)]/10 text-[var(--nv-primary)]" title="全书写作节奏阶段（基于本章在全书的进度自动推导，被动展示）">
+                    <Icon name="compass" size={11} /> {narrativeStage.label} · {narrativeStage.percent}%
+                  </span>
+                )}
                 {selectedNode.status === "completed" ? <span className="flex items-center gap-1"><Icon name="check" size={11} className="text-[var(--nv-success)]" /> 已完成</span> : selectedNode.status === "reviewing" ? <span className="flex items-center gap-1"><Icon name="alert" size={11} className="text-accent-label" /> 待修改</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={11} /> 草稿</span>}{" "}
                 · {selectedNode.wordCount || 0} 字
                 <button onClick={openRevisions}
@@ -256,11 +264,11 @@ export function CenterPanel({
                         ) : (
                           <>
                             <input value={chapterOutlinePrompt} onChange={(e) => onChapterOutlinePromptChange(e.target.value)}
-                              placeholder="提示词（留空自动）"
+                              placeholder="预览提示词（留空自动）"
                               className="input-glass w-36 rounded-lg px-2 py-1 text-[10px] focus:border-[var(--nv-primary)]" />
                             <button onClick={() => onGenerateChapterOutline(chapterOutlinePrompt)}
                               className="flex items-center gap-1 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-2 py-1 text-[10px] text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-                              title="轻量预览——快速生成本章草稿章纲（不绑定角色，可随时重生成）"><Icon name="sparkles" size={10} /> 轻量章纲</button>
+                              title="快速预览——轻量生成本章草稿章纲，不绑定角色、可随时重生成，仅作写作前的快速参考（正式大纲请用「抽卡分镜」）"><Icon name="sparkles" size={10} /> 快速预览</button>
                             <button onClick={onDrawChapterOutline}
                               className="flex items-center gap-1 rounded-lg border border-[var(--nv-primary)]/40 bg-[var(--nv-primary-soft)] px-2 py-1 text-[10px] font-medium text-[var(--nv-primary)] transition-colors hover:bg-[var(--nv-primary)]/15"
                               title="正式 Outline——并行抽 3-5 条不同路线并自动选角，采用后写入带角色/剧情的正式章纲"><Icon name="grid" size={12} /> 抽卡分镜</button>

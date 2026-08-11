@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjectStore } from "@/store";
 import { invalidateQueries } from "@/hooks/useApi";
+import { computeNarrativeStage } from "@/core/pipeline/narrative-stage";
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -68,6 +69,13 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
+  // P2-2：被动展示叙事阶段名——基于当前章在全书章节列表中的进度位置推导，复用 computeNarrativeStage（零新增 schema / 零子系统）
+  const narrativeStage = (() => {
+    if (!selectedNode || chapterNodes.length === 0) return null;
+    const idx = chapterNodes.findIndex((n) => n.id === selectedNode.id);
+    if (idx < 0) return null;
+    return computeNarrativeStage(idx, chapterNodes.length);
+  })();
 
   const handleSelectNode = (node: StoryNodeData) => {
     if (selectedNode?.id !== node.id) {
@@ -963,6 +971,7 @@ export default function WorkspacePage() {
         <div className="flex flex-col flex-1 overflow-hidden" inert={leftDrawerOpen || rightDrawerOpen}>
           <CenterPanel selectedNode={selectedNode} streamContent={streamContent}
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
+            narrativeStage={narrativeStage}
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
             targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
             todayWords={monitorTodayWords}
@@ -1029,25 +1038,7 @@ export default function WorkspacePage() {
             loadProject={loadProject}
           />
 
-          {/* 宝宝流记忆召回面板（写作闭环透明度：本轮已自动呼应的设定/人设阶段） */}
-          {recallMemories.length > 0 && selectedNode && (
-            <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
-              <div className="surface-elevated rounded-2xl p-4 border border-[var(--nv-primary)]/20">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <span className="w-1.5 h-5 rounded-full bg-[var(--nv-primary)]/60" />
-                  <h3 className="text-sm font-semibold text-[var(--nv-text-secondary)]">宝宝流记忆召回（已注入本轮写作）</h3>
-                </div>
-                <ul className="space-y-2.5">
-                  {recallMemories.map((m, i) => (
-                    <li key={i} className="text-xs">
-                      <span className="text-[var(--nv-primary)] font-medium">{m.source === "lorebook" ? "世界书" : "结构化表格"}｜{m.title}</span>
-                      <p className="text-[var(--nv-text-tertiary)] mt-1 whitespace-pre-wrap leading-relaxed">{m.content}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
+          {/* P1-3：宝宝流记忆召回面板已合并入右栏「统计 → 上下文监控」（单一记忆透出组件），此处不再重复渲染 */}
 
           {/* 确认流程已收口到「项目设定」弹窗——正文区不再常驻确认栏，阅读不被遮挡 */}
 
@@ -1099,6 +1090,8 @@ export default function WorkspacePage() {
             onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
             selectedText={selectedText || undefined}
             toolboxItems={toolboxItems}
+            recallMemories={recallMemories}
+            isGenerating={isGenerating || continueLoading}
             onEditCharacter={(id) => {
               const c = project.characters.find((x) => x.id === id);
               if (c) setEditingCharacter(c);

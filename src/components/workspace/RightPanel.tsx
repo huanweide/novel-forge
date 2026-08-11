@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { ContextPreview } from "@/components/editor/ContextPreview";
 import { ChapterEntitiesPanel } from "./ChapterEntitiesPanel";
@@ -27,6 +27,10 @@ interface RightPanelProps {
   onEditLore?: (id: string) => void;
   selectedText?: string;
   toolboxItems: ToolboxItem[];
+  /** P1-3：宝宝流记忆召回，透传给 ContextPreview 合并展示 */
+  recallMemories?: any[];
+  /** P1-3：生成进行中，自动展开统计区上下文监控 */
+  isGenerating?: boolean;
 }
 
 const TOP_TABS: Array<{ key: TopTab; icon: IconName; label: string }> = [
@@ -52,7 +56,7 @@ const MONITOR_SECTIONS = [
 ] as const;
 
 export function RightPanel(props: RightPanelProps) {
-  const { selectedNode, onClose, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems } = props;
+  const { selectedNode, onClose, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, recallMemories = [], isGenerating = false } = props;
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
@@ -63,6 +67,14 @@ export function RightPanel(props: RightPanelProps) {
   const [showContext, setShowContext] = useState(false);
   // 默认展开首项（叙事能量曲线），避免首屏空白；不三项全开以免三路同时 fetch
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ energy: true });
+
+  // P1-3：生成进行时自动展开统计区的「上下文监控」（含合并的召回），满足「生成时展开、平时收起」
+  useEffect(() => {
+    if (isGenerating) {
+      setTopTab("stats");
+      setShowContext(true);
+    }
+  }, [isGenerating]);
 
   // 监测三块 section（折叠区块，展开才挂载子组件以省 fetch）
   const monitorSections = MONITOR_SECTIONS.map((s) => {
@@ -145,6 +157,10 @@ export function RightPanel(props: RightPanelProps) {
         {/* ── 实体 tab（查询实体：实体追踪 / 伏笔 / 关系图） ── */}
         {topTab === "entities" && (
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* P1-2：同源标注——三子 Tab 均为「结构化表格（权威库）」的快捷切片，关系图数据源独立 */}
+            <div className="px-3 pt-2 pb-1 text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed">
+              以下三个视图均源自<span className="text-[var(--nv-text-secondary)]">结构化表格</span>（角色卡 + 世界书的权威库）的同源快捷切片；关系图（角色详情内）数据源独立，不与本表强同步。
+            </div>
             {/* 子tab */}
             <div className="flex border-b border-[var(--nv-border-2)] shrink-0">
               <button
@@ -254,7 +270,14 @@ export function RightPanel(props: RightPanelProps) {
             </button>
             {showContext && selectedNode && (
               <div className="px-3 pb-3">
-                <ContextPreview projectId={project.id} nodeId={selectedNode.id} authorNote={authorNote} refreshKey={contextRefreshKey} />
+                <ContextPreview
+                  projectId={project.id}
+                  nodeId={selectedNode.id}
+                  authorNote={authorNote}
+                  refreshKey={contextRefreshKey}
+                  recallMemories={recallMemories}
+                  isGenerating={isGenerating}
+                />
               </div>
             )}
           </div>

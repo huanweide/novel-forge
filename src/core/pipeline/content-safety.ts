@@ -20,6 +20,8 @@ export interface SafetyIssue {
   matched: string;
   snippet: string;
   suggestion: string;
+  /** 命中来源：baseline=内置默认基线；custom=用户增量黑名单 */
+  source?: "baseline" | "custom";
 }
 
 export interface SafetyResult {
@@ -27,6 +29,8 @@ export interface SafetyResult {
   score: number;
   issues: SafetyIssue[];
   summary: string;
+  /** 合并后的规则统计（用于 UI 展示基线/用户规则数量） */
+  ruleStats?: { baseline: number; custom: number };
 }
 
 interface Rule {
@@ -36,6 +40,35 @@ interface Rule {
   pattern: RegExp;
   suggestion: string;
 }
+
+/**
+ * 用户可配置安全规则（可序列化，存于 Project.customSafetyRules）。
+ * pattern 为字面关键词/短语（扫描时按字面转义匹配，避免正则注入），
+ * 不替换内置基线，仅作为「增量黑名单」叠加。
+ */
+export interface CustomSafetyRule {
+  id: string;
+  pattern: string;
+  category: SafetyCategory;
+  severity: Severity;
+  suggestion?: string;
+}
+
+/** UI 用分类选项（标签 + 值） */
+export const CUSTOM_SAFETY_CATEGORY_OPTIONS: { value: SafetyCategory; label: string }[] = [
+  { value: "violence", label: "暴力" },
+  { value: "gore", label: "血腥恐怖" },
+  { value: "sexual", label: "色情低俗" },
+  { value: "illegal", label: "违法违禁" },
+  { value: "hate", label: "仇恨歧视" },
+];
+
+/** UI 用严重度选项 */
+export const CUSTOM_SAFETY_SEVERITY_OPTIONS: { value: Severity; label: string }[] = [
+  { value: "high", label: "高" },
+  { value: "medium", label: "中" },
+  { value: "low", label: "低" },
+];
 
 const SEVERITY_PENALTY: Record<Severity, number> = { high: 40, medium: 20, low: 8 };
 
@@ -64,18 +97,68 @@ function snippetAround(text: string, index: number, length: number): string {
   return text.slice(start, end).replace(/\s+/g, " ").trim();
 }
 
+/** 内置默认基线规则（不可删，UI 只读展示）。 */
+export const DEFAULT_SAFETY_RULES: Rule[] = RULES;
+
+/** 转义正则特殊字符，把用户字面关键词当作纯文本匹配（防正则注入）。 */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** 把一条用户规则编译成可扫描的 Rule（字面匹配 + 全局不区分大小写）。 */
+function toRule(custom: CustomSafetyRule): Rule {
+  const label = CUSTOM_SAFETY_CATEGORY_OPTIONS.find((c) => c.value === custom.category)?.label ?? custom.category;
+  return {
+    category: custom.category,
+    categoryLabel: label,
+    severity: custom.severity,
+    pattern: new RegExp(escapeRegExp(custom.pattern), "gi"),
+    suggestion: custom.suggestion?.trim() || "命中你自定义的黑名单词，确认是否适合本作。",
+  };
+}
+
+/**
+ * 从 Project.customSafetyRules（未知 JSON）安全解析出用户规则数组。
+ * 丢弃非法项，保证零崩溃、可序列化回写。
+ */
+export function buildCustomSafetyRules(json: unknown): CustomSafetyRule[] {
+  if (!Array.isArray(json)) return [];
+  const validCats: SafetyCategory[] = ["violence", "gore", "sexual", "illegal", "hate"];
+  const validSev: Severity[] = ["high", "medium", "low"];
+  const out: CustomSafetyRule[] = [];
+  for (const raw of json) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.pattern !== "string" || !r.pattern.trim()) continue;
+    if (!validCats.includes(r.category as SafetyCategory)) continue;
+    if (!validSev.includes(r.severity as Severity)) continue;
+    out.push({
+      id: typeof r.id === "string" && r.id ? r.id : `c_${Date.now()}_${out.length}`,
+      pattern: r.pattern.trim(),
+      category: r.category as SafetyCategory,
+      severity: r.severity as Severity,
+      suggestion: typeof r.suggestion === "string" ? r.suggestion : undefined,
+    });
+  }
+  return out;
+}
+
 /**
  * 分析文本的内容安全风险。
  * @param text 待审文本
+ * @param extraRules 用户增量黑名单（叠在默认基线上，不替换基线）
  * @returns 风险结果（passed 表示无高/中风险；score 0-100，越高越安全）
  */
-export function analyzeContentSafety(text: string): SafetyResult {
+export function analyzeContentSafety(text: string, extraRules?: CustomSafetyRule[]): SafetyResult {
   if (!text || !text.trim()) {
-    return { passed: true, score: 100, issues: [], summary: "无内容可审。" };
+    return { passed: true, score: 100, issues: [], summary: "无内容可审。", ruleStats: { baseline: RULES.length, custom: extraRules?.length ?? 0 } };
   }
 
+  const activeRules = extraRules && extraRules.length > 0 ? [...RULES, ...extraRules.map(toRule)] : RULES;
+  const customSources = new Set(extraRules?.map((r) => escapeRegExp(r.pattern)) ?? []);
+
   const issues: SafetyIssue[] = [];
-  for (const rule of RULES) {
+  for (const rule of activeRules) {
     // matchAll 要求全局正则；克隆并补 g 标志
     const re = new RegExp(rule.pattern.source, rule.pattern.flags.includes("g") ? rule.pattern.flags : rule.pattern.flags + "g");
     const matches = text.matchAll(re);
@@ -88,6 +171,7 @@ export function analyzeContentSafety(text: string): SafetyResult {
         matched: m[0],
         snippet: snippetAround(text, idx, m[0].length),
         suggestion: rule.suggestion,
+        source: customSources.has(rule.pattern.source) ? "custom" : "baseline",
       });
     }
   }
@@ -118,7 +202,7 @@ export function analyzeContentSafety(text: string): SafetyResult {
     summary = `检出 ${deduped.length} 处低风险提示，一般可保留。`;
   }
 
-  return { passed, score, issues: deduped, summary };
+  return { passed, score, issues: deduped, summary, ruleStats: { baseline: RULES.length, custom: extraRules?.length ?? 0 } };
 }
 
 export const SAFETY_CATEGORIES: SafetyCategory[] = ["violence", "gore", "sexual", "illegal", "hate"];

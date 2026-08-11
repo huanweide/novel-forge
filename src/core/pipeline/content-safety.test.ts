@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analyzeContentSafety } from "./content-safety";
+import { analyzeContentSafety, buildCustomSafetyRules } from "./content-safety";
 
 describe("analyzeContentSafety", () => {
   it("空文本通过且满分", () => {
@@ -65,5 +65,35 @@ describe("analyzeContentSafety", () => {
     const r = analyzeContentSafety("血肉模糊的地方血肉模糊还在。");
     const matched = r.issues.filter((i) => i.matched === "血肉模糊");
     expect(matched.length).toBe(1);
+  });
+
+  it("合并用户增量黑名单并标记来源", () => {
+    const r = analyzeContentSafety("他忽然念出禁语：咕噜咕噜。", [
+      { id: "u1", pattern: "咕噜咕噜", category: "illegal", severity: "high", suggestion: "自定义禁语" },
+    ]);
+    const hit = r.issues.find((i) => i.matched === "咕噜咕噜");
+    expect(hit).toBeTruthy();
+    expect(hit!.source).toBe("custom");
+    expect(r.ruleStats?.custom).toBe(1);
+    expect(r.ruleStats?.baseline).toBeGreaterThan(0);
+  });
+
+  it("用户黑名单不替换默认基线", () => {
+    const r = analyzeContentSafety("满门屠城灭门，还念出咕噜咕噜。", [
+      { id: "u1", pattern: "咕噜咕噜", category: "illegal", severity: "high" },
+    ]);
+    expect(r.issues.some((i) => i.matched === "屠城" || i.matched === "灭门")).toBe(true);
+    expect(r.issues.some((i) => i.matched === "咕噜咕噜")).toBe(true);
+  });
+
+  it("buildCustomSafetyRules 丢弃非法项", () => {
+    const out = buildCustomSafetyRules([
+      { id: "a", pattern: "abc", category: "illegal", severity: "high" },
+      { pattern: "", category: "illegal", severity: "high" }, // 空 pattern
+      { id: "b", pattern: "xyz", category: "nope", severity: "high" }, // 非法分类
+      "garbage",
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].pattern).toBe("abc");
   });
 });

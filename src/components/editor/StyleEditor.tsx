@@ -356,6 +356,12 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               ═══════════════════════════════════ */}
           {tab === "style" && (
             <>
+              {/* 两入口层级说明（与 PostGenPanel「文风」页签呼应） */}
+              <div className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-3 py-2 text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
+                本弹窗编辑「<span className="text-[var(--nv-text-secondary)]">文风模板 + 12 维度 + LLM 参数</span>」，对应生成系统提示词的<span className="text-[var(--nv-text-secondary)]">第五部分·最高优先级</span>（其中模板的 stylePrompt 始终覆盖其它文风设定）。
+                写作页 PostGenPanel「文风」页签编辑的是「文风卡」，对应<span className="text-[var(--nv-text-secondary)]">第四部分·文风设定</span>；两者打通：叙事视角本弹窗优先、未填取文风卡。
+              </div>
+
               {/* 预设风格库 */}
               <div>
                 <label className="text-sm text-[var(--nv-text-tertiary)] mb-2 block"><Icon name="package" size={15} className="inline-block align-text-bottom shrink-0" /> 预设风格库（一键切换）</label>

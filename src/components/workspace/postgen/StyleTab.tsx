@@ -123,7 +123,9 @@ export function StyleTab({ projectId }: StyleTabProps) {
   return (
     <div className="p-4 space-y-4">
       <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
-        这里的设定会被直接注入 AI 生成上下文（文风卡是生成时真正生效的真相源）。保存后下次写/续写即采用。
+        本页编辑的是「<span className="text-[var(--nv-text-secondary)]">文风卡</span>」，对应 AI 系统提示词的<span className="text-[var(--nv-text-secondary)]">第四部分·文风设定</span>，是生成时真正生效的文风真相源之一。保存后下次写/续写即采用。
+        <br />
+        注意：顶栏「文风与质量控制」里的<span className="text-[var(--nv-text-secondary)]">文风模板（含 12 维度）</span>对应<span className="text-[var(--nv-text-secondary)]">第五部分·最高优先级</span>，会覆盖本页同项设定；叙事视角两者打通（本页优先，未填取文风模板）。
       </p>
 
       {/* 叙事视角 */}

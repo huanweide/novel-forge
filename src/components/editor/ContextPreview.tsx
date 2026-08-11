@@ -51,17 +51,29 @@ export function ContextPreview({
   nodeId,
   authorNote,
   refreshKey,
+  recallMemories = [],
+  isGenerating = false,
 }: {
   projectId: string;
   nodeId?: string;
   authorNote?: string;
   refreshKey: number;
+  /** F3 宝宝流记忆召回（来自 SSE babylore_recall），合并入本单组件，生成时自动展开 */
+  recallMemories?: any[];
+  /** 生成进行中：自动展开召回段，满足「生成时展开、平时收起」 */
+  isGenerating?: boolean;
 }) {
   const [data, setData] = useState<ContextData | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // P1-3：F3 宝宝流记忆召回合并入本组件——生成时（或已有召回）自动展开，平时收起
+  const [recallExpanded, setRecallExpanded] = useState(false);
+  useEffect(() => {
+    if (isGenerating || recallMemories.length > 0) setRecallExpanded(true);
+  }, [isGenerating, recallMemories]);
 
   // #221 重新摘要 + 摘要确认
   const [reloadTick, setReloadTick] = useState(0);
@@ -189,6 +201,31 @@ export function ContextPreview({
 
   const { breakdown, activeCharacters, usagePercent, contextWindowSize } = data;
 
+  // P1-3：F2 上下文监控 + F3 宝宝流召回 → 合并为单一「记忆透出」组件
+  const recallSection = recallMemories.length > 0 ? (
+    <div className="bg-[var(--nv-primary)]/10 border border-[var(--nv-primary)]/30 rounded-lg p-3">
+      <button
+        onClick={() => setRecallExpanded(!recallExpanded)}
+        className="flex items-center justify-between w-full text-xs transition-colors hover:text-[var(--nv-text-secondary)]"
+      >
+        <span className="text-[var(--nv-primary)] font-medium">
+          <Icon name="brain" size={13} className="inline-block align-text-bottom shrink-0" /> 宝宝流记忆召回（已注入本轮写作）· {recallMemories.length} 条
+        </span>
+        <span className="text-[var(--nv-text-muted)]">{recallExpanded ? "▾" : "▸"}</span>
+      </button>
+      {recallExpanded && (
+        <ul className="mt-2 space-y-2.5">
+          {recallMemories.map((m, i) => (
+            <li key={i} className="text-xs">
+              <span className="text-[var(--nv-primary)] font-medium">{m.source === "lorebook" ? "世界书" : "结构化表格"}｜{m.title}</span>
+              <p className="text-[var(--nv-text-tertiary)] mt-1 whitespace-pre-wrap leading-relaxed">{m.content}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  ) : null;
+
   const sections = [
     { key: "systemPrompt", label: "系统指令", icon: "bot", data: breakdown.systemPrompt },
     { key: "globalMemory", label: "全局记忆", icon: "brain", data: breakdown.globalMemory },
@@ -226,6 +263,9 @@ export function ContextPreview({
           />
         </div>
       </div>
+
+      {/* P1-3：合并后的记忆透出（F3 召回） */}
+      {recallSection}
 
       {/* 文风模板注入状态 */}
       {data.templateInjection && (
