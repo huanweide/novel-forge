@@ -131,3 +131,25 @@ export function buildCausalChain(storylines: any[], selectedId: string | null): 
     )
     .sort((a, b) => a.event.position - b.event.position);
 }
+
+// ─── v1.9 叙事角色：推进 / 卡点 / 分支选择点（持久化到 StorylineEvent.role 字段）───
+export type NarrativeRole = "advance" | "probe" | "vote";
+export const NARRATIVE_ROLES: NarrativeRole[] = ["advance", "probe", "vote"];
+
+/**
+ * 把用户在前端标注的叙事角色映射到因果链节点上。
+ * roleMap 的 key 形如 `${selectedId}:${eventId}`，value 为角色枚举。
+ * 纯函数：不触碰存储，便于单测与组件零逻辑重复。
+ */
+export function withNarrativeRoles<T extends { event: { id: string } }>(
+  nodes: T[],
+  selectedId: string | null,
+  roleMap: Record<string, string | undefined> | null | undefined,
+): (T & { role: NarrativeRole | null })[] {
+  const safeMap = roleMap || {};
+  return (nodes || []).map((n) => {
+    const raw = safeMap[`${selectedId}:${n.event.id}`];
+    const role = raw && (NARRATIVE_ROLES as readonly string[]).includes(raw) ? (raw as NarrativeRole) : null;
+    return { ...n, role };
+  });
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain, sortChildrenByStatusThenOrder, buildCausalChain } from "./storyline-progress";
+import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain, sortChildrenByStatusThenOrder, buildCausalChain, withNarrativeRoles, NARRATIVE_ROLES } from "./storyline-progress";
 
 describe("故事线进度量化（v1.8.4 · sevenElements）", () => {
   it("空故事线：进度全 0、未收束", () => {
@@ -163,5 +163,39 @@ describe("v1.9 buildCausalChain（因果链聚合）", () => {
     expect(buildCausalChain(lines, "not-exist")).toEqual([]);
     expect(buildCausalChain([], "main")).toEqual([]);
     expect(buildCausalChain(undefined as any, "main")).toEqual([]);
+  });
+});
+
+describe("v1.9 withNarrativeRoles（叙事角色映射）", () => {
+  const nodes = [
+    { event: { id: "e1" }, lineTitle: "主线", lineType: "main", isMain: true },
+    { event: { id: "e2" }, lineTitle: "支线", lineType: "side", isMain: false },
+  ];
+  const SID = "main";
+
+  it("无标注时所有节点 role=null", () => {
+    const out = withNarrativeRoles(nodes, SID, {});
+    expect(out.every((n) => n.role === null)).toBe(true);
+    expect(out).toHaveLength(2);
+  });
+
+  it("按 `${selectedId}:${eventId}` 精确映射角色，其他节点不受影响", () => {
+    const out = withNarrativeRoles(nodes, SID, { [`${SID}:e1`]: "advance", [`${SID}:e2`]: "vote" });
+    expect(out.find((n) => n.event.id === "e1")!.role).toBe("advance");
+    expect(out.find((n) => n.event.id === "e2")!.role).toBe("vote");
+  });
+
+  it("非法角色值被忽略为 null（防御脏数据）", () => {
+    const out = withNarrativeRoles(nodes, SID, { [`${SID}:e1`]: "hack" });
+    expect(out.find((n) => n.event.id === "e1")!.role).toBeNull();
+  });
+
+  it("空/异常输入安全", () => {
+    expect(withNarrativeRoles(undefined as any, SID, {})).toEqual([]);
+    expect(withNarrativeRoles(nodes, SID, undefined as any).every((n) => n.role === null)).toBe(true);
+  });
+
+  it("NARRATIVE_ROLES 含三种角色", () => {
+    expect(NARRATIVE_ROLES).toEqual(["advance", "probe", "vote"]);
   });
 });

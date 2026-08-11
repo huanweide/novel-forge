@@ -22,6 +22,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         title: body.title !== undefined ? body.title : existing.title,
         content: body.content !== undefined ? body.content : existing.content,
         position: typeof body.position === "number" ? body.position : existing.position,
+        role: body.role !== undefined ? body.role : existing.role,
       },
     });
     return NextResponse.json(event);

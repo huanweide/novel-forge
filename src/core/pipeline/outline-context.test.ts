@@ -121,7 +121,7 @@ describe("formatStorylines（#200 续写非孤立 · 主线三要素）", () => 
 
   it("时间轴注入全部已规划/已发生事件（含 EVENT，不止 MILESTONE）", () => {
     const out = formatStorylines([main]);
-    expect(out).toContain("时间轴（已规划/已发生）：");
+    expect(out).toContain("时间轴（已规划/已发生，方向：先发生 → 后导致）：");
     expect(out).toContain("事件·守墓人潜入");
     expect(out).toContain("里程碑·裂隙开启");
     // CLUE 不应进入时间轴，而应在线索集

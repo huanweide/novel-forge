@@ -402,6 +402,7 @@ model StorylineEvent {
   title       String   @default("")
   content     String   @default("")        // 事件/线索正文
   position    Float    @default(0)         // 时间轴排序位（可总结性，不绑章节号）
+  role        String?                      // 叙事角色：advance（剧情推进点）| probe（卡点/阻碍）| vote（分支选择点）
   sourceRefs  Json     @default("[]")      // 来源引用：[{type:"chapter"|"note"|"llm", ref:""}]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

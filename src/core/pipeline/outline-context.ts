@@ -268,8 +268,18 @@ export function formatStorylines(storylines: any[], options: FormatStorylinesOpt
         .slice()
         .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
         .slice(-15)
-        .map((e: any) => `${e.kind === "MILESTONE" ? "里程碑·" : "事件·"}${e.title || e.content?.slice(0, 40) || e.tag || "未命名"}`);
-      if (timeline.length) parts.push("时间轴（已规划/已发生）：" + timeline.join(" → "));
+        .map((e: any) => {
+          const roleLabel =
+            e.role === "advance"
+              ? "[推进点]"
+              : e.role === "probe"
+                ? "[卡点]"
+                : e.role === "vote"
+                  ? "[分支选择点]"
+                  : "";
+          return `${roleLabel}${e.kind === "MILESTONE" ? "里程碑·" : "事件·"}${e.title || e.content?.slice(0, 40) || e.tag || "未命名"}`;
+        });
+      if (timeline.length) parts.push("时间轴（已规划/已发生，方向：先发生 → 后导致）：" + timeline.join(" → "));
       return parts.join("\n");
     })
     .join("\n\n");

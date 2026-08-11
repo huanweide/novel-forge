@@ -16,6 +16,7 @@ export interface StorylineEventData {
   title: string;
   content: string;
   position: number;
+  role?: "advance" | "probe" | "vote" | null;
   sourceRefs: unknown[];
 }
 

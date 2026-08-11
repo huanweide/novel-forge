@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { toastError, toastSuccess, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
-import { computeStorylineProgress, groupStorylinesByMain, sortChildrenByStatusThenOrder, buildCausalChain } from "@/lib/storyline-progress";
+import { computeStorylineProgress, groupStorylinesByMain, sortChildrenByStatusThenOrder, buildCausalChain, withNarrativeRoles, type NarrativeRole } from "@/lib/storyline-progress";
 import type { StorylineData } from "./StorylineList";
 import { DialogField, DialogInput } from "./DialogUI";
 
@@ -116,6 +116,49 @@ export function StorylineWorkbench({
   const [activeTab, setActiveTab] = useState<"elements" | "timeline" | "clues" | "causal">("elements");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+
+  // v1.9 叙事角色标注（剧情推进点 / 卡点 / 分支选择点）：持久化到 StorylineEvent.role
+  const roleMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of list) {
+      for (const e of s.events || []) {
+        if (e.role) map[`${selectedId}:${e.id}`] = e.role;
+      }
+    }
+    return map;
+  }, [list, selectedId]);
+  const [roleFilter, setRoleFilter] = useState<NarrativeRole | null>(null);
+  const [roleSavingFor, setRoleSavingFor] = useState<string | null>(null);
+  const setRole = async (eventId: string, role: NarrativeRole | null) => {
+    const prev = roleMap[eventId] || null;
+    // 乐观更新本地 list，让 UI 立刻反馈
+    setList((prevList) =>
+      prevList.map((s) => ({
+        ...s,
+        events: (s.events || []).map((e: any) => (e.id === eventId ? { ...e, role: role ?? undefined } : e)),
+      })),
+    );
+    setRoleSavingFor(eventId);
+    try {
+      const r = await fetch(`/api/storyline-events/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: role ?? null }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error || "保存失败");
+    } catch (err) {
+      toastError(`标注失败：${err instanceof Error ? err.message : "未知错误"}`);
+      // 回滚
+      setList((prevList) =>
+        prevList.map((s) => ({
+          ...s,
+          events: (s.events || []).map((e: any) => (e.id === eventId ? { ...e, role: prev ?? undefined } : e)),
+        })),
+      );
+    } finally {
+      setRoleSavingFor(null);
+    }
+  };
 
   // AI 生成中间态
   const [genSuggestions, setGenSuggestions] = useState<StorylineSuggestion[] | null>(initialSuggestions ?? null);
@@ -264,7 +307,7 @@ export function StorylineWorkbench({
       : ownClues.map((c) => ({ clue: c, source: null as string | null }));
 
   // ── v1.9 因果链：选中线的事件按时间轴串成因果叙事链（纯函数见 storyline-progress） ──
-  const causalNodes = buildCausalChain(list, selectedId);
+  const causalNodes = withNarrativeRoles(buildCausalChain(list, selectedId), selectedId, roleMap);
   const causalClues = selected
     ? selected.type === "main"
       ? aggregatedClues
@@ -1188,17 +1231,59 @@ export function StorylineWorkbench({
                   </div>
                 )}
 
-                {activeTab === "causal" && (
+                {activeTab === "causal" && selected && (
                   <div>
-                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-tertiary)]">
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--nv-text-primary)]">
                       <Icon name="gitBranch" size={14} />
                       {selected.type === "main"
-                        ? "因果链 · 汇聚本线与所有支线/伏笔的事件流向"
-                        : "因果链 · 本条线的事件因果流向"}
+                        ? "因果链 · 主线如何带动支线与伏笔"
+                        : "因果链 · 这条线的事件前后关系"}
                     </div>
-                    <p className="mb-3 text-[11px] leading-relaxed text-[var(--nv-text-secondary)]">
-                      把写作自动记录的关键节点按时间串成一条因果叙事：上一个是「因」、下一个是「果」。跨线事件标注归属，可见主线如何牵动支线、伏笔如何兑现。
-                    </p>
+                    <div className="mb-3 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5 text-[11px] leading-relaxed text-[var(--nv-text-secondary)]">
+                      <div className="mb-1 flex items-center gap-1 font-medium text-[var(--nv-text-primary)]">
+                        <Icon name="info" size={12} /> 怎么读这条链？
+                      </div>
+                      <ul className="list-disc space-y-0.5 pl-4">
+                        <li><b>时间向下流动：</b>越靠上的事件越早发生，越靠下的事件越晚发生。</li>
+                        <li><b>前因后果：</b>每个事件都是上方事件的「果」、下方事件的「因」。</li>
+                        <li><b>跨线归属：</b>主线事件会带动支线/伏笔事件，节点上标了来自哪条线。</li>
+                        <li><b>给节点打标签：</b>点击节点右上角小图标，标注它是「剧情推进点」「卡点」还是「分支选择点」，AI 续写时会读到这些标记。</li>
+                      </ul>
+                    </div>
+
+                    {/* 叙事角色统计与筛选 */}
+                    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                      {(
+                        [
+                          { r: "advance" as NarrativeRole, label: "剧情推进点", short: "推进", color: "var(--nv-success)", icon: "arrowRight", desc: "让剧情往前走的关键转折" },
+                          { r: "probe" as NarrativeRole, label: "卡点 / 阻碍", short: "卡点", color: "var(--nv-warning)", icon: "shield", desc: "主角遇到的困难、未解之谜或暂时过不去的障碍" },
+                          { r: "vote" as NarrativeRole, label: "分支选择点", short: "分支", color: "var(--nv-info)", icon: "flag", desc: "剧情到这里可以走向不同方向，需要你或 AI 决定" },
+                        ] as const
+                      ).map(({ r, label, short, color, icon, desc }) => {
+                        const count = causalNodes.filter((n) => n.role === r).length;
+                        const active = roleFilter === r;
+                        return (
+                          <button
+                            key={r}
+                            onClick={() => setRoleFilter(active ? null : r)}
+                            title={desc}
+                            className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium transition-all ${
+                              active
+                                ? "border-[var(--nv-border-1)] bg-[var(--nv-surface-2)] shadow-sm"
+                                : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-1)] hover:bg-[var(--nv-surface-2)]"
+                            }`}
+                            style={{ color: active ? color : undefined }}
+                          >
+                            <Icon name={icon as IconName} size={11} /> {short} {count}
+                          </button>
+                        );
+                      })}
+                      {roleFilter && (
+                        <button onClick={() => setRoleFilter(null)} className="rounded-full px-2 py-1 text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-primary)] hover:underline">
+                          清除筛选
+                        </button>
+                      )}
+                    </div>
 
                     {/* 悬而未决的因：未兑现线索 */}
                     {causalClues.length > 0 && (
@@ -1235,7 +1320,15 @@ export function StorylineWorkbench({
                                     : "bg-[var(--nv-accent)]"
                               }`}
                             />
-                            <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5 transition-colors hover:border-[var(--nv-border-1)] hover:bg-[var(--nv-surface-2)]">
+                            <div className={`rounded-xl border bg-[var(--nv-surface-1)] p-2.5 transition-colors hover:bg-[var(--nv-surface-2)] ${
+                              node.role === "advance"
+                                ? "border border-[var(--nv-border-2)] border-l-2 border-l-[var(--nv-success)]"
+                                : node.role === "probe"
+                                  ? "border border-[var(--nv-border-2)] border-l-2 border-l-[var(--nv-warning)]"
+                                  : node.role === "vote"
+                                    ? "border border-[var(--nv-border-2)] border-l-2 border-l-[var(--nv-info)]"
+                                    : "border border-[var(--nv-border-2)]"
+                            } ${roleFilter && node.role !== roleFilter ? "opacity-40" : ""}`}>
                               <div className="mb-1 flex items-center gap-1.5">
                                 <span
                                   className={`rounded bg-[var(--nv-surface-2)] px-1.5 py-0.5 text-[10px] font-medium ${
@@ -1264,10 +1357,43 @@ export function StorylineWorkbench({
                                   {node.event.content}
                                 </p>
                               )}
+                              {/* 角色标注按钮组 */}
+                              <div className="mt-2 flex flex-wrap items-center gap-1">
+                                {(
+                                  [
+                                    { r: "advance" as NarrativeRole, label: "剧情推进点", icon: "arrowRight", color: "var(--nv-success)", desc: "这个事件让剧情往前走" },
+                                    { r: "probe" as NarrativeRole, label: "卡点 / 阻碍", icon: "shield", color: "var(--nv-warning)", desc: "这个事件制造了困难或悬念" },
+                                    { r: "vote" as NarrativeRole, label: "分支选择点", icon: "flag", color: "var(--nv-info)", desc: "这个事件让剧情可以走向不同方向" },
+                                  ] as const
+                                ).map(({ r, label, icon, color, desc }) => {
+                                  const active = node.role === r;
+                                  return (
+                                    <button
+                                      key={r}
+                                      disabled={roleSavingFor === node.event.id}
+                                      title={desc}
+                                      onClick={() => setRole(node.event.id, active ? null : r)}
+                                      className={`flex items-center gap-1 rounded border px-1.5 py-1 text-[10px] font-medium transition-all disabled:opacity-50 ${
+                                        active
+                                          ? "border-[var(--nv-border-1)] bg-[var(--nv-surface-2)] shadow-sm"
+                                          : "border-[var(--nv-border-2)] text-[var(--nv-text-muted)] hover:border-[var(--nv-border-1)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+                                      }`}
+                                      style={active ? { color } : undefined}
+                                    >
+                                      <Icon name={icon as IconName} size={11} />
+                                      {label}
+                                      {active && <Icon name="check" size={10} />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                             {i < causalNodes.length - 1 && (
-                              <div className="ml-1 mt-1 flex items-center gap-1 text-[10px] text-[var(--nv-text-secondary)]">
-                                <Icon name="arrowDown" size={11} /> 因 → 果
+                              <div className="ml-1 mt-1 flex items-center gap-1 text-[10px] font-medium text-[var(--nv-text-secondary)]">
+                                <Icon name="arrowDown" size={11} />
+                                <span>先发生</span>
+                                <span className="text-[var(--nv-border-1)]">→</span>
+                                <span>后导致</span>
                               </div>
                             )}
                           </li>
