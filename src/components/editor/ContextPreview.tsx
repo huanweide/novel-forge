@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { Modal, ModalFooter } from "@/components/ui/Modal";
+import { toastSuccess, toastError, toastInfo } from "@/components/ui/toast";
 
 /**
  * 上下文预览面板 —— 展示当前 Prompt 中各区域的 Token 用量
@@ -61,6 +63,20 @@ export function ContextPreview({
   const [loadError, setLoadError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // #221 重新摘要 + 摘要确认
+  const [reloadTick, setReloadTick] = useState(0);
+  const [summarizing, setSummarizing] = useState(false);
+  const [savingSummary, setSavingSummary] = useState(false);
+  const [summaryDraft, setSummaryDraft] = useState<{
+    summary?: string;
+    keyEvents?: string[];
+    characterStates?: unknown;
+    closingSnapshot?: unknown;
+    characterImpulses?: unknown;
+    eventImportances?: unknown;
+  } | null>(null);
+  const [editedSummary, setEditedSummary] = useState("");
+
   useEffect(() => {
     if (!nodeId) return;
 
@@ -94,7 +110,66 @@ export function ContextPreview({
     fetchData();
 
     return () => { controller.abort(); };
-  }, [projectId, nodeId, authorNote, refreshKey]);
+  }, [projectId, nodeId, authorNote, refreshKey, reloadTick]);
+
+  // #221 重新摘要：preview 生成摘要，不落库，弹确认模态
+  const handleResummarize = async () => {
+    if (!nodeId || !projectId) return;
+    setSummarizing(true);
+    try {
+      const res = await fetch("/api/generate/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, chapterId: nodeId, preview: true }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toastInfo(d?.error || "无法生成摘要预览");
+        return;
+      }
+      setSummaryDraft(d);
+      setEditedSummary(d.summary ?? "");
+      setExpanded("mediumTermMemory");
+    } catch (err) {
+      toastError("摘要预览失败：" + (err instanceof Error ? err.message : "请重试"));
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
+  // #221 摘要确认：将已确认/编辑的摘要 upsert 落库，不重跑 LLM
+  const handleConfirmSummary = async () => {
+    if (!summaryDraft || !nodeId || !projectId) return;
+    setSavingSummary(true);
+    try {
+      const res = await fetch("/api/generate/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          chapterId: nodeId,
+          summary: editedSummary,
+          keyEvents: summaryDraft.keyEvents ?? [],
+          characterStates: summaryDraft.characterStates,
+          closingSnapshot: summaryDraft.closingSnapshot,
+          characterImpulses: summaryDraft.characterImpulses,
+          eventImportances: summaryDraft.eventImportances,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toastError(d?.error || "保存摘要失败");
+        return;
+      }
+      toastSuccess("摘要已保存至中期记忆");
+      setSummaryDraft(null);
+      setReloadTick((t) => t + 1);
+    } catch (err) {
+      toastError("保存摘要失败：" + (err instanceof Error ? err.message : "请重试"));
+    } finally {
+      setSavingSummary(false);
+    }
+  };
 
   if (!nodeId) {
     return <div className="text-xs text-[var(--nv-text-muted)] p-4">选择大纲节点以预览上下文</div>;
@@ -190,52 +265,85 @@ export function ContextPreview({
       )}
 
       {/* 各区域明细 */}
-      {sections.map(({ key, label, icon, data: d }) => (
-        <div key={key}>
-          <button
-            onClick={() => setExpanded(expanded === key ? null : key)}
-            className="w-full flex items-center justify-between text-xs py-1 hover:text-[var(--nv-text-secondary)] transition-colors"
-          >
-            <span>
-              <Icon name={icon as IconName} size={12} className="inline-block align-text-bottom shrink-0" /> {label}
-            </span>
-            <span className="text-[var(--nv-text-muted)] font-mono">{d.tokens.toLocaleString()} tokens</span>
-          </button>
-
-          {expanded === key && (
-            <div className="ml-4 mt-1 text-xs text-[var(--nv-text-muted)] space-y-1 border-l border-[var(--nv-border-2)] pl-3">
-              {key === "systemPrompt" && <div>{(d as any).preview}...</div>}
-              {key === "globalMemory" && (
-                <>
-                  <div>主角：{(d as any).protagonist || "无"}</div>
-                  <div>基调：{(d as any).toneKeywords?.join("、") || "未设定"}</div>
-                </>
-              )}
-              {key === "triggeredLore" && (
-                <>
-                  <div>{(d as any).count} 条触发词条</div>
-                  {(d as any).entries?.map((e: any, i: number) => (
-                    <div key={i} className="text-[var(--nv-text-muted)]">
-                      [{e.keyword}] → {e.title}: {e.contentPreview}
-                    </div>
-                  ))}
-                </>
-              )}
-              {key === "shortTermMemory" && (
-                <>
-                  <div>{(d as any).sectionCount} 个小节</div>
-                  {(d as any).sections?.map((s: any, i: number) => (
-                    <div key={i}>{s.title} ({s.wordCount}字)</div>
-                  ))}
-                </>
-              )}
-              {key === "mediumTermMemory" && <div>{(d as any).summaryCount} 章摘要</div>}
-              {key === "longTermMemory" && <div>{(d as any).beatCount} 个转折点</div>}
-              {key === "authorNote" && (d as any).content !== "无" && <div>{(d as any).content}</div>}
+      {sections.map(({ key, label, icon, data: d }) =>
+        key === "mediumTermMemory" ? (
+          // 中期记忆单独渲染：展开开关 + 「重新摘要」按钮（兄弟节点，不嵌套在展开 button 内，避免 hydration 错误）
+          <div key={key}>
+            <div className="flex items-center justify-between text-xs py-1">
+              <button
+                onClick={() => setExpanded(expanded === key ? null : key)}
+                className="flex items-center hover:text-[var(--nv-text-secondary)] transition-colors"
+              >
+                <Icon name={icon as IconName} size={12} className="inline-block align-text-bottom shrink-0" /> {label}
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[var(--nv-text-muted)] font-mono">{d.tokens.toLocaleString()} tokens</span>
+                <button
+                  onClick={handleResummarize}
+                  disabled={summarizing}
+                  className="flex items-center gap-1 text-[var(--nv-primary)] hover:text-[var(--nv-text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="用当前章节正文重新生成摘要（生成后可确认/编辑再保存）"
+                >
+                  <Icon name="refresh" size={12} className={summarizing ? "inline-block align-text-bottom shrink-0 animate-spin" : "inline-block align-text-bottom shrink-0"} />
+                  {summarizing ? "生成中" : "重新摘要"}
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      ))}
+            {expanded === key && (
+              <div className="ml-4 mt-1 text-xs text-[var(--nv-text-muted)] border-l border-[var(--nv-border-2)] pl-3">
+                {(d as any).summaryCount} 章摘要
+                {(d as any).summaryCount > 0 && (
+                  <span className="ml-2 text-[var(--nv-text-muted)]">点「重新摘要」可基于当前正文刷新</span>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div key={key}>
+            <button
+              onClick={() => setExpanded(expanded === key ? null : key)}
+              className="w-full flex items-center justify-between text-xs py-1 hover:text-[var(--nv-text-secondary)] transition-colors"
+            >
+              <span>
+                <Icon name={icon as IconName} size={12} className="inline-block align-text-bottom shrink-0" /> {label}
+              </span>
+              <span className="text-[var(--nv-text-muted)] font-mono">{d.tokens.toLocaleString()} tokens</span>
+            </button>
+
+            {expanded === key && (
+              <div className="ml-4 mt-1 text-xs text-[var(--nv-text-muted)] space-y-1 border-l border-[var(--nv-border-2)] pl-3">
+                {key === "systemPrompt" && <div>{(d as any).preview}...</div>}
+                {key === "globalMemory" && (
+                  <>
+                    <div>主角：{(d as any).protagonist || "无"}</div>
+                    <div>基调：{(d as any).toneKeywords?.join("、") || "未设定"}</div>
+                  </>
+                )}
+                {key === "triggeredLore" && (
+                  <>
+                    <div>{(d as any).count} 条触发词条</div>
+                    {(d as any).entries?.map((e: any, i: number) => (
+                      <div key={i} className="text-[var(--nv-text-muted)]">
+                        [{e.keyword}] → {e.title}: {e.contentPreview}
+                      </div>
+                    ))}
+                  </>
+                )}
+                {key === "shortTermMemory" && (
+                  <>
+                    <div>{(d as any).sectionCount} 个小节</div>
+                    {(d as any).sections?.map((s: any, i: number) => (
+                      <div key={i}>{s.title} ({s.wordCount}字)</div>
+                    ))}
+                  </>
+                )}
+                {key === "longTermMemory" && <div>{(d as any).beatCount} 个转折点</div>}
+                {key === "authorNote" && (d as any).content !== "无" && <div>{(d as any).content}</div>}
+              </div>
+            )}
+          </div>
+        )
+      )}
 
       {/* 角色读取统计 */}
       <div className="border-t border-[var(--nv-border-2)] pt-3 space-y-2">
@@ -277,6 +385,56 @@ export function ContextPreview({
           </details>
         )}
       </div>
+
+      {/* 摘要确认模态：重新摘要后预览/编辑，确认才落库 */}
+      <Modal
+        open={!!summaryDraft}
+        onClose={() => setSummaryDraft(null)}
+        title="摘要确认"
+        icon="brain"
+        size="2xl"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setSummaryDraft(null)} className="btn-ghost" disabled={savingSummary}>取消</button>
+            <button onClick={handleConfirmSummary} className="btn-creative" disabled={savingSummary || !editedSummary.trim()}>
+              {savingSummary ? "保存中..." : "确认保存"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-[var(--nv-text-muted)]">章节摘要（可编辑后保存）</label>
+            <textarea
+              value={editedSummary}
+              onChange={(e) => setEditedSummary(e.target.value)}
+              rows={6}
+              className="w-full mt-1 rounded-lg bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] p-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)] resize-y"
+            />
+          </div>
+          {summaryDraft?.keyEvents && summaryDraft.keyEvents.length > 0 && (
+            <div>
+              <div className="text-xs text-[var(--nv-text-muted)] mb-1">关键事件</div>
+              <ul className="list-disc list-inside text-sm text-[var(--nv-text-secondary)] space-y-0.5">
+                {summaryDraft.keyEvents.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summaryDraft?.characterStates != null && (
+            <div>
+              <div className="text-xs text-[var(--nv-text-muted)] mb-1">角色状态快照</div>
+              <pre className="text-xs text-[var(--nv-text-tertiary)] whitespace-pre-wrap bg-[var(--nv-surface-2)] rounded-lg p-2 max-h-40 overflow-auto">
+                {typeof summaryDraft.characterStates === "string"
+                  ? summaryDraft.characterStates
+                  : JSON.stringify(summaryDraft.characterStates, null, 2)}
+              </pre>
+            </div>
+          )}
+          <p className="text-[10px] text-[var(--nv-text-muted)]">确认保存后，摘要将写入中期记忆并替换本章原有摘要，供后续章节上下文引用。</p>
+        </div>
+      </Modal>
     </div>
   );
 }

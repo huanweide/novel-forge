@@ -25,18 +25,35 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.16";
+export const LATEST_VERSION = "v1.8.17";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.16 游戏模式多风格视觉：集成粒子场景 / 光影艺术 / 指针跟随三种角色设定，苍青·白昼·黑夜三套模式一键切换（作用域独立，不影响工作区）。",
-  "v1.8.16 粒子场景设计师：漂浮点缓慢漂移 8–15s 呼吸、Hover 局部聚合分散，新增降噪与停动开关；光影设计师多层 box-shadow/text-shadow 辉光 + 150–220ms 平滑呼吸，重要点击 UI 发光。",
-  "v1.8.16 物品跟踪增强：新物品高亮 + WebAudio 提示音 + 平移背包动效，背包分全部/角色物品两类，正文实时检测交易/买卖元素分类提示。",
-  "v1.8.16 故事线工作台修复：主线按 order 自动排序、主线下支线可收起、独立支线并列并加分组标签、废弃线一键清理，支线图标改分支（gitBranch）。",
+  "v1.8.17 上下文窗口新增「重新摘要」按钮（中期记忆区），基于当前章节正文重新生成摘要。",
+  "v1.8.17 摘要确认模态：重新摘要后先预览/可编辑摘要与关键事件，确认才写入中期记忆，避免劣质摘要污染记忆系统。",
+  "v1.8.17 summarize 路由支持 preview 预览（仅生成不落库）+ 确认落库（upsert 复用），杜绝重复摘要行。",
+  "v1.8.17 落库改为 upsert：同一章节始终一行摘要，重复摘要不再累积重复 ChapterSummary / StoryBeat 行。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.17",
+    date: "2026-08-11",
+    title: "上下文窗口重新摘要 + 摘要确认（#221）",
+    sections: [
+      {
+        label: "上下文窗口重新摘要 + 摘要确认（#221）",
+        items: [
+          "上下文窗口「中期记忆」区新增「重新摘要」按钮：基于当前章节正文调用摘要生成（preview 模式，先生成不落库）。",
+          "摘要确认模态：生成后弹窗预览可编辑的章节摘要 + 关键事件 + 角色状态快照，确认保存才 upsert 写入 ChapterSummary 与 StoryBeat；取消则不落库。",
+          "summarize 路由三模式：preview（仅生成不落库）/ 携带 summary（确认落库、不跑 LLM）/ 默认（生成 + upsert 落库）。",
+          "落库改为 upsert 复用：同一章节始终一行 ChapterSummary，重复摘要不再累积重复行；StoryBeat 按章节 deleteMany + create 替换，避免重复转折点。",
+          "向后兼容：原工具栏「生成摘要」行为不变（仍走默认 upsert 路径），并顺带修复其重复摘要产生重复行的潜在 bug。",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.16",
     date: "2026-08-10",
