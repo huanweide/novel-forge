@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.19 — 2026-08-11
+
+**因果链视图检测后视觉优化**
+
+- **无头检测验证**：用 Playwright 跑完整 UI（workspace → 故事线 → 主线 → 因果链 tab），先验证空状态，再临时写入 1 个 MILESTONE + 1 个 EVENT + 1 个 CLUE 验证节点渲染；结果为零 console / pageerror，因果链节点、因→果标记、悬而未决的因均按预期渲染；临时数据事后已清理。
+- **对比度优化**：因果链头部说明文字由 `text-tertiary` 改为 `text-secondary`；时间轴竖线由 `border-2` 改为 `border-1`；节点间「因 → 果」流向标记由 `text-muted` 改为 `text-secondary`，整体可读性提升。
+- **交互反馈优化**：因果链节点卡片新增 `hover:border-border-1` + `hover:bg-surface-2` 过渡，悬停时边框与背景变化更明显。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 46 文件 403/403 全绿；零 schema 变更、零迁移。
+
+---
+
 ## v1.8.18 — 2026-08-11
 
 **故事线工作台因果链视图（v1.9 第一步）**

@@ -1196,7 +1196,7 @@ export function StorylineWorkbench({
                         ? "因果链 · 汇聚本线与所有支线/伏笔的事件流向"
                         : "因果链 · 本条线的事件因果流向"}
                     </div>
-                    <p className="mb-3 text-[11px] leading-relaxed text-[var(--nv-text-tertiary)]">
+                    <p className="mb-3 text-[11px] leading-relaxed text-[var(--nv-text-secondary)]">
                       把写作自动记录的关键节点按时间串成一条因果叙事：上一个是「因」、下一个是「果」。跨线事件标注归属，可见主线如何牵动支线、伏笔如何兑现。
                     </p>
 
@@ -1223,7 +1223,7 @@ export function StorylineWorkbench({
 
                     {/* 因果链主体 */}
                     {causalNodes.length > 0 ? (
-                      <ol className="relative space-y-0 border-l-2 border-[var(--nv-border-2)] pl-4">
+                      <ol className="relative space-y-0 border-l-2 border-[var(--nv-border-1)] pl-4">
                         {causalNodes.map((node, i) => (
                           <li key={node.event.id} className="relative pb-4 last:pb-0">
                             <span
@@ -1235,7 +1235,7 @@ export function StorylineWorkbench({
                                     : "bg-[var(--nv-accent)]"
                               }`}
                             />
-                            <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5">
+                            <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2.5 transition-colors hover:border-[var(--nv-border-1)] hover:bg-[var(--nv-surface-2)]">
                               <div className="mb-1 flex items-center gap-1.5">
                                 <span
                                   className={`rounded bg-[var(--nv-surface-2)] px-1.5 py-0.5 text-[10px] font-medium ${
@@ -1266,7 +1266,7 @@ export function StorylineWorkbench({
                               )}
                             </div>
                             {i < causalNodes.length - 1 && (
-                              <div className="ml-1 mt-1 flex items-center gap-1 text-[10px] text-[var(--nv-text-muted)]">
+                              <div className="ml-1 mt-1 flex items-center gap-1 text-[10px] text-[var(--nv-text-secondary)]">
                                 <Icon name="arrowDown" size={11} /> 因 → 果
                               </div>
                             )}

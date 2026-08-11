@@ -25,18 +25,44 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.18";
+export const LATEST_VERSION = "v1.8.19";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.18 故事线工作台新增「因果链」第四栏：把选中线（主线则含所有支线/伏笔）的事件按时间轴串成一条因果叙事链。",
-  "v1.8.18 因果链节点标注来源线（主线/支线/伏笔）+ 序号，跨线事件在同一链上可见因果流向，节点间「因 → 果」串联。",
-  "v1.8.18 未兑现线索（CLUE）作为「悬而未决的因」浮于链顶，提醒作者别漏掉自己埋的坑。",
-  "v1.8.18 聚合逻辑抽为纯函数 buildCausalChain（storyline-progress.ts）+ 单测，零 schema 变更。",
+  "v1.8.19 因果链视图检测后优化：提升头部说明文字、时间轴竖线、节点间「因 → 果」标记的对比度，增强可读性。",
+  "v1.8.19 因果链节点卡片新增 hover 状态（边框/背景色过渡），强化可交互反馈。",
+  "v1.8.19 无头检测验证：playwright 走完整 UI（空状态 + 节点渲染 + 悬而未决的因），DOM 断言与控制台报错全绿，临时数据已清理。",
+  "v1.8.19 双门禁复跑：tsc 0 错误 + vitest 46 文件 403/403 全绿；零 schema 变更。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.19",
+    date: "2026-08-11",
+    title: "因果链视图检测后视觉优化",
+    sections: [
+      {
+        label: "检测与优化",
+        items: [
+          "用 Playwright 跑因果链无头检测：访问 workspace → 故事线 → 主线 → 因果链 tab，先验证空状态，再临时造 1 个 MILESTONE + 1 个 EVENT + 1 个 CLUE 验证节点渲染",
+          "检测控制台报错：零 console.error / pageerror；DOM 断言：因果链节点 2 个、「因 → 果」标记 1 个、「悬而未决的因」区 1 个；临时 events 用统一 tag 清理（delete 3 条）",
+          "优化点 1：因果链头部说明文字由 text-tertiary 改为 text-secondary，提升深色背景下的可读性",
+          "优化点 2：时间轴竖线由 border-2 改为 border-1，让因果链骨架更明显",
+          "优化点 3：节点间「因 → 果」标记由 text-muted 改为 text-secondary，增强流向可读性",
+          "优化点 4：节点卡片新增 hover:border-border-1 + hover:bg-surface-2 过渡，强化可交互反馈",
+        ],
+      },
+      {
+        label: "质量验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误",
+          "npx vitest run 46 文件 403/403 全绿",
+          "零 schema 变更、零数据库迁移",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.18",
     date: "2026-08-11",
