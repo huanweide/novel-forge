@@ -21,7 +21,6 @@ import { CenterPanel } from "@/components/workspace/CenterPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
 import { CharacterDialog } from "@/components/workspace/CharacterDialog";
 import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
-import { BatchProgressPanel } from "@/components/workspace/BatchProgressPanel";
 import { BatchWriteDialog } from "@/components/workspace/BatchWriteDialog";
 import { OutlineDialog } from "@/components/workspace/OutlineDialog";
 import { AutomationSettingsDialog } from "@/components/workspace/AutomationSettingsDialog";
@@ -279,14 +278,7 @@ export default function WorkspacePage() {
     passed: boolean; issues: any[]; summary: string;
   } | null>(null);
 
-  // ── 批量生成 ──────────────────────────────
-  const [batchMode, setBatchMode] = useState(false);
-  const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
-  const [batchGenerating, setBatchGenerating] = useState(false);
-  const [batchProgress, setBatchProgress] = useState<Map<string, { status: string; error?: string }>>(new Map());
-  const [batchAbort, setBatchAbort] = useState(false);
-  const [batchConfirming, setBatchConfirming] = useState(false);
-  // v1.5.0 批量写作（后台任务）
+  // ── 批量写作（A4 后台任务，统一入口）────────
   const [showBatchWrite, setShowBatchWrite] = useState(false);
   const [batchWriteTask, setBatchWriteTask] = useState<{ id: string; status: string; progress: number; done: number; total: number } | null>(null);
 
@@ -853,96 +845,9 @@ export default function WorkspacePage() {
     finally { setSummarizing(false); }
   };
 
-  // ═══════════════════════════════════════════
-  // 批量生成
-  // ═══════════════════════════════════════════
+  // [2.0] 前台串行批量生成已移除，统一走 A4 后台任务（BatchWriteDialog → POST /api/story/batch-write）
 
-  const toggleChapterSelect = (id: string) => { setSelectedChapterIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); };
-  const selectAllChapters = () => { if (!project) return; const chapters = project.storyNodes.filter((n) => n.type === "chapter" && n.status !== "completed"); setSelectedChapterIds(new Set(chapters.map((c) => c.id))); };
-  const clearSelection = () => setSelectedChapterIds(new Set());
-
-  const handleBatchGenerate = async () => {
-    if (!project || selectedChapterIds.size === 0) return;
-    setBatchGenerating(true); setBatchAbort(false);
-    const ids = [...selectedChapterIds].sort((a, b) => { const na = project.storyNodes.find((n) => n.id === a); const nb = project.storyNodes.find((n) => n.id === b); return (na?.order || 0) - (nb?.order || 0); });
-    const progress = new Map<string, { status: string; error?: string }>();
-    ids.forEach((id) => progress.set(id, { status: "pending" }));
-    setBatchProgress(new Map(progress));
-
-    // IMP-024：批量生成复用单章角色卡调度逻辑——带当前抽中卡 + 上次 PreGen 确认的角色/新角色约束，
-    // 避免批量章不带角色约束导致质量不一致（与 :666 handleWriteConfirmed 同源）。
-    const pregenPersisted = (() => {
-      try {
-        return JSON.parse(localStorage.getItem(`pregen-conf-${project.id}`) || "{}") as {
-          selected?: string[];
-          newChars?: string[];
-        };
-      } catch {
-        return {};
-      }
-    })();
-    const batchConfirmedCardIds =
-      drawSelectedCharIds.length > 0 ? drawSelectedCharIds : pregenPersisted.selected ?? [];
-    const batchNewChars = pregenPersisted.newChars ?? [];
-
-    for (const nodeId of ids) {
-      if (batchAbort) break;
-      const node = project.storyNodes.find((n) => n.id === nodeId);
-      if (!node || node.status === "completed") continue;
-      progress.set(nodeId, { status: "generating" }); setBatchProgress(new Map(progress));
-      try {
-        const controller = new AbortController();
-        const res = await fetch("/api/generate/write", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId, authorNote: authorNote || undefined, targetWordCount, confirmedCardIds: batchConfirmedCardIds, cardNotes: {}, newCharacterRequests: batchNewChars }), signal: controller.signal });
-        if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); progress.set(nodeId, { status: "failed", error: err.error || `HTTP ${res.status}` }); setBatchProgress(new Map(progress)); continue; }
-        const reader = res.body?.getReader();
-        if (!reader) { progress.set(nodeId, { status: "failed", error: "无法获取响应流" }); setBatchProgress(new Map(progress)); continue; }
-        const decoder = new TextDecoder(); let buffer = ""; let failed = false;
-        while (true) {
-          const { done, value } = await reader.read(); if (done) break;
-          buffer += decoder.decode(value, { stream: true }); const lines = buffer.split("\n"); buffer = lines.pop() || "";
-          for (const line of lines) { const trimmed = line.trim(); if (!trimmed.startsWith("data: ")) continue;
-            try { const event = JSON.parse(trimmed.slice(6)); if (event.type === "error") { failed = true; progress.set(nodeId, { status: "failed", error: event.content }); } if (event.type === "done" && !failed) { progress.set(nodeId, { status: "done" }); } } catch { /* */ } }
-        }
-        if (!failed && progress.get(nodeId)?.status !== "failed") progress.set(nodeId, { status: "done" });
-      } catch (err) { progress.set(nodeId, { status: "failed", error: err instanceof Error ? err.message : "网络错误" }); }
-      setBatchProgress(new Map(progress));
-    }
-    setBatchGenerating(false); setBatchMode(false); setSelectedChapterIds(new Set());
-    await loadProject();
-    toastSuccess(`批量写作完成：${ids.length} 章已生成`);
-  };
-
-  // ═══════════════════════════════════════════
-  // 批量确认本卷（质量护栏在后端拦截低分章）
-  // ═══════════════════════════════════════════
-
-  const handleBatchConfirm = async () => {
-    if (!project || selectedChapterIds.size === 0) return;
-    setBatchConfirming(true);
-    try {
-      const res = await fetch("/api/story/nodes/batch-confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, nodeIds: [...selectedChapterIds] }),
-      });
-      const d = await res.json().catch(() => ({}) as any);
-      if (!res.ok) { toastError("批量确认失败：" + (d.error || `HTTP ${res.status}`)); return; }
-      const confirmed: any[] = d.confirmed ?? [];
-      const blocked: any[] = d.blocked ?? [];
-      const skipped: any[] = d.skipped ?? [];
-      let msg = `批量确认完成：通过 ${confirmed.length} 章`;
-      if (blocked.length > 0) msg += `，拦截 ${blocked.length} 章（质量低于阈值）`;
-      if (skipped.length > 0) msg += `，跳过 ${skipped.length} 章（非待确认态）`;
-      if (blocked.length > 0 || skipped.length > 0) toastInfo(msg); else toastSuccess(msg);
-      await loadProject();
-      setSelectedChapterIds(new Set());
-      setBatchMode(false);
-    } catch (err) {
-      toastError("批量确认失败（网络错误）：" + (err instanceof Error ? err.message : "请重试"));
-    } finally {
-      setBatchConfirming(false);
-    }
-  };
+  // [2.0] 批量确认本卷（前台选择 UI）随 A5 前台批量一并移除；质量护栏保留于后端 /api/story/nodes/batch-confirm，后续可并入 A4 对话框
 
   // ═══════════════════════════════════════════
   // 导出
@@ -957,7 +862,7 @@ export default function WorkspacePage() {
   const toolboxItems: ToolboxItem[] = [
     { id: "write", label: "续写 / 微调", desc: "选中章节后让 AI 接着写或润色本章", icon: "pencil", category: "write", action: () => { if (!selectedNode) { toastInfo("请先在左侧大纲选中一个章节"); return; } handleWrite(); } },
     { id: "outline", label: "生成大纲", desc: "AI 规划整本书的章节结构与走向", icon: "bot", category: "write", action: () => setShowOutlineDialog(true) },
-    { id: "batch", label: "批量生成", desc: "一次勾选多章、批量产出草稿", icon: "package", category: "write", action: () => setBatchMode(true) },
+    { id: "batch", label: "批量写作", desc: "后台批量产出多章草稿，可关窗继续", icon: "package", category: "write", action: () => setShowBatchWrite(true) },
     { id: "summarize", label: "章节摘要", desc: "为当前章生成要点摘要，便于长文回顾", icon: "clipboard", category: "write", action: () => handleSummarize() },
     { id: "draw", label: "抽卡选章纲", desc: "用色子抽取剧情走向，选定本章路线", icon: "sparkles", category: "generate", action: () => handleDrawChapterOutline() },
     { id: "character", label: "新建角色", desc: "添加一张角色卡，定义人设与关系", icon: "user", category: "generate", action: () => setShowNewCharacter(true) },
@@ -1048,10 +953,7 @@ export default function WorkspacePage() {
           onAddSection={handleAddSection} onEditCharacter={setEditingCharacter} onEditLore={setEditingLore}
           onNewCharacter={() => setShowNewCharacter(true)}
           viewMode={viewMode} onSetViewMode={setViewMode} loadProject={loadProject}
-          batchMode={batchMode} onToggleBatchMode={() => { setBatchMode(!batchMode); setSelectedChapterIds(new Set()); }}
-          selectedChapterIds={selectedChapterIds} onToggleChapterSelect={toggleChapterSelect}
-          onSelectAll={selectAllChapters} onClearSelection={clearSelection}
-          batchGenerating={batchGenerating} onBatchGenerate={handleBatchGenerate} onBatchConfirm={handleBatchConfirm} batchConfirming={batchConfirming} onDeleteNode={deleteNode} deletingNodeId={deletingId}
+          onDeleteNode={deleteNode} deletingNodeId={deletingId}
           onLoadSample={loadSample} onWriteChapter={handleWriteFromStoryline} />
         </ErrorBoundary>
         </div>
@@ -1221,7 +1123,6 @@ export default function WorkspacePage() {
       {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={refreshAfterMutate} />}
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
       {showImportWizard && <ImportWizard projectId={project.id} initialMode={importWizardMode} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
-      {batchGenerating && <BatchProgressPanel progress={batchProgress} nodes={project.storyNodes} onAbort={() => setBatchAbort(true)} />}
 
       {/* v1.5.0 批量写作弹窗 + 后台进度胶囊 */}
       {showBatchWrite && <BatchWriteDialog projectId={project.id} onClose={() => setShowBatchWrite(false)} onConfirmWrite={handleBatchWrite} />}
@@ -1374,7 +1275,7 @@ export default function WorkspacePage() {
           onAuthorNoteChange={handleAuthorNoteChange}
           onConfirm={(cards, notes, newChars, finalAuthorNote, storylineId) => {
             // R2-004：单章 PreGen 确认后，把用户选定的角色卡 / 新角色请求持久化到 localStorage，
-            // 作为「批量生成」(handleBatchGenerate) 角色约束的默认来源。此前全代码库无写入端，
+            // 作为「批量写作」(handleBatchWrite 经 A4 后台任务) 角色约束的默认来源。此前全代码库无写入端，
             // 批量章恒为空约束（confirmedCardIds 退回 drawSelectedCharIds、newCharacterRequests 恒为空）。
             // 来源说明：cards/newChars 即用户在 PreGenConfirm 弹窗中勾选/输入的约束，写入即批量主路径的约束来源。
             if (project) {

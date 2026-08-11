@@ -16,10 +16,8 @@ import { useProjectStore } from "@/store";
 export function LeftPanel({
   activeTab, onTabChange, selectedNode, onSelectNode,   onAddSection,
   onEditCharacter, onEditLore, onNewCharacter, loadProject,
-  viewMode, onSetViewMode, batchMode, onToggleBatchMode,
-  selectedChapterIds, onToggleChapterSelect, onSelectAll, onClearSelection,
-  batchGenerating, onBatchGenerate, onDeleteNode, deletingNodeId, onLoadSample,
-  onBatchConfirm, batchConfirming, onWriteChapter,
+  viewMode, onSetViewMode, onDeleteNode, deletingNodeId, onLoadSample,
+  onWriteChapter,
 }: {
   activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules" | "digest") => void;
@@ -27,10 +25,6 @@ export function LeftPanel({
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
   onEditLore: (l: LorebookData) => void; onNewCharacter: () => void;
   loadProject: () => void; viewMode: "volume" | "flat"; onSetViewMode: (m: "volume" | "flat") => void;
-  batchMode: boolean; onToggleBatchMode: () => void; selectedChapterIds: Set<string>;
-  onToggleChapterSelect: (id: string) => void; onSelectAll: () => void;
-  onClearSelection: () => void; batchGenerating: boolean; onBatchGenerate: () => void;
-  onBatchConfirm: () => void; batchConfirming: boolean;
   onDeleteNode?: (id: string) => void;
   deletingNodeId?: string | null;
   onLoadSample?: () => void;
@@ -52,9 +46,6 @@ export function LeftPanel({
     const rect = el.getBoundingClientRect();
     setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
   }, [moreMenuOpen]);
-  // 选中的章节里处于「待确认」的数量（批量确认仅对这些章生效）
-  const selectedPendingCount =
-    project.storyNodes?.filter((n) => selectedChapterIds.has(n.id) && n.status === "pending_confirm").length ?? 0;
   const visibleTabs = [
     { key: "outline", label: "大纲", icon: "book" as const },
     { key: "characters", label: `角色 (${project.characters?.length || 0})`, icon: "users" as const },
@@ -137,28 +128,10 @@ export function LeftPanel({
                   title="平铺视图">
                   <span className="flex items-center gap-1"><Icon name="file" size={10} /> 平铺</span>
                 </button>
-                <button onClick={onToggleBatchMode} disabled={batchGenerating}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${batchMode ? "bg-[var(--nv-accent-soft)] text-[var(--nv-accent)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-tertiary)]"}`}>
-                  批量
-                </button>
               </div>
             </div>
-            {batchMode && (
-              <div className="flex items-center gap-1 mb-1 px-1 flex-wrap">
-                <button onClick={onSelectAll} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] bg-[var(--nv-surface-3)] px-1.5 py-0.5 rounded">全选</button>
-                <button onClick={onClearSelection} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] bg-[var(--nv-surface-3)] px-1.5 py-0.5 rounded">清除</button>
-                <span className="text-[10px] text-[var(--nv-text-tertiary)] ml-1">{selectedChapterIds.size} 章</span>
-                {selectedChapterIds.size > 0 && !batchGenerating && (
-                  <button onClick={onBatchGenerate} className="btn-ghost text-[10px] px-2 py-0.5 rounded font-medium ml-auto text-[var(--nv-accent)] border border-[var(--nv-accent)]/40 hover:bg-[var(--nv-accent-soft)]">批量生成</button>
-                )}
-                {selectedPendingCount > 0 && !batchGenerating && !batchConfirming && (
-                  <button onClick={onBatchConfirm} disabled={batchConfirming} className="btn-ghost text-[10px] px-2 py-0.5 rounded font-medium text-[var(--nv-success)] border border-[var(--nv-success)]/40 hover:bg-[var(--nv-success)]/10">批量确认 {selectedPendingCount}</button>
-                )}
-              </div>
-            )}
             <OutlineTree nodes={project.storyNodes ?? []} selectedNode={selectedNode} onSelectNode={onSelectNode}
-              onAddSection={onAddSection} viewMode={viewMode} batchMode={batchMode}
-              selectedChapterIds={selectedChapterIds} onToggleChapterSelect={onToggleChapterSelect}
+              onAddSection={onAddSection} viewMode={viewMode}
               onDeleteNode={onDeleteNode} projectId={project.id} deletingId={deletingNodeId}
               onLoadSample={onLoadSample} />
           </>

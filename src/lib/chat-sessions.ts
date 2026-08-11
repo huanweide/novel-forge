@@ -1,14 +1,20 @@
 /**
- * chat-sessions — Agent 会话记忆
+ * chat-sessions — Agent / 角色对话会话记忆（2.0 P0-3 持久化版）
  *
- * 内存存储最近 N 轮对话。每个项目一个会话，
- * Agent 能看到之前的问答上下文，实现连续对话。
+ * 取代原进程级全局 Map：会话历史落库到 Postgres，重启不丢失、跨实例不串号。
  *
  * 设计决策：
- * - 用内存 Map 而非数据库——会话是临时的，刷新页面就重置
- * - 最多保留 20 条消息（10 轮问答），超出自动淘汰旧消息
- * - 按 projectId 隔离，不同项目互不干扰
+ * - 用 Prisma 持久化而非内存 Map——会话是用户的连续写作资产，应跨重启保留
+ * - 最多保留 20 条消息（10 轮问答），超出自动淘汰旧消息（写入时裁剪）
+ * - key 维度复用既有约定：
+ *     · 角色对话/附身：`${projectId}__char__${characterId}`
+ *     · 通用 Agent 对话：`${projectId}`
+ *   落在 ChatSession.sessionKey 唯一约束上；projectId/characterId 冗余存储便于按项目清理。
+ * - 导出 API 与原版完全兼容（签名不变），仅改为 async：
+ *     appendExchange / getRecentContext / clearSession 调用方须 await。
  */
+
+import { prisma } from "@/lib/prisma";
 
 interface SessionMessage {
   role: "user" | "agent";
@@ -18,58 +24,60 @@ interface SessionMessage {
   ts: number;
 }
 
-interface ChatSession {
-  projectId: string;
-  messages: SessionMessage[];
-  createdAt: number;
-  lastActiveAt: number;
-}
-
 const MAX_MESSAGES = 20; // 最多保留 20 条消息
-const MAX_AGE_MS = 30 * 60 * 1000; // 30 分钟过期
+const SEP = "__char__";
 
-const sessions = new Map<string, ChatSession>();
-
-function getOrCreate(projectId: string): ChatSession {
-  const existing = sessions.get(projectId);
-  if (existing) {
-    existing.lastActiveAt = Date.now();
-    return existing;
+function parseKey(key: string): { projectId: string; characterId: string | null } {
+  const idx = key.indexOf(SEP);
+  if (idx >= 0) {
+    return { projectId: key.slice(0, idx), characterId: key.slice(idx + SEP.length) };
   }
-  const session: ChatSession = {
-    projectId,
-    messages: [],
-    createdAt: Date.now(),
-    lastActiveAt: Date.now(),
-  };
-  sessions.set(projectId, session);
-  return session;
+  return { projectId: key, characterId: null };
 }
 
-/** 添加一轮对话 */
-export function appendExchange(
-  projectId: string,
+function toMessages(raw: unknown): SessionMessage[] {
+  return Array.isArray(raw) ? (raw as unknown as SessionMessage[]) : [];
+}
+
+/** 添加一轮对话（落库） */
+export async function appendExchange(
+  key: string,
   userMessage: string,
   agentReply: string,
   toolsUsed: string[] = [],
-) {
-  const session = getOrCreate(projectId);
-  session.messages.push(
+): Promise<void> {
+  const { projectId, characterId } = parseKey(key);
+  const existing = await prisma.chatSession.findUnique({ where: { sessionKey: key } });
+
+  const messages: SessionMessage[] = existing ? toMessages(existing.messages) : [];
+  messages.push(
     { role: "user", content: userMessage, ts: Date.now() },
     { role: "agent", content: agentReply, toolsUsed, ts: Date.now() },
   );
   // 超出上限就删最早的
-  while (session.messages.length > MAX_MESSAGES) {
-    session.messages.shift();
+  while (messages.length > MAX_MESSAGES) {
+    messages.shift();
+  }
+
+  if (existing) {
+    await prisma.chatSession.update({
+      where: { sessionKey: key },
+      data: { messages: messages as never, updatedAt: new Date() },
+    });
+  } else {
+    await prisma.chatSession.create({
+      data: { projectId, characterId, sessionKey: key, messages: messages as never },
+    });
   }
 }
 
 /** 获取最近 N 条消息，格式化为上下文文本 */
-export function getRecentContext(projectId: string, maxMessages = 10): string {
-  const session = sessions.get(projectId);
-  if (!session || session.messages.length === 0) return "";
+export async function getRecentContext(key: string, maxMessages = 10): Promise<string> {
+  const session = await prisma.chatSession.findUnique({ where: { sessionKey: key } });
+  const messages = toMessages(session?.messages);
+  if (messages.length === 0) return "";
 
-  const recent = session.messages.slice(-maxMessages);
+  const recent = messages.slice(-maxMessages);
   const lines: string[] = ["【对话历史】"];
   for (const msg of recent) {
     const prefix = msg.role === "user" ? "用户" : "助手";
@@ -81,19 +89,7 @@ export function getRecentContext(projectId: string, maxMessages = 10): string {
   return lines.join("\n");
 }
 
-/** 清空会话 */
-export function clearSession(projectId: string) {
-  sessions.delete(projectId);
-}
-
-/** 定期清理过期会话 */
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, session] of sessions) {
-      if (now - session.lastActiveAt > MAX_AGE_MS) {
-        sessions.delete(key);
-      }
-    }
-  }, 5 * 60 * 1000); // 每5分钟清理一次
+/** 清空会话（落库） */
+export async function clearSession(key: string): Promise<void> {
+  await prisma.chatSession.deleteMany({ where: { sessionKey: key } });
 }

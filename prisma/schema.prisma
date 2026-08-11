@@ -749,3 +749,20 @@ model LlmCallLog {
   @@index([model])
   @@index([role])
 }
+
+// ─── 会话记忆 (Chat Session) —— 角色对话/附身 + Agent 对话持久化（2.0 P0-3）──
+// 取代原进程级全局 Map：会话历史落库，重启不丢失、跨实例不串号。
+// key 维度复用既有约定：角色对话 = `${projectId}__char__${characterId}`，通用 Agent 对话 = `${projectId}`。
+// 落在 sessionKey 唯一约束上；projectId/characterId 冗余存储便于按项目清理与索引。
+
+model ChatSession {
+  id          String   @id @default(uuid())
+  projectId   String                      // 隔离维度（复合 key 的项目前缀）
+  characterId String?                     // 角色对话隔离；通用 Agent 对话为 null
+  sessionKey  String   @unique            // 复合 key（${projectId} 或 ${projectId}__char__${characterId}）
+  messages    Json     @default("[]")     // SessionMessage[]: {role, content, toolsUsed?, ts}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}

@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
     // 按「项目 + 角色」隔离的会话记忆（chat-sessions 用 projectId 作 key，这里用复合 key 区分角色）
     const memKey = `${projectId}__char__${characterId}`;
-    const recent = getRecentContext(memKey, 12);
+    const recent = await getRecentContext(memKey, 12);
 
     const userPrompt = recent
       ? `${recent}\n\n【当前用户】${message}`
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     });
 
     const reply = (response.content || "").trim() || "……";
-    appendExchange(memKey, message, reply, [`character_chat:${chatMode}`]);
+    await appendExchange(memKey, message, reply, [`character_chat:${chatMode}`]);
 
     return NextResponse.json({
       reply,

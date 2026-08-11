@@ -172,7 +172,7 @@ ${modeLine}
 - 修改数据前先用对应查询工具确认目标存在，避免重复创建。`;
 
     // ── 会话记忆：注入最近对话历史 ──
-    const recentContext = getRecentContext(projectId, 10);
+    const recentContext = await getRecentContext(projectId, 10);
 
     const userPrompt = context
       ? `【上下文】${context.slice(0, 500)}\n\n【用户消息】${message}`
@@ -262,7 +262,7 @@ ${modeLine}
 
     // ── 保存会话记忆 ──
     const usedTools = toolTrace.map((t) => t.tool);
-    appendExchange(projectId, message, finalReply, usedTools);
+    await appendExchange(projectId, message, finalReply, usedTools);
 
     // ── 创造性润色：保持信息完整，去掉机械感 ──
     if (finalReply.length > 30) {
