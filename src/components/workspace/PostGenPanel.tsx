@@ -36,6 +36,7 @@ import { DistillTab } from "./postgen/DistillTab";
 import { ReviewTab } from "./postgen/ReviewTab";
 import { StyleTab } from "./postgen/StyleTab";
 import { SafetyTab } from "./postgen/SafetyTab";
+import { QualityScoreBar } from "./postgen/QualityScoreBar";
 
 // ═══════════════════════════════════════════
 // 类型
@@ -198,6 +199,11 @@ export function PostGenPanel({
         onSave={handleSave}
         onContinueWriting={onContinueWriting}
         onClose={onClose}
+      />
+      <QualityScoreBar
+        forbiddenScanResult={forbiddenScanResult}
+        logicCheckResult={logicCheckResult}
+        reviewResult={reviewResult}
       />
       <PostGenPanelTabs
         tab={tab}
