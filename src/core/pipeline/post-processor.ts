@@ -21,6 +21,7 @@ import { snapshotRevision } from "@/lib/versions";
 import { evaluateConfirmEligibility, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
 import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
 import { detectConsistencyConflicts } from "@/core/consistency/detectConflicts";
+import { rebuildProjectDigest } from "./digest";
 
 /**
  * 运行完整的生成后处理管线。
@@ -565,6 +566,16 @@ export async function runPostGenerationPipeline(
         });
       } else {
         send({ type: "summarize_empty", content: "摘要连续生成失败，跳过空摘要写入（不污染后续章上下文）" });
+      }
+
+      // v1.8.23：摘要落库后重建项目级摘要大纲（时间线 + 故事线），供写作 / 章纲上下文"全部读取"。
+      // 失败静默降级——绝不阻断主流程（摘要本身已落库，大纲只是聚合派生数据）。
+      if (summarized && String(summary).trim().length > 0) {
+        try {
+          await rebuildProjectDigest(projectId);
+        } catch (de) {
+          console.error("[digest] 摘要大纲重建失败（已降级，不影响交付）:", de instanceof Error ? de.message : de);
+        }
       }
 
       // v1.4.0：故事线进度回写（threadProgress 之前被丢弃；现在写入 Storyline 七要素 + chapterBindings，只记大事）

@@ -16,6 +16,7 @@ import {
   runPostGenerationPipeline,
   formatStorylines,
   loadStorylinesWithEvents,
+  formatDigest,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
@@ -183,6 +184,12 @@ ${lastParagraphs}
         writingInstruction +=
           "\n\n【剧情线上下文——本章必须呼应以下故事线，核心推进线为最高优先级】\n" + formatted;
       }
+    }
+
+    // v1.8.23：摘要大纲注入（时间线 + 故事线长期记忆）
+    const digestBlock = formatDigest(data.project as any);
+    if (digestBlock) {
+      writingInstruction += "\n\n" + digestBlock;
     }
 
     // ── 宝宝流记忆召回（与 write 路由共享闭环逻辑） ──

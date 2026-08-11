@@ -15,6 +15,7 @@ import {
   runPostGenerationPipeline,
   formatStorylines,
   loadStorylinesWithEvents,
+  formatDigest,
 } from "@/core/pipeline";
 import type { StoryNode } from "@/core/types";
 import { buildRecallBlock } from "@/core/babylore/loop";
@@ -117,6 +118,12 @@ export async function POST(request: Request) {
         writingInstruction +=
           "\n\n【剧情线上下文——本章必须呼应以下故事线，核心推进线为最高优先级】\n" + formatted;
       }
+    }
+
+    // v1.8.23：摘要大纲注入（时间线 + 故事线长期记忆——"此前各章发生了什么""主线大事件"）
+    const digestBlock = formatDigest(data.project as any);
+    if (digestBlock) {
+      writingInstruction += "\n\n" + digestBlock;
     }
 
     writingInstruction +=

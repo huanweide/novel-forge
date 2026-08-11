@@ -100,7 +100,7 @@ export default function WorkspacePage() {
       if (l) setEditingLore(l);
     }
     const tab = searchParams.get("tab");
-    if (tab) setLeftPanel(tab as "characters" | "world" | "outline" | "storylines" | "rules");
+    if (tab) setLeftPanel(tab as "characters" | "world" | "outline" | "storylines" | "rules" | "digest");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, searchParams]);
 
@@ -121,7 +121,7 @@ export default function WorkspacePage() {
   const [targetWordCount, setTargetWordCount] = useState(3000);
 
   // ── 面板状态 ──────────────────────────────
-  const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "outline" | "storylines" | "rules">("outline");
+  const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "outline" | "storylines" | "rules" | "digest">("outline");
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   // 窄屏左右栏抽屉开合（桌面端由 lg: 断点复位为内联，此状态仅在 <lg 生效）
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);

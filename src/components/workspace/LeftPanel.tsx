@@ -6,6 +6,7 @@ import { CharacterList } from "@/components/workspace/CharacterList";
 import { WorldPanel } from "@/components/workspace/WorldPanel";
 import { StorylineList } from "@/components/workspace/StorylineList";
 import { RulesPanel } from "@/components/workspace/RulesPanel";
+import { DigestPanel } from "@/components/workspace/DigestPanel";
 import { OutlineTree } from "./OutlineTree";
 import { Icon } from "@/components/ui/icons";
 import type { CharacterData, LorebookData, StoryNodeData } from "./types";
@@ -21,7 +22,7 @@ export function LeftPanel({
   onBatchConfirm, batchConfirming, onWriteChapter,
 }: {
   activeTab: string;
-  onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules") => void;
+  onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules" | "digest") => void;
   selectedNode: StoryNodeData | null; onSelectNode: (node: StoryNodeData) => void;
   onAddSection: (parentId: string | null) => void; onEditCharacter: (c: CharacterData) => void;
   onEditLore: (l: LorebookData) => void; onNewCharacter: () => void;
@@ -62,6 +63,7 @@ export function LeftPanel({
   ] as const;
   const moreTabs = [
     { key: "rules", label: "规则", icon: "shield" as const },
+    { key: "digest", label: "摘要大纲", icon: "scroll" as const },
   ] as const;
   const moreActive = moreTabs.some((t) => t.key === activeTab);
 
@@ -176,6 +178,9 @@ export function LeftPanel({
         )}
         {activeTab === "rules" && (
           <RulesPanel projectId={project.id} onRefresh={loadProject} />
+        )}
+        {activeTab === "digest" && (
+          <DigestPanel projectId={project.id} onRefresh={loadProject} />
         )}
       </div>
     </aside>

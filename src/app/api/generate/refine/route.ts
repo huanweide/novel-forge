@@ -25,6 +25,7 @@ import {
   runPostGenerationPipeline,
   formatStorylines,
   loadStorylinesWithEvents,
+  formatDigest,
 } from "@/core/pipeline";
 import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
 import { triggerForeshadowDetect } from "@/core/confirm-guard";
@@ -188,6 +189,12 @@ ${selectedText.trim()}
         writingInstruction +=
           "\n\n【剧情线上下文——本章必须呼应以下故事线，核心推进线为最高优先级】\n" + formatted;
       }
+    }
+
+    // v1.8.23：摘要大纲注入（时间线 + 故事线长期记忆）
+    const digestBlock = formatDigest(data.project as any);
+    if (digestBlock) {
+      writingInstruction += "\n\n" + digestBlock;
     }
 
     // ── 8. 调度器（支持项目级 LLM 覆盖）──

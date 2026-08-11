@@ -2,6 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { AgentOrchestrator } from "@/core/agents";
+import { rebuildProjectDigest } from "@/core/pipeline/digest";
 
 /**
  * POST /api/generate/summarize
@@ -92,6 +93,12 @@ export async function POST(request: Request) {
     // ── 模式 1：默认（生成 + upsert 落库）──
     const result = await runSummarize(projectId, chapter);
     const saved = await persistSummary(projectId, chapterId, result);
+    // v1.8.23：摘要落库后重建项目级摘要大纲（失败静默降级，不影响本次摘要返回）
+    try {
+      await rebuildProjectDigest(projectId);
+    } catch (de) {
+      console.error("[digest] 摘要大纲重建失败（已降级）:", de instanceof Error ? de.message : de);
+    }
     return NextResponse.json({
       summary: saved,
       keyEvents: saved.keyEvents,

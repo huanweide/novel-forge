@@ -264,5 +264,8 @@ export async function loadGenerationContext(
     pendingItems: pendingItemsRaw as any,
     storylines: storylinesRaw as any,
     loreTables: (loreTablesRaw || []) as any,
+    // v1.8.23：项目级摘要大纲（时间线 + 故事线），供写作上下文注入"此前发生了什么"
+    timelineDigest: (project as any)?.timelineDigest ?? "",
+    storylineDigest: (project as any)?.storylineDigest ?? "",
   };
 }

@@ -21,4 +21,6 @@ export {
   filterActiveStorylines,
 } from "./outline-context";
 export type { OutlineContextData, FormatStorylinesOptions } from "./outline-context";
+export { rebuildProjectDigest, formatDigest } from "./digest";
+export type { ProjectDigest } from "./digest";
 export type { GenerationData, LLMExtract, PostPipelineParams, PostPipelineResult } from "./types";

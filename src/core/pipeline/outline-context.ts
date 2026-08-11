@@ -31,6 +31,9 @@ export interface OutlineContextData {
   characters: any[];
   summaries: any[];
   storylines: any[];
+  /** v1.8.23：项目级摘要大纲（时间线 + 故事线） */
+  timelineDigest?: string;
+  storylineDigest?: string;
 }
 
 export async function loadOutlineData(
@@ -79,6 +82,9 @@ export async function loadOutlineData(
   return {
     project: project as unknown as Project, node, allNodes: allNodes as any[], characters: characters as any[],
     summaries: summaries as any[], storylines: storylinesWithEvents as any[],
+    // v1.8.23：项目级摘要大纲（时间线 + 故事线），供章纲上下文注入"此前发生了什么"
+    timelineDigest: (project as any)?.timelineDigest ?? "",
+    storylineDigest: (project as any)?.storylineDigest ?? "",
   };
 }
 

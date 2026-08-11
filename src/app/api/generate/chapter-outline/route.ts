@@ -27,6 +27,7 @@ import {
   buildCharacterList, prepareOutlineDirective, formatSummaries,
   formatStorylines, extractLastChapterHook, filterActiveStorylines,
 } from "@/core/pipeline/outline-context";
+import { formatDigest } from "@/core/pipeline";
 import { completeText } from "@/core/llm/client";
 
 export async function POST(request: Request) {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     // Step 1: 读数据——使用共享模块
     // ═══════════════════════════════════════════════
 
-    const { project, node, allNodes, characters, summaries, storylines } = await loadOutlineData(projectId, nodeId, 3);
+    const { project, node, allNodes, characters, summaries, storylines, timelineDigest, storylineDigest } = await loadOutlineData(projectId, nodeId, 3);
     if (!project || !node) {
       return NextResponse.json({ error: "项目或章节不存在" }, { status: 404 });
     }
@@ -69,6 +70,8 @@ export async function POST(request: Request) {
 
     const characterList = buildCharacterList(characters, false);
     const recentSummary = formatSummaries(summaries);
+    // v1.8.23：摘要大纲（时间线 + 故事线长期记忆）——写章纲前让 AI 知道"此前发生了什么""主线大事件"
+    const digestBlock = formatDigest({ timelineDigest, storylineDigest });
     const nodeIndex = allNodes.findIndex((n: any) => n.id === nodeId);
     const effectiveAuthorNote = explicitAuthorNote?.trim() || project.authorNote?.trim() || "";
 
@@ -228,6 +231,7 @@ ${nextContext || "（无后续章节规划）"}
 
 【最近摘要】
 ${recentSummary || "无"}
+${digestBlock ? `\n\n${digestBlock}` : ""}
 
 【AI 选定出场角色——本章只允许这些人出现】
 ${charBriefs}

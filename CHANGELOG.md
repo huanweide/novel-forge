@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.23 — 2026-08-11
+
+**摘要大纲：长期记忆融入世界卡与上下文**
+
+- **摘要大纲（项目级聚合）**：Project 新增 `timelineDigest` / `storylineDigest` 两字段，由 `rebuildProjectDigest` 纯函数确定性聚合（不调 LLM、零 token、幂等）。时间线摘要按章序聚合各章 ChapterSummary（取最近 20 章），描述「此前各章按时间线大概发生了什么」；故事线摘要把主线(main)的里程碑 / 事件（非 CLUE）按 position 串联并标注推进点 / 卡点 / 分支角色，描述「什么故事线在推进」。
+- **入口与重建**：「更多▾」下拉新增「摘要大纲」tab（scroll 图标），与规则并列；DigestPanel 分段展示两摘要并提供「重新生成」按钮。自动触发：写完一章（后处理落库 ChapterSummary 后）与「重新摘要」确认落库后自动重建；手动：`POST /api/generate/digest/rebuild`。
+- **注入写作 / 章纲上下文**：`GenerationData` / `OutlineContextData` 携带两摘要；write / refine / continue 的 writingInstruction 与 chapter-outline 的 outlinePrompt 经 `formatDigest` 注入。空摘要时 `formatDigest` 返回空串，调用方跳过注入，不污染 prompt；AI 写下一章 / 章纲时「全部读取」此前文与主线大事件。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 47 文件 412/412 全绿；Playwright 无头检测「更多▾ → 摘要大纲」可点击、渲染、重新生成均通过，零控制台报错。
+
+---
+
 ## v1.8.22 — 2026-08-11
 
 **恢复游戏模式前端入口**

@@ -34,6 +34,9 @@ export interface ProjectData {
   autoConfirmEnabled?: boolean;
   /** v1.1.0：全书智能交付自动执行开关，默认开 */
   autoDeliverEnabled?: boolean;
+  /** v1.8.23：摘要大纲——项目级聚合（时间线 + 故事线），被写作/章纲上下文读取 */
+  timelineDigest?: string;
+  storylineDigest?: string;
 }
 
 export interface CharacterData {

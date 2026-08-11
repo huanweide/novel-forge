@@ -458,6 +458,9 @@ export interface Project {
   autoConfirmEnabled?: boolean;   // 智能审阅（auto-confirm）开关
   autoDeliverEnabled?: boolean;   // 智能交付开关
   importSource?: string | null;   // 导入来源标识（幂等）
+  // v1.8.23：摘要大纲——项目级聚合（时间线 + 故事线），被写作/章纲上下文读取
+  timelineDigest?: string;          // 时间线摘要大纲：此前各章发生了什么
+  storylineDigest?: string;         // 故事线摘要大纲：主线大事件进展
   createdAt: Date;
   updatedAt: Date;
 }

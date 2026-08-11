@@ -52,6 +52,10 @@ model Project {
   // 值为导入源的稳定标识（如 .nfproject 原始 projectId + source 组合 hash），相同备份重复导入触发唯一冲突 → 幂等返回已存在项目。
   importSource String? @unique
 
+  // v1.8.23：摘要大纲——项目级聚合（时间线 + 故事线），被写作/章纲上下文读取（"全部读取"的长期记忆）
+  timelineDigest   String @default("")  // 时间线摘要大纲：按章序聚合各章摘要，描述"此前各章发生了什么"
+  storylineDigest String @default("")  // 故事线摘要大纲：主线大事件（里程碑/事件）按时间轴聚合，描述"什么故事线在推进"
+
   characters    CharacterCard[]
   lorebookEntries LorebookEntry[]
   loreTables    LoreTable[]

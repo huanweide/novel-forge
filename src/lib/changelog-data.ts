@@ -25,18 +25,47 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.22";
+export const LATEST_VERSION = "v1.8.23";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.22 恢复游戏模式前端入口：在 CenterPanel 生成控制区重新显示「游戏模式」按钮，接回既有的 onOpenGame 跳转逻辑，普通用户可再次进入跑团式互动创作。",
-  "v1.8.22 无头检测验证游戏模式入口：workspace 选中章节 → 点击「游戏模式」→ 正确跳转 /workspace/[projectId]/game/[nodeId]，页面呈现「游戏模式 · 跑团式互动创作」特征，零报错。",
-  "v1.8.22 保留游戏模式后端与视觉组件：v1.8.16 引入的 7 个 game API、游戏引擎、三模式视觉、背包与物品跟踪均完整保留，仅恢复被 Round-16 移除的 UI 入口。",
-  "v1.8.22 双门禁复跑：源码 tsc 0 错误 + vitest 46 文件 408/408 全绿。",
+  "v1.8.23 全新「摘要大纲」功能：每章摘要 + 主线大事件自动聚合成项目级时间线 / 故事线大纲，写入 Project 两字段，既是「更多▾ → 摘要大纲」可读面板，也被写作 / 章纲上下文「全部读取」。",
+  "v1.8.23 摘要大纲自动重建：写完一章（后处理摘要落库）或「重新摘要」确认后自动触发聚合；并提供「重新生成」按钮手动按需重算（POST /api/generate/digest/rebuild）。",
+  "v1.8.23 长期记忆注入写作 / 章纲：写下一章、续写、微调、写章纲时，formatDigest 把「此前各章发生了什么 + 主线大事件」注入指令，AI 不再只看最近 3 章。",
+  "v1.8.23 双门禁复跑：源码 tsc 0 错误 + vitest 47 文件 412/412 全绿；无头检测「更多▾ → 摘要大纲」可点击、渲染、重新生成均通过，零控制台报错。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.23",
+    date: "2026-08-11",
+    title: "摘要大纲：长期记忆融入世界卡与上下文",
+    sections: [
+      {
+        label: "摘要大纲（项目级聚合）",
+        items: [
+          "Project 新增 timelineDigest / storylineDigest 两字段，由 rebuildProjectDigest 纯函数确定性聚合（不调 LLM、零 token）",
+          "时间线摘要：按章序聚合各章 ChapterSummary（取最近 20 章），描述「此前各章按时间线大概发生了什么」",
+          "故事线摘要：主线(main)的里程碑 / 事件（非 CLUE）按 position 串联，标注推进点 / 卡点 / 分支角色，描述「什么故事线在推进」",
+        ],
+      },
+      {
+        label: "入口与重建",
+        items: [
+          "「更多▾」下拉新增「摘要大纲」tab（scroll 图标），与规则并列；DigestPanel 分段展示两摘要并提供「重新生成」按钮",
+          "自动触发：写完一章（后处理落库 ChapterSummary 后）与「重新摘要」确认落库后自动重建；手动：POST /api/generate/digest/rebuild",
+        ],
+      },
+      {
+        label: "注入写作 / 章纲上下文",
+        items: [
+          "GenerationData / OutlineContextData 携带两摘要；write / refine / continue 的 writingInstruction 与 chapter-outline 的 outlinePrompt 经 formatDigest 注入",
+          "空摘要时 formatDigest 返回空串，调用方跳过注入，不污染 prompt；AI 写下一章 / 章纲时「全部读取」此前文与主线大事件",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.22",
     date: "2026-08-11",
