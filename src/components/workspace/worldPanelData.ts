@@ -152,3 +152,16 @@ export const MODULE_FIELDS: Record<ModuleKey, WorldFieldDef[]> = {
     { key: "evidence", label: "正文证据", placeholder: "摘录正文中体现此关系的句子", type: "textarea" },
   ],
 };
+
+// ─── 板块计数纯函数（组件与单测复用，避免分类映射误判）───
+// 注意：custom（特殊设定）是合法 category，必须按 e.category === "custom" 直接统计。
+// 不能用 !CATEGORY_TO_MODULE[e.category] —— 因为 custom 本身在白名单中，取反会把真条目排除。
+export function countByModule(
+  entries: ReadonlyArray<{ category: string }>,
+  key: ModuleKey,
+): number {
+  if (key === "custom") {
+    return entries.filter((e) => e.category === "custom").length;
+  }
+  return entries.filter((e) => CATEGORY_TO_MODULE[e.category] === key).length;
+}

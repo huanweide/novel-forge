@@ -772,18 +772,17 @@ export async function convertToProject(
     keys: string[];
     order: number;
   }> = [
-    { dimKey: "worldview", title: "世界观概要", category: "worldview", keys: ["世界观", "世界", "设定", "背景", "天地", "宇宙"], order: 60 },
-    { dimKey: "story_core", title: "故事核心", category: "worldview", keys: ["主线", "故事", "核心", "剧情", "冲突", "主题"], order: 58 },
+    { dimKey: "worldview", title: "世界观概要", category: "custom", keys: ["世界观", "世界", "设定", "背景", "天地", "宇宙"], order: 60 },
+    { dimKey: "story_core", title: "故事核心", category: "custom", keys: ["主线", "故事", "核心", "剧情", "冲突", "主题"], order: 58 },
     { dimKey: "factions", title: "势力阵营", category: "faction", keys: ["势力", "宗门", "组织", "帮派", "国家", "阵营", "门派", "家族"], order: 50 },
     { dimKey: "power_system", title: "力量体系", category: "magic_system", keys: ["修炼", "境界", "力量", "等级", "突破", "实力"], order: 55 },
-    { dimKey: "cultivation", title: "功法体系", category: "magic_system", keys: ["功法", "秘籍", "法术", "神通", "武技", "秘术", "传承"], order: 54 },
-    { dimKey: "map", title: "地理地图", category: "location", keys: ["地图", "地点", "地理", "位置", "区域"], order: 40 },
+    { dimKey: "cultivation", title: "功法体系", category: "technique", keys: ["功法", "秘籍", "法术", "神通", "武技", "秘术", "传承"], order: 54 },
+    { dimKey: "map", title: "地理地图", category: "geography", keys: ["地图", "地点", "地理", "位置", "区域"], order: 40 },
     { dimKey: "special_settings", title: "特殊设定", category: "custom", keys: ["特殊", "设定", "规则", "独特", "限制"], order: 45 },
-    { dimKey: "currency", title: "货币体系", category: "economy", keys: ["货币", "灵石", "金币", "交易", "价格", "购买", "经济"], order: 30 },
-    { dimKey: "items", title: "重要物品", category: "items", keys: ["物品", "法宝", "神器", "丹药", "兵器", "材料", "宝物"], order: 35 },
-    { dimKey: "plot_thread", title: "情节脉络", category: "plot", keys: ["情节", "剧情", "转折", "发展", "高潮", "线索"], order: 48 },
-    { dimKey: "foreshadowing", title: "未收尾线索", category: "plot", keys: ["伏笔", "悬念", "铺垫", "回收", "暗示"], order: 46 },
-    { dimKey: "outline_summary", title: "大纲摘要", category: "plot", keys: ["大纲", "摘要", "章节", "概要", "结构"], order: 44 },
+    { dimKey: "currency", title: "货币体系", category: "currency", keys: ["货币", "灵石", "金币", "交易", "价格", "购买", "经济"], order: 30 },
+    { dimKey: "items", title: "重要物品", category: "item", keys: ["物品", "法宝", "神器", "丹药", "兵器", "材料", "宝物"], order: 35 },
+    // 注：情节脉络/伏笔/大纲不属于世界书 15 类，交由故事线/大纲系统管理，不再写入 LorebookEntry，
+    // 避免非法 category（"plot"）污染世界书与"特殊设定"计数。
   ];
 
   for (const ld of loreDimensions) {

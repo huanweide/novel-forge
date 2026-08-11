@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CharacterList } from "@/components/workspace/CharacterList";
 import { WorldPanel } from "@/components/workspace/WorldPanel";
 import { StorylineList } from "@/components/workspace/StorylineList";
@@ -38,6 +39,18 @@ export function LeftPanel({
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreBtnRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  useEffect(() => {
+    if (!moreMenuOpen) {
+      setMenuPos(null);
+      return;
+    }
+    const el = moreBtnRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
+  }, [moreMenuOpen]);
   // 选中的章节里处于「待确认」的数量（批量确认仅对这些章生效）
   const selectedPendingCount =
     project.storyNodes?.filter((n) => selectedChapterIds.has(n.id) && n.status === "pending_confirm").length ?? 0;
@@ -74,7 +87,7 @@ export function LeftPanel({
           );
         })}
         {/* 更多▾：规则收起，故事线已置顶常显 */}
-        <div className="relative z-50 shrink-0">
+        <div className="relative z-50 shrink-0" ref={moreBtnRef}>
           <button
             onClick={() => setMoreMenuOpen((o) => !o)}
             className={`flex items-center gap-0.5 rounded-t-lg px-2.5 py-1.5 text-[11px] transition-all ${
@@ -86,10 +99,13 @@ export function LeftPanel({
             <span>更多</span>
             <span className="text-[10px] opacity-70">▾</span>
           </button>
-          {moreMenuOpen && (
+          {moreMenuOpen && menuPos && createPortal(
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setMoreMenuOpen(false)} aria-hidden />
-              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 shadow-xl">
+              <div className="fixed inset-0 z-[60]" onClick={() => setMoreMenuOpen(false)} aria-hidden />
+              <div
+                className="fixed z-[70] mt-1 w-40 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 shadow-xl"
+                style={{ top: menuPos.top, right: menuPos.right }}
+              >
                 {moreTabs.map((t) => (
                   <button key={t.key} onClick={() => { setMoreMenuOpen(false); onTabChange(t.key); }}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--nv-surface-2)] ${activeTab === t.key ? "font-medium text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>
@@ -98,7 +114,8 @@ export function LeftPanel({
                   </button>
                 ))}
               </div>
-            </>
+            </>,
+            document.body
           )}
         </div>
       </div>

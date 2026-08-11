@@ -196,19 +196,9 @@ export async function POST(request: Request) {
       `${c.name}(${c.role}，别名：${(c.aliases || []).join("、") || "无"}，已有能力：${(c.abilities || []).join("、") || "无"})`
     ).join("\n");
 
-    const locationEntries = loreEntries
-      .filter((l) => l.category === "geography")
-      .map((l) => `- ${l.title}：${(l.content || "").slice(0, 80)}`)
-      .join("\n");
-
-    const factionEntries = loreEntries
-      .filter((l) => l.category === "faction")
-      .map((l) => `- ${l.title}：${(l.content || "").slice(0, 80)}`)
-      .join("\n");
-
-    const itemEntries = loreEntries
-      .filter((l) => l.category === "item" || l.category === "technique")
-      .map((l) => `- ${l.title}：${(l.content || "").slice(0, 80)}`)
+    // 全量世界书条目（15 类，仅 enabled）——供 LLM 识别"已有/别名/重复"，避免重复建卡（#222-B）
+    const loreDigest = loreEntries
+      .map((l) => `- ${l.title}（${l.category}）：${(l.content || "").slice(0, 60)}`)
       .join("\n");
 
     const foreshadowingList = existingForeshadowings
@@ -219,25 +209,29 @@ export async function POST(request: Request) {
     const extractionPrompt = `你是小说章节分析专家。从以下正文中一次性提取全部维度。
 
 ## 角色名册（用于匹配）
-${charRoster.slice(0, 2500)}
+${charRoster.slice(0, 4000)}
 
-## 已有地点
-${locationEntries.slice(0, 500) || "（无）"}
-
-## 已有势力
-${factionEntries.slice(0, 500) || "（无）"}
-
-## 已有道具
-${itemEntries.slice(0, 500) || "（无）"}
+## 已有世界书（全量，含地点/势力/道具/功法/其他设定）
+${loreDigest.slice(0, 1500) || "（无）"}
 
 ## 已有伏笔
-${foreshadowingList.slice(0, 500) || "（无）"}
+${foreshadowingList.slice(0, 800) || "（无）"}
 
 ## 章节正文
 标题：${chapterTitle || "未命名"}
 ${chapterContent.slice(0, 6000)}
 
 ## 提取规则
+
+### 去重与别名（最高优先级）
+- 凡正文中出现的名称，先与上方「角色名册 / 已有世界书」比对：
+  - 是已有条目的**主名、别名、俗称、小名、异称**之一 → **绝不新建**，suggestion 设为 "update"，并尽量填好 existingCardId / existingEntryId；
+  - 同一实体在正文用多个名字（如「龙门」与「龙庭集团」指代同一势力）→ **合并为一个条目**，主名取最正式者，其余作为别名，不要拆成两条。
+- 以下**不要抽取**（不符合审查机制，抽了也是垃圾，会污染世界书）：
+  - 一次性路人称谓（"那人道友"、"某个少年"）、纯口语指代（"这东西"、"那玩意"）；
+  - 仅出现一次、无具体设定意义的模糊名词；
+  - 已被前文判定无实质意义、或明显是作者笔误/口语碎片的词。
+- 需要补充信息的已有条目 → suggestion="update"，在对应 description 里补正文新披露的信息（不要另建新条）。
 
 ### 出场角色
 - 列出本章实际出场的所有角色（名册中有则匹配，没有则标 isNew=true）
@@ -384,14 +378,24 @@ ${chapterContent.slice(0, 6000)}
 
       // 匹配已有地点/势力/道具 ID
       const titleToLoreId = new Map(loreEntries.map((l) => [l.title, l.id]));
+      // #222-B：别名/同义词索引——世界书条目的 keys 字段存了别名/俗称/异称
+      // （见 apply-extraction / entity-auto-creator 的 keys 写入）。LLM 输出别名时
+      // 也能反向匹配到已有条目 → suggestion="update" 而非误建 "create"。
+      const loreKeyToId = new Map<string, string>();
+      for (const l of loreEntries) {
+        for (const k of ((l.keys as string[]) || [])) {
+          const low = k.trim().toLowerCase();
+          if (low && !loreKeyToId.has(low)) loreKeyToId.set(low, l.id);
+        }
+      }
       for (const loc of result.locations) {
-        if (!loc.isNew && !loc.existingEntryId) loc.existingEntryId = titleToLoreId.get(loc.name) || null;
+        if (!loc.isNew && !loc.existingEntryId) loc.existingEntryId = titleToLoreId.get(loc.name) || loreKeyToId.get(loc.name.toLowerCase()) || null;
       }
       for (const fac of result.factions) {
-        if (!fac.isNew && !fac.existingEntryId) fac.existingEntryId = titleToLoreId.get(fac.name) || null;
+        if (!fac.isNew && !fac.existingEntryId) fac.existingEntryId = titleToLoreId.get(fac.name) || loreKeyToId.get(fac.name.toLowerCase()) || null;
       }
       for (const it of result.items) {
-        if (!it.isNew && !it.existingEntryId) it.existingEntryId = titleToLoreId.get(it.name) || null;
+        if (!it.isNew && !it.existingEntryId) it.existingEntryId = titleToLoreId.get(it.name) || loreKeyToId.get(it.name.toLowerCase()) || null;
       }
     } catch (err) {
       console.error("提取结果解析失败:", err, raw.slice(0, 300));

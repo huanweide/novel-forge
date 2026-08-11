@@ -139,6 +139,12 @@ const ABSTRACT_NOUNS = new Set([
 /** 合并排除集合 */
 const EXCLUDE_SET = new Set([...BODY_PARTS, ...COMMON_NOUNS, ...ABSTRACT_NOUNS]);
 
+/**
+ * 子串黑名单 —— 命中即视为非实体（灭「后视镜」被法宝模式误抽、「骨头」被材料模式误抽）。
+ * 用子串而非精确匹配，可覆盖「玄铁后视镜」等带前缀的误抽。
+ */
+const SUBSTRING_BLACKLIST = ["后视", "骨头"];
+
 // ─── 句子碎片过滤器（Q1：防本地蒸馏/LLM 提取把分句当实体） ──────────
 //
 // 蒸馏兜底分段或 LLM 提取偶尔会返回句子片段（如「右手拇指」「核桃壳在他指」
@@ -343,9 +349,10 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** 检查匹配文本是否在排除词库中 */
+/** 检查匹配文本是否在排除词库中（精确 + 子串黑名单） */
 function isExcluded(name: string): boolean {
-  return EXCLUDE_SET.has(name);
+  if (EXCLUDE_SET.has(name)) return true;
+  return SUBSTRING_BLACKLIST.some((s) => name.includes(s));
 }
 
 // ─── 主检测函数 ──────────────────────────────────────────────

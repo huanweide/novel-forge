@@ -9,6 +9,7 @@ import { WorldEditor } from "./WorldEditor";
 import { WorldEntryList } from "./WorldEntryList";
 import {
   WORLD_MODULES, DEPTH_LABEL, CATEGORY_TO_MODULE, MODULE_FIELDS,
+  countByModule,
   type ModuleKey,
 } from "./worldPanelData";
 
@@ -31,13 +32,8 @@ export function WorldPanel({
     return mapped === activeModule || (activeModule === "custom" && !CATEGORY_TO_MODULE[e.category]);
   });
 
-  // 板块计数
-  const getCount = (key: ModuleKey) => {
-    if (key === "custom") {
-      return entries.filter((e) => !CATEGORY_TO_MODULE[e.category]).length;
-    }
-    return entries.filter((e) => CATEGORY_TO_MODULE[e.category] === key).length;
-  };
+  // 板块计数（复用 worldPanelData 纯函数，custom 按 e.category === "custom" 统计）
+  const getCount = (key: ModuleKey) => countByModule(entries, key);
 
   // 字段变更
   const handleFieldChange = (key: string, value: string) =>

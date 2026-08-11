@@ -73,7 +73,7 @@ export function Toolbar({
           className="flex h-7 items-center gap-1 text-xs">{summarizing ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="package" size={12} />} 摘要</Button>
         {/* 导入书稿 */}
         <Button size="sm" variant="outline" onClick={onImportChapters} disabled={isGenerating}
-          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]" title="导入：粘贴文本后可在弹窗内选择「章节正文」（整本分章+抽卡）或「设定文本」（仅抽角色/世界观/风格三卡，不建章节）"><Icon name="download" size={12} /> 导入书稿</Button>
+          className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]" title="导入：粘贴文本后可在弹窗内选择「自动检测」（智能识别角色/世界观/风格）或「设定文本」（仅抽角色/世界观/风格三卡）或「快速导入」（正则识别名字直写）"><Icon name="download" size={12} /> 导入书稿</Button>
 
         {/* 导出下拉：导出文件 + 复制全文 */}
         <div className="relative z-50">

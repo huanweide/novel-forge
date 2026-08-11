@@ -81,12 +81,12 @@ export function ImportWizard({
   projectId: string;
   onClose: () => void;
   onImported: () => void;
-  initialMode?: "auto" | "chapters" | "settings" | "quick";
+  initialMode?: "auto" | "settings" | "quick";
 }) {
   const [step, setStep] = useState<Step>("input");
   const [rawText, setRawText] = useState("");
   const [volumeMode, setVolumeMode] = useState(true);
-  const [importMode, setImportMode] = useState<"auto" | "chapters" | "settings" | "quick">(initialMode);
+  const [importMode, setImportMode] = useState<"auto" | "settings" | "quick">(initialMode);
   const [result, setResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -569,7 +569,6 @@ export function ImportWizard({
                 <div className="flex gap-2">
                   {[
                     { key: "auto", icon: "bot", label: "自动检测", desc: "智能识别" },
-                    { key: "chapters", icon: "book", label: "章节正文", desc: "叙事文本" },
                     { key: "settings", icon: "clipboard", label: "设定文本", desc: "角色/世界观/风格" },
                     { key: "quick", icon: "zap", label: "快速导入", desc: "识别名字→直写DB" },
                   ].map((opt) => (
@@ -597,15 +596,10 @@ export function ImportWizard({
                     <Icon name="zap" size={15} className="inline-block align-text-bottom shrink-0" /> 快速导入：正则匹配"1.人名"格式→原文全抄进 quickImportContent→直接写DB。不用AI、毫秒级解析、一次搞定。
                                                         </p>
                 )}
-                {importMode === "chapters" && (
-                  <p className="text-xs text-info mt-2">
-                    <Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /> 章节模式：自动识别分章标记，提取叙事中的角色和世界观。同时创建章节大纲节点。
-                                                        </p>
-                )}
               </div>
 
-              {/* 分卷开关（仅章节模式显示） */}
-              {importMode !== "settings" && (
+              {/* 分卷开关（仅自动检测模式显示，叙事结构选项） */}
+              {importMode === "auto" && (
                 <div className="flex items-center gap-3 mb-2">
                   <label className="flex items-center gap-2 text-sm text-[var(--nv-text-tertiary)] cursor-pointer">
                     <input
@@ -766,7 +760,7 @@ export function ImportWizard({
                 <div>
                   <p className="text-sm text-[var(--nv-text-secondary)] font-medium">
                     {currentStage === "init" && "连接数据库..."}
-                    {currentStage === "ready" && `文本 ${rawText.length.toLocaleString()} 字 · 双Provider并行`}
+                    {currentStage === "ready" && `文本 ${rawText.length.toLocaleString()} 字 · 双路并行解析（人物 + 世界）`}
                     {currentStage === "launch" && "A路 DeepSeek→人物 | B路 Flash→世界"}
                     {(currentStage === "path-a" || currentStage === "path-b") && `AB路并行中 · ${parsePct}%`}
                     {currentStage === "path-a-done" && `A路完成`}
@@ -776,7 +770,7 @@ export function ImportWizard({
                     {!currentStage && "准备中..."}
                   </p>
                   <p className="text-xs text-[var(--nv-text-muted)]">
-                    {rawText.length > 0 && `文本 ${rawText.length.toLocaleString()} 字符 · 硅基+DeepSeek 双Provider`}
+                    {rawText.length > 0 && `文本 ${rawText.length.toLocaleString()} 字符 · 双路并行解析（人物 / 世界）`}
                   </p>
                 </div>
               </div>

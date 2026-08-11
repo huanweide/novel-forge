@@ -10,7 +10,6 @@ import { enrichForeshadow } from "@/core/foreshadowing";
 import { writeStorylineProgress } from "@/core/pipeline/storyline-writer";
 import { scanForbiddenWordsEnhanced, type ForbiddenMatch } from "@/lib/forbidden-checker";
 import { runLocalDistillation } from "@/lib/distillation-runner";
-import { autoCreateEntities } from "@/lib/entity-auto-creator";
 import { classifyAndConvert } from "@/lib/memory-classifier";
 import { analyzeQuality } from "@/lib/quality-analyzer";
 import { STATUS_DRAFTING } from "@/core/story-status";
@@ -430,34 +429,12 @@ export async function runPostGenerationPipeline(
       }
     }
 
-    // ── 3.7 数据反哺：新实体自动入库 ──
-    const newEntities = distillResult.entities.entities
-      .filter((e) => !e.isKnown && e.confidence >= 0.7);
-    if (newEntities.length > 0) {
-      send({ type: "entity_auto_create_start", content: `发现 ${newEntities.length} 个新实体，正在自动创建...` });
-      try {
-        const autoResult = await autoCreateEntities(newEntities, projectId, nodeId);
-        if (autoResult.created.length > 0) {
-          send({
-            type: "entity_auto_created",
-            content: `自动创建了 ${autoResult.created.length} 个实体`,
-            created: autoResult.created,
-          });
-        }
-        if (autoResult.skipped.length > 0) {
-          send({
-            type: "entity_auto_skip",
-            content: `${autoResult.skipped.length} 个实体因重复跳过：${autoResult.skipped.join("、")}`,
-          });
-        }
-      } catch (entityErr) {
-        // 实体创建失败降级——不阻塞主流程
-        send({
-          type: "entity_auto_create_error",
-          content: `实体自动创建失败：${String(entityErr).slice(0, 100)}`,
-        });
-      }
-    }
+    // ── 3.7 实时自动发现已关闭（#222）──
+    // 新实体不再在此静默落库（避免半成品/垃圾污染世界书，见历史 9 条误抽清理）。
+    // 写章后发现的实体通过上方 distill_local_done 的 newEntities 推给前端展示，
+    // 真正的去重 + 审查 + 入库改由「章节提取面板」统一后端处理：
+    //   extract-chapter（LLM 抽取，已喂全量世界卡+角色卡并识别别名/小名/重复）
+    //   → apply-extraction（带 G4 精确 + G5 变体 + 别名归一去重落库）。
   } catch (distillErr) {
     // 本地蒸馏失败降级——不阻塞主流程，LLM summarize 继续运行
     send({

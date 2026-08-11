@@ -144,7 +144,7 @@ export default function WorkspacePage() {
   // ── 弹窗状态 ──────────────────────────────
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
-  const [importWizardMode, setImportWizardMode] = useState<"auto" | "chapters" | "settings" | "quick">("auto");
+  const [importWizardMode, setImportWizardMode] = useState<"auto" | "settings" | "quick">("auto");
   const [showAutomationSettings, setShowAutomationSettings] = useState(false);
   const [showBuildConfig, setShowBuildConfig] = useState(false);
   const [showMemoryDecay, setShowMemoryDecay] = useState(false);
@@ -1004,7 +1004,7 @@ export default function WorkspacePage() {
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
-        onImportChapters={() => { setImportWizardMode("chapters"); setShowImportWizard(true); }}
+        onImportChapters={() => { setImportWizardMode("auto"); setShowImportWizard(true); }}
         onEditStyle={() => setShowStyleEditor(true)}
         isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
         projectId={project.id} styleTemplateId={styleTemplateId}
