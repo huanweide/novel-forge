@@ -1390,3 +1390,183 @@ html.azure .btn-danger { color: oklch(0.76 0.18 20); border-color: oklch(0.62 0.
     color: #fff;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   游戏模式 · 多风格视觉与交互体系（data-game-theme 作用域，独立于工作区主题）
+   集成三种角色设定：粒子场景设计师 / 光影艺术设计师 / 指针跟随设计师
+   三套模式：night 黑夜（紫） · twilight 苍青（青绿） · day 白昼（浅亮）
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* 设计令牌：作用域变量（--game-*）。子组件通过 var() 取用，主题切换零改组件代码 */
+[data-game-theme="night"] {
+  --game-bg:      #0B1322;
+  --game-bg-2:    #1A1230;
+  --game-glow:    167, 139, 250;   /* 紫罗兰辉光（rgb 三元组，便于 rgba() 控透明度） */
+  --game-glow-2:  124, 92, 255;
+  --game-particle:139, 92, 246;   /* 粒子色 */
+  --game-pointer-a: 109, 139, 255; /* 指针光斑渐变起 */
+  --game-pointer-b: 139, 92, 246;  /* 指针光斑渐变止 */
+}
+[data-game-theme="twilight"] {
+  --game-bg:      #07171A;
+  --game-bg-2:    #0C2A2A;
+  --game-glow:    45, 212, 191;    /* 青绿辉光 */
+  --game-glow-2:  94, 234, 212;
+  --game-particle:45, 212, 191;
+  --game-pointer-a: 52, 211, 153;
+  --game-pointer-b: 34, 211, 238;
+}
+[data-game-theme="day"] {
+  --game-bg:      #EEF2F7;
+  --game-bg-2:    #DBE4F0;
+  --game-glow:    99, 102, 241;    /* 靛蓝辉光（浅底用深发光色） */
+  --game-glow-2:  139, 92, 246;
+  --game-particle:99, 102, 241;
+  --game-pointer-a: 96, 165, 250;
+  --game-pointer-b: 129, 140, 248;
+  /* —— 浅色令牌覆盖：仅作用于游戏根容器及其子树（不影响工作区） —— */
+  --nv-void:          #EEF2F7;
+  --nv-abyss:         #FFFFFF;
+  --nv-surface-1:     rgba(15, 23, 42, 0.04);
+  --nv-surface-2:     rgba(15, 23, 42, 0.07);
+  --nv-surface-3:     rgba(15, 23, 42, 0.10);
+  --nv-border-1:      rgba(15, 23, 42, 0.08);
+  --nv-border-2:      rgba(15, 23, 42, 0.12);
+  --nv-border-3:      rgba(15, 23, 42, 0.18);
+  --nv-text-primary:  #16181D;
+  --nv-text-secondary:#3A3E49;
+  --nv-text-tertiary: #565B68;
+  --nv-text-muted:    #6A6F7C;
+  --nv-creative:      oklch(0.55 0.13 95);   /* 深金，浅底对比达标 */
+  --nv-accent:        oklch(0.52 0.14 95);
+  --nv-creative-fill: #B9892F;               /* 更深的金填充，浅字 #F0EEE8 清晰 */
+  --background:       #EEF2F7;
+  --foreground:       #16181D;
+  --card:             rgba(255, 255, 255, 0.72);
+  --popover:          #FFFFFF;
+  --card-foreground:  #16181D;
+  --popover-foreground:#16181D;
+  --secondary:        rgba(15, 23, 42, 0.06);
+  --secondary-foreground:#16181D;
+  --muted:            rgba(15, 23, 42, 0.05);
+  --muted-foreground: #565B68;
+  --accent:           rgba(15, 23, 42, 0.06);
+  --accent-foreground:#16181D;
+  --border:           rgba(15, 23, 42, 0.12);
+  --input:            rgba(15, 23, 42, 0.10);
+}
+
+/* —— 游戏根容器背景：三模式各自渐变天幕，默认沿用虚空底色 —— */
+.game-root { background: var(--nv-void); }
+[data-game-theme].game-root {
+  background:
+    radial-gradient(1200px 820px at 18% -12%, rgba(var(--game-glow), 0.10), transparent 60%),
+    radial-gradient(1000px 720px at 102% 112%, rgba(var(--game-glow-2), 0.08), transparent 60%),
+    var(--game-bg);
+}
+
+/* ── 光影艺术设计师：多层 box-shadow / text-shadow 光晕，150–220ms 平滑呼吸 ── */
+.nv-glow {
+  box-shadow:
+    0 0 6px rgba(var(--game-glow), 0.55),
+    0 0 16px rgba(var(--game-glow), 0.32),
+    0 0 30px rgba(var(--game-glow), 0.16);
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.nv-glow:hover {
+  box-shadow:
+    0 0 10px rgba(var(--game-glow), 0.70),
+    0 0 26px rgba(var(--game-glow), 0.46),
+    0 0 50px rgba(var(--game-glow), 0.26);
+  transform: translateY(-1px);
+}
+.nv-glow:active {
+  transform: translateY(1px) scale(0.99);  /* 收敛下沉 */
+  box-shadow:
+    0 0 4px rgba(var(--game-glow), 0.50),
+    0 0 10px rgba(var(--game-glow), 0.30);
+}
+/* 重要点击 UI：更强发光（如主行动按钮） */
+.nv-glow-strong {
+  box-shadow:
+    0 0 8px rgba(var(--game-glow), 0.65),
+    0 0 22px rgba(var(--game-glow), 0.40),
+    0 0 42px rgba(var(--game-glow), 0.22);
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.nv-glow-strong:hover {
+  box-shadow:
+    0 0 14px rgba(var(--game-glow), 0.85),
+    0 0 34px rgba(var(--game-glow), 0.55),
+    0 0 64px rgba(var(--game-glow), 0.32);
+  transform: translateY(-1px);
+}
+.nv-glow-strong:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow:
+    0 0 6px rgba(var(--game-glow), 0.55),
+    0 0 16px rgba(var(--game-glow), 0.32);
+}
+/* 文字辉光 */
+.nv-text-glow {
+  text-shadow:
+    0 0 6px rgba(var(--game-glow), 0.50),
+    0 0 14px rgba(var(--game-glow), 0.25);
+}
+
+/* ── 指针跟随设计师：卡片感应鼠标，冷色系渐变光斑（transform 硬件加速） ── */
+.pointer-card { position: relative; overflow: hidden; isolation: isolate; }
+.pointer-blob {
+  position: absolute;
+  top: 0; left: 0;
+  width: 340px; height: 340px;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+  transition: opacity 220ms ease;
+  background: radial-gradient(circle at center,
+    rgba(var(--game-pointer-a), 0.30) 0%,
+    rgba(var(--game-pointer-b), 0.14) 38%,
+    transparent 70%);
+  mix-blend-mode: screen;
+}
+.pointer-card:hover .pointer-blob { opacity: 1; }
+/* 浅色模式下 screen 混合会过曝，改用 multiply 更自然 */
+[data-game-theme="day"] .pointer-blob {
+  mix-blend-mode: multiply;
+  background: radial-gradient(circle at center,
+    rgba(var(--game-pointer-a), 0.18) 0%,
+    rgba(var(--game-pointer-b), 0.10) 38%,
+    transparent 70%);
+}
+
+/* ── 物品检测（游戏模式 C 任务）：高亮 + 向右滑入背包的动效 ── */
+@keyframes nf-item-slide-in {
+  from { opacity: 0; transform: translateX(-26px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.item-detected {
+  animation: nf-item-slide-in 420ms var(--ease-out-expo, ease);
+  box-shadow: 0 0 0 1px rgba(var(--game-glow), 0.6), 0 0 16px rgba(var(--game-glow), 0.35);
+}
+.item-detected::after {
+  content: "新";
+  position: absolute; top: -6px; right: -6px;
+  font-size: 9px; line-height: 1; padding: 2px 4px;
+  border-radius: 9999px;
+  background: rgb(var(--game-glow));
+  color: #fff; font-weight: 700;
+}
+/* 交易/买卖检测微章 */
+.trade-pill {
+  background: rgba(var(--game-glow), 0.14);
+  border: 1px solid rgba(var(--game-glow), 0.4);
+  color: rgb(var(--game-glow));
+}
+
+/* 无障碍：尊重「减少动效」系统设置，关闭所有游戏模式新增动效 */
+@media (prefers-reduced-motion: reduce) {
+  .nv-glow, .nv-glow-strong, .pointer-blob, .item-detected { transition: none; animation: none; }
+  .pointer-blob { display: none; }
+}

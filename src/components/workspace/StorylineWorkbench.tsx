@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { toastError, toastSuccess, toastCreated } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
-import { computeStorylineProgress, groupStorylinesByMain } from "@/lib/storyline-progress";
+import { computeStorylineProgress, groupStorylinesByMain, sortChildrenByStatusThenOrder } from "@/lib/storyline-progress";
 import type { StorylineData } from "./StorylineList";
 import { DialogField, DialogInput } from "./DialogUI";
 
@@ -103,6 +103,11 @@ export function StorylineWorkbench({
   const [list, setList] = useState<StorylineData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 主线收起态（B 任务：主线下的支线可收起）
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // 清理废弃故事线确认框
+  const [showCleanup, setShowCleanup] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(initialId ?? null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -234,6 +239,9 @@ export function StorylineWorkbench({
   const selected = list.find((s) => s.id === selectedId) || null;
   const { mains, sides, resolveParent } = groupStorylinesByMain(list);
   const orphanSides = sides.filter((s) => !resolveParent(s));
+  // 自动排序（B 任务）：主线按 order 升序；子线按 状态+order（完结沉底）保证一致呈现
+  const sortedMains = [...mains].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const abandonedCount = list.filter((s) => s.status === "abandoned").length;
 
   const events = selected?.events || [];
   const timelineEvents = events
@@ -405,6 +413,30 @@ export function StorylineWorkbench({
     }
   };
 
+  // 清理废弃故事线（B 任务）：批量删除所有 status=abandoned 的线
+  const cleanupAbandoned = async () => {
+    const ids = list.filter((s) => s.status === "abandoned").map((s) => s.id);
+    if (ids.length === 0) return;
+    setCleaning(true);
+    try {
+      for (const id of ids) {
+        const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
+          throw new Error((d as { error?: string }).error || `HTTP ${res.status}`);
+        }
+      }
+      toastSuccess(`已清理 ${ids.length} 条废弃故事线`);
+      setShowCleanup(false);
+      void load();
+      onRefresh();
+    } catch (err) {
+      toastError("清理失败：" + (err instanceof Error ? err.message : "请重试"));
+    } finally {
+      setCleaning(false);
+    }
+  };
+
   const { deletingId, remove: deleteStoryline } = useConfirmDelete({
     title: "删除故事线",
     description: "确定删除这条故事线？此操作不可恢复。",
@@ -543,6 +575,7 @@ export function StorylineWorkbench({
   };
 
   return (
+    <>
     <Modal
       open
       onClose={onClose}
@@ -559,6 +592,15 @@ export function StorylineWorkbench({
           <Icon name="bookmarked" size={18} className="text-[var(--nv-accent)]" /> 故事线工作台
         </h2>
         <div className="flex items-center gap-2">
+          {abandonedCount > 0 && (
+            <button
+              onClick={() => setShowCleanup(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--nv-danger)]/40 px-3 py-1.5 text-xs font-medium text-[var(--nv-danger)] transition-colors hover:bg-[var(--nv-danger-soft)]"
+              title="删除所有已废弃的故事线"
+            >
+              <Icon name="trash" size={14} /> 清理废弃({abandonedCount})
+            </button>
+          )}
           <button
             onClick={handleGenerate}
             disabled={generating || !!genSuggestions}
@@ -693,46 +735,70 @@ export function StorylineWorkbench({
             )}
             {!loading && !error && list.length > 0 && (
               <div className="space-y-1">
-                {mains.map((m) => (
-                  <div key={m.id}>
-                    <LineNav
-                      s={m}
-                      selected={selectedId === m.id}
-                      onSelect={() => {
-                        setSelectedId(m.id);
-                        setEditing(false);
-                      }}
-                      onToggle={() => handleToggleComplete(m)}
-                    />
-                    {sides
-                      .filter((s) => resolveParent(s)?.id === m.id)
-                      .map((s) => (
-                        <div key={s.id} className="ml-3">
-                          <LineNav
-                            s={s}
-                            selected={selectedId === s.id}
-                            onSelect={() => {
-                              setSelectedId(s.id);
-                              setEditing(false);
-                            }}
-                            onToggle={() => handleToggleComplete(s)}
-                          />
-                        </div>
-                      ))}
-                  </div>
-                ))}
-                {orphanSides.map((s) => (
-                  <LineNav
-                    key={s.id}
-                    s={s}
-                    selected={selectedId === s.id}
-                    onSelect={() => {
-                      setSelectedId(s.id);
-                      setEditing(false);
-                    }}
-                    onToggle={() => handleToggleComplete(s)}
-                  />
-                ))}
+                {sortedMains.map((m) => {
+                  const children = sortChildrenByStatusThenOrder([
+                    ...sides.filter((s) => resolveParent(s)?.id === m.id),
+                  ]);
+                  const isCollapsed = collapsed.has(m.id);
+                  return (
+                    <div key={m.id}>
+                      <LineNav
+                        s={m}
+                        selected={selectedId === m.id}
+                        onSelect={() => {
+                          setSelectedId(m.id);
+                          setEditing(false);
+                        }}
+                        onToggle={() => handleToggleComplete(m)}
+                        collapsible
+                        collapsed={isCollapsed}
+                        childCount={children.length}
+                        onToggleCollapse={() =>
+                          setCollapsed((prev) => {
+                            const n = new Set(prev);
+                            if (n.has(m.id)) n.delete(m.id);
+                            else n.add(m.id);
+                            return n;
+                          })
+                        }
+                      />
+                      {!isCollapsed &&
+                        children.map((s) => (
+                          <div key={s.id} className="ml-3">
+                            <LineNav
+                              s={s}
+                              selected={selectedId === s.id}
+                              onSelect={() => {
+                                setSelectedId(s.id);
+                                setEditing(false);
+                              }}
+                              onToggle={() => handleToggleComplete(s)}
+                            />
+                          </div>
+                        ))}
+                    </div>
+                  );
+                })}
+                {/* 独立支线：无归属主线，与主线并列呈现（B 任务） */}
+                {orphanSides.length > 0 && (
+                  <>
+                    <p className="px-1 pt-2 text-[10px] uppercase tracking-wider text-[var(--nv-text-tertiary)]">
+                      独立支线
+                    </p>
+                    {sortChildrenByStatusThenOrder([...orphanSides]).map((s) => (
+                      <LineNav
+                        key={s.id}
+                        s={s}
+                        selected={selectedId === s.id}
+                        onSelect={() => {
+                          setSelectedId(s.id);
+                          setEditing(false);
+                        }}
+                        onToggle={() => handleToggleComplete(s)}
+                      />
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -787,12 +853,12 @@ export function StorylineWorkbench({
                       value={form.parentId || ""}
                       onChange={(e) => updateField("parentId", e.target.value)}
                     >
-                      <option value="">（无归属）</option>
-                      {mains.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.title}
-                        </option>
-                      ))}
+                        <option value="">（无归属）</option>
+                        {sortedMains.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.title}
+                          </option>
+                        ))}
                     </select>
                   </DialogField>
                 )}
@@ -1118,6 +1184,25 @@ export function StorylineWorkbench({
         </div>
       )}
     </Modal>
+    {showCleanup && (
+      <Modal open onClose={() => setShowCleanup(false)} bare panelClassName="max-w-sm" labelledBy="cleanup-title">
+        <div className="p-5">
+          <h3 id="cleanup-title" className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
+            <Icon name="trash" size={16} className="text-[var(--nv-danger)]" /> 清理废弃故事线
+          </h3>
+          <p className="mt-2 text-sm text-[var(--nv-text-secondary)]">
+            将永久删除 {abandonedCount} 条「已废弃」的故事线，此操作不可恢复。确定继续？
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowCleanup(false)}>取消</Button>
+            <Button onClick={cleanupAbandoned} disabled={cleaning} className="bg-[var(--nv-danger)] text-white hover:opacity-90">
+              {cleaning ? "清理中…" : "删除"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -1126,11 +1211,19 @@ function LineNav({
   selected,
   onSelect,
   onToggle,
+  collapsible,
+  collapsed,
+  childCount,
+  onToggleCollapse,
 }: {
   s: StorylineData;
   selected: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  childCount?: number;
+  onToggleCollapse?: () => void;
 }) {
   const p = computeStorylineProgress(s);
   return (
@@ -1154,9 +1247,9 @@ function LineNav({
     >
       <div className="flex items-center gap-1.5">
         <Icon
-          name={s.type === "main" ? "star" : s.type === "thread" ? "link" : "arrowRight"}
+          name={s.type === "main" ? "star" : s.type === "thread" ? "link" : "gitBranch"}
           size={13}
-          className={s.type === "main" ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)]"}
+          className={s.type === "main" ? "text-[var(--nv-accent)]" : s.type === "thread" ? "text-[var(--nv-info)]" : "text-[var(--nv-text-tertiary)]"}
         />
         <span
           className={`flex-1 line-clamp-2 text-xs ${
@@ -1168,11 +1261,28 @@ function LineNav({
           }`}
         >
           {s.title}
+          {collapsible && collapsed && childCount ? (
+            <span className="ml-1 text-[9px] text-[var(--nv-text-tertiary)]">({childCount})</span>
+          ) : null}
         </span>
         {s.status === "completed" && (
           <span className="rounded bg-[var(--nv-success)]/15 px-1 text-[9px] text-[var(--nv-success)]">
             完结
           </span>
+        )}
+        {collapsible && (
+          <button
+            type="button"
+            aria-label={collapsed ? "展开支线" : "收起支线"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse?.();
+            }}
+            className="shrink-0 rounded-full p-0.5 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-accent)]"
+            title={collapsed ? "展开支线" : "收起支线"}
+          >
+            <Icon name={collapsed ? "chevronRight" : "chevronDown"} size={13} />
+          </button>
         )}
         <button
           type="button"

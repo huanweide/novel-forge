@@ -15,6 +15,7 @@ import { useParams, useRouter } from "next/navigation";
 import GameCanvas from "@/components/game/GameCanvas";
 import GameParticles, { type GameParticlesHandle } from "@/components/game/GameParticles";
 import GameOutlineEditor from "@/components/game/GameOutlineEditor";
+import { PointerGlow } from "@/components/game/PointerGlow";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
@@ -135,6 +136,100 @@ export default function GamePage() {
   const [conceptLoading, setConceptLoading] = useState(false);
   const [conceptError, setConceptError] = useState<string | null>(null);
 
+  // ── 游戏模式多风格视觉（A 任务）：三模式 + 降噪/停动，localStorage 记忆 ──
+  type GameTheme = "night" | "twilight" | "day";
+  const [gameTheme, setGameTheme] = useState<GameTheme>(() => {
+    try {
+      const v = localStorage.getItem("nf-game-theme");
+      return v === "night" || v === "twilight" || v === "day" ? v : "night";
+    } catch { return "night"; }
+  });
+  const [denoise, setDenoise] = useState(() => {
+    try { return localStorage.getItem("nf-game-denoise") === "1"; } catch { return false; }
+  });
+  const [paused, setPaused] = useState(() => {
+    try { return localStorage.getItem("nf-game-paused") === "1"; } catch { return false; }
+  });
+
+  // ── 物品检测（C 任务）：新物品高亮集合 + 交易检测 + 音频 ──
+  const [newItemKeys, setNewItemKeys] = useState<Set<string>>(new Set());
+  const newItemKeysRef = useRef<Set<string>>(new Set());
+  const [trades, setTrades] = useState<Array<{ id: number; label: string }>>([]);
+  const tradeIdRef = useRef(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  // 背包分类：全部物品 / 角色物品（按 owner 区分）
+  const [backpackFilter, setBackpackFilter] = useState<"all" | "char">("all");
+
+  // 物品获得提示音（WebAudio，首次用户手势后可用）
+  const playItemChime = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new AC();
+      }
+      const ac = audioCtxRef.current;
+      if (ac.state === "suspended") void ac.resume();
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(740, ac.currentTime);
+      o.frequency.exponentialRampToValueAtTime(1180, ac.currentTime + 0.12);
+      g.gain.setValueAtTime(0.0001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.16, ac.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.34);
+      o.connect(g);
+      g.connect(ac.destination);
+      o.start();
+      o.stop(ac.currentTime + 0.36);
+    } catch {
+      /* 静默：部分浏览器禁用音频时不影响游戏 */
+    }
+  }, []);
+
+  // 检测本轮新获得的物品（按 name|owner 二元组），触发辉光/声音/平移/提示
+  const flagNewItems = useCallback(
+    (prevItems: GameItem[], nextItems: GameItem[]) => {
+      const prevKeys = new Set(prevItems.map((i) => `${i.name}|${i.owner || "主角"}`));
+      const added = nextItems.filter((i) => !prevKeys.has(`${i.name}|${i.owner || "主角"}`));
+      if (added.length === 0) return;
+      playItemChime();
+      const GLOW: Record<string, string> = {
+        night: "167,139,250",
+        twilight: "45,212,191",
+        day: "99,102,241",
+      };
+      for (const it of added) {
+        const key = `${it.name}|${it.owner || "主角"}`;
+        const color = `rgb(${GLOW[gameTheme] ?? "167,139,250"})`;
+        particlesRef.current?.emitBurst({ color, count: 14 });
+        const id = ++discoveryIdRef.current;
+        setDiscoveries((prev) => [...prev, { id, label: `获得物品·${it.name}`, color }]);
+        setTimeout(() => setDiscoveries((prev) => prev.filter((d) => d.id !== id)), 3000);
+        // 高亮 + 「新」徽章（背包内），2.6s 后淡出
+        newItemKeysRef.current = new Set(newItemKeysRef.current).add(key);
+        setNewItemKeys(new Set(newItemKeysRef.current));
+        setTimeout(() => {
+          newItemKeysRef.current = new Set([...newItemKeysRef.current].filter((k) => k !== key));
+          setNewItemKeys(new Set(newItemKeysRef.current));
+        }, 2600);
+      }
+      // 平移至右侧物品栏：自动切到背包页展示滑入动效
+      setRightTab("backpack");
+    },
+    [playItemChime, gameTheme],
+  );
+
+  // 检测文本中的交易/买卖元素，分类提示
+  const flagTrades = useCallback((text: string) => {
+    if (!text) return;
+    const kws = ["交易", "买卖", "购买", "出售", "贩卖", "收购", "卖出", "买入", "摆摊", "集市", "商铺", "钱庄", "典当", "金币", "银两", "铜钱", "议价", "成交"];
+    const hit = kws.find((k) => text.includes(k));
+    if (!hit) return;
+    const id = ++tradeIdRef.current;
+    setTrades((prev) => [...prev, { id, label: `交易·${hit}` }]);
+    setTimeout(() => setTrades((prev) => prev.filter((t) => t.id !== id)), 3500);
+  }, []);
+
   // 同步最新 status 给 setTimeout 回调读取（避免自动推进闭包读到旧值）
   useEffect(() => {
     statusRef.current = state.status;
@@ -245,6 +340,9 @@ export default function GamePage() {
 
       // 开场即检测到的实体也来一波粒子
       fireDiscoveries(data.newEntities);
+      // 开场即获得的物品：高亮 + 声音 + 平移背包；正文里的交易元素分类提示
+      flagNewItems([], data.items ?? []);
+      flagTrades(data.narrative);
       setConcept(null);
     } catch (err: any) {
       setState((s) => ({ ...s, status: "ready", error: err.message }));
@@ -389,6 +487,9 @@ export default function GamePage() {
 
       // 检测本回合新实体：粒子爆发 + 发现提示
       fireDiscoveries(doneData.newEntities);
+      // 本回合新物品：高亮 + 声音 + 平移背包；交易元素分类提示
+      flagNewItems(state.items, updatedItems);
+      flagTrades(doneData.narrative);
 
       // 自动推进：开启时，本轮结束后延迟触发下一轮「自动推进剧情」
       if (autoAdvanceRef.current) {
@@ -483,8 +584,11 @@ export default function GamePage() {
     state.status === "ready" || (state.status === "ended" && !state.narrative);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[var(--nv-void)] font-sans text-[var(--nv-text-secondary)]">
-      <GameParticles ref={particlesRef} />
+    <div
+      data-game-theme={gameTheme}
+      className="game-root flex h-screen flex-col overflow-hidden font-sans text-[var(--nv-text-secondary)]"
+    >
+      <GameParticles ref={particlesRef} theme={gameTheme} denoise={denoise} paused={paused} />
 
       {/* 顶部进度条：开场 / 每轮生成 / 导出时显示（v0.46.78） */}
       {(state.status === "generating" || state.status === "ending") && (
@@ -517,6 +621,20 @@ export default function GamePage() {
             >
               <Icon name="sparkles" size={12} />
               发现：{d.label}
+            </div>
+          ))}
+        </div>
+      )}
+      {/* 交易/买卖检测提示（C 任务） */}
+      {trades.length > 0 && (
+        <div className="pointer-events-none fixed left-1/2 top-32 z-40 flex -translate-x-1/2 flex-col items-center gap-2">
+          {trades.map((t) => (
+            <div
+              key={t.id}
+              className="trade-pill flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium shadow-lg"
+            >
+              <Icon name="coins" size={12} />
+              {t.label}
             </div>
           ))}
         </div>
@@ -579,7 +697,7 @@ export default function GamePage() {
           </button>
           <div>
             <h1 className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
-              <Icon name="gamepad" size={18} className="text-[var(--nv-creative)]" />
+              <Icon name="gamepad" size={18} className="nv-text-glow text-[var(--nv-creative)]" />
               游戏模式 — {state.bookName}
             </h1>
             <p className="text-xs text-[var(--nv-text-tertiary)]">
@@ -603,11 +721,55 @@ export default function GamePage() {
           {state.status === "playing" && (
             <button
               onClick={handleEnd}
-              className="btn-creative rounded-lg px-4 py-1.5 text-sm font-medium text-[var(--nv-text-primary)]"
+              className="nv-glow-strong btn-creative rounded-lg px-4 py-1.5 text-sm font-medium text-[var(--nv-text-primary)]"
             >
               结束并导出
             </button>
           )}
+          {/* 游戏模式视觉：三模式切换 + 降噪/停动（A 任务） */}
+          <div className="hidden items-center gap-1.5 md:flex">
+            <div className="flex items-center gap-0.5 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-0.5">
+              {([
+                { k: "twilight", icon: "cloud", label: "苍青" },
+                { k: "day", icon: "sun", label: "白昼" },
+                { k: "night", icon: "moon", label: "黑夜" },
+              ] as const).map(({ k, icon, label }) => (
+                <button
+                  key={k}
+                  onClick={() => { setGameTheme(k); try { localStorage.setItem("nf-game-theme", k); } catch { /* ignore */ } }}
+                  title={`${label}模式`}
+                  aria-label={`${label}模式`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
+                    gameTheme === k
+                      ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]"
+                      : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+                  }`}
+                >
+                  <Icon name={icon} size={14} />
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { const n = !denoise; setDenoise(n); try { localStorage.setItem("nf-game-denoise", n ? "1" : "0"); } catch { /* ignore */ } }}
+              title={denoise ? "降噪：已开启（粒子已压缩）" : "降噪：关闭"}
+              aria-label="降噪开关"
+              className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all ${
+                denoise ? "border-[var(--nv-creative)] text-[var(--nv-creative)]" : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+              }`}
+            >
+              <Icon name="sliders" size={14} />
+            </button>
+            <button
+              onClick={() => { const n = !paused; setPaused(n); try { localStorage.setItem("nf-game-paused", n ? "1" : "0"); } catch { /* ignore */ } }}
+              title={paused ? "粒子已停动（点击恢复）" : "停动粒子（点击冻结）"}
+              aria-label="停动开关"
+              className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all ${
+                paused ? "border-[var(--nv-creative)] text-[var(--nv-creative)]" : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+              }`}
+            >
+              <Icon name={paused ? "play" : "pause"} size={14} />
+            </button>
+          </div>
           {/* 窄屏：抽屉切换 */}
           <button
             onClick={() => setLeftDrawerOpen(o => !o)}
@@ -823,7 +985,7 @@ export default function GamePage() {
                 <div className="flex flex-col items-center gap-3">
                   <button
                     onClick={() => handleStart()}
-                    className="btn-creative rounded-xl px-10 py-3 text-lg font-medium text-[var(--nv-text-primary)] shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
+                    className="nv-glow-strong btn-creative rounded-xl px-10 py-3 text-lg font-medium text-[var(--nv-text-primary)] shadow-[var(--shadow-glow-creative)] transition-all active:scale-95"
                   >
                     开始游戏
                   </button>
@@ -901,22 +1063,24 @@ export default function GamePage() {
               {/* 选项区 */}
               {state.options.length > 0 && state.status === "playing" && (
                 <div className="px-6 pb-3">
-                  <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3">
-                    {state.options.map((opt) => (
+                <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3">
+                  {state.options.map((opt) => (
+                    <PointerGlow key={opt.index} className="rounded-xl">
                       <button
                         key={opt.index}
                         onClick={() =>
                           handleAction("option", `选择：${opt.text}`, opt.index)
                         }
-                        className="group flex items-start gap-2 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3 text-left text-sm text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative-soft)] hover:text-[var(--nv-text-primary)] active:scale-[0.98]"
+                        className="group flex w-full items-start gap-2 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3 text-left text-sm text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative-soft)] hover:text-[var(--nv-text-primary)] active:scale-[0.98]"
                       >
                         <span className="font-mono text-[var(--nv-creative)]">
                           {opt.index}.
                         </span>
                         <span>{opt.text}</span>
                       </button>
-                    ))}
-                  </div>
+                    </PointerGlow>
+                  ))}
+                </div>
                 </div>
               )}
             </>
@@ -974,17 +1138,46 @@ export default function GamePage() {
             )}
             {rightTab === "backpack" && (
               <div>
-                <p className="mb-3 flex items-center gap-1.5 font-medium text-[var(--nv-text-primary)]">
-                  <Icon name="backpack" size={14} className="text-[var(--nv-creative)]" /> 当前背包
-                </p>
-                {state.items.length === 0 ? (
-                  <p className="italic text-[var(--nv-text-muted)]">
-                    背包空空如也，在冒险中获取物品吧
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 font-medium text-[var(--nv-text-primary)]">
+                    <Icon name="backpack" size={14} className="text-[var(--nv-creative)]" /> 当前背包
                   </p>
-                ) : (
+                  {/* 全部物品 / 角色物品 两类切换（C 任务） */}
+                  <div className="flex items-center gap-0.5 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-0.5">
+                    {([
+                      { k: "all", label: "全部" },
+                      { k: "char", label: "角色物品" },
+                    ] as const).map(({ k, label }) => (
+                      <button
+                        key={k}
+                        onClick={() => setBackpackFilter(k)}
+                        className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${
+                          backpackFilter === k
+                            ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]"
+                            : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {(() => {
+                  const visibleItems =
+                    backpackFilter === "char"
+                      ? state.items.filter((i) => i.owner && i.owner !== "主角")
+                      : state.items;
+                  // 新获得物品高亮 + 「新」徽章（滑入背包时显现）
+                  const itemCls = (i: GameItem) =>
+                    newItemKeys.has(`${i.name}|${i.owner || "主角"}`) ? "item-detected relative" : "";
+                  return visibleItems.length === 0 ? (
+                    <p className="italic text-[var(--nv-text-muted)]">
+                      {backpackFilter === "char" ? "暂无归属角色的物品" : "背包空空如也，在冒险中获取物品吧"}
+                    </p>
+                  ) : (
                   <div className="space-y-2">
                     {(() => {
-                      const consumables = state.items.filter(
+                      const consumables = visibleItems.filter(
                         (i) => i.category === "consumable" || i.category === "other"
                       );
                       const equipment = state.items.filter(
@@ -1006,7 +1199,7 @@ export default function GamePage() {
                               {consumables.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
+                                  className={`rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1 ${itemCls(i)}`}
                                 >
                                   <span className="text-[var(--nv-text-primary)]">{i.name}</span>
                                   <span className="ml-2 text-[var(--nv-creative)]">
@@ -1027,7 +1220,7 @@ export default function GamePage() {
                               {equipment.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
+                                  className={`rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1 ${itemCls(i)}`}
                                 >
                                   <span className="text-[var(--nv-text-primary)]">{i.name}</span>
                                   <span className="ml-2 text-[var(--nv-success)]">
@@ -1048,7 +1241,7 @@ export default function GamePage() {
                               {questItems.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
+                                  className={`rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1 ${itemCls(i)}`}
                                 >
                                   <span className="text-[var(--nv-warning)]">{i.name}</span>
                                   {i.owner && (
@@ -1066,7 +1259,7 @@ export default function GamePage() {
                               {currency.map((i, idx) => (
                                 <div
                                   key={idx}
-                                  className="rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1"
+                                  className={`rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1 ${itemCls(i)}`}
                                 >
                                   <span className="text-accent-label">{i.name}</span>
                                   <span className="ml-2 text-accent-label">
@@ -1083,7 +1276,7 @@ export default function GamePage() {
                       );
                     })()}
                   </div>
-                )}
+                ); })()}
               </div>
             )}
             {rightTab === "world" && (
@@ -1145,7 +1338,7 @@ export default function GamePage() {
               <button
                 onClick={handleEnd}
                 disabled={state.status !== "playing"}
-                className="btn-creative w-full rounded-lg py-2.5 text-sm font-medium text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="nv-glow-strong btn-creative w-full rounded-lg py-2.5 text-sm font-medium text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 结束并导出
               </button>
@@ -1182,16 +1375,18 @@ export default function GamePage() {
           {/* 快捷动作按钮 */}
           <div className="mx-auto flex max-w-3xl gap-2">
             {QUICK_ACTIONS.map((action) => (
-              <button
-                key={action.type}
-                onClick={() => handleAction(action.type, action.label)}
-                disabled={state.status !== "playing"}
-                title={action.desc}
-                className="group flex flex-1 flex-col items-center gap-1 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-1 py-2.5 text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative-soft)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Icon name={action.icon as IconName} size={16} className="transition-colors group-hover:text-[var(--nv-creative)]" />
-                <span className="text-[11px]">{action.label}</span>
-              </button>
+              <PointerGlow key={action.type} className="flex-1 rounded-xl">
+                <button
+                  key={action.type}
+                  onClick={() => handleAction(action.type, action.label)}
+                  disabled={state.status !== "playing"}
+                  title={action.desc}
+                  className="group flex w-full flex-col items-center gap-1 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-1 py-2.5 text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-creative-soft)] hover:bg-[var(--nv-creative-soft)] hover:text-[var(--nv-text-primary)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icon name={action.icon as IconName} size={16} className="transition-colors group-hover:text-[var(--nv-creative)]" />
+                  <span className="text-[11px]">{action.label}</span>
+                </button>
+              </PointerGlow>
             ))}
           </div>
 
@@ -1215,7 +1410,7 @@ export default function GamePage() {
                 if (customInput.trim()) handleAction("custom", customInput.trim());
               }}
               disabled={state.status !== "playing" || !customInput.trim()}
-              className="btn-creative rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--nv-text-primary)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              className="nv-glow-strong btn-creative rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--nv-text-primary)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             >
               发送
             </button>
