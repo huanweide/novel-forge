@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain } from "./storyline-progress";
+import { computeStorylineProgress, SEVEN_ELEMENT_FILL_KEYS, groupStorylinesByMain, sortChildrenByStatusThenOrder } from "./storyline-progress";
 
 describe("故事线进度量化（v1.8.4 · sevenElements）", () => {
   it("空故事线：进度全 0、未收束", () => {
@@ -75,5 +75,40 @@ describe("N2 groupStorylinesByMain（多主线遍历）", () => {
   it("空/异常输入安全", () => {
     expect(groupStorylinesByMain(undefined as any).mains).toEqual([]);
     expect(groupStorylinesByMain([]).fallbackMain).toBeNull();
+  });
+});
+
+describe("thread 伏笔分类与完结沉底（#223）", () => {
+  const data = [
+    { id: "main1", type: "main", status: "active", title: "主线", order: 1 },
+    { id: "s1", type: "side", status: "active", title: "活跃支线", parentId: "main1", order: 2 },
+    { id: "s2", type: "side", status: "completed", title: "完结支线", parentId: "main1", order: 1 },
+    { id: "t1", type: "thread", status: "active", title: "活跃伏笔", parentId: "main1", order: 3 },
+    { id: "t2", type: "thread", status: "completed", title: "完结伏笔", parentId: "main1", order: 1 },
+  ];
+
+  it("thread 被单独分类，不混入 sides", () => {
+    const { sides, threads } = groupStorylinesByMain(data);
+    expect(sides.map((s: any) => s.id).sort()).toEqual(["s1", "s2"]);
+    expect(threads.map((t: any) => t.id).sort()).toEqual(["t1", "t2"]);
+  });
+
+  it("childrenOf 返回主线下的支线+伏笔，且完结沉底、order 升序", () => {
+    const { childrenOf } = groupStorylinesByMain(data);
+    const ids = childrenOf("main1").map((s: any) => s.id);
+    // 未完结(s1 order2, t1 order3) 在前并按 order 升序；完结(s2,t2) 沉底
+    expect(ids[0]).toBe("s1");
+    expect(ids[1]).toBe("t1");
+    expect(ids[2]).toBe("s2");
+    expect(ids[3]).toBe("t2");
+  });
+
+  it("sortChildrenByStatusThenOrder：完结沉底、同状态按 order 升序", () => {
+    const arr = [
+      { id: "a", status: "completed", order: 1 },
+      { id: "b", status: "active", order: 5 },
+      { id: "c", status: "active", order: 2 },
+    ];
+    expect(sortChildrenByStatusThenOrder(arr).map((x: any) => x.id)).toEqual(["c", "b", "a"]);
   });
 });

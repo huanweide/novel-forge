@@ -86,11 +86,18 @@ export async function POST(request: Request) {
 - 如果已有主线存在（非前主线已完结的 newMain 场景），你只能生成支线，绝不能再开第二条主线。多开主线会被系统强制降级为支线。
 - 主线七要素默认留空：大主线不预填七要素，等主线全部推进完结后由系统/AI 自动回填；支线可正常填七要素。
 
+【伏笔/线索铁律（最高优先级，与主线/支线并列，务必遵守）】
+- 伏笔/线索（thread）= 一个悬而未解的谜团、物证、人物暗线、未明真相——它"不是一条完整的小故事"，而是一颗埋下的种子。典型如"掩埋之钥""龙元裂缝的第七个白日""谁留下的血字"。
+- 判断法（最重要）：这条内容是"一个待解的点"（伏笔）？还是"一段有起承转合的情节"（支线/主线）？前者必须生成 type="thread"，绝不允许生成 type="side"（支线）。支线必须是能撑起情节的小故事，绝不能把线索/伏笔塞进支线。
+- thread 不要求完整七要素因果链，只需一句话 description 概述这个悬念即可；七要素留空。
+- thread 必须归属于某条主线（parentId=主线），不能独立成树；若项目中尚无主线，则不要生成 thread（降级为不生成）。
+- 严禁把"对话/发现/前往某地"这类小事开成支线——它们应是 thread（伏笔）或主线时间轴事件（MILESTONE/CLUE），绝不是支线。
+
 【输出格式——纯JSON】
 {
   "lines": [
     {
-      "type": "main",
+      "type": "main" | "side" | "thread",  // 主线 / 支线 / 伏笔线索（见上方铁律，线索绝不可填 side）
       "title": "事件线名称",
       "description": "一句话概述这条线",
       "desire": "...", "obstacle": "...", "action": "...", "result": "...",
@@ -179,12 +186,15 @@ ${
     // 非落库（草稿预览）→ 返回 suggestions 供前端中间编辑态
     if (!shouldCommit) {
       const suggestionView = lines.map((l, i) => {
-        const isMain = (l.type as string) === "main";
+        const rawType = (l.type as string);
+        const isMain = rawType === "main";
+        const isThread = rawType === "thread";
         return {
-          type: isMain ? "main" : "side",
+          type: isMain ? "main" : isThread ? "thread" : "side",
           title: (l.title as string) || `事件线${i + 1}`,
           description: (l.description as string) || "",
-          sevenElements: isMain ? emptySevenElements() : toSevenElements(l),
+          // 主线与伏笔(thread)七要素留空；支线正常填充
+          sevenElements: isMain || isThread ? emptySevenElements() : toSevenElements(l),
         };
       });
       return NextResponse.json({ suggestions: suggestionView });
@@ -193,7 +203,8 @@ ${
     // ── 落库逻辑（buildData 改用 sevenElements）──
     const maxOrder = existingStorylines.reduce((max, s) => Math.max(max, s.order), 0);
     const mainLines = lines.filter((l) => (l.type as string) === "main");
-    const sideLines = lines.filter((l) => (l.type as string) !== "main");
+    let sideLines = lines.filter((l) => (l.type as string) === "side");
+    let threadLines = lines.filter((l) => (l.type as string) === "thread"); // #223：伏笔/线索独立一类
 
     const hasActiveMain = existingStorylines.some((s) => s.type === "main" && s.status === "active");
     const isNewMainMode = mode === "newMain";
@@ -235,10 +246,13 @@ ${
                   title: line.title as string,
                   description: line.description as string,
                 })
-          : toSevenElements(line),
+          // #223：伏笔(thread)不要求七要素，留空，由 UI 以线索事件数展示
+          : type === "thread"
+            ? { desire: "", obstacle: "", action: "", result: "", twist: "", turn: "", ending: null }
+            : toSevenElements(line),
     });
 
-    // 先建主线（如有），拿到 id 供支线挂载
+    // 先建主线（如有），拿到 id 供支线/伏笔挂载
     for (const line of mainLines) {
       const m = await prisma.storyline.create({
         data: buildData(line, "main", maxOrder + created.length + 1, null),
@@ -256,6 +270,12 @@ ${
       });
     }
 
+    // #223：伏笔(thread)必须依附主线；若没有任何主线（理论上 mainId 必有，双保险）则降级为支线避免孤立
+    if (!mainId && threadLines.length > 0) {
+      sideLines.push(...threadLines);
+      threadLines = [];
+    }
+
     // 再建支线，parentId 挂到主线（让"支线服务于主线"数据化）
     const createdSides = await Promise.all(
       sideLines.map((line, i) =>
@@ -266,10 +286,26 @@ ${
     );
     created.push(...createdSides);
 
+    // 建伏笔(thread)，强制挂主线，七要素留空
+    const createdThreads = mainId && threadLines.length > 0
+      ? await Promise.all(
+          threadLines.map((line, i) =>
+            prisma.storyline.create({
+              data: buildData(line, "thread", maxOrder + created.length + i + 1, mainId),
+            })
+          )
+        )
+      : [];
+    created.push(...createdThreads);
+
     return NextResponse.json({
       storylines: created,
       count: created.length,
-      types: { main: created.filter((s) => s.type === "main").length, side: created.filter((s) => s.type === "side").length },
+      types: {
+        main: created.filter((s) => s.type === "main").length,
+        side: created.filter((s) => s.type === "side").length,
+        thread: created.filter((s) => s.type === "thread").length,
+      },
     });
   } catch (err) {
     return jsonError(err);

@@ -56,18 +56,34 @@ export function computeStorylineProgress(s: any): StorylineProgress {
 export interface StorylineGroup {
   mains: any[];
   sides: any[];
+  /** 伏笔/线索线（从支线中剥离的独立一类，不参与「支线」统计与因果链要求） */
+  threads: any[];
   /** 回退主线：parentId 解析失败时的默认归属 */
   fallbackMain: any | null;
   /** 解析某条线的归属主线（可能为自身若是主线） */
   resolveParent: (s: any) => any | null;
-  /** 取某条主线名下的支线集合 */
+  /** 取某条主线名下的支线 + 伏笔集合（已按「完结沉底 + order」排序） */
   childrenOf: (mainId: string) => any[];
+}
+
+/**
+ * 子线排序：完结（completed）沉底、其余按 order 升序。
+ * 让「进行中的支线/伏笔」排前、「已完结」沉底，主线树下始终清爽。
+ */
+export function sortChildrenByStatusThenOrder(children: any[]): any[] {
+  return [...children].sort((a, b) => {
+    const aDone = a?.status === "completed" ? 1 : 0;
+    const bDone = b?.status === "completed" ? 1 : 0;
+    if (aDone !== bDone) return aDone - bDone; // 未完结(0) 在前，完结(1) 沉底
+    return (a?.order ?? 0) - (b?.order ?? 0);
+  });
 }
 
 export function groupStorylinesByMain(storylines: any[]): StorylineGroup {
   const list = Array.isArray(storylines) ? storylines : [];
   const mains = list.filter((s) => s && s.type === "main");
   const sides = list.filter((s) => s && s.type === "side");
+  const threads = list.filter((s) => s && s.type === "thread"); // #223：伏笔/线索独立一类
   const fallbackMain = mains.find((m) => m.status === "active") || mains[0] || null;
 
   const resolveParent = (s: any): any | null => {
@@ -78,8 +94,11 @@ export function groupStorylinesByMain(storylines: any[]): StorylineGroup {
     return fallbackMain;
   };
 
+  // 主线名下 = 支线 + 伏笔，按「完结沉底 + order」排序（#223-B）
   const childrenOf = (mainId: string) =>
-    sides.filter((s) => resolveParent(s)?.id === mainId);
+    sortChildrenByStatusThenOrder(
+      [...sides, ...threads].filter((s) => resolveParent(s)?.id === mainId),
+    );
 
-  return { mains, sides, fallbackMain, resolveParent, childrenOf };
+  return { mains, sides, threads, fallbackMain, resolveParent, childrenOf };
 }

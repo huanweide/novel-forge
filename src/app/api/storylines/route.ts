@@ -33,11 +33,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "缺少 projectId 或 title" }, { status: 400 });
     }
 
+    // #223：伏笔(thread)必须依附主线；若未显式指定 parentId，则挂到活跃主线，避免孤立成树
+    let resolvedParentId = parentId || null;
+    const resolvedType = type === "main" || type === "side" || type === "thread" ? type : "side";
+    if (resolvedType === "thread" && !resolvedParentId) {
+      const activeMain = await prisma.storyline.findFirst({
+        where: { projectId, type: "main", status: "active" },
+        orderBy: { order: "asc" },
+      });
+      resolvedParentId = activeMain?.id ?? null;
+    }
+
     const storyline = await prisma.storyline.create({
       data: {
         projectId,
-        type: type || "side",
-        parentId: parentId || null,
+        type: resolvedType,
+        parentId: resolvedParentId,
         title: title.trim(),
         description: description || "",
         order: order ?? 0,

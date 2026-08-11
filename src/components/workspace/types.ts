@@ -88,7 +88,7 @@ export interface StoryNodeData {
 
 export interface StorylineData {
   id: string; projectId: string;
-  type: "main" | "side"; parentId?: string | null;
+  type: "main" | "side" | "thread"; parentId?: string | null;
   title: string; order: number; status: string; description: string;
   desire: string; obstacle: string; action: string; result: string;
   twist: string; turn: string; ending: string;

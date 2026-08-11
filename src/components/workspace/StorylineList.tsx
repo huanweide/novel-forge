@@ -22,7 +22,7 @@ export interface StorylineEventData {
 export interface StorylineData {
   id: string;
   projectId: string;
-  type: "main" | "side";
+  type: "main" | "side" | "thread";
   parentId?: string | null;
   title: string;
   order: number;
@@ -112,7 +112,7 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
     });
   };
 
-  const { mains: mainLines, sides: sideLines, resolveParent } = groupStorylinesByMain(storylines);
+  const { mains: mainLines, sides: sideLines, threads, resolveParent, childrenOf } = groupStorylinesByMain(storylines);
 
   if (loading) return <div className="py-4 text-center text-xs text-[var(--nv-text-tertiary)]">加载中…</div>;
 
@@ -120,7 +120,9 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
     <div className="space-y-2 p-1">
       {/* 工具栏：只显示统计，AI 生成入口收敛到每条主线/支线的工作台右上角 */}
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] text-[var(--nv-text-tertiary)]">{storylines.length} 条故事线</span>
+        <span className="text-[10px] text-[var(--nv-text-tertiary)]">
+          {mainLines.length} 主线 · {sideLines.length} 支线{threads.length > 0 ? ` · ${threads.length} 伏笔` : ""}
+        </span>
       </div>
 
       {loadError && !loading && (
@@ -149,7 +151,7 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
       {storylines.length > 0 && (
         <div className="space-y-1.5">
           {mainLines.map((mainLine) => {
-            const childLines = sideLines.filter((s) => resolveParent(s)?.id === mainLine.id);
+            const childLines = childrenOf(mainLine.id); // #223：支线 + 伏笔(thread)，已按「完结沉底 + order」排序
             const expanded = expandedMains.has(mainLine.id);
             const p = computeStorylineProgress(mainLine);
             return (
@@ -188,6 +190,26 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
                 {expanded && childLines.length > 0 && (
                   <div className="space-y-1 px-2 pb-1.5">
                     {childLines.map((s) => {
+                      const isThread = s.type === "thread";
+                      if (isThread) {
+                        // #223：伏笔(thread)——不要求七要素，以「线索点」计数展示，区别于支线进度条
+                        const clueCount = (s.events || []).filter(
+                          (e: StorylineEventData) => e.kind === "CLUE",
+                        ).length;
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => setWorkbenchId(s.id)}
+                            className="flex w-full items-center gap-1 rounded px-1.5 py-1 text-left transition-colors hover:bg-[var(--nv-surface-2)]"
+                          >
+                            <Icon name="link" size={10} className="shrink-0 text-[var(--nv-text-tertiary)]" />
+                            <span className="flex-1 truncate text-[10px] text-[var(--nv-text-primary)]">{s.title}</span>
+                            <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px] text-[var(--nv-text-tertiary)]">
+                              {s.status === "completed" ? "已解明" : `伏笔·${clueCount}点`}
+                            </span>
+                          </button>
+                        );
+                      }
                       const cp = computeStorylineProgress(s);
                       return (
                         <button
@@ -207,10 +229,28 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
             );
           })}
 
-          {/* 无父支线 */}
-          {sideLines
+          {/* 无父支线 / 伏笔（悬空，未挂任何主线） */}
+          {[...sideLines, ...threads]
             .filter((s) => !resolveParent(s))
             .map((s) => {
+              if (s.type === "thread") {
+                const clueCount = (s.events || []).filter(
+                  (e: StorylineEventData) => e.kind === "CLUE",
+                ).length;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setWorkbenchId(s.id)}
+                    className="flex w-full items-center gap-1 rounded-lg border border-[var(--nv-border-2)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--nv-surface-2)]"
+                  >
+                    <Icon name="link" size={11} className="shrink-0 text-[var(--nv-text-tertiary)]" />
+                    <span className="flex-1 truncate text-xs text-[var(--nv-text-primary)]">{s.title}</span>
+                    <span className="rounded bg-[var(--nv-surface-2)] px-1 text-[9px] text-[var(--nv-text-tertiary)]">
+                      {s.status === "completed" ? "已解明" : `伏笔·${clueCount}点`}
+                    </span>
+                  </button>
+                );
+              }
               const cp = computeStorylineProgress(s);
               return (
                 <button

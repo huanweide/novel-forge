@@ -15,7 +15,7 @@ const UNKNOWN_ERROR = "请求失败，请稍后重试";
 const MAX_POLLS = 240; // 轮询兜底上限（≈6min，1.5s/次）
 
 export interface StorylineSuggestion {
-  type: "main" | "side";
+  type: "main" | "side" | "thread";
   title: string;
   description: string;
   sevenElements: {
@@ -607,7 +607,7 @@ export function StorylineWorkbench({
                         : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)]"
                     }`}
                   >
-                    {s.type === "main" ? "主线" : "支线"}
+                    {s.type === "main" ? "主线" : s.type === "thread" ? "伏笔" : "支线"}
                   </span>
                   <DialogInput
                     value={s.title}
@@ -764,6 +764,7 @@ export function StorylineWorkbench({
                     >
                       <option value="main">主线</option>
                       <option value="side">支线</option>
+                      <option value="thread">伏笔</option>
                     </select>
                   </DialogField>
                   <DialogField label="状态">
@@ -778,8 +779,8 @@ export function StorylineWorkbench({
                     </select>
                   </DialogField>
                 </div>
-                {/* 支线归属主线 */}
-                {form.type === "side" && (
+                {/* 支线/伏笔归属主线 */}
+                {(form.type === "side" || form.type === "thread") && (
                   <DialogField label="所属主线">
                     <select
                       className="input-glass w-full rounded-lg px-3 py-2 text-sm"
@@ -825,7 +826,7 @@ export function StorylineWorkbench({
                             : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)]"
                         }`}
                       >
-                        {selected.type === "main" ? "主线" : "支线"}
+                        {selected.type === "main" ? "主线" : selected.type === "thread" ? "伏笔" : "支线"}
                       </span>
                       <h3 className="truncate text-lg font-semibold text-[var(--nv-text-primary)]">
                         {selected.title}
@@ -1153,7 +1154,7 @@ function LineNav({
     >
       <div className="flex items-center gap-1.5">
         <Icon
-          name={s.type === "main" ? "star" : "arrowRight"}
+          name={s.type === "main" ? "star" : s.type === "thread" ? "link" : "arrowRight"}
           size={13}
           className={s.type === "main" ? "text-[var(--nv-accent)]" : "text-[var(--nv-text-tertiary)]"}
         />
