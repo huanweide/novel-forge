@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.22 — 2026-08-11
+
+**恢复游戏模式前端入口**
+
+- **游戏模式入口恢复**：在 CenterPanel 生成控制区重新加入「游戏模式」按钮（gamepad 图标），与「生成/重写」「微调」「批量写作」并列；点击调用既有的 `onOpenGame` prop，由 `page.tsx` 跳转 `/workspace/[projectId]/game/[selectedNode.id]`。v1.8.16 后端 7 路由、游戏引擎、三模式视觉与背包系统全部保留并重新可达。
+- **无头检测验证入口**：Playwright 检测 workspace → 选中左侧章节 → 点击「游戏模式」→ URL 正确跳转 `/workspace/[pid]/game/[nodeId]`；页面渲染「游戏模式 · 跑团式互动创作」说明卡片与「开始冒险」按钮，零 console / pageerror。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 46 文件 408/408 全绿。
+
+---
+
 ## v1.8.21 — 2026-08-11
 
 **因果链检测优化 + 帮助文案修正**

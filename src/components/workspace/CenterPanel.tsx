@@ -310,6 +310,13 @@ export function CenterPanel({
                         <Icon name="pencil" size={12} /> 批量写作
                       </button>
                     )}
+                    {!isGenerating && (
+                      <button onClick={onOpenGame}
+                        className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
+                        title="进入游戏模式：以互动叙事方式探索本章">
+                        <Icon name="gamepad" size={12} /> 游戏模式
+                      </button>
+                    )}
                   </>
                 )}
                 <div className="flex items-center gap-1 ml-auto">

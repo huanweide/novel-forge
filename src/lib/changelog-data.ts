@@ -25,18 +25,40 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.21";
+export const LATEST_VERSION = "v1.8.22";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.21 修复因果链帮助文案：将「点击节点右上角小图标」改为「点击节点下方按钮」，与实际 UI 位置一致，避免用户找不到角色标注入口。",
-  "v1.8.21 无头检测验证因果链角色标注：在干净 dev server 上跑通空状态→造事件→节点渲染→点选「剧情推进点」→PUT 落库→pg 实查 role=advance→统计计数联动，零 console 报错、零 503。",
-  "v1.8.21 绕过 stale dev server：旧 3001 server 被平台进程锁住且 Prisma client 陈旧（不识 role 字段），改用独立 distDir 的干净 server 完成检测，并给 .gitignore 增加 .next-detect*。",
-  "v1.8.21 双门禁复跑：源码 tsc 0 错误 + vitest 46 文件 408/408 全绿。",
+  "v1.8.22 恢复游戏模式前端入口：在 CenterPanel 生成控制区重新显示「游戏模式」按钮，接回既有的 onOpenGame 跳转逻辑，普通用户可再次进入跑团式互动创作。",
+  "v1.8.22 无头检测验证游戏模式入口：workspace 选中章节 → 点击「游戏模式」→ 正确跳转 /workspace/[projectId]/game/[nodeId]，页面呈现「游戏模式 · 跑团式互动创作」特征，零报错。",
+  "v1.8.22 保留游戏模式后端与视觉组件：v1.8.16 引入的 7 个 game API、游戏引擎、三模式视觉、背包与物品跟踪均完整保留，仅恢复被 Round-16 移除的 UI 入口。",
+  "v1.8.22 双门禁复跑：源码 tsc 0 错误 + vitest 46 文件 408/408 全绿。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.22",
+    date: "2026-08-11",
+    title: "恢复游戏模式前端入口",
+    sections: [
+      {
+        label: "游戏模式入口恢复",
+        items: [
+          "在 CenterPanel 生成控制区重新加入「游戏模式」按钮（gamepad 图标），与「生成/重写」「微调」「批量写作」并列",
+          "按钮点击调用既有的 onOpenGame prop，由 page.tsx 负责跳转 /workspace/[projectId]/game/[selectedNode.id]",
+          "恢复后普通用户无需记忆 URL 即可进入游戏模式，v1.8.16 后端 7 路由、游戏引擎、三模式视觉与背包系统全部可用",
+        ],
+      },
+      {
+        label: "无头检测验证",
+        items: [
+          "Playwright 检测：进入 workspace → 选中左侧第一章节 → 点击「游戏模式」按钮 → URL 正确跳转为 /workspace/[pid]/game/[nodeId]",
+          "页面渲染「游戏模式 · 跑团式互动创作」说明卡片与「开始冒险」按钮，零 console 报错、零 pageerror",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.21",
     date: "2026-08-11",
