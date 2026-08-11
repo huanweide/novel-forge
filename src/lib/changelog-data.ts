@@ -25,18 +25,48 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v1.8.20";
+export const LATEST_VERSION = "v1.8.21";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v1.8.20 因果链叙事角色标注：StorylineEvent 新增 role 字段（推进点/卡点/分支选择点），节点卡片内三态按钮可点选、落库，顶部按角色筛选并计数。",
-  "v1.8.20 因果链文案重写：顶部新增「怎么读这条链？」解释三个标签含义；节点流向由「因 → 果」改为「先发生 / 后导致」，明确时间先后与因果权重。",
-  "v1.8.20 角色标注注入写作上下文：outline-context 把时间轴方向（先发生 → 后导致）与每个节点的 [推进点]/[卡点]/[分支选择点] 标签一并写入 LLM 上下文，AI 写作可理解叙事节奏。",
-  "v1.8.20 双门禁复跑：源码 tsc 0 错误 + vitest 46 文件 408/408 全绿；schema 新增 role 字段并建迁移。",
+  "v1.8.21 修复因果链帮助文案：将「点击节点右上角小图标」改为「点击节点下方按钮」，与实际 UI 位置一致，避免用户找不到角色标注入口。",
+  "v1.8.21 无头检测验证因果链角色标注：在干净 dev server 上跑通空状态→造事件→节点渲染→点选「剧情推进点」→PUT 落库→pg 实查 role=advance→统计计数联动，零 console 报错、零 503。",
+  "v1.8.21 绕过 stale dev server：旧 3001 server 被平台进程锁住且 Prisma client 陈旧（不识 role 字段），改用独立 distDir 的干净 server 完成检测，并给 .gitignore 增加 .next-detect*。",
+  "v1.8.21 双门禁复跑：源码 tsc 0 错误 + vitest 46 文件 408/408 全绿。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v1.8.21",
+    date: "2026-08-11",
+    title: "因果链检测优化 + 帮助文案修正",
+    sections: [
+      {
+        label: "检测发现的文案优化",
+        items: [
+          "修正「怎么读这条链？」帮助文案：将「点击节点右上角小图标」改为「点击节点下方按钮」，与角色标注按钮实际位于节点卡片下方的 UI 一致，消除用户找不到入口的困惑",
+        ],
+      },
+      {
+        label: "无头检测验证角色标注",
+        items: [
+          "用 Playwright 在干净 dev server 上跑完整因果链 UI：workspace → 故事 tab → 主线「保守备份 vs 主动扩张」→ 因果链 tab",
+          "先验证空状态「这条线还没有事件」与帮助文案「怎么读这条链？」渲染正确；再临时写入 MILESTONE + EVENT + CLUE 三类事件，验证节点渲染、流向标记「先发生 → 后导致」、悬而未决的因区",
+          "点击首个节点「剧情推进点」按钮，触发 PUT /api/storyline-events/[id]，pg 直连确认 role 字段持久化为 advance；顶部统计计数由「推进 0」实时变为「推进 1」",
+          "检测结果：零 console.error / pageerror，零 503；临时数据统一 tag 事后 pg 清理",
+        ],
+      },
+      {
+        label: "工程质量",
+        items: [
+          "绕过被平台进程锁住的旧 3001 stale dev server（其 Prisma client 不识 role 字段，导致 PUT 503）：使用独立 distDir 启动干净 dev server 完成检测",
+          "gitignore 增加 .next-detect*，避免检测用独立 distDir 污染 git status",
+          "双门禁：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 46 文件 408/408 全绿",
+        ],
+      },
+    ],
+  },
   {
     version: "v1.8.20",
     date: "2026-08-11",

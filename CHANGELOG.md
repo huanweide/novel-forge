@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v1.8.21 — 2026-08-11
+
+**因果链检测优化 + 帮助文案修正**
+
+- **检测发现的文案优化**：修正「怎么读这条链？」帮助文案，将「点击节点右上角小图标」改为「点击节点下方按钮」，与角色标注按钮实际位于节点卡片下方的 UI 一致，消除用户找不到入口的困惑。
+- **无头检测验证角色标注**：用 Playwright 在干净 dev server 上跑完整因果链 UI（workspace → 故事 → 主线 → 因果链 tab）；先验证空状态与帮助文案，再临时写入 MILESTONE / EVENT / CLUE 验证节点渲染、流向「先发生 → 后导致」、「悬而未决的因」；点击「剧情推进点」触发 PUT，pg 直连确认 role 持久化为 `advance`，顶部统计计数由「推进 0」变为「推进 1」。零 console / pageerror，零 503。
+- **绕过 stale dev server**：旧 3001 server 被平台进程锁住且 Prisma client 陈旧（不识 `role` 字段，导致 PUT 503），使用独立 `distDir` 启动干净 dev server 完成检测；`.gitignore` 增加 `.next-detect*` 避免检测缓存污染。
+- **验证**：`SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 46 文件 408/408 全绿。
+
+---
+
 ## v1.8.20 — 2026-08-11
 
 **因果链叙事角色标注 + 注入写作上下文**
