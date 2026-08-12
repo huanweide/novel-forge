@@ -108,6 +108,7 @@ export function OutlineDialog({
             <Button onClick={onGenerate} disabled={isGenerating || (chapterCount === -1 && !customChapterCount)} className="btn-primary text-[var(--nv-text-primary)]">
               {isGenerating ? <><Icon name="loader" size={14} className="animate-spin" /> 生成中…</> : <><Icon name="sparkles" size={14} /> 生成大纲预览</>}
             </Button>
+            <p className="text-[11px] text-[var(--nv-text-tertiary)]">生成在后台运行，可随时关闭本窗口，完成后自动返回预览</p>
           </div>
           {/* 总览文本 */}
           {rawOutline && (

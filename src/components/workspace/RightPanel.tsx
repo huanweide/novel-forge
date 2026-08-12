@@ -20,7 +20,10 @@ type EntitySubTab = "entities" | "foreshadowing" | "relationships" | "consistenc
 
 interface RightPanelProps {
   selectedNode: StoryNodeData | null;
-  onClose: () => void;
+  /** v2.0.14：最小化与展开由父组件控制，配合左栏互斥，确保只一侧可见；父组件传 onMinimize/onExpand 即可 */
+  minimized: boolean;
+  onMinimize: () => void;
+  onExpand: () => void;
   contextRefreshKey: number;
   authorNote: string;
   onEditCharacter?: (id: string) => void;
@@ -56,12 +59,11 @@ const MONITOR_SECTIONS = [
 ] as const;
 
 export function RightPanel(props: RightPanelProps) {
-  const { selectedNode, onClose, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, recallMemories = [], isGenerating = false } = props;
+  const { selectedNode, minimized, onMinimize, onExpand, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, recallMemories = [], isGenerating = false } = props;
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
 
-  const [minimized, setMinimized] = useState(false);
   const [topTab, setTopTab] = useState<TopTab>("ai");
   const [entitySubTab, setEntitySubTab] = useState<EntitySubTab>("entities");
   const [showContext, setShowContext] = useState(false);
@@ -104,17 +106,16 @@ export function RightPanel(props: RightPanelProps) {
   if (minimized) {
     return (
       <aside className="flex w-10 shrink-0 flex-col items-center gap-3 border-l border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-3 backdrop-blur-sm">
-        <button onClick={() => setMinimized(false)} className="text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]" title="展开面板" aria-label="展开面板"><Icon name="arrowLeft" size={16} /></button>
+        <button onClick={onExpand} className="text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]" title="展开面板" aria-label="展开面板"><Icon name="arrowLeft" size={16} /></button>
         <div className="flex flex-1 flex-col items-center gap-3 text-[10px] text-[var(--nv-text-tertiary)]">
           {TOP_TABS.map((t) => (
-            <button key={t.key} onClick={() => { setMinimized(false); setTopTab(t.key); }}
+            <button key={t.key} onClick={() => { onExpand(); setTopTab(t.key); }}
               className={`writing-mode-vertical hover:text-[var(--nv-text-primary)] ${topTab === t.key ? "text-[var(--nv-primary)]" : ""}`}
               style={{ writingMode: "vertical-rl" }} title={t.label}
             >{t.label}</button>
           ))}
         </div>
-        <button onClick={onClose} className="text-[var(--nv-text-muted)] transition-colors hover:text-[var(--nv-danger)]" title="完全关闭" aria-label="关闭面板"><Icon name="x" size={14} /></button>
-      </aside>
+              </aside>
     );
   }
 
@@ -136,8 +137,7 @@ export function RightPanel(props: RightPanelProps) {
             <Icon name={t.icon} size={13} /> {t.label}
           </button>
         ))}
-        <button onClick={() => setMinimized(true)} className="shrink-0 px-2 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]" title="最小化" aria-label="最小化"><Icon name="arrowRight" size={14} /></button>
-        <button onClick={onClose} className="shrink-0 px-2 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-danger)]" title="完全关闭" aria-label="关闭面板"><Icon name="x" size={14} /></button>
+        <button onClick={onMinimize} className="shrink-0 px-2 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-danger)]" title="最小化（可从右侧竖条随时展开）" aria-label="最小化面板"><Icon name="x" size={14} /></button>
       </div>
 
       {/* Tab 内容 */}

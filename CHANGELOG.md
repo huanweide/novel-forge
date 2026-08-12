@@ -1,5 +1,22 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.14 — 2026-08-12
+
+### 右侧检测栏最小化常驻（修复关闭后无法拉起）（round-19）
+- RightPanel `minimized` 状态由组件内部 useState 提升为 workspace 父页面 props 控制（minimized/onMinimize/onExpand），面板常驻渲染不再因关闭而卸载；右侧竖条常驻，随时可拉回。
+- 与左栏互斥：展开右栏时自动收起左栏（onExpand 内 setLeftCollapsed(true)）；宽度 w-10↔w-80 用 transition-all duration-200 平滑过渡，消除「收缩不完全/突兀」。
+- 顶部栏双按钮（最小化+完全关闭）合并为单按钮（最小化），竖条内删除「完全关闭」入口，统一「只有一个拉出/打开栏位」的心智模型。
+
+### 角色栏 UI 一致性（round-19）
+- 去重结果卡片标题改为 flex-1 min-w-0 truncate + 按钮 inline-flex items-center gap-1 whitespace-nowrap shrink-0，修复「×关闭」竖排挤压。
+- 筛选徽章 4 种激活态（状态/已分类/未分类/具体标签）统一为 bg-[var(--nv-primary)]，消除多色语义混乱；具体标签字号 9px→10px、圆角改 rounded-full，大小字体统一。
+- 新建标签 / 打标到选中 从 CharacterList 移入 CharacterToolbar 复用 base 样式，消除与工具栏按钮大小字体不一。
+
+### 大纲按钮后台化（保留并改造，二选一）（round-19）
+- 生成改为后台运行：handleOutlineConfirmed 启动后右下角显示进度胶囊「大纲生成中…（后台运行，可关闭弹窗，完成后自动返回）」，关掉弹窗任务仍在父层 state 继续，可隐藏胶囊（隐藏≠停止）。
+- 完成后自动重开 OutlineDialog 显示预览（setShowOutlineDialog(true) + toast 成功），并保留 onClose 不清空预览/错误/原始大纲——关闭后重开仍可见历史结果。
+- Dialog 内加「生成在后台运行，可随时关闭本窗口，完成后自动返回预览」提示，赋予大纲按钮真实意义（后台异步、可离窗、结果不丢）。
+
 ## v2.0.13 — 2026-08-12
 
 ### 续写截断保护（round-18 F1）

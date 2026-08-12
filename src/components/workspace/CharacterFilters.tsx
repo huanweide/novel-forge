@@ -72,7 +72,7 @@ export function CharacterFilters({
             key={o.key}
             onClick={() => { onStatus(statusFilter === o.key ? "all" : o.key); }}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
-              statusFilter === o.key ? "bg-[var(--nv-surface-3)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+              statusFilter === o.key ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {o.label}<span className="ml-0.5 opacity-60">{o.count}</span>
@@ -99,7 +99,7 @@ export function CharacterFilters({
             onClick={() => onTag(tagFilter === o.key ? "all" : o.key)}
             className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
               tagFilter === o.key
-                ? "bg-[var(--nv-accent)] text-[var(--nv-text-primary)]"
+                ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]"
                 : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
@@ -111,10 +111,10 @@ export function CharacterFilters({
           <button
             key={t}
             onClick={() => onTag(tagFilter === t ? "all" : t)}
-            className={`text-[9px] px-1 py-0 rounded transition-colors ${
+            className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
               tagFilter === t
-                ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]"
-                : "bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+                ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)]"
+                : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
             {t}

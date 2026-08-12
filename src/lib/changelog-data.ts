@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.13";
+export const LATEST_VERSION = "v2.0.14";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.14 写作右侧检测栏与大纲后台化修复（round-19）：右侧检测栏改为最小化常驻——关闭不再卸载面板，右侧竖条随时拉回，与左栏互斥（展开右栏自动收左栏），宽度 transition-all 平滑过渡，修复「关闭后无法拉起/收缩不完全」；角色栏筛选徽章 4 种激活色统一为 bg-[var(--nv-primary)]，新建标签/打标移入 CharacterToolbar 复用 base 样式消除按钮大小字体不一，去重结果卡片关闭按钮竖排修复；大纲按钮改为后台运行——关掉弹窗任务继续、右下角进度胶囊可见、完成后自动重开预览，Dialog 内加「后台运行」提示，解决「叉掉无后台状态与进度」痛点。",
   "v2.0.13 flow-lens 四项错误修复（round-18 F1/F2/F3/F4）：续写 finish_reason=length 截断保护回退草稿并告警；续写路径填表统一归确认门（不再自动填 lorebook）；write/continue 两处草稿落库由 fire-and-forget 改 await 同步，消除 [PARTIAL_DRAFT] 竞态泄漏；伏笔收束检测与主线缝合由 HTTP 自回环（硬编码 origin localhost:3001）改进程内直调 detectPayoffs/runStorylineGeneration，消除非本地部署死链。",
   "v2.0.12 角色 role 与题材 genre 分类标签单源治理（round-18 F-04/F-05）：角色 role 中文映射收敛为 character-parse.ts 单一权威源（补 comic_relief 对齐 8 类、派生 CHARACTER_ROLE_LABEL），修复 DissectDimensions/ImportWizard/workshop 三处硬编码错标（love_interest/catalyst/background/comic_relief 不再被标为「配角」）；题材 GENRE_OPTIONS 以首页 GENRE_TEMPLATES 为基准并集补充，消除与首页选题分叉。",
   "v2.0.11 分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）：世界分类 15 类收敛为 world-category-classifier 单一权威源；LORE_COLORS 升为 Record<WorldCategory,string> 强制覆盖全部 15 类（补全 fate_system/physics/public_system/character_relationship 4 色）；ChapterEntitiesPanel 实体分组遍历权威源动态生成 15 组，7 类不再被吞；图例与高亮配色三处共用单一源。",
@@ -40,6 +41,44 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.14",
+    date: "2026-08-12",
+    title: "v2.0.14 右侧检测栏最小化常驻 + 角色栏 UI 一致 + 大纲后台化（round-19）",
+    sections: [
+      {
+        label: "右侧检测栏最小化常驻（修复关闭后无法拉起）",
+        items: [
+          "RightPanel minimized 状态由组件内部 useState 提升为 workspace 父页面 props 控制（minimized/onMinimize/onExpand），面板常驻渲染不再因关闭而卸载；右侧竖条常驻，随时可拉回。",
+          "与左栏互斥：展开右栏时自动收起左栏（onExpand 内 setLeftCollapsed(true)）；宽度 w-10↔w-80 用 transition-all duration-200 平滑过渡，消除「收缩不完全/突兀」。",
+          "顶部栏双按钮（最小化+完全关闭）合并为单按钮（最小化），竖条内删除「完全关闭」入口，统一「只有一个拉出/打开栏位」的心智模型。",
+        ],
+      },
+      {
+        label: "角色栏 UI 一致性",
+        items: [
+          "去重结果卡片标题改为 flex-1 min-w-0 truncate + 按钮 inline-flex items-center gap-1 whitespace-nowrap shrink-0，修复「×关闭」竖排挤压。",
+          "筛选徽章 4 种激活态（状态/已分类/未分类/具体标签）统一为 bg-[var(--nv-primary)]，消除多色语义混乱；具体标签字号 9px→10px、圆角改 rounded-full，大小字体统一。",
+          "新建标签 / 打标到选中 从 CharacterList 移入 CharacterToolbar 复用 base 样式，消除与工具栏按钮大小字体不一。",
+        ],
+      },
+      {
+        label: "大纲按钮后台化（保留并改造，二选一）",
+        items: [
+          "生成改为后台运行：handleOutlineConfirmed 启动后右下角显示进度胶囊「大纲生成中…（后台运行，可关闭弹窗，完成后自动返回）」，关掉弹窗任务仍在父层 state 继续，可隐藏胶囊（隐藏≠停止）。",
+          "完成后自动重开 OutlineDialog 显示预览（setShowOutlineDialog(true) + toast 成功），并保留 onClose 不清空预览/错误/原始大纲——关闭后重开仍可见历史结果。",
+          "Dialog 内加「生成在后台运行，可随时关闭本窗口，完成后自动返回预览」提示，赋予大纲按钮真实意义（后台异步、可离窗、结果不丢）。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 60 文件 514/514 全绿（无新增测试，纯 UI/状态改造）。改动无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v2.0.13",
     date: "2026-08-12",

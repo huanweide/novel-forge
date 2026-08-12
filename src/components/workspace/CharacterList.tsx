@@ -353,32 +353,20 @@ export function CharacterList({
         onDedupe={handleDedupe}
         onRange={handleRangeSelect}
         onClear={() => setSelectedIds(new Set())}
+        newTag={newTag}
+        onNewTagChange={setNewTag}
+        onApplyTags={handleApplyTags}
+        applying={applying}
+        selectedCount={selectedIds.size}
       />
 
-      {/* v2.0.4：自建标签——输入标签名，把勾选角色打上新标签（并集，不抹旧标签） */}
-      <div className="flex items-center gap-1 mb-2 px-1 flex-wrap">
-        <input
-          value={newTag}
-          onChange={(e) => setNewTag(e.target.value)}
-          placeholder="新建标签名（如：龙陨卫）"
-          className="text-xs px-2 py-0.5 rounded border border-[var(--nv-border-1)] bg-transparent text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-accent)] w-36"
-        />
-        <button
-          onClick={handleApplyTags}
-          disabled={applying || newTag.trim() === "" || selectedIds.size === 0}
-          className={`text-xs px-2 py-0.5 rounded border inline-flex items-center gap-1 ${applying || newTag.trim() === "" || selectedIds.size === 0 ? "border-[var(--nv-border-1)] text-[var(--nv-text-tertiary)] cursor-not-allowed" : "border-[var(--nv-accent-soft)] text-[var(--nv-accent)] hover:border-[var(--nv-accent)]"}`}
-          title="把当前勾选的角色全部打上新标签；角色原有标签会保留（并集）"
-        >
-          {applying ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />打标中…</span> : <span>打标到选中({selectedIds.size})</span>}
-        </button>
-      </div>
-
+      {/* v2.0.4 → v2.0.14：自建标签移入 CharacterToolbar 复用 base 样式 */}
       {/* 去重合并结果弹窗 */}
       {dedupeResult && (
         <div className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-[var(--nv-text-primary)]">去重合并结果（共扫描 {dedupeResult.total} 个角色）</span>
-            <button onClick={() => { setDedupeResult(null); onExpanded(); }} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]"><Icon name="x" size={11} /> 关闭</button>
+            <span className="flex-1 min-w-0 truncate pr-2 text-xs font-medium text-[var(--nv-text-primary)]">去重合并结果（共扫描 {dedupeResult.total} 个角色）</span>
+            <button onClick={() => { setDedupeResult(null); onExpanded(); }} className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]" title="关闭去重结果"><Icon name="x" size={11} />关闭</button>
           </div>
           {dedupeResult.mergedGroups.length === 0 && dedupeResult.markedRockets.length === 0 ? (
             <p className="text-xs text-[var(--nv-text-muted)]">全部干净：没有需要合并或标记的角色。</p>

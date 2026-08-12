@@ -132,7 +132,8 @@ export default function WorkspacePage() {
 
   // ── 面板状态 ──────────────────────────────
   const [leftPanel, setLeftPanel] = useState<"characters" | "world" | "outline" | "storylines" | "rules" | "digest">("outline");
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  // v2.0.14：右侧栏最小化由父组件控制（true=最小化竖条，false=完整面板），保证关闭后仍可从竖条随时拉回；展开时自动收起左栏（互斥，桌面只一侧可见）
+  const [rightMinimized, setRightMinimized] = useState(false);
   // 窄屏左右栏抽屉开合（桌面端由 lg: 断点复位为内联，此状态仅在 <lg 生效）
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
@@ -244,7 +245,8 @@ export default function WorkspacePage() {
 
   useShortcut("save-node", "mod+s", "保存当前章节", () => { void handleSaveNode(); }, { allowInEditable: true });
   useShortcut("new-chapter", "n", "新建章节", () => { void handleAddSection(); });
-  useShortcut("toggle-right", "]", "切换右侧栏", () => setRightPanelOpen((v) => !v));
+  // v2.0.14：右侧栏快捷键改为 toggle 最小化（默认=false=展开），展开时自动收起左栏（互斥，只一侧可见）
+  useShortcut("toggle-right", "]", "切换右侧栏", () => setRightMinimized((v) => { const next = !v; if (!next) setLeftCollapsed(true); return next; }));
   useShortcut("toggle-left", "[", "切换左侧栏", () => setLeftCollapsed((v) => !v));
 
   // ── 文风模板 ──────────────────────────────
@@ -328,6 +330,9 @@ export default function WorkspacePage() {
   const [outlineCustomChapterCount, setOutlineCustomChapterCount] = useState("");
   const [outlineCustomPrompt, setOutlineCustomPrompt] = useState("");
   const [outlineGenerating, setOutlineGenerating] = useState(false);
+  // v2.0.14：大纲后台生成运行时标记——驱动右下角进度胶囊，与"确认写入"阶段的 outlineGenerating 区分
+  const [outlineGenRunning, setOutlineGenRunning] = useState(false);
+  const [outlineCapsuleHidden, setOutlineCapsuleHidden] = useState(false);
   const [outlinePreviewChapters, setOutlinePreviewChapters] = useState<
     { title: string; summary: string; coreConflict: string; characters: string[] }[]
   >([]);
@@ -677,7 +682,7 @@ export default function WorkspacePage() {
 
   const handleOutlineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], _finalAuthorNote: string) => {
     if (!project || !outlineGenConfig) return;
-    setPreGenOpen(false); setGenStep("generating"); setOutlineGenerating(true);
+    setPreGenOpen(false); setGenStep("generating"); setOutlineGenerating(true); setOutlineGenRunning(true); setOutlineCapsuleHidden(false);
     setOutlineError(""); setOutlinePreviewChapters([]); setOutlineRaw("");
     const { chapterCount, customPrompt } = outlineGenConfig;
     try {
@@ -687,9 +692,12 @@ export default function WorkspacePage() {
       const chapters = data.chapters || [];
       if (chapters.length === 0) { setOutlineError("未生成任何章节，请检查角色和世界书是否有内容"); return; }
       setOutlinePreviewChapters(chapters); setOutlineRaw(data.rawOutline || "");
+      // v2.0.14：后台生成完成——即使此前已关闭弹窗，也自动重开展示预览，关窗不丢结果
+      setShowOutlineDialog(true);
       setGenStep("done"); setTimeout(() => setGenStep(""), 5000);
+      toastSuccess(`大纲生成完成：${chapters.length} 章预览已就绪`);
     } catch (err) { setGenStep("error"); setOutlineError(err instanceof Error ? err.message : "网络错误"); }
-    finally { setOutlineGenerating(false); }
+    finally { setOutlineGenerating(false); setOutlineGenRunning(false); }
   };
 
   const handleConfirmOutline = async () => {
@@ -1228,21 +1236,23 @@ export default function WorkspacePage() {
         </div>
         </ErrorBoundary>
 
-        {rightPanelOpen && (
-          <div
+        <div
             ref={rightDrawerRef}
             tabIndex={-1}
             role={rightDrawerOpen ? "dialog" : undefined}
             aria-modal={rightDrawerOpen ? "true" : undefined}
             aria-labelledby={rightDrawerOpen ? rightDrawerTitleId : undefined}
-            className={`fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] h-full transition-transform duration-200
+            className={`fixed inset-y-0 right-0 z-40 ${rightMinimized ? "w-10" : "w-80"} max-w-[85vw] h-full transition-all duration-200
             ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"}
-            lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}
+            lg:static lg:z-auto lg:h-auto lg:shrink-0 ${rightMinimized ? "lg:w-10" : "lg:w-80"} lg:translate-x-0 lg:transition-all`}
           >
             <h2 id={rightDrawerTitleId} className="sr-only">侧栏</h2>
           <ErrorBoundary name="侧栏">
         <RightPanel selectedNode={selectedNode}
-            onClose={() => setRightPanelOpen(false)} contextRefreshKey={contextRefreshKey} authorNote={authorNote}
+            minimized={rightMinimized}
+            onMinimize={() => setRightMinimized(true)}
+            onExpand={() => { setRightMinimized(false); setLeftCollapsed(true); }}
+            contextRefreshKey={contextRefreshKey} authorNote={authorNote}
             selectedText={selectedText || undefined}
             toolboxItems={toolboxItems}
             recallMemories={recallMemories}
@@ -1258,7 +1268,6 @@ export default function WorkspacePage() {
           />
         </ErrorBoundary>
         </div>
-        )}
       {/* 窄屏抽屉遮罩 */}
       {(leftDrawerOpen || rightDrawerOpen) && (
         <div aria-hidden="true" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
@@ -1314,7 +1323,16 @@ export default function WorkspacePage() {
           onConfirm={handleConfirmOutline} onUpdateChapter={updatePreviewChapter}
           appendMode={outlineAppendMode} onAppendModeChange={setOutlineAppendMode}
           hasExistingChapters={existingChapterCount > 0}
-          onClose={() => { setShowOutlineDialog(false); setOutlinePreviewChapters([]); setOutlineError(""); setOutlineRaw(""); }} />
+          // v2.0.14：叉掉对话框不清空预览/错误/原始大纲——允许关闭后重开仍可见，且后台继续生成；进度通过下方胶囊显示
+          onClose={() => { setShowOutlineDialog(false); }} />
+      )}
+      {/* v2.0.14：大纲后台生成进度胶囊——关掉弹窗任务仍在后台继续，完成自动重开预览 */}
+      {outlineGenRunning && !outlineCapsuleHidden && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/95 backdrop-blur px-3 py-1.5 shadow-lg text-xs text-[var(--nv-text-secondary)]">
+          <Icon name="loader" size={12} className="animate-spin text-[var(--nv-primary)]" />
+          大纲生成中…（后台运行，可关闭弹窗，完成后自动返回）
+          <button onClick={() => setOutlineCapsuleHidden(true)} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" title="隐藏进度提示（任务仍在后台继续）"><Icon name="x" size={12} /></button>
+        </div>
       )}
       {showAutomationSettings && project && (
         <AutomationSettingsDialog projectId={project.id} projectName={project.name} onClose={() => setShowAutomationSettings(false)} />

@@ -21,6 +21,12 @@ export function CharacterToolbar({
   onDedupe,
   onRange,
   onClear,
+  // v2.0.14：自建标签输入与打标——移入工具栏保持同一 base 样式
+  newTag,
+  onNewTagChange,
+  onApplyTags,
+  applying,
+  selectedCount,
 }: {
   filtered: { id: string }[];
   selectedIds: Set<string>;
@@ -34,6 +40,12 @@ export function CharacterToolbar({
   onDedupe: () => void;
   onRange: (indices: Set<number>) => void;
   onClear: () => void;
+  // v2.0.14：自建标签输入与打标
+  newTag: string;
+  onNewTagChange: (v: string) => void;
+  onApplyTags: () => void;
+  applying: boolean;
+  selectedCount: number;
 }) {
   // 统一的按钮基础样式：相同 padding / 边框 / 圆角 / 字号
   const base =
@@ -81,6 +93,21 @@ export function CharacterToolbar({
           清空
         </button>
       )}
+      {/* v2.0.14：自建标签——输入标签名，把勾选角色打上新标签（并集，不抹旧标签），复用 base 样式保持视觉一致 */}
+      <input
+        value={newTag}
+        onChange={(e) => onNewTagChange(e.target.value)}
+        placeholder="新建标签名（如：龙陨卫）"
+        className="text-xs px-2 py-0.5 rounded border border-[var(--nv-border-1)] bg-transparent text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)] w-36"
+      />
+      <button
+        onClick={onApplyTags}
+        disabled={applying || newTag.trim() === "" || selectedCount === 0}
+        className={`${base} ${applying || newTag.trim() === "" || selectedCount === 0 ? disabled : "border-[var(--nv-primary-soft)] text-[var(--nv-primary)] hover:border-[var(--nv-primary)]"}`}
+        title="把当前勾选的角色全部打上新标签；角色原有标签会保留（并集）"
+      >
+        {applying ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />打标中…</span> : <span>打标到选中({selectedCount})</span>}
+      </button>
     </div>
   );
 }
