@@ -1,5 +1,19 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.12 — 2026-08-12
+
+### 角色 role 单源治理（round-18 F-04）
+- `src/lib/character-parse.ts` 的 `CHARACTER_ROLE_OPTIONS` 补 `comic_relief`（对齐 `CharacterRole` 8 类），并派生 `CHARACTER_ROLE_LABEL: Record<CharacterRole,string>` 作为角色 value→中文唯一映射，消除各 UI 手写映射漂移。
+- 修复 `DissectDimensions.tsx` / `ImportWizard.tsx` / `workshop/page.tsx` 三处硬编码错标：`love_interest` / `catalyst` / `background` / `comic_relief` 不再被统一标为「配角」；workshop 角色定位下拉由仅 2 个 option 改为遍历 `CHARACTER_ROLE_OPTIONS` 全 8 类。
+- `CharacterList.tsx` 的 roleOrder/roleLabel 与 `CharacterFilters.tsx` 筛选 chip 改为从权威源派生，排序与中文一致。
+
+### 题材 genre 单源对齐（round-18 F-05）
+- `src/core/explore/types.ts` 的 `GENRE_OPTIONS`（explore 建项目题材下拉，被 `BuildConfigPanel`/`BuildConfigDialog` 共用）改为以首页 `GENRE_TEMPLATES` 的 name 为单一基准并集补充（玄幻/奇幻/末世/游戏/军事），消除与首页选题卡片的题材名分叉（西幻 vs 奇幻、缺少玄幻/末世/游戏/军事）。
+- `genre` 仍是自由 `string[]`，未强枚举，不破坏导入与外部数据；`GENRE_TO_TYPE` 装饰映射与 `genreMap` 关键词推断保留。
+
+### 验证
+- `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 59 文件 513/513 全绿。
+
 ## v2.0.11 — 2026-08-12
 
 **分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）**

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { confirmDialog } from "@/components/ui/toast";
+import type { CharacterRole } from "@/core/types";
+import { CHARACTER_ROLE_LABEL } from "@/lib/character-parse";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -961,7 +963,7 @@ export function ImportWizard({
                           <div className="min-w-0">
                             <span className="text-[var(--nv-text-secondary)] font-medium">{char.name}</span>
                             <span className="text-[var(--nv-text-muted)] ml-1">
-                              {char.role === "protagonist" ? "主角" : char.role === "antagonist" ? "反派" : char.role === "supporting" ? "配角" : char.role || "配角"}
+                              {CHARACTER_ROLE_LABEL[char.role as CharacterRole] ?? char.role ?? "配角"}
                             </span>
                             {Array.isArray(char.personality) && char.personality.length > 0 && (
                               <div className="flex flex-wrap gap-0.5 mt-0.5">

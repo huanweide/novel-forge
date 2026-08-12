@@ -61,9 +61,12 @@ export const STEP_DESCRIPTIONS: Record<ExploreStep, string> = {
   free_talk: "还有什么想讨论的？可以补充任何设定、提问、调整已有设定、或者让AI帮你梳理和完善整个世界观。",
 };
 
-/** 小说类型选项 */
+/** 小说类型选项 —— 题材名单一基准：以首页 GENRE_TEMPLATES 的 name 为准，避免两入口题材分叉 */
+import { GENRE_TEMPLATES, type GenreTemplate } from "@/core/templates/genres";
+
 export const GENRE_OPTIONS = [
-  "玄幻", "仙侠", "都市", "科幻", "历史", "言情", "悬疑", "武侠", "奇幻", "末世", "游戏", "军事",
+  ...GENRE_TEMPLATES.map((g: GenreTemplate) => g.name),
+  "玄幻", "奇幻", "末世", "游戏", "军事",
 ] as const;
 
 /** 流派标签 */

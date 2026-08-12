@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icons";
 import { toastSuccess, toastError, toastInfo, confirmDialog, toastAdded, toastCreated } from "@/components/ui/toast";
 import { EmptyState, Loading } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
+import { CHARACTER_ROLE_OPTIONS } from "@/lib/character-parse";
 
 interface Preset {
   id: string;
@@ -655,9 +656,9 @@ export default function Workshop() {
                       onChange={(e) => setUpload({ ...upload, charRole: e.target.value })}
                       className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"
                     >
-                      <option value="protagonist">主角</option>
-                      <option value="supporting">配角</option>
-                      <option value="antagonist">反派</option>
+                      {CHARACTER_ROLE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

@@ -10,6 +10,8 @@ import { CharacterFilters } from "./CharacterFilters";
 import { CharacterToolbar } from "./CharacterToolbar";
 import { ExpandResultModal } from "./ExpandResultModal";
 import { CharacterGroupList } from "./CharacterGroupList";
+import type { CharacterRole } from "@/core/types";
+import { CHARACTER_ROLE_OPTIONS } from "@/lib/character-parse";
 import { MergePendingPanel } from "./MergePendingPanel";
 
 export function CharacterList({
@@ -99,8 +101,8 @@ export function CharacterList({
     return true;
   });
 
-  const roleOrder = ["protagonist", "antagonist", "mentor", "love_interest", "supporting", "background"];
-  const roleLabel: Record<string, string> = { protagonist: "主角", antagonist: "反派", mentor: "导师", love_interest: "恋爱", supporting: "配角", background: "背景" };
+  const roleOrder = CHARACTER_ROLE_OPTIONS.map((o) => o.value as CharacterRole);
+  const roleLabel: Record<string, string> = Object.fromEntries(CHARACTER_ROLE_OPTIONS.map((o) => [o.value, o.label]));
   const grouped: Record<string, CharacterData[]> = {};
   for (const c of filtered) {
     const r = c.role || "supporting";

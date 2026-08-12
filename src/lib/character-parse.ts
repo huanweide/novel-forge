@@ -1,3 +1,5 @@
+import type { CharacterRole } from "@/core/types";
+
 // 角色字段解析共享工具 —— 由 CharacterDialog（合并原 CharacterEditDialog / CharacterCreateDialog）抽取为单一数据源。
 // 目的：避免「建角色」与「编角色」两个弹窗各自维护一份 personality / 时间线解析逻辑导致字段约定漂移。
 // 解析规则与历史实现完全一致（主导/驱动/矛盾/习惯/面具 + 时间线 X岁：事件（时间参照））。
@@ -14,8 +16,18 @@ export const CHARACTER_ROLE_OPTIONS: CharacterRoleOption[] = [
   { value: "mentor", label: "导师" },
   { value: "love_interest", label: "恋爱对象" },
   { value: "catalyst", label: "剧情催化剂" },
+  { value: "comic_relief", label: "喜剧担当" },
   { value: "background", label: "背景角色" },
 ];
+
+/** 角色 value → 中文标签（从 CHARACTER_ROLE_OPTIONS 派生，单一权威源，避免各 UI 手写映射漂移/错标） */
+export const CHARACTER_ROLE_LABEL: Record<CharacterRole, string> = CHARACTER_ROLE_OPTIONS.reduce(
+  (acc, o) => {
+    acc[o.value as CharacterRole] = o.label;
+    return acc;
+  },
+  {} as Record<CharacterRole, string>,
+);
 
 export interface PersonalityParsed {
   dominant: string;

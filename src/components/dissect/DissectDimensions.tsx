@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import type { DimensionResult } from "@/core/dissect/types";
 import { DIMENSION_LABELS, DIMENSION_ICONS } from "@/core/dissect/types";
 import { Icon, type IconName } from "@/components/ui/icons";
+import type { CharacterRole } from "@/core/types";
+import { CHARACTER_ROLE_LABEL } from "@/lib/character-parse";
 
 // ─── 维度分组 ──────────────────────────────────────────
 
@@ -135,7 +137,7 @@ export function DissectDimensions({
                     c.role === "mentor" ? "bg-info/30 text-info" :
                     "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)]"
                   }`}>
-                    {c.role === "protagonist" ? "★主角" : c.role === "antagonist" ? "◆反派" : c.role === "mentor" ? "◈导师" : "●配角"}
+                    {c.role === "protagonist" ? "★主角" : c.role === "antagonist" ? "◆反派" : c.role === "mentor" ? "◈导师" : `●${CHARACTER_ROLE_LABEL[c.role as CharacterRole] ?? "配角"}`}
                   </span>
                   {c.description && (
                     <span className="text-[9px] text-[var(--nv-text-muted)] truncate hidden md:inline">{c.description.slice(0, 30)}</span>

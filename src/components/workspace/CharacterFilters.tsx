@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { Icon, StatusDot } from "@/components/ui/icons";
 import type { CharacterData } from "./types";
+import { CHARACTER_ROLE_OPTIONS } from "@/lib/character-parse";
 
 export function CharacterFilters({
   characters,
@@ -50,12 +51,7 @@ export function CharacterFilters({
       <div className="flex gap-0.5 mb-1 flex-wrap items-center">
         {([
           { key: "all", label: "全部", count: characters.length },
-          { key: "protagonist", label: "主角", count: statRole("protagonist") },
-          { key: "antagonist", label: "反派", count: statRole("antagonist") },
-          { key: "mentor", label: "导师", count: statRole("mentor") },
-          { key: "love_interest", label: "恋爱", count: statRole("love_interest") },
-          { key: "supporting", label: "配角", count: statRole("supporting") },
-          { key: "background", label: "背景", count: statRole("background") },
+          ...CHARACTER_ROLE_OPTIONS.map((o) => ({ key: o.value, label: o.label, count: statRole(o.value) })),
         ] as { key: string; label: ReactNode; count: number }[]).filter(o => o.count > 0 || o.key === "all").map(o => (
           <button
             key={o.key}

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.11";
+export const LATEST_VERSION = "v2.0.12";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.12 角色 role 与题材 genre 分类标签单源治理（round-18 F-04/F-05）：角色 role 中文映射收敛为 character-parse.ts 单一权威源（补 comic_relief 对齐 8 类、派生 CHARACTER_ROLE_LABEL），修复 DissectDimensions/ImportWizard/workshop 三处硬编码错标（love_interest/catalyst/background/comic_relief 不再被标为「配角」）；题材 GENRE_OPTIONS 以首页 GENRE_TEMPLATES 为基准并集补充，消除与首页选题分叉。",
   "v2.0.11 分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）：世界分类 15 类收敛为 world-category-classifier 单一权威源；LORE_COLORS 升为 Record<WorldCategory,string> 强制覆盖全部 15 类（补全 fate_system/physics/public_system/character_relationship 4 色）；ChapterEntitiesPanel 实体分组遍历权威源动态生成 15 组，7 类不再被吞；图例与高亮配色三处共用单一源。",
   "v2.0.10 回滚还原接口（round-2 裁决 P2 #10「prompt 当代码」闭环收尾 #319）：POST /api/projects/[id]/prompt-revisions/rollback 读指定 version 的完整 content 写回 Project.globalPrompt，并调 recordGlobalPromptRevision(content, \"rollback\") 落一条 source=rollback 的新版本（version=max+1），使「回滚」本身成为一次可追踪的新提交（git revert 语义：不删旧版，只新增还原版），避免静默覆盖导致不可恢复。",
   "v2.0.10 评测集（P2 #10 第三要素 #320）：新增 src/core/prompt-eval.ts——固定评测集 fixture（基准角色/世界书/风格/项目设定）+ evaluatePromptVersions(current, baseline?) 要素守护对比纯函数，守护「作品/角色/世界书/风格」四大块关键要素不丢、字数与 hash 不漂移；零 LLM、确定性、可进 vitest 双门禁。直接补上历史上 sync 重写 globalPrompt 多次静默丢要素（世界书 7 类被漏 / buildConfig 双漏口）的回归守护。",
@@ -38,6 +39,35 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.12",
+    date: "2026-08-12",
+    title: "v2.0.12 角色 role 与题材 genre 分类标签单源治理（round-18 F-04/F-05）",
+    sections: [
+      {
+        label: "角色 role 单源治理（F-04）",
+        items: [
+          "src/lib/character-parse.ts：CHARACTER_ROLE_OPTIONS 补 comic_relief（对齐 CharacterRole 8 类：protagonist/antagonist/supporting/mentor/love_interest/catalyst/comic_relief/background），并派生 CHARACTER_ROLE_LABEL: Record<CharacterRole,string> 作为角色 value→中文唯一映射。",
+          "DissectDimensions/ImportWizard/workshop 三处手写「role→中文三元表达式」改为读 CHARACTER_ROLE_LABEL，消除 love_interest/catalyst/background/comic_relief 被错标为「配角」；workshop 角色定位下拉由仅 2 个 option 改为遍历 CHARACTER_ROLE_OPTIONS 全 8 类。",
+          "CharacterList 的 roleOrder/roleLabel 与 CharacterFilters 的筛选 chip 改为从 CHARACTER_ROLE_OPTIONS 派生，排序与中文与权威源一致。",
+        ],
+      },
+      {
+        label: "题材 genre 单源对齐（F-05）",
+        items: [
+          "src/core/explore/types.ts 的 GENRE_OPTIONS（explore 建项目题材下拉，被 BuildConfigPanel/BuildConfigDialog 共用）改为以首页 GENRE_TEMPLATES 的 name 为单一基准并集补充（玄幻/奇幻/末世/游戏/军事），消除与首页选题卡片的题材名分叉（西幻 vs 奇幻、缺玄幻/末世/游戏/军事）。",
+          "genre 仍是自由 string[]，未强枚举，不破坏导入/外部数据；GENRE_TO_TYPE 装饰映射与 genreMap 关键词推断保留。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 59 文件 513/513 全绿。改动仅类型与展示层，无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v2.0.11",
     date: "2026-08-12",
