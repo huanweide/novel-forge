@@ -8,6 +8,7 @@ import { analyzeQuality } from "@/lib/quality-analyzer";
 import { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
 import { CONFIRMABLE_STATUSES, STATUS_CONFIRMED } from "@/core/story-status";
 import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
+import { detectPayoffs } from "@/core/foreshadowing";
 
 // 共享阈值（单一真相源）：与 analyzeQuality 的 passed 口径一致
 export { QUALITY_PASS_THRESHOLD } from "@/core/quality-thresholds";
@@ -197,7 +198,7 @@ export async function applyConfirm(node: {
 }
 
 /**
- * R2-007 收口（新坑3）+ Round-4（新坑4/新坑5）改进：伏笔收束率检测自调用的共享 fire-and-forget helper。
+ * 伏笔收束率检测自调用共享 helper（R2-007 收口 / Max Loop 审查 F4 修复：进程内直调 detectPayoffs，消除 HTTP 自回环死链）。
  * - 失败不再静默吞掉：至少 console.error 一次，附 projectId 便于排查。
  * - 轻量重试一次（最多 2 次），两次之间 sleep 200ms 轻退避，避免对正在抖动的服务器雪上加霜。
  * - 超时保护：fetch 带 AbortSignal.timeout(5000)，避免 detect 路由在 O(C×S) 全量重算时
@@ -217,15 +218,12 @@ const detectLocks = new Map<string, Promise<void>>();
 
 export async function triggerForeshadowDetect(args: {
   projectId: string;
-  origin?: string;
+  origin?: string; // 保留兼容，进程内直调不再使用
 }): Promise<void> {
-  const origin = args.origin || process.env.APP_ORIGIN || "http://localhost:3001";
-  const url = `${origin}/api/foreshadowing/detect`;
-  const body = JSON.stringify({ projectId: args.projectId });
-  const TIMEOUT_MS = 5000;
+  const projectId = args.projectId;
 
-  // NEW-2：同 projectId 已有在途 detect → 复用其结果，不重复发请求（规避重试放大雪崩）。
-  const inflight = detectLocks.get(args.projectId);
+  // NEW-2：同 projectId 已有在途 detect → 复用其结果，不重复跑（规避并发放大雪崩）。
+  const inflight = detectLocks.get(projectId);
   if (inflight) {
     try {
       await inflight;
@@ -236,45 +234,24 @@ export async function triggerForeshadowDetect(args: {
   }
 
   const run = (async () => {
-    let lastErr: unknown;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-          signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(TIMEOUT_MS) : undefined,
-        });
-        if (!res.ok) {
-          lastErr = new Error(`detect 返回非 2xx 状态码 ${res.status}`);
-          // 非 2xx 同样走重试（应对确认瞬间短暂抖动）
-        } else {
-          return;
-        }
-      } catch (e) {
-        lastErr = e;
-      }
-      if (attempt < 2) await sleep(200); // 轻退避
+    try {
+      await detectPayoffs(projectId);
+    } catch (e) {
+      console.error(
+        "[foreshadowing/detect] 进程内直调 detectPayoffs 失败:",
+        e instanceof Error ? e.message : String(e),
+        { projectId },
+      );
     }
-    console.error(
-      "[foreshadowing/detect] 自调用失败（已重试1次，放弃）:",
-      lastErr instanceof Error ? lastErr.message : String(lastErr),
-      { projectId: args.projectId },
-    );
   })();
 
-  detectLocks.set(args.projectId, run);
+  detectLocks.set(projectId, run);
   try {
     await run;
   } finally {
     // 不论成功失败，本次 detect 结算后立即释放锁，允许下一波变更触发新一次 detect
-    detectLocks.delete(args.projectId);
+    detectLocks.delete(projectId);
   }
-}
-
-/** 最小退避，避免重试瞬间打满正在抖动的 detect 路由。 */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

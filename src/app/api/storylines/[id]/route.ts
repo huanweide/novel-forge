@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { pickReassignMainId } from "@/core/pipeline/outline-context";
 import { STORYLINE_STATUS } from "@/core/story-status";
 import { completeStorylineElements } from "@/core/storyline/complete";
+import { runStorylineGeneration } from "@/app/api/storylines/generate/route";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -89,12 +90,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             where: { projectId: prev.projectId, type: "main", status: STORYLINE_STATUS.ACTIVE },
           });
           if (activeMain === 0) {
-            const origin = process.env.APP_ORIGIN || "http://localhost:3001";
-            void fetch(`${origin}/api/storylines/generate`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ projectId: prev.projectId, mode: "newMain" }),
-            }).catch(() => {});
+            // F4 修复：进程内直调生成逻辑，消除对 fetch(${APP_ORIGIN}/api/storylines/generate) 自回环的硬依赖
+            // （非 localhost:3001 部署且未配 APP_ORIGIN 时为死链，导致新主线永不自动构造）
+            void runStorylineGeneration({ projectId: prev.projectId, mode: "newMain" }).catch(() => {});
           }
         }
       } catch {

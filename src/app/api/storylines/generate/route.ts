@@ -22,9 +22,8 @@ import { getCompletedMainIds, isRehangTargetActiveMain } from "@/core/pipeline/o
 import { storylineStyleDesc } from "@/core/storyline/generate";
 import { deriveMainElements } from "@/core/storyline/complete";
 
-export async function POST(request: Request) {
+export async function runStorylineGeneration(bodyJson: any) {
   try {
-    const bodyJson: any = await request.json();
     const { projectId, mode, commit, suggestions } = bodyJson;
     if (!projectId) return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
 
@@ -307,6 +306,15 @@ ${
         thread: created.filter((s) => s.type === "thread").length,
       },
     });
+  } catch (err) {
+    return jsonError(err);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const bodyJson: any = await request.json();
+    return await runStorylineGeneration(bodyJson);
   } catch (err) {
     return jsonError(err);
   }

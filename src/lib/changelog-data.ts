@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.12";
+export const LATEST_VERSION = "v2.0.13";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.13 flow-lens 四项错误修复（round-18 F1/F2/F3/F4）：续写 finish_reason=length 截断保护回退草稿并告警；续写路径填表统一归确认门（不再自动填 lorebook）；write/continue 两处草稿落库由 fire-and-forget 改 await 同步，消除 [PARTIAL_DRAFT] 竞态泄漏；伏笔收束检测与主线缝合由 HTTP 自回环（硬编码 origin localhost:3001）改进程内直调 detectPayoffs/runStorylineGeneration，消除非本地部署死链。",
   "v2.0.12 角色 role 与题材 genre 分类标签单源治理（round-18 F-04/F-05）：角色 role 中文映射收敛为 character-parse.ts 单一权威源（补 comic_relief 对齐 8 类、派生 CHARACTER_ROLE_LABEL），修复 DissectDimensions/ImportWizard/workshop 三处硬编码错标（love_interest/catalyst/background/comic_relief 不再被标为「配角」）；题材 GENRE_OPTIONS 以首页 GENRE_TEMPLATES 为基准并集补充，消除与首页选题分叉。",
   "v2.0.11 分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）：世界分类 15 类收敛为 world-category-classifier 单一权威源；LORE_COLORS 升为 Record<WorldCategory,string> 强制覆盖全部 15 类（补全 fate_system/physics/public_system/character_relationship 4 色）；ChapterEntitiesPanel 实体分组遍历权威源动态生成 15 组，7 类不再被吞；图例与高亮配色三处共用单一源。",
   "v2.0.10 回滚还原接口（round-2 裁决 P2 #10「prompt 当代码」闭环收尾 #319）：POST /api/projects/[id]/prompt-revisions/rollback 读指定 version 的完整 content 写回 Project.globalPrompt，并调 recordGlobalPromptRevision(content, \"rollback\") 落一条 source=rollback 的新版本（version=max+1），使「回滚」本身成为一次可追踪的新提交（git revert 语义：不删旧版，只新增还原版），避免静默覆盖导致不可恢复。",
@@ -39,6 +40,49 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.13",
+    date: "2026-08-12",
+    title: "v2.0.13 flow-lens 四项错误修复（round-18 F1/F2/F3/F4）",
+    sections: [
+      {
+        label: "续写截断保护（F1）",
+        items: [
+          "新增 src/core/finish-reason.ts：classifyTruncation(finishReason, contentLength, targetWords) 单一真相，write/continue 共用截断判定与告警文案（60% 字数阈值区分「被截断但尚可」与「明显不足」）。",
+          "src/app/api/generate/continue/route.ts：原代码根本丢弃 chunk.type===\"done\" 分支导致 finishReason=length 被忽略、残缺章当 completed 交付；现补 done 分支捕获 finishReason，并在后处理前插入 length 保护块——回退节点 status=\"drafting\"、流关闭前下发 truncated:true + 告警 + nextAction 引导点「继续生成」补全。",
+          "src/core/write-generation.ts：内联 length 判断改为复用 classifyTruncation 单一真相，warning 文案与续写一致。",
+        ],
+      },
+      {
+        label: "续写对齐确认门（F2）",
+        items: [
+          "删除续写路由无条件 safeFillAfterWriting({source:\"continue\"}) 自动填表逻辑，续写路径不再绕过确认门；填表统一归确认门 applyConfirm（与 write 路径一致），消除 autoConfirm 双触发导致 lorebook 被续写顺手填空。",
+          "续写 done 事件 nextAction 改为「请确认后回填记忆库」，不再自动填表。",
+        ],
+      },
+      {
+        label: "草稿标记竞态修复（F3）",
+        items: [
+          "src/app/api/generate/continue/route.ts 与 src/core/write-generation.ts 的草稿保存由 fire-and-forget .then(落库) 改为 await prisma.storyNode.update 同步落库，删除 saving 重入锁变量；杜绝草稿标记与后处理落库竞态导致 [PARTIAL_DRAFT] 串入正文。",
+        ],
+      },
+      {
+        label: "服务端自调用 origin 硬编码死链（F4）",
+        items: [
+          "src/core/confirm-guard.ts：triggerForeshadowDetect 由 HTTP 自回环（fetch origin/api/... 硬编码 localhost:3001 + sleep 重试）改进程内直调 detectPayoffs(projectId)（去重锁防并发雪崩保留），消除非 localhost:3001 部署死链。",
+          "src/app/api/storylines/[id]/route.ts：主线缝合怪自动构造新主线由 fetch 自调 /api/storylines/generate 改进程内直调 runStorylineGeneration({projectId, mode:\"newMain\"})；generate 路由核心逻辑抽为可导出 runStorylineGeneration(bodyJson)。",
+          "src/core/confirm-guard.test.ts：断言由 fetchMock 改为 detectPayoffs mock（直调断言 / 抛错 console.error / 并发去重仅调一次）。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 60 文件 514/514 全绿（新增 src/core/finish-reason.test.ts 4 用例）。改动无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v2.0.12",
     date: "2026-08-12",

@@ -11,8 +11,10 @@ const prismaMock = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/core/babylore/loop", () => ({ safeFillAfterWriting: vi.fn() }));
 vi.mock("@/lib/quality-analyzer", () => ({ analyzeQuality: vi.fn() }));
+vi.mock("@/core/foreshadowing", () => ({ detectPayoffs: vi.fn() }));
 
 import { evaluateConfirmEligibility, MIN_AUTO_CONFIRM_LENGTH, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
+import { detectPayoffs } from "@/core/foreshadowing";
 
 describe("evaluateConfirmEligibility（smart-deliver 自动放行护栏）", () => {
   it("空正文直接拦截", () => {
@@ -50,96 +52,64 @@ describe("evaluateConfirmEligibility（smart-deliver 自动放行护栏）", () 
   });
 });
 
-describe("triggerForeshadowDetect（R2-007 收口：detect 自调用 + 失败日志/重试）", () => {
+describe("triggerForeshadowDetect（F4 修复：进程内直调 detectPayoffs，消除 HTTP 自回环死链）", () => {
+  const detectPayoffsMock = vi.mocked(detectPayoffs);
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    detectPayoffsMock.mockReset();
   });
 
-  it("确认后 POST /api/foreshadowing/detect 并携带 projectId（nodeId 死参数已移除）", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    vi.stubGlobal("fetch", fetchMock);
+  it("确认后进程内直调 detectPayoffs 且携带 projectId（无 HTTP 自回环）", async () => {
+    detectPayoffsMock.mockResolvedValue({} as any);
     await triggerForeshadowDetect({ projectId: "p1" });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, opts] = fetchMock.mock.calls[0];
-    expect(url).toContain("/api/foreshadowing/detect");
-    expect(opts.method).toBe("POST");
-    const parsed = JSON.parse(opts.body);
-    expect(parsed).toEqual({ projectId: "p1" });
-    expect(parsed).not.toHaveProperty("nodeId");
+    expect(detectPayoffsMock).toHaveBeenCalledTimes(1);
+    expect(detectPayoffsMock).toHaveBeenCalledWith("p1");
   });
 
-  it("网络失败重试一次并 console.error 记录（不再静默吞错）", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("net down"));
-    vi.stubGlobal("fetch", fetchMock);
+  it("detectPayoffs 抛错 → console.error 记录且不抛（不阻断确认主流程）", async () => {
+    detectPayoffsMock.mockRejectedValue(new Error("db down"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await triggerForeshadowDetect({ projectId: "p1" });
-    expect(fetchMock).toHaveBeenCalledTimes(2); // 初次 + 重试1次
+    await expect(triggerForeshadowDetect({ projectId: "p1" })).resolves.not.toThrow();
     expect(errSpy).toHaveBeenCalledTimes(1);
     expect(errSpy.mock.calls[0][0]).toContain("[foreshadowing/detect]");
   });
 
-  it("非 2xx 响应也触发重试并最终记录日志", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
-    vi.stubGlobal("fetch", fetchMock);
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await triggerForeshadowDetect({ projectId: "p1" });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(errSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("detect 路由超时（AbortSignal）触发重试并最终记录日志，不挂死", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new DOMException("Aborted", "TimeoutError"));
-    vi.stubGlobal("fetch", fetchMock);
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await triggerForeshadowDetect({ projectId: "p1" });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(errSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("AbortSignal.timeout 未定义的旧运行时 → 降级不抛且 fetch 仍发出（R4-NEW-7）", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    vi.stubGlobal("fetch", fetchMock);
-    // 模拟旧 Node 运行时：AbortSignal.timeout 不存在
-    vi.stubGlobal("AbortSignal", { ...AbortSignal, timeout: undefined });
-    await expect(triggerForeshadowDetect({ projectId: "p1" })).resolves.not.toThrow();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [, opts] = fetchMock.mock.calls[0];
-    expect(opts.signal).toBeUndefined();
-  });
-
-  it("NEW-2: 同 projectId 并发触发 → fetch 仅发一次（互斥去重防雪崩）", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    vi.stubGlobal("fetch", fetchMock);
-    await Promise.all([
-      triggerForeshadowDetect({ projectId: "dedup-p" }),
-      triggerForeshadowDetect({ projectId: "dedup-p" }),
-    ]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+  it("NEW-2: 同 projectId 并发触发 → detectPayoffs 仅调用一次（互斥去重防雪崩）", async () => {
+    let resolveDetect: () => void = () => {};
+    const pending = new Promise<void>((res) => { resolveDetect = res; });
+    detectPayoffsMock.mockReturnValue(pending as unknown as Promise<any>);
+    const p1 = triggerForeshadowDetect({ projectId: "dedup-p" });
+    const p2 = triggerForeshadowDetect({ projectId: "dedup-p" });
+    // 在途期间不应重复调用
+    expect(detectPayoffsMock).toHaveBeenCalledTimes(1);
+    resolveDetect();
+    await Promise.all([p1, p2]);
+    expect(detectPayoffsMock).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("applyConfirm（R2-007 收口：skipDetect 控制 detect 触发）", () => {
+  const detectPayoffsMock = vi.mocked(detectPayoffs);
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
-  it("skipDetect 未置 → 确认成功后会触发 detect", async () => {
+  it("skipDetect 未置 → 确认成功后会触发 detect（进程内直调 detectPayoffs）", async () => {
     prismaMock.storyNode.findUnique.mockResolvedValue({ reviewLogs: [] });
     prismaMock.storyNode.aggregate.mockResolvedValue({ _max: { order: 0 } });
     prismaMock.storyNode.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.project.findUnique.mockResolvedValue(null);
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    vi.stubGlobal("fetch", fetchMock);
+    detectPayoffsMock.mockResolvedValue({} as any);
 
     await applyConfirm({ id: "n1", projectId: "p1", content: null, order: 0 });
 
     expect(prismaMock.storyNode.updateMany).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url] = fetchMock.mock.calls[0];
-    expect(url).toContain("/api/foreshadowing/detect");
+    expect(detectPayoffsMock).toHaveBeenCalledTimes(1);
+    expect(detectPayoffsMock).toHaveBeenCalledWith("p1");
   });
 
   it("skipDetect 置真 → 确认成功但不触发 detect", async () => {
@@ -147,12 +117,10 @@ describe("applyConfirm（R2-007 收口：skipDetect 控制 detect 触发）", ()
     prismaMock.storyNode.aggregate.mockResolvedValue({ _max: { order: 0 } });
     prismaMock.storyNode.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.project.findUnique.mockResolvedValue(null);
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    vi.stubGlobal("fetch", fetchMock);
 
     await applyConfirm({ id: "n1", projectId: "p1", content: null, order: 0, skipDetect: true });
 
     expect(prismaMock.storyNode.updateMany).toHaveBeenCalledTimes(1);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(detectPayoffsMock).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,27 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.13 — 2026-08-12
+
+### 续写截断保护（round-18 F1）
+- 新增 `src/core/finish-reason.ts`：`classifyTruncation(finishReason, contentLength, targetWords)` 单一真相，write/continue 共用截断判定与告警文案（60% 字数阈值区分「被截断但尚可」与「明显不足」）。
+- `src/app/api/generate/continue/route.ts`：原代码根本丢弃 `chunk.type==="done"` 分支导致 `finishReason=length` 被忽略、残缺章当 completed 交付；现补 done 分支捕获 finishReason，并在后处理前插入 length 保护块——回退节点 `status="drafting"`、流关闭前下发 `truncated:true` + 告警 + `nextAction` 引导点「继续生成」补全。
+- `src/core/write-generation.ts`：内联 length 判断改为复用 `classifyTruncation`，warning 文案与续写一致。
+
+### 续写对齐确认门（round-18 F2）
+- 删除续写路由无条件 `safeFillAfterWriting({source:"continue"})` 自动填表逻辑，续写路径不再绕过确认门；填表统一归确认门 `applyConfirm`（与 write 路径一致），消除 autoConfirm 双触发导致 lorebook 被续写顺手填空。
+- 续写 done 事件 `nextAction` 改为「请确认后回填记忆库」，不再自动填表。
+
+### 草稿标记竞态修复（round-18 F3）
+- `src/app/api/generate/continue/route.ts` 与 `src/core/write-generation.ts` 的草稿保存由 fire-and-forget `.then(落库)` 改为 `await prisma.storyNode.update` 同步落库，删除 `saving` 重入锁变量；杜绝草稿标记与后处理落库竞态导致 `[PARTIAL_DRAFT]` 串入正文。
+
+### 服务端自调用 origin 硬编码死链（round-18 F4）
+- `src/core/confirm-guard.ts`：`triggerForeshadowDetect` 由 HTTP 自回环（fetch origin/api/... 硬编码 localhost:3001 + sleep 重试）改进程内直调 `detectPayoffs(projectId)`（去重锁防并发雪崩保留），消除非 localhost:3001 部署死链。
+- `src/app/api/storylines/[id]/route.ts`：主线缝合怪自动构造新主线由 fetch 自调 `/api/storylines/generate` 改进程内直调 `runStorylineGeneration({projectId, mode:"newMain"})`；generate 路由核心逻辑抽为可导出 `runStorylineGeneration(bodyJson)`。
+- `src/core/confirm-guard.test.ts`：断言由 fetchMock 改为 `detectPayoffs` mock（直调断言 / 抛错 console.error / 并发去重仅调一次）。
+
+### 验证
+- `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 0 错误；`npx vitest run` 60 文件 514/514 全绿（新增 `src/core/finish-reason.test.ts` 4 用例）。无 schema 迁移、无新依赖。
+
 ## v2.0.12 — 2026-08-12
 
 ### 角色 role 单源治理（round-18 F-04）

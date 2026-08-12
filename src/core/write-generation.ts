@@ -32,6 +32,7 @@ import { buildRecallBlock } from "@/core/babylore/loop";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 import { applyRegexRules } from "@/core/post-process/regex";
 import { STATUS_COMPLETED, STATUS_DRAFTING, STATUS_OUTLINE_ONLY } from "@/core/story-status";
+import { classifyTruncation } from "@/core/finish-reason";
 
 export type WriteSend = (obj: object) => void;
 
@@ -232,7 +233,6 @@ export async function runWriteGeneration(
 
     // Phase 1: 流式生成
     let saveCounter = 0;
-    let saving = false;
     let scanBuffer = ""; // 累积待扫描的新字符
     let lastScanLength = 0; // 上次扫描时的总字符数
     const rtPatterns = collectForbiddenPatterns(template?.forbiddenPatterns || [], customForbidden);
@@ -284,27 +284,23 @@ export async function runWriteGeneration(
           scanBuffer = "";
         }
 
-        // 每 ~300 字保存草稿
+        // 每 ~300 字保存草稿（F3 修复：改 await 同步落库，杜绝 fire-and-forget 与后处理落库竞态导致
+        // [PARTIAL_DRAFT] 标记泄漏进已定稿正文；流末尾最后一次写必先于后处理管线落库，无需重入锁）
         saveCounter += chunk.content.length;
-        if (saveCounter >= 300 && !saving) {
+        if (saveCounter >= 300) {
           saveCounter = 0;
-          saving = true;
           const combined = partialDraft + newContent;
-          prisma.storyNode
-            .update({
+          try {
+            await prisma.storyNode.update({
               where: { id: nodeId },
               data: {
                 content: combined + "\n\n[PARTIAL_DRAFT]",
                 status: STATUS_DRAFTING,
               },
-            })
-            .then(() => {
-              saving = false;
-            })
-            .catch((e) => {
-              saving = false;
-              console.error("草稿保存失败:", e?.message);
             });
+          } catch (e) {
+            console.error("草稿保存失败:", e instanceof Error ? e.message : String(e));
+          }
         }
       } else if (chunk.type === "done") {
         // L5-01：流式末尾携带 finish_reason（'length' 表示被 max_tokens 截断）
@@ -351,12 +347,12 @@ export async function runWriteGeneration(
       return;
     }
 
-    // ── L5-01：max_tokens 截断保护 ──
+    // ── L5-01：max_tokens 截断保护（F1 修复：判定抽到 classifyTruncation 单一真相，write/continue 共用语义与文案）──
     // finish_reason==='length' 表示模型在 max_tokens 处被硬截断（已按 targetWordCount 动态放大预算仍不足）。
     // 此时正文残缺，绝不静默进入后处理/待确认：保留流式阶段已落盘的 partial draft（含 [PARTIAL_DRAFT]），
     // 状态维持 drafting，便于用户下次「继续生成」从断点恢复；并明确告警为「草稿未完成」。
-    if (finishReason === "length") {
-      const insufficient = fullContent.length < Math.ceil(targetWordCount * 0.6);
+    const truncation = classifyTruncation(finishReason, fullContent.length, targetWordCount);
+    if (truncation.truncated) {
       try {
         await prisma.storyNode.update({
           where: { id: nodeId },
@@ -371,9 +367,7 @@ export async function runWriteGeneration(
         nodeId,
         status: STATUS_DRAFTING,
         truncated: true,
-        warning: insufficient
-          ? "⚠️ 生成被 max_tokens 截断（finish_reason=length）且字数明显不足，已保留已生成部分作为草稿，请点击「继续生成」补全后再确认。"
-          : "⚠️ 生成被 max_tokens 截断（finish_reason=length），已保留已生成部分作为草稿，请点击「继续生成」补全后再确认。",
+        warning: truncation.warning,
       });
       return;
     }

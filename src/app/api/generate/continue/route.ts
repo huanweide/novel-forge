@@ -20,7 +20,8 @@ import {
   formatStage,
   injectContextBlocks,
 } from "@/core/pipeline";
-import { buildRecallBlock, safeFillAfterWriting } from "@/core/babylore/loop";
+import { buildRecallBlock } from "@/core/babylore/loop";
+import { classifyTruncation } from "@/core/finish-reason";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
 import { toAppStoryNode } from "@/core/story-node-bridge";
 
@@ -227,6 +228,7 @@ ${lastParagraphs}
 
         try {
           let fullContent = "";
+          let finishReason: string | undefined; // F1 修复：捕获流式末尾 finish_reason（'length' = 被 max_tokens 截断）
 
           if (contRecallItems.length > 0) {
             send({ type: "babylore_recall", items: contRecallItems });
@@ -234,7 +236,6 @@ ${lastParagraphs}
 
           // Phase 1: 流式生成
           let saveCounter = 0;
-          let saving = false;
           for await (const chunk of orchestrator.writeSection(
             promptContext, writingInstruction, targetWords,
             undefined, undefined, temperature, topP,
@@ -245,16 +246,22 @@ ${lastParagraphs}
               send({ type: "token", content: chunk.content });
 
               saveCounter += chunk.content.length;
-              if (saveCounter >= 300 && !saving) {
+              // F3 修复：草稿保存改 await 同步落库，杜绝 fire-and-forget 与后处理落库竞态导致 [PARTIAL_DRAFT] 泄漏
+              if (saveCounter >= 300) {
                 saveCounter = 0;
-                saving = true;
                 const draft = fullContent;
-                prisma.storyNode.update({
-                  where: { id: nextNode.id },
-                  data: { content: draft + "\n\n[PARTIAL_DRAFT]", status: "drafting" },
-                }).then(() => { saving = false; })
-                  .catch((e) => { saving = false; console.error("草稿保存失败:", e?.message); });
+                try {
+                  await prisma.storyNode.update({
+                    where: { id: nextNode.id },
+                    data: { content: draft + "\n\n[PARTIAL_DRAFT]", status: "drafting" },
+                  });
+                } catch (e) {
+                  console.error("草稿保存失败:", e instanceof Error ? e.message : String(e));
+                }
               }
+            } else if (chunk.type === "done") {
+              // F1 修复：捕获流式末尾 finish_reason（'length' = 被 max_tokens 截断），与 write 路径一致
+              if (chunk.finishReason) finishReason = chunk.finishReason;
             } else if (chunk.type === "error") {
               send({ type: "error", content: chunk.content });
               controller.close();
@@ -283,6 +290,33 @@ ${lastParagraphs}
             if (cleaned !== fullContent) {
               send({ type: "postprocess_regex", content: `正则后处理已应用 ${projectRules.length} 条规则` });
               fullContent = cleaned;
+            }
+          }
+
+          // ── L5-01：max_tokens 截断保护（F1 修复：与 write 路径共用 classifyTruncation 单一真相）──
+          // finish_reason==='length' 表示模型被 max_tokens 硬截断，正文残缺，绝不静默进入后处理/确认门；
+          // 保留已落盘 partial draft，状态维持 drafting，明确告警为「草稿未完成」，待用户「继续生成」补全。
+          {
+            const truncation = classifyTruncation(finishReason, fullContent.length, targetWords);
+            if (truncation.truncated) {
+              try {
+                await prisma.storyNode.update({
+                  where: { id: nextNode.id },
+                  data: { status: "drafting" },
+                });
+              } catch {
+                /* 回滚状态失败不阻塞告警返回 */
+              }
+              send({
+                type: "done", content: "",
+                nodeId: nextNode.id, title: nextTitle, order: nextNode.order,
+                status: "drafting",
+                truncated: true,
+                warning: truncation.warning,
+                nextAction: `「${nextTitle}」被截断为草稿，点击「继续生成」可从此处补全`,
+              });
+              controller.close();
+              return;
             }
           }
 
@@ -316,32 +350,14 @@ ${lastParagraphs}
             send({ type: "postprocess_skip", content: e instanceof Error ? e.message : "后处理跳过" });
           }
 
-          // 宝宝流自动填表（正文 → 填表，闭合写作闭环）
-          // M1（墨白 Round12）：透传 nextNode.order/nodeId，使写入行 _src 形如 ch{n}:batchmanual（章节段非空），与 write 路径一致。
-          // IMP-002 扩充：补算 isLatestChapter 使 skipLatestChapter 在 continue 路径生效（与 confirm/batch 算法一致）。
-          // R2-003：补传 source:"continue"，闭合填表溯源单链路（写章报告 F-07）；此前漏传 source 导致 _src 缺溯源段、与 confirm/manual/auto-confirm/batch 四入口不一致。
-          let contIsLatest = false;
-          try {
-            const agg = await prisma.storyNode.aggregate({ where: { projectId, deletedAt: null }, _max: { order: true } });
-            contIsLatest = nextNode.order === (agg._max.order ?? nextNode.order);
-          } catch { /* 聚合失败按非最新，保守填表 */ }
-          const babylore = await safeFillAfterWriting({
-            projectId,
-            content: fullContent,
-            send,
-            nodeOrder: nextNode.order,
-            isLatestChapter: contIsLatest,
-            nodeId: nextNode.id,
-            source: "continue",
-            projectLlmConfig: projLlm as Record<string, unknown> | null,
-          });
-
+          // F2 修复：续写不再无条件自动填表。填表唯一发生在「确认门」（手动 confirm 或后处理管线内的 auto-confirm
+          // → applyConfirm → safeFillAfterWriting），与 write 路径完全一致，杜绝未审视草稿污染下游记忆/设定库，
+          // 并消除 autoConfirm 时与 applyConfirm 的双重填表触发。
           send({
             type: "done", content: "",
             nodeId: result?.nodeId || nextNode.id, title: nextTitle, order: nextNode.order,
             status: result?.status || "completed",
-            nextAction: `已自动创建并完成「${nextTitle}」，可继续续写`,
-            babylore,
+            nextAction: `已自动创建并完成「${nextTitle}」，请确认后回填记忆库`,
           });
         } catch (err) {
           // L5-03 + L5-04：SSE 中断/客户端断连（request.signal 中止）或网关异常时，
