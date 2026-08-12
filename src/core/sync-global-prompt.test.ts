@@ -16,6 +16,7 @@ const pendingCard = {
 };
 
 const updateCalls: any[] = [];
+const revisionCalls: any[] = [];
 let lastCharWhere: any = null;
 let lastLoreWhere: any = null;
 
@@ -42,13 +43,23 @@ vi.mock("@/lib/prisma", () => ({
     styleCard: {
       findFirst: vi.fn(async () => null),
     },
+    // #316/#317：globalPrompt 版本快照写入所需的三个方法
+    globalPromptRevision: {
+      aggregate: vi.fn(async () => ({ _max: { version: null } })), // 首版 max=null → nextVersion=1
+      create: vi.fn(async (args: any) => { revisionCalls.push(args); return args.data; }),
+    },
   },
 }));
 
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 describe("syncGlobalPrompt 待审隔离负向测试 (v1.6.20 F1)", () => {
-  beforeEach(() => { updateCalls.length = 0; lastCharWhere = null; lastLoreWhere = null; });
+  beforeEach(() => {
+    updateCalls.length = 0;
+    revisionCalls.length = 0;
+    lastCharWhere = null;
+    lastLoreWhere = null;
+  });
 
   it("pending 角色卡不进入 globalPrompt，approved 卡进入", async () => {
     const prompt = await syncGlobalPrompt("p1");
@@ -65,5 +76,28 @@ describe("syncGlobalPrompt 待审隔离负向测试 (v1.6.20 F1)", () => {
     // 落库断言：写入的 globalPrompt 同样不含 pending
     const written = updateCalls.find((c) => c.data && typeof c.data.globalPrompt === "string");
     expect(written?.data?.globalPrompt).not.toContain("阿pending待审反派");
+  });
+
+  it("#316/#317 sync 后落 globalPrompt 版本快照，且回写 currentPromptVersion", async () => {
+    const prompt = await syncGlobalPrompt("p1");
+    expect(prompt).toBeTruthy();
+    const p = prompt!; // 非空断言：上面 toBeTruthy 已确认
+
+    // recordGlobalPromptRevision 在 syncGlobalPrompt 内是 fire-and-forget（.catch 兜底不阻塞主流程），
+    // 等一个 macrotask 让其落库完成，避免断言竞态。
+    await new Promise((r) => setTimeout(r, 10));
+
+    // 版本快照应被写入一条：version=1（首版 max 为 null）、source=sync、content=本次 prompt
+    expect(revisionCalls).toHaveLength(1);
+    const rev = revisionCalls[0]?.data ?? revisionCalls[0];
+    expect(rev.version).toBe(1);
+    expect(rev.source).toBe("sync");
+    expect(rev.content).toBe(p);
+    expect(typeof rev.hash).toBe("string");
+    expect(rev.wordCount).toBe(p.length);
+
+    // Project.currentPromptVersion 应回写为 1
+    const versionWrite = updateCalls.find((c) => c.data && typeof c.data.currentPromptVersion === "number");
+    expect(versionWrite?.data?.currentPromptVersion).toBe(1);
   });
 });

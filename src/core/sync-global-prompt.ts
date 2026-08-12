@@ -35,6 +35,12 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
       data: { globalPrompt: prompt },
     });
 
+    // #316/#317：把本次刷新写入版本快照（独立 try，失败仅 log 不阻断主流程）。
+    // 版本号取「该项目当前最大 version + 1」，回写 Project.currentPromptVersion 作为当前生效版本指针。
+    recordGlobalPromptRevision(projectId, prompt, "sync").catch((e) => {
+      console.error(`❌ [sync] globalPrompt 版本快照写入失败 (${projectId.slice(0, 8)}...):`, e instanceof Error ? e.message : String(e));
+    });
+
     console.log(`✅ [sync] globalPrompt 已刷新 (${projectId.slice(0, 8)}...) — ${characters.length}角色 · ${loreEntries.length}世界 · 风格${styleCard ? "有" : "无"} · ${prompt.length}字`);
     return prompt;
   } catch (e) {
@@ -301,4 +307,58 @@ ${project.authorNote}`);
   }
 
   return parts.join("\n");
+}
+
+// ─── prompt 版本化（#316/#317）─────────────────────────────
+
+export type GlobalPromptRevisionSource = "sync" | "manual" | "rollback";
+
+/**
+ * 把一个 globalPrompt 全文写入不可变版本快照（GlobalPromptRevision）。
+ * - 版本号 = 该项目当前最大 version + 1（(projectId, version) 唯一约束保证权威有序）；
+ *   并发竞争时一条会触发 P2002，本函数 catch 后返回 null，不影响调用方主流程。
+ * - 同时回写 Project.currentPromptVersion 作为「当前生效版本」指针。
+ * - source 区分 sync（卡变动自动刷新）/ manual（手动编辑）/ rollback（回滚还原）。
+ *
+ * 设计上故意与 syncGlobalPrompt 解耦：sync 失败时主流程仍返回 prompt，
+ * 版本快照只是「可观测/可回滚」的增量能力，绝不作为生成的硬依赖。
+ */
+export async function recordGlobalPromptRevision(
+  projectId: string,
+  content: string,
+  source: GlobalPromptRevisionSource = "sync",
+  summary?: string,
+): Promise<{ version: number; hash: string } | null> {
+  try {
+    const maxRev = await prisma.globalPromptRevision.aggregate({
+      where: { projectId },
+      _max: { version: true },
+    });
+    const nextVersion = (maxRev._max.version ?? 0) + 1;
+    const hash = hashContent(content);
+    const wordCount = content.length; // 中文按字符计（最贴近「字数」直觉）
+    await prisma.globalPromptRevision.create({
+      data: { projectId, version: nextVersion, content, source, hash, wordCount, summary },
+    });
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { currentPromptVersion: nextVersion },
+    });
+    return { version: nextVersion, hash };
+  } catch (e) {
+    console.error(`❌ [sync] globalPrompt 版本快照写入失败 (${projectId.slice(0, 8)}...):`, e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+/**
+ * 轻量内容指纹（djb2）。不追求密码学强度，只用于同项目内版本去重与跨版本快速比对
+ * （如「这次 sync 的内容和上一版是否完全相同」），避免无意义的版本堆积。
+ */
+function hashContent(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0; // h * 33 + c（djb2）
+  }
+  return (h >>> 0).toString(36);
 }

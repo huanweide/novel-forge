@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.9 — 2026-08-12
+
+**prompt 版本化（round-2 裁决 P2 #10「prompt 当代码」半边落地）**
+
+- **schema：GlobalPromptRevision 模型 + Project 字段（#316）**：新增 `GlobalPromptRevision` 模型（id/projectId + Cascade 关系、version 递增、content @db.Text 全文、source 区分 sync/manual/rollback、hash 内容指纹、wordCount、summary、createdAt）；Project 加 `currentPromptVersion` 指针与 `globalPromptRevisions` 反向关系，`(projectId, version)` 唯一约束保证版本号权威有序。模式复用既有 `CharacterCardRevision` / `StoryNodeRevision`。
+- **sync-global-prompt 记录版本（#317）**：`syncGlobalPrompt` 写完 `globalPrompt` 后 fire-and-forget 调 `recordGlobalPromptRevision`（独立 try/.catch，失败仅 log 不阻断主流程），版本号取「该项目当前最大 version + 1」并回写 `currentPromptVersion`。函数导出，供未来 manual/rollback 来源复用。
+- **GET prompt-revisions 列版本 API（#318）**：`GET /api/projects/[id]/prompt-revisions` 返回当前生效版本指针 + 每个版本元数据（version/source/hash/字数/summary/createdAt）与内容预览，供审计 / 比较 / 回滚（完整内容查看与回滚还原为后续迭代）。
+- **验证**：tsc 0 错 + vitest 57 文件 502/502 全绿（基线 499 + #317 加 1 同步落版本断言 + #318 加 2 路由测试）；真实 DB 冒烟在星辰项目触发一次 sync → 落 version=1、currentPromptVersion=1、`(projectId,version)` 唯一约束触发 P2002 验证通过；`prisma db push` 同步 schema 成功。
+
 ## v2.0.8 — 2026-08-12
 
 **移除 batch-write 自回环 + dedupe 语义缓存 + completeText JSON-mode（round-2 裁决 P2 收口）**

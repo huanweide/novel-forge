@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.8";
+export const LATEST_VERSION = "v2.0.9";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.8 移除 batch-write 自回环 fetch（round-2 裁决 P2 #313）：将 generate/chapter-outline 与 generate/write 的业务逻辑抽离为可 import 的核心函数（generateChapterOutline / runWriteGeneration），路由降级为薄壳（仅限流 + 参数解析 + SSE 封装），batch-write 直接 import 调用——消除「批量写 10 章撞 generate/write 10 次/分钟限流误触发 429」的脆弱自调与进程间耦合。",
-  "v2.0.8 dedupe 语义缓存（round-2 裁决 P2 #314）：character-dedupe 新增角色集内容指纹（charFingerprint），指纹未变则跳过全部 LLM 分组调用、直接复用进程级缓存分组（source=\"cache\"），仅角色集变更才重算——零 schema 改动、零成本去重，高频批写去重不再重复烧 LLM。",
-  "v2.0.8 completeText 暴露 JSON-mode + 优雅降级（round-2 裁决 P2 #315）：completeText 新增 json?:boolean 参数，请求体加 response_format:{type:json_object}；供应商不支持（通常 4xx）自动去 json 重试一次，不破坏现有供应商；章纲选角与去重分组调用点传 json:true，结构化输出更稳。",
-  "v2.0.8 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 499/499 全绿；无头冒烟 mode A（count=1）done=1 章纲落库、mode B（nodeId=efd39c69-768c-4f8c-979d-2030658e12d2）done=1 正文生成正常；dev server 首页 200。",
+  "v2.0.9 prompt 版本化（round-2 裁决 P2 #10「prompt 当代码」半边落地）：新增 GlobalPromptRevision 模型 + Project.currentPromptVersion 字段；syncGlobalPrompt 每次刷新 globalPrompt 后自动落不可变版本快照（version 递增、hash 内容指纹、字数、source 区分 sync/manual/rollback），并回写 currentPromptVersion 作为当前生效版本指针。版本快照写库失败仅 log 不阻断主流程——绝不成为生成的硬依赖。",
+  "v2.0.9 GET prompt-revisions 列版本 API（GET /api/projects/[id]/prompt-revisions）：返回当前生效版本指针 + 每个版本的元数据（version/source/hash/字数/summary/createdAt）与内容预览，供「prompt 当代码」的审计 / 比较 / 回滚（完整内容查看与回滚还原为后续迭代）。",
+  "v2.0.9 设计同构：GlobalPromptRevision 复用既有 CharacterCardRevision / StoryNodeRevision 的 projectId + Cascade 关系 + 版本/来源标记模式；(projectId, version) 唯一约束保证版本号在该项目内权威有序，并发竞争一条失败静默降级。",
+  "v2.0.9 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 57 文件 502/502 全绿（基线 499 + #317 加 1 同步测试 + #318 加 2 路由测试）；真实 DB 冒烟在星辰项目触发一次 sync → 落 version=1、currentPromptVersion=1、(projectId,version) 唯一约束触发 P2002 验证通过；prisma db push 同步 schema 成功。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.9",
+    date: "2026-08-12",
+    title: "v2.0.9 prompt 版本化（round-2 裁决 P2 #10「prompt 当代码」半边落地）",
+    sections: [
+      {
+        label: "schema：GlobalPromptRevision 模型 + Project 字段（#316）",
+        items: [
+          "新增 GlobalPromptRevision 模型：id/projectId + Project Cascade 关系、version Int 递增、content @db.Text 存全文、source（sync|manual|rollback）、hash（djb2 内容指纹）、wordCount（中文按字符计）、summary、createdAt。",
+          "Project 加 currentPromptVersion Int @default(0)（当前生效版本指针）与 globalPromptRevisions GlobalPromptRevision[] 反向关系；(projectId, version) 唯一约束保证版本号在该项目内权威有序。",
+          "模式同构：复用既有 CharacterCardRevision / StoryNodeRevision 的 projectId + Cascade 关系 + 版本/来源标记写法，降低认知负担。",
+        ],
+      },
+      {
+        label: "sync-global-prompt 记录版本（#317）",
+        items: [
+          "syncGlobalPrompt 写完 globalPrompt 后，fire-and-forget 调 recordGlobalPromptRevision（独立 try/.catch，失败仅 log 不阻断主流程）；版本号取「该项目当前最大 version + 1」，并回写 Project.currentPromptVersion。",
+          "recordGlobalPromptRevision 导出，供未来 manual（手动编辑）/ rollback（回滚还原）来源复用；hash 用于同项目内版本去重与跨版本快速比对。",
+        ],
+      },
+      {
+        label: "GET prompt-revisions 列版本 API（#318）",
+        items: [
+          "GET /api/projects/[id]/prompt-revisions 返回 currentPromptVersion + 每个版本元数据（version/source/hash/wordCount/summary/createdAt）与内容预览（前 300 字，超出加省略号），列表按 version desc。",
+          "鉴权风格对齐 stylecard 路由：校验 project 存在性 + jsonError 兜底；完整内容查看 / 回滚还原接口为后续迭代（避免列表载荷过大）。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 57 文件 502/502 全绿（基线 499 + #317 加 1 同步落版本断言 + #318 加 2 路由测试）；真实 DB 冒烟在星辰项目触发一次 sync → 落 version=1、currentPromptVersion=1、(projectId,version) 唯一约束触发 P2002 验证通过；prisma db push 同步 schema 成功。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.8",
     date: "2026-08-12",

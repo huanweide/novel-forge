@@ -19,6 +19,8 @@ model Project {
   toneKeywords   String[] @default([])  // 基调关键词
 
   globalPrompt String @default("")  // 世界书+风格卡缓存摘要——扩展角色时直接用
+  // #316 prompt 版本化：当前生效的 globalPrompt 版本号（指向 GlobalPromptRevision.version）；0=尚未产生版本快照
+  currentPromptVersion Int @default(0)
   authorNote   String @default("")  // 作者指令——持久化，所有生成端点统一读取
   // LLM配置 (JSON存储)
   llmConfig Json @default("{}")
@@ -74,6 +76,7 @@ model Project {
   gameSessions  GameSession[]
   pendingItems  PendingItem[]
   characterRevisions CharacterCardRevision[]
+  globalPromptRevisions GlobalPromptRevision[]
 }
 
 // ─── 人物卡 (Character Card) ───────────────────────────────
@@ -139,6 +142,30 @@ model CharacterCardRevision {
 
   @@index([projectId])
   @@index([projectId, status])
+}
+
+// ─── 全局提示词版本快照 (Global Prompt Revision) ──────────
+// #316 prompt 版本化（round-2 决议 P2 #10「prompt 当代码」）：把每次 sync 写入的
+// globalPrompt 全文存为不可变快照，版本号递增，供「prompt 当代码」的回滚/评测/审计。
+// 与 CharacterCardRevision / StoryNodeRevision 同构：projectId + Cascade 关系 + 版本/来源标记。
+// content 用 @db.Text 存全文（可能数千字），hash 用于去重与跨项目比对，source 区分 sync/manual/rollback。
+
+model GlobalPromptRevision {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  version   Int      @default(1)            // 该项目内递增版本号（同 project 唯一有序）
+  content   String   @db.Text               // 该版本的 globalPrompt 全文快照
+  source    String   @default("sync")       // sync | manual | rollback
+  hash      String   @default("")           // content 指纹（djb2），去重/比对用
+  wordCount Int      @default(0)            // 字数（中文按字符计）
+  summary   String?                        // 可选备注（如「角色卡新增张三后刷新」）
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@unique([projectId, version])
 }
 
 // ─── 世界书词条 (Lorebook Entry) ───────────────────────────
