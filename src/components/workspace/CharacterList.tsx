@@ -8,7 +8,6 @@ import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { CharacterFilters } from "./CharacterFilters";
 import { CharacterToolbar } from "./CharacterToolbar";
-import { ClassifyPanel } from "./ClassifyPanel";
 import { ExpandResultModal } from "./ExpandResultModal";
 import { CharacterGroupList } from "./CharacterGroupList";
 
@@ -38,11 +37,6 @@ export function CharacterList({
   const [expandResult, setExpandResult] = useState<{
     okList: string[]; failList: Array<{ name: string; reason: string }>; total: number;
   } | null>(null);
-  const [classifying, setClassifying] = useState(false);
-  const [classifyMsg, setClassifyMsg] = useState("");
-  const [classifyDone, setClassifyDone] = useState(0);
-  const [classifyTotal, setClassifyTotal] = useState(0);
-  const [classifyResult, setClassifyResult] = useState<{ ok: boolean; message: string } | null>(null);
   // 自动去重合并（v1.4.0）
   const [deduping, setDeduping] = useState(false);
   const [dedupeResult, setDedupeResult] = useState<{
@@ -50,12 +44,8 @@ export function CharacterList({
     markedRockets: string[];
     total: number;
   } | null>(null);
-  // 分类面板：AI 返回的分类体系
-  const [classifyGroups, setClassifyGroups] = useState<Array<{
-    category: string; label: string; description: string; members: string[]; memberIds: string[];
-  }> | null>(null);
-  // 勾选状态：label → Set<characterId>
-  const [groupSelections, setGroupSelections] = useState<Map<string, Set<string>>>(new Map());
+  // 自定义标签（v2.0.4）：玩家自建标签并往里加人
+  const [newTag, setNewTag] = useState("");
   const [applying, setApplying] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -117,17 +107,6 @@ export function CharacterList({
     if (!grouped[r]) grouped[r] = [];
     grouped[r].push(c);
   }
-
-  // 兜底：classifying结束但没显示面板 → 确保结果消息可见（仅触发一次）
-  const classifyFallbackTriggered = useRef(false);
-  useEffect(() => {
-    if (!classifying && classifyResult && !classifyGroups && !classifyFallbackTriggered.current) {
-      classifyFallbackTriggered.current = true;
-      // 强制刷新——让错误面板显示（如果 classifyResult.message 非空但面板没渲染）
-      setClassifyResult(prev => prev ? { ...prev } : null);
-    }
-    if (classifying) classifyFallbackTriggered.current = false;
-  }, [classifying, classifyResult, classifyGroups]);
 
   // 兜底：expanding结束但没有弹窗 → 从progress自动构建结果（仅触发一次）
   const expandFallbackTriggered = useRef(false);
@@ -247,105 +226,6 @@ export function CharacterList({
     }
   };
 
-  const handleClassify = async () => {
-    setClassifying(true);
-    setClassifyMsg("连接中…");
-    setClassifyDone(0);
-    setClassifyTotal(0);
-    setClassifyResult(null);
-    setClassifyGroups(null);
-    setGroupSelections(new Map());
-    try {
-      const res = await fetch("/api/characters/classify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId }),
-      });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        setClassifyResult({ ok: false, message: `${errBody.error || "请求失败"}` });
-        return;
-      }
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("无响应流");
-      const decoder = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          // 流结束——处理 buf 中残余的 data: 行（done 事件可能卡在这里）
-          if (buf.trim()) {
-            const lines = buf.split("\n").filter(l => l.trim().startsWith("data: "));
-            for (const dataLine of lines) {
-              try {
-                const ev = JSON.parse(dataLine.trim().slice(6));
-                if (ev.type === "progress") {
-                  setClassifyMsg(ev.message as string);
-                  if (ev.pct !== undefined) { setClassifyDone(Math.round(ev.pct as number)); setClassifyTotal(100); }
-                } else if (ev.type === "done") {
-                  const groups = (ev.groups || []) as Array<{
-                    category: string; label: string; description: string;
-                    members: string[]; memberIds: string[];
-                  }>;
-                  if (groups.length > 0) {
-                    setClassifyGroups(groups);
-                    const sel = new Map<string, Set<string>>();
-                    for (const g of groups) sel.set(g.label, new Set(g.memberIds));
-                    setGroupSelections(sel);
-                  }
-                  setClassifyResult({ ok: ev.ok !== false, message: ev.message as string });
-                  setClassifyDone(100); setClassifyTotal(100);
-                } else if (ev.type === "error") {
-                  setClassifyResult({ ok: false, message: `${ev.message}` });
-                }
-              } catch { /* skip */ }
-            }
-          }
-          break;
-        }
-        buf += decoder.decode(value, { stream: true });
-        const chunks = buf.split("\n\n");
-        buf = chunks.pop() || "";
-        for (const chunk of chunks) {
-          const dataLine = chunk.split("\n").find(l => l.trim().startsWith("data: "));
-          if (!dataLine) continue;
-          try {
-            const ev = JSON.parse(dataLine.trim().slice(6));
-
-            if (ev.type === "progress") {
-              setClassifyMsg(ev.message as string);
-              if (ev.pct !== undefined) {
-                setClassifyDone(Math.round(ev.pct as number));
-                setClassifyTotal(100);
-              }
-            } else if (ev.type === "done") {
-              const groups = (ev.groups || []) as Array<{
-                category: string; label: string; description: string;
-                members: string[]; memberIds: string[];
-              }>;
-              if (groups.length > 0) {
-                setClassifyGroups(groups);
-                const sel = new Map<string, Set<string>>();
-                for (const g of groups) {
-                  sel.set(g.label, new Set(g.memberIds));
-                }
-                setGroupSelections(sel);
-              }
-              setClassifyResult({ ok: ev.ok !== false, message: ev.message as string });
-              setClassifyDone(100); setClassifyTotal(100);
-            } else if (ev.type === "error") {
-              setClassifyResult({ ok: false, message: `${ev.message}` });
-            }
-          } catch { /* skip */ }
-        }
-      }
-    } catch (e) {
-      setClassifyResult({ ok: false, message: `${e instanceof Error ? e.message : "网络错误"}` });
-    } finally {
-      setClassifying(false);
-    }
-  };
-
   // v1.4.0：自动去重合并——扫描全部角色卡，合并相似名、标记龙套，结果弹窗预览后由 onExpanded 刷新
   const handleDedupe = async () => {
     setDeduping(true);
@@ -378,24 +258,20 @@ export function CharacterList({
     }
   };
 
-  // 应用用户勾选的标签
+  // v2.0.4：玩家自建标签并往里加人——把勾选角色通过 apply-tags 打上新标签（并集语义，不会抹掉旧标签）
   const handleApplyTags = async () => {
-    if (!classifyGroups) return;
+    const tag = newTag.trim();
+    if (!tag) {
+      toastInfo("请先输入标签名");
+      return;
+    }
+    if (selectedIds.size === 0) {
+      toastInfo("请先勾选要加入标签的角色");
+      return;
+    }
     setApplying(true);
     try {
-      // 构建 assignments: [{characterId, labels[]}]
-      const assignMap = new Map<string, string[]>(); // charId → labels[]
-      for (const [label, memberSet] of groupSelections) {
-        for (const cid of memberSet) {
-          if (!assignMap.has(cid)) assignMap.set(cid, []);
-          assignMap.get(cid)!.push(label);
-        }
-      }
-      const assignments = Array.from(assignMap.entries()).map(([characterId, labels]) => ({
-        characterId,
-        labels: [...new Set(labels)], // 去重
-      }));
-
+      const assignments = [...selectedIds].map((characterId) => ({ characterId, labels: [tag] }));
       const res = await fetch("/api/characters/apply-tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -407,8 +283,8 @@ export function CharacterList({
         return;
       }
       const data = await res.json();
-      setClassifyResult({ ok: true, message: `已为 ${data.updated} 个角色应用标签` });
-      setClassifyGroups(null); // 关闭分类面板
+      toastSuccess(`已为 ${data.updated} 个角色打上标签「${tag}」`);
+      setNewTag("");
       onExpanded(); // 刷新角色列表
     } catch (e) {
       toastError("" + (e instanceof Error ? e.message : "网络错误"));
@@ -444,36 +320,6 @@ export function CharacterList({
     }
   };
 
-  const toggleGroup = (label: string) => {
-    const sel = new Map(groupSelections);
-    const group = classifyGroups?.find(g => g.label === label);
-    if (!group) return;
-    const current = sel.get(label);
-    if (current && current.size === group.memberIds.length) {
-      // 全选 → 取消全选
-      sel.set(label, new Set());
-    } else {
-      // 不全选 → 全选
-      sel.set(label, new Set(group.memberIds));
-    }
-    setGroupSelections(sel);
-  };
-
-  const toggleMember = (label: string, memberId: string) => {
-    const sel = new Map(groupSelections);
-    const current = sel.get(label) || new Set();
-    const next = new Set(current);
-    next.has(memberId) ? next.delete(memberId) : next.add(memberId);
-    sel.set(label, next);
-    setGroupSelections(sel);
-  };
-
-  // 统计已选标签数
-  const selectedTagCount = Array.from(groupSelections.values()).reduce((sum, s) => sum + s.size, 0);
-  // 统计已选角色数
-  const selectedCharIds = new Set<string>();
-  for (const s of groupSelections.values()) { for (const id of s) selectedCharIds.add(id); }
-
   const filteredIds = new Set(filtered.map(c => c.id));
   const selectedInView = [...selectedIds].filter(id => filteredIds.has(id)).length;
   const allInViewSelected = filtered.length > 0 && selectedInView === filtered.length;
@@ -499,17 +345,31 @@ export function CharacterList({
         expanding={expanding}
         expandDone={expandDone}
         expandTotal={expandTotal}
-        classifying={classifying}
-        classifyDone={classifyDone}
-        classifyTotal={classifyTotal}
         deduping={deduping}
         onToggleAll={handleToggleAll}
         onExpand={handleExpand}
-        onClassify={handleClassify}
         onDedupe={handleDedupe}
         onRange={handleRangeSelect}
         onClear={() => setSelectedIds(new Set())}
       />
+
+      {/* v2.0.4：自建标签——输入标签名，把勾选角色打上新标签（并集，不抹旧标签） */}
+      <div className="flex items-center gap-1 mb-2 px-1 flex-wrap">
+        <input
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          placeholder="新建标签名（如：龙陨卫）"
+          className="text-xs px-2 py-0.5 rounded border border-[var(--nv-border-1)] bg-transparent text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-accent)] w-36"
+        />
+        <button
+          onClick={handleApplyTags}
+          disabled={applying || newTag.trim() === "" || selectedIds.size === 0}
+          className={`text-xs px-2 py-0.5 rounded border inline-flex items-center gap-1 ${applying || newTag.trim() === "" || selectedIds.size === 0 ? "border-[var(--nv-border-1)] text-[var(--nv-text-tertiary)] cursor-not-allowed" : "border-[var(--nv-accent-soft)] text-[var(--nv-accent)] hover:border-[var(--nv-accent)]"}`}
+          title="把当前勾选的角色全部打上新标签；角色原有标签会保留（并集）"
+        >
+          {applying ? <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />打标中…</span> : <span>打标到选中({selectedIds.size})</span>}
+        </button>
+      </div>
 
       {/* 去重合并结果弹窗 */}
       {dedupeResult && (
@@ -537,25 +397,6 @@ export function CharacterList({
           <p className="text-[10px] text-[var(--nv-text-tertiary)] mt-2">被合并角色已软删标记（🗂 已合并），龙套仅打标签（🎭 龙套）不删除，可在标签筛选中查看/隐藏。</p>
         </div>
       )}
-
-      <ClassifyPanel
-        classifying={classifying}
-        groups={classifyGroups}
-        selections={groupSelections}
-        characters={characters}
-        applying={applying}
-        onToggleGroup={toggleGroup}
-        onToggleMember={toggleMember}
-        onApply={handleApplyTags}
-        onClose={() => { setClassifyGroups(null); setGroupSelections(new Map()); }}
-        msg={classifyMsg}
-        done={classifyDone}
-        total={classifyTotal}
-        result={classifyResult}
-        onResultClose={() => setClassifyResult(null)}
-        selectedTagCount={selectedTagCount}
-        selectedCharIds={selectedCharIds}
-      />
 
       <ExpandResultModal
         result={expandResult}

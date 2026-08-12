@@ -305,7 +305,7 @@ export async function POST(request: Request) {
                 background: srcChar?.background || "",
                 abilities: srcChar?.abilities || [],
                 personality: srcChar?.personality || ({} as any),
-                tags: ["🆕 自动拆分"],
+                tags: [],
                 currentStatus: "alive",
                 reviewStatus: "pending",
               } as any,
@@ -479,7 +479,7 @@ ${charListForAudit}
                   abilities: c.abilities || [],
                   hiddenMotives: c.hiddenMotives || [],
                   personality: c.personality || ({} as any),
-                  tags: ["🆕 自动拆分"],
+                  tags: [],
                   currentStatus: "alive",
                   reviewStatus: "pending",
                 } as any,
@@ -545,7 +545,7 @@ ${charListForAudit}
                   background: `[自动发现] 从角色扩展分析中检测到的新人物`,
                   abilities: [],
                   hiddenMotives: [],
-                tags: ["🆕 自动发现"],
+                tags: [],
                 currentStatus: "alive",
                 reviewStatus: "pending",
               } as any,
@@ -569,7 +569,7 @@ ${charListForAudit}
         const preprocessParts: string[] = [];
         if (splitLog.length > 0) preprocessParts.push(`✂️ 拆分 ${splitLog.length} 组: ${splitLog.join("、")}`);
         if (deleteLog.length > 0) preprocessParts.push(`🗑️ 删除 ${deleteLog.length} 张非角色: ${deleteLog.join("、")}`);
-        if (newCharLog.length > 0) preprocessParts.push(`🆕 发现 ${newCharLog.length} 个缺失角色: ${newCharLog.join("、")}`);
+        if (newCharLog.length > 0) preprocessParts.push(`发现 ${newCharLog.length} 个缺失角色: ${newCharLog.join("、")}`);
         if (preprocessParts.length > 0) {
           send({ type: "progress", stage: "preprocess", message: preprocessParts.join(" | "), pct: 2 });
         }

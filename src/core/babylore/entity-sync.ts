@@ -220,7 +220,7 @@ export async function syncChapterEntities(
             abilities: [],
             currentStatus: "alive",
             relationships: newRels as any,
-            tags: ["🆕 自动发现"],
+            tags: [],
             reviewStatus: "pending",
           } as any,
         });

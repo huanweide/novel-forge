@@ -1,6 +1,7 @@
 import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { dedupeCharacters } from "@/core/character-dedupe";
 
 export const maxDuration = 300;
 
@@ -87,6 +88,10 @@ export async function POST(request: Request) {
             where: { id: task.id },
             data: { status: done > 0 ? "completed" : "failed", progress: 100, result: { done, failed, total: ids.length } },
           });
+          // #297：批量写作完成后默认自动跑一次去重合并（LLM 判定同一人，清理昵称缩写/尊称脏卡）；失败不阻塞批写结果
+          if (done > 0) {
+            await dedupeCharacters(projectId).catch(() => {});
+          }
         } catch (e) {
           await prisma.fillTask.update({
             where: { id: task.id },
@@ -114,6 +119,9 @@ export async function POST(request: Request) {
       let done = 0;
       let failed = 0;
       const outlines: { nodeId: string; title: string; outline: string }[] = [];
+      // #294：批量章纲「延续性」——把本批次已生成的章纲依次累积，传给下一章作为强上下文，
+      // 保证三章是连续剧情而非彼此独立（即使 DB 时序未落库也能承接）。
+      const generatedOutlines: string[] = [];
       try {
         for (let i = 0; i < n; i++) {
           try {
@@ -132,15 +140,21 @@ export async function POST(request: Request) {
                 order,
               },
             });
-            // 2) 生成章纲（写 node.outline，不写正文）
+            // 2) 生成章纲（写 node.outline，不写正文）——传入前文章纲保证延续
             const res = await fetch(`${ORIGIN}/api/generate/chapter-outline`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ projectId, nodeId: node.id, authorNote: authorNote || undefined }),
+              body: JSON.stringify({
+                projectId,
+                nodeId: node.id,
+                authorNote: authorNote || undefined,
+                prevOutlines: generatedOutlines.slice(),
+              }),
             });
             const d = await res.json().catch(() => ({}));
             if (res.ok && typeof (d as any).outline === "string" && String((d as any).outline).length >= 10) {
               outlines.push({ nodeId: node.id, title: node.title, outline: (d as any).outline });
+              generatedOutlines.push(String((d as any).outline)); // 累积给下一章承接
               done++;
             } else {
               failed++;

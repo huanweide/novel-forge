@@ -54,9 +54,11 @@ export function isGarbageSummary(summary: string | null | undefined): boolean {
   return false;
 }
 
-export interface RawChapterSummary {
+export interface RawChapterOutline {
   chapterId: string;
-  summary: string | null | undefined;
+  order: number;
+  title: string | null | undefined;
+  outline: string | null | undefined;
 }
 
 export interface ChapterOrderMeta {
@@ -67,62 +69,51 @@ export interface ChapterOrderMeta {
 /**
  * 构建时间线摘要大纲（纯函数）。
  *
- * 流程：
- *  1) 按章分组：每章只保留「非垃圾且最长」的一条（去重 + 过滤垃圾）；
- *  2) 仅保留仍存在的章（orderMap 命中才纳入，过滤已删节点遗留行）；
- *  3) 按章序排序，取最近 MAX_TIMELINE_CHAPTERS 章；
- *  4) 拼装「第N章 标题：文本」。
+ * v2.0.4 设计（瑞宝宝需求「章纲就是大纲」）：
+ *  - 直接抄写每章的章纲（node.outline）按章序排列，不再依赖 AI 生成的 ChapterSummary。
+ *  - 每章「第N章 标题」换行接章纲本体，章与章之间空一行（\n\n），往下滑不堆叠。
+ *  - 过滤：无章纲 / 过短 / 模板元应答残片 的章不入大纲；按章序取最近 MAX_TIMELINE_CHAPTERS 章。
  *
- * 关键性质：无论底层有多少重复行 / 垃圾行，返回的字符串里每一章最多出现一次，
- * 且绝不出现模板元应答残片。
+ * 关键性质：大纲即各章章纲的忠实排列，零幻觉、幂等、可被无头测试断言。
  */
-export function buildTimelineDigest(
-  summaries: RawChapterSummary[],
-  orderMap: Map<string, ChapterOrderMeta>,
-): string {
-  // 1) 按章去重：每章只留「非垃圾 + 最长」一条
-  const bestByChapter = new Map<string, string>();
-  for (const s of summaries) {
-    if (!orderMap.has(s.chapterId)) continue; // 跳过已删章的遗留行
-    const text = String(s.summary ?? "").trim();
-    if (isGarbageSummary(text)) continue; // 直接丢弃垃圾
-    const prev = bestByChapter.get(s.chapterId);
-    if (prev === undefined || text.length > prev.length) {
-      bestByChapter.set(s.chapterId, text);
-    }
-  }
+export function buildTimelineDigest(chapters: RawChapterOutline[]): string {
+  if (!Array.isArray(chapters) || chapters.length === 0) return "";
 
-  // 2) 按章序排序，取最近 N 章
-  const ordered = [...bestByChapter.entries()]
-    .sort((a, b) => {
-      const oa = orderMap.get(a[0])!.order;
-      const ob = orderMap.get(b[0])!.order;
-      return oa - ob;
-    })
+  // 1) 过滤：空 / 单字占位 与 模板元应答残片 的章不入大纲。
+  //    注意：章纲（node.outline）是作者/模型写出的真实大纲，哪怕偏短也应保留（「章纲就是大纲」），
+  //    不再按任意长度阈值误杀；仅剔除明显占位与模板残片。
+  const valid = chapters.filter((c) => {
+    const text = String(c.outline ?? "").trim();
+    if (text.length < 2) return false; // 空 / 单字占位不进大纲
+    if (GARBAGE_PATTERNS.some((re) => re.test(text))) return false; // 模板元应答残片不入
+    return true;
+  });
+
+  // 2) 按章序排序，取最近 MAX_TIMELINE_CHAPTERS 章
+  const ordered = valid
+    .slice()
+    .sort((a, b) => a.order - b.order)
     .slice(-MAX_TIMELINE_CHAPTERS);
 
-  // 3) 拼装
+  // 3) 拼装：每章「第N章 标题」换行接章纲本体，章间空一行（\n\n）
   return ordered
-    .map(([chapterId, text]) => {
-      const meta = orderMap.get(chapterId)!;
-      const chNo = meta.order + 1;
-      const rawTitle = meta.title || "";
-      // 规范化：循环剥离标题里自带的"第X章"前缀（中文 / 阿拉伯数字都算），
-      // 避免与下方 canonical 前缀叠加成"第3章 第三章：第3章"式三重前缀
-      // （曾出现过节点标题本身就是"第三章：第3章"的畸形数据）。
-      let cleanTitle = rawTitle;
-      const titlePrefixRe = /^第\s*[0-9零一二三四五六七八九十百千]+\s*章[\s:：·\-—]*/;
-      let m: RegExpExecArray | null;
-      while ((m = titlePrefixRe.exec(cleanTitle))) {
-        cleanTitle = cleanTitle.slice(m[0].length);
-      }
-      cleanTitle = cleanTitle.trim();
+    .map((c) => {
+      const chNo = c.order + 1;
+      const cleanTitle = stripChapterTitlePrefix(c.title || "").trim();
       const prefixedTitle = cleanTitle ? `第${chNo}章 ${cleanTitle}` : `第${chNo}章`;
-      // 摘要文本若自身又以"第N章"开头（AI 摘要常带此前缀），剥离避免前缀叠加
-      const cleanText = text.replace(/^第\s*\d+\s*章[\s:：·\-—]*/, "");
-      return `${prefixedTitle}：${cleanText.slice(0, 220)}`;
+      const text = String(c.outline ?? "").trim();
+      return `${prefixedTitle}\n${text.slice(0, 500)}`;
     })
-    .join("\n");
+    .join("\n\n");
+}
+
+// 循环剥离标题里自带的「第X章」前缀（中文 / 阿拉伯数字），避免与规范前缀叠加成三重前缀
+function stripChapterTitlePrefix(rawTitle: string): string {
+  const re = /^第\s*[0-9零一二三四五六七八九十百千]+\s*章[\s:：·\-—]*/;
+  let t = rawTitle;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(t))) t = t.slice(m[0].length);
+  return t;
 }
 
 export interface RawStorylineEvent {

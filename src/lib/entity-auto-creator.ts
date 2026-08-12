@@ -211,6 +211,32 @@ export function resolveHonorificTarget(allNames: string[], honorificName: string
 }
 
 /**
+ * 昵称缩写 / 姓氏缩写 + 描述词（v2.0.4，#297/#299 配套）：
+ *  - 单字姓名（如「樊」「叶」）= 对应正主的昵称缩写，应并入别名而非拆成两张卡；
+ *  - 前缀尊称（老X / 小X / 阿X）；
+ *  - 「X姓 + 描述词」（韩姓男子 / 叶姓女子 / 萧姓青年 …）。
+ * 与 isHonorificVariant 互补：后者覆盖「X先生/女子」等标准尊称，本函数覆盖单字缩写与「姓+描述」结构。
+ * 仅做「是否为变体」的判定；能否无歧义并入正主由 resolveHonorificTarget 把关。
+ */
+const DESCRIPTOR_AFTER = ["", "男子", "女子", "青年", "少年", "老者", "少女", "姑娘", "公子", "书生", "壮士", "大侠", "少侠", "女侠", "侠女", "前辈", "掌门", "宗主", "将军", "王爷"];
+export function isSurnameAbbrevOrDescriptor(name: string): boolean {
+  const n = normalizeTraditional(name.trim().toLowerCase());
+  if (!n) return false;
+  // 单字姓（昵称缩写）
+  if (n.length === 1) return true;
+  // 前缀尊称（老韩 / 小韩 / 阿韩）
+  if (PREFIX_HONORIFICS.includes(n[0]) && n.length <= 3) return true;
+  // X姓 + 描述词（韩姓男子）
+  const rest = n.slice(1);
+  const idx = rest.indexOf("姓");
+  if (idx === 0) {
+    const after = rest.slice(1);
+    if (DESCRIPTOR_AFTER.includes(after)) return true;
+  }
+  return false;
+}
+
+/**
  * 判断两个名称是否「高度相似、疑似同一实体的变体」。
  * 规则：忽略大小写后
  *  - 完全相同 → 是
@@ -243,7 +269,7 @@ export function isSimilarName(a: string, b: string): boolean {
 /**
  * 自动创建蒸馏发现的新实体。
  *
- * - 角色 → CharacterCard（role: "supporting"，标记 🆕自动发现）
+ * - 角色 → CharacterCard（role: "supporting"，pending 待审；昵称缩写/尊称变体自动并入正主别名，不再拆成脏卡）
  * - 地点/丹药/法宝/功法/材料 → LorebookEntry（对应 category + entityType 记录在 keys 中）
  *
  * 查重策略：大小写不敏感精确匹配 + 相似度去重（灭繁简/错别字变体）。
@@ -333,6 +359,24 @@ export async function autoCreateEntities(
         continue;
       }
     }
+    // 昵称缩写 / 姓氏缩写 + 描述词：同样并入唯一同姓正主别名（樊=樊斯瑞、韩姓男子=韩立）
+    if (isSurnameAbbrevOrDescriptor(name)) {
+      const targetName = resolveHonorificTarget(existingChars.map((c) => c.name), name);
+      if (targetName) {
+        const matched = existingChars.find((c) => c.name.toLowerCase() === targetName.toLowerCase());
+        if (matched) {
+          const curAliases = Array.isArray(matched.aliases) ? (matched.aliases as string[]) : [];
+          if (!curAliases.some((al) => al.toLowerCase() === name.toLowerCase())) {
+            await prisma.characterCard.update({
+              where: { id: matched.id },
+              data: { aliases: Array.from(new Set([...curAliases, name])).slice(0, 50) },
+            });
+          }
+        }
+        skipped.push(name);
+        continue;
+      }
+    }
     // 标记为已存在，避免同一批次内的重复（主名 + 别名）
     existingNames.add(name.toLowerCase());
     existingNameList.push(name);
@@ -375,7 +419,7 @@ export async function autoCreateEntities(
             personality: { dominant: "自动发现，待丰富" } as any,
             background: `[第${sourceNodeId}章自动发现]`,
             abilities: [],
-            tags: ["🆕 自动发现"],
+            tags: [],
             currentStatus: "alive",
             reviewStatus: "pending",
           } as any,

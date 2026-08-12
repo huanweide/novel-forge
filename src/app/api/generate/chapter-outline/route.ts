@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     return rateLimitResponse();
   }
   try {
-    const { projectId, nodeId, prompt: customPrompt, authorNote: explicitAuthorNote } = await request.json();
+    const { projectId, nodeId, prompt: customPrompt, authorNote: explicitAuthorNote, prevOutlines } = await request.json();
 
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
@@ -222,6 +222,10 @@ ${authorDirective}
 
 【前文上下文——你读了才知道从哪里接】
 ${prevContext || "（本章为开头）"}
+
+${(Array.isArray(prevOutlines) && prevOutlines.length > 0)
+  ? `【本批次已生成的前文章纲（你正在写连续剧情，必须承接以下内容，保持人物 / 线索 / 悬念连续，不要另起炉灶）】\n${prevOutlines.slice(0, 8).map((o: string, i: number) => `前章${i + 1}：\n${(o || "").slice(0, 700)}`).join("\n\n")}`
+  : ""}
 
 【活跃剧情线——本章必须顺着这些线推进（v0.46.57 剧情感知）】
 ${storylineContext || "（暂无剧情线，按总纲自由推进）"}

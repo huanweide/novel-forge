@@ -22,7 +22,7 @@ import { CenterPanel } from "@/components/workspace/CenterPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
 import { CharacterDialog } from "@/components/workspace/CharacterDialog";
 import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
-import { BatchWriteDialog } from "@/components/workspace/BatchWriteDialog";
+import { BatchWriteDialog, type OutlineItem } from "@/components/workspace/BatchWriteDialog";
 import { OutlineDialog } from "@/components/workspace/OutlineDialog";
 import { AutomationSettingsDialog } from "@/components/workspace/AutomationSettingsDialog";
 import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
@@ -289,9 +289,38 @@ export default function WorkspacePage() {
     passed: boolean; issues: any[]; summary: string;
   } | null>(null);
 
-  // ── 批量写作（A4 后台任务，统一入口）────────
-  const [showBatchWrite, setShowBatchWrite] = useState(false);
-  const [batchWriteTask, setBatchWriteTask] = useState<{ id: string; status: string; progress: number; done: number; total: number } | null>(null);
+  // ── 批量写作（A4 后台任务，受控统一入口）────────
+  // 全部状态集中于此：phase 决定弹窗视图；taskId=章纲任务 / writeTaskId=正文任务；
+  // 轮询在父层进行，弹窗关闭后任务仍继续，章纲完成后自动重开弹窗（review）。
+  const [batchWrite, setBatchWrite] = useState<{
+    open: boolean;
+    phase: "input" | "running" | "review";
+    count: number;
+    note: string;
+    progress: { done: number; total: number; pct: number };
+    outlines: OutlineItem[];
+    checked: Set<string>;
+    taskId: string | null;
+    writeTaskId: string | null;
+    startedAt: number | null;
+    elapsedSec: number;
+    confirming: boolean;
+    capsuleHidden: boolean;
+  }>({
+    open: false,
+    phase: "input",
+    count: 3,
+    note: "",
+    progress: { done: 0, total: 0, pct: 0 },
+    outlines: [],
+    checked: new Set(),
+    taskId: null,
+    writeTaskId: null,
+    startedAt: null,
+    elapsedSec: 0,
+    confirming: false,
+    capsuleHidden: false,
+  });
 
   // ── 大纲生成对话框 ────────────────────────
   const [showOutlineDialog, setShowOutlineDialog] = useState(false);
@@ -316,46 +345,169 @@ export default function WorkspacePage() {
   };
 
   // v1.5.0 批量写作：启动后台任务 + 轮询进度（可关窗口，任务继续）
-  // v1.6.0：改为「章纲确认流」——弹窗内先生成章纲，确认后走这里写正文（mode:"write"）
-  const handleBatchWrite = async (nodeIds: string[], authorNote: string) => {
-    setShowBatchWrite(false);
+  // v2.0.4：受控改造——弹窗状态全在 batchWrite 上；轮询放父层，章纲完成后自动重开弹窗。
+  const openBatchWrite = () => {
     if (!project) return;
+    setBatchWrite((s) => ({ ...s, open: true, phase: "input" }));
+  };
+
+  // 阶段1：启动章纲生成（mode:"outline"）
+  const startBatchOutline = async () => {
+    if (!project) return;
+    setBatchWrite((s) => ({
+      ...s,
+      phase: "running",
+      progress: { done: 0, total: s.count, pct: 0 },
+      startedAt: Date.now(),
+      elapsedSec: 0,
+      capsuleHidden: false,
+    }));
     try {
       const res = await fetch("/api/story/batch-write", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, nodeIds, authorNote, mode: "write" }),
+        body: JSON.stringify({
+          projectId: project.id,
+          count: batchWrite.count,
+          authorNote: batchWrite.note || undefined,
+          mode: "outline",
+        }),
       });
       const d = await res.json().catch(() => ({}));
       if (!d.taskId) {
-        toastError(d.error || "批量写作启动失败");
+        toastError(d.error || "启动失败");
+        setBatchWrite((s) => ({ ...s, phase: "input" }));
         return;
       }
-      setBatchWriteTask({ id: d.taskId, status: "running", progress: 0, done: 0, total: nodeIds.length });
-      toastInfo("正文生成已启动（后台运行），可继续编辑；进度在右下角查看");
+      setBatchWrite((s) => ({ ...s, taskId: d.taskId }));
+      toastInfo("章纲生成已启动（后台运行），完成后自动回到本窗口");
     } catch (e) {
-      toastError("批量写作启动失败：" + (e instanceof Error ? e.message : "网络错误"));
+      toastError("启动失败：" + (e instanceof Error ? e.message : "网络错误"));
+      setBatchWrite((s) => ({ ...s, phase: "input" }));
     }
   };
 
-  // 批量写作进度轮询
+  // 阶段2：保存编辑后的章纲 → 启动正文生成（mode:"write"），后台运行，右下角看进度
+  const confirmBatchWrite = async () => {
+    if (!project) return;
+    const ids = batchWrite.outlines.filter((i) => batchWrite.checked.has(i.nodeId)).map((i) => i.nodeId);
+    if (ids.length === 0) {
+      toastError("请至少勾选一章");
+      return;
+    }
+    setBatchWrite((s) => ({ ...s, confirming: true }));
+    try {
+      // 逐章保存编辑后的章纲（只有勾选的才发，省请求）
+      for (const item of batchWrite.outlines) {
+        if (!batchWrite.checked.has(item.nodeId)) continue;
+        await fetch(`/api/story/nodes/${item.nodeId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ outline: item.outline }),
+        });
+      }
+      const res = await fetch("/api/story/batch-write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          nodeIds: ids,
+          authorNote: batchWrite.note || undefined,
+          mode: "write",
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!d.taskId) {
+        toastError(d.error || "启动失败");
+        setBatchWrite((s) => ({ ...s, confirming: false }));
+        return;
+      }
+      setBatchWrite((s) => ({
+        ...s,
+        confirming: false,
+        open: false,
+        writeTaskId: d.taskId,
+        taskId: null,
+        phase: "review",
+        outlines: [],
+        checked: new Set(),
+        capsuleHidden: false,
+      }));
+      toastInfo("正文生成已启动（后台运行），进度在右下角查看");
+    } catch (e) {
+      toastError("启动失败：" + (e instanceof Error ? e.message : "网络错误"));
+      setBatchWrite((s) => ({ ...s, confirming: false }));
+    }
+  };
+
+  // 章纲任务轮询：完成 → 自动重开弹窗展示章纲（review）；失败 → 回到 input
   useEffect(() => {
-    if (!batchWriteTask || batchWriteTask.status === "completed" || batchWriteTask.status === "failed") return;
+    if (!batchWrite.taskId || batchWrite.phase !== "running") return;
     const timer = setInterval(async () => {
       try {
-        const r = await fetch(`/api/babylore/fill-task/${batchWriteTask.id}`);
+        const r = await fetch(`/api/babylore/fill-task/${batchWrite.taskId}`);
         const t = await r.json();
-        setBatchWriteTask({ id: t.id, status: t.status, progress: t.progress, done: t.done, total: t.total });
+        setBatchWrite((s) => ({ ...s, progress: { done: t.done || 0, total: t.total || 0, pct: t.progress || 0 } }));
         if (t.status === "completed") {
+          clearInterval(timer);
+          const items: OutlineItem[] = Array.isArray(t.result?.outlines) ? t.result.outlines : [];
+          if (items.length === 0) {
+            setBatchWrite((s) => ({ ...s, phase: "input", open: true, taskId: null, startedAt: null, progress: { done: 0, total: 0, pct: 0 } }));
+            toastError("章纲生成失败：未返回任何章纲，请重试");
+            return;
+          }
+          setBatchWrite((s) => ({
+            ...s,
+            phase: "review",
+            open: true,
+            taskId: null,
+            startedAt: null,
+            outlines: items,
+            checked: new Set(items.map((i) => i.nodeId)),
+            progress: { done: items.length, total: items.length, pct: 100 },
+          }));
+          toastSuccess(`章纲生成完成：${items.length} 章，可逐章查看/编辑后确认生成正文`);
+        } else if (t.status === "failed") {
+          clearInterval(timer);
+          setBatchWrite((s) => ({ ...s, phase: "input", open: true, taskId: null, startedAt: null, progress: { done: 0, total: 0, pct: 0 } }));
+          toastError("章纲生成失败：" + (t.error || "未知错误"));
+        }
+      } catch { /* 下轮重试 */ }
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [batchWrite.taskId, batchWrite.phase]);
+
+  // 实时运行耗时（running 阶段每秒刷新）
+  useEffect(() => {
+    if (batchWrite.phase !== "running" || !batchWrite.startedAt) return;
+    const timer = setInterval(() => {
+      setBatchWrite((s) => (s.startedAt ? { ...s, elapsedSec: Math.floor((Date.now() - s.startedAt) / 1000) } : s));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [batchWrite.phase, batchWrite.startedAt]);
+
+  // 正文任务轮询：完成 → toast + 刷新项目；失败 → toast
+  useEffect(() => {
+    if (!batchWrite.writeTaskId) return;
+    const timer = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/babylore/fill-task/${batchWrite.writeTaskId}`);
+        const t = await r.json();
+        setBatchWrite((s) => ({ ...s, progress: { done: t.done || 0, total: t.total || 0, pct: t.progress || 0 } }));
+        if (t.status === "completed") {
+          clearInterval(timer);
           toastSuccess(`批量写作完成：${t.done}/${t.total} 章已生成`);
           void loadProject();
+          setBatchWrite((s) => ({ ...s, writeTaskId: null, capsuleHidden: true }));
         } else if (t.status === "failed") {
+          clearInterval(timer);
           toastError("批量写作失败：" + (t.error || "未知错误"));
+          setBatchWrite((s) => ({ ...s, writeTaskId: null, capsuleHidden: true }));
         }
-      } catch { /* 轮询失败下轮重试 */ }
+      } catch { /* 下轮重试 */ }
     }, 3000);
     return () => clearInterval(timer);
-  }, [batchWriteTask?.id, batchWriteTask?.status]);
+  }, [batchWrite.writeTaskId]);
 
   const handleDrawSelect = async (card: { outline: string; characters: string[]; coreConflict: string; mood: string; cardLabel?: string }, storylineId?: string, characterIds?: string[]) => {
     if (!selectedNode) return;
@@ -873,7 +1025,7 @@ export default function WorkspacePage() {
   const toolboxItems: ToolboxItem[] = [
     { id: "write", label: "续写 / 微调", desc: "选中章节后让 AI 接着写或润色本章", icon: "pencil", category: "write", action: () => { if (!selectedNode) { toastInfo("请先在左侧大纲选中一个章节"); return; } handleWrite(); } },
     { id: "outline", label: "生成大纲", desc: "AI 规划整本书的章节结构与走向", icon: "bot", category: "write", action: () => setShowOutlineDialog(true) },
-    { id: "batch", label: "批量写作", desc: "后台批量产出多章草稿，可关窗继续", icon: "package", category: "write", action: () => setShowBatchWrite(true) },
+    { id: "batch", label: "批量写作", desc: "后台批量产出多章草稿，可关窗继续", icon: "package", category: "write", action: () => openBatchWrite() },
     { id: "draw", label: "抽卡选章纲", desc: "用色子抽取剧情走向，选定本章路线", icon: "sparkles", category: "generate", action: () => handleDrawChapterOutline() },
     { id: "character", label: "新建角色", desc: "添加一张角色卡，定义人设与关系", icon: "user", category: "generate", action: () => setShowNewCharacter(true) },
     { id: "workshop", label: "创意工坊", desc: "预设 / 角色卡 / 导入导出分享社区预设", icon: "book", category: "generate", action: () => router.push("/workshop") },
@@ -979,7 +1131,7 @@ export default function WorkspacePage() {
             targetWordCount={targetWordCount} onTargetWordCountChange={setTargetWordCount}
             todayWords={monitorTodayWords}
             onWrite={handleWrite} onStop={handleStop}
-            onBatchWrite={() => setShowBatchWrite(true)}
+            onBatchWrite={() => openBatchWrite()}
             onEditOutline={async (outline) => {
               if (!selectedNode) return;
               const prev = selectedNode;
@@ -1120,13 +1272,34 @@ export default function WorkspacePage() {
       {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
       {showImportWizard && <ImportWizard projectId={project.id} initialMode={importWizardMode} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
 
-      {/* v1.5.0 批量写作弹窗 + 后台进度胶囊 */}
-      {showBatchWrite && <BatchWriteDialog projectId={project.id} onClose={() => setShowBatchWrite(false)} onConfirmWrite={handleBatchWrite} />}
-      {batchWriteTask && batchWriteTask.status !== "completed" && batchWriteTask.status !== "failed" && (
+      {/* v2.0.4 批量写作弹窗（受控）+ 后台进度胶囊 */}
+      <BatchWriteDialog
+        open={batchWrite.open}
+        phase={batchWrite.phase}
+        count={batchWrite.count}
+        note={batchWrite.note}
+        progress={batchWrite.progress}
+        elapsedSec={batchWrite.elapsedSec}
+        outlines={batchWrite.outlines}
+        checked={batchWrite.checked}
+        confirming={batchWrite.confirming}
+        onCountChange={(n) => setBatchWrite((s) => ({ ...s, count: n }))}
+        onNoteChange={(t) => setBatchWrite((s) => ({ ...s, note: t }))}
+        onStart={startBatchOutline}
+        onClose={() => setBatchWrite((s) => ({ ...s, open: false }))}
+        onToggle={(id) => setBatchWrite((s) => {
+          const next = new Set(s.checked);
+          if (next.has(id)) next.delete(id); else next.add(id);
+          return { ...s, checked: next };
+        })}
+        onEdit={(id, text) => setBatchWrite((s) => ({ ...s, outlines: s.outlines.map((i) => (i.nodeId === id ? { ...i, outline: text } : i)) }))}
+        onConfirm={confirmBatchWrite}
+      />
+      {(batchWrite.writeTaskId || (batchWrite.taskId && !batchWrite.open)) && !batchWrite.capsuleHidden && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/95 backdrop-blur px-3 py-1.5 shadow-lg text-xs text-[var(--nv-text-secondary)]">
           <Icon name="loader" size={12} className="animate-spin text-[var(--nv-primary)]" />
-          批量写作中… {batchWriteTask.done}/{batchWriteTask.total} 章（{batchWriteTask.progress}%）
-          <button onClick={() => setBatchWriteTask(null)} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" title="隐藏进度提示（任务仍在后台继续）"><Icon name="x" size={12} /></button>
+          批量写作中… {batchWrite.progress.done}/{batchWrite.progress.total} 章（{batchWrite.progress.pct}%）
+          <button onClick={() => setBatchWrite((s) => ({ ...s, capsuleHidden: true }))} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" title="隐藏进度提示（任务仍在后台继续）"><Icon name="x" size={12} /></button>
         </div>
       )}
 

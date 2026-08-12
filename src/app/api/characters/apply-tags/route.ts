@@ -1,8 +1,9 @@
 /**
  * POST /api/characters/apply-tags
  *
- * 接收用户勾选的分类标签，批量更新角色 tags。
- * 合并逻辑：保留旧标签中的系统标签（📥📝），替换分类标签。
+ * 接收用户自定义标签，批量更新角色 tags。
+ * 合并逻辑：保留旧标签（含系统标签 📥📝 与既有自定义标签），追加新标签（并集）。
+ * v2.0.4：改为「并集追加」语义——用户可往多个自定义标签里加同一个人，不会互相覆盖。
  */
 import { jsonError } from "@/lib/api-error";
 
@@ -46,11 +47,9 @@ export async function POST(request: Request) {
       if (!character) { skipped++; continue; }
 
       const oldTags = Array.isArray(character.tags) ? character.tags : [];
-      const systemTags = oldTags.filter((t: unknown) =>
-        typeof t === "string" && (t.startsWith("📥") || t.startsWith("📝"))
-      );
-      const allLabels = a.labels.filter(l => typeof l === "string" && l.length > 0);
-      const merged = [...new Set([...allLabels, ...systemTags])];
+      const allLabels = a.labels.filter((l: unknown) => typeof l === "string" && l.length > 0);
+      // 并集：保留所有旧标签（系统标签 + 既有自定义标签），追加本次新标签
+      const merged = [...new Set([...oldTags, ...allLabels])];
 
       await prisma.characterCard.update({
         where: { id: a.characterId },

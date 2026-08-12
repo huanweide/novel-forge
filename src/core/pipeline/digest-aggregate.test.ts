@@ -5,6 +5,7 @@ import {
   buildStorylineDigest,
   formatStorylineEvents,
   MAX_TIMELINE_CHAPTERS,
+  type RawChapterOutline,
 } from "./digest-aggregate";
 
 describe("isGarbageSummary", () => {
@@ -34,94 +35,71 @@ describe("isGarbageSummary", () => {
   });
 });
 
-describe("buildTimelineDigest", () => {
-  const orderMap = new Map<string, { order: number; title: string }>([
-    ["c1", { order: 0, title: "第一章 启航" }],
-    ["c2", { order: 1, title: "潮痕" }],
-    ["c3", { order: 2, title: "第三章 迷雾" }],
-  ]);
+describe("buildTimelineDigest（v2.0.4：直接抄章纲）", () => {
+  const mk = (order: number, title: string, outline: string): RawChapterOutline => ({
+    chapterId: `c${order + 1}`,
+    order,
+    title,
+    outline,
+  });
 
-  it("同章多条遗留行：只保留非垃圾且最长的一条，每章仅出现一次", () => {
-    const summaries = [
-      { chapterId: "c2", summary: "您提供的章节内容似乎为空——没有实际正文，请粘贴进来" }, // 垃圾
-      { chapterId: "c2", summary: "阿芸在潮痕崖边拾得一枚龙鳞，预示着风暴将至。" }, // 真实
-      { chapterId: "c2", summary: "阿芸拾得龙鳞。" }, // 真实但更短，应被更长的覆盖
+  it("空输入返回空串", () => {
+    expect(buildTimelineDigest([])).toBe("");
+  });
+
+  it("无章纲 / 过短章纲不入大纲；章纲按章序排列，章间空一行", () => {
+    const chapters: RawChapterOutline[] = [
+      mk(0, "第一章 启航", "林夜在龙骨滩苏醒，发现整座新城建立在巨龙骸骨之上。"),
+      mk(1, "潮痕", ""), // 无章纲，跳过
+      mk(2, "第三章 迷雾", "短"), // 过短，跳过
+      mk(3, "第四章 暗涌", "阿芸在潮痕崖边拾得一枚龙鳞，预示着风暴将至，三人连夜撤离。"),
     ];
-    const out = buildTimelineDigest(summaries, orderMap);
-    // 第2章只出现一次，且为最长那条真实摘要
-    const matches = out.match(/第2章/g) ?? [];
-    expect(matches.length).toBe(1);
-    expect(out).toContain("阿芸在潮痕崖边拾得一枚龙鳞，预示着风暴将至。");
-    expect(out).not.toContain("您提供的章节内容似乎为空");
+    const out = buildTimelineDigest(chapters);
+    expect(out).toContain("第1章 启航");
+    expect(out).toContain("第4章 暗涌");
+    expect(out).not.toContain("第2章 潮痕"); // 空章纲章节块未出现（注意：第4章正文提及「潮痕崖边」属正常）
+    expect(out).not.toContain("第3章 迷雾"); // 过短章节块未出现
+    // 章间空一行：存在连续两个换行
+    expect(out).toContain("\n\n");
   });
 
-  it("整章都是垃圾：该章不出现在大纲中", () => {
-    const summaries = [
-      { chapterId: "c3", summary: "我注意到您提供了模板，但没有提供实际的正文内容" },
-      { chapterId: "c1", summary: "林夜在龙骨滩苏醒，发现整座新城建立在巨龙骸骨之上。" },
-    ];
-    const out = buildTimelineDigest(summaries, orderMap);
-    expect(out).not.toContain("第三章");
-    expect(out).toContain("第1章 启航：林夜在龙骨滩苏醒");
-  });
-
-  it("已删节点的遗留行被排除（orderMap 不命中）", () => {
-    const summaries = [
-      { chapterId: "c1", summary: "林夜在龙骨滩苏醒，发现整座新城建立在巨龙骸骨之上。" },
-      { chapterId: "ghost", summary: "这是已删章节的脏数据，不应出现" },
-    ];
-    const out = buildTimelineDigest(summaries, orderMap);
-    expect(out).not.toContain("ghost");
-    expect(out).not.toContain("已删章节");
-  });
-
-  it("按章序排序，且仅保留最近 MAX_TIMELINE_CHAPTERS 章", () => {
-    const bigOrderMap = new Map<string, { order: number; title: string }>();
-    const bigSummaries: { chapterId: string; summary: string }[] = [];
-    for (let i = 0; i < 25; i++) {
-      const id = `k${i}`;
-      bigOrderMap.set(id, { order: i, title: `第${i + 1}章` });
-      bigSummaries.push({ chapterId: id, summary: `第${i + 1}章的真实摘要内容，足够长不会被判为垃圾行。` });
-    }
-    const out = buildTimelineDigest(bigSummaries, bigOrderMap);
-    const lines = out.split("\n").filter((l) => l.trim().length > 0);
-    // 25 章只保留最近 20 章
-    expect(lines.length).toBe(MAX_TIMELINE_CHAPTERS);
-    // 最旧的 k0（第1章）被淘汰，最新的 k24（第25章）保留
-    expect(out).not.toContain("第1章");
-    expect(out).toContain("第25章");
-  });
-
-  it("标题已含『第X章』前缀时不重复前缀（阿拉伯数字）", () => {
-    const sums = [{ chapterId: "c1", summary: "林夜在龙骨滩苏醒，发现整座新城建立在巨龙骸骨之上。" }];
-    const om = new Map<string, { order: number; title: string }>([["c1", { order: 0, title: "第一章 启航" }]]);
-    const out = buildTimelineDigest(sums, om);
-    expect(out).toContain("第1章 启航：林夜在龙骨滩苏醒");
-    expect(out).not.toContain("第一章 启航：林夜");
-  });
-
-  it("标题为中文数字『第X章』时归一为规范阿拉伯前缀", () => {
-    const om = new Map<string, { order: number; title: string }>([["c1", { order: 0, title: "第一章：龙髓石" }]]);
-    const out = buildTimelineDigest([{ chapterId: "c1", summary: "高千惠带着契约进入龙庭集团。" }], om);
-    expect(out).toContain("第1章 龙髓石：高千惠带着契约进入龙庭集团。");
+  it("章纲文本自身以『第N章』开头时不叠加前缀", () => {
+    const chapters = [mk(0, "第一章 启航", "第1章：林夜在龙骨滩苏醒，发现新城建立在巨龙骸骨之上。")];
+    const out = buildTimelineDigest(chapters);
+    expect(out).toContain("第1章 启航");
+    expect(out).toContain("林夜在龙骨滩苏醒");
+    expect(out).not.toContain("第1章 第1章");
   });
 
   it("畸形标题『第三章：第3章』循环剥离，不出现三重前缀", () => {
-    const om = new Map<string, { order: number; title: string }>([["c3", { order: 2, title: "第三章：第3章" }]]);
-    const out = buildTimelineDigest([{ chapterId: "c3", summary: "叶凌云以茶探访龙渊，察觉其有暗器旧伤。" }], om);
-    expect(out).toBe("第3章：叶凌云以茶探访龙渊，察觉其有暗器旧伤。");
+    const chapters = [mk(2, "第三章：第3章", "叶凌云以茶探访龙渊，察觉其有暗器旧伤。")];
+    const out = buildTimelineDigest(chapters);
+    expect(out).toContain("第3章");
+    expect(out).toContain("叶凌云以茶探访龙渊");
     expect(out).not.toContain("第三章");
     expect(out).not.toContain("第3章 第3章");
   });
 
-  it("摘要文本自身以『第N章』开头时剥离，避免前缀叠加", () => {
-    const summaries = [
-      { chapterId: "c3", summary: "第3章：叶凌云以茶探访龙渊，察觉其有暗器旧伤。" },
+  it("垃圾模板章纲被过滤", () => {
+    const chapters = [
+      mk(0, "第一章", "林夜在龙骨滩苏醒。"),
+      mk(1, "第二章", "您提供的章节内容似乎为空——没有实际正文，请粘贴进来。"),
     ];
-    const out = buildTimelineDigest(summaries, orderMap);
-    // 标题"第三章 迷雾"的"第三章"被归一剥离为"迷雾"，摘要自带"第3章："也被剥离
-    expect(out).toContain("第3章 迷雾：叶凌云以茶探访龙渊");
-    expect(out).not.toContain("第3章 第三章：第3章：");
+    const out = buildTimelineDigest(chapters);
+    expect(out).toContain("第1章");
+    expect(out).not.toContain("您提供的章节内容似乎为空");
+  });
+
+  it("超过 MAX_TIMELINE_CHAPTERS 章时只保留最近 N 章", () => {
+    const chapters: RawChapterOutline[] = [];
+    for (let i = 0; i < 25; i++) {
+      chapters.push(mk(i, `第${i + 1}章`, `第${i + 1}章的真实章纲内容，足够长不会被判为垃圾行，用于测试截断。`));
+    }
+    const out = buildTimelineDigest(chapters);
+    const blocks = out.split("\n\n").filter((b) => b.trim().length > 0);
+    expect(blocks.length).toBe(MAX_TIMELINE_CHAPTERS);
+    expect(out).not.toContain("第1章"); // 最旧被淘汰
+    expect(out).toContain("第25章");
   });
 });
 

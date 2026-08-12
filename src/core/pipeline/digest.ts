@@ -18,7 +18,6 @@ import { prisma } from "@/lib/prisma";
 import {
   buildTimelineDigest,
   buildStorylineDigest,
-  type ChapterOrderMeta,
   type RawStorylineEvent,
 } from "./digest-aggregate";
 
@@ -37,11 +36,12 @@ export interface ProjectDigest {
  * 故事线摘要：主线(main)的里程碑 / 事件(非 CLUE)按 position 串联，标注角色(推进 / 卡点 / 分支)。
  */
 export async function rebuildProjectDigest(projectId: string): Promise<ProjectDigest> {
-  const [summaries, nodes, mainLines] = await Promise.all([
-    prisma.chapterSummary.findMany({ where: { projectId } }),
+  const [nodes, mainLines] = await Promise.all([
+    // v2.0.4：时间线直接抄各章章纲（node.outline），不再读 ChapterSummary
     prisma.storyNode.findMany({
-      where: { projectId, deletedAt: null },
-      select: { id: true, order: true, title: true },
+      where: { projectId, deletedAt: null, type: { in: ["chapter", "section"] } },
+      select: { id: true, order: true, title: true, outline: true },
+      orderBy: { order: "asc" },
     }),
     prisma.storyline.findMany({
       where: { projectId, type: "main" },
@@ -56,18 +56,14 @@ export async function rebuildProjectDigest(projectId: string): Promise<ProjectDi
     },
   });
 
-  // 章 id → {order, title} 映射，用于对摘要按章序排序
-  const orderMap = new Map<string, ChapterOrderMeta>();
-  for (const n of nodes as Array<{ id: string; order: number; title: string }>) {
-    orderMap.set(n.id, { order: n.order, title: n.title });
-  }
-
+  // v2.0.4：时间线 = 各章章纲按章序排列
   const timelineDigest = buildTimelineDigest(
-    (summaries as Array<{ chapterId: string; summary: string | null }>).map((s) => ({
-      chapterId: s.chapterId,
-      summary: s.summary,
+    (nodes as Array<{ id: string; order: number; title: string; outline: string | null }>).map((n) => ({
+      chapterId: n.id,
+      order: n.order,
+      title: n.title,
+      outline: n.outline,
     })),
-    orderMap,
   );
 
   // 把事件按 storylineId 分组，喂给纯函数
