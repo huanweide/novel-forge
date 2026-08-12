@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.4 — 2026-08-12
+
+**批量写安全护栏 + 体验债清理（round-2 董事会收口）**
+
+- **批量写安全护栏（P0）**：批量写后去重接入去掉 `.catch(()=>{})` 静默吞错，去重合并组数/龙套标记数/异常原因写入任务 `result.dedupe`，前端可见、可告警，杜绝「去重从未成功过却照报批写成功」；`consumeSSE` 从字符串 `contains` 改为逐个解析 SSE 事件，遇 `done.truncated`（被 max_tokens 截断）或 `error` 事件记 `failed`，截断章不再虚高 `done`，进度真实化。
+- **角色列表体验债清理（P1）**：`CharacterList.handleToggleAll` 移除自动 `handleExpand` 调用，全选仅做选择，扩展必须显式点按钮，消除「想批量删除/打标却被意外发起全量 LLM 角色扩展」的惊吓副作用与隐性算力消耗。
+- **诚实标注与后续路线（round-2 董事会）**：经樊氏集团董事会 round-2 六位董事诊断，如实标注去重与批写集成「逻辑落地、集成未验证」的缺口；P0 后续待补 `CharacterCardRevision` 快照表（合并前存旧值可一键回滚）+ 高置信度自动合并/pending 确认，P2 待做 dedupe 增量缓存、prompt 版本化、移除 batch-write 自回环 fetch 等。
+
 ## v2.0.3 — 2026-08-12
 
 **批量写作体验升级 + 角色去重/标签重构 + 摘要大纲直连章纲**

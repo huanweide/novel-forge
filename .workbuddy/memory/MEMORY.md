@@ -9,7 +9,7 @@
 
 ## 质量门禁
 - `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 必须 0 错误。
-- `npx vitest run` 必须全绿（当前基线 50 文件 437 测试）。
+- `npx vitest run` 必须全绿（当前基线 55 文件 483 测试，v2.0.3）。
 - 每次改 schema.prisma 后必须杀 dev server 重启，否则 stale Prisma client 会 503。
 
 ## 已知环境限制
@@ -27,6 +27,10 @@
 - v1.8.23 摘要大纲：长期记忆融入世界卡与上下文（timelineDigest/storylineDigest）。
 - v1.8.24 叙事阶段：narrative role 注入写作上下文（WORK_REPORT-narrative-stage-v1824）。
 - v1.8.25 自动情节化：抽取关键事件一键归纳进故事线（Task #265，零 schema 变更）。双门禁 0 错/437 全绿；真实 星辰 库集成核验通过。已知未做：live 生成会话端到端点击未走通（服务端 LLM 调用 Playwright 拦不到，核心落库已被真实库集成测试覆盖，留上线人工点验）。
+- v2.0.0 长征收口：质量总分聚合条、前台批量统一后台异步、角色对话会话落库、安全规则库用户可配、记忆单源、文风两入口互标、叙事阶段被动展示（commit 6004fe8）。
+- v2.0.1 摘要大纲根治：digest-aggregate 纯函数去重+垃圾过滤+标题归一；入口 isGarbageSummary 守卫拒收脏数据；清理 新城/星辰 脏行（commit 49635e0）。
+- v2.0.2 游戏模式 SSE 流式 + 写作节奏后台收尾修复 + 摘要入口整合 + 正文内联编辑（commit 6602e26）。
+- v2.0.3 批量写作进度UX/章纲延续自查、角色去重改 LLM 驱动+默认开启、删自动分类死代码改自建标签、移除死板自动发现改 LLM 发现源头防脏卡、摘要大纲直连章纲（commit 5bf0d6b）。
 
 ## 工作原则
 - IP 永远归瑞宝宝；不另立 IP/品牌/项目。

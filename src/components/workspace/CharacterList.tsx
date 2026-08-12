@@ -73,7 +73,7 @@ export function CharacterList({
   };
 
   // 全选/取消全选（仅对筛选后可见列表生效）
-  // v1.2.0：全选后自动联动「AI 扩展」——一次点选即开跑，无需再手动点扩展按钮
+  // 注意：全选不再自动联动「AI 扩展」——避免用户仅想批量删除/打标时，被意外发起全量 LLM 角色扩展（惊吓副作用 + 隐性算力消耗）。扩展必须是显式点按钮。
   const handleToggleAll = () => {
     if (allInViewSelected) {
       const next = new Set(selectedIds);
@@ -83,7 +83,6 @@ export function CharacterList({
       const next = new Set(selectedIds);
       filtered.forEach(c => next.add(c.id));
       setSelectedIds(next);
-      if (next.size > 0) void handleExpand(next);
     }
   };
 

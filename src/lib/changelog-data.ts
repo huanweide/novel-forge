@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.3";
+export const LATEST_VERSION = "v2.0.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.3 批量写作体验升级：弹窗实时显示耗时、可中途关窗后台续写、完成自动重开看章纲、右下角常驻进度。",
-  "v2.0.3 批量章纲延续性三要素自查：注入前序章纲、自动校验「章纲合规/正文合规/三章延续」，确认后直接出正文。",
-  "v2.0.3 角色去重合并改 LLM 驱动且默认开启（识别昵称缩写/尊称变体），批量写后自动跑；移除死板自动分类与自动发现。",
-  "v2.0.3 摘要大纲直连章纲：直接排列每章章纲、章间空一行，不再误杀真实短章纲；时间线/故事线大纲保留累加。",
+  "v2.0.4 批量写去重可观测化：去掉静默吞错的 .catch(()=>{})，去重合并组数/龙套标记数/异常原因写入任务 result.dedupe，前端可见，杜绝「去重从未成功过却照报批写成功」。",
+  "v2.0.4 批量写进度真实化：consumeSSE 真正解析 write 端 SSE 的 done 事件，被 max_tokens 截断的章记 failed 而非虚高 done，进度不再注水。",
+  "v2.0.4 角色列表去除「全选即触发 AI 扩展」惊吓副作用：全选仅做选择，扩展必须显式点按钮，避免误触发起全量 LLM 调用。",
+  "v2.0.4 安全护栏（round-2 董事会）：去重/批写集成由「逻辑落地、集成未验证」如实标注缺口；P0 后续待补角色卡快照表（可回滚）+ 高置信度自动合并/pending 确认。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.4",
+    date: "2026-08-12",
+    title: "v2.0.4 批量写安全护栏 + 体验债清理（round-2 董事会收口）",
+    sections: [
+      {
+        label: "批量写安全护栏（P0）",
+        items: [
+          "批量写后去重接入去掉 .catch(()=>{}) 静默吞错：去重结果（merged/rockets/total）与异常原因写入 fillTask.result.dedupe，前端可见、可告警；不再「去重可 100% 失败、系统却照报批写成功」。对应费曼诊断：此前去重/batch-write 零测试、集成未验证。",
+          "consumeSSE 从字符串 contains 改为逐个解析 SSE 事件：遇 done.truncated（被 max_tokens 截断）或 error 事件记 failed，截断章不再虚高 done，进度真实化（对应 Karpathy 诊断）。",
+        ],
+      },
+      {
+        label: "角色列表体验债清理（P1）",
+        items: [
+          "CharacterList.handleToggleAll 移除自动 handleExpand 调用：全选只做选择，扩展必须显式点按钮，消除「想批量删除/打标却被意外发起全量 LLM 角色扩展」的惊吓副作用与隐性算力消耗（对应乔布斯/张雪峰诊断）。",
+        ],
+      },
+      {
+        label: "诚实标注与后续路线（round-2 董事会）",
+        items: [
+          "经樊氏集团董事会 round-2 六位董事诊断（乔布斯/马斯克/Karpathy/张雪峰/芒格/费曼），如实标注去重与批写集成「逻辑落地、集成未验证」的缺口。",
+          "P0 后续待做：CharacterCardRevision 快照表（合并前存旧值可一键回滚，止血不可逆操作）、高置信度自动合并 + 低置信度 pending 确认（Chair 裁决：保留「默认跑出建议」体验，但不可逆合并改「建议+确认」）；P2 待做：dedupe 增量/语义缓存、prompt 版本化与 completeText 暴露 JSON-mode、合并 entity-auto-creator 与 character-dedupe 重复判定分支、移除 batch-write 自回环 fetch、死路由审计。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.3",
     date: "2026-08-12",

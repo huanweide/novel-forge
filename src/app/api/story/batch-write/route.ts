@@ -28,14 +28,34 @@ async function consumeSSE(res: Response): Promise<boolean> {
   const decoder = new TextDecoder();
   let buf = "";
   let okDone = false;
+  let truncated = false;
+  let errored = false;
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const { done: d, value } = await reader.read();
     if (value) buf += decoder.decode(value, { stream: true });
-    if (buf.includes('"type":"done"') || buf.includes('"type": "done"')) okDone = true;
+    // 逐个解析已完成的 SSE 事件（以 \n\n 分隔，每行 "data: {json}"）
+    let idx;
+    while ((idx = buf.indexOf("\n\n")) !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const dataLine = raw.split("\n").find((l) => l.startsWith("data:"));
+      if (!dataLine) continue;
+      try {
+        const evt = JSON.parse(dataLine.slice(5).trim());
+        if (evt.type === "error") errored = true;
+        if (evt.type === "done") {
+          okDone = true;
+          if (evt.truncated) truncated = true; // 被 max_tokens 截断的章：记为失败，不虚高进度
+        }
+      } catch {
+        /* 跳过非 JSON 的控制行 */
+      }
+    }
     if (d) break;
   }
-  return okDone;
+  // 仅在明确成功（无 error、无截断）时记 done；截断章记 failed，进度真实化
+  return okDone && !truncated && !errored;
 }
 
 export async function POST(request: Request) {
@@ -88,9 +108,36 @@ export async function POST(request: Request) {
             where: { id: task.id },
             data: { status: done > 0 ? "completed" : "failed", progress: 100, result: { done, failed, total: ids.length } },
           });
-          // #297：批量写作完成后默认自动跑一次去重合并（LLM 判定同一人，清理昵称缩写/尊称脏卡）；失败不阻塞批写结果
+          // #297：批量写作完成后默认自动跑一次去重合并（LLM 判定同一人，清理昵称缩写/尊称脏卡）。
+          // P0 护栏（round-2 董事会）：去重结果/异常必须可观测，不再用 .catch(()=>{}) 静默吞掉——
+          // 合并组数、龙套标记数、异常原因都写进 fillTask.result.dedupe，前端可见，避免"去重从未成功过却照报批写成功"。
           if (done > 0) {
-            await dedupeCharacters(projectId).catch(() => {});
+            try {
+              const dres = await dedupeCharacters(projectId);
+              await prisma.fillTask.update({
+                where: { id: task.id },
+                data: {
+                  result: {
+                    done,
+                    failed,
+                    total: ids.length,
+                    dedupe: { merged: dres.mergedGroups.length, rockets: dres.markedRockets.length, total: dres.total },
+                  },
+                },
+              });
+            } catch (de) {
+              await prisma.fillTask.update({
+                where: { id: task.id },
+                data: {
+                  result: {
+                    done,
+                    failed,
+                    total: ids.length,
+                    dedupe: { error: de instanceof Error ? de.message : String(de) },
+                  },
+                },
+              });
+            }
           }
         } catch (e) {
           await prisma.fillTask.update({
