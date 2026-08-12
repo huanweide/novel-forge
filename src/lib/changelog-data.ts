@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.10";
+export const LATEST_VERSION = "v2.0.11";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.11 分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）：世界分类 15 类收敛为 world-category-classifier 单一权威源；LORE_COLORS 升为 Record<WorldCategory,string> 强制覆盖全部 15 类（补全 fate_system/physics/public_system/character_relationship 4 色）；ChapterEntitiesPanel 实体分组遍历权威源动态生成 15 组，7 类不再被吞；图例与高亮配色三处共用单一源。",
   "v2.0.10 回滚还原接口（round-2 裁决 P2 #10「prompt 当代码」闭环收尾 #319）：POST /api/projects/[id]/prompt-revisions/rollback 读指定 version 的完整 content 写回 Project.globalPrompt，并调 recordGlobalPromptRevision(content, \"rollback\") 落一条 source=rollback 的新版本（version=max+1），使「回滚」本身成为一次可追踪的新提交（git revert 语义：不删旧版，只新增还原版），避免静默覆盖导致不可恢复。",
   "v2.0.10 评测集（P2 #10 第三要素 #320）：新增 src/core/prompt-eval.ts——固定评测集 fixture（基准角色/世界书/风格/项目设定）+ evaluatePromptVersions(current, baseline?) 要素守护对比纯函数，守护「作品/角色/世界书/风格」四大块关键要素不丢、字数与 hash 不漂移；零 LLM、确定性、可进 vitest 双门禁。直接补上历史上 sync 重写 globalPrompt 多次静默丢要素（世界书 7 类被漏 / buildConfig 双漏口）的回归守护。",
   "v2.0.10 导出 buildGlobalPrompt 供评测集复用；评测集与回滚共享 recordGlobalPromptRevision 的 source=rollback 入口，三块（版本化 #316/317/318 + 回滚 #319 + 评测集 #320）完整闭环「prompt 当代码」。",
@@ -37,6 +38,28 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.11",
+    date: "2026-08-12",
+    title: "v2.0.11 分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）",
+    sections: [
+      {
+        label: "世界分类单一权威源",
+        items: [
+          "src/lib/world-category-classifier.ts 的 WorldCategory/ALL_WORLD_CATEGORIES 确立为世界分类唯一权威源（15 类，Record<WorldCategory,X> 类型强制全覆盖）。",
+          "src/core/entity-highlighter.ts：LORE_COLORS 类型由 Record<string,string> 升为 Record<WorldCategory,string>，补全 character_relationship/fate_system/physics/public_system 4 色（原 11 色不变），类型系统强制 15 类全覆盖，漏一类 tsc 直接报错；WORLD_LEGEND_CATS 改为由 ALL_WORLD_CATEGORIES 派生，图例自动覆盖 15 类。",
+          "src/components/workspace/ChapterEntitiesPanel.tsx：实体分组 groupDefs 由手抄 9 组 + other 兜底改为 character 组 + 遍历 ALL_WORLD_CATEGORIES 动态生成 15 组（MODULE_ICON 从 WORLD_MODULES 派生），law/currency/custom/fate_system/physics/public_system/character_relationship 共 7 类不再被吞；API route 复用 getCategoryColor 单一取值逻辑。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 59 文件 513/513 全绿。改动仅类型与展示层，无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v2.0.10",
     date: "2026-08-12",

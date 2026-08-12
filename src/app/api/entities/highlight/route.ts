@@ -8,7 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
-import { CHARACTER_COLOR, LORE_COLORS } from "@/core/entity-highlighter";
+import { CHARACTER_COLOR, getCategoryColor } from "@/core/entity-highlighter";
 
 export async function GET(request: Request) {
   try {
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // 世界书词条（title 优先，覆盖同名角色）
     const seenLore = new Set<string>();
     for (const e of loreEntries) {
-      const color = LORE_COLORS[e.category] || "#6b7280";
+      const color = getCategoryColor(e.category);
       if (!seenLore.has(e.title)) {
         seenLore.add(e.title);
         entities.push({ id: e.id, name: e.title, type: "lorebook", color, category: e.category });

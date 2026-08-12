@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.11 — 2026-08-12
+
+**分类标签体系单一权威源治理（round-17 F-01/F-02/F-03）**
+
+- **世界分类唯一权威源（F-01）**：`src/lib/world-category-classifier.ts` 的 `WorldCategory`（15 类）+ `ALL_WORLD_CATEGORIES` + `WORLD_CATEGORY_LABELS`/`WORLD_CATEGORY_SECTIONS`（`Record<WorldCategory,X>` 类型强制全覆盖）确立为世界分类唯一权威源。
+- **LORE_COLORS 强制 15 类覆盖（F-02）**：`src/core/entity-highlighter.ts` 的 `LORE_COLORS` 类型由 `Record<string,string>` 升为 `Record<WorldCategory,string>`，补全 `character_relationship`/`fate_system`/`physics`/`public_system` 4 色（原 11 色不变）；类型系统强制 15 类全覆盖，漏一类 tsc 直接报错；`WORLD_LEGEND_CATS` 改为由 `ALL_WORLD_CATEGORIES` 派生，图例自动覆盖 15 类。
+- **ChapterEntitiesPanel 不再吞 7 类（F-03）**：`src/components/workspace/ChapterEntitiesPanel.tsx` 的实体分组 `groupDefs` 由手抄 9 组 + other 兜底改为 character 组 + 遍历 `ALL_WORLD_CATEGORIES` 动态生成 15 组（`MODULE_ICON` 从 `WORLD_MODULES` 派生）；`law`/`currency`/`custom`/`fate_system`/`physics`/`public_system`/`character_relationship` 共 7 类不再被「其他」桶吞掉；API route 复用 `getCategoryColor` 单一取值逻辑。
+- **验证**：tsc 0 错 + vitest 59 文件 513/513 全绿；仅类型与展示层改动，无 schema 迁移、无新依赖。
+
 ## v2.0.9 — 2026-08-12
 
 **prompt 版本化（round-2 裁决 P2 #10「prompt 当代码」半边落地）**

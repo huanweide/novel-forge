@@ -1,4 +1,4 @@
-import { WORLD_CATEGORY_SECTIONS } from "@/lib/world-category-classifier";
+import { WORLD_CATEGORY_SECTIONS, ALL_WORLD_CATEGORIES, type WorldCategory } from "@/lib/world-category-classifier";
 /**
  * 实体颜色高亮引擎（客户端安全——不导入 prisma）
  *
@@ -16,8 +16,13 @@ import { WORLD_CATEGORY_SECTIONS } from "@/lib/world-category-classifier";
 
 export const CHARACTER_COLOR = "#F97316"; // 🟠 鲜橙 — 角色卡固定标注色，醒目且暗背景对比达标
 
-/** 词条分类 → 颜色（高对比、暗色背景醒目，彼此区分度高） */
-export const LORE_COLORS: Record<string, string> = {
+/**
+ * 词条分类 → 颜色（高对比、暗色背景醒目，彼此区分度高）。
+ * 类型升级为 Record<WorldCategory, string>：与 world-category-classifier 的权威源同源，
+ * 类型系统强制覆盖全部 15 类——一旦 ALL_WORLD_CATEGORIES 增删/改名某一类而此处漏改，
+ * tsc 直接报错，从编译期消灭「LORE_COLORS 仅 11/15 覆盖」的漂移根因（F-02 / Round-17）。
+ */
+export const LORE_COLORS: Record<WorldCategory, string> = {
   faction:      "#22C55E", // 🟢 鲜绿 — 势力
   item:         "#FACC15", // 🟡 亮金 — 物品
   geography:    "#38BDF8", // 🔵 天蓝 — 地点
@@ -29,6 +34,11 @@ export const LORE_COLORS: Record<string, string> = {
   law:          "#F59E0B", // 🟠 琥珀 — 法则
   currency:     "#BEF264", // 🟢 柠檬绿 — 货币
   custom:       "#9CA3AF", // ⚫ 灰   — 自定义
+  // ── 补全原缺失的 4 类（F-02 修复）──
+  character_relationship: "#F472B6", // 玫红 — 角色关系
+  fate_system:  "#C084FC", // 淡紫 — 命运体系
+  physics:      "#34D399", // 翠绿 — 物理
+  public_system:"#8B5CF6", // 紫罗兰 — 公开体制
 };
 
 // ═══════════════════════════════════════════
@@ -177,7 +187,7 @@ export function invalidateEntityCache(projectId: string) {
  * 获取分类对应的颜色
  */
 export function getCategoryColor(category: string): string {
-  return LORE_COLORS[category] || "#6b7280";
+  return LORE_COLORS[category as WorldCategory] ?? "#6b7280";
 }
 
 // ═══════════════════════════════════════════
@@ -290,10 +300,9 @@ export function findEntitiesInText(
 // 中文标签单一来源：直接引用分类器权威源 WORLD_CATEGORY_LABELS 的纯中文派生
 //（WORLD_CATEGORY_SECTIONS[cat].label），消灭 ENTITY_LEGEND 手抄中文名漂移根因
 //（与 sync-global-prompt 的 catLabel、游戏侧 engine.ts 同一权威源）。
-const WORLD_LEGEND_CATS = [
-  "faction", "item", "geography", "magic_system", "technique",
-  "creature", "culture", "history", "law", "currency", "custom",
-] as const;
+// 单一权威源：直接由 ALL_WORLD_CATEGORIES 派生，覆盖全部 15 类
+//（F-02 修复：消灭原手抄 11 类数组的漂移根因，未来增删分类自动同步）
+const WORLD_LEGEND_CATS: WorldCategory[] = [...ALL_WORLD_CATEGORIES];
 
 export const ENTITY_LEGEND: Array<{ key: string; label: string; color: string }> = [
   { key: "character", label: "角色", color: CHARACTER_COLOR },

@@ -9,7 +9,9 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { getEntityMap, findEntitiesInText, getCategoryColor, CHARACTER_COLOR, LORE_COLORS } from "@/core/entity-highlighter";
-import { Icon } from "@/components/ui/icons";
+import { ALL_WORLD_CATEGORIES, WORLD_CATEGORY_SECTIONS, type WorldCategory } from "@/lib/world-category-classifier";
+import { WORLD_MODULES } from "@/components/workspace/worldPanelData";
+import { Icon, type IconName } from "@/components/ui/icons";
 import type { EntityHighlight, EntityMatch } from "@/core/entity-highlighter";
 
 // ═══════════════════════════════════════════
@@ -24,18 +26,25 @@ interface EntityGroup {
   entities: EntityMatch[];
 }
 
+// 分类 → 图标：单一权威源，从 WORLD_MODULES 派生（F-03 修复：消灭手抄 9 组图标漂移）
+const MODULE_ICON: Record<string, IconName> = Object.fromEntries(
+  WORLD_MODULES.map((m) => [m.key, m.icon]),
+) as Record<string, IconName>;
+
 function buildGroups(matches: EntityMatch[]): EntityGroup[] {
   const groupDefs: Array<{ key: string; label: string; icon: React.ReactNode; color: string; match: (m: EntityMatch) => boolean }> = [
     { key: "character", label: "角色", icon: <Icon name="user" size={14} />, color: CHARACTER_COLOR, match: (m) => m.type === "character" },
-    { key: "faction",   label: "势力", icon: <Icon name="building" size={14} />, color: LORE_COLORS.faction, match: (m) => m.category === "faction" },
-    { key: "item",      label: "物品", icon: <Icon name="gem" size={14} />, color: LORE_COLORS.item, match: (m) => m.category === "item" },
-    { key: "geography", label: "地点", icon: <Icon name="map" size={14} />, color: LORE_COLORS.geography, match: (m) => m.category === "geography" },
-    { key: "magic",     label: "世界观", icon: <Icon name="globe" size={14} />, color: LORE_COLORS.magic_system, match: (m) => m.category === "magic_system" },
-    { key: "technique", label: "功法", icon: <Icon name="sparkles" size={14} />, color: LORE_COLORS.technique, match: (m) => m.category === "technique" },
-    { key: "creature",  label: "生物", icon: <Icon name="sparkles" size={14} className="text-[var(--nv-creative)]" />, color: LORE_COLORS.creature, match: (m) => m.category === "creature" },
-    { key: "culture",   label: "文化", icon: <Icon name="palette" size={14} />, color: LORE_COLORS.culture, match: (m) => m.category === "culture" },
-    { key: "history",   label: "历史", icon: <Icon name="scroll" size={14} />, color: LORE_COLORS.history, match: (m) => m.category === "history" },
-    { key: "other",     label: "其他", icon: <Icon name="package" size={14} />, color: LORE_COLORS.custom, match: () => true },
+    // 遍历权威源 ALL_WORLD_CATEGORIES 动态生成 15 组（F-03 修复：law/currency/custom/fate_system/
+    // physics/public_system/character_relationship 共 7 类不再被「其他」桶吞掉；未来增删分类自动同步）
+    ...ALL_WORLD_CATEGORIES.map((cat) => ({
+      key: cat,
+      label: WORLD_CATEGORY_SECTIONS[cat].label,
+      icon: <Icon name={MODULE_ICON[cat] ?? "package"} size={14} />,
+      color: LORE_COLORS[cat],
+      match: (m: EntityMatch) => m.category === cat,
+    })),
+    // 异常兜底：仅当 lorebook 的 category 不在 15 类权威源内时才进「其他」，正常实体绝不丢失
+    { key: "other", label: "其他", icon: <Icon name="package" size={14} />, color: LORE_COLORS.custom, match: (m) => m.type === "lorebook" && !ALL_WORLD_CATEGORIES.includes(m.category as WorldCategory) },
   ];
 
   const groups: EntityGroup[] = [];
