@@ -41,7 +41,6 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
       console.error(`❌ [sync] globalPrompt 版本快照写入失败 (${projectId.slice(0, 8)}...):`, e instanceof Error ? e.message : String(e));
     });
 
-    console.log(`✅ [sync] globalPrompt 已刷新 (${projectId.slice(0, 8)}...) — ${characters.length}角色 · ${loreEntries.length}世界 · 风格${styleCard ? "有" : "无"} · ${prompt.length}字`);
     return prompt;
   } catch (e) {
     console.error(`❌ [sync] globalPrompt 刷新失败 (${projectId.slice(0, 8)}...):`, e instanceof Error ? e.message : String(e));

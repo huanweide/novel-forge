@@ -1,5 +1,16 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.17 — 2026-08-13
+
+### 后台高频任务日志噪声治理（round-21 检验并优化）
+- sync-global-prompt.ts：删除每次角色/世界/风格变化时刷屏的成功 console.log（globalPrompt 已刷新…N角色·M世界…），保留所有失败 console.error——成功是常态无需刷屏，失败才需可观测。
+- babylore/fill.ts：删除每次 LLM 调用（含 3 次重试）的调试日志（attempt http=…/raw_len=…/finish=…），仅保留失败日志并降级为 console.warn（[fill] LLM attempt FAILED…），避免填表任务在生产环境刷屏；babylore/loop.ts 删除每章填表结果汇总 console.log（信息已通过 SSE send 到前端）。
+- 原则：仅清理「后台高频循环任务」的调试级日志，保留错误诊断日志（console.error）与一次性导入/回写流程日志（dissect/engine.ts、pipeline/plan-chapter.ts 因低频且对排查导入有用而保留）。
+
+### 游离 git 外的守护型代码正式入库（检验处置）
+- src/core/prompt-eval.ts + prompt-eval.test.ts：#320「prompt 当代码」评测集（固定 fixture + evaluatePromptVersions 要素守护纯函数），此前探索写完未 git add，长期游离是技术债；现正式纳入版本控制，守护「作品/角色/世界书/风格」四大块关键要素不丢、字数与 hash 不漂移。
+- src/app/api/projects/[id]/prompt-revisions/rollback/route.ts + route.test.ts：#319 prompt 版本回滚 API（读指定 version content 写回 globalPrompt + 落 source=rollback 新版本），此前同样未入库；现正式纳入。前端暂无调用入口（纯后端闭环），UI 后续可接，符合增量集成。
+
 ## v2.0.16 — 2026-08-12
 
 ### RefineDiffModal 接入焦点陷阱（修复 a11y 缺陷）（round-20）

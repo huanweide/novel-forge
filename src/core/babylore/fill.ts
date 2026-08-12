@@ -357,8 +357,6 @@ ${chapterText.slice(0, 12000)}
         lastErr = `API ${res.status}: ${e.slice(0, 200)}`;
         throw new Error(lastErr);
       }
-      console.log(`[fill] LLM attempt=${attempt} http=${res.status} dt=${Date.now() - t0}ms`);
-
       const data = await res.json();
       const msg0 = data?.choices?.[0]?.message || {};
       let raw = (msg0.content || "").trim();
@@ -370,7 +368,6 @@ ${chapterText.slice(0, 12000)}
         const b = reasoning.lastIndexOf("}");
         if (a >= 0 && b > a) raw = reasoning.slice(a, b + 1);
       }
-      console.log(`[fill] LLM attempt=${attempt} raw_len=${raw.length} reasoning_len=${(msg0.reasoning_content || "").length} finish=${data?.choices?.[0]?.finish_reason}`);
       const ops = parseOps(raw);
       if (ops.length === 0) {
         lastErr = "模型未返回任何有效操作";
@@ -404,7 +401,7 @@ ${chapterText.slice(0, 12000)}
       };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
-      console.log(`[fill] LLM attempt=${attempt} FAILED dt=${Date.now() - t0}ms err=${lastErr.slice(0, 120)}`);
+      console.warn(`[fill] LLM attempt=${attempt} FAILED dt=${Date.now() - t0}ms err=${lastErr.slice(0, 120)}`);
       if (attempt < 3) continue;
     }
   }

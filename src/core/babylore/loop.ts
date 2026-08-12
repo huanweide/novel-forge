@@ -192,7 +192,6 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
     }
   }
 
-  console.log(`[babylore] 填表 project=${projectId} chapter=${(nodeOrder ?? 0) + 1} ok=${babylore.ok} ops=${babylore.operations} applied=${babylore.applied}${babylore.error ? " err=" + babylore.error : ""}`);
   if (send) send({ type: "babylore_fill", ...babylore });
   return babylore;
 }

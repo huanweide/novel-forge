@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.16";
+export const LATEST_VERSION = "v2.0.17";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.17 生产日志噪声治理 + 守护型代码入库（round-21 检验并优化）：sync-global-prompt.ts 删除每次角色/世界/风格变化刷屏的成功 console.log、保留失败 console.error；babylore/fill.ts 删除每次 LLM 调用（含重试）的调试日志（attempt/http/raw_len/finish）、失败日志降级 console.warn，babylore/loop.ts 删除每章填表汇总 log（信息已 SSE 到前端）；原则只清后台高频循环任务的调试日志，保留错误诊断与一次性导入/回写流程日志。检验发现此前游离 git 外的守护型代码正式入库：prompt-eval.ts 评测集（#320 守护全局提示词要素不丢）+ prompt-revisions/rollback 回滚 API（#319），均类型/测试健康、功能完整，长期游离是技术债，现纳入版本控制（前端暂无回滚 UI 入口，纯后端闭环，符合增量集成）。",
   "v2.0.16 精修弹窗焦点陷阱 + 角色/世界卡片重渲染优化（round-20 收尾 ui-lens 遗留项）：RefineDiffModal 接入已有 useFocusTrap hook（面板挂载 ref + tabIndex=-1，Esc 关闭、Tab 在面板内循环、关闭后焦点交还打开前元素），修复「Esc 无法关闭 / 键盘焦点逃逸到背后页面 / 键盘用户被困」可访问性缺陷；WorldEntryCard/CharacterRow 包 React.memo，CharacterList 把传给卡片的 toggleSelect/handleConfirm/onDelete/onConfirm/onTagClick 全部 useCallback 稳定化（toggleSelect 改函数式更新），让 memo 真正生效——搜索输入、去重结果弹窗等父级 state 变化时未变卡片跳过重渲染；虚拟滚动经评估暂缓（单项目角色/世界设定条目通常几十~几百条，普通 map 渲染足够，项目未引入任何 windowing 库，盲目引入属过度优化且增新依赖，留待数千+条目场景再接）。",
   "v2.0.15 角色去重合并深度修复（round-19）：核心名 token 宽松分组启发式——去尊称/后缀/描述词提取稳定核心名，识别「韩先生/韩姓男子」「迭戈/迭戈先生/迭戈·美第奇」等脏卡与全名+后缀重复（此前因无全名正主被静默漏检，误报「全部干净」）；LLM∪规则∪宽松三路分组并集、共享 id 归并；置信度分级——有普通全名正主→high 自动合并，脏卡互相→low 进 pending 确认界面；前端去重弹窗显示待确认提案并修正「全部干净」误判，合并提案面板标识「宽松判定」来源；entity-auto-creator 自动发现新角色后后台 fire-and-forget 触发去重合并，新角色即时归并。",
   "v2.0.14 写作右侧检测栏与大纲后台化修复（round-19）：右侧检测栏改为最小化常驻——关闭不再卸载面板，右侧竖条随时拉回，与左栏互斥（展开右栏自动收左栏），宽度 transition-all 平滑过渡，修复「关闭后无法拉起/收缩不完全」；角色栏筛选徽章 4 种激活色统一为 bg-[var(--nv-primary)]，新建标签/打标移入 CharacterToolbar 复用 base 样式消除按钮大小字体不一，去重结果卡片关闭按钮竖排修复；大纲按钮改为后台运行——关掉弹窗任务继续、右下角进度胶囊可见、完成后自动重开预览，Dialog 内加「后台运行」提示，解决「叉掉无后台状态与进度」痛点。",
@@ -43,6 +44,34 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.17",
+    date: "2026-08-13",
+    title: "v2.0.17 生产日志噪声治理 + 守护型代码入库（round-21 检验并优化）",
+    sections: [
+      {
+        label: "后台高频任务日志噪声治理（round-21 检验并优化）",
+        items: [
+          "sync-global-prompt.ts：删除每次角色/世界/风格变化时刷屏的成功 console.log（globalPrompt 已刷新…N角色·M世界…），保留所有失败 console.error——成功是常态无需刷屏，失败才需可观测。",
+          "babylore/fill.ts：删除每次 LLM 调用（含 3 次重试）的调试日志（attempt http=…/raw_len=…/finish=…），仅保留失败日志并降级为 console.warn（[fill] LLM attempt FAILED…），避免填表任务在生产环境刷屏；babylore/loop.ts 删除每章填表结果汇总 console.log（信息已通过 SSE send 到前端）。",
+          "原则：仅清理「后台高频循环任务」的调试级日志，保留错误诊断日志（console.error）与一次性导入/回写流程日志（dissect/engine.ts、pipeline/plan-chapter.ts 等保留，因其低频且对排查导入问题有用）。",
+        ],
+      },
+      {
+        label: "游离 git 外的守护型代码正式入库（检验处置）",
+        items: [
+          "src/core/prompt-eval.ts + prompt-eval.test.ts：#320「prompt 当代码」评测集（固定 fixture + evaluatePromptVersions 要素守护纯函数），此前探索写完未 git add，长期游离在外是技术债；现正式纳入版本控制，守护「作品/角色/世界书/风格」四大块关键要素不丢、字数与 hash 不漂移。",
+          "src/app/api/projects/[id]/prompt-revisions/rollback/route.ts + route.test.ts：#319 prompt 版本回滚 API（读指定 version content 写回 globalPrompt + 落 source=rollback 新版本），此前同样未入库；现正式纳入。前端暂无调用入口（纯后端闭环），UI 后续可接，符合增量集成。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 60 文件 514/514 全绿（含新纳入的 prompt-eval.test.ts 5 例、rollback/route.test.ts 6 例）。无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.16",
     date: "2026-08-12",
