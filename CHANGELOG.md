@@ -1,5 +1,20 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.15 — 2026-08-12
+
+### 核心名 token 宽松分组（修复漏检）（round-19）
+- 新增 coreTokenOf(name)：去前缀尊称、去后缀（·美第奇）、去尊称 token（先生/女子）、去「姓+描述词」（韩姓男子），提取稳定核心名；核心名相同即视为同一真实人物候选。
+- 新增 looseTokenGroups：覆盖「韩先生/韩姓男子」脏卡互相、「迭戈/迭戈先生/迭戈·美第奇」全名+后缀变体——此前规则组要求变体解析到集合内全名正主（无正主则跳过）、LLM 保守不归组，导致误报「全部干净」。
+- 新增 mergeOverlappingGroups：LLM∪规则∪宽松三路分组按共享 id 并查集归并；语义缓存 key 加 LOOSE_V1 戳防旧缓存误导。
+
+### 置信度分级 + 确认 UI 中间界面（round-19）
+- computeConfidence 扩展：主卡为普通全名正主且各被并成员可无歧义并入 → high 自动合并；主卡本身是脏卡/变体 → low 进 pending 等确认。
+- 「迭戈三兄弟」有正主「迭戈」→ 自动合并；「韩先生/韩姓男子」无正主 → 进合并提案面板，用户逐组确认/忽略/回滚，不再静默丢弃。
+
+### 前端弹窗 + 后台自动去重（round-19）
+- CharacterList 去重结果弹窗新增 pendingGroups 展示并修正「全部干净」误判；MergePendingPanel 来源标识加「宽松判定」。
+- entity-auto-creator 自动发现新角色后 fire-and-forget 触发 dedupeCharacters（动态 import 避免循环依赖），实现「后台检测到新角色即去重合并」。
+
 ## v2.0.14 — 2026-08-12
 
 ### 右侧检测栏最小化常驻（修复关闭后无法拉起）（round-19）

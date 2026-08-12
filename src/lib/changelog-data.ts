@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.14";
+export const LATEST_VERSION = "v2.0.15";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.15 角色去重合并深度修复（round-19）：核心名 token 宽松分组启发式——去尊称/后缀/描述词提取稳定核心名，识别「韩先生/韩姓男子」「迭戈/迭戈先生/迭戈·美第奇」等脏卡与全名+后缀重复（此前因无全名正主被静默漏检，误报「全部干净」）；LLM∪规则∪宽松三路分组并集、共享 id 归并；置信度分级——有普通全名正主→high 自动合并，脏卡互相→low 进 pending 确认界面；前端去重弹窗显示待确认提案并修正「全部干净」误判，合并提案面板标识「宽松判定」来源；entity-auto-creator 自动发现新角色后后台 fire-and-forget 触发去重合并，新角色即时归并。",
   "v2.0.14 写作右侧检测栏与大纲后台化修复（round-19）：右侧检测栏改为最小化常驻——关闭不再卸载面板，右侧竖条随时拉回，与左栏互斥（展开右栏自动收左栏），宽度 transition-all 平滑过渡，修复「关闭后无法拉起/收缩不完全」；角色栏筛选徽章 4 种激活色统一为 bg-[var(--nv-primary)]，新建标签/打标移入 CharacterToolbar 复用 base 样式消除按钮大小字体不一，去重结果卡片关闭按钮竖排修复；大纲按钮改为后台运行——关掉弹窗任务继续、右下角进度胶囊可见、完成后自动重开预览，Dialog 内加「后台运行」提示，解决「叉掉无后台状态与进度」痛点。",
   "v2.0.13 flow-lens 四项错误修复（round-18 F1/F2/F3/F4）：续写 finish_reason=length 截断保护回退草稿并告警；续写路径填表统一归确认门（不再自动填 lorebook）；write/continue 两处草稿落库由 fire-and-forget 改 await 同步，消除 [PARTIAL_DRAFT] 竞态泄漏；伏笔收束检测与主线缝合由 HTTP 自回环（硬编码 origin localhost:3001）改进程内直调 detectPayoffs/runStorylineGeneration，消除非本地部署死链。",
   "v2.0.12 角色 role 与题材 genre 分类标签单源治理（round-18 F-04/F-05）：角色 role 中文映射收敛为 character-parse.ts 单一权威源（补 comic_relief 对齐 8 类、派生 CHARACTER_ROLE_LABEL），修复 DissectDimensions/ImportWizard/workshop 三处硬编码错标（love_interest/catalyst/background/comic_relief 不再被标为「配角」）；题材 GENRE_OPTIONS 以首页 GENRE_TEMPLATES 为基准并集补充，消除与首页选题分叉。",
@@ -41,6 +42,42 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.15",
+    date: "2026-08-12",
+    title: "v2.0.15 角色去重合并深度修复（round-19）",
+    sections: [
+      {
+        label: "核心名 token 宽松分组（修复漏检）",
+        items: [
+          "新增 coreTokenOf(name)：去前缀尊称（老/小/阿）、去后缀（·美第奇）、去尊称 token（先生/女子）、去「姓+描述词」（韩姓男子），提取稳定核心名；两个卡核心名相同即视为同一真实人物候选。",
+          "新增 looseTokenGroups：核心名相同的卡归组，覆盖「韩先生/韩姓男子」脏卡互相、「迭戈/迭戈先生/迭戈·美第奇」全名+后缀变体——此前规则组要求变体必须解析到集合内全名正主（两者无正主）而静默跳过，LLM 因背景稀疏+同姓警示也保守不归组，导致误报「全部干净」。",
+          "新增 mergeOverlappingGroups：LLM∪规则∪宽松三路分组按共享 id 并查集归并，输出去重最终分组；语义缓存 key 加 LOOSE_V1 戳，强制升级后旧缓存失效。",
+        ],
+      },
+      {
+        label: "置信度分级 + 确认 UI 中间界面",
+        items: [
+          "computeConfidence 扩展：主卡为普通全名正主（非变体/非单字/无后缀）且各被并成员可无歧义并入（变体走 resolveVariantTarget，全名+后缀走核心名相同）→ high 自动合并；主卡本身是脏卡/变体 → low 进 pending 等用户确认。",
+          "即「迭戈三兄弟」有正主「迭戈」→ high 自动合并；「韩先生/韩姓男子」无正主→ low 进合并提案面板，用户在确认 UI 中间界面逐组确认/忽略/回滚，不再静默丢弃。",
+        ],
+      },
+      {
+        label: "前端弹窗 + 后台自动去重",
+        items: [
+          "CharacterList 去重结果弹窗新增 pendingGroups 展示（待确认提案）并修正「全部干净」误判（merged+pending+rockets 全空才显示干净）；MergePendingPanel 来源标识加「宽松判定」。",
+          "entity-auto-creator 自动发现新角色后 fire-and-forget 触发 dedupeCharacters（动态 import 避免与 character-dedupe 循环依赖），实现「后台检测到新角色即去重合并」；有正主自动合并、脏卡进 pending。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 60 文件 514/514 全绿（character-dedupe.test.ts computeConfidence 8 用例覆盖林惊羽/林惊雨→low、韩立+韩先生→high 等边界）。无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v2.0.14",
     date: "2026-08-12",

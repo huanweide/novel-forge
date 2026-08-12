@@ -154,6 +154,79 @@ function ruleBasedGroups(chars: CharLite[]): string[][] {
   return groups;
 }
 
+/**
+ * v2.0.15 核心名 token 宽松分组（修复「韩先生/韩姓男子」「迭戈/迭戈先生/迭戈·美第奇」漏检）。
+ * coreTokenOf：去前缀尊称（老/小/阿）、去后缀（·美第奇）、去尊称 token（先生/女子）、去「姓+描述词」（韩姓男子），
+ * 得到稳定核心名。两个卡核心名相同即视为同一真实人物的候选（含脏描述卡互相、全名+后缀变体）。
+ */
+function coreTokenOf(name: string): string {
+  const n = name.trim().toLowerCase();
+  if (!n) return "";
+  let t = n;
+  if (["老", "小", "阿"].includes(t[0]) && t.length <= 3) t = t.slice(1);
+  t = t.split(/[·•・\-－]/)[0].trim();
+  const honorifics = ["先生", "女士", "小姐", "女子", "公子", "姑娘", "少爷", "夫人", "阁下", "大人", "老板", "师傅", "老师", "兄弟", "大侠", "少侠"];
+  for (const h of honorifics) {
+    const idx = t.indexOf(h);
+    if (idx !== -1 && t.slice(idx + h.length).length === 0) {
+      const before = t.slice(0, idx);
+      if (before.length <= 1) { t = before; break; }
+    }
+  }
+  if (t.length > 1 && t[1] === "姓") {
+    const after = t.slice(2);
+    const descs = ["", "男子", "女子", "青年", "少年", "老者", "少女", "姑娘", "公子", "书生", "壮士", "大侠", "少侠", "女侠", "侠女", "前辈", "掌门", "宗主", "将军", "王爷", "少爷", "殿下"];
+    if (descs.includes(after)) t = t[0];
+  }
+  return t;
+}
+
+/** 宽松分组：核心名相同的卡归为一组（覆盖脏描述卡互相、全名+后缀变体） */
+function looseTokenGroups(chars: CharLite[]): string[][] {
+  const byToken = new Map<string, string[]>();
+  for (const c of chars) {
+    const tok = coreTokenOf(c.name);
+    if (!tok) continue;
+    if (!byToken.has(tok)) byToken.set(tok, []);
+    byToken.get(tok)!.push(c.id);
+  }
+  const groups: string[][] = [];
+  for (const ids of byToken.values()) if (ids.length >= 2) groups.push(ids);
+  return groups;
+}
+
+/** 合并多组来源（LLM / 规则 / 宽松）中共享 id 的组，输出去重后的最终分组 */
+function mergeOverlappingGroups(groups: string[][]): string[][] {
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    let cur = x;
+    while (parent.get(cur) !== cur) cur = parent.get(cur)!;
+    return cur;
+  };
+  const union = (a: string, b: string) => { parent.set(find(a), find(b)); };
+  for (const g of groups) for (const id of g) if (!parent.has(id)) parent.set(id, id);
+  for (const g of groups) for (let i = 1; i < g.length; i++) union(g[0], g[i]);
+  const m = new Map<string, Set<string>>();
+  for (const id of parent.keys()) {
+    const r = find(id);
+    if (!m.has(r)) m.set(r, new Set());
+    m.get(r)!.add(id);
+  }
+  return [...m.values()].filter((s) => s.size >= 2).map((s) => [...s]);
+}
+
+/** 单成员是否可无歧义并入主卡：变体走 resolveVariantTarget；全名+后缀/衍生称呼走核心名相同 */
+function canMergeIntoMain(m: CharLite, main: CharLite, allNames: string[]): boolean {
+  const isVariant = isHonorificVariant(m.name) || isSurnameAbbrevOrDescriptor(m.name);
+  if (isVariant) {
+    const target = resolveVariantTarget(allNames, m.name);
+    return target != null && target.toLowerCase() === main.name.toLowerCase();
+  }
+  const mt = coreTokenOf(m.name);
+  const pt = coreTokenOf(main.name);
+  return mt.length > 0 && mt === pt && m.name.trim().toLowerCase() !== main.name.trim().toLowerCase();
+}
+
 /** 主卡选择：普通姓名优先，其次内容更丰富者 */
 function pickMain(members: CharLite[]): CharLite {
   const richness = (x: CharLite) => (x.background || "").length + (x.storyLine || "").length;
@@ -175,12 +248,10 @@ export function computeConfidence(members: CharLite[], allNames: string[]): "hig
   const main = pickMain(members);
   const merged = members.filter((x) => x.id !== main.id);
   if (merged.length === 0) return "high";
-  const allResolved = merged.every((m) => {
-    const isVariant = isHonorificVariant(m.name) || isSurnameAbbrevOrDescriptor(m.name);
-    if (!isVariant) return false;
-    const target = resolveVariantTarget(allNames, m.name);
-    return target != null && target.toLowerCase() === main.name.toLowerCase();
-  });
+  // 主卡本身是脏卡/变体/单字/带后缀 → 整组置信度降为 low，进 pending 等用户确认（v2.0.15 宽松标准 + 确认 UI）
+  const mainIsPlain = !isHonorificVariant(main.name) && !isSurnameAbbrevOrDescriptor(main.name) && !main.name.includes("·") && main.name.trim().length > 1;
+  if (!mainIsPlain) return "low";
+  const allResolved = merged.every((m) => canMergeIntoMain(m, main, allNames));
   return allResolved ? "high" : "low";
 }
 
@@ -275,19 +346,22 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     tags: Array.isArray(c.tags) ? (c.tags as string[]) : [],
   }));
 
-  // 优先 LLM 分组，失败回退规则分组；项目级语义缓存：角色集内容指纹未变则跳过 LLM（#314 增量/语义缓存）
-  const allFp = lite.map(charFingerprint).sort().join("|");
+  // v2.0.15：LLM 分组 ∪ 规则分组 ∪ 核心名 token 宽松分组（去重合并来源三路并集，共享 id 归并）；
+  // 项目级语义缓存：角色集内容指纹未变则跳过 LLM（#314 增量/语义缓存）。LOOSE_V1 戳强制升级后旧缓存失效。
+  const allFp = "LOOSE_V1|" + lite.map(charFingerprint).sort().join("|");
   const cached = dedupeGroupCache.get(projectId);
   let finalGroups: string[][];
-  let source: "llm" | "rule" | "cache";
+  let source: "llm" | "rule" | "loose" | "cache";
   if (cached && cached.fp === allFp) {
     // 语义缓存命中：角色集内容未变，完全跳过 LLM 分组调用（增量 + 缓存收益）
     finalGroups = cached.groups;
     source = "cache";
   } else {
-    const groups = await llmDetectSamePersonGroups(lite);
-    finalGroups = groups.length > 0 ? groups : ruleBasedGroups(lite);
-    source = groups.length > 0 ? "llm" : "rule";
+    const llmGroups = await llmDetectSamePersonGroups(lite);
+    const ruleGroups = ruleBasedGroups(lite);
+    const looseGroups = looseTokenGroups(lite);
+    finalGroups = mergeOverlappingGroups([...llmGroups, ...ruleGroups, ...looseGroups]);
+    source = llmGroups.length > 0 ? "llm" : ruleGroups.length > 0 ? "rule" : "loose";
     dedupeGroupCache.set(projectId, { fp: allFp, groups: finalGroups });
   }
   const allNames = lite.map((c) => c.name);

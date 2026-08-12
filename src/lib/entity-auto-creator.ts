@@ -472,5 +472,11 @@ export async function autoCreateEntities(
     }
   }
 
+  // v2.0.15：自动发现新角色后触发后台去重合并（宽松标准：有正主自动合并，脏卡进 pending 待确认）
+  if (created.some((c) => c.type === "character")) {
+    void import("@/core/character-dedupe")
+      .then((m) => m.dedupeCharacters(projectId))
+      .catch(() => {});
+  }
   return { created, skipped };
 }

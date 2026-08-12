@@ -9,7 +9,7 @@ interface MergeRevision {
   mainCardId: string;
   mergedIds: string[];
   confidence: "high" | "low";
-  source: "llm" | "rule";
+  source: "llm" | "rule" | "loose";
   status: "pending" | "applied";
   summary: string;
   createdAt: string;
@@ -97,7 +97,7 @@ export function MergePendingPanel({
               </span>
             </div>
             <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <span className="text-[9px] text-[var(--nv-text-tertiary)]">{it.source === "llm" ? "AI 判定" : "规则判定"}</span>
+              <span className="text-[9px] text-[var(--nv-text-tertiary)]">{it.source === "llm" ? "AI 判定" : it.source === "loose" ? "宽松判定" : "规则判定"}</span>
               {it.status === "pending" ? (
                 <>
                   <button

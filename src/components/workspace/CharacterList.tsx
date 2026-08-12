@@ -44,6 +44,7 @@ export function CharacterList({
   const [deduping, setDeduping] = useState(false);
   const [dedupeResult, setDedupeResult] = useState<{
     mergedGroups: Array<{ mainId: string; mainName: string; merged: Array<{ id: string; name: string }> }>;
+    pendingGroups: Array<{ mainId: string; mainName: string; merged: Array<{ id: string; name: string }> }>;
     markedRockets: string[];
     total: number;
   } | null>(null);
@@ -245,13 +246,17 @@ export function CharacterList({
       }
       setDedupeResult({
         mergedGroups: d.mergedGroups || [],
+        pendingGroups: d.pendingGroups || [],
         markedRockets: d.markedRockets || [],
         total: d.total || 0,
       });
-      if ((d.mergedGroups || []).length + (d.markedRockets || []).length === 0) {
+      const merged = (d.mergedGroups || []).length;
+      const pending = (d.pendingGroups || []).length;
+      const rockets = (d.markedRockets || []).length;
+      if (merged + pending + rockets === 0) {
         toastSuccess("未发现需去重/标记的角色，全部干净");
       } else {
-        toastInfo(`扫描 ${d.total || 0} 个角色：${(d.mergedGroups || []).length} 组合并、${(d.markedRockets || []).length} 个龙套`);
+        toastInfo(`扫描 ${d.total || 0} 个角色：${merged} 组合并、${pending} 组待确认、${rockets} 个龙套`);
       }
     } catch (e) {
       toastError("去重合并失败：" + (e instanceof Error ? e.message : "网络错误"));
@@ -368,13 +373,18 @@ export function CharacterList({
             <span className="flex-1 min-w-0 truncate pr-2 text-xs font-medium text-[var(--nv-text-primary)]">去重合并结果（共扫描 {dedupeResult.total} 个角色）</span>
             <button onClick={() => { setDedupeResult(null); onExpanded(); }} className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]" title="关闭去重结果"><Icon name="x" size={11} />关闭</button>
           </div>
-          {dedupeResult.mergedGroups.length === 0 && dedupeResult.markedRockets.length === 0 ? (
+          {dedupeResult.mergedGroups.length === 0 && dedupeResult.pendingGroups.length === 0 && dedupeResult.markedRockets.length === 0 ? (
             <p className="text-xs text-[var(--nv-text-muted)]">全部干净：没有需要合并或标记的角色。</p>
           ) : (
             <div className="space-y-2 max-h-56 overflow-y-auto">
               {dedupeResult.mergedGroups.map((g, i) => (
-                <div key={i} className="text-[11px] text-[var(--nv-text-secondary)]">
+                <div key={`m${i}`} className="text-[11px] text-[var(--nv-text-secondary)]">
                   <span className="text-[var(--nv-primary)]">合：{g.mainName}</span> ← {g.merged.map((m) => m.name).join("、")}
+                </div>
+              ))}
+              {dedupeResult.pendingGroups.map((g, i) => (
+                <div key={`p${i}`} className="text-[11px] text-[var(--nv-warn)]">
+                  待确认：{g.mainName} ← {g.merged.map((m) => m.name).join("、")}
                 </div>
               ))}
               {dedupeResult.markedRockets.length > 0 && (
