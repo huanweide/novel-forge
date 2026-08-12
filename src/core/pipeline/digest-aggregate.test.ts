@@ -63,6 +63,28 @@ describe("buildTimelineDigest（v2.0.4：直接抄章纲）", () => {
     expect(out).toContain("\n\n");
   });
 
+  it("2~11 字脏片段（生成失败 / 占位 / 过渡废话）不进大纲，与 isGarbageSummary 阈值一致", () => {
+    const chapters: RawChapterOutline[] = [
+      mk(0, "第一章 启航", "林夜在龙骨滩苏醒，发现整座新城建立在巨龙骸骨之上。"),
+      mk(1, "第二章 迷雾", "过渡章节"), // 4 字占位，应过滤
+      mk(2, "第三章 暗涌", "本章待补充"), // 5 字占位，应过滤
+      mk(3, "第四章 潮痕", "略"), // 单字占位，应过滤
+    ];
+    const out = buildTimelineDigest(chapters);
+    expect(out).toContain("第1章 启航"); // 真实长章纲保留
+    expect(out).not.toContain("第2章 迷雾"); // 4 字片段未出现
+    expect(out).not.toContain("第3章 暗涌"); // 5 字片段未出现
+    expect(out).not.toContain("第4章 潮痕"); // 单字片段未出现
+  });
+
+  it("恰好 12 字的有效章纲被保留（与 isGarbageSummary 的 12 字边界一致）", () => {
+    const outline = "林夜决定潜入龙庭总部调查"; // 恰好 12 字
+    const chapters = [mk(0, "第一章 启航", outline)];
+    const out = buildTimelineDigest(chapters);
+    expect(out).toContain("第1章 启航");
+    expect(out).toContain(outline); // 12 字边界保留
+  });
+
   it("章纲文本自身以『第N章』开头时不叠加前缀", () => {
     const chapters = [mk(0, "第一章 启航", "第1章：林夜在龙骨滩苏醒，发现新城建立在巨龙骸骨之上。")];
     const out = buildTimelineDigest(chapters);
@@ -80,9 +102,9 @@ describe("buildTimelineDigest（v2.0.4：直接抄章纲）", () => {
     expect(out).not.toContain("第3章 第3章");
   });
 
-  it("垃圾模板章纲被过滤", () => {
+  it("垃圾模板章纲被过滤（保留章需 ≥12 字，与 isGarbageSummary 阈值一致）", () => {
     const chapters = [
-      mk(0, "第一章", "林夜在龙骨滩苏醒。"),
+      mk(0, "第一章", "林夜在龙骨滩苏醒，发现整座新城建在巨龙骸骨之上。"),
       mk(1, "第二章", "您提供的章节内容似乎为空——没有实际正文，请粘贴进来。"),
     ];
     const out = buildTimelineDigest(chapters);

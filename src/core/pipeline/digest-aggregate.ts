@@ -17,6 +17,15 @@
 export const MAX_TIMELINE_CHAPTERS = 20; // 时间线摘要最多保留最近 20 章，保持精简
 
 /**
+ * 摘要 / 章纲的「最短有效长度」地板。
+ *
+ * isGarbageSummary 与 buildTimelineDigest 共用同一阈值，保证两条入口的判定一致——
+ * 低于此长度的片段一律视为「脏片段」（AI 对空 / 生成失败 / 占位），不进任何大纲。
+ * 真实摘要与章纲都远长于此，故该地板不会误杀有效内容（见 digest 阈值一致性修复）。
+ */
+export const MIN_SUMMARY_LEN = 12;
+
+/**
  * 垃圾摘要判定：AI 对空 / 模板内容生成的"元应答"（向用户索要正文、复述模板字段），
  * 而非真实章节摘要。命中任意一条即判为垃圾。
  *
@@ -47,7 +56,7 @@ export function isGarbageSummary(summary: string | null | undefined): boolean {
   if (summary == null) return true;
   const s = String(summary).trim();
   if (s.length === 0) return true;
-  if (s.length < 12) return true; // 过短：基本不可能是真实摘要
+  if (s.length < MIN_SUMMARY_LEN) return true; // 过短：基本不可能是真实摘要
   for (const re of GARBAGE_PATTERNS) {
     if (re.test(s)) return true;
   }
@@ -79,12 +88,13 @@ export interface ChapterOrderMeta {
 export function buildTimelineDigest(chapters: RawChapterOutline[]): string {
   if (!Array.isArray(chapters) || chapters.length === 0) return "";
 
-  // 1) 过滤：空 / 单字占位 与 模板元应答残片 的章不入大纲。
-  //    注意：章纲（node.outline）是作者/模型写出的真实大纲，哪怕偏短也应保留（「章纲就是大纲」），
-  //    不再按任意长度阈值误杀；仅剔除明显占位与模板残片。
+  // 1) 过滤：空 / 过短占位 与 模板元应答残片 的章不入大纲。
+  //    阈值与 isGarbageSummary 共用 MIN_SUMMARY_LEN，保证两条入口判定一致——
+  //    2~11 字的脏片段（生成失败 / 占位 / 过渡废话）不再漏进大纲（digest 阈值一致性修复）。
+  //    真实章纲远长于该地板，故不会误杀有效短章纲（「章纲就是大纲」仍成立）。
   const valid = chapters.filter((c) => {
     const text = String(c.outline ?? "").trim();
-    if (text.length < 2) return false; // 空 / 单字占位不进大纲
+    if (text.length < MIN_SUMMARY_LEN) return false; // 空 / 过短占位不进大纲
     if (GARBAGE_PATTERNS.some((re) => re.test(text))) return false; // 模板元应答残片不入
     return true;
   });

@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.5";
+export const LATEST_VERSION = "v2.0.6";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.5 角色合并快照回滚：新增 CharacterCardRevision 表，合并前存主卡+被并卡完整字段快照，状态 pending/applied/rolled_back/ignored，一键回滚消除「去重无回滚生存债」（round-2 主席裁决 P0）。",
-  "v2.0.5 高/低置信度分级合并：尊称/缩写变体无歧义 → high 直接合并；纯语义相似的普通姓名 → low 只存快照写 pending 等确认，UI 新增 MergePendingPanel 可确认/忽略/回滚。",
-  "v2.0.5 单字缩写修复：computeConfidence 此前把「樊」=樊斯瑞这类明确缩写误判 low，新增 resolveVariantTarget 按同姓唯一正主解析 → high，明确缩写可自动合并。",
-  "v2.0.5 验证：tsc 0 错 + vitest 56 文件 491/491 全绿（新增 8 单测）；prisma db push 已建表；client 新表 CRUD 往返通过；新增 merge-pending/confirm/rollback/ignore 四路由。",
+  "v2.0.6 摘要大纲阈值一致性修复：isGarbageSummary 与 buildTimelineDigest 此前分别用 <12 与 <2 两档阈值，导致 2~11 字脏片段（生成失败/占位/过渡废话）漏进大纲。新增共享常量 MIN_SUMMARY_LEN=12，两条入口统一判定，不再有漏网脏片段（round-2 裁决 P2）。",
+  "v2.0.6 单测补全：digest-aggregate 新增 2~11 字脏片段过滤用例 + 12 字边界保留用例，证明阈值对齐后行为一致；既有「9 字章纲算有效」旧断言已随规则更正。",
+  "v2.0.6 零风险纯函数改动：仅改 digest-aggregate.ts 阈值与共享常量，不碰 schema、不碰路由，回归面最小。",
+  "v2.0.6 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 493/493 全绿（基线 491 + 新增 2 单测）。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.6",
+    date: "2026-08-12",
+    title: "v2.0.6 摘要大纲阈值一致性修复（digest 阈值脏片段根治，round-2 裁决 P2）",
+    sections: [
+      {
+        label: "摘要大纲阈值一致性（P2）",
+        items: [
+          "根因：isGarbageSummary 用 <12 判垃圾（守 ChapterSummary），buildTimelineDigest 用 <2 过滤章纲（守 node.outline），两档阈值不一致 → 2~11 字脏片段（生成失败/占位/过渡废话）漏进大纲。",
+          "修复：新增共享常量 MIN_SUMMARY_LEN=12，两处阈值统一复用；buildTimelineDigest 现与 isGarbageSummary 同判，2~11 字脏片段不再漏网，且真实长章纲不受影响（「章纲就是大纲」仍成立，因真实章纲远长于该地板）。",
+        ],
+      },
+      {
+        label: "单测补全",
+        items: [
+          "digest-aggregate 新增 2~11 字脏片段过滤用例（过渡章节/本章待补充/单字略）与 12 字边界保留用例，证明阈值对齐后两入口行为一致。",
+          "既有「9 字章纲算有效」旧断言随规则更正为 12 字以上才保留，避免测试固化错误行为。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "纯函数改动，零 schema、零路由变更，回归面最小；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 493/493 全绿（基线 491 + 新增 2 单测）。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.5",
     date: "2026-08-12",
