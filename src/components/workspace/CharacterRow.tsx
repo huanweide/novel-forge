@@ -1,9 +1,10 @@
 "use client";
 
+import { memo } from "react";
 import { Icon } from "@/components/ui/icons";
 import type { CharacterData } from "./types";
 
-export function CharacterRow({
+function CharacterRowImpl({
   character,
   selected,
   deleting,
@@ -73,7 +74,9 @@ export function CharacterRow({
         onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
         disabled={deleting}
         className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] shrink-0 disabled:opacity-40"
-      ><Icon name="x" size={12} className="align-middle" /></button>
+      ><Icon name="x" size={12} className="align-middle" />      </button>
     </div>
   );
 }
+
+export const CharacterRow = memo(CharacterRowImpl);

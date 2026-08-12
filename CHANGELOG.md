@@ -1,5 +1,17 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.16 — 2026-08-12
+
+### RefineDiffModal 接入焦点陷阱（修复 a11y 缺陷）（round-20）
+- 接入已有 useFocusTrap hook（src/hooks/use-focus-trap.ts）：面板挂载 panelRef + tabIndex=-1，打开时焦点移入面板首个可聚焦元素、Tab/Shift+Tab 在面板内循环、Esc 触发 onClose、关闭后焦点交还打开前元素；修复此前「Esc 无法关闭、键盘焦点逃逸到背后页面、键盘/读屏用户被困」的可访问性缺陷。
+
+### 卡片 React.memo + 回调稳定化（round-20）
+- WorldEntryCard / CharacterRow 包 React.memo，避免父组件无关 state 变化（如搜索输入、去重结果弹窗开关）导致所有卡片无谓重渲染。
+- CharacterList 把传给卡片的回调 toggleSelect/handleConfirm/onDelete/onConfirm/onTagClick 改 useCallback 稳定化（toggleSelect 改函数式 setSelectedIds(prev => ...) 更新），让 memo 真正生效——父级 state 变化时未变化的卡片跳过重渲染。
+
+### 虚拟滚动评估（round-20）
+- 经评估单项目角色/世界设定条目通常几十~几百条，普通 map 渲染足够，项目未引入任何 windowing 库；盲目引入虚拟滚动库属「为优化而优化」且增新依赖，故暂缓，留待数千+条目真实大数据量场景再接。
+
 ## v2.0.15 — 2026-08-12
 
 ### 核心名 token 宽松分组（修复漏检）（round-19）

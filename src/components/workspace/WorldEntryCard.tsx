@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Icon } from "@/components/ui/icons";
 import type { LorebookData } from "./types";
 
@@ -14,7 +15,7 @@ interface WorldEntryCardProps {
   onConfirm?: (id: string) => void;
 }
 
-export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm }: WorldEntryCardProps) {
+function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm }: WorldEntryCardProps) {
   return (
     <div
       className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]" + (entry.enabled ? "" : " opacity-60")}
@@ -85,3 +86,5 @@ export function WorldEntryCard({ entry, depthLabels, onDelete, deleting, onEdit,
     </div>
   );
 }
+
+export const WorldEntryCard = memo(WorldEntryCardImpl);

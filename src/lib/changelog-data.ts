@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.15";
+export const LATEST_VERSION = "v2.0.16";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.16 精修弹窗焦点陷阱 + 角色/世界卡片重渲染优化（round-20 收尾 ui-lens 遗留项）：RefineDiffModal 接入已有 useFocusTrap hook（面板挂载 ref + tabIndex=-1，Esc 关闭、Tab 在面板内循环、关闭后焦点交还打开前元素），修复「Esc 无法关闭 / 键盘焦点逃逸到背后页面 / 键盘用户被困」可访问性缺陷；WorldEntryCard/CharacterRow 包 React.memo，CharacterList 把传给卡片的 toggleSelect/handleConfirm/onDelete/onConfirm/onTagClick 全部 useCallback 稳定化（toggleSelect 改函数式更新），让 memo 真正生效——搜索输入、去重结果弹窗等父级 state 变化时未变卡片跳过重渲染；虚拟滚动经评估暂缓（单项目角色/世界设定条目通常几十~几百条，普通 map 渲染足够，项目未引入任何 windowing 库，盲目引入属过度优化且增新依赖，留待数千+条目场景再接）。",
   "v2.0.15 角色去重合并深度修复（round-19）：核心名 token 宽松分组启发式——去尊称/后缀/描述词提取稳定核心名，识别「韩先生/韩姓男子」「迭戈/迭戈先生/迭戈·美第奇」等脏卡与全名+后缀重复（此前因无全名正主被静默漏检，误报「全部干净」）；LLM∪规则∪宽松三路分组并集、共享 id 归并；置信度分级——有普通全名正主→high 自动合并，脏卡互相→low 进 pending 确认界面；前端去重弹窗显示待确认提案并修正「全部干净」误判，合并提案面板标识「宽松判定」来源；entity-auto-creator 自动发现新角色后后台 fire-and-forget 触发去重合并，新角色即时归并。",
   "v2.0.14 写作右侧检测栏与大纲后台化修复（round-19）：右侧检测栏改为最小化常驻——关闭不再卸载面板，右侧竖条随时拉回，与左栏互斥（展开右栏自动收左栏），宽度 transition-all 平滑过渡，修复「关闭后无法拉起/收缩不完全」；角色栏筛选徽章 4 种激活色统一为 bg-[var(--nv-primary)]，新建标签/打标移入 CharacterToolbar 复用 base 样式消除按钮大小字体不一，去重结果卡片关闭按钮竖排修复；大纲按钮改为后台运行——关掉弹窗任务继续、右下角进度胶囊可见、完成后自动重开预览，Dialog 内加「后台运行」提示，解决「叉掉无后台状态与进度」痛点。",
   "v2.0.13 flow-lens 四项错误修复（round-18 F1/F2/F3/F4）：续写 finish_reason=length 截断保护回退草稿并告警；续写路径填表统一归确认门（不再自动填 lorebook）；write/continue 两处草稿落库由 fire-and-forget 改 await 同步，消除 [PARTIAL_DRAFT] 竞态泄漏；伏笔收束检测与主线缝合由 HTTP 自回环（硬编码 origin localhost:3001）改进程内直调 detectPayoffs/runStorylineGeneration，消除非本地部署死链。",
@@ -42,6 +43,40 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.16",
+    date: "2026-08-12",
+    title: "v2.0.16 精修弹窗焦点陷阱 + 角色/世界卡片重渲染优化（round-20 收尾 ui-lens 遗留项）",
+    sections: [
+      {
+        label: "RefineDiffModal 接入焦点陷阱（修复 a11y 缺陷）",
+        items: [
+          "接入已有 useFocusTrap hook（src/hooks/use-focus-trap.ts）：面板挂载 panelRef + tabIndex=-1，打开时焦点移入面板首个可聚焦元素、Tab/Shift+Tab 在面板内循环、Esc 触发 onClose、关闭后焦点交还打开前元素；修复此前「Esc 无法关闭、键盘焦点逃逸到背后页面、键盘/读屏用户被困」的可访问性缺陷。",
+        ],
+      },
+      {
+        label: "卡片 React.memo + 回调稳定化（轻量重渲染优化，无新依赖）",
+        items: [
+          "WorldEntryCard / CharacterRow 包 React.memo，避免父组件无关 state 变化（如搜索输入、去重结果弹窗开关）导致所有卡片无谓重渲染。",
+          "CharacterList 把传给卡片的回调 toggleSelect/handleConfirm/onDelete/onConfirm/onTagClick 改 useCallback 稳定化（toggleSelect 改函数式 setSelectedIds(prev => ...) 更新），让 memo 真正生效——父级 state 变化时未变化的卡片（character 对象引用不变、selected/deleting 不变）跳过重渲染。",
+        ],
+      },
+      {
+        label: "虚拟滚动评估（务实取舍，不强行引入）",
+        items: [
+          "经评估，单项目角色/世界设定条目通常几十~几百条，普通 map 渲染足够；项目未引入任何 windowing 库（react-window / @tanstack/react-virtual 均无）。",
+          "盲目引入虚拟滚动库属「为优化而优化」，违背「避免过度抽象」原则，且增加新依赖与重写复杂度风险，故暂缓；当前 memo 优化已覆盖主要重渲染痛点（频繁 state 变化），虚拟滚动留待真实大数据量（数千+条目）场景再接。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 全绿（基线 60 文件 514 用例，本次纯组件/渲染层改动无新增测试破坏）；无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v2.0.15",
     date: "2026-08-12",

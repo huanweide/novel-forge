@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { Icon } from "@/components/ui/icons";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 interface RefineDiffModalProps {
   open: boolean;
@@ -19,6 +21,9 @@ interface RefineDiffModalProps {
  * 让用户显式「应用」或「撤销（保留原正文）」，避免 AI 静默覆盖正文却无从察觉。
  */
 export function RefineDiffModal({ open, oldContent, newContent, onApply, onUndo, onClose }: RefineDiffModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // v2.0.16：接入焦点陷阱——Esc 关闭、Tab 在面板内循环，避免键盘焦点逃逸到背后页面
+  useFocusTrap(panelRef, open, onClose);
   if (!open) return null;
   const oldLen = (oldContent || "").length;
   const newLen = (newContent || "").length;
@@ -27,7 +32,7 @@ export function RefineDiffModal({ open, oldContent, newContent, onApply, onUndo,
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="surface-floating w-full max-w-5xl max-h-[88vh] flex flex-col rounded-2xl p-6 animate-spring">
+      <div ref={panelRef} tabIndex={-1} className="surface-floating w-full max-w-5xl max-h-[88vh] flex flex-col rounded-2xl p-6 animate-spring">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Icon name="history" size={18} className="text-accent-label" />

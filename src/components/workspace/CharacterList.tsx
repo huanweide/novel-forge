@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { CharacterData } from "./types";
 import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
@@ -56,11 +56,14 @@ export function CharacterList({
   const [tagFilter, setTagFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setSelectedIds(next);
-  };
+  // v2.0.16：函数式更新 + useCallback 稳定，配合 CharacterRow 的 React.memo 避免搜索输入等父级 state 变化时所有卡片无谓重渲染
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
 
   // 范围选择——对筛选后的可见列表生效
   const handleRangeSelect = (indices: Set<number>) => {
@@ -308,7 +311,8 @@ export function CharacterList({
   });
 
   // v1.6.24：角色卡待审审批闭环——默认确认处理器（父组件可传 onConfirm 覆盖，统一刷新逻辑）
-  const handleConfirm = async (id: string) => {
+  // v2.0.16：useCallback 稳定，供 resolvedOnConfirm 复用
+  const handleConfirm = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/characters/${id}`, {
         method: "PUT",
@@ -325,7 +329,15 @@ export function CharacterList({
     } catch (e) {
       toastError("确认失败：" + (e instanceof Error ? e.message : "网络错误"));
     }
-  };
+  }, [onExpanded]);
+
+  // v2.0.16：稳定化传给 CharacterRow 的回调，配合 React.memo 避免每次父级 state 变化（如搜索输入）时所有卡片无谓重渲染
+  const resolvedOnConfirm = useCallback(
+    (id: string) => { if (onConfirm) onConfirm(id); else handleConfirm(id); },
+    [onConfirm, handleConfirm],
+  );
+  const handleDelete = useCallback((id: string, name: string) => deleteCharacter(id, name), [deleteCharacter]);
+  const handleTagClick = useCallback((t: string) => setTagFilter(t), []);
 
   const filteredIds = new Set(filtered.map(c => c.id));
   const selectedInView = [...selectedIds].filter(id => filteredIds.has(id)).length;
@@ -418,9 +430,9 @@ export function CharacterList({
         tagFilter={tagFilter}
         onToggleSelect={toggleSelect}
         onEdit={onEdit}
-        onDelete={(id, name) => deleteCharacter(id, name)}
-        onConfirm={onConfirm ?? handleConfirm}
-        onTagClick={(t) => setTagFilter(t)}
+        onDelete={handleDelete}
+        onConfirm={resolvedOnConfirm}
+        onTagClick={handleTagClick}
       />
 
       {filtered.length === 0 && (
