@@ -25,18 +25,46 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.9";
+export const LATEST_VERSION = "v2.0.10";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.9 prompt 版本化（round-2 裁决 P2 #10「prompt 当代码」半边落地）：新增 GlobalPromptRevision 模型 + Project.currentPromptVersion 字段；syncGlobalPrompt 每次刷新 globalPrompt 后自动落不可变版本快照（version 递增、hash 内容指纹、字数、source 区分 sync/manual/rollback），并回写 currentPromptVersion 作为当前生效版本指针。版本快照写库失败仅 log 不阻断主流程——绝不成为生成的硬依赖。",
-  "v2.0.9 GET prompt-revisions 列版本 API（GET /api/projects/[id]/prompt-revisions）：返回当前生效版本指针 + 每个版本的元数据（version/source/hash/字数/summary/createdAt）与内容预览，供「prompt 当代码」的审计 / 比较 / 回滚（完整内容查看与回滚还原为后续迭代）。",
-  "v2.0.9 设计同构：GlobalPromptRevision 复用既有 CharacterCardRevision / StoryNodeRevision 的 projectId + Cascade 关系 + 版本/来源标记模式；(projectId, version) 唯一约束保证版本号在该项目内权威有序，并发竞争一条失败静默降级。",
-  "v2.0.9 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 57 文件 502/502 全绿（基线 499 + #317 加 1 同步测试 + #318 加 2 路由测试）；真实 DB 冒烟在星辰项目触发一次 sync → 落 version=1、currentPromptVersion=1、(projectId,version) 唯一约束触发 P2002 验证通过；prisma db push 同步 schema 成功。",
+  "v2.0.10 回滚还原接口（round-2 裁决 P2 #10「prompt 当代码」闭环收尾 #319）：POST /api/projects/[id]/prompt-revisions/rollback 读指定 version 的完整 content 写回 Project.globalPrompt，并调 recordGlobalPromptRevision(content, \"rollback\") 落一条 source=rollback 的新版本（version=max+1），使「回滚」本身成为一次可追踪的新提交（git revert 语义：不删旧版，只新增还原版），避免静默覆盖导致不可恢复。",
+  "v2.0.10 评测集（P2 #10 第三要素 #320）：新增 src/core/prompt-eval.ts——固定评测集 fixture（基准角色/世界书/风格/项目设定）+ evaluatePromptVersions(current, baseline?) 要素守护对比纯函数，守护「作品/角色/世界书/风格」四大块关键要素不丢、字数与 hash 不漂移；零 LLM、确定性、可进 vitest 双门禁。直接补上历史上 sync 重写 globalPrompt 多次静默丢要素（世界书 7 类被漏 / buildConfig 双漏口）的回归守护。",
+  "v2.0.10 导出 buildGlobalPrompt 供评测集复用；评测集与回滚共享 recordGlobalPromptRevision 的 source=rollback 入口，三块（版本化 #316/317/318 + 回滚 #319 + 评测集 #320）完整闭环「prompt 当代码」。",
+  "v2.0.10 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 59 文件 513/513 全绿（基线 502 + #319 加 6 回滚路由测试 + #320 加 5 评测集测试）；真实 DB 冒烟在星辰项目验证回滚闭环 currentPromptVersion 2→3、globalPrompt 恢复至 v1、清理后库无痕。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.10",
+    date: "2026-08-12",
+    title: "v2.0.10 回滚还原接口 + prompt 评测集（round-2 裁决 P2 #10「prompt 当代码」完整闭环）",
+    sections: [
+      {
+        label: "回滚还原接口（#319）",
+        items: [
+          "POST /api/projects/[id]/prompt-revisions/rollback：body { version }，读指定 version 的完整 content（GlobalPromptRevision.projectId_version 复合唯一定位），写回 Project.globalPrompt，并调 recordGlobalPromptRevision(content, \"rollback\") 落一条 source=rollback 的新版本（version=max+1）。",
+          "语义对齐 git revert：不删旧版、只新增一条还原版，使「回滚」本身可追踪、可再回滚；校验 version 合法（>=1 整数）、项目存在、版本存在，四类边界返回 400/404/500；鉴权风格对齐 #318 列表路由。",
+        ],
+      },
+      {
+        label: "prompt 评测集（#320 / P2 #10 第三要素）",
+        items: [
+          "src/core/prompt-eval.ts：固定评测集 fixture（基准作品/角色/世界书/风格设定）+ 期望要素 token 列表，代表 globalPrompt 永远应包含的关键要素；buildBaselinePrompt() 用 buildGlobalPrompt 基于 fixture 构建确定性基线。",
+          "evaluatePromptVersions(current, baseline?) 把任意 globalPrompt 与基线对比，检出丢失要素 / 字数与 hash 漂移，输出可机器判读的报告（total/matched/missing/stable）。零 LLM、确定性、可进双门禁，直接守护历史上 sync 重写 globalPrompt 静默丢要素（世界书 7 类被漏、buildConfig 双漏口）的回归痛点。",
+          "导出 buildGlobalPrompt 供评测集复用；评测集与回滚共享 recordGlobalPromptRevision 的 source=rollback 入口。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 59 文件 513/513 全绿（基线 502 + #319 加 6 回滚路由测试 + #320 加 5 评测集测试）；真实 DB 冒烟在星辰项目验证回滚闭环 currentPromptVersion 2→3、globalPrompt 恢复至 v1、清理后库无痕。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.9",
     date: "2026-08-12",

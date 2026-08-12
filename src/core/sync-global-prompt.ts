@@ -49,7 +49,7 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
   }
 }
 
-function buildGlobalPrompt(
+export function buildGlobalPrompt(
   project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string; llmConfig?: any; buildConfig?: any },
   characters: any[],
   loreEntries: any[],
