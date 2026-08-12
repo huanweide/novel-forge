@@ -2,60 +2,26 @@ import { jsonError } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dedupeCharacters } from "@/core/character-dedupe";
+import { generateChapterOutline } from "@/core/pipeline/generate-chapter-outline";
+import { runWriteGeneration, WriteSend } from "@/core/write-generation";
 
 export const maxDuration = 300;
 
 // POST /api/story/batch-write
 //  A) { projectId, count(1-10), authorNote?, mode:"outline" }（默认）
-//     → 后台逐章：建新章节 → 调 /api/generate/chapter-outline 生成章纲（写入 node.outline，不写正文）
+//     → 后台逐章：建新章节 → 直接调用 generateChapterOutline 生成章纲（写入 node.outline，不写正文）
 //     → 完成后 result.outlines=[{nodeId,title,outline}]，前端可编辑/勾选
 //  B) { projectId, nodeIds[], authorNote?, mode:"write" }
-//     → 后台逐章：调 /api/generate/write 生成正文（write 自动读取 node.outline 作为本节大纲）
-//     → 消费 SSE 到 done → 上报进度
+//     → 后台逐章：直接调用 runWriteGeneration 生成正文（write 自动读取 node.outline 作为本节大纲）
+//     → 收集事件流判定 done/truncated/error → 上报进度
 // 两种模式都创建 FillTask(taskType=batchWrite) 立即返回 taskId；前端轮询 GET /api/babylore/fill-task/[taskId]。
-const ORIGIN = process.env.APP_ORIGIN || "http://localhost:3001";
+// v2.0.8 #313：移除原 fetch(${ORIGIN}/api/...) 的 HTTP 自回环，改为直接 import 调用核心逻辑。
 
 async function ensureNoRunning(projectId: string) {
   const running = await prisma.fillTask.findFirst({
     where: { projectId, taskType: "batchWrite", status: { in: ["pending", "running"] } },
   });
   return running;
-}
-
-async function consumeSSE(res: Response): Promise<boolean> {
-  if (!res.ok || !res.body) throw new Error(`write HTTP ${res.status}`);
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-  let okDone = false;
-  let truncated = false;
-  let errored = false;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { done: d, value } = await reader.read();
-    if (value) buf += decoder.decode(value, { stream: true });
-    // 逐个解析已完成的 SSE 事件（以 \n\n 分隔，每行 "data: {json}"）
-    let idx;
-    while ((idx = buf.indexOf("\n\n")) !== -1) {
-      const raw = buf.slice(0, idx);
-      buf = buf.slice(idx + 2);
-      const dataLine = raw.split("\n").find((l) => l.startsWith("data:"));
-      if (!dataLine) continue;
-      try {
-        const evt = JSON.parse(dataLine.slice(5).trim());
-        if (evt.type === "error") errored = true;
-        if (evt.type === "done") {
-          okDone = true;
-          if (evt.truncated) truncated = true; // 被 max_tokens 截断的章：记为失败，不虚高进度
-        }
-      } catch {
-        /* 跳过非 JSON 的控制行 */
-      }
-    }
-    if (d) break;
-  }
-  // 仅在明确成功（无 error、无截断）时记 done；截断章记 failed，进度真实化
-  return okDone && !truncated && !errored;
 }
 
 export async function POST(request: Request) {
@@ -84,19 +50,22 @@ export async function POST(request: Request) {
         try {
           for (const nodeId of ids) {
             try {
-              const res = await fetch(`${ORIGIN}/api/generate/write`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  projectId,
-                  nodeId,
-                  authorNote: authorNote || undefined,
-                  targetWordCount: 3000,
-                }),
-              });
-              if (await consumeSSE(res)) done++;
+              // #313：直接调用核心逻辑，移除 fetch(${ORIGIN}/api/generate/write) 自回环
+              const events: any[] = [];
+              const send: WriteSend = (obj) => events.push(obj);
+              await runWriteGeneration(
+                { projectId, nodeId, authorNote: authorNote || undefined, targetWordCount: 3000 },
+                // 后台任务不依赖客户端断连信号，用独立 AbortController 占位
+                { send, signal: new AbortController().signal },
+              );
+              // 与原 consumeSSE 等价：仅在明确成功（无 error、无截断）时记 done
+              const okDone = events.some((e) => e.type === "done" && !e.truncated);
+              const errored = events.some((e) => e.type === "error");
+              if (okDone && !errored) done++;
               else failed++;
-            } catch {
+            } catch (we) {
+              // 前置校验错误（不存在/回收站）也记为失败，保留可观测
+              console.error("[batch-write] 正文生成失败:", we instanceof Error ? we.message : we);
               failed++;
             }
             await prisma.fillTask.update({
@@ -188,22 +157,24 @@ export async function POST(request: Request) {
               },
             });
             // 2) 生成章纲（写 node.outline，不写正文）——传入前文章纲保证延续
-            const res = await fetch(`${ORIGIN}/api/generate/chapter-outline`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+            // #313：直接调用核心逻辑，移除 fetch(${ORIGIN}/api/generate/chapter-outline) 自回环
+            try {
+              const d = await generateChapterOutline({
                 projectId,
                 nodeId: node.id,
                 authorNote: authorNote || undefined,
                 prevOutlines: generatedOutlines.slice(),
-              }),
-            });
-            const d = await res.json().catch(() => ({}));
-            if (res.ok && typeof (d as any).outline === "string" && String((d as any).outline).length >= 10) {
-              outlines.push({ nodeId: node.id, title: node.title, outline: (d as any).outline });
-              generatedOutlines.push(String((d as any).outline)); // 累积给下一章承接
-              done++;
-            } else {
+              });
+              if (typeof d.outline === "string" && d.outline.length >= 10) {
+                outlines.push({ nodeId: node.id, title: node.title, outline: d.outline });
+                generatedOutlines.push(d.outline); // 累积给下一章承接
+                done++;
+              } else {
+                failed++;
+              }
+            } catch (ce) {
+              // 异常即本章章纲失败（含回收站/不存在/模型空响应），记 failed 并保留可观测
+              console.error("[batch-write] 章纲生成失败:", ce instanceof Error ? ce.message : ce);
               failed++;
             }
           } catch {

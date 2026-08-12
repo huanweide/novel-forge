@@ -25,18 +25,53 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.7";
+export const LATEST_VERSION = "v2.0.8";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.7 死路由审计 + 去重判定分支合并（round-2 裁决 P2 两轮）：132 个 API 路由按路径静态分析零引用 → 无孤儿路由可删（审计干净）；entity-auto-creator 与 character-dedupe 重复的「同人异称→主卡」判定合并为单一规范函数 resolveVariantTarget。",
-  "v2.0.7 修单字缩写合并缺口：entity-auto-creator 的自动建卡此前对单字缩写（樊=樊斯瑞）/姓+描述词（韩姓男子=韩立）永远合并不进（旧分支误调只认尊称的 resolveHonorificTarget）；现统一走 resolveVariantTarget，自动建卡与批量去重行为一致。",
-  "v2.0.7 去重规则兜底（ruleBasedGroups）同步改用 resolveVariantTarget，规则分组也能覆盖单字缩写；character-dedupe 删掉本地副本，仅 import 规范函数，消除两处逻辑漂移。",
-  "v2.0.7 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 493/493 全绿（新增 resolveVariantTarget 6 单测）；entity-auto-creator 单测 26 全绿、character-dedupe 8 全绿。",
+  "v2.0.8 移除 batch-write 自回环 fetch（round-2 裁决 P2 #313）：将 generate/chapter-outline 与 generate/write 的业务逻辑抽离为可 import 的核心函数（generateChapterOutline / runWriteGeneration），路由降级为薄壳（仅限流 + 参数解析 + SSE 封装），batch-write 直接 import 调用——消除「批量写 10 章撞 generate/write 10 次/分钟限流误触发 429」的脆弱自调与进程间耦合。",
+  "v2.0.8 dedupe 语义缓存（round-2 裁决 P2 #314）：character-dedupe 新增角色集内容指纹（charFingerprint），指纹未变则跳过全部 LLM 分组调用、直接复用进程级缓存分组（source=\"cache\"），仅角色集变更才重算——零 schema 改动、零成本去重，高频批写去重不再重复烧 LLM。",
+  "v2.0.8 completeText 暴露 JSON-mode + 优雅降级（round-2 裁决 P2 #315）：completeText 新增 json?:boolean 参数，请求体加 response_format:{type:json_object}；供应商不支持（通常 4xx）自动去 json 重试一次，不破坏现有供应商；章纲选角与去重分组调用点传 json:true，结构化输出更稳。",
+  "v2.0.8 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 499/499 全绿；无头冒烟 mode A（count=1）done=1 章纲落库、mode B（nodeId=efd39c69-768c-4f8c-979d-2030658e12d2）done=1 正文生成正常；dev server 首页 200。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.8",
+    date: "2026-08-12",
+    title: "v2.0.8 移除 batch-write 自回环 + dedupe 语义缓存 + completeText JSON-mode（round-2 裁决 P2 收口）",
+    sections: [
+      {
+        label: "移除 batch-write 自回环 fetch（P2 #313）",
+        items: [
+          "根因：batch-write 通过 fetch(${ORIGIN}/api/generate/write|chapter-outline) 自调自己，进程间脆弱；批量写 10 章会撞 generate/write 的 10 次/分钟限流 → 误触发 429 中断整批。",
+          "重构：将两路由业务逻辑抽离为可 import 的核心函数 generateChapterOutline / runWriteGeneration（core 函数接收 send:WriteSend 回调 + AbortSignal，等价替换原 controller.enqueue / request.signal）；路由降级为薄壳（仅限流 + 参数解析 + SSE 封装），batch-write 直接 import 调用，全项目零 fetch(${ORIGIN} 残留。",
+          "收益：批量写与单章写共用同一份生成逻辑，不再有进程间耦合与限流误伤；SSE 抽象统一，事件判定（done/truncated/error）逻辑一致。",
+        ],
+      },
+      {
+        label: "dedupe 语义缓存（P2 #314）",
+        items: [
+          "新增角色集内容指纹 charFingerprint（name|aliases|background|storyLine|tags 哈希），进程级 dedupeGroupCache = Map<projectId,{fp,groups}>；指纹未变 → 直接复用缓存分组（source=\"cache\"），跳过全部 LLM 分组调用；指纹变更才重算并刷新缓存。",
+          "零 schema 改动、零路由新增，高频批写去重在角色集稳定时零 LLM 成本。",
+        ],
+      },
+      {
+        label: "completeText 暴露 JSON-mode + 优雅降级（P2 #315）",
+        items: [
+          "completeText 新增 json?:boolean 参数，请求体加 response_format:{type:json_object}；调用失败（供应商不支持，通常 4xx）自动去掉 json 重试一次，避免破坏现有供应商。",
+          "集成点：章纲选角与去重分组两处 completeText 调用传 json:true，结构化输出更稳；供应商不支持时自动降级为普通文本解析，不阻断流程。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 499/499 全绿；无头冒烟 mode A（count=1）done=1 章纲落库、mode B（nodeId=efd39c69-768c-4f8c-979d-2030658e12d2）done=1 正文生成正常；dev server 首页 200。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.7",
     date: "2026-08-12",

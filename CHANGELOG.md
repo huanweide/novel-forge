@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.8 — 2026-08-12
+
+**移除 batch-write 自回环 + dedupe 语义缓存 + completeText JSON-mode（round-2 裁决 P2 收口）**
+
+- **移除 batch-write 自回环 fetch（P2 #313）**：根因——batch-write 通过 `fetch(${ORIGIN}/api/generate/write|chapter-outline)` 自调自己，进程间脆弱；批量写 10 章会撞 `generate/write` 的 10 次/分钟限流 → 误触发 429 中断整批。重构——将两路由业务逻辑抽离为可 import 的核心函数 `generateChapterOutline` / `runWriteGeneration`（core 函数接收 `send:WriteSend` 回调 + `AbortSignal`，等价替换原 `controller.enqueue` / `request.signal`），路由降级为薄壳（仅限流 + 参数解析 + SSE 封装），batch-write 直接 import 调用，全项目零 `fetch(${ORIGIN}` 残留。收益——批量写与单章写共用同一份生成逻辑，不再有进程间耦合与限流误伤。
+- **dedupe 语义缓存（P2 #314）**：新增角色集内容指纹 `charFingerprint`，进程级 `dedupeGroupCache = Map<projectId,{fp,groups}>`；指纹未变 → 直接复用缓存分组（`source="cache"`），跳过全部 LLM 分组调用，仅角色集变更才重算。零 schema 改动、零路由新增，高频批写去重在角色集稳定时零 LLM 成本。
+- **completeText 暴露 JSON-mode + 优雅降级（P2 #315）**：`completeText` 新增 `json?:boolean` 参数，请求体加 `response_format:{type:json_object}`；调用失败（供应商不支持，通常 4xx）自动去掉 json 重试一次，避免破坏现有供应商。集成点——章纲选角与去重分组两处 `completeText` 调用传 `json:true`，结构化输出更稳；供应商不支持时自动降级为普通文本解析，不阻断流程。
+- **验证**：tsc 0 错 + vitest 56 文件 499/499 全绿；无头冒烟 mode A（count=1）`done=1` 章纲落库、mode B（nodeId=efd39c69-768c-4f8c-979d-2030658e12d2）`done=1` 正文生成正常；dev server 首页 200。
+
 ## v2.0.7 — 2026-08-12
 
 **死路由审计 + 去重判定分支合并（round-2 裁决 P2 收口）**

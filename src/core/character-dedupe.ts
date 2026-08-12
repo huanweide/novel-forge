@@ -44,6 +44,24 @@ interface CharLite {
   tags: string[];
 }
 
+/**
+ * #314 增量 / 语义缓存基础设施。
+ *
+ *  - charFingerprint：角色关键字段（名称/别名/背景/剧情线/标签）的稳定指纹。
+ *    仅当指纹变化才需要重新跑 LLM 判定，否则可复用上次结果。
+ *  - dedupeGroupCache：项目级语义缓存（进程内）。角色集内容指纹未变时，
+ *    直接复用上次 LLM/规则分组结果，跳过全部 LLM 调用（零成本去重）。
+ *    进程重启会清空，但同进程内多次 batch-write 去重可显著减少 LLM 开销。
+ */
+function charFingerprint(c: CharLite): string {
+  let h = 0;
+  const s = `${c.name}|${(c.aliases || []).join(",")}|${c.background}|${c.storyLine}|${(c.tags || []).join(",")}`;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+const dedupeGroupCache = new Map<string, { fp: string; groups: string[][] }>();
+
 /** 从可能包裹了说明文字的模型输出里抠出第一个 JSON 对象 */
 function extractJson(raw: string): any {
   if (!raw) return null;
@@ -84,7 +102,7 @@ async function llmDetectSamePersonGroups(chars: CharLite[]): Promise<string[][]>
   const prompt = `角色卡清单：\n${listing}\n\n请输出归组 JSON。`;
 
   try {
-    const raw = await completeText(system, prompt, { temperature: 0.2, maxTokens: 1500, role: "dedupe" });
+    const raw = await completeText(system, prompt, { temperature: 0.2, maxTokens: 1500, role: "dedupe", json: true });
     const json = extractJson(raw);
     const groups = Array.isArray(json?.groups) ? json.groups : [];
     const ids = new Set(chars.map((c) => c.id));
@@ -257,10 +275,21 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     tags: Array.isArray(c.tags) ? (c.tags as string[]) : [],
   }));
 
-  // 优先 LLM 分组，失败回退规则分组
-  const groups = await llmDetectSamePersonGroups(lite);
-  const source = groups.length > 0 ? "llm" : "rule";
-  const finalGroups = groups.length > 0 ? groups : ruleBasedGroups(lite);
+  // 优先 LLM 分组，失败回退规则分组；项目级语义缓存：角色集内容指纹未变则跳过 LLM（#314 增量/语义缓存）
+  const allFp = lite.map(charFingerprint).sort().join("|");
+  const cached = dedupeGroupCache.get(projectId);
+  let finalGroups: string[][];
+  let source: "llm" | "rule" | "cache";
+  if (cached && cached.fp === allFp) {
+    // 语义缓存命中：角色集内容未变，完全跳过 LLM 分组调用（增量 + 缓存收益）
+    finalGroups = cached.groups;
+    source = "cache";
+  } else {
+    const groups = await llmDetectSamePersonGroups(lite);
+    finalGroups = groups.length > 0 ? groups : ruleBasedGroups(lite);
+    source = groups.length > 0 ? "llm" : "rule";
+    dedupeGroupCache.set(projectId, { fp: allFp, groups: finalGroups });
+  }
   const allNames = lite.map((c) => c.name);
 
   const consumed = new Set<string>();

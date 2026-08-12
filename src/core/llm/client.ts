@@ -45,6 +45,8 @@ export interface LLMRequest {
   thinking?: { type: "enabled" | "disabled" };
   /** 外部 AbortSignal（如用户停止生成）：与超时信号合并，真正中断底层 fetch，灭停止后仍在生成的 token 浪费 */
   signal?: AbortSignal;
+  /** JSON 模式：要求模型以严格 JSON 对象输出（OpenAI 兼容 response_format）。用于选角 / 去重分组等"必须纯 JSON"的场景 */
+  json?: boolean;
   /** OpenAI 兼容的工具定义 */
   tools?: Array<{
     type: "function";
@@ -195,6 +197,7 @@ async function attemptChat(
     }),
     stream: false,
     ...(request.thinking ? { thinking: request.thinking } : {}),
+    ...(request.json ? { response_format: { type: "json_object" } } : {}),
   };
   if (request.tools && request.tools.length > 0) {
     body.tools = request.tools;
@@ -641,11 +644,13 @@ export async function completeText(
     maxTokens?: number;
     role?: string;
     config?: LLMConfig;
+    /** JSON 模式：要求模型以严格 JSON 对象输出（见 LLMRequest.json） */
+    json?: boolean;
   },
 ): Promise<string> {
   const config = opts?.config ?? (await getEffectiveConfig());
   const client = createLLMClient(config);
-  const res = await client.chat({
+  const baseReq: Omit<LLMRequest, "stream"> = {
     messages: [
       { role: "system", content: system },
       { role: "user", content: prompt },
@@ -654,8 +659,19 @@ export async function completeText(
     role: opts?.role,
     temperature: opts?.temperature,
     maxTokens: opts?.maxTokens,
-  });
-  return res.content;
+  };
+  try {
+    const res = await client.chat({ ...baseReq, ...(opts?.json ? { json: true } : {}) });
+    return res.content;
+  } catch (e) {
+    // JSON-mode 优雅降级：若供应商不支持 response_format（通常 4xx），去掉 json 重试一次，
+    // 避免 JSON-mode 导致"要求纯 JSON 的场景"（选角 / 去重分组）整体失败（#315 稳健性）。
+    if (opts?.json) {
+      const res2 = await client.chat(baseReq);
+      return res2.content;
+    }
+    throw e;
+  }
 }
 
 /**
