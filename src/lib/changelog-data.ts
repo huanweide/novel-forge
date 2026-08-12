@@ -25,18 +25,45 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.6";
+export const LATEST_VERSION = "v2.0.7";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.6 摘要大纲阈值一致性修复：isGarbageSummary 与 buildTimelineDigest 此前分别用 <12 与 <2 两档阈值，导致 2~11 字脏片段（生成失败/占位/过渡废话）漏进大纲。新增共享常量 MIN_SUMMARY_LEN=12，两条入口统一判定，不再有漏网脏片段（round-2 裁决 P2）。",
-  "v2.0.6 单测补全：digest-aggregate 新增 2~11 字脏片段过滤用例 + 12 字边界保留用例，证明阈值对齐后行为一致；既有「9 字章纲算有效」旧断言已随规则更正。",
-  "v2.0.6 零风险纯函数改动：仅改 digest-aggregate.ts 阈值与共享常量，不碰 schema、不碰路由，回归面最小。",
-  "v2.0.6 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 493/493 全绿（基线 491 + 新增 2 单测）。",
+  "v2.0.7 死路由审计 + 去重判定分支合并（round-2 裁决 P2 两轮）：132 个 API 路由按路径静态分析零引用 → 无孤儿路由可删（审计干净）；entity-auto-creator 与 character-dedupe 重复的「同人异称→主卡」判定合并为单一规范函数 resolveVariantTarget。",
+  "v2.0.7 修单字缩写合并缺口：entity-auto-creator 的自动建卡此前对单字缩写（樊=樊斯瑞）/姓+描述词（韩姓男子=韩立）永远合并不进（旧分支误调只认尊称的 resolveHonorificTarget）；现统一走 resolveVariantTarget，自动建卡与批量去重行为一致。",
+  "v2.0.7 去重规则兜底（ruleBasedGroups）同步改用 resolveVariantTarget，规则分组也能覆盖单字缩写；character-dedupe 删掉本地副本，仅 import 规范函数，消除两处逻辑漂移。",
+  "v2.0.7 验证：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 493/493 全绿（新增 resolveVariantTarget 6 单测）；entity-auto-creator 单测 26 全绿、character-dedupe 8 全绿。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.7",
+    date: "2026-08-12",
+    title: "v2.0.7 死路由审计 + 去重判定分支合并（round-2 裁决 P2 收口）",
+    sections: [
+      {
+        label: "死路由审计（P2）",
+        items: [
+          "静态分析：132 个 API 路由按「路径是否被源码引用（排除变更日志历史文本与自身文件）」做差集，结果零孤儿路由——所有路由在组件/页面/服务端自调中都有真实引用，无安全可删项。审计结论：无需删除，已彻底核查零误删风险。",
+        ],
+      },
+      {
+        label: "去重判定分支合并（P2）",
+        items: [
+          "根因：entity-auto-creator 与 character-dedupe 各有一套「同人异称→主卡」判定；前者只认尊称（resolveHonorificTarget），导致自动建卡时单字缩写（樊）/姓+描述词（韩姓男子）永远合并不进，与批量去重（resolveVariantTarget 覆盖单字缩写）行为分裂。",
+          "合并：把 resolveVariantTarget 提升为 entity-auto-creator 的规范导出函数（尊称 + 单字缩写两分支），自动建卡两处重复分支合并为一处调用；character-dedupe 删本地副本改为 import。ruleBasedGroups 也改走 resolveVariantTarget，规则分组覆盖单字缩写。",
+          "收益：单一判定入口，自动建卡与批量去重对昵称缩写/尊称变体的处理完全一致；顺手修掉自动建卡单字缩写漏合并的 bug（减少脏卡）。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "纯函数/导入重构，零 schema、零路由新增；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 493/493 全绿（新增 resolveVariantTarget 6 单测：尊称/单字缩写/描述词并入 + 同姓歧义拒绝 + 自身非变体）；entity-auto-creator 26 全绿、character-dedupe 8 全绿。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.6",
     date: "2026-08-12",

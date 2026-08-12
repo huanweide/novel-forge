@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.7 — 2026-08-12
+
+**死路由审计 + 去重判定分支合并（round-2 裁决 P2 收口）**
+
+- **死路由审计（P2）**：静态分析 132 个 API 路由，按「路径是否被源码引用（排除变更日志历史文本与自身文件）」做差集，结果零孤儿路由——所有路由在组件/页面/服务端自调中都有真实引用，无安全可删项。审计结论：无需删除，已彻底核查零误删风险。
+- **去重判定分支合并（P2）**：根因——entity-auto-creator 与 character-dedupe 各有一套「同人异称→主卡」判定；前者只认尊称（`resolveHonorificTarget`），导致自动建卡时单字缩写（樊）/姓+描述词（韩姓男子）永远合并不进，与批量去重（`resolveVariantTarget` 覆盖单字缩写）行为分裂。合并——把 `resolveVariantTarget` 提升为 entity-auto-creator 的规范导出函数（尊称+单字缩写两分支），自动建卡两处重复分支合并为一处调用；character-dedupe 删本地副本改为 import；`ruleBasedGroups` 也走 `resolveVariantTarget`。收益：单一判定入口，自动建卡与批量去重对昵称缩写/尊称变体处理完全一致，顺手修掉自动建卡单字缩写漏合并的 bug（减脏卡）。
+- **验证**：纯函数/导入重构，零 schema、零路由新增；tsc 0 错 + vitest 56 文件 493/493 全绿（新增 `resolveVariantTarget` 6 单测：尊称/单字缩写/描述词并入 + 同姓歧义拒绝 + 自身非变体）；entity-auto-creator 26 全绿、character-dedupe 8 全绿。
+
 ## v2.0.6 — 2026-08-12
 
 **摘要大纲阈值一致性修复（digest 阈值脏片段根治，round-2 裁决 P2）**

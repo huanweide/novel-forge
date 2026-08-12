@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget, resolveEntityCategory } from "./entity-auto-creator";
+import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget, resolveVariantTarget, resolveEntityCategory } from "./entity-auto-creator";
 
 // 验证 entity-auto-creator 的相似名去重（尤其中文短名繁简归一化，青砚 P2）。
 describe("isSimilarName —— 短名繁简去重", () => {
@@ -52,6 +52,27 @@ describe("同人异称融合（v1.6.3）—— resolveHonorificTarget 唯一性�
   it("真实姓名含尊称字不误判（韩山君 非变体）", () => {
     expect(isHonorificVariant("韩山君")).toBe(false);
     expect(resolveHonorificTarget(["韩立"], "韩山君")).toBeNull();
+  });
+});
+
+describe("resolveVariantTarget（合并重复判定分支的规范入口，v2.0.7）", () => {
+  it("尊称变体并入唯一同姓正主（韩先生→韩立）", () => {
+    expect(resolveVariantTarget(["韩立"], "韩先生")).toBe("韩立");
+  });
+  it("单字缩写并入唯一同姓正主（樊→樊斯瑞）——覆盖 resolveHonorificTarget 不处理单字缩写的旧缺口", () => {
+    expect(resolveVariantTarget(["樊斯瑞"], "樊")).toBe("樊斯瑞");
+  });
+  it("姓+描述词并入唯一同姓正主（韩姓男子→韩立）", () => {
+    expect(resolveVariantTarget(["韩立"], "韩姓男子")).toBe("韩立");
+  });
+  it("同姓正主不唯一：拒绝合并（韩先生 遇 韩立+韩雪 → null）", () => {
+    expect(resolveVariantTarget(["韩立", "韩雪"], "韩先生")).toBeNull();
+  });
+  it("单字缩写同姓正主不唯一：拒绝合并（樊 遇 樊斯瑞+樊雪 → null）", () => {
+    expect(resolveVariantTarget(["樊斯瑞", "樊雪"], "樊")).toBeNull();
+  });
+  it("自身已是正主则无目标（樊斯瑞 非变体）", () => {
+    expect(resolveVariantTarget(["樊斯瑞"], "樊斯瑞")).toBeNull();
   });
 });
 

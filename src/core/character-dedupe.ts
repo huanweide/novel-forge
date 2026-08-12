@@ -19,7 +19,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { completeText } from "@/core/llm/client";
-import { isHonorificVariant, resolveHonorificTarget, isSurnameAbbrevOrDescriptor, coreSurname } from "@/lib/entity-auto-creator";
+import { isHonorificVariant, resolveVariantTarget, isSurnameAbbrevOrDescriptor, coreSurname } from "@/lib/entity-auto-creator";
 
 export interface DedupeMergeItem {
   mainId: string;
@@ -103,6 +103,7 @@ async function llmDetectSamePersonGroups(chars: CharLite[]): Promise<string[][]>
 /**
  * 规则兜底分组（LLM 不可用时的降级）：仅处理「尊称 / 昵称缩写 / 姓氏缩写 + 描述词」这类
  * 能无歧义并入唯一同姓正主的情况。不覆盖 LLM 才能识别的昵称缩写语义，但至少不漏掉旧版能处理的尊称。
+ * 变体→主卡解析统一走 resolveVariantTarget（与 entity-auto-creator 共用，覆盖单字缩写分支）。
  */
 function ruleBasedGroups(chars: CharLite[]): string[][] {
   const names = chars.map((c) => c.name);
@@ -119,10 +120,10 @@ function ruleBasedGroups(chars: CharLite[]): string[][] {
       const bVar = isHonorificVariant(b.name) || isSurnameAbbrevOrDescriptor(b.name);
       if (!aVar && !bVar) continue;
       // 仅当其一为变体、另一为普通姓名，且变体能无歧义解析到另一同姓正主时才合并
-      if (aVar && !bVar && resolveHonorificTarget(names, a.name)?.toLowerCase() === b.name.toLowerCase()) {
+      if (aVar && !bVar && resolveVariantTarget(names, a.name)?.toLowerCase() === b.name.toLowerCase()) {
         g.push(b.id);
         consumed.add(b.id);
-      } else if (bVar && !aVar && resolveHonorificTarget(names, b.name)?.toLowerCase() === a.name.toLowerCase()) {
+      } else if (bVar && !aVar && resolveVariantTarget(names, b.name)?.toLowerCase() === a.name.toLowerCase()) {
         g.push(b.id);
         consumed.add(b.id);
       }
@@ -149,26 +150,9 @@ function pickMain(members: CharLite[]): CharLite {
  *    否则（纯语义相似的普通姓名） → low（需用户确认）。
  */
 /**
- * 变体 → 主卡名解析（高置信度判定的消歧闸门）：
- *  - 标准尊称（X先生 / X女子）：交给 resolveHonorificTarget（同姓唯一正主才返回，歧义则 null）；
- *  - 单字缩写 / 姓+描述词（樊 / 韩姓男子）：resolveHonorificTarget 不覆盖（它只认 isHonorificVariant），
- *    故此处补一刀——按 coreSurname 在同姓非变体正主中找唯一匹配，歧义（≥2）则 null。
- * 任一变体若解析不到唯一主卡 → 该组降为 low（需用户确认），避免错并。
+ * 变体 → 主卡名解析（高置信度判定的消歧闸门）统一走 entity-auto-creator 的
+ * resolveVariantTarget（已提升为规范函数，覆盖尊称 + 单字缩写两分支），本文件不再重复定义。
  */
-function resolveVariantTarget(allNames: string[], variantName: string): string | null {
-  const byHonorific = resolveHonorificTarget(allNames, variantName);
-  if (byHonorific) return byHonorific;
-  if (isSurnameAbbrevOrDescriptor(variantName)) {
-    const surname = coreSurname(variantName);
-    const cands = allNames
-      .filter((n) => n.trim().toLowerCase() !== variantName.trim().toLowerCase())
-      .filter((n) => !isHonorificVariant(n) && !isSurnameAbbrevOrDescriptor(n))
-      .filter((n) => coreSurname(n) === surname);
-    if (cands.length === 1) return cands[0];
-  }
-  return null;
-}
-
 export function computeConfidence(members: CharLite[], allNames: string[]): "high" | "low" {
   const main = pickMain(members);
   const merged = members.filter((x) => x.id !== main.id);

@@ -211,6 +211,28 @@ export function resolveHonorificTarget(allNames: string[], honorificName: string
 }
 
 /**
+ * 变体 → 主卡名解析（消歧闸门，合并 entity-auto-creator 与 character-dedupe 的重复判定分支）：
+ *  - 标准尊称（X先生 / X女子）：交给 resolveHonorificTarget（同姓唯一正主才返回，歧义 null）；
+ *  - 单字缩写 / 姓+描述词（樊 / 韩姓男子）：resolveHonorificTarget 不覆盖（它只认 isHonorificVariant），
+ *    故补一刀——按 coreSurname 在同姓非变体正主中找唯一匹配，歧义（≥2）则 null。
+ * 任一变体解析不到唯一主卡 → 返回 null（需用户/LLM 确认，避免错并）。
+ * 本函数是「同人异称 → 主卡」的唯一判定入口，autoCreate 与角色去重共用，避免两处逻辑漂移。
+ */
+export function resolveVariantTarget(allNames: string[], variantName: string): string | null {
+  const byHonorific = resolveHonorificTarget(allNames, variantName);
+  if (byHonorific) return byHonorific;
+  if (isSurnameAbbrevOrDescriptor(variantName)) {
+    const surname = coreSurname(variantName);
+    const cands = allNames
+      .filter((n) => n.trim().toLowerCase() !== variantName.trim().toLowerCase())
+      .filter((n) => !isHonorificVariant(n) && !isSurnameAbbrevOrDescriptor(n))
+      .filter((n) => coreSurname(n) === surname);
+    if (cands.length === 1) return cands[0];
+  }
+  return null;
+}
+
+/**
  * 昵称缩写 / 姓氏缩写 + 描述词（v2.0.4，#297/#299 配套）：
  *  - 单字姓名（如「樊」「叶」）= 对应正主的昵称缩写，应并入别名而非拆成两张卡；
  *  - 前缀尊称（老X / 小X / 阿X）；
@@ -341,41 +363,23 @@ export async function autoCreateEntities(
       skipped.push(name);
       continue;
     }
-    // 同人异称：尊称/描述变体自动并入唯一同姓正主别名（歧义时拒绝，避免错并）
-    if (isHonorificVariant(name)) {
-      const targetName = resolveHonorificTarget(existingChars.map((c) => c.name), name);
-      if (targetName) {
-        const matched = existingChars.find((c) => c.name.toLowerCase() === targetName.toLowerCase());
-        if (matched) {
-          const curAliases = Array.isArray(matched.aliases) ? (matched.aliases as string[]) : [];
-          if (!curAliases.some((al) => al.toLowerCase() === name.toLowerCase())) {
-            await prisma.characterCard.update({
-              where: { id: matched.id },
-              data: { aliases: Array.from(new Set([...curAliases, name])).slice(0, 50) },
-            });
-          }
+    // 同人异称：尊称 / 昵称缩写 / 姓+描述词 自动并入唯一同姓正主别名（歧义时拒绝，避免错并）。
+    // 统一走 resolveVariantTarget（合并原两处重复分支，并修掉单字缩写此前因 resolveHonorificTarget
+    // 只认 isHonorificVariant 而永远合并不进的 bug：现「樊」=樊斯瑞、「韩姓男子」=韩立 都能正确并入）。
+    const targetName = resolveVariantTarget(existingChars.map((c) => c.name), name);
+    if (targetName) {
+      const matched = existingChars.find((c) => c.name.toLowerCase() === targetName.toLowerCase());
+      if (matched) {
+        const curAliases = Array.isArray(matched.aliases) ? (matched.aliases as string[]) : [];
+        if (!curAliases.some((al) => al.toLowerCase() === name.toLowerCase())) {
+          await prisma.characterCard.update({
+            where: { id: matched.id },
+            data: { aliases: Array.from(new Set([...curAliases, name])).slice(0, 50) },
+          });
         }
-        skipped.push(name);
-        continue;
       }
-    }
-    // 昵称缩写 / 姓氏缩写 + 描述词：同样并入唯一同姓正主别名（樊=樊斯瑞、韩姓男子=韩立）
-    if (isSurnameAbbrevOrDescriptor(name)) {
-      const targetName = resolveHonorificTarget(existingChars.map((c) => c.name), name);
-      if (targetName) {
-        const matched = existingChars.find((c) => c.name.toLowerCase() === targetName.toLowerCase());
-        if (matched) {
-          const curAliases = Array.isArray(matched.aliases) ? (matched.aliases as string[]) : [];
-          if (!curAliases.some((al) => al.toLowerCase() === name.toLowerCase())) {
-            await prisma.characterCard.update({
-              where: { id: matched.id },
-              data: { aliases: Array.from(new Set([...curAliases, name])).slice(0, 50) },
-            });
-          }
-        }
-        skipped.push(name);
-        continue;
-      }
+      skipped.push(name);
+      continue;
     }
     // 标记为已存在，避免同一批次内的重复（主名 + 别名）
     existingNames.add(name.toLowerCase());
