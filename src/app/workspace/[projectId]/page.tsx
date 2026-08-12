@@ -69,12 +69,15 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
-  // P2-2：被动展示叙事阶段名——基于当前章在全书章节列表中的进度位置推导，复用 computeNarrativeStage（零新增 schema / 零子系统）
+  // P2-2：被动展示叙事阶段名——基于当前章在全书章节列表中的进度位置推导，复用 computeNarrativeStage。
+  // 主线被标记 completed 时视为收尾；否则不靠章数硬判（用户可写数百章而不被提前结局）。
   const narrativeStage = (() => {
     if (!selectedNode || chapterNodes.length === 0) return null;
     const idx = chapterNodes.findIndex((n) => n.id === selectedNode.id);
     if (idx < 0) return null;
-    return computeNarrativeStage(idx, chapterNodes.length);
+    const mainQuestComplete = Array.isArray(project?.storylines) &&
+      project!.storylines!.some((sl: any) => sl?.type === "main" && sl?.status === "completed");
+    return computeNarrativeStage(idx, chapterNodes.length, { mainQuestComplete });
   })();
 
   const handleSelectNode = (node: StoryNodeData) => {
@@ -871,7 +874,6 @@ export default function WorkspacePage() {
     { id: "write", label: "续写 / 微调", desc: "选中章节后让 AI 接着写或润色本章", icon: "pencil", category: "write", action: () => { if (!selectedNode) { toastInfo("请先在左侧大纲选中一个章节"); return; } handleWrite(); } },
     { id: "outline", label: "生成大纲", desc: "AI 规划整本书的章节结构与走向", icon: "bot", category: "write", action: () => setShowOutlineDialog(true) },
     { id: "batch", label: "批量写作", desc: "后台批量产出多章草稿，可关窗继续", icon: "package", category: "write", action: () => setShowBatchWrite(true) },
-    { id: "summarize", label: "章节摘要", desc: "为当前章生成要点摘要，便于长文回顾", icon: "clipboard", category: "write", action: () => handleSummarize() },
     { id: "draw", label: "抽卡选章纲", desc: "用色子抽取剧情走向，选定本章路线", icon: "sparkles", category: "generate", action: () => handleDrawChapterOutline() },
     { id: "character", label: "新建角色", desc: "添加一张角色卡，定义人设与关系", icon: "user", category: "generate", action: () => setShowNewCharacter(true) },
     { id: "workshop", label: "创意工坊", desc: "预设 / 角色卡 / 导入导出分享社区预设", icon: "book", category: "generate", action: () => router.push("/workshop") },
@@ -916,10 +918,10 @@ export default function WorkspacePage() {
       <div inert={leftDrawerOpen || rightDrawerOpen}>
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
-        onGenerateOutline={() => setShowOutlineDialog(true)} onSummarize={handleSummarize}
+        onGenerateOutline={() => setShowOutlineDialog(true)}
         onImportChapters={() => { setImportWizardMode("auto"); setShowImportWizard(true); }}
         onEditStyle={() => setShowStyleEditor(true)}
-        isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating} summarizing={summarizing}
+        isGenerating={isGenerating || continueLoading} outlineGenerating={outlineGenerating}
         projectId={project.id} styleTemplateId={styleTemplateId}
         onOpenAutomation={() => setShowAutomationSettings(true)}
         onOpenExport={() => setShowExportDialog(true)}
@@ -962,7 +964,8 @@ export default function WorkspacePage() {
           onNewCharacter={() => setShowNewCharacter(true)}
           viewMode={viewMode} onSetViewMode={setViewMode} loadProject={loadProject}
           onDeleteNode={deleteNode} deletingNodeId={deletingId}
-          onLoadSample={loadSample} onWriteChapter={handleWriteFromStoryline} />
+          onLoadSample={loadSample} onWriteChapter={handleWriteFromStoryline}
+          onSummarizeCurrent={handleSummarize} summarizing={summarizing} />
         </ErrorBoundary>
         </div>
 

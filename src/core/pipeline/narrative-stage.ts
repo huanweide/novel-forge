@@ -99,16 +99,51 @@ const STAGES: StageDef[] = [
  * 计算全书写作节奏阶段。
  *
  * @param chapterIndex  当前章在「章节节点列表」中的 0-based 索引（第 1 章为 0）。
- * @param totalChapters 已存在的章节总数（作为进度分母）。
+ * @param totalChapters 已存在的章节总数（无规划总章数时作为进度分母）。
+ * @param opts.targetChapters   作者规划的本书总章数；提供后用它做进度分母，
+ *        避免「已写最后一章被误判为收尾」（用户要写几百章时尤为关键）。
+ * @param opts.mainQuestComplete 后台判定：主线任务是否已收尾（主线 Storyline 标记 completed）。
+ *        为 true 时直接进入「收尾」阶段，不靠章数硬判、也不显式逼 AI 收尾。
  */
+export interface NarrativeStageOptions {
+  targetChapters?: number | null;
+  mainQuestComplete?: boolean;
+}
+
+const LATE_CAP_INDEX = STAGES.findIndex((s) => s.key === "late");
+
 export function computeNarrativeStage(
   chapterIndex: number,
   totalChapters: number,
+  opts?: NarrativeStageOptions,
 ): NarrativeStage {
-  const safeTotal = Math.max(1, totalChapters);
-  const safeIdx = Math.max(0, Math.min(chapterIndex, safeTotal - 1));
-  const percent = Math.round(((safeIdx + 1) / safeTotal) * 100);
-  const stage = STAGES.find((s) => percent <= s.until) ?? STAGES[STAGES.length - 1];
+  // 后台判定主线收尾：直接进入「收尾」阶段（不靠章数硬判）
+  if (opts?.mainQuestComplete) {
+    const ending = STAGES[STAGES.length - 1];
+    return { key: ending.key, label: ending.label, percent: 100, directive: ending.directive };
+  }
+
+  const target = opts?.targetChapters && opts.targetChapters > 0 ? opts.targetChapters : null;
+  // 分母：优先用作者规划总章数；否则用已存在章节数。
+  const denom = target ?? Math.max(1, totalChapters);
+  const safeIdx = Math.max(0, Math.min(chapterIndex, denom - 1));
+  const percent = Math.round(((safeIdx + 1) / denom) * 100);
+
+  let stageIdx = STAGES.findIndex((s) => percent <= s.until);
+  if (stageIdx < 0) stageIdx = STAGES.length - 1;
+
+  // 未声明规划总章数时：我们「不知道是否临近结尾」，故进度仅用于渐进收紧防抢跑，
+  // 不得自动触发「高潮 / 收尾」——否则几百章计划只写了十几章就会被误判收尾。
+  // 此时把阶段与展示进度都夹在「后期发展」以内。
+  if (!target && stageIdx > LATE_CAP_INDEX) {
+    stageIdx = LATE_CAP_INDEX;
+    // 展示进度也夹住，避免 UI 出现「后期发展 · 100%」这类自相矛盾的数字
+    const cappedPercent = Math.min(percent, STAGES[LATE_CAP_INDEX].until);
+    const capped = STAGES[LATE_CAP_INDEX];
+    return { key: capped.key, label: capped.label, percent: cappedPercent, directive: capped.directive };
+  }
+
+  const stage = STAGES[stageIdx];
   return { key: stage.key, label: stage.label, percent, directive: stage.directive };
 }
 

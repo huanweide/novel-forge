@@ -17,7 +17,7 @@ export function LeftPanel({
   activeTab, onTabChange, selectedNode, onSelectNode,   onAddSection,
   onEditCharacter, onEditLore, onNewCharacter, loadProject,
   viewMode, onSetViewMode, onDeleteNode, deletingNodeId, onLoadSample,
-  onWriteChapter,
+  onWriteChapter, onSummarizeCurrent, summarizing,
 }: {
   activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules" | "digest") => void;
@@ -29,6 +29,8 @@ export function LeftPanel({
   deletingNodeId?: string | null;
   onLoadSample?: () => void;
   onWriteChapter?: (storylineId?: string) => void;
+  onSummarizeCurrent?: () => void;
+  summarizing?: boolean;
 }) {
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
@@ -153,7 +155,7 @@ export function LeftPanel({
           <RulesPanel projectId={project.id} onRefresh={loadProject} />
         )}
         {activeTab === "digest" && (
-          <DigestPanel projectId={project.id} onRefresh={loadProject} />
+          <DigestPanel projectId={project.id} onRefresh={loadProject} selectedNode={selectedNode} onSummarizeCurrent={onSummarizeCurrent} summarizing={summarizing} />
         )}
       </div>
     </aside>

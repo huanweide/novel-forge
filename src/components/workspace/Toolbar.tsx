@@ -6,15 +6,15 @@ import { Icon } from "@/components/ui/icons";
 import { getTemplate } from "@/core/templates";
 
 export function Toolbar({
-  projectName, onBack, onGenerateOutline, onSummarize, onImportChapters,
-  onEditStyle, onOpenExport, onBackup, isGenerating, outlineGenerating, summarizing,
+  projectName, onBack, onGenerateOutline, onImportChapters,
+  onEditStyle, onOpenExport, onBackup, isGenerating, outlineGenerating,
   projectId, styleTemplateId,
   onOpenAutomation,
 }: {
   projectName: string; onBack: () => void; onGenerateOutline: () => void;
-  onSummarize: () => void; onImportChapters: () => void;
+  onImportChapters: () => void;
   onEditStyle: () => void; onOpenExport: () => void; onBackup: () => void;
-  isGenerating: boolean; outlineGenerating?: boolean; summarizing: boolean;
+  isGenerating: boolean; outlineGenerating?: boolean;
   projectId: string; styleTemplateId?: string;
   onOpenAutomation: () => void;
 }) {
@@ -68,9 +68,6 @@ export function Toolbar({
           className="flex h-7 items-center gap-1 rounded border border-[var(--nv-border-2)] px-2.5 text-xs text-[var(--nv-text-secondary)] transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-50">
           {outlineGenerating ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="bot" size={12} />} 大纲
         </button>
-        {/* 摘要 */}
-        <Button size="sm" variant="outline" onClick={onSummarize} disabled={isGenerating || summarizing}
-          className="flex h-7 items-center gap-1 text-xs">{summarizing ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="package" size={12} />} 摘要</Button>
         {/* 导入书稿 */}
         <Button size="sm" variant="outline" onClick={onImportChapters} disabled={isGenerating}
           className="flex h-7 items-center gap-1 text-xs text-[var(--nv-creative)]" title="导入：粘贴文本后可在弹窗内选择「自动检测」（智能识别角色/世界观/风格）或「设定文本」（仅抽角色/世界观/风格三卡）或「快速导入」（正则识别名字直写）"><Icon name="download" size={12} /> 导入书稿</Button>

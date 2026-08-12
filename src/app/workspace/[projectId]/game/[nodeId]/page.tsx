@@ -48,6 +48,7 @@ interface TurnRecord {
   round: number;
   playerAction: string;
   narrative: string;
+  actionType?: string; // 操作类型徽标（开始/观察/对话/战斗/探索/使用物品/休息/选项/自定义）
 }
 
 // ─── 快捷动作（图标名对应 icons.tsx） ────────────────────────
@@ -113,6 +114,9 @@ export default function GamePage() {
     try { return localStorage.getItem("nf-game-tutorial-seen") !== "1"; } catch { return true; }
   });
   const [lorebook, setLorebook] = useState<any[]>([]);
+  // 结束导出「影子确认」浮层 + 自动定稿开关（从项目设置读取，确认浮层如实展示）
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [autoConfirmEnabled, setAutoConfirmEnabled] = useState(true);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   // 无障碍：窄屏模态抽屉的焦点陷阱（仅抽屉打开时激活，桌面常驻侧栏不受影响）
@@ -261,6 +265,8 @@ export default function GamePage() {
         status: "ready",
       }));
 
+      setAutoConfirmEnabled(projData.autoConfirmEnabled ?? true);
+
       setNodeOutline(node.outline || null);
       setLorebook(projData.lorebookEntries || []);
       setTurns([]);
@@ -311,41 +317,85 @@ export default function GamePage() {
 
   const handleStart = async (conceptText?: string) => {
     setState((s) => ({ ...s, status: "generating", error: null }));
+    const controller = new AbortController();
+    streamRef.current = controller;
     try {
       const res = await fetch("/api/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, nodeId, concept: conceptText || null }),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "启动失败");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "未知错误" }));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
+      // 读取 SSE 流，逐 token 增量渲染开场叙事（不再整段空等）
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamedNarrative = "";
+      let doneData: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "token") {
+                streamedNarrative += event.content || "";
+                setState((s) => ({ ...s, lastNarrative: streamedNarrative }));
+              } else if (event.type === "start_done") {
+                doneData = event;
+              } else if (event.type === "error") {
+                throw new Error(event.error || "未知错误");
+              }
+            } catch (e: any) {
+              if (e.message && !e.message.includes("JSON")) throw e;
+            }
+          }
+        }
+      }
+
+      if (!doneData) throw new Error("未收到开场结果");
 
       setState((s) => ({
         ...s,
-        sessionId: data.sessionId,
+        sessionId: doneData.sessionId,
         status: "playing",
-        currentRound: data.currentRound,
-        totalWords: data.totalWords,
-        plotProgress: data.plotProgress,
-        narrative: data.narrative,
-        lastNarrative: data.narrative,
-        options: data.options || [],
-        entities: data.newEntities || [],
-        items: data.items ?? [],
+        currentRound: doneData.currentRound,
+        totalWords: doneData.totalWords,
+        plotProgress: doneData.plotProgress,
+        narrative: doneData.narrative,
+        lastNarrative: doneData.narrative,
+        options: doneData.options || [],
+        entities: doneData.newEntities || [],
+        items: doneData.items ?? [],
       }));
 
       setTurns([
-        { round: 1, playerAction: "开始游戏", narrative: data.narrative },
+        { round: 1, playerAction: "开始游戏", actionType: "start", narrative: doneData.narrative },
       ]);
 
       // 开场即检测到的实体也来一波粒子
-      fireDiscoveries(data.newEntities);
+      fireDiscoveries(doneData.newEntities);
       // 开场即获得的物品：高亮 + 声音 + 平移背包；正文里的交易元素分类提示
-      flagNewItems([], data.items ?? []);
-      flagTrades(data.narrative);
+      flagNewItems([], doneData.items ?? []);
+      flagTrades(doneData.narrative);
       setConcept(null);
     } catch (err: any) {
-      setState((s) => ({ ...s, status: "ready", error: err.message }));
+      // 用户主动停止（abort）不算失败，回到 ready 等待重开
+      if (err?.name !== "AbortError") {
+        setState((s) => ({ ...s, status: "ready", error: err.message }));
+      } else {
+        setState((s) => ({ ...s, status: "ready", error: null }));
+      }
     }
   };
 
@@ -481,6 +531,7 @@ export default function GamePage() {
         {
           round: newRound,
           playerAction: actionText,
+          actionType,
           narrative: doneData.narrative,
         },
       ]);
@@ -720,7 +771,7 @@ export default function GamePage() {
           <span className="hidden sm:inline">字数 {state.totalWords}</span>
           {state.status === "playing" && (
             <button
-              onClick={handleEnd}
+              onClick={() => setShowEndConfirm(true)}
               className="nv-glow-strong btn-creative rounded-lg px-4 py-1.5 text-sm font-medium text-[var(--nv-text-primary)]"
             >
               结束并导出
@@ -1336,7 +1387,7 @@ export default function GamePage() {
           <div className="border-t border-[var(--nv-border-2)] p-3">
             {state.narrative && (
               <button
-                onClick={handleEnd}
+                onClick={() => setShowEndConfirm(true)}
                 disabled={state.status !== "playing"}
                 className="nv-glow-strong btn-creative w-full rounded-lg py-2.5 text-sm font-medium text-[var(--nv-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1369,8 +1420,66 @@ export default function GamePage() {
         </div>
       )}
 
+      {/* ═══ 结束并导出 · 影子确认浮层（游戏模式设置预览） ═══ */}
+      {showEndConfirm && (
+        <Modal
+          open
+          onClose={() => setShowEndConfirm(false)}
+          bare
+          panelClassName="max-w-md"
+          labelledBy="game-end-confirm-title"
+        >
+          <div className="p-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Icon name="alert" size={22} className="text-[var(--nv-creative)]" />
+              <h2 id="game-end-confirm-title" className="text-lg font-bold text-[var(--nv-text-primary)]">
+                结束并导出 · 游戏模式
+              </h2>
+            </div>
+            <div className="space-y-3 text-sm leading-relaxed text-[var(--nv-text-secondary)]">
+              <p>
+                本章已累积 <span className="font-medium text-[var(--nv-creative)]">{state.totalWords}</span> 字、
+                <span className="font-medium text-[var(--nv-creative)]">{state.currentRound}</span> 轮互动叙事。
+                确认后，游戏叙事将拼接章尾收束段，<span className="text-[var(--nv-text-primary)]">写入本章正文</span>（保留原有正文前置，不覆盖已写内容）。
+              </p>
+              <div className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 space-y-1.5">
+                <p className="text-xs font-medium text-[var(--nv-text-primary)]">导出设置（游戏模式）</p>
+                <p className="flex items-center justify-between text-xs">
+                  <span>智能审阅（自动定稿）</span>
+                  <span className={autoConfirmEnabled ? "text-[var(--nv-success)]" : "text-[var(--nv-text-tertiary)]"}>
+                    {autoConfirmEnabled ? "已开启" : "已关闭"}
+                  </span>
+                </p>
+                <p className="text-[11px] text-[var(--nv-text-tertiary)]">
+                  {autoConfirmEnabled
+                    ? "开启且质量达标将自动定稿；否则进入待确认状态，由你在工作区手动定稿。"
+                    : "导出后进入待确认状态，由你在工作区手动定稿。"}
+                </p>
+              </div>
+              <p className="text-xs text-[var(--nv-text-tertiary)]">
+                提示：导出后可随时回到工作区对正文精修，不会影响已生成的游戏叙事。
+              </p>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowEndConfirm(false)}
+                className="flex-1 rounded-xl border border-[var(--nv-border-2)] py-2.5 text-sm font-medium text-[var(--nv-text-secondary)] transition-all hover:border-[var(--nv-border-3)] hover:text-[var(--nv-text-primary)] active:scale-95"
+              >
+                再想想
+              </button>
+              <button
+                onClick={() => { setShowEndConfirm(false); handleEnd(); }}
+                className="nv-glow-strong btn-creative flex-1 rounded-xl py-2.5 text-sm font-medium text-[var(--nv-text-primary)] transition-all active:scale-95"
+              >
+                确认导出
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* ═══ 底部动作栏 ═══ */}
-      {state.status === "playing" && (
+      {(state.status === "playing" || state.status === "generating") && (
         <footer className="relative z-10 border-t border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-4 py-3 backdrop-blur-sm">
           {/* 快捷动作按钮 */}
           <div className="mx-auto flex max-w-3xl gap-2">

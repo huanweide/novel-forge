@@ -257,7 +257,13 @@ export async function loadGenerationContext(
     const maxOrder = allLight.reduce((m, n) => Math.max(m, (n as any).order ?? 0), 0);
     stageChapterIndex = Math.min(currentOrder, maxOrder);
   }
-  const narrativeStage = computeNarrativeStage(stageChapterIndex, stageTotalChapters);
+  // 后台判定主线收尾：主线 Storyline（type==="main"）被标记 completed 时，视为全书主线已收束。
+  // 未标记时绝不靠章数硬判收尾（用户可写数百章而不被提前结局）。
+  const mainQuestComplete =
+    Array.isArray(storylinesRaw) &&
+    storylinesRaw.some((sl: any) => sl?.type === "main" && sl?.status === "completed");
+
+  const narrativeStage = computeNarrativeStage(stageChapterIndex, stageTotalChapters, { mainQuestComplete });
 
   return {
     project: project as Project,

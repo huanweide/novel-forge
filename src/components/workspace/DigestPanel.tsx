@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProjectStore } from "@/store";
 import { Icon } from "@/components/ui/icons";
+import type { StoryNodeData } from "./types";
 
 /**
  * 摘要大纲面板（v1.8.23）
@@ -16,9 +17,15 @@ import { Icon } from "@/components/ui/icons";
 export function DigestPanel({
   projectId,
   onRefresh,
+  selectedNode,
+  onSummarizeCurrent,
+  summarizing,
 }: {
   projectId: string;
   onRefresh: () => void;
+  selectedNode?: StoryNodeData | null;
+  onSummarizeCurrent?: () => void;
+  summarizing?: boolean;
 }) {
   const project = useProjectStore((s) => s.project);
   const [rebuilding, setRebuilding] = useState(false);
@@ -100,6 +107,35 @@ export function DigestPanel({
           )}
         </>
       )}
+
+      {/* #291：当前章摘要入口（原顶栏「摘要」按钮能力迁移至此，统一摘要枢纽） */}
+      <section className="mx-1 bg-[var(--nv-surface-2)] rounded-lg p-3 border border-[var(--nv-border-2)]">
+        <h4 className="text-[11px] font-semibold text-[var(--nv-text-secondary)] mb-1.5 flex items-center gap-1">
+          <Icon name="package" size={12} /> 当前章摘要
+        </h4>
+        {selectedNode ? (
+          <>
+            <p className="text-[12px] text-[var(--nv-text-primary)] leading-relaxed mb-2 truncate">
+              《{selectedNode.title || "未命名章节"}》
+            </p>
+            <button
+              onClick={onSummarizeCurrent}
+              disabled={summarizing || !selectedNode.content}
+              className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-md border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] transition-colors disabled:opacity-50"
+            >
+              {summarizing ? <Icon name="loader" size={12} className="animate-spin" /> : <Icon name="refresh" size={12} />}
+              {summarizing ? "生成中…" : (selectedNode.content ? "重新生成本章摘要" : "本章暂无正文")}
+            </button>
+            <p className="text-[10px] text-[var(--nv-text-tertiary)] mt-2 leading-relaxed">
+              章节写完后系统会自动生成摘要并聚入上方大纲；此处可手动重算当前选中章。
+            </p>
+          </>
+        ) : (
+          <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
+            未选中章节。在左侧大纲点选一章后，可在此手动生成 / 重算该章摘要。
+          </p>
+        )}
+      </section>
     </div>
   );
 }

@@ -52,6 +52,55 @@ export function CenterPanel({
   const [outlineDraft, setOutlineDraft] = useState("");
   const [outlineExpanded, setOutlineExpanded] = useState(false);
 
+  // ── 正文内联编辑：点击「编辑正文」后页面外观不变，仅正文变为可编辑状态（无外框界面）──
+  const [inlineEditing, setInlineEditing] = useState(false);
+  const [inlineDraft, setInlineDraft] = useState("");
+  const [savingInline, setSavingInline] = useState(false);
+  const inlineRef = useRef<HTMLDivElement>(null);
+
+  const startInlineEdit = () => {
+    if (!selectedNode) return;
+    setInlineDraft(displayContent);
+    setInlineEditing(true);
+  };
+  const cancelInlineEdit = () => {
+    setInlineEditing(false);
+    setInlineDraft("");
+  };
+  const saveInlineEdit = async () => {
+    if (!selectedNode || !inlineRef.current) return;
+    const newContent = inlineRef.current.textContent ?? "";
+    setSavingInline(true);
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: newContent,
+          wordCount: newContent.length,
+          editVersion: (selectedNode as any).editVersion,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      toastSuccess("正文已保存");
+      setInlineEditing(false);
+      setInlineDraft("");
+      if (loadProject) await loadProject();
+    } catch (err: any) {
+      toastError("保存失败：" + (err?.message || "请重试"));
+    } finally {
+      setSavingInline(false);
+    }
+  };
+
+  // 进入编辑态时把原文写入 contentEditable（非受控，避免光标跳动）
+  useEffect(() => {
+    if (inlineEditing && inlineRef.current) {
+      inlineRef.current.textContent = inlineDraft;
+    }
+  }, [inlineEditing]);
+
   useEffect(() => {
     if (contentRef.current && isGenerating) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
@@ -325,6 +374,25 @@ export function CenterPanel({
                         <Icon name="gamepad" size={12} /> 游戏模式
                       </button>
                     )}
+                    {!isGenerating && !inlineEditing && (
+                      <button onClick={startInlineEdit}
+                        className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
+                        title="编辑正文：页面不变，仅正文变为可直接修改的可编辑状态">
+                        <Icon name="pencil" size={12} /> 编辑正文
+                      </button>
+                    )}
+                    {inlineEditing && (
+                      <>
+                        <button onClick={saveInlineEdit} disabled={savingInline}
+                          className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-success)]/50 text-[var(--nv-success)] bg-[var(--nv-success-soft)] hover:bg-[var(--nv-success)]/15 transition-colors disabled:opacity-50">
+                          <Icon name="check" size={12} /> {savingInline ? "保存中…" : "完成"}
+                        </button>
+                        <button onClick={cancelInlineEdit}
+                          className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors">
+                          <Icon name="x" size={12} /> 取消
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
                 <div className="flex items-center gap-1 ml-auto">
@@ -377,15 +445,26 @@ export function CenterPanel({
                     ))}
                   </div>
                 )}
-                <MarkdownViewer
-                  content={displayContent}
-                  projectId={projectId}
-                  isStreaming={isGenerating}
-                  onEntityClick={(id, type) => {
-                    if (type === "character") onEditCharacter?.(id);
-                    else onEditLore?.(id);
-                  }}
-                />
+                {inlineEditing ? (
+                  // 内联编辑态：无外框，页面其余完全不变，仅正文变为可直接修改的可编辑区
+                  <div
+                    ref={inlineRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    className="max-w-[700px] mx-auto text-[15px] leading-relaxed text-[var(--nv-text-secondary)] whitespace-pre-wrap outline-none rounded-lg px-2 -mx-2 min-h-[70vh] focus:bg-[var(--nv-surface-1)]/40"
+                  />
+                ) : (
+                  <MarkdownViewer
+                    content={displayContent}
+                    projectId={projectId}
+                    isStreaming={isGenerating}
+                    onEntityClick={(id, type) => {
+                      if (type === "character") onEditCharacter?.(id);
+                      else onEditLore?.(id);
+                    }}
+                  />
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-[var(--nv-text-tertiary)] text-sm">

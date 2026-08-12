@@ -98,7 +98,12 @@ export async function loadOutlineData(
     stageChIdx >= 0
       ? stageChIdx
       : chapterNodesForStage.filter((n: any) => (n.order ?? 0) <= ((node as any)?.order ?? 0)).length - 1;
-  const narrativeStage = computeNarrativeStage(stageChapterIndex, stageTotalChapters);
+  // 后台判定主线收尾：主线 Storyline 被标记 completed 时视为全书主线已收束，否则绝不靠章数硬判收尾。
+  const mainQuestComplete =
+    Array.isArray(storylinesWithEvents) &&
+    storylinesWithEvents.some((sl: any) => sl?.type === "main" && sl?.status === "completed");
+
+  const narrativeStage = computeNarrativeStage(stageChapterIndex, stageTotalChapters, { mainQuestComplete });
 
   return {
     project: project as unknown as Project, node, allNodes: allNodes as any[], characters: characters as any[],

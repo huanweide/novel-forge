@@ -526,6 +526,197 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   custom: "自定义行动",
 };
 
+/**
+ * 开始游戏（流式）——复用与 processGameTurn 相同的 SSE 事件协议
+ * 逐 token 产出 {type:"token"}，最后产出 {type:"start_done"}。
+ * 这样「开始游戏」期间前端即可实时看到开场叙事逐字流出，不再空等整段生成完。
+ */
+export async function* processGameStart(
+  input: { projectId: string; nodeId: string; concept?: string | null },
+  signal?: AbortSignal
+): AsyncGenerator<{
+  type: string;
+  content?: string;
+  sessionId?: string;
+  narrative?: string;
+  options?: GameOption[];
+  newEntities?: GameEntity[];
+  itemChanges?: { operation: string; name: string; quantity: number }[];
+  items?: GameItem[];
+  plotProgress?: number;
+  wordCount?: number;
+  totalWords?: number;
+  currentRound?: number;
+  error?: string;
+}> {
+  // 1. 创建或重置会话
+  const session = await resetGameSession(input.projectId, input.nodeId);
+
+  // 2. 加载上下文
+  const [project, node, characters, loreEntries] = await Promise.all([
+    prisma.project.findUnique({ where: { id: input.projectId } }),
+    prisma.storyNode.findUnique({ where: { id: input.nodeId } }),
+    getApprovedCharacters(prisma, input.projectId, { take: 20 }),
+    getApprovedLore(prisma, input.projectId, { take: 15 }),
+  ]);
+
+  if (!project || !node) {
+    yield { type: "error", error: "项目或章节不存在" };
+    return;
+  }
+  // #123 软删防复活：已移入回收站的节点不允许开始游戏，避免污染 tombstone
+  if (node.deletedAt) {
+    yield { type: "error", error: "该节点已被删除（回收站），无法开始游戏。如需操作请先从回收站恢复" };
+    return;
+  }
+
+  // 3. 组装起始提示词
+  const existingContent = (node.content || "").trim();
+  const ctx = {
+    bookName: project.name,
+    chapterTitle: node.title,
+    outline: node.outline ?? null,
+    existingContent: existingContent || null,
+    characters: characters.map((c: { name: string; role: string; currentStatus: string; background?: string }) => ({
+      name: c.name,
+      role: c.role,
+      currentStatus: c.currentStatus,
+      briefDescription: c.background?.slice(0, 100) || "",
+    })),
+    worldLore: loreEntries.map((l: { title: string; content: string }) => ({ title: l.title, content: l.content })),
+    previousTurns: [] as any[],
+    entities: [] as any[],
+    items: [] as any[],
+    currentRound: 0,
+    totalWords: existingContent.length,
+    maxWords: 3000,
+    plotProgress: 0,
+  };
+
+  const systemPrompt = buildGameSystemPrompt(ctx);
+  const userPrompt = existingContent
+    ? `【开始游戏】本章已有正文 ${existingContent.length} 字。请从现有正文的结尾自然续接，为游戏开场：简短承接上一段情节，然后给出 3-4 个编号选项让玩家选择接下来的行动。`
+    : node.outline
+      ? `【开始游戏】根据章纲，为本章写一个开场。从"${node.outline.slice(0, 80)}..."开始，生成精彩的入场叙事。记住在叙事结束后给出 3-4 个编号选项。`
+      : `【开始游戏】为本章写一个精彩的开场。描述场景、氛围和角色的初始状态，然后给出 3-4 个编号选项。`;
+
+  const finalUserPrompt = input.concept
+    ? `${userPrompt}\n\n【构思参考】玩家已采用以下开场构思，请据此展开本章开场叙事，自然融入而非照抄原文：${input.concept}`
+    : userPrompt;
+
+  // 4. 调用 LLM（流式，逐 token 产出）
+  const llmConfig = await getEffectiveConfig();
+  const client = createLLMClient(llmConfig);
+  const messages = [
+    { role: "system" as const, content: systemPrompt },
+    { role: "user" as const, content: finalUserPrompt },
+  ];
+
+  let fullResponse = "";
+  try {
+    const stream = client.chatStream({
+      model: llmConfig.writerModel,
+      messages,
+      temperature: 0.85,
+      maxTokens: 2500,
+      signal,
+    });
+    for await (const chunk of stream) {
+      if (signal?.aborted) return;
+      if (chunk.content) {
+        fullResponse += chunk.content;
+        yield { type: "token", content: chunk.content };
+      }
+    }
+  } catch (err: any) {
+    if (err?.name === "AbortError" || signal?.aborted) return;
+    yield { type: "error", error: `LLM 调用失败：${err?.message ?? err}` };
+    return;
+  }
+
+  if (!fullResponse.trim()) {
+    yield { type: "error", error: "LLM 返回为空，开场未生成" };
+    return;
+  }
+
+  // 5. 解析
+  const parsed = parseGameOutput(fullResponse);
+  const wordCount = parsed.narrative.length;
+
+  let finalOptions = parsed.options;
+  if (finalOptions.length < 2) {
+    finalOptions = [
+      { index: 1, text: "仔细观察周围环境" },
+      { index: 2, text: "与身边的人交谈" },
+      { index: 3, text: "继续探索前进" },
+    ];
+  }
+
+  const entities = parsed.newEntities.map((ne) => ({
+    ...ne,
+    firstSeenRound: 1,
+  }));
+
+  const initialItems: any[] = [];
+  for (const change of parsed.itemChanges) {
+    if (change.operation === "gain") {
+      initialItems.push({
+        name: change.name,
+        quantity: change.quantity,
+        category: change.category || "other",
+        owner: change.owner || "主角",
+        source: "开场获得",
+        acquiredRound: 1,
+      });
+    }
+  }
+
+  for (const item of initialItems) {
+    await ensureItemLorebook(session.projectId, item.name, item.owner || "主角");
+  }
+
+  // 用户中途停止：丢弃本轮，不提交空会话态
+  if (signal?.aborted) return;
+
+  // 6. 保存第一轮状态
+  await prisma.gameState.create({
+    data: {
+      sessionId: session.id,
+      round: 1,
+      playerAction: "开始游戏",
+      narrative: parsed.narrative,
+      options: finalOptions as any,
+      entities: entities as any,
+      items: initialItems as any,
+      plotProgress: parsed.plotProgress > 0 ? parsed.plotProgress : 5,
+      wordCount,
+    },
+  });
+
+  await prisma.gameSession.update({
+    where: { id: session.id },
+    data: {
+      currentRound: 1,
+      totalWords: wordCount,
+      plotProgress: parsed.plotProgress > 0 ? parsed.plotProgress : 5,
+    },
+  });
+
+  // 7. 产出开场结果
+  yield {
+    type: "start_done",
+    sessionId: session.id,
+    narrative: parsed.narrative,
+    options: finalOptions,
+    newEntities: entities,
+    itemChanges: parsed.itemChanges,
+    items: initialItems,
+    plotProgress: parsed.plotProgress > 0 ? parsed.plotProgress : 5,
+    totalWords: wordCount,
+    currentRound: 1,
+  };
+}
+
 // ─── 结束并导出 ────────────────────────────────────────────────
 
 /**
