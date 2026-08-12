@@ -73,6 +73,7 @@ model Project {
   consistencyConflicts ConsistencyConflict[]
   gameSessions  GameSession[]
   pendingItems  PendingItem[]
+  characterRevisions CharacterCardRevision[]
 }
 
 // ─── 人物卡 (Character Card) ───────────────────────────────
@@ -109,6 +110,35 @@ model CharacterCard {
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
+}
+
+// ─── 角色合并快照 (Character Card Revision) ──────────────
+// 角色去重合并是「AI 判断 + 写库」的不可逆操作。每次合并（无论高置信度自动或低置信度待确认）
+// 先把主卡与被并卡的合并前完整字段存此表，状态标记 pending/applied/rolled_back/ignored，
+// 提供一键回滚能力（applied → 恢复旧值，被并卡去除「🗂 已合并」标记）。
+
+model CharacterCardRevision {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  mainCardId  String               // 合并后保留的主卡 id
+  mergedIds   String[] @default([]) // 被并卡 id 列表
+
+  mainBefore   Json               // 主卡合并前字段快照 { aliases, background, storyLine, relationships, tags }
+  mergedBefore Json               // 被并卡合并前列表 [{ id, name, aliases, background, storyLine, relationships, tags }]
+  mainAfter    Json?              // 合并后实际写入（审计）
+
+  confidence   String  @default("low")  // high | low
+  source       String  @default("llm")  // llm | rule
+  status       String  @default("pending") // pending | applied | rolled_back | ignored
+  summary      String  @default("")     // UI 摘要，如「樊斯瑞 ← 樊 / 樊弟」
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, status])
 }
 
 // ─── 世界书词条 (Lorebook Entry) ───────────────────────────

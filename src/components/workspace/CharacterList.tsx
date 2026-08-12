@@ -10,6 +10,7 @@ import { CharacterFilters } from "./CharacterFilters";
 import { CharacterToolbar } from "./CharacterToolbar";
 import { ExpandResultModal } from "./ExpandResultModal";
 import { CharacterGroupList } from "./CharacterGroupList";
+import { MergePendingPanel } from "./MergePendingPanel";
 
 export function CharacterList({
   characters = [],
@@ -396,6 +397,8 @@ export function CharacterList({
           <p className="text-[10px] text-[var(--nv-text-tertiary)] mt-2">被合并角色已软删标记（🗂 已合并），龙套仅打标签（🎭 龙套）不删除，可在标签筛选中查看/隐藏。</p>
         </div>
       )}
+
+      <MergePendingPanel projectId={projectId} onChanged={onExpanded} />
 
       <ExpandResultModal
         result={expandResult}

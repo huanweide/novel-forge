@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.5 — 2026-08-12
+
+**角色合并快照回滚 + 高/低置信度分级合并（round-2 主席裁决 P0 落地）**
+
+- **角色合并快照回滚（P0）**：新增 CharacterCardRevision 表，每次合并前存主卡+被并卡完整字段快照（aliases/background/storyLine/relationships/tags），状态 pending/applied/rolled_back/ignored，提供一键回滚（rollbackMerge 恢复旧值、去除「🗂 已合并」标记），彻底消除「去重无回滚生存债」。
+- **高/低置信度分级合并（P0）**：置信度分级（computeConfidence）——尊称/缩写变体无歧义解析到主卡 → high 直接合并；纯语义相似的普通姓名 → low 只存快照写 pending 等确认。UI 新增 MergePendingPanel（确认合并/忽略/回滚），路由 merge-pending/confirm/rollback/ignore 四件套。
+- **单字缩写误判修复（质量）**：computeConfidence 此前对单字缩写（如「樊」=樊斯瑞）误判 low（resolveHonorificTarget 不覆盖 isSurnameAbbrevOrDescriptor 命中的单字），新增 resolveVariantTarget 按 coreSurname 找同姓唯一正主 → high，明确缩写可自动合并。
+- **验证**：tsc 0 错 + vitest 56 文件 491/491 全绿（新增 8 单测）；prisma db push 已建表；client 新表 CRUD 往返 ROUNDTRIP_OK:true；新增 4 条合并路由。
+
 ## v2.0.4 — 2026-08-12
 
 **批量写安全护栏 + 体验债清理（round-2 董事会收口）**

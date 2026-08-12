@@ -25,18 +25,51 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.4";
+export const LATEST_VERSION = "v2.0.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.0.4 批量写去重可观测化：去掉静默吞错的 .catch(()=>{})，去重合并组数/龙套标记数/异常原因写入任务 result.dedupe，前端可见，杜绝「去重从未成功过却照报批写成功」。",
-  "v2.0.4 批量写进度真实化：consumeSSE 真正解析 write 端 SSE 的 done 事件，被 max_tokens 截断的章记 failed 而非虚高 done，进度不再注水。",
-  "v2.0.4 角色列表去除「全选即触发 AI 扩展」惊吓副作用：全选仅做选择，扩展必须显式点按钮，避免误触发起全量 LLM 调用。",
-  "v2.0.4 安全护栏（round-2 董事会）：去重/批写集成由「逻辑落地、集成未验证」如实标注缺口；P0 后续待补角色卡快照表（可回滚）+ 高置信度自动合并/pending 确认。",
+  "v2.0.5 角色合并快照回滚：新增 CharacterCardRevision 表，合并前存主卡+被并卡完整字段快照，状态 pending/applied/rolled_back/ignored，一键回滚消除「去重无回滚生存债」（round-2 主席裁决 P0）。",
+  "v2.0.5 高/低置信度分级合并：尊称/缩写变体无歧义 → high 直接合并；纯语义相似的普通姓名 → low 只存快照写 pending 等确认，UI 新增 MergePendingPanel 可确认/忽略/回滚。",
+  "v2.0.5 单字缩写修复：computeConfidence 此前把「樊」=樊斯瑞这类明确缩写误判 low，新增 resolveVariantTarget 按同姓唯一正主解析 → high，明确缩写可自动合并。",
+  "v2.0.5 验证：tsc 0 错 + vitest 56 文件 491/491 全绿（新增 8 单测）；prisma db push 已建表；client 新表 CRUD 往返通过；新增 merge-pending/confirm/rollback/ignore 四路由。",
 ];
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.5",
+    date: "2026-08-12",
+    title: "v2.0.5 角色合并快照回滚 + 高/低置信度分级合并（round-2 主席裁决 P0 落地）",
+    sections: [
+      {
+        label: "角色合并快照回滚（P0）",
+        items: [
+          "新增 CharacterCardRevision 快照表：每次角色去重合并（无论高/低置信度）前，先把主卡与被并卡的完整字段（aliases/background/storyLine/relationships/tags）快照存入该表，状态标记 pending/applied/rolled_back/ignored；合并不可逆操作从此有回滚手段，彻底消除 round-2 董事会点名的「去重无回滚生存债」。",
+          "一键回滚：rollbackMerge 恢复主卡合并前快照旧值（去除「🗂 已合并」标记）、被并卡去除标记，状态置 rolled_back；高置信度自动合并也保留快照，可随时回退。",
+        ],
+      },
+      {
+        label: "高/低置信度分级合并（P0）",
+        items: [
+          "置信度分级（computeConfidence）：规则分组，或 LLM 分组且每个被并成员都能无歧义解析到主卡（尊称/缩写变体）→ high，直接合并；纯语义相似的普通姓名 → low，只存快照写 pending 不合并，等用户确认。",
+          "UI 新增 MergePendingPanel：展示待确认（确认合并/忽略）与已应用（回滚，二次确认）列表，路由 merge-pending/confirm/rollback/ignore 四件套支撑。",
+        ],
+      },
+      {
+        label: "单字缩写误判修复（质量）",
+        items: [
+          "computeConfidence 此前对单字缩写（如「樊」=樊斯瑞）误判 low：resolveHonorificTarget 仅认 isHonorificVariant，不覆盖单字缩写（isSurnameAbbrevOrDescriptor 命中）。新增 resolveVariantTarget 按 coreSurname 在同姓非变体正主中找唯一匹配，歧义则保持 low；明确缩写现可高置信度自动合并。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 56 文件 491/491 全绿（新增 8 条 computeConfidence/toCharLite 单测）；prisma db push 已建 CharacterCardRevision 表；client 新表 CRUD 往返 ROUNDTRIP_OK:true；新增 4 条合并管理路由。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.4",
     date: "2026-08-12",

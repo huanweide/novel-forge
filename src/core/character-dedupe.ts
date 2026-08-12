@@ -1,30 +1,35 @@
 /**
- * 角色自动去重合并（v2.0.4 重构）
+ * 角色自动去重合并（v2.0.5 重构：快照回滚 + 置信度分级）
  *
- * 用户痛点（#297）：
- *  - 旧版规则（isSimilarName / isHonorificVariant）无法识别「昵称缩写 / 同人异称」，
- *    如「樊斯瑞 / 樊」「叶凌云 / 叶」「韩先生 / 韩立」完全检测不出，去重形同虚设；
- *  - 旧版为统计龙套出场次数，`findMany` 加载全部章节正文进内存，量大且没必要。
+ * 用户痛点（#297 + round-2 董事会）：
+ *  - 旧版规则无法识别「昵称缩写 / 同人异称」（樊斯瑞/樊、叶凌云/叶、韩先生/韩立），去重形同虚设；
+ *  - 旧版为统计龙套，`findMany` 加载全部章节正文进内存，量大且没必要；
+ *  - round-2 共识：去重是「AI 判断 + 写库」的不可逆操作，此前「静默直接合并」既不可观测、也无回滚。
  *
  * 新版方案：
- *  - 合并判定交给 LLM——把角色卡（id / 名称 / 别名 / 简介）列给模型，
- *    由它判断「确为同一真实人物」的组（昵称缩写、尊称、错别字/翻译变体），
- *    返回 id 分组（`llmDetectSamePersonGroups`）；LLM 不可用时回退到「尊称/缩写」规则分组。
- *  - 龙套标记改用数据库侧 `count({ content: { contains } })`（DB 扫、不回传正文），
- *    不再把全量正文拉进应用内存。
- *  - 合并执行：别名并入主卡、内容取更丰富者、关系合并、被并卡软删标记「🗂 已合并」（保留审计）。
+ *  - 合并判定交给 LLM（llmDetectSamePersonGroups），失败回退「尊称/缩写」规则分组；
+ *  - 龙套标记改用 DB 侧 `count({ content: { contains } })`（DB 扫、不回传正文）；
+ *  - 置信度分级（computeConfidence）：
+ *      · high = 规则分组，或 LLM 分组且每个被并成员都能无歧义解析到主卡（尊称/缩写变体）→ 直接合并；
+ *      · low  = LLM 分组但仅靠语义相似（无明确变体证据）→ 只存快照写 pending，不合并，等用户确认。
+ *  - 每次合并前把主卡 + 被并卡完整字段快照存 CharacterCardRevision，
+ *    状态 applied（已合并）/ pending（待确认）/ rolled_back（已回滚）/ ignored（已忽略）；
+ *    高置信度自动合并也留快照，可一键回滚（rollbackMerge）。
  */
 
 import { prisma } from "@/lib/prisma";
 import { completeText } from "@/core/llm/client";
-import { isHonorificVariant, resolveHonorificTarget, isSurnameAbbrevOrDescriptor } from "@/lib/entity-auto-creator";
+import { isHonorificVariant, resolveHonorificTarget, isSurnameAbbrevOrDescriptor, coreSurname } from "@/lib/entity-auto-creator";
 
+export interface DedupeMergeItem {
+  mainId: string;
+  mainName: string;
+  merged: Array<{ id: string; name: string }>;
+  confidence: "high" | "low";
+}
 export interface DedupeResult {
-  mergedGroups: Array<{
-    mainId: string;
-    mainName: string;
-    merged: Array<{ id: string; name: string }>;
-  }>;
+  mergedGroups: DedupeMergeItem[];
+  pendingGroups: DedupeMergeItem[];
   markedRockets: string[];
   total: number;
 }
@@ -130,6 +135,120 @@ function ruleBasedGroups(chars: CharLite[]): string[][] {
   return groups;
 }
 
+/** 主卡选择：普通姓名优先，其次内容更丰富者 */
+function pickMain(members: CharLite[]): CharLite {
+  const richness = (x: CharLite) => (x.background || "").length + (x.storyLine || "").length;
+  const plain = members.filter((x) => !isHonorificVariant(x.name) && !isSurnameAbbrevOrDescriptor(x.name));
+  return (plain.length > 0 ? plain : members).reduce((m, x) => (richness(x) > richness(m) ? x : m));
+}
+
+/**
+ * 计算合并置信度：
+ *  - 规则分组强制 high（都是无歧义尊称/缩写映射）；
+ *  - LLM 分组：若每个被并成员都是变体且能无歧义解析到主卡名 → high；
+ *    否则（纯语义相似的普通姓名） → low（需用户确认）。
+ */
+/**
+ * 变体 → 主卡名解析（高置信度判定的消歧闸门）：
+ *  - 标准尊称（X先生 / X女子）：交给 resolveHonorificTarget（同姓唯一正主才返回，歧义则 null）；
+ *  - 单字缩写 / 姓+描述词（樊 / 韩姓男子）：resolveHonorificTarget 不覆盖（它只认 isHonorificVariant），
+ *    故此处补一刀——按 coreSurname 在同姓非变体正主中找唯一匹配，歧义（≥2）则 null。
+ * 任一变体若解析不到唯一主卡 → 该组降为 low（需用户确认），避免错并。
+ */
+function resolveVariantTarget(allNames: string[], variantName: string): string | null {
+  const byHonorific = resolveHonorificTarget(allNames, variantName);
+  if (byHonorific) return byHonorific;
+  if (isSurnameAbbrevOrDescriptor(variantName)) {
+    const surname = coreSurname(variantName);
+    const cands = allNames
+      .filter((n) => n.trim().toLowerCase() !== variantName.trim().toLowerCase())
+      .filter((n) => !isHonorificVariant(n) && !isSurnameAbbrevOrDescriptor(n))
+      .filter((n) => coreSurname(n) === surname);
+    if (cands.length === 1) return cands[0];
+  }
+  return null;
+}
+
+export function computeConfidence(members: CharLite[], allNames: string[]): "high" | "low" {
+  const main = pickMain(members);
+  const merged = members.filter((x) => x.id !== main.id);
+  if (merged.length === 0) return "high";
+  const allResolved = merged.every((m) => {
+    const isVariant = isHonorificVariant(m.name) || isSurnameAbbrevOrDescriptor(m.name);
+    if (!isVariant) return false;
+    const target = resolveVariantTarget(allNames, m.name);
+    return target != null && target.toLowerCase() === main.name.toLowerCase();
+  });
+  return allResolved ? "high" : "low";
+}
+
+/** 从 CharacterCard 行构造 CharLite（confirm 复用：pending 时 DB 当前值即合并前值） */
+export function toCharLite(row: {
+  id: string;
+  name: string;
+  aliases: unknown;
+  background: string | null;
+  storyLine: string | null;
+  relationships: unknown;
+  tags: unknown;
+}): CharLite {
+  return {
+    id: row.id,
+    name: row.name,
+    aliases: Array.isArray(row.aliases) ? (row.aliases as string[]) : [],
+    background: row.background || "",
+    storyLine: row.storyLine || "",
+    relationships: row.relationships,
+    tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+  };
+}
+
+/** 执行合并：别名并入主卡、内容取更长、关系合并；被并卡软删标记「🗂 已合并」。返回主卡实际写入字段（审计）。 */
+export async function applyMerge(main: CharLite, merged: CharLite[]): Promise<Record<string, unknown>> {
+  const extraAliases = merged.flatMap((x) => [x.name, ...x.aliases]);
+  const newAliases = Array.from(new Set([...main.aliases, ...extraAliases])).slice(0, 50);
+  const bestBg = merged.reduce((m, x) => ((x.background || "").length > (m || "").length ? x.background : m), main.background);
+  const bestSl = merged.reduce((m, x) => ((x.storyLine || "").length > (m || "").length ? x.storyLine : m), main.storyLine);
+  const newRels = mergeRelationships(main.relationships, merged.map((x) => x.relationships));
+  await prisma.characterCard.update({
+    where: { id: main.id },
+    data: {
+      aliases: newAliases,
+      background: bestBg || main.background,
+      storyLine: bestSl || main.storyLine,
+      relationships: newRels,
+    } as any,
+  });
+  for (const x of merged) {
+    await prisma.characterCard.update({
+      where: { id: x.id },
+      data: { tags: Array.from(new Set([...x.tags, "🗂 已合并"])) },
+    });
+  }
+  return { aliases: newAliases, background: bestBg || main.background, storyLine: bestSl || main.storyLine, relationships: newRels };
+}
+
+/** 回滚已应用的合并：主卡恢复快照旧值，被并卡去除「🗂 已合并」标记。 */
+export async function rollbackMerge(rev: { mainCardId: string; mainBefore: any; mergedBefore: any }): Promise<void> {
+  const mb = rev.mainBefore || {};
+  await prisma.characterCard.update({
+    where: { id: rev.mainCardId },
+    data: {
+      aliases: (mb.aliases ?? []) as any,
+      background: (mb.background ?? "") as any,
+      storyLine: (mb.storyLine ?? "") as any,
+      relationships: (mb.relationships ?? []) as any,
+      tags: Array.from(new Set((mb.tags ?? []).filter((t: string) => t !== "🗂 已合并"))) as any,
+    } as any,
+  });
+  for (const m of (rev.mergedBefore || []) as any[]) {
+    await prisma.characterCard.update({
+      where: { id: m.id },
+      data: { tags: Array.from(new Set((m.tags ?? []).filter((t: string) => t !== "🗂 已合并"))) } as any,
+    });
+  }
+}
+
 export async function dedupeCharacters(projectId: string): Promise<DedupeResult> {
   const chars = await prisma.characterCard.findMany({
     where: { projectId },
@@ -156,10 +275,13 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
 
   // 优先 LLM 分组，失败回退规则分组
   const groups = await llmDetectSamePersonGroups(lite);
+  const source = groups.length > 0 ? "llm" : "rule";
   const finalGroups = groups.length > 0 ? groups : ruleBasedGroups(lite);
+  const allNames = lite.map((c) => c.name);
 
   const consumed = new Set<string>();
   const mergedGroups: DedupeResult["mergedGroups"] = [];
+  const pendingGroups: DedupeResult["pendingGroups"] = [];
 
   for (const g of finalGroups) {
     const members = g
@@ -167,44 +289,75 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
       .filter((x): x is CharLite => Boolean(x) && !consumed.has(x!.id));
     if (members.length < 2) continue;
 
-    // 主卡 = 普通姓名优先（避免把「韩先生」这类称呼变体当主卡），其次取内容更丰富者
-    const richness = (x: CharLite) => (x.background || "").length + (x.storyLine || "").length;
-    const plain = members.filter((x) => !isHonorificVariant(x.name) && !isSurnameAbbrevOrDescriptor(x.name));
-    const main = (plain.length > 0 ? plain : members).reduce((m, x) => (richness(x) > richness(m) ? x : m));
+    const main = pickMain(members);
     const merged = members.filter((x) => x.id !== main.id);
+    const confidence = computeConfidence(members, allNames);
 
-    mergedGroups.push({
-      mainId: main.id,
-      mainName: main.name,
-      merged: merged.map((x) => ({ id: x.id, name: x.name })),
-    });
+    // 合并前完整字段快照（回滚用）
+    const mainBefore = {
+      aliases: main.aliases,
+      background: main.background,
+      storyLine: main.storyLine,
+      relationships: main.relationships,
+      tags: main.tags,
+    };
+    const mergedBefore = merged.map((x) => ({
+      id: x.id,
+      name: x.name,
+      aliases: x.aliases,
+      background: x.background,
+      storyLine: x.storyLine,
+      relationships: x.relationships,
+      tags: x.tags,
+    }));
+    const summary = `${main.name} ← ${merged.map((x) => x.name).join(" / ")}`;
 
     consumed.add(main.id);
     merged.forEach((x) => consumed.add(x.id));
 
-    // 合并执行：别名并入、内容取更长、关系合并
-    const extraAliases = merged.flatMap((x) => [x.name, ...x.aliases]);
-    const newAliases = Array.from(new Set([...main.aliases, ...extraAliases])).slice(0, 50);
-    const bestBg = merged.reduce((m, x) => ((x.background || "").length > (m || "").length ? x.background : m), main.background);
-    const bestSl = merged.reduce((m, x) => ((x.storyLine || "").length > (m || "").length ? x.storyLine : m), main.storyLine);
-
-    await prisma.characterCard.update({
-      where: { id: main.id },
-      data: {
-        aliases: newAliases,
-        background: bestBg || main.background,
-        storyLine: bestSl || main.storyLine,
-        relationships: mergeRelationships(main.relationships, merged.map((x) => x.relationships)),
-      } as any,
-    });
-
-    // 被并卡软删标记（保留审计，前端可按标签隐藏）
-    for (const x of merged) {
-      await prisma.characterCard.update({
-        where: { id: x.id },
+    if (confidence === "high") {
+      // 高置信度：直接合并，并留快照可回滚
+      const mainAfter = await applyMerge(main, merged);
+      await prisma.characterCardRevision.create({
         data: {
-          tags: Array.from(new Set([...x.tags, "🗂 已合并"])),
+          projectId,
+          mainCardId: main.id,
+          mergedIds: merged.map((x) => x.id),
+          mainBefore: mainBefore as any,
+          mergedBefore: mergedBefore as any,
+          mainAfter: mainAfter as any,
+          confidence,
+          source,
+          status: "applied",
+          summary,
         },
+      });
+      mergedGroups.push({
+        mainId: main.id,
+        mainName: main.name,
+        merged: merged.map((x) => ({ id: x.id, name: x.name })),
+        confidence,
+      });
+    } else {
+      // 低置信度：只存快照写 pending，不合并，等用户确认
+      await prisma.characterCardRevision.create({
+        data: {
+          projectId,
+          mainCardId: main.id,
+          mergedIds: merged.map((x) => x.id),
+          mainBefore: mainBefore as any,
+          mergedBefore: mergedBefore as any,
+          confidence,
+          source,
+          status: "pending",
+          summary,
+        },
+      });
+      pendingGroups.push({
+        mainId: main.id,
+        mainName: main.name,
+        merged: merged.map((x) => ({ id: x.id, name: x.name })),
+        confidence,
       });
     }
   }
@@ -231,7 +384,7 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     }),
   );
 
-  return { mergedGroups, markedRockets, total: chars.length };
+  return { mergedGroups, pendingGroups, markedRockets, total: chars.length };
 }
 
 function mergeRelationships(mainRels: unknown, otherRels: unknown[]): unknown[] {
