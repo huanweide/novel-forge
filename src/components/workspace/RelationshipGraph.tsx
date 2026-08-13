@@ -215,11 +215,11 @@ export function RelationshipGraph({ characters, projectId, onEditCharacter }: Re
     } finally {
       setLoading(false);
     }
-  }, [projectId, characters.length]);
+  }, [projectId, characters]);
 
   useEffect(() => {
     if (characters.length > 0) runAnalysis();
-  }, [characters.length > 0 ? 1 : 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [characters, projectId, runAnalysis]);
 
   // ── 计算布局 ──
   const { nodes, protagonistId } = useMemo(() => {

@@ -662,7 +662,7 @@ export function LorebookList({
               <h3 className="text-base font-bold text-zinc-200">
                 {expandResult.failList.length === 0 ? "🎉 全部扩展成功" : "📋 扩展结果"}
               </h3>
-              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none">✕</button>
+              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none" aria-label="关闭">✕</button>
             </div>
             <div className="px-5 py-3 flex gap-4 text-sm border-b border-white/[0.06]/50">
               <div className="flex items-center gap-2">

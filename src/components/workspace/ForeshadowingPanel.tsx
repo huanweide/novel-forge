@@ -75,25 +75,24 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`);
+        const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if (!cancelled) {
-          setData(json);
-          setError("");
-        }
+        setData(json);
+        setError("");
       } catch (err) {
-        if (!cancelled) setError(String(err));
+        if (controller.signal.aborted) return;
+        setError(String(err));
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, [projectId]);
 
   const toggleGroup = (key: string) => {

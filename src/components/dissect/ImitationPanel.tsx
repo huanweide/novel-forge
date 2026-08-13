@@ -51,7 +51,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
 
   // 加载拆书任务列表
   useEffect(() => {
-    fetch("/api/dissect/list")
+    const controller = new AbortController();
+    fetch("/api/dissect/list", { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
         const completed = (data.tasks || []).filter(
@@ -62,8 +63,12 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           setSelectedTaskId(preselectedDissectionId);
         }
       })
-      .catch((err) => { setTasks([]); setError("加载拆书任务失败：" + (err instanceof Error ? err.message : "请重试")); })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setTasks([]); setError("加载拆书任务失败：" + (err instanceof Error ? err.message : "请重试"));
+      })
       .finally(() => setLoadingTasks(false));
+    return () => controller.abort();
   }, [preselectedDissectionId]);
 
   // 选定任务后加载其维度

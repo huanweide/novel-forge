@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from "react";
 import type { CharacterData } from "./types";
 import { RangeSelector } from "./RangeSelector";
 import { Icon, StatusDot } from "@/components/ui/icons";
@@ -48,6 +48,9 @@ export function CharacterList({
   const [statusFilter, setStatusFilter] = useState("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // 搜索输入做延迟值：快速打字时不过度触发重过滤，保持交互流畅
+  const deferredSearch = useDeferredValue(search);
+
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -71,7 +74,7 @@ export function CharacterList({
   // 从所有角色标签中提取唯一值（过滤掉系统标签如 📥📝）
   const allTags = [...new Set(characters.flatMap(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝"))))].sort();
 
-  const filtered = characters.filter(c => {
+  const filtered = useMemo(() => characters.filter(c => {
     if (roleFilter !== "all" && c.role !== roleFilter) return false;
     // tagFilter: 特殊值 + 具体标签值
     if (tagFilter === "no-tags" && (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0) return false;
@@ -79,9 +82,9 @@ export function CharacterList({
     if (tagFilter !== "all" && tagFilter !== "no-tags" && tagFilter !== "has-tags" && !(c.tags || []).includes(tagFilter)) return false;
     if (statusFilter === "alive" && c.currentStatus !== "alive") return false;
     if (statusFilter === "dead" && !["dead","missing","presumed_dead"].includes(c.currentStatus)) return false;
-    if (search && !c.name.includes(search) && !(c.aliases || []).some((a: string) => a.includes(search))) return false;
+    if (deferredSearch && !c.name.includes(deferredSearch) && !(c.aliases || []).some((a: string) => a.includes(deferredSearch))) return false;
     return true;
-  });
+  }), [characters, roleFilter, tagFilter, statusFilter, deferredSearch]);
 
   const statRole = (r: string) => characters.filter(c => c.role === r).length;
   const statHasTags = characters.filter(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0).length;
@@ -406,8 +409,8 @@ export function CharacterList({
   const selectedCharIds = new Set<string>();
   for (const s of groupSelections.values()) { for (const id of s) selectedCharIds.add(id); }
 
-  const filteredIds = new Set(filtered.map(c => c.id));
-  const selectedInView = [...selectedIds].filter(id => filteredIds.has(id)).length;
+  const filteredIds = useMemo(() => new Set(filtered.map(c => c.id)), [filtered]);
+  const selectedInView = useMemo(() => [...selectedIds].filter(id => filteredIds.has(id)).length, [selectedIds, filteredIds]);
   const allInViewSelected = filtered.length > 0 && selectedInView === filtered.length;
 
   return (
@@ -694,7 +697,7 @@ export function CharacterList({
             : "bg-red-950/30 text-red-400 border border-red-900/20"
         }`}>
           {classifyResult.message}
-          <button onClick={() => setClassifyResult(null)} className="ml-2 text-zinc-500 hover:text-zinc-300">✕</button>
+          <button onClick={() => setClassifyResult(null)} className="ml-2 text-zinc-500 hover:text-zinc-300" aria-label="关闭">✕</button>
         </div>
       )}
 
@@ -744,7 +747,7 @@ export function CharacterList({
               <h3 className="text-base font-bold text-zinc-200">
                 {expandResult.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-emerald-400" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
               </h3>
-              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none">✕</button>
+              <button onClick={() => setExpandResult(null)} className="text-zinc-500 hover:text-zinc-300 text-lg leading-none" aria-label="关闭">✕</button>
             </div>
 
             {/* 统计 */}
@@ -857,7 +860,7 @@ export function CharacterList({
                   onClick={(e) => { e.stopPropagation(); handleDeleteCharacter(c.id, c.name); }}
                   disabled={deletingId === c.id}
                   className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 shrink-0 disabled:opacity-40"
-                >✕</button>
+                 aria-label="关闭">✕</button>
               </div>
             ))}
           </div>

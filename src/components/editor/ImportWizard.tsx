@@ -442,7 +442,7 @@ export function ImportWizard({
           <h2 className="text-lg font-semibold">
             📥 {step === "input" ? "导入文本" : step === "parsing" ? "AI 分析中..." : step === "preview" ? "预览确认" : step === "committing" ? "写入中..." : "导入完成"}
           </h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">✕</button>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300" aria-label="关闭">✕</button>
         </div>
 
         {/* 内容区 */}
@@ -804,7 +804,7 @@ export function ImportWizard({
                           }}
                           className="text-zinc-600 hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
                           title="移除"
-                        >✕</button>
+                         aria-label="关闭">✕</button>
                       </div>
                     ))}
                   </div>
@@ -869,7 +869,7 @@ export function ImportWizard({
                           }}
                           className="text-zinc-600 hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
                           title="移除"
-                        >✕</button>
+                         aria-label="关闭">✕</button>
                       </div>
                     ))}
                     {editedCharacters.length === 0 && (
@@ -934,7 +934,7 @@ export function ImportWizard({
                             }}
                             className="text-zinc-600 hover:text-red-400 hover:bg-red-950/30 p-1 rounded shrink-0 transition-colors"
                             title="移除"
-                          >✕</button>
+                           aria-label="关闭">✕</button>
                         </div>
                       ))}
                       {editedLore.length === 0 && (

@@ -248,7 +248,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] shrink-0">
           <h2 className="text-lg font-semibold">🎨 文风与质量控制</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg" aria-label="关闭">✕</button>
         </div>
 
         {/* Tab 切换 */}
@@ -378,7 +378,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                     {config.customForbiddenPatterns.map((p) => (
                       <span key={p} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-950/50 border border-red-900/50 text-xs text-red-400">
                         🚫 {p}
-                        <button onClick={() => removeForbidden(p)} className="hover:text-red-300 text-red-500">✕</button>
+                        <button onClick={() => removeForbidden(p)} className="hover:text-red-300 text-red-500" aria-label="关闭">✕</button>
                       </span>
                     ))}
                   </div>

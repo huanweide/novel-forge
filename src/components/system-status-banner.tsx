@@ -36,16 +36,12 @@ export function SystemStatusBanner() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/health", { cache: "no-store" })
+    const controller = new AbortController();
+    fetch("/api/health", { cache: "no-store", signal: controller.signal })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: Health | null) => {
-        if (active && d) setHealth(d);
-      })
+      .then((d: Health | null) => { if (d) setHealth(d); })
       .catch(() => {});
-    return () => {
-      active = false;
-    };
+    return () => controller.abort();
   }, []);
 
   if (!health || dismissed) return null;

@@ -526,7 +526,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
       {error && (
         <div className="px-3 py-1.5 text-[10px] text-red-400 bg-red-950/20 border-t border-red-900/30 shrink-0">
           ⚠️ {error}
-          <button onClick={() => setError("")} className="ml-2 text-zinc-500 hover:text-zinc-300">✕</button>
+          <button onClick={() => setError("")} className="ml-2 text-zinc-500 hover:text-zinc-300" aria-label="关闭">✕</button>
         </div>
       )}
 

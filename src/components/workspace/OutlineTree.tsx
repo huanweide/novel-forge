@@ -43,7 +43,7 @@ export function NodeTreeItem({
         {isImported && <span className="text-purple-400/70 text-[10px]" title="从导入文本创建">📥</span>}
         {onDeleteNode && (node.type === "chapter" || node.type === "section") && (
           <button onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
-            className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity" title="删除此章节">✕</button>
+            className="opacity-0 group-hover:opacity-100 text-red-500/60 hover:text-red-400 text-[12px] px-0.5 transition-opacity" title="删除此章节" aria-label="删除此章节">✕</button>
         )}
         {isChapter && (
           <button onClick={(e) => { e.stopPropagation(); router.push(`/workspace/${projectId}/game/${node.id}`); }}

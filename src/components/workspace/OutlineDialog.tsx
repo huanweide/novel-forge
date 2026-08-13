@@ -37,7 +37,7 @@ export function OutlineDialog({
             <h2 className="text-lg font-semibold">🤖 AI 生成大纲</h2>
             <p className="text-xs text-zinc-500 mt-0.5">《{projectName}》</p>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-lg" aria-label="关闭">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* 章节数选择 */}

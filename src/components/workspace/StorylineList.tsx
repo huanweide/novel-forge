@@ -221,7 +221,7 @@ function StorylineDetail({ storyline, expanded, onToggle, onEdit, onDelete, dele
       <div className="px-2 pb-1.5 flex items-center gap-2">
         <button onClick={onToggle} className="text-[10px] text-zinc-500 hover:text-zinc-300">展开 ▼</button>
         <button onClick={onEdit} className="text-[10px] text-zinc-600 hover:text-zinc-400">✏️</button>
-        <button onClick={onDelete} disabled={deletingId === storyline.id} className="text-[10px] text-zinc-600 hover:text-red-400 disabled:opacity-40">✕</button>
+        <button onClick={onDelete} disabled={deletingId === storyline.id} className="text-[10px] text-zinc-600 hover:text-red-400 disabled:opacity-40" aria-label="删除">✕</button>
         {storyline.description && <span className="text-[10px] text-zinc-600 truncate flex-1">{storyline.description}</span>}
       </div>
     );

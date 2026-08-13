@@ -79,7 +79,7 @@ export function PreGenConfirm({
             <h2 className="text-lg font-semibold">📋 {title || "生成前确认——角色调度"}</h2>
             {storyInfo && <p className="text-xs text-zinc-500 mt-0.5">{storyInfo.storyPhase} · {storyInfo.sceneContext || "未确定场景"} · 「{storyInfo.chapterTitle}」</p>}
           </div>
-          <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+          <button onClick={onCancel} className="text-zinc-500 hover:text-zinc-300 text-lg" aria-label="关闭">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {loading && (
@@ -150,7 +150,7 @@ export function PreGenConfirm({
                   {newChars.map(n => (
                     <span key={n} className="text-[10px] px-2 py-0.5 rounded bg-emerald-900/30 text-emerald-400 flex items-center gap-1">
                       🆕 AI自建：{n}
-                      <button onClick={() => setNewChars(newChars.filter(x => x !== n))} className="text-zinc-500 hover:text-red-400">✕</button>
+                      <button onClick={() => setNewChars(newChars.filter(x => x !== n))} className="text-zinc-500 hover:text-red-400" aria-label="关闭">✕</button>
                     </span>
                   ))}
                 </div>

@@ -51,7 +51,7 @@ export function RightPanel(props: RightPanelProps) {
             >{t.label}</button>
           ))}
         </div>
-        <button onClick={onClose} className="text-zinc-700 hover:text-zinc-400 text-[10px]" title="完全关闭">✕</button>
+        <button onClick={onClose} className="text-zinc-700 hover:text-zinc-400 text-[10px]" title="完全关闭" aria-label="关闭">✕</button>
       </aside>
     );
   }
@@ -75,7 +75,7 @@ export function RightPanel(props: RightPanelProps) {
           </button>
         ))}
         <button onClick={() => setMinimized(true)} className="px-2 text-zinc-600 hover:text-zinc-400 text-xs shrink-0" title="最小化">▶</button>
-        <button onClick={onClose} className="px-2 text-zinc-600 hover:text-zinc-400 text-xs shrink-0" title="完全关闭">✕</button>
+        <button onClick={onClose} className="px-2 text-zinc-600 hover:text-zinc-400 text-xs shrink-0" title="完全关闭" aria-label="关闭">✕</button>
       </div>
 
       {/* Tab 内容 */}

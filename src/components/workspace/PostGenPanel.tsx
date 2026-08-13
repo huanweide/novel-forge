@@ -223,7 +223,7 @@ export function PostGenPanel({
           <Button onClick={onContinueWriting} size="sm" className="bg-indigo-600 hover:bg-indigo-500 h-7 text-xs">
             ✨ 继续写下一节
           </Button>
-          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400 text-sm">✕</button>
+          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400 text-sm" aria-label="关闭">✕</button>
         </div>
       </div>
 

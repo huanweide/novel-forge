@@ -24,19 +24,21 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     async function load() {
       setLoading(true);
       try {
         const params = new URLSearchParams({ projectId });
         if (nodeId) params.set("nodeId", nodeId);
-        const res = await fetch(`/api/stats/monitor?${params}`);
-        if (res.ok && !cancelled) setData(await res.json());
-      } catch { /* ignore */ }
-      if (!cancelled) setLoading(false);
+        const res = await fetch(`/api/stats/monitor?${params}`, { signal: controller.signal });
+        if (res.ok) setData(await res.json());
+      } catch {
+        if (controller.signal.aborted) return;
+      }
+      setLoading(false);
     }
     load();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, [projectId, nodeId]);
 
   if (loading) return <div className="p-4 text-xs text-zinc-500">加载监测数据...</div>;
