@@ -48,6 +48,9 @@ export function CharacterList({
     markedRockets: string[];
     total: number;
   } | null>(null);
+  // 项目加载时后台静默检测存量重复角色（detectOnly，只分组不写库），有则提示用户一键清理（不自动改数据）
+  const [dedupeHint, setDedupeHint] = useState<{ merged: number; pending: number } | null>(null);
+  const dedupeProbedProject = useRef<string | null>(null);
   // 自定义标签（v2.0.4）：玩家自建标签并往里加人
   const [newTag, setNewTag] = useState("");
   const [applying, setApplying] = useState(false);
@@ -267,6 +270,33 @@ export function CharacterList({
     }
   };
 
+  // 项目加载/切换时后台静默检测存量重复角色（detectOnly：只分组、不写库、不合并），有则提示用户一键清理
+  const handleDedupeFromHint = () => {
+    setDedupeHint(null);
+    void handleDedupe();
+  };
+  useEffect(() => {
+    if (!projectId || dedupeProbedProject.current === projectId) return;
+    dedupeProbedProject.current = projectId;
+    (async () => {
+      try {
+        const res = await fetch("/api/characters/dedupe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, detectOnly: true }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (res.ok) {
+          const merged = (d.mergedGroups || []).length;
+          const pending = (d.pendingGroups || []).length;
+          if (merged + pending > 0) setDedupeHint({ merged, pending });
+        }
+      } catch {
+        // 静默：检测失败不影响正常使用
+      }
+    })();
+  }, [projectId]);
+
   // v2.0.4：玩家自建标签并往里加人——把勾选角色通过 apply-tags 打上新标签（并集语义，不会抹掉旧标签）
   const handleApplyTags = async () => {
     const tag = newTag.trim();
@@ -344,6 +374,15 @@ export function CharacterList({
 
   return (
     <div className="space-y-1">
+      {dedupeHint && dedupeHint.merged + dedupeHint.pending > 0 && (
+        <div
+          onClick={handleDedupeFromHint}
+          className="mb-1 cursor-pointer rounded-md border border-[var(--nv-warning)] bg-[var(--nv-surface-2)] px-3 py-2 text-xs text-[var(--nv-text-primary)] hover:opacity-80"
+          title="点击运行自动去重合并"
+        >
+          发现 {dedupeHint.merged + dedupeHint.pending} 个可能为同一人的角色（自动合并 {dedupeHint.merged} · 待确认 {dedupeHint.pending}），点击一键清理 →
+        </div>
+      )}
       <CharacterFilters
         characters={characters}
         search={search}

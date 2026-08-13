@@ -10,11 +10,11 @@ export const maxDuration = 300;
 //  - 相似名称（小名/繁简/错别字变体）合并到主卡（别名/关系/内容），被并卡软删标记「🗂 已合并」。
 export async function POST(request: Request) {
   try {
-    const { projectId } = (await request.json()) as any;
+    const { projectId, detectOnly } = (await request.json()) as any;
     if (!projectId) {
       return NextResponse.json({ error: "缺少 projectId" }, { status: 400 });
     }
-    const result = await dedupeCharacters(projectId);
+    const result = await dedupeCharacters(projectId, { detectOnly: Boolean(detectOnly) });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     return jsonError(e);

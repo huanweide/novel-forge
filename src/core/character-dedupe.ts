@@ -34,7 +34,7 @@ export interface DedupeResult {
   total: number;
 }
 
-interface CharLite {
+export interface CharLite {
   id: string;
   name: string;
   aliases: string[];
@@ -354,7 +354,10 @@ export async function rollbackMerge(rev: { mainCardId: string; mainBefore: any; 
   }
 }
 
-export async function dedupeCharacters(projectId: string): Promise<DedupeResult> {
+export async function dedupeCharacters(
+  projectId: string,
+  opts?: { detectOnly?: boolean }
+): Promise<DedupeResult> {
   const chars = await prisma.characterCard.findMany({
     where: { projectId },
     select: {
@@ -437,49 +440,53 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     merged.forEach((x) => consumed.add(x.id));
 
     if (confidence === "high") {
-      // 高置信度：直接合并，并留快照可回滚
-      const mainAfter = await applyMerge(main, merged);
-      await prisma.characterCardRevision.create({
-        data: {
-          projectId,
-          mainCardId: main.id,
-          mergedIds: merged.map((x) => x.id),
-          mainBefore: mainBefore as any,
-          mergedBefore: mergedBefore as any,
-          mainAfter: mainAfter as any,
-          confidence,
-          source,
-          status: "applied",
-          summary,
-        },
-      });
+      // 高置信度：直接合并，并留快照可回滚（detectOnly 模式仅分组提示、不写库不合并）
       mergedGroups.push({
         mainId: main.id,
         mainName: main.name,
         merged: merged.map((x) => ({ id: x.id, name: x.name })),
         confidence,
       });
+      if (!opts?.detectOnly) {
+        const mainAfter = await applyMerge(main, merged);
+        await prisma.characterCardRevision.create({
+          data: {
+            projectId,
+            mainCardId: main.id,
+            mergedIds: merged.map((x) => x.id),
+            mainBefore: mainBefore as any,
+            mergedBefore: mergedBefore as any,
+            mainAfter: mainAfter as any,
+            confidence,
+            source,
+            status: "applied",
+            summary,
+          },
+        });
+      }
     } else {
-      // 低置信度：只存快照写 pending，不合并，等用户确认
-      await prisma.characterCardRevision.create({
-        data: {
-          projectId,
-          mainCardId: main.id,
-          mergedIds: merged.map((x) => x.id),
-          mainBefore: mainBefore as any,
-          mergedBefore: mergedBefore as any,
-          confidence,
-          source,
-          status: "pending",
-          summary,
-        },
-      });
+      // 低置信度：只存快照写 pending，不合并，等用户确认（detectOnly 模式仅分组提示、不写库）
       pendingGroups.push({
         mainId: main.id,
         mainName: main.name,
         merged: merged.map((x) => ({ id: x.id, name: x.name })),
         confidence,
       });
+      if (!opts?.detectOnly) {
+        await prisma.characterCardRevision.create({
+          data: {
+            projectId,
+            mainCardId: main.id,
+            mergedIds: merged.map((x) => x.id),
+            mainBefore: mainBefore as any,
+            mergedBefore: mergedBefore as any,
+            confidence,
+            source,
+            status: "pending",
+            summary,
+          },
+        });
+      }
     }
   }
 

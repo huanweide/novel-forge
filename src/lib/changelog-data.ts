@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.18";
+export const LATEST_VERSION = "v2.0.19";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.19 存量角色自动检测提示（round-22 续）：角色栏加载/切换项目时后台静默检测一次存量重复角色（dedupeCharacters 新增 detectOnly 模式只分组不写库不合并，复用项目级指纹缓存跳过 LLM）；发现可合并组则在角色栏顶部显示非阻塞提示 banner（发现 N 个可能为同一人的角色，点击一键清理），点击即运行现有全量去重合并；存量脏卡（韩姓男子+韩先生、迭戈+迭戈先生）加载即被发现并提示，无需再手动点「自动去重合并」——自动发现实时合并仍只对新角色生效，本功能补上存量场景。",
   "v2.0.18 角色栏 UI 统一 + 去重合并架构重做（round-22）：自动发现阶段实时清洗 LLM 误写的「🆕自动发现/待审」脏标记；按「两变体互并」把韩姓男子+韩先生、迭戈+迭戈先生等同姓唯一候选即时归并同一卡（加别名），不再各建新人；含「·」的隐藏身份/马甲（如迭戈·美第奇）独立建卡打「🎭 隐藏身份（待确认）」、不自动合并；去重合并新增大纲/后文三路判断（注入 Project.globalPrompt+synopsis+已批准 outline，缓存 key 拼其指纹使后文揭露可随剧情重判），含·组强制 pending 待用户确认；按「不要自动分类」移除自动龙套标记。角色栏 UI 整洁统一：复选框定宽、待审徽章 9px 圆角、工具栏 px-2 对齐、修复未定义 --nv-warn 令牌、龙套文案全清。",
   "v2.0.17 生产日志噪声治理 + 守护型代码入库（round-21 检验并优化）：sync-global-prompt.ts 删除每次角色/世界/风格变化刷屏的成功 console.log、保留失败 console.error；babylore/fill.ts 删除每次 LLM 调用（含重试）的调试日志（attempt/http/raw_len/finish）、失败日志降级 console.warn，babylore/loop.ts 删除每章填表汇总 log（信息已 SSE 到前端）；原则只清后台高频循环任务的调试日志，保留错误诊断与一次性导入/回写流程日志。检验发现此前游离 git 外的守护型代码正式入库：prompt-eval.ts 评测集（#320 守护全局提示词要素不丢）+ prompt-revisions/rollback 回滚 API（#319），均类型/测试健康、功能完整，长期游离是技术债，现纳入版本控制（前端暂无回滚 UI 入口，纯后端闭环，符合增量集成）。",
   "v2.0.16 精修弹窗焦点陷阱 + 角色/世界卡片重渲染优化（round-20 收尾 ui-lens 遗留项）：RefineDiffModal 接入已有 useFocusTrap hook（面板挂载 ref + tabIndex=-1，Esc 关闭、Tab 在面板内循环、关闭后焦点交还打开前元素），修复「Esc 无法关闭 / 键盘焦点逃逸到背后页面 / 键盘用户被困」可访问性缺陷；WorldEntryCard/CharacterRow 包 React.memo，CharacterList 把传给卡片的 toggleSelect/handleConfirm/onDelete/onConfirm/onTagClick 全部 useCallback 稳定化（toggleSelect 改函数式更新），让 memo 真正生效——搜索输入、去重结果弹窗等父级 state 变化时未变卡片跳过重渲染；虚拟滚动经评估暂缓（单项目角色/世界设定条目通常几十~几百条，普通 map 渲染足够，项目未引入任何 windowing 库，盲目引入属过度优化且增新依赖，留待数千+条目场景再接）。",
@@ -45,6 +46,27 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.19",
+    date: "2026-08-13",
+    title: "v2.0.19 存量角色自动检测提示（round-22 续）",
+    sections: [
+      {
+        label: "存量重复角色自动检测提示",
+        items: [
+          "角色栏加载/切换项目时后台静默检测一次存量重复角色（dedupeCharacters 新增 detectOnly 模式：只分组、不写库、不合并，复用项目级指纹缓存，角色集未变则跳过 LLM）。",
+          "发现可合并组（高置信自动合并 + 低置信待确认）数量 > 0 时，在角色栏顶部显示非阻塞提示 banner「发现 N 个可能为同一人的角色（自动合并 M · 待确认 K），点击一键清理」，点击即运行现有全量去重合并。",
+          "存量脏卡（如韩姓男子/韩先生、迭戈/迭戈先生）加载即被发现并提示，无需再到工具栏手动点「自动去重合并」——自动发现实时合并仍只对新角色生效，本功能补上存量场景；detectOnly 不自动改数据，保留用户对合并的确认权。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 62 文件 529/529 全绿（修复 round-22 测试文件对未导出 CharLite 类型的导入——该类型已补 export，vitest 用 esbuild 转译不查类型此前掩盖此错误）；无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.18",
     date: "2026-08-12",
