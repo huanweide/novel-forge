@@ -60,4 +60,8 @@ describe("formatTokenUsage", () => {
   it("used=0 → 0.0%（total>0 不除零）", () => {
     expect(formatTokenUsage(0, 100)).toBe("0 / 100 (0.0%)");
   });
+  it("total=0 → 0.0%（除零保护，不返回 NaN）", () => {
+    expect(formatTokenUsage(0, 0)).toBe("0 / 0 (0.0%)");
+    expect(formatTokenUsage(5, 0)).toBe("5 / 0 (0.0%)");
+  });
 });

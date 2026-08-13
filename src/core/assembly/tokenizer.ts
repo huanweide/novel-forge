@@ -48,6 +48,6 @@ export function truncateByTokens(
  * 格式化 Token 用量为人类可读字符串
  */
 export function formatTokenUsage(used: number, total: number): string {
-  const percentage = ((used / total) * 100).toFixed(1);
+  const percentage = total > 0 ? ((used / total) * 100).toFixed(1) : "0.0";
   return `${used.toLocaleString()} / ${total.toLocaleString()} (${percentage}%)`;
 }
