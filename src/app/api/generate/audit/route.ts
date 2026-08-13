@@ -48,6 +48,15 @@ export async function POST(req: Request) {
         bySeverity: forbidden.bySeverity,
         byCategory: forbidden.byCategory,
         matchCount: forbidden.matches.length,
+        matches: forbidden.matches.slice(0, 80).map((m) => ({
+          category: m.category,
+          severity: m.severity,
+          pattern: m.pattern,
+          context: m.context,
+          suggestion: m.suggestion ?? null,
+          index: m.index,
+          isRegex: m.isRegex,
+        })),
       },
       quality: {
         overallScore: quality.overallScore,

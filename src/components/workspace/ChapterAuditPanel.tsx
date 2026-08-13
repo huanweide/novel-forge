@@ -14,6 +14,15 @@ import { toastError } from "@/components/ui/toast";
  * 在章节定稿前给用户一个可见的「踩线项 + 质量分」报告。
  */
 
+interface AuditMatch {
+  category: string;
+  severity: "error" | "warning" | "info";
+  pattern: string;
+  context: string;
+  suggestion: string | null;
+  index: number;
+  isRegex: boolean;
+}
 interface AuditForbidden {
   passed: boolean;
   textLength: number;
@@ -22,6 +31,7 @@ interface AuditForbidden {
   bySeverity: Record<string, number>;
   byCategory: Record<string, number>;
   matchCount: number;
+  matches: AuditMatch[];
 }
 interface AuditDimension {
   name: string;
@@ -107,6 +117,11 @@ export function ChapterAuditPanel({
         : g === "C"
           ? "bg-warning/20 text-warning"
           : "bg-danger/20 text-danger";
+  const sevBar = (s: string) =>
+    s === "error" ? "bg-danger" : s === "warning" ? "bg-warning" : "bg-[var(--nv-text-muted)]";
+  const sevText = (s: string) =>
+    s === "error" ? "text-danger" : s === "warning" ? "text-warning" : "text-[var(--nv-text-muted)]";
+  const sevLabel = (s: string) => (s === "error" ? "高危" : s === "warning" ? "警示" : "提示");
 
   return (
     <>
@@ -181,6 +196,48 @@ export function ChapterAuditPanel({
                   <span className="text-[10px] text-success">未命中任何禁用词</span>
                 )}
               </div>
+
+              {/* 命中明细：逐条列出踩线内容、上下文与修改建议 */}
+              <details className="mt-3 rounded-lg border border-[var(--nv-border)] bg-[var(--nv-surface-1)]">
+                <summary className="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-[var(--nv-text-secondary)]">
+                  命中明细（{report.forbidden.matches.length} 条
+                  {report.forbidden.matches.length < report.forbidden.matchCount
+                    ? `，仅显示前 ${report.forbidden.matches.length} 条`
+                    : ""}）
+                </summary>
+                <div className="space-y-2 px-3 pb-3 max-h-72 overflow-y-auto">
+                  {[...report.forbidden.matches]
+                    .sort(
+                      (a, b) =>
+                        (a.severity === "error" ? 0 : a.severity === "warning" ? 1 : 2) -
+                        (b.severity === "error" ? 0 : b.severity === "warning" ? 1 : 2),
+                    )
+                    .map((m, i) => (
+                      <div key={i} className="flex gap-2 rounded-md bg-[var(--nv-surface-2)] p-2">
+                        <div className={`w-1 shrink-0 rounded-full ${sevBar(m.severity)}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] px-1 py-0.5 rounded bg-[var(--nv-surface-1)] text-[var(--nv-text-tertiary)]">
+                              {CATEGORY_LABELS[m.category] ?? m.category}
+                            </span>
+                            <span className={`text-[10px] px-1 py-0.5 rounded bg-[var(--nv-surface-1)] ${sevText(m.severity)}`}>
+                              {sevLabel(m.severity)}
+                            </span>
+                            {!m.isRegex && (
+                              <span className={`text-[10px] font-mono ${sevText(m.severity)}`}>「{m.pattern}」</span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-[11px] leading-relaxed text-[var(--nv-text-secondary)] break-words">
+                            {m.context}
+                          </p>
+                          {m.suggestion && (
+                            <p className="mt-1 text-[10px] text-[var(--nv-text-muted)]">建议：{m.suggestion}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </details>
             </section>
 
             {/* 质量体检 */}

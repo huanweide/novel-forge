@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.9.0";
+export const LATEST_VERSION = "v2.10.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.10.0 内容安全命中明细显式化（UI/功能增强，魔王循环第9轮）：单章「写作体检」面板安全体检区块新增可折叠「命中明细」列表，后端 /api/generate/audit 在 forbidden 返回里透传 scanForbiddenWordsEnhanced 已算好的逐条 matches 明细（最多80条，含 category/severity/pattern/context 上下文片段/suggestion 修改建议），前端按 error→warning→info 严重度排序逐条展示——高危(error 级如精确禁用词)红色、警示(warning)黄色、提示(info)灰色，每条给出命中位置上下文与替换建议，让用户点开体检就能直接定位「雷在哪句、具体哪个词、怎么改」；复用纯函数零算法改动、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 1 组件改动 + 接口透传，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.9.0 质量分回写大纲常驻徽章（UI/功能增强，魔王循环第8轮）：全书体检看板新增「保存质量分到大纲」按钮，点按调 POST /api/generate/audit/book?persist=true，把每章写作质量分批量回写 StoryNode.qualityScore（schema 已有字段）；左侧大纲树每章节点常驻显示彩色质量徽章（≥85绿/≥70主色/≥60警告/否则危险），体检一次后无需反复点开弹窗即可一眼看出哪章写得差；保存后自动刷新大纲与选中章节；纯本地零 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮前端 2 组件改动 + 回写 API，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
   "v2.8.0 全书健康度体检看板（UI/功能增强，魔王循环第7轮）：在章节确认栏常驻新增「全书体检」入口，点按调用新接口 /api/generate/audit/book，复用 forbidden-checker（内容安全五类扫描）与 quality-analyzer（写作质量六维评分）两个纯函数，按 projectId 一次性取出所有正文章节逐章跑两遍本地算法；看板弹窗聚合全书——每章安全分/质量分/评级/字数/状态明细表（需返工行红色高亮），顶部汇总平均质量分/平均安全分/需返工章数；纯本地零 LLM 开销、秒出；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮新增 1 个 API + 1 个看板组件，API 依赖 DB 不单测，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
   "v2.7.0 写作安全/质量体检面板（UI/功能增强，魔王循环第6轮）：在章节确认栏常驻新增「写作体检」入口，点按调用 /api/generate/audit，复用 forbidden-checker（内容安全五类扫描）与 quality-analyzer（写作质量六维评分）两个纯函数，按 nodeId 取正文跑两遍本地算法；面板弹窗可见报告——内容安全分/模糊词密度/各类禁用词命中数，以及六维质量分+总分+A/B/C/D 评级，双达标才提示可放心定稿；纯前端 Modal 展示，零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮新增 1 个 API + 1 个面板组件，API 依赖 DB 不单测，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
@@ -57,6 +58,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.10.0",
+    date: "2026-08-13",
+    title: "v2.10.0 内容安全命中明细显式化（UI/功能增强，魔王循环第9轮）",
+    sections: [
+      {
+        label: "内容安全命中明细显式化",
+        items: [
+          "单章「写作体检」面板安全体检区块新增可折叠「命中明细」列表：后端 /api/generate/audit 在 forbidden 返回里透传 scanForbiddenWordsEnhanced 已算好的逐条 matches 明细（最多80条，含 category/severity/pattern/context 上下文片段/suggestion 修改建议）。",
+          "前端按 error→warning→info 严重度排序逐条展示，高危(error 级如精确禁用词)红色、警示(warning)黄色、提示(info)灰色，每条给出命中位置上下文与替换建议，用户点开体检即可直接定位「雷在哪句、具体哪个词、怎么改」，不再只看到一个总数。",
+          "复用纯函数零算法改动、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 1 组件改动 + 接口透传，纯函数已由 v2.3.0 单测覆盖）。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.9.0",
     date: "2026-08-13",

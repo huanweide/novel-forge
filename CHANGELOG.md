@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.10.0 — 2026-08-13
+
+### 内容安全命中明细显式化（UI/功能增强，魔王循环第9轮）
+- 单章「写作体检」面板安全体检区块新增可折叠「命中明细」列表：后端 /api/generate/audit 在 forbidden 返回里透传 scanForbiddenWordsEnhanced 已算好的逐条 matches 明细（最多80条，含 category/severity/pattern/context 上下文片段/suggestion 修改建议）。
+- 前端按 error→warning→info 严重度排序逐条展示，高危(error 级如精确禁用词)红色、警示(warning)黄色、提示(info)灰色，每条给出命中位置上下文与替换建议，用户点开体检即可直接定位「雷在哪句、具体哪个词、怎么改」，不再只看到一个总数。
+- 复用纯函数零算法改动、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 1 组件改动 + 接口透传，纯函数已由 v2.3.0 单测覆盖）。
+
 ## v2.9.0 — 2026-08-13
 
 ### 质量分回写大纲常驻徽章（UI/功能增强，魔王循环第8轮）
