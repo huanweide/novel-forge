@@ -87,6 +87,8 @@ export interface StoryNodeData {
   editVersion: number;
   // FE-N6 时间线：书中世界时间标记（自由文本），用于按时间轴排序视图
   worldTime: string | null;
+  // v2.9.0：写作质量分（0–100）。经 /api/generate/audit/book POST persist 回写 StoryNode.qualityScore；null=未体检
+  qualityScore?: number | null;
 }
 
 export interface StorylineData {

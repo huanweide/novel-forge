@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { Modal, ModalFooter } from "@/components/ui/Modal";
-import { toastError } from "@/components/ui/toast";
+import { toastError, toastSuccess } from "@/components/ui/toast";
 
 /**
  * BookHealthBoard —— 「全书体检」入口（v2.8.0）
@@ -64,10 +64,33 @@ const gradeBadge = (g: string) =>
         ? "bg-warning/20 text-warning"
         : "bg-danger/20 text-danger";
 
-export function BookHealthBoard({ projectId }: { projectId: string }) {
+export function BookHealthBoard({ projectId, onPersisted }: { projectId: string; onPersisted?: () => void }) {
   const [auditing, setAuditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [report, setReport] = useState<BookReport | null>(null);
+  const [persisting, setPersisting] = useState(false);
+
+  const handlePersist = async () => {
+    setPersisting(true);
+    try {
+      const res = await fetch(`/api/generate/audit/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, persist: true }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        toastError(d?.error || "保存质量分失败");
+        return;
+      }
+      toastSuccess(`已保存 ${d.persisted} 章质量分到大纲树`);
+      onPersisted?.();
+    } catch (err) {
+      toastError("保存质量分失败：" + (err instanceof Error ? err.message : "网络错误"));
+    } finally {
+      setPersisting(false);
+    }
+  };
 
   const handleAudit = async () => {
     setAuditing(true);
@@ -117,6 +140,16 @@ export function BookHealthBoard({ projectId }: { projectId: string }) {
         size="3xl"
         footer={
           <ModalFooter>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              disabled={persisting}
+              onClick={handlePersist}
+              title="把每章质量分写回大纲树节点，左侧大纲即可常驻显示彩色质量徽章"
+            >
+              {persisting ? "保存中" : "保存质量分到大纲"}
+            </Button>
             <button onClick={() => setOpen(false)} className="btn-ghost">
               关闭
             </button>

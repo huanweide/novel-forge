@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.8.0";
+export const LATEST_VERSION = "v2.9.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.9.0 质量分回写大纲常驻徽章（UI/功能增强，魔王循环第8轮）：全书体检看板新增「保存质量分到大纲」按钮，点按调 POST /api/generate/audit/book?persist=true，把每章写作质量分批量回写 StoryNode.qualityScore（schema 已有字段）；左侧大纲树每章节点常驻显示彩色质量徽章（≥85绿/≥70主色/≥60警告/否则危险），体检一次后无需反复点开弹窗即可一眼看出哪章写得差；保存后自动刷新大纲与选中章节；纯本地零 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮前端 2 组件改动 + 回写 API，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
   "v2.8.0 全书健康度体检看板（UI/功能增强，魔王循环第7轮）：在章节确认栏常驻新增「全书体检」入口，点按调用新接口 /api/generate/audit/book，复用 forbidden-checker（内容安全五类扫描）与 quality-analyzer（写作质量六维评分）两个纯函数，按 projectId 一次性取出所有正文章节逐章跑两遍本地算法；看板弹窗聚合全书——每章安全分/质量分/评级/字数/状态明细表（需返工行红色高亮），顶部汇总平均质量分/平均安全分/需返工章数；纯本地零 LLM 开销、秒出；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮新增 1 个 API + 1 个看板组件，API 依赖 DB 不单测，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
   "v2.7.0 写作安全/质量体检面板（UI/功能增强，魔王循环第6轮）：在章节确认栏常驻新增「写作体检」入口，点按调用 /api/generate/audit，复用 forbidden-checker（内容安全五类扫描）与 quality-analyzer（写作质量六维评分）两个纯函数，按 nodeId 取正文跑两遍本地算法；面板弹窗可见报告——内容安全分/模糊词密度/各类禁用词命中数，以及六维质量分+总分+A/B/C/D 评级，双达标才提示可放心定稿；纯前端 Modal 展示，零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮新增 1 个 API + 1 个面板组件，API 依赖 DB 不单测，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
   "v2.6.0 写作质量六维评分 quality-analyzer 补 11 例纯逻辑单测（魔王循环第5轮）：给「写作质量评分器」analyzeQuality 补 11 例自动化测试，锁死六维评分（废话率/展示vs讲述/视角一致性/句式多样/对话自然/主语多样，权重 0.20/0.20/0.15/0.15/0.15/0.15）的边界与行为——空文本六维满分且总分100 A级通过、每维分数恒在[0,100]；干净动作描写≥85 A级、塞满禁用词则非A且废话率低于100、PoV频繁切角色视角一致性<100、无角色词典视角满分；评级 A≥85/B≥70/C≥60(通过线)/D<60 且 passed===总分≥60；复用禁用词扫描结果避免重复计算；纯函数零 Token/LLM/prisma/DOM 依赖，vitest 全量 80 文件 775/775 全绿（本轮 quality-analyzer 补 11 例，较上轮 +11），tsc 0 错误。",
@@ -56,6 +57,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.9.0",
+    date: "2026-08-13",
+    title: "v2.9.0 质量分回写大纲常驻徽章（UI/功能增强，魔王循环第8轮）",
+    sections: [
+      {
+        label: "质量分回写 + 大纲常驻徽章",
+        items: [
+          "全书体检看板（BookHealthBoard）弹窗底部新增「保存质量分到大纲」按钮，点按调 POST /api/generate/audit/book?persist=true，后端 computeBookAudit 逐章算完质量分后批量 prisma.storyNode.update 回写 StoryNode.qualityScore 字段（schema 已有、此前未被主动填充），单章失败容错不阻断其余。",
+          "左侧大纲树 NodeTreeItem 基于节点 qualityScore 常驻渲染彩色质量徽章（≥85绿/≥70主色/≥60警告/否则危险），体检一次保存后即在大纲永久可见每章质量，无需反复点开弹窗；保存成功自动刷新大纲与当前选中章节（onPersisted 接 ChapterConfirmBar.onAction）。",
+          "StoryNodeData 补 qualityScore?: number | null 字段对齐 schema；纯前端 Modal 触发、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 2 组件改动 + 回写 API，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.8.0",
     date: "2026-08-13",

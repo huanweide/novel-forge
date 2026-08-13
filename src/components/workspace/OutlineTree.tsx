@@ -41,6 +41,23 @@ export function NodeTreeItem({
         )}
         <Icon name={typeIcon} size={11} className="shrink-0" />
         <StatusBadge status={node.status} />
+        {/* v2.9.0：体检保存的质量分常驻徽章（qualityScore 经 /api/generate/audit/book POST 回写） */}
+        {node.qualityScore != null && (
+          <span
+            className={`text-[10px] px-1 py-0.5 rounded-full font-mono ${
+              node.qualityScore >= 85
+                ? "bg-success/20 text-success"
+                : node.qualityScore >= 70
+                  ? "bg-[var(--nv-primary)]/20 text-[var(--nv-primary)]"
+                  : node.qualityScore >= 60
+                    ? "bg-warning/20 text-warning"
+                    : "bg-danger/20 text-danger"
+            }`}
+            title={`写作质量分（全书体检保存）：${node.qualityScore}`}
+          >
+            {node.qualityScore}
+          </span>
+        )}
         {badgeSlot}
         <span className="flex-1 truncate">{node.title}</span>
         {isImported && <span className="text-[var(--nv-creative)]/70 text-[10px]" title="从导入文本创建"><Icon name="download" size={11} /></span>}

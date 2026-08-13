@@ -258,7 +258,7 @@ export function ChapterConfirmBar({
           {/* v2.7.0：写作安全/质量体检入口——复用 forbidden-checker + quality-analyzer 纯函数，定稿前给可见的踩线/质量报告 */}
           <ChapterAuditPanel projectId={projectId} nodeId={nodeId} disabled={busy} />
           {/* v2.8.0：全书健康度体检入口——复用 forbidden-checker + quality-analyzer 纯函数，一键聚合全书各章安全/质量分 */}
-          <BookHealthBoard projectId={projectId} />
+          <BookHealthBoard projectId={projectId} onPersisted={onAction} />
           {/* 智能审阅态：常态收敛人工按钮，仅拦截/接管时展开 */}
           {isAutoMode && !isConfirmed && !manualTakeover && (
             <>
