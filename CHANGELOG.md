@@ -1,5 +1,11 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.21 — 2026-08-13
+
+### 测试体系全面补强 + 修 token 用量显示乱码（round-23）
+- 引入 @vitest/coverage-v8，给核心纯逻辑层（dedupe/json-parser/character-parse/api-error/rate-limit/validators/banned-words/relations/utils/finish-reason/auto-rate/explore-utils/tokenizer/memory-decay 等）补齐自动化测试，vitest 全量 76 文件 719/719 全绿，All files 覆盖率 39.12% lines。
+- 修 formatTokenUsage 除零：上下文窗口 total=0 时旧代码返回 NaN% 乱码，改为返回 0.0%，消除界面乱码。
+
 ## v2.0.20 — 2026-08-13
 
 ### 高置信组加载时静默自动合并（round-22 续 v2）
