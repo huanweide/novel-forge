@@ -24,6 +24,8 @@ interface BookChapter {
   forbiddenScore: number;
   forbiddenPassed: boolean;
   matchCount: number;
+  errorCount: number;
+  warningCount: number;
   qualityScore: number;
   grade: string;
   passed: boolean;
@@ -194,13 +196,14 @@ export function BookHealthBoard({ projectId, onPersisted }: { projectId: string;
 
             {/* 章节明细表：按章序排列，需返工行高亮 */}
             <div className="rounded-lg border border-[var(--nv-border-2)] overflow-hidden">
-              <div className="grid grid-cols-[48px_1fr_72px_64px_64px_52px_84px] text-[10px] font-medium text-[var(--nv-text-muted)] bg-[var(--nv-surface-2)] px-2 py-1.5">
+              <div className="grid grid-cols-[44px_1fr_64px_56px_56px_48px_76px_84px] text-[10px] font-medium text-[var(--nv-text-muted)] bg-[var(--nv-surface-2)] px-2 py-1.5">
                 <span>序号</span>
                 <span>章节标题</span>
                 <span className="text-right">字数</span>
                 <span className="text-right">安全分</span>
                 <span className="text-right">质量分</span>
                 <span className="text-center">评级</span>
+                <span className="text-center">高危/警示</span>
                 <span className="text-center">状态</span>
               </div>
               <div className="max-h-[50vh] overflow-y-auto">
@@ -209,7 +212,7 @@ export function BookHealthBoard({ projectId, onPersisted }: { projectId: string;
                   return (
                     <div
                       key={c.id}
-                      className={`grid grid-cols-[48px_1fr_72px_64px_64px_52px_84px] items-center px-2 py-1.5 text-[11px] border-t border-[var(--nv-border-2)] ${
+                      className={`grid grid-cols-[44px_1fr_64px_56px_56px_48px_76px_84px] items-center px-2 py-1.5 text-[11px] border-t border-[var(--nv-border-2)] ${
                         flag ? "bg-danger/5" : ""
                       }`}
                     >
@@ -227,6 +230,15 @@ export function BookHealthBoard({ projectId, onPersisted }: { projectId: string;
                           {c.grade}
                         </span>
                       </span>
+                      <span className="text-center font-mono">
+                        {c.errorCount === 0 && c.warningCount === 0 ? (
+                          <span className="text-[var(--nv-text-tertiary)]">—</span>
+                        ) : (
+                          <span className={c.errorCount > 0 ? "text-danger font-bold" : "text-warning"}>
+                            {c.errorCount}/{c.warningCount}
+                          </span>
+                        )}
+                      </span>
                       <span className="text-center text-[10px] text-[var(--nv-text-muted)]">
                         {STATUS_LABELS[c.status] ?? c.status}
                       </span>
@@ -242,7 +254,8 @@ export function BookHealthBoard({ projectId, onPersisted }: { projectId: string;
             </div>
 
             <p className="text-[10px] text-[var(--nv-text-muted)]">
-              评级：A≥85 / B≥70 / C≥60 / D&lt;60；质量分&lt;60 或安全未通过即标记为需返工（红色行）。
+              评级：A≥85 / B≥70 / C≥60 / D&lt;60；质量分&lt;60 或安全未通过即标记为需返工（红色行）。「高危/警示」列为该章命中的
+              error 级（高危，必改）/ warning 级（套路化，建议改）违禁词数量，点开该章「写作体检」可看逐条命中上下文与改稿建议。
             </p>
           </div>
         ) : null}

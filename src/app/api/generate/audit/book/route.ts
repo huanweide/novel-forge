@@ -28,6 +28,8 @@ interface ChapterAudit {
   forbiddenScore: number;
   forbiddenPassed: boolean;
   matchCount: number;
+  errorCount: number;
+  warningCount: number;
   qualityScore: number;
   grade: string;
   passed: boolean;
@@ -60,6 +62,8 @@ async function computeBookAudit(projectId: string) {
       forbiddenScore: forbidden.qualityScore,
       forbiddenPassed: forbidden.passed,
       matchCount: forbidden.matches.length,
+      errorCount: forbidden.matches.filter((m) => m.severity === "error").length,
+      warningCount: forbidden.matches.filter((m) => m.severity === "warning").length,
       qualityScore: quality.overallScore,
       grade: quality.grade,
       passed: quality.passed,
