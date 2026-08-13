@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.3.0 — 2026-08-13
+
+### 内容安全扫描 forbidden-checker 补 19 例纯逻辑单测（魔王循环第2轮）
+- 禁用词扫描器五类检测（精确词/句式模式/身体模板/模糊词密度/AI高频词）全覆盖：内置 error 级词命中即不通过并扣 5 分、warning 级扣 2 分、自定义词与 disableBuiltin 开关、模糊词每 500 字超 3 个触发 density 警告并给摘要。
+- 边界与工具：空文本直接通过满分、多 error 严重扣分但质量分恒在 [0,100]、collectForbiddenPatterns 去重（含 trim）、groupMatchesByCategory 按类别分组、getBuiltinRuleCounts 内置规则总数锁死 49。
+- 兼容旧 API scanForbiddenWords + 恶意正则防护：嵌套量词 (a+)+ 类灾难性回溯正则被静态启发式拒绝，记为 info 提示且不崩溃。
+- vitest 全量 77 文件 735/735 全绿（较上轮 +19），tsc 0 错误。
+
 ## v2.2.0 — 2026-08-13
 
 ### 上下文窗口「重新摘要」按钮 + 摘要确认（大修 #221 收官）

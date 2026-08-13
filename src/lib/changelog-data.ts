@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.2.0";
+export const LATEST_VERSION = "v2.3.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.3.0 内容安全扫描 forbidden-checker 补 19 例纯逻辑单测（魔王循环第2轮）：给「禁用词扫描器」五类检测（精确词/句式/身体模板/模糊词密度/AI高频词）+ 边界（空文本/正常文本/多 error 触底0分）+ 工具函数（去重/分组/内置规则计数）+ 兼容旧 API + 灾难性回溯(ReDoS)防护 补 19 例自动化测试，锁死「哪些词算违禁、怎么匹配、怎么扣分、危险正则被拒不崩溃」的行为，防止回归把误判漏判带上生产；vitest 全量 77 文件 735/735 全绿，tsc 0 错误。",
   "v2.2.0 上下文窗口「重新摘要」按钮 + 摘要确认完成（大修 #221 收官）：中期记忆区加「重新摘要」按钮，点按调 summarize API 的 preview 模式基于当前章节正文重新生成摘要（不落库），弹确认模态供预览/编辑，确认后才 upsert 落库（不重跑 LLM）；后端同步拦截空模板/占位摘要拒收，避免 AI 抽风覆盖好的摘要。至此大修二期全部完成。",
   "v2.1.0 测试盲区收尾 + 仓库散报告清理（魔王循环第1轮）：给「正文版本快照去重」补 6 例自动化测试（覆盖空正文不快照 / 无历史建 v1 / 内容相同去重跳过 / 内容不同建 v+1 / DB 失败静默不阻断），删掉一个放错位置的重复测试文件，并把仓库里一堆零散的旧工作报告合并进单一的《更新报告.md》（历史技术细节仍在 CHANGELOG.md 留痕），vitest 全量 76 文件 716/716 全绿，tsc 0 错误。",
   "v2.0.21 测试体系全面补强 + 修 token 用量显示乱码（round-23）：给网站背后几十个纯逻辑小工具（输入校验、内容安全扫描、角色关系、笔记过期清理、token 计算等）补齐自动化测试，vitest 全量 719/719 全绿，整体代码测试覆盖率从 33% 提升到 39%；修 formatTokenUsage 除零——上下文窗口总量为 0 时旧代码显示 NaN% 乱码，改为显示 0.0%。",
@@ -50,6 +51,22 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.3.0",
+    date: "2026-08-13",
+    title: "v2.3.0 内容安全扫描 forbidden-checker 补 19 例纯逻辑单测（魔王循环第2轮）",
+    sections: [
+      {
+        label: "内容安全扫描测试护网（forbidden-checker）",
+        items: [
+          "禁用词扫描器五类检测（精确词 / 句式模式 / 身体模板 / 模糊词密度 / AI 高频词）全覆盖：内置 error 级词命中即不通过并扣 5 分、warning 级词扣 2 分、自定义词与 disableBuiltin 开关、模糊词每 500 字超 3 个触发 density 警告并给摘要。",
+          "边界与工具：空文本直接通过满分、多 error 严重扣分但质量分恒在 [0,100]、collectForbiddenPatterns 去重（含 trim）、groupMatchesByCategory 按类别分组、getBuiltinRuleCounts 内置规则总数锁死为 49。",
+          "兼容旧 API scanForbiddenWords（空 patterns 直接通过、旧 patterns 当精确词处理）与恶意正则防护：用户传入嵌套量词 (a+)+ 类灾难性回溯正则被静态启发式拒绝，记为 info 提示且不崩溃。",
+          "vitest 全量 77 文件 735/735 全绿（较上轮 +19），tsc 0 错误；纯函数零 prisma/LLM/DOM 依赖，直接 import 即可跑。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.2.0",
     date: "2026-08-13",
