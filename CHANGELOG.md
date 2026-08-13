@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.1.0 — 2026-08-13
+
+### 测试盲区收尾 + 仓库散报告清理（魔王循环第1轮）
+- src/lib/versions.ts 的 snapshotRevision（正文覆盖前自动存旧版快照、内容相同去重、DB 失败静默）补 6 例纯逻辑单测：空正文不快照、无历史版本建 v1、内容相同去重跳过、内容不同建 v+1、DB 创建失败静默不抛错不阻断正文生成。
+- 删僵尸重复测试 src/core/instruction-context.test.ts（正确版在 src/core/pipeline/instruction-context.test.ts）。
+- 清仓库散报告 PROCESS/WORK_REPORT-*.md（违反「单一报告」规范）+ 调试临时脚本/截图目录；历史技术细节在 CHANGELOG.md 留痕，大白话变化统一在《更新报告.md》。vitest 76 文件 716/716 全绿，tsc 0 错误。
+
 ## v2.0.21 — 2026-08-13
 
 ### 测试体系全面补强 + 修 token 用量显示乱码（round-23）
