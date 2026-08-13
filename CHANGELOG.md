@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.5.0 — 2026-08-13
+
+### 写作规则冲突检测与注入 rules 补 13 例纯逻辑单测（魔王循环第4轮）
+- 冲突检测 detectConflicts 全覆盖：空规则→无冲突；同分类语义相反（「禁止 X」vs「必须 X」）→判定冲突且高优先级规则胜出；同分类都正向→不冲突；跨分类→不冲突；实体重叠且引号同名→判定冲突。
+- 三阶段裁决顺序锁死：先比 priority 数值大者胜、再比 specificityScore 高者胜、最后比 createdAt 早者胜，杜绝随机裁决。
+- 注入 injectRules 行为锁死：空规则直接原样返回 authorNote；单条规则注入带规则名；冲突败方标记「[已被更高优先级规则覆盖]」；非空 authorNote 正确拼接「作者指令」段；存在冲突时附「冲突裁决记录」。
+- vitest 全量 80 文件 775/775 全绿（本轮 rules 补 13 例），tsc 0 错误；纯函数零 prisma/LLM/DOM 依赖，vi.mock('@/lib/prisma') 隔离顶层 import 后直接 import 即跑。
+
 ## v2.4.0 — 2026-08-13
 
 ### 意图解析 intent-parser 补 16 例纯逻辑单测（魔王循环第3轮）
