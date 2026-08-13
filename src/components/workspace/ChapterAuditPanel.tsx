@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { Modal, ModalFooter } from "@/components/ui/Modal";
@@ -66,23 +66,27 @@ export function ChapterAuditPanel({
   projectId,
   nodeId,
   disabled,
+  triggerNodeId,
+  onTriggerConsumed,
 }: {
   projectId: string;
   nodeId: string;
   disabled?: boolean;
+  triggerNodeId?: string | null;
+  onTriggerConsumed?: () => void;
 }) {
   const [auditing, setAuditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [empty, setEmpty] = useState(false);
 
-  const handleAudit = async () => {
+  const loadAndOpen = async (tid: string) => {
     setAuditing(true);
     try {
       const res = await fetch("/api/generate/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, nodeId }),
+        body: JSON.stringify({ projectId, nodeId: tid }),
       });
       const d = await res.json();
       if (!res.ok) {
@@ -103,6 +107,22 @@ export function ChapterAuditPanel({
     } finally {
       setAuditing(false);
     }
+  };
+
+  const handleAudit = () => loadAndOpen(nodeId);
+
+  // 受控触发：父层把某章 id 塞进 triggerNodeId 时，自动拉取并弹开该章体检（看板行点击跳转用）
+  useEffect(() => {
+    if (triggerNodeId) {
+      loadAndOpen(triggerNodeId);
+      onTriggerConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerNodeId]);
+
+  const handleClose = () => {
+    setOpen(false);
+    onTriggerConsumed?.();
   };
 
   const barClass = (s: number) =>
@@ -143,7 +163,7 @@ export function ChapterAuditPanel({
 
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={handleClose}
         title="写作体检报告"
         icon="brain"
         size="2xl"

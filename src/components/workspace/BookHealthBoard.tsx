@@ -66,7 +66,7 @@ const gradeBadge = (g: string) =>
         ? "bg-warning/20 text-warning"
         : "bg-danger/20 text-danger";
 
-export function BookHealthBoard({ projectId, onPersisted }: { projectId: string; onPersisted?: () => void }) {
+export function BookHealthBoard({ projectId, onPersisted, onRowAudit }: { projectId: string; onPersisted?: () => void; onRowAudit?: (nodeId: string) => void }) {
   const [auditing, setAuditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [report, setReport] = useState<BookReport | null>(null);
@@ -212,7 +212,9 @@ export function BookHealthBoard({ projectId, onPersisted }: { projectId: string;
                   return (
                     <div
                       key={c.id}
-                      className={`grid grid-cols-[44px_1fr_64px_56px_56px_48px_76px_84px] items-center px-2 py-1.5 text-[11px] border-t border-[var(--nv-border-2)] ${
+                      onClick={() => { setOpen(false); onRowAudit?.(c.id); }}
+                      title="点击查看本章逐条命中明细与改稿建议"
+                      className={`grid grid-cols-[44px_1fr_64px_56px_56px_48px_76px_84px] items-center px-2 py-1.5 text-[11px] border-t border-[var(--nv-border-2)] cursor-pointer hover:bg-[var(--nv-primary)]/5 ${
                         flag ? "bg-danger/5" : ""
                       }`}
                     >

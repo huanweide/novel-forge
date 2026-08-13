@@ -25,11 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.11.0";
+export const LATEST_VERSION = "v2.12.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.11.0 全书体检新增「高危/警示」分级列（UI/功能增强，魔王循环第11轮）：全书健康度体检看板在章节明细表中新增「高危/警示」列，后端 /api/generate/audit/book 的 computeBookAudit 逐章统计 scanForbiddenWordsEnhanced 命中里 error 级（高危，必改）与 warning 级（套路化，建议改）违禁词数量并透传，前端以「高危/警示」双数字呈现——高危>0 红色加粗、仅警示>0 黄色、全 0 灰色「—」，让作者在大纲式看板里一眼锁定真正危险的章节，再点开该章「写作体检」看逐条命中明细与改稿建议；复用纯函数零算法改动、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 1 接口透传 + 1 看板列，纯函数已由 v2.3.0 单测覆盖）。",
+  "v2.12.0 全书体检看板行点击跳转单章体检（UI/功能增强，魔王循环第12轮）：全书健康度体检看板章节明细表每行可点击，点某章行即关闭看板并一键弹出该章的「写作体检」弹窗（逐条命中明细 + 改稿建议），把 v2.11 的「高危/警示」列与 v2.10 的单章命中明细串成闭环，作者看到某章高危后无需再回大纲找该章点体检；ChapterAuditPanel 改造为「受控触发」模式（父层 ChapterConfirmBar 用 auditTrigger 状态记下待弹章 id，看板行点击 setAuditTrigger(id) 并关看板，单章体检监听 triggerNodeId 变化自动 fetch 并弹开、关闭后 onTriggerConsumed 清空），三个组件一个共享状态串成闭环，纯前端状态传递零额外接口；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件改动，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.10.0 内容安全命中明细显式化（UI/功能增强，魔王循环第9轮）：单章「写作体检」面板安全体检区块新增可折叠「命中明细」列表，后端 /api/generate/audit 在 forbidden 返回里透传 scanForbiddenWordsEnhanced 已算好的逐条 matches 明细（最多80条，含 category/severity/pattern/context 上下文片段/suggestion 修改建议），前端按 error→warning→info 严重度排序逐条展示——高危(error 级如精确禁用词)红色、警示(warning)黄色、提示(info)灰色，每条给出命中位置上下文与替换建议，让用户点开体检就能直接定位「雷在哪句、具体哪个词、怎么改」；复用纯函数零算法改动、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 1 组件改动 + 接口透传，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.9.0 质量分回写大纲常驻徽章（UI/功能增强，魔王循环第8轮）：全书体检看板新增「保存质量分到大纲」按钮，点按调 POST /api/generate/audit/book?persist=true，把每章写作质量分批量回写 StoryNode.qualityScore（schema 已有字段）；左侧大纲树每章节点常驻显示彩色质量徽章（≥85绿/≥70主色/≥60警告/否则危险），体检一次后无需反复点开弹窗即可一眼看出哪章写得差；保存后自动刷新大纲与选中章节；纯本地零 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮前端 2 组件改动 + 回写 API，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
   "v2.8.0 全书健康度体检看板（UI/功能增强，魔王循环第7轮）：在章节确认栏常驻新增「全书体检」入口，点按调用新接口 /api/generate/audit/book，复用 forbidden-checker（内容安全五类扫描）与 quality-analyzer（写作质量六维评分）两个纯函数，按 projectId 一次性取出所有正文章节逐章跑两遍本地算法；看板弹窗聚合全书——每章安全分/质量分/评级/字数/状态明细表（需返工行红色高亮），顶部汇总平均质量分/平均安全分/需返工章数；纯本地零 LLM 开销、秒出；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮新增 1 个 API + 1 个看板组件，API 依赖 DB 不单测，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
@@ -59,6 +59,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.12.0",
+    date: "2026-08-14",
+    title: "v2.12.0 全书体检看板行点击跳转单章体检（UI/功能增强，魔王循环第12轮）",
+    sections: [
+      {
+        label: "全书体检看板行点击跳转单章体检",
+        items: [
+          "全书健康度体检看板（BookHealthBoard）章节明细表每行可点击：点某章行即关闭看板并一键弹出该章「写作体检」弹窗（逐条命中明细 + 上下文 + 改稿建议），把 v2.11 的高危/警示列与 v2.10 的单章命中明细串成闭环。",
+          "ChapterAuditPanel 改造为「受控触发」模式：父层 ChapterConfirmBar 用 auditTrigger 状态记录待弹章 id；看板行点击时 setAuditTrigger(id) 并关看板，单章体检用 useEffect 监听 triggerNodeId 变化自动 fetch 并弹开，关闭后 onTriggerConsumed 把状态清空以便下次再触发。",
+          "三个组件靠一个共享状态串成闭环，纯前端状态传递、零额外接口、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件改动，纯函数已由 v2.3.0 单测覆盖）。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.11.0",
     date: "2026-08-13",

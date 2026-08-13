@@ -54,6 +54,8 @@ export function ChapterConfirmBar({
   // 复用 PATCH /api/projects/[id] 通路，与「自动交付」并排同面板，满足跨面板对称与联动写入铁律。
   const [autoConfirm, setAutoConfirm] = useState(autoConfirmEnabled ?? true);
   const [togglingConfirm, setTogglingConfirm] = useState(false);
+  // v2.12.0：全书体检看板行点击 → 串起单章体检弹窗。trigger 为待弹开体检的章 id，消费后置空。
+  const [auditTrigger, setAuditTrigger] = useState<string | null>(null);
 
   // 确认栏默认收起为极简状态条，正文区不被遮挡；偏好持久化到 localStorage
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -256,9 +258,9 @@ export function ChapterConfirmBar({
 
             <div className="flex items-center gap-2 flex-wrap">
           {/* v2.7.0：写作安全/质量体检入口——复用 forbidden-checker + quality-analyzer 纯函数，定稿前给可见的踩线/质量报告 */}
-          <ChapterAuditPanel projectId={projectId} nodeId={nodeId} disabled={busy} />
+          <ChapterAuditPanel projectId={projectId} nodeId={nodeId} disabled={busy} triggerNodeId={auditTrigger} onTriggerConsumed={() => setAuditTrigger(null)} />
           {/* v2.8.0：全书健康度体检入口——复用 forbidden-checker + quality-analyzer 纯函数，一键聚合全书各章安全/质量分 */}
-          <BookHealthBoard projectId={projectId} onPersisted={onAction} />
+          <BookHealthBoard projectId={projectId} onPersisted={onAction} onRowAudit={(id) => setAuditTrigger(id)} />
           {/* 智能审阅态：常态收敛人工按钮，仅拦截/接管时展开 */}
           {isAutoMode && !isConfirmed && !manualTakeover && (
             <>
