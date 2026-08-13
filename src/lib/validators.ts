@@ -93,3 +93,45 @@ export async function readValidatedBody<T>(
     return badRequest(e instanceof Error ? e.message : "校验失败", "body");
   }
 }
+
+// ---- 可选字段校验（用于 PATCH 部分更新）----
+// 语义：未提供 → undefined（不更新该字段）；显式 null → null（清空）；
+// 类型非法 → 抛 ValidationError（脏数据在进入 prisma 前被拦下，防 500 / 防脏库）。
+
+export function optStr(v: unknown, field: string, max = 20000): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  if (typeof v !== "string") throw new ValidationError(field, `${field} 必须是字符串`);
+  if (v.length > max) throw new ValidationError(field, `${field} 长度不能超过 ${max}`);
+  return v;
+}
+
+export function optStrArray(v: unknown, field: string): string[] | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  return asStrArray(v, field);
+}
+
+export function optInt(v: unknown, field: string): number | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  if (typeof v === "number") return Math.trunc(v);
+  const n = Number(v);
+  if (!Number.isFinite(n)) throw new ValidationError(field, `${field} 必须是数字`);
+  return Math.trunc(n);
+}
+
+export function optBool(v: unknown): boolean | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  return Boolean(v);
+}
+
+export function optObj(v: unknown, field: string): Record<string, unknown> | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  if (typeof v !== "object" || Array.isArray(v)) {
+    throw new ValidationError(field, `${field} 必须是对象`);
+  }
+  return v as Record<string, unknown>;
+}
