@@ -56,7 +56,7 @@ export function CharacterToolbar({
     "border-[var(--nv-border-1)] text-[var(--nv-text-tertiary)] cursor-not-allowed";
 
   return (
-    <div className="flex items-center gap-1 mb-2 px-1 flex-wrap">
+    <div className="flex items-center gap-1 mb-2 px-2 flex-wrap">
       <button onClick={onToggleAll} className={`${base} ${neutral}`}>
         {allInViewSelected ? "取消全选" : `全选(${filtered.length})`}
       </button>
@@ -80,7 +80,7 @@ export function CharacterToolbar({
         onClick={onDedupe}
         disabled={deduping}
         className={`${base} ${deduping ? "border-[var(--nv-border-1)] text-[var(--nv-text-tertiary)] cursor-not-allowed" : neutral}`}
-        title="扫描全部角色卡：① 合并同一真实人物（昵称 / 尊称 / 错别字变体，由 AI 判定并接管别名与关系，被并卡软删标记「🗂 已合并」）；② 标记出场极少的龙套（🎭 龙套，仅打标签不删除）。批量写作后默认自动跑，此按钮用于手动补救。"
+        title="扫描全部角色卡：合并同一真实人物（昵称 / 尊称 / 别名 / 小名 / 隐藏身份揭露，由 AI 判定并接管别名与关系，被并卡软删标记「🗂 已合并」）。批量写作后默认自动跑，此按钮用于手动补救。"
       >
         {deduping ? (
           <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" /> 去重中…</span>

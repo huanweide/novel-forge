@@ -32,7 +32,7 @@ function CharacterRowImpl({
         checked={selected}
         onChange={() => onToggleSelect(character.id)}
         onClick={e => e.stopPropagation()}
-        className="rounded accent-[var(--nv-accent)] shrink-0"
+        className="rounded accent-[var(--nv-accent)] shrink-0 h-3.5 w-3.5"
       />
       <div onClick={() => onEdit(character)} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
         <span className="w-5 h-5 rounded-full bg-[var(--nv-surface-2)] flex items-center justify-center text-[10px] shrink-0">
@@ -59,7 +59,7 @@ function CharacterRowImpl({
         </div>
       </div>
       {character.reviewStatus === "pending" && (
-        <span className="ml-1 shrink-0 rounded bg-[var(--nv-warning)]/20 px-1 py-0.5 text-[8px] text-[var(--nv-warning)]">待审</span>
+        <span className="ml-1 shrink-0 rounded-full bg-[var(--nv-warning)]/20 px-1 py-0.5 text-[9px] text-[var(--nv-warning)]">待审</span>
       )}
       {character.reviewStatus === "pending" && onConfirm && (
         <button

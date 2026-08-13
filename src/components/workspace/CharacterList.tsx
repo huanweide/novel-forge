@@ -232,7 +232,7 @@ export function CharacterList({
     }
   };
 
-  // v1.4.0：自动去重合并——扫描全部角色卡，合并相似名、标记龙套，结果弹窗预览后由 onExpanded 刷新
+  // v1.4.0：自动去重合并——扫描全部角色卡，合并同一真实人物（昵称/尊称/别名/小名/隐藏身份揭露），结果弹窗预览后由 onExpanded 刷新
   const handleDedupe = async () => {
     setDeduping(true);
     setDedupeResult(null);
@@ -255,11 +255,10 @@ export function CharacterList({
       });
       const merged = (d.mergedGroups || []).length;
       const pending = (d.pendingGroups || []).length;
-      const rockets = (d.markedRockets || []).length;
-      if (merged + pending + rockets === 0) {
-        toastSuccess("未发现需去重/标记的角色，全部干净");
+      if (merged + pending === 0) {
+        toastSuccess("未发现需合并或待确认的角色，全部干净");
       } else {
-        toastInfo(`扫描 ${d.total || 0} 个角色：${merged} 组合并、${pending} 组待确认、${rockets} 个龙套`);
+        toastInfo(`扫描 ${d.total || 0} 个角色：${merged} 组合并、${pending} 组待确认`);
       }
     } catch (e) {
       toastError("去重合并失败：" + (e instanceof Error ? e.message : "网络错误"));
@@ -385,7 +384,7 @@ export function CharacterList({
             <span className="flex-1 min-w-0 truncate pr-2 text-xs font-medium text-[var(--nv-text-primary)]">去重合并结果（共扫描 {dedupeResult.total} 个角色）</span>
             <button onClick={() => { setDedupeResult(null); onExpanded(); }} className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]" title="关闭去重结果"><Icon name="x" size={11} />关闭</button>
           </div>
-          {dedupeResult.mergedGroups.length === 0 && dedupeResult.pendingGroups.length === 0 && dedupeResult.markedRockets.length === 0 ? (
+          {dedupeResult.mergedGroups.length === 0 && dedupeResult.pendingGroups.length === 0 ? (
             <p className="text-xs text-[var(--nv-text-muted)]">全部干净：没有需要合并或标记的角色。</p>
           ) : (
             <div className="space-y-2 max-h-56 overflow-y-auto">
@@ -395,18 +394,13 @@ export function CharacterList({
                 </div>
               ))}
               {dedupeResult.pendingGroups.map((g, i) => (
-                <div key={`p${i}`} className="text-[11px] text-[var(--nv-warn)]">
+                <div key={`p${i}`} className="text-[11px] text-[var(--nv-warning)]">
                   待确认：{g.mainName} ← {g.merged.map((m) => m.name).join("、")}
                 </div>
               ))}
-              {dedupeResult.markedRockets.length > 0 && (
-                <div className="text-[11px] text-[var(--nv-text-secondary)]">
-                  <span className="text-accent-label">龙套标记：</span>{dedupeResult.markedRockets.join("、")}
-                </div>
-              )}
             </div>
           )}
-          <p className="text-[10px] text-[var(--nv-text-tertiary)] mt-2">被合并角色已软删标记（🗂 已合并），龙套仅打标签（🎭 龙套）不删除，可在标签筛选中查看/隐藏。</p>
+          <p className="text-[10px] text-[var(--nv-text-tertiary)] mt-2">被合并角色已软删标记（🗂 已合并），可在标签筛选中查看/隐藏。</p>
         </div>
       )}
 

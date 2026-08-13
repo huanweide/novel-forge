@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.17";
+export const LATEST_VERSION = "v2.0.18";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.18 角色栏 UI 统一 + 去重合并架构重做（round-22）：自动发现阶段实时清洗 LLM 误写的「🆕自动发现/待审」脏标记；按「两变体互并」把韩姓男子+韩先生、迭戈+迭戈先生等同姓唯一候选即时归并同一卡（加别名），不再各建新人；含「·」的隐藏身份/马甲（如迭戈·美第奇）独立建卡打「🎭 隐藏身份（待确认）」、不自动合并；去重合并新增大纲/后文三路判断（注入 Project.globalPrompt+synopsis+已批准 outline，缓存 key 拼其指纹使后文揭露可随剧情重判），含·组强制 pending 待用户确认；按「不要自动分类」移除自动龙套标记。角色栏 UI 整洁统一：复选框定宽、待审徽章 9px 圆角、工具栏 px-2 对齐、修复未定义 --nv-warn 令牌、龙套文案全清。",
   "v2.0.17 生产日志噪声治理 + 守护型代码入库（round-21 检验并优化）：sync-global-prompt.ts 删除每次角色/世界/风格变化刷屏的成功 console.log、保留失败 console.error；babylore/fill.ts 删除每次 LLM 调用（含重试）的调试日志（attempt/http/raw_len/finish）、失败日志降级 console.warn，babylore/loop.ts 删除每章填表汇总 log（信息已 SSE 到前端）；原则只清后台高频循环任务的调试日志，保留错误诊断与一次性导入/回写流程日志。检验发现此前游离 git 外的守护型代码正式入库：prompt-eval.ts 评测集（#320 守护全局提示词要素不丢）+ prompt-revisions/rollback 回滚 API（#319），均类型/测试健康、功能完整，长期游离是技术债，现纳入版本控制（前端暂无回滚 UI 入口，纯后端闭环，符合增量集成）。",
   "v2.0.16 精修弹窗焦点陷阱 + 角色/世界卡片重渲染优化（round-20 收尾 ui-lens 遗留项）：RefineDiffModal 接入已有 useFocusTrap hook（面板挂载 ref + tabIndex=-1，Esc 关闭、Tab 在面板内循环、关闭后焦点交还打开前元素），修复「Esc 无法关闭 / 键盘焦点逃逸到背后页面 / 键盘用户被困」可访问性缺陷；WorldEntryCard/CharacterRow 包 React.memo，CharacterList 把传给卡片的 toggleSelect/handleConfirm/onDelete/onConfirm/onTagClick 全部 useCallback 稳定化（toggleSelect 改函数式更新），让 memo 真正生效——搜索输入、去重结果弹窗等父级 state 变化时未变卡片跳过重渲染；虚拟滚动经评估暂缓（单项目角色/世界设定条目通常几十~几百条，普通 map 渲染足够，项目未引入任何 windowing 库，盲目引入属过度优化且增新依赖，留待数千+条目场景再接）。",
   "v2.0.15 角色去重合并深度修复（round-19）：核心名 token 宽松分组启发式——去尊称/后缀/描述词提取稳定核心名，识别「韩先生/韩姓男子」「迭戈/迭戈先生/迭戈·美第奇」等脏卡与全名+后缀重复（此前因无全名正主被静默漏检，误报「全部干净」）；LLM∪规则∪宽松三路分组并集、共享 id 归并；置信度分级——有普通全名正主→high 自动合并，脏卡互相→low 进 pending 确认界面；前端去重弹窗显示待确认提案并修正「全部干净」误判，合并提案面板标识「宽松判定」来源；entity-auto-creator 自动发现新角色后后台 fire-and-forget 触发去重合并，新角色即时归并。",
@@ -44,6 +45,37 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.18",
+    date: "2026-08-12",
+    title: "v2.0.18 角色栏 UI 统一 + 去重合并架构重做（round-22）",
+    sections: [
+      {
+        label: "角色栏 UI 栏位统一（整洁大小一致）",
+        items: [
+          "复选框加 h-3.5 w-3.5 定宽，与 20px 头像比例协调；待审徽章 text-[8px]→9px 且改 rounded-full，与筛选 pill 风格统一。",
+          "CharacterToolbar 容器 px-1→px-2，与角色行左缩进对齐，消除 4px 错位；去重按钮 tooltip 去掉「标记龙套」句（已无自动分类）。",
+          "修复 CharacterList 误用的未定义令牌 --nv-warn→--nv-warning（globals.css 仅定义后者）；去重结果弹窗移除龙套标记展示块与 footer 龙套文案。",
+        ],
+      },
+      {
+        label: "去重合并架构重做（别名实时合并 vs 马甲区分）",
+        items: [
+          "入库即清洗：autoCreateEntities 新增 normalizeDiscoveryName，剥离 LLM 误写入实体名的「🆕自动发现/待审」等脏标记，根绝下游启发式失效。",
+          "自动发现阶段实时别名合并：新增 resolveDiscoveryMergeTarget（「两变体互并」），韩姓男子+韩先生、迭戈+迭戈先生等同姓唯一候选即时归并同一卡并加别名，不再各建新人卡闪烁；歧义（韩立/韩雪+韩先生）与单字名无同姓正主时拒绝合并，安全优先。",
+          "马甲/隐藏身份不合并：含「·」的名字（迭戈·美第奇）独立建卡并打「🎭 隐藏身份（待确认）」、background 记疑似核心名线索，绝不自动合并。",
+          "三路判断：dedupeCharacters 注入 Project.globalPrompt+synopsis+已批准 StoryNode.outline（截断 4k）到 LLM，识别「大纲写明 X 即 Y」「后文揭露身份」；缓存 key 拼接大纲/后文指纹（修复此前大纲变化不触发重判的 stale bug）；含·组强制 pending 待用户确认。",
+          "按「不要自动分类」诉求移除 dedupe 自动龙套标记逻辑（markedRockets 恒空，保留字段兼容前端）。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 62 文件 529/529 全绿（基线 514 + 新增 round-22 单测 15 例：normalizeDiscoveryName 4 + resolveDiscoveryMergeTarget 7 + computeConfidence 4）；无 schema 迁移、无新依赖。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.17",
     date: "2026-08-13",

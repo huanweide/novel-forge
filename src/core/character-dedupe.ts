@@ -81,7 +81,34 @@ function extractJson(raw: string): any {
  * 返回 id 数组的数组（每组长度 ≥ 2），仅含确实存在且集合内去重的 id。
  * 任何异常（无 Key / 超时 / 解析失败）一律返回空数组——宁可少合并也不错并。
  */
-async function llmDetectSamePersonGroups(chars: CharLite[]): Promise<string[][]> {
+/**
+ * 项目大纲/后文上下文（round-22，F 修正）：
+ * 读取 Project.globalPrompt + synopsis + 已批准 StoryNode.outline，截断到硬预算（4k 字）用于注入 LLM，
+ * 同时哈希成指纹拼入 dedupe 缓存 key，确保大纲/后文变化能触发重新判断（否则「后文揭露身份」永不重跑）。
+ */
+async function getOutlineContextSummary(projectId: string): Promise<string> {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { globalPrompt: true, synopsis: true },
+    });
+    const nodes = await prisma.storyNode.findMany({
+      where: { projectId, status: { in: ["completed", "confirmed", "draft"] } },
+      select: { outline: true },
+      take: 50,
+    });
+    const text = [
+      project?.globalPrompt || "",
+      project?.synopsis || "",
+      ...nodes.map((n) => n.outline || "").filter(Boolean),
+    ].join("\n").replace(/\s+/g, " ").slice(0, 4000);
+    return text;
+  } catch {
+    return "";
+  }
+}
+
+async function llmDetectSamePersonGroups(chars: CharLite[], context: string): Promise<string[][]> {
   if (chars.length < 2) return [];
   const listing = chars
     .map((c, i) => {
@@ -95,11 +122,15 @@ async function llmDetectSamePersonGroups(chars: CharLite[]): Promise<string[][]>
 规则：
 - 仅当高度确信是同一人时才归组；
 - 同姓但不同人（如韩立与韩雪）不要归组；
+- 若项目背景（大纲/后文）明确写明「X 即 Y」「X 化名 Y」「X 实为 Y」，则 X 与 Y 应归为同一人组；
+- 含「·」的名字（如「迭戈·美第奇」）通常是隐藏身份/马甲，除非背景明确证明其与某卡为同一人，否则不要归组；
 - 龙套 / 一次性称呼若无明确同一人证据不要归组；
 - 每组是同一真实人物的 id 数组（长度 ≥ 2）。
 只输出 JSON：{"groups":[["id1","id2"],...]}，不要任何额外文字。`;
 
-  const prompt = `角色卡清单：\n${listing}\n\n请输出归组 JSON。`;
+  const prompt = context
+    ? `项目背景（大纲/后文，可能含身份揭露）：\n${context}\n\n角色卡清单：\n${listing}\n\n请输出归组 JSON。`
+    : `角色卡清单：\n${listing}\n\n请输出归组 JSON。`;
 
   try {
     const raw = await completeText(system, prompt, { temperature: 0.2, maxTokens: 1500, role: "dedupe", json: true });
@@ -248,9 +279,10 @@ export function computeConfidence(members: CharLite[], allNames: string[]): "hig
   const main = pickMain(members);
   const merged = members.filter((x) => x.id !== main.id);
   if (merged.length === 0) return "high";
-  // 主卡本身是脏卡/变体/单字/带后缀 → 整组置信度降为 low，进 pending 等用户确认（v2.0.15 宽松标准 + 确认 UI）
+  // 主卡本身是脏卡/变体/单字/带后缀，或组内任一含「·」（隐藏身份/马甲）→ 整组降 low，进 pending 等用户确认
   const mainIsPlain = !isHonorificVariant(main.name) && !isSurnameAbbrevOrDescriptor(main.name) && !main.name.includes("·") && main.name.trim().length > 1;
-  if (!mainIsPlain) return "low";
+  const hasPseudo = members.some((m) => m.name.includes("·") || m.name.includes("•") || m.name.includes("・"));
+  if (!mainIsPlain || hasPseudo) return "low";
   const allResolved = merged.every((m) => canMergeIntoMain(m, main, allNames));
   return allResolved ? "high" : "low";
 }
@@ -348,7 +380,8 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
 
   // v2.0.15：LLM 分组 ∪ 规则分组 ∪ 核心名 token 宽松分组（去重合并来源三路并集，共享 id 归并）；
   // 项目级语义缓存：角色集内容指纹未变则跳过 LLM（#314 增量/语义缓存）。LOOSE_V1 戳强制升级后旧缓存失效。
-  const allFp = "LOOSE_V1|" + lite.map(charFingerprint).sort().join("|");
+  const outlineFp = await getOutlineContextSummary(projectId);
+  const allFp = "LOOSE_V2|" + lite.map(charFingerprint).sort().join("|") + "|" + outlineFp;
   const cached = dedupeGroupCache.get(projectId);
   let finalGroups: string[][];
   let source: "llm" | "rule" | "loose" | "cache";
@@ -357,7 +390,8 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     finalGroups = cached.groups;
     source = "cache";
   } else {
-    const llmGroups = await llmDetectSamePersonGroups(lite);
+    const outlineContext = outlineFp; // 复用缓存 key 阶段已取过的同一份上下文，避免重复查库
+    const llmGroups = await llmDetectSamePersonGroups(lite, outlineContext);
     const ruleGroups = ruleBasedGroups(lite);
     const looseGroups = looseTokenGroups(lite);
     finalGroups = mergeOverlappingGroups([...llmGroups, ...ruleGroups, ...looseGroups]);
@@ -449,27 +483,9 @@ export async function dedupeCharacters(projectId: string): Promise<DedupeResult>
     }
   }
 
-  // 龙套标记：仅对未被合并、且背景薄弱 / 无剧情的卡，用 DB 侧 count 统计出场次数（不加载全文）
-  const rocketCandidates = lite.filter(
-    (c) => !consumed.has(c.id) && (c.background || "").trim().length < 20 && !(c.storyLine || "").trim(),
-  );
+  // round-22（D 修正）：移除自动龙套分类标记——不做任何自动分类，符合用户「不要自动分类」诉求。
+  // markedRockets 保留字段（恒空）以兼容前端接口。
   const markedRockets: string[] = [];
-  await Promise.all(
-    rocketCandidates.map(async (c) => {
-      const key = c.name.trim();
-      if (!key) return;
-      const cnt = await prisma.storyNode.count({
-        where: { projectId, content: { contains: key, mode: "insensitive" } },
-      });
-      if (cnt < 3 && !c.tags.includes("🎭 龙套")) {
-        await prisma.characterCard.update({
-          where: { id: c.id },
-          data: { tags: Array.from(new Set([...c.tags, "🎭 龙套"])) },
-        });
-        markedRockets.push(c.name);
-      }
-    }),
-  );
 
   return { mergedGroups, pendingGroups, markedRockets, total: chars.length };
 }

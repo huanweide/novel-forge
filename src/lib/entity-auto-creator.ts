@@ -286,6 +286,54 @@ export function isSimilarName(a: string, b: string): boolean {
   return levenshtein(x, y) === 0;
 }
 
+/**
+ * 发现名清洗（round-22）：剥离 LLM 误写入实体名的发现标记（🆕自动发现 / 待审 等），
+ * 避免脏后缀污染下游去重启发式。reviewStatus 的「待审」语义由 UI 基于 reviewStatus 字段展示，
+ * 不依赖名字里的文字。
+ */
+const DISCOVERY_MARKER_RE =
+  /[\s　]*(🆕|🔍|⚑|▶)?\s*自动发现|（自动发现）|\(自动发现\)|待审|🔍|⚑|▶/gi;
+export function normalizeDiscoveryName(raw: string): { name: string; hadMarker: boolean } {
+  const trimmed = raw.trim();
+  const cleaned = trimmed.replace(DISCOVERY_MARKER_RE, "").replace(/\s+/g, " ").trim();
+  return { name: cleaned, hadMarker: cleaned !== trimmed };
+}
+
+/**
+ * 自动发现阶段实时别名合并（round-22，替换 resolveVariantTarget 的「仅 plain 正主」限制）：
+ * 允许「两变体互并」——只要同姓唯一候选（无论候选是普通正主还是另一个变体）即合并加 alias，
+ * 实现「韩姓男子」+「韩先生」实时归并同一卡，避免先建两张脏卡再等 dedupe 的闪烁。
+ *  - 入参必须是变体（尊称/描述词/单字缩写），普通姓名不走此路；
+ *  - 含「·」的候选（隐藏身份/马甲）不自动合并，返回 null（独立建卡，B 修正）；
+ *  - 同姓候选 ≥2（歧义，如 韩立/韩雪）→ null，不合并，等后续 LLM/大纲判断（安全优先，且单字名仅当有同姓正主才合并，避免误并真单字角色）。
+ */
+export function resolveDiscoveryMergeTarget(allNames: string[], variantName: string): string | null {
+  const v = variantName.trim().toLowerCase();
+  if (!v) return null;
+  // 后缀尊称（只匹配结尾，避免误命中「王小明」这类含单字尊称的普通名）：
+  // 「迭戈先生」= 迭戈 + 先生，按后缀尊称识别为变体，可合并到同姓正主。
+  const SUFFIX_HONORIFICS = [
+    "先生", "女士", "小姐", "公子", "姑娘", "少年", "少女", "夫人", "阁下", "大人",
+    "老板", "师傅", "师父", "少爷", "殿下", "陛下", "兄台", "大侠", "少侠", "壮士",
+    "道友", "前辈", "掌门", "宗主", "将军", "书生", "侠女", "女侠", "朋友",
+  ];
+  const hasSuffixHonorific = SUFFIX_HONORIFICS.some((t) => v.endsWith(t));
+  const isVariant =
+    isHonorificVariant(variantName) ||
+    isSurnameAbbrevOrDescriptor(variantName) ||
+    variantName.trim().length === 1 || // 单字缩写
+    hasSuffixHonorific;
+  if (!isVariant) return null;
+  if (v.includes("·") || v.includes("•") || v.includes("・")) return null; // 马甲不自动合并
+  const surname = coreSurname(variantName);
+  const cands = allNames
+    .map((n) => n.trim())
+    .filter((n) => n.toLowerCase() !== v)
+    .filter((n) => !n.includes("·") && !n.includes("•") && !n.includes("・"))
+    .filter((n) => coreSurname(n) === surname);
+  return cands.length === 1 ? cands[0] : null;
+}
+
 // ─── 主函数 ──────────────────────────────────────────────────
 
 /**
@@ -343,8 +391,9 @@ export async function autoCreateEntities(
   const skipped: string[] = [];
 
   for (const entity of newEntities) {
-    const name = entity.name.trim();
-    if (!name || name.length < 2) continue;
+    const rawName = entity.name.trim();
+    const { name } = normalizeDiscoveryName(rawName);
+    if (!name || name.length < 2) { skipped.push(rawName); continue; }
     // Q1：兜底过滤句子碎片（含功能词/标点/超长/末字非名词性 CJK），
     // 即使上游蒸馏/提取返回片段，也不写入世界书污染数据。
     if (!isCompleteEntityName(name)) {
@@ -366,7 +415,7 @@ export async function autoCreateEntities(
     // 同人异称：尊称 / 昵称缩写 / 姓+描述词 自动并入唯一同姓正主别名（歧义时拒绝，避免错并）。
     // 统一走 resolveVariantTarget（合并原两处重复分支，并修掉单字缩写此前因 resolveHonorificTarget
     // 只认 isHonorificVariant 而永远合并不进的 bug：现「樊」=樊斯瑞、「韩姓男子」=韩立 都能正确并入）。
-    const targetName = resolveVariantTarget(existingChars.map((c) => c.name), name);
+    const targetName = resolveDiscoveryMergeTarget(existingChars.map((c) => c.name), name);
     if (targetName) {
       const matched = existingChars.find((c) => c.name.toLowerCase() === targetName.toLowerCase());
       if (matched) {
@@ -415,15 +464,18 @@ export async function autoCreateEntities(
     try {
       if (entity.type === "character") {
         // ── 创建角色卡 ──
+        const isPseudo = name.includes("·") || name.includes("•") || name.includes("・");
         const card = await prisma.characterCard.create({
           data: {
             projectId,
             name,
             role: "supporting",
             personality: { dominant: "自动发现，待丰富" } as any,
-            background: `[第${sourceNodeId}章自动发现]`,
+            background: isPseudo
+              ? `[第${sourceNodeId}章自动发现] 疑似隐藏身份/马甲：核心名「${name.split(/[·•・]/)[0]}」，待大纲或后文确认是否同一人。`
+              : `[第${sourceNodeId}章自动发现]`,
             abilities: [],
-            tags: [],
+            tags: isPseudo ? ["🎭 隐藏身份（待确认）"] : [],
             currentStatus: "alive",
             reviewStatus: "pending",
           } as any,

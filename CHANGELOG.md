@@ -1,5 +1,19 @@
 ﻿# Novel Forge 更新公告
 
+## v2.0.18 — 2026-08-12
+
+### 角色栏 UI 栏位统一（整洁大小一致）
+- 复选框加 h-3.5 w-3.5 定宽，与 20px 头像比例协调；待审徽章 text-[8px]→9px 且改 rounded-full，与筛选 pill 风格统一。
+- CharacterToolbar 容器 px-1→px-2，与角色行左缩进对齐，消除 4px 错位；去重按钮 tooltip 去掉「标记龙套」句（已无自动分类）。
+- 修复 CharacterList 误用的未定义令牌 --nv-warn→--nv-warning（globals.css 仅定义后者）；去重结果弹窗移除龙套标记展示块与 footer 龙套文案。
+
+### 去重合并架构重做（别名实时合并 vs 马甲区分）
+- 入库即清洗：autoCreateEntities 新增 normalizeDiscoveryName，剥离 LLM 误写入实体名的「🆕自动发现/待审」等脏标记，根绝下游启发式失效。
+- 自动发现阶段实时别名合并：新增 resolveDiscoveryMergeTarget（「两变体互并」），韩姓男子+韩先生、迭戈+迭戈先生等同姓唯一候选即时归并同一卡并加别名，不再各建新人卡；歧义（韩立/韩雪+韩先生）与单字名无同姓正主时拒绝合并，安全优先。
+- 马甲/隐藏身份不合并：含「·」的名字（迭戈·美第奇）独立建卡并打「🎭 隐藏身份（待确认）」、background 记疑似核心名线索，绝不自动合并。
+- 三路判断：dedupeCharacters 注入 Project.globalPrompt+synopsis+已批准 StoryNode.outline（截断 4k）到 LLM，识别「大纲写明 X 即 Y」「后文揭露身份」；缓存 key 拼接大纲/后文指纹（修复 stale bug）；含·组强制 pending 待用户确认。
+- 按「不要自动分类」诉求移除 dedupe 自动龙套标记逻辑。
+
 ## v2.0.17 — 2026-08-13
 
 ### 后台高频任务日志噪声治理（round-21 检验并优化）
