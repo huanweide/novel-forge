@@ -440,30 +440,30 @@ export async function dedupeCharacters(
     merged.forEach((x) => consumed.add(x.id));
 
     if (confidence === "high") {
-      // 高置信度：直接合并，并留快照可回滚（detectOnly 模式仅分组提示、不写库不合并）
+      // 高置信度：直接合并，并留快照可回滚。
+      // detectOnly（加载时静默）也执行自动合并——高置信合并是安全且用户已认可的快速路径，无需每项目每次确认；
+      // 仅低置信组保留进 pending 提示，由用户在 MergePendingPanel 手动确认（见 else 分支）。
       mergedGroups.push({
         mainId: main.id,
         mainName: main.name,
         merged: merged.map((x) => ({ id: x.id, name: x.name })),
         confidence,
       });
-      if (!opts?.detectOnly) {
-        const mainAfter = await applyMerge(main, merged);
-        await prisma.characterCardRevision.create({
-          data: {
-            projectId,
-            mainCardId: main.id,
-            mergedIds: merged.map((x) => x.id),
-            mainBefore: mainBefore as any,
-            mergedBefore: mergedBefore as any,
-            mainAfter: mainAfter as any,
-            confidence,
-            source,
-            status: "applied",
-            summary,
-          },
-        });
-      }
+      const mainAfter = await applyMerge(main, merged);
+      await prisma.characterCardRevision.create({
+        data: {
+          projectId,
+          mainCardId: main.id,
+          mergedIds: merged.map((x) => x.id),
+          mainBefore: mainBefore as any,
+          mergedBefore: mergedBefore as any,
+          mainAfter: mainAfter as any,
+          confidence,
+          source,
+          status: "applied",
+          summary,
+        },
+      });
     } else {
       // 低置信度：只存快照写 pending，不合并，等用户确认（detectOnly 模式仅分组提示、不写库）
       pendingGroups.push({

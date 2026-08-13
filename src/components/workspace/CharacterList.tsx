@@ -289,7 +289,10 @@ export function CharacterList({
         if (res.ok) {
           const merged = (d.mergedGroups || []).length;
           const pending = (d.pendingGroups || []).length;
-          if (merged + pending > 0) setDedupeHint({ merged, pending });
+          // 高置信组已在后端静默自动合并：刷新列表以反映合并结果（不弹提示）
+          if (merged > 0) onExpanded();
+          // 仅低置信待确认组进提示 banner（用户手动点确认）
+          if (pending > 0) setDedupeHint({ merged, pending });
         }
       } catch {
         // 静默：检测失败不影响正常使用
@@ -374,13 +377,13 @@ export function CharacterList({
 
   return (
     <div className="space-y-1">
-      {dedupeHint && dedupeHint.merged + dedupeHint.pending > 0 && (
+      {dedupeHint && dedupeHint.pending > 0 && (
         <div
           onClick={handleDedupeFromHint}
           className="mb-1 cursor-pointer rounded-md border border-[var(--nv-warning)] bg-[var(--nv-surface-2)] px-3 py-2 text-xs text-[var(--nv-text-primary)] hover:opacity-80"
-          title="点击运行自动去重合并"
+          title="点击确认合并低置信重复角色"
         >
-          发现 {dedupeHint.merged + dedupeHint.pending} 个可能为同一人的角色（自动合并 {dedupeHint.merged} · 待确认 {dedupeHint.pending}），点击一键清理 →
+          检测到 {dedupeHint.pending} 个疑似同一人但把握不足的重复角色，点击确认合并{dedupeHint.merged > 0 ? `（另有 ${dedupeHint.merged} 组高置信重复已自动合并）` : ""} →
         </div>
       )}
       <CharacterFilters

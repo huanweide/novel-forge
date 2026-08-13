@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.0.19";
+export const LATEST_VERSION = "v2.0.20";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.0.20 高置信组加载时静默自动合并（round-22 续 v2）：角色栏加载/切换项目时后台静默检测存量重复角色，置信度为 high 的组（规则分组/尊称缩写变体/有普通全名正主）直接在后端自动合并并留可回滚快照，不再弹提示打扰用户；仅置信度 low 的组（仅靠语义相似、无明确变体证据）保留进角色栏顶部非阻塞提示 banner，由用户手动点确认合并。合并后自动 onExpanded() 刷新列表反映结果。韩姓男子+韩先生、迭戈+迭戈先生类高置信脏卡加载即被静默清理；含·马甲、歧义组等低置信项仍走待确认流程，兼顾自动化与用户掌控权。",
   "v2.0.19 存量角色自动检测提示（round-22 续）：角色栏加载/切换项目时后台静默检测一次存量重复角色（dedupeCharacters 新增 detectOnly 模式只分组不写库不合并，复用项目级指纹缓存跳过 LLM）；发现可合并组则在角色栏顶部显示非阻塞提示 banner（发现 N 个可能为同一人的角色，点击一键清理），点击即运行现有全量去重合并；存量脏卡（韩姓男子+韩先生、迭戈+迭戈先生）加载即被发现并提示，无需再手动点「自动去重合并」——自动发现实时合并仍只对新角色生效，本功能补上存量场景。",
   "v2.0.18 角色栏 UI 统一 + 去重合并架构重做（round-22）：自动发现阶段实时清洗 LLM 误写的「🆕自动发现/待审」脏标记；按「两变体互并」把韩姓男子+韩先生、迭戈+迭戈先生等同姓唯一候选即时归并同一卡（加别名），不再各建新人；含「·」的隐藏身份/马甲（如迭戈·美第奇）独立建卡打「🎭 隐藏身份（待确认）」、不自动合并；去重合并新增大纲/后文三路判断（注入 Project.globalPrompt+synopsis+已批准 outline，缓存 key 拼其指纹使后文揭露可随剧情重判），含·组强制 pending 待用户确认；按「不要自动分类」移除自动龙套标记。角色栏 UI 整洁统一：复选框定宽、待审徽章 9px 圆角、工具栏 px-2 对齐、修复未定义 --nv-warn 令牌、龙套文案全清。",
   "v2.0.17 生产日志噪声治理 + 守护型代码入库（round-21 检验并优化）：sync-global-prompt.ts 删除每次角色/世界/风格变化刷屏的成功 console.log、保留失败 console.error；babylore/fill.ts 删除每次 LLM 调用（含重试）的调试日志（attempt/http/raw_len/finish）、失败日志降级 console.warn，babylore/loop.ts 删除每章填表汇总 log（信息已 SSE 到前端）；原则只清后台高频循环任务的调试日志，保留错误诊断与一次性导入/回写流程日志。检验发现此前游离 git 外的守护型代码正式入库：prompt-eval.ts 评测集（#320 守护全局提示词要素不丢）+ prompt-revisions/rollback 回滚 API（#319），均类型/测试健康、功能完整，长期游离是技术债，现纳入版本控制（前端暂无回滚 UI 入口，纯后端闭环，符合增量集成）。",
@@ -46,6 +47,27 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.0.20",
+    date: "2026-08-13",
+    title: "v2.0.20 高置信组加载时静默自动合并（round-22 续 v2）",
+    sections: [
+      {
+        label: "高置信组加载时静默自动合并",
+        items: [
+          "dedupeCharacters 的 detectOnly（加载时后台静默检测）模式下，置信度 high 的组不再只分组提示，而是直接在后端自动合并并写 applied 快照（可一键回滚）——高置信合并是安全且用户已认可的快速路径，无需每项目每次确认。",
+          "仅置信度 low 的组（仅靠语义相似、无明确变体证据，如含·马甲、歧义组）保留进 pending，由用户在 MergePendingPanel 手动确认；detectOnly 不写库、不合并，保留用户对低置信合并的确认权。",
+          "前端 detectOnly 检测后：merged（高置信自动合并组数）> 0 时自动调 onExpanded() 刷新角色列表（不弹提示）；仅 pending > 0 时在角色栏顶部显示非阻塞 banner「检测到 K 个疑似同一人但把握不足的重复角色，点击确认合并（另有 M 组高置信重复已自动合并）→」。韩姓男子/韩先生、迭戈/迭戈先生类高置信脏卡加载即被静默清理，低置信项仍走待确认流程。",
+        ],
+      },
+      {
+        label: "验证",
+        items: [
+          "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 62 文件 529/529 全绿（高置信自动合并复用 v2.0.15/2.0.18 既有合并与快照逻辑，无新增分支、无 schema 迁移、无新依赖）；detectOnly 合并由 POST /api/characters/dedupe 的全局 try-catch 兜底，异常不污染提示流程。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.0.19",
     date: "2026-08-13",
