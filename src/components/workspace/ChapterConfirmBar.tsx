@@ -149,8 +149,10 @@ export function ChapterConfirmBar({
         // 真正执行才说「已执行」，未触发/失败则如实说明，不谎称「已执行」。
         let msg: string;
         if (action === "confirm") {
-          const logs: any[] = Array.isArray(d.reviewLogs) ? d.reviewLogs : [];
-          const lastFill = logs.length ? (logs[logs.length - 1] as any)?.fill : undefined;
+          const logs = Array.isArray(d.reviewLogs)
+            ? (d.reviewLogs as Array<{ fill?: string }>)
+            : [];
+          const lastFill = logs.length ? logs[logs.length - 1]?.fill : undefined;
           if (typeof lastFill === "string") {
             if (lastFill.includes("已执行")) msg = "已确认定稿 ✓（自动填表已执行）";
             else if (lastFill.startsWith("（") || lastFill.includes("未触发") || lastFill.includes("跳过") || lastFill.includes("关闭")) msg = "已确认定稿 ✓（本次未触发自动填表）";

@@ -1,5 +1,11 @@
 ﻿# Novel Forge 更新公告
 
+## v2.14.0 — 2026-08-14
+
+### 类型逃逸收尾（maxloop 深度体检 Round-24）
+- ChapterConfirmBar 清除 `const logs: any[]` 与 `logs[logs.length - 1] as any` 两处类型逃逸：确认定稿时依据 reviewLogs.fill 真实状态决定文案，原 any 绕过类型检查，改为 `Array<{ fill?: string }>` + 可选链 `?.fill`，对齐 v2.13 类型安全收尾主题。
+- 本轮为 maxloop 深度体检 Round-24，子代理（Agent 工具）通道在本环境返回空、不落盘，已按 SKILL.md「六之二」自动降级为主代理 Chair 亲验（见 PROCESS/meetings/round-24/chair-self-audit.md）；tsc 0 错误，vitest 全量 80 文件 775/775 全绿。
+
 ## v2.13.0 — 2026-08-14
 
 ### 体检链路无障碍与类型安全收尾（maxloop 深度体检 Round-23）
