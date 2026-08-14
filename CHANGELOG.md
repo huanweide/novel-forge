@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v2.18.0 — 2026-08-14
+
+### UI 优化 + 测试流程优化（maxloop 多视角亲验，主对话模拟子 Agent 多轮检验）
+- 修 CharacterList 后台静默去重探测 fire-and-forget 反模式：补 AbortController，组件卸载（切换项目/离开页面）时中止在途请求，避免 fetch 回调在卸载后 setState 触发 React 警告（novel-forge-diagnostic 反模式清单项）。
+- CharacterRow 删除图标按钮补 aria-label「删除角色」（图标唯一按钮可访问性缺口，原仅靠 hover 显隐、读屏与键盘用户无按钮名）；v2.17 已修搜索框 aria-label、去重提示 banner 改 button、关闭按钮 aria-label，本轮补完角色行删除键。
+- 抽角色过滤逻辑为纯函数 filterCharacters（src/lib/character-filter.ts，含 isUserTag 用户标签判定），把 v2.17 内联于 CharacterList 的过滤规则（已合并卡隐藏 / role / tag / status / search 命中 name+alias）收敛为可单测纯函数，CharacterList 改调用。
+- vitest 配 jsdom 组件测试基础设施：setupFiles 注册 jest-dom 匹配器（用 /vitest 子路径入口避免 expect is not defined）、include 增加 .test.tsx、afterEach(cleanup) 保证测试隔离（本项目未开 globals，RTL 自动清理不生效）；coverage 纳入 src/components/workspace。
+- 为 v2.17 的 6 个 UI 组件补组件单测：TagChip（统一样式 / aria-pressed / count / onClick）、CharacterRow（待审徽章 + 确认按钮条件渲染 / 勾选回调 / 删除按钮 aria-label）、CharacterFilters（搜索框 aria-label / 角色芯片 / 标签过滤剔除系统标签 📥📝 与软删 🗂 已合并 / 已分类·未分类芯片）+ 过滤逻辑单测，共 28 例。
+- tsc 0 错误；vitest 全量 84 文件 804/804 全绿（较 v2.17 的 776 增 28）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.17.0 — 2026-08-14
 
 ### 角色去重硬化：高/低置信分组 + 已合并卡隐藏 + 尊称误判护栏（马斯克 CEO 循环运营交付）

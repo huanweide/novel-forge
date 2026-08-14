@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.17.0";
+export const LATEST_VERSION = "v2.18.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.18.0 UI 优化 + 测试流程优化（maxloop 多视角亲验，主对话模拟子 Agent 多轮检验）：UI——修 CharacterList 后台静默去重探测 fire-and-forget 反模式（补 AbortController，防组件卸载后 setState 告警）；CharacterRow 删除图标按钮补 aria-label「删除角色」（图标唯一按钮可访问性缺口）；v2.17 已修搜索框 aria-label、去重提示 banner 改 button、关闭按钮 aria-label。测试流程——抽角色过滤逻辑为纯函数 filterCharacters（src/lib/character-filter.ts，含 isUserTag）便于单测；vitest 配 jsdom 组件测试基础设施（setupFiles 注册 jest-dom 匹配器 + .test.tsx include + afterEach cleanup 隔离）；为 v2.17 的 6 个 UI 组件补组件单测（TagChip/CharacterRow/CharacterFilters）与过滤逻辑单测共 28 例，coverage 纳入 src/components/workspace；tsc 0 错误，vitest 全量 84 文件 804/804 全绿（较 v2.17 的 776 增 28）。",
   "v2.17.0 角色去重硬化：高/低置信分组 + 已合并卡隐藏 + 尊称误判护栏（马斯克 CEO 循环运营交付）：重构 dedupeCharacters 分组策略——确定性组（规则+核心名宽松）直接高置信自动合并、LLM 跨核心名建议仅进低置信 pending 待确认，避免 LLM 误判拖垮真实重复卡自动清除；computeConfidence 补同核名 high 判定（变体+变体如韩先生/韩姓男子、全名+单「·」后缀如迭戈/迭戈·美第奇直接自动合并），多「·」马甲同核仍降 low 交用户确认；pickMain 改干净 canonical 名优先、coreTokenOf 修复拖尾尊称剥离（修「迭戈先生」漏检 Diego 三兄弟）；isHonorificVariant 加风险 token 护栏（王/皇/帝/后/妃）避免「武帝」「王后」误并；dedupeCharacters 跳过已合并软删卡防反复重合并；角色栏抽统一 TagChip 组件、默认隐藏已合并卡。tsc 0 错误，vitest 全量 80 文件 776/776 全绿。",
   "v2.16.0 实时多 Agent 编排控制台 + Round-26 UI/前后端实测（maxloop 深度体检 Round-26）：新增开发期诊断工具 agent-forge/（Node 内置 http + SSE，零依赖），主代理并行调度 5 个真实 Worker Agent（类型门禁 tsc/架构体检/版本一致性/代码质量/安全扫描）实时扫描 novel-forge 源码并流式推进度与日志，浏览器开 http://localhost:8787 即可看到一批 Agent 实时干活，直接回应「要看到 Agent 干活、有进度」诉求且不依赖本环境故障的子代理通道；主代理亲验对前端 12 页面 + 3 动态页面 SSR 实测全 200、无 error boundary、dev 零报错零 hydration 警告，核心 API 全 200 返回真实数据，诚实排除 3 处根路径 GET 405（设计对称）与项目名乱码（终端 locale 显示问题）4 个误报；修复 Round-25 漏同步——package.json version 仍 2.14.0 与源码 v2.15.0 不一致，本轮升 v2.16.0 三处对齐；本轮为 maxloop 深度体检 Round-26，子代理通道派发自定义 agent 报 Tool Read not found，继续按「六之二」降级主代理 Chair 亲验（见 PROCESS/meetings/round-26/chair-self-audit.md）；agent-forge 控制台独立运行于 8787 不受影响。",
   "v2.15.0 确认路径一致性基线刷新对称修复（maxloop 深度体检 Round-25）：自动确认（auto-confirm）与批量确认（batch-confirm）两条确认路径在批量定稿后只触发了伏笔收束率检测，漏触发一致性事实基线抽取，而手动确认路径两者都做——导致自动/批量确认定稿后一致性面板不刷新、比手动确认滞后；本轮对称补齐两条路径确认成功后统一补触发 extractConsistencyFacts（fire-and-forget，不阻塞响应），与手动确认路径一致；配套 auto-confirm 路由单测新增 extractConsistencyFacts mock，消除偶发 500 的测试不稳定；本轮为 maxloop 深度体检 Round-25，子代理通道仍故障按「六之二」降级主代理 Chair 亲验（见 PROCESS/meetings/round-25/chair-self-audit.md）；tsc 0 错误，确认路由单测全绿。",
@@ -64,6 +65,34 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.18.0",
+    date: "2026-08-14",
+    title: "v2.18.0 UI 优化 + 测试流程优化（maxloop 多视角亲验）",
+    sections: [
+      {
+        label: "UI 优化（可访问性 + 反模式）",
+        items: [
+          "修 CharacterList 后台静默去重探测 fire-and-forget 反模式：补 AbortController，组件卸载（切换项目/离开页面）时中止在途请求，避免 fetch 回调在卸载后 setState 触发 React 警告（novel-forge-diagnostic 反模式清单项）。",
+          "CharacterRow 删除图标按钮补 aria-label「删除角色」（图标唯一按钮可访问性缺口，原仅靠 hover 显隐、读屏与键盘用户无按钮名）；v2.17 已修搜索框 aria-label、去重提示 banner 改 button、关闭按钮 aria-label，本轮补完角色行删除键。",
+        ],
+      },
+      {
+        label: "测试流程优化（组件测试基础设施）",
+        items: [
+          "抽角色过滤逻辑为纯函数 filterCharacters（src/lib/character-filter.ts，含 isUserTag 用户标签判定），把 v2.17 内联于 CharacterList 的过滤规则（已合并卡隐藏 / role / tag / status / search 命中 name+alias）收敛为可单测纯函数，CharacterList 改调用。",
+          "vitest 配 jsdom 组件测试基础设施：setupFiles 注册 jest-dom 匹配器（用 /vitest 子路径入口避免 expect is not defined）、include 增加 .test.tsx、afterEach(cleanup) 保证测试隔离（本项目未开 globals，RTL 自动清理不生效）；coverage 纳入 src/components/workspace。",
+          "为 v2.17 的 6 个 UI 组件补组件单测：TagChip（统一样式 / aria-pressed / count / onClick）、CharacterRow（待审徽章 + 确认按钮条件渲染 / 勾选回调 / 删除按钮 aria-label）、CharacterFilters（搜索框 aria-label / 角色芯片 / 标签过滤剔除系统标签 📥📝 与软删 🗂 已合并 / 已分类·未分类芯片）+ 过滤逻辑单测，共 28 例。",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 0 错误；vitest 全量 84 文件 804/804 全绿（较 v2.17 的 776 增 28）；纯前端组件收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.17.0",
     date: "2026-08-14",

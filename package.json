@@ -1,6 +1,6 @@
 {
   "name": "novel-forge",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
@@ -46,6 +46,8 @@
   "devDependencies": {
     "@bubblewrap/core": "^1.24.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
@@ -54,6 +56,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.3",
     "typescript": "^5",

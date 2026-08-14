@@ -12,6 +12,7 @@ import { ExpandResultModal } from "./ExpandResultModal";
 import { CharacterGroupList } from "./CharacterGroupList";
 import type { CharacterRole } from "@/core/types";
 import { CHARACTER_ROLE_OPTIONS } from "@/lib/character-parse";
+import { filterCharacters } from "@/lib/character-filter";
 import { MergePendingPanel } from "./MergePendingPanel";
 
 export function CharacterList({
@@ -96,20 +97,8 @@ export function CharacterList({
     }
   };
 
-  const filtered = characters.filter(c => {
-    // v2.17：被合并（软删）的角色卡默认从列表隐藏，实现「去重后自动清除重复名」；
-    // 如需恢复可在「合并提案」面板回滚。
-    if ((c.tags || []).includes("🗂 已合并")) return false;
-    if (roleFilter !== "all" && c.role !== roleFilter) return false;
-    // tagFilter: 特殊值 + 具体标签值
-    if (tagFilter === "no-tags" && (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0) return false;
-    if (tagFilter === "has-tags" && (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length === 0) return false;
-    if (tagFilter !== "all" && tagFilter !== "no-tags" && tagFilter !== "has-tags" && !(c.tags || []).includes(tagFilter)) return false;
-    if (statusFilter === "alive" && c.currentStatus !== "alive") return false;
-    if (statusFilter === "dead" && !["dead","missing","presumed_dead"].includes(c.currentStatus)) return false;
-    if (search && !c.name.includes(search) && !(c.aliases || []).some((a: string) => a.includes(search))) return false;
-    return true;
-  });
+  // v2.18：过滤逻辑抽为纯函数 filterCharacters（便于单测），行为与原内联逻辑一致
+  const filtered = filterCharacters(characters, { search, roleFilter, tagFilter, statusFilter });
 
   const roleOrder = CHARACTER_ROLE_OPTIONS.map((o) => o.value as CharacterRole);
   const roleLabel: Record<string, string> = Object.fromEntries(CHARACTER_ROLE_OPTIONS.map((o) => [o.value, o.label]));
@@ -278,15 +267,19 @@ export function CharacterList({
     setDedupeHint(null);
     void handleDedupe();
   };
+  // v2.18：补 AbortController——组件卸载（切换项目/离开页面）时中止在途请求，
+  // 避免 fetch 回调在卸载后 setState 触发 React 警告（diagnostic 反模式修复）。
   useEffect(() => {
     if (!projectId || dedupeProbedProject.current === projectId) return;
     dedupeProbedProject.current = projectId;
+    const controller = new AbortController();
     (async () => {
       try {
         const res = await fetch("/api/characters/dedupe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ projectId, detectOnly: true }),
+          signal: controller.signal,
         });
         const d = await res.json().catch(() => ({}));
         if (res.ok) {
@@ -297,10 +290,12 @@ export function CharacterList({
           // 仅低置信待确认组进提示 banner（用户手动点确认）
           if (pending > 0) setDedupeHint({ merged, pending });
         }
-      } catch {
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return; // 卸载中止，静默
         // 静默：检测失败不影响正常使用
       }
     })();
+    return () => controller.abort();
   }, [projectId]);
 
   // v2.0.4：玩家自建标签并往里加人——把勾选角色通过 apply-tags 打上新标签（并集语义，不会抹掉旧标签）
@@ -381,13 +376,14 @@ export function CharacterList({
   return (
     <div className="space-y-1">
       {dedupeHint && dedupeHint.pending > 0 && (
-        <div
+        <button
+          type="button"
           onClick={handleDedupeFromHint}
-          className="mb-1 cursor-pointer rounded-md border border-[var(--nv-warning)] bg-[var(--nv-surface-2)] px-3 py-2 text-xs text-[var(--nv-text-primary)] hover:opacity-80"
+          className="mb-1 w-full text-left cursor-pointer rounded-md border border-[var(--nv-warning)] bg-[var(--nv-surface-2)] px-3 py-2 text-xs text-[var(--nv-text-primary)] hover:opacity-80"
           title="点击确认合并低置信重复角色"
         >
           检测到 {dedupeHint.pending} 个疑似同一人但把握不足的重复角色，点击确认合并{dedupeHint.merged > 0 ? `（另有 ${dedupeHint.merged} 组高置信重复已自动合并）` : ""} →
-        </div>
+        </button>
       )}
       <CharacterFilters
         characters={characters}
@@ -427,7 +423,7 @@ export function CharacterList({
         <div className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="flex-1 min-w-0 truncate pr-2 text-xs font-medium text-[var(--nv-text-primary)]">去重合并结果（共扫描 {dedupeResult.total} 个角色）</span>
-            <button onClick={() => { setDedupeResult(null); onExpanded(); }} className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]" title="关闭去重结果"><Icon name="x" size={11} />关闭</button>
+            <button onClick={() => { setDedupeResult(null); onExpanded(); }} aria-label="关闭去重结果" className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]" title="关闭去重结果"><Icon name="x" size={11} />关闭</button>
           </div>
           {dedupeResult.mergedGroups.length === 0 && dedupeResult.pendingGroups.length === 0 ? (
             <p className="text-xs text-[var(--nv-text-muted)]">全部干净：没有需要合并或标记的角色。</p>

@@ -50,6 +50,7 @@ export function CharacterFilters({
           value={search}
           onChange={e => onSearch(e.target.value)}
           placeholder="搜索角色…"
+          aria-label="搜索角色"
           className="w-full bg-[var(--nv-surface-1)] border border-[var(--nv-border-2)] rounded px-2 py-1 text-xs text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)]"
         />
       </div>

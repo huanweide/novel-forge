@@ -74,6 +74,8 @@ function CharacterRowImpl({
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
         disabled={deleting}
+        aria-label="删除角色"
+        title="删除角色"
         className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] shrink-0 disabled:opacity-40"
       ><Icon name="x" size={12} className="align-middle" />      </button>
     </div>
