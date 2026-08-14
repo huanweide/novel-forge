@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.14.0";
+export const LATEST_VERSION = "v2.15.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.15.0 确认路径一致性基线刷新对称修复（maxloop 深度体检 Round-25）：自动确认（auto-confirm）与批量确认（batch-confirm）两条确认路径在批量定稿后只触发了伏笔收束率检测，漏触发一致性事实基线抽取，而手动确认路径两者都做——导致自动/批量确认定稿后一致性面板不刷新、比手动确认滞后；本轮对称补齐两条路径确认成功后统一补触发 extractConsistencyFacts（fire-and-forget，不阻塞响应），与手动确认路径一致；配套 auto-confirm 路由单测新增 extractConsistencyFacts mock，消除偶发 500 的测试不稳定；本轮为 maxloop 深度体检 Round-25，子代理通道仍故障按「六之二」降级主代理 Chair 亲验（见 PROCESS/meetings/round-25/chair-self-audit.md）；tsc 0 错误，确认路由单测全绿。",
   "v2.14.0 确认栏类型逃逸收尾（maxloop 深度体检 Round-24）：章节确认栏 ChapterConfirmBar 清除 `const logs: any[]` 与 `logs[logs.length - 1] as any` 两处类型逃逸——确认定稿时原本靠 any 绕过类型检查去读 reviewLogs 最后一条的 fill 状态，改为 `Array<{ fill?: string }>` + 可选链 `?.fill`，类型安全地决定「已填/未填」文案，对齐 v2.13 类型安全收尾主题；本轮为 maxloop 深度体检 Round-24，子代理（Agent 工具）通道在本环境返回空、不落盘，已按 SKILL.md「六之二」自动降级为主代理 Chair 亲验（见 PROCESS/meetings/round-24/chair-self-audit.md）；tsc 0 错误，vitest 全量 80 文件 775/775 全绿。",
   "v2.13.0 体检链路无障碍与类型安全收尾（maxloop 深度体检 Round-23）：全书体检看板章节明细行补键盘可访问性——行加 role=button/tabIndex=0/Enter 与空格键触发跳转单章体检/焦点可见样式/aria-label，键盘与读屏用户不再只能靠鼠标点行；单章写作体检弹窗底部「关闭」统一走 handleClose（连带清空受控 trigger 状态），消除看板行点击跳转后关闭弹窗可能残留触发态的隐患；大纲树折叠箭头 Icon 清除 as any 类型逃逸（arrowRight/arrowDown 本就在 IconName 中，历史残留）。tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件纯前端改动，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.12.0 全书体检看板行点击跳转单章体检（UI/功能增强，魔王循环第12轮）：全书健康度体检看板章节明细表每行可点击，点某章行即关闭看板并一键弹出该章的「写作体检」弹窗（逐条命中明细 + 改稿建议），把 v2.11 的「高危/警示」列与 v2.10 的单章命中明细串成闭环，作者看到某章高危后无需再回大纲找该章点体检；ChapterAuditPanel 改造为「受控触发」模式（父层 ChapterConfirmBar 用 auditTrigger 状态记下待弹章 id，看板行点击 setAuditTrigger(id) 并关看板，单章体检监听 triggerNodeId 变化自动 fetch 并弹开、关闭后 onTriggerConsumed 清空），三个组件一个共享状态串成闭环，纯前端状态传递零额外接口；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件改动，纯函数已由 v2.3.0 单测覆盖）。",
@@ -61,6 +62,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.15.0",
+    date: "2026-08-14",
+    title: "v2.15.0 确认路径一致性基线刷新对称修复（maxloop 深度体检 Round-25）",
+    sections: [
+      {
+        label: "确认路径一致性基线刷新对称",
+        items: [
+          "自动确认（auto-confirm）与批量确认（batch-confirm）两条路径在批量定稿后只触发伏笔收束率检测，漏触发一致性事实基线抽取（extractConsistencyFacts），而手动确认路径（PATCH /api/story/nodes/[id]）两者都做——自动/批量确认定稿后一致性面板不随定稿刷新，比手动确认滞后；本轮对称补齐：两条路径确认成功后统一补触发 extractConsistencyFacts（fire-and-forget，不阻塞响应），与手动确认路径一致。",
+          "配套 auto-confirm 路由单测新增 extractConsistencyFacts mock，消除未隔离真实 LLM/DB 依赖导致的偶发 500，测试确定性恢复。",
+          "本轮为 maxloop 深度体检 Round-25，子代理（Agent 工具）通道在本环境仍返回空、不落盘，按 SKILL.md「六之二」继续降级为主代理 Chair 亲验（见 PROCESS/meetings/round-25/chair-self-audit.md）；tsc 0 错误，确认路由单测全绿。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.14.0",
     date: "2026-08-14",

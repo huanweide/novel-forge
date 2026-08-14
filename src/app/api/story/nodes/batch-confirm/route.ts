@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { safeFillAfterWriting } from "@/core/babylore/loop";
 import { evaluateConfirmEligibility, maybeAutoDeliver, triggerForeshadowDetect } from "@/core/confirm-guard";
+import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
 import { STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_PENDING_CONFIRM } from "@/core/story-status";
 
 /**
@@ -118,6 +119,9 @@ export async function POST(request: Request) {
     // 仅当确有章节被确认时才触发，避免空跑。
     if (confirmed.length > 0) {
       void triggerForeshadowDetect({ projectId, origin: new URL(request.url).origin });
+      // v2.15.0（Max Loop Round25）：补触发一致性事实基线抽取，与手动确认路径对称，
+      // 避免批量确认定稿后一致性面板滞后不刷新。
+      void extractConsistencyFacts(projectId).catch(() => {});
     }
 
     return NextResponse.json({

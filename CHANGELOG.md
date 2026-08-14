@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.15.0 — 2026-08-14
+
+### 确认路径一致性基线刷新对称修复（maxloop 深度体检 Round-25）
+- 自动确认（auto-confirm）与批量确认（batch-confirm）两条路径在批量定稿后只触发伏笔收束率检测，漏触发一致性事实基线抽取（extractConsistencyFacts），而手动确认路径（PATCH /api/story/nodes/[id]）两者都做——自动/批量确认定稿后一致性面板（前后人设/设定矛盾检测）不随定稿刷新，比手动确认滞后；本轮对称补齐：两条路径确认成功后统一补触发 extractConsistencyFacts（fire-and-forget，不阻塞响应），与手动确认路径一致。
+- 配套 auto-confirm 路由单测新增 extractConsistencyFacts mock，消除未隔离真实 LLM/DB 依赖导致的偶发 500，测试确定性恢复。
+- 本轮为 maxloop 深度体检 Round-25，子代理（Agent 工具）通道在本环境仍返回空、不落盘，按 SKILL.md「六之二」继续降级为主代理 Chair 亲验（见 PROCESS/meetings/round-25/chair-self-audit.md）；tsc 0 错误，确认路由单测全绿。
+
 ## v2.14.0 — 2026-08-14
 
 ### 类型逃逸收尾（maxloop 深度体检 Round-24）

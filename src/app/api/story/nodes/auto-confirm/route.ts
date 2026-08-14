@@ -7,6 +7,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { evaluateConfirmEligibility, applyConfirm, triggerForeshadowDetect } from "@/core/confirm-guard";
+import { extractConsistencyFacts } from "@/core/consistency/extractFacts";
 import { CONFIRMABLE_STATUSES, STATUS_COMPLETED, STATUS_CONFIRMED, STATUS_OUTLINE_ONLY, STATUS_REVIEWING } from "@/core/story-status";
 
 export async function POST(request: Request) {
@@ -110,6 +111,9 @@ export async function POST(request: Request) {
     // 统一只触发一次，与 batch-confirm 的「只触发一次」原则保持一致。
     if (confirmed.length > 0) {
       void triggerForeshadowDetect({ projectId: pid });
+      // v2.15.0（Max Loop Round25）：补触发一致性事实基线抽取，与手动确认路径
+      // src/app/api/story/nodes/[id]/route.ts 对称，避免自动确认定稿后一致性面板滞后不刷新。
+      void extractConsistencyFacts(pid).catch(() => {});
     }
 
     return NextResponse.json({

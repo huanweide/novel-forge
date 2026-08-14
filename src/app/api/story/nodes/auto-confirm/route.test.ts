@@ -21,6 +21,13 @@ const confirmGuardMock = vi.hoisted(() => ({
 }));
 vi.mock("@/core/confirm-guard", () => confirmGuardMock);
 
+// v2.15.0（Max Loop Round25）：路由新增「确认后补触发一致性事实抽取」，此处隔离该真实依赖，
+// 避免测试环境误触真实 LLM/DB 造成偶发失败（生产环境为真实调用，与手动确认路径对称）。
+const consistencyMock = vi.hoisted(() => ({
+  extractConsistencyFacts: vi.fn().mockResolvedValue({ count: 0, facts: [] }),
+}));
+vi.mock("@/core/consistency/extractFacts", () => consistencyMock);
+
 import { POST } from "./route";
 
 const makeReq = (body: any) => ({ json: async () => body }) as any;
