@@ -16,6 +16,7 @@ export function CharacterFilters({
   onRole,
   onStatus,
   onTag,
+  onRemoveTag,
 }: {
   characters: CharacterData[];
   search: string;
@@ -26,6 +27,8 @@ export function CharacterFilters({
   onRole: (v: string) => void;
   onStatus: (v: string) => void;
   onTag: (v: string) => void;
+  /** 删除用户自建标签类型（从所有角色移除） */
+  onRemoveTag?: (tag: string) => void;
 }) {
   // 从所有角色标签中提取唯一值（过滤掉系统标签 📥📝 与软删标记 🗂 已合并）
   const allTags = Array.from(
@@ -106,12 +109,24 @@ export function CharacterFilters({
         ))}
         {allTags.length > 0 && <span className="text-[var(--nv-border-3)] mx-0.5">·</span>}
         {allTags.slice(0, 12).map(t => (
-          <TagChip
-            key={t}
-            label={t}
-            active={tagFilter === t}
-            onClick={() => onTag(tagFilter === t ? "all" : t)}
-          />
+          <span key={t} className="group/tag relative inline-flex items-center">
+            <TagChip
+              label={t}
+              active={tagFilter === t}
+              onClick={() => onTag(tagFilter === t ? "all" : t)}
+            />
+            {onRemoveTag && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onRemoveTag(t); }}
+                title={`删除标签「${t}」`}
+                aria-label={`删除标签 ${t}`}
+                className="ml-[-4px] z-10 rounded-full opacity-0 group-hover/tag:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] transition-opacity p-0.5"
+              >
+                <Icon name="x" size={9} />
+              </button>
+            )}
+          </span>
         ))}
         {allTags.length > 12 && (
           <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{allTags.length - 12}</span>

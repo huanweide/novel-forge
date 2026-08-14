@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.26.0";
+export const LATEST_VERSION = "v2.27.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.27.0 分类标题美化 + 删除标签类型（UI 统一 + 功能补全）：UI 统一——Collapse 分组标题（主角/配角/路人）收紧内边距 py-2→py-1.5、加 font-medium 形成清晰分组层级，与功能按钮(text-xs)和标签芯片(text-xs)三者字体系统统一协调；分类字体不再松散笨重。删除标签类型——新增 POST /api/characters/remove-tag-type 后端接口（接收 projectId+tag，遍历所有含该标签角色移除该标签，系统标签📥📝🗂防删保护，syncGlobalPrompt 刷新缓存）；前端 CharacterFilters 用户自建标签芯片 hover 显示 × 删除按钮（group/tag + opacity-0→100），点击后 confirmDialog 确认→调用 API→toast 反馈→自动刷新角色列表。tsc 0 错误；vitest 全量 91 文件 852/852 全绿。",
   "v2.26.0 角色核心逻辑硬化 + 功能精简（maxloop 深度探索）：角色核心——entity-sync 自动建卡入口加两道闸门：①变体并入别名（尊称/缩写/小名/姓+描述词如「迪哥先生→迪哥」「韩姓男子→韩立」经 resolveDiscoveryMergeTarget 实时并入正主 aliases，不建脏卡）；②频次门槛建卡（storyNode 正文出现次数 < MIN_CHARACTER_APPEARANCES(2) 视为路人甲拦截，不建卡、进 skipped），抽纯函数 shouldAutoCreateCharacterCard 可单测、fail-open 查库失败默认放行；配套 5 例 entity-sync.guard.test.ts 锁死 (a)新角色引入、(b)去重识别、(c)含·马甲不误并、(d)低频路人甲拦截。功能精简——移除 CharacterToolbar 冗余「自动去重合并」按钮（去重已全自动：批量写作后/自动发现后/加载 detectOnly 后台静默跑，手动入口冗余），同步清理 CharacterList/CharacterToolbar.test 配套代码。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +5 例）；纯逻辑硬化，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.25.0 类型逃逸清理启动·第一批：MarkdownViewer 收口 21 处 any（maxloop 多视角持续亲验）：类型安全——用 TypeScript AST 全量扫描得 1344 处 any（as any 455 / 类型注解 231 / any[] 274 / 参数 384），按风险分级——LLM/Prisma JSON 桥接（orchestrator/fill/post-processor/context-loader/pre-processor/characters/expand 等）与 Prisma 生成文件暂缓、test 文件低优先；首批挑纯前端参数 any 为主的 MarkdownViewer，用 react-markdown 导出的 Components 类型替换手写 Record<string, React.FC<any>> 与各渲染函数 ({children,...props}:any) 参数注解（props 改为由 Components 上下文推断精确元素类型），并把 rehype 插件列表 any[] 改为 unified 的 PluggableList，共消除 21 处。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮仅改 MarkdownViewer 类型、零运行时逻辑改动）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.24.0 角色栏组件测试闭环收官：CharacterList 含 SSE 流/删除确认单测（maxloop 多视角持续亲验）：测试流程——补齐 v2.20/v2.22 留下的最后一环——出口组件 CharacterList 组件单测（src/components/workspace/CharacterList.test.tsx），闭合角色栏组件测试闭环：用 vi.mock 把重型子组件（CharacterFilters/CharacterToolbar/CharacterGroupList/ExpandResultModal/MergePendingPanel）与 UI 原子（Icon/EmptyState/toast）替换成轻量 stub，只验证 CharacterList 自身状态机与网络层；覆盖 SSE 流扩展（构造 TextEncoder+ReadableStream 字节流喂入，断言进度解析 / done 事件触发 onExpanded 清空选中 / HTTP 非 2xx 调 toastError / 未勾选不对 expand 发请求）、删除确认（confirmDialog 返回 true→调 onDelete、false→不调，删除确认走真实 useConfirmDelete 钩子）、确认角色卡（默认 handleConfirm PUT 成功回调 onExpanded），共 9 例。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +9 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -71,6 +72,15 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.27.0",
+    date: "2026-08-15",
+    title: "分类标题美化 + 删除标签类型（UI 统一 + 功能补全）",
+    sections: [
+      { label: "UI 统一", items: ["Collapse 分组标题收紧 py-2→py-1.5 + font-medium，分类字体不再松散笨重", "分类标题/功能按钮/标签芯片三者 text-xs 字体系统统一协调"] },
+      { label: "新功能", items: ["新增 POST /api/characters/remove-tag-type 删除标签类型接口", "前端用户自建标签芯片 hover 显示 × 删除按钮", "删除前 confirmDialog 确认，系统标签防删保护"] },
+    ],
+  },
   {
     version: "v2.26.0",
     date: "2026-08-14",

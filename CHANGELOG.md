@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.27.0 — 2026-08-15
+
+### 分类标题美化 + 删除标签类型（UI 统一 + 功能补全）
+- **UI 统一**：Collapse 分组标题（主角/配角/路人）收紧内边距 `py-2`→`py-1.5`、加 `font-medium` 形成清晰分组层级，与功能按钮(`text-xs`)和标签芯片(`text-xs`)三者字体系统统一协调；分类字体不再松散笨重。
+- **删除标签类型**：新增 `POST /api/characters/remove-tag-type` 后端接口——接收 `projectId`+`tag`，遍历所有含该标签角色移除该标签；系统标签(📥📝🗂)防删保护；自动刷新 globalPrompt 缓存。
+- **前端交互**：CharacterFilters 用户自建标签芯片 hover 显示 × 删除按钮（`group/tag` + `opacity-0→100`），点击后 `confirmDialog` 确认 → 调用 API → toast 反馈 → 自动刷新角色列表。
+- tsc 0 错误；vitest 全量 91 文件 852/852 全绿。
+
 ## v2.26.0 — 2026-08-14
 
 ### 角色核心逻辑硬化 + 功能精简（maxloop 深度探索）

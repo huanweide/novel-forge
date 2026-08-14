@@ -10,7 +10,7 @@ interface CollapseProps {
   onOpenChange?: (open: boolean) => void;
   title: ReactNode;          // 分组标题
   icon?: IconName;           // 可选左侧图标
-  size?: "sm" | "md";        // sm 用于弹窗内密集分组（text-xs / chevron 14），md 默认（text-sm / chevron 16）
+  size?: "sm" | "md";        // sm 用于密集分组（text-xs font-medium / chevron 14 / py-1.5），md 默认（text-sm / chevron 16）
   disabled?: boolean;
   mountOnOpen?: boolean;     // 折叠时卸载 children（性能范式，对齐 RightPanel 懒挂载）
   className?: string;
@@ -55,8 +55,8 @@ export function Collapse({
         disabled={disabled}
         aria-expanded={isOpen}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded px-1 py-2 cursor-pointer select-none text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-3)]/40",
-          size === "sm" ? "text-xs" : "text-sm",
+          "flex w-full items-center justify-between gap-2 rounded px-1 py-1.5 cursor-pointer select-none text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-3)]/40",
+          size === "sm" ? "text-xs font-medium" : "text-sm",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >

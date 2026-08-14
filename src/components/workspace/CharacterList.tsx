@@ -331,6 +331,38 @@ export function CharacterList({
     }
   };
 
+  // v2.27.0：删除用户自建标签类型——从所有角色上移除该标签
+  const handleRemoveTag = async (tag: string) => {
+    const ok = await confirmDialog({
+      title: "删除标签类型",
+      description: `确定删除标签「${tag}」吗？这会从所有角色上移除此标签。`,
+      confirmText: "删除",
+      cancelText: "取消",
+      danger: true,
+    });
+    if (!ok) return;
+
+    try {
+      const res = await fetch("/api/characters/remove-tag-type", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, tag }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "失败" }));
+        toastError(`删除失败: ${err.error}`);
+        return;
+      }
+      const data = await res.json();
+      toastSuccess(`已从 ${data.removed} 个角色删除标签「${tag}」`);
+      // 如果当前正在筛选该标签，切回"全部"
+      if (tagFilter === tag) setTagFilter("all");
+      onExpanded(); // 刷新角色列表
+    } catch (e) {
+      toastError("" + (e instanceof Error ? e.message : "网络错误"));
+    }
+  };
+
   const { deletingId, remove: deleteCharacter } = useConfirmDelete({
     title: "删除角色",
     description: (id, name) => `确定删除角色「${name}」？此操作不可恢复。`,
@@ -393,6 +425,7 @@ export function CharacterList({
         onRole={setRoleFilter}
         onStatus={setStatusFilter}
         onTag={setTagFilter}
+        onRemoveTag={handleRemoveTag}
       />
 
       <CharacterToolbar
