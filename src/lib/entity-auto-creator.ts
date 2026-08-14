@@ -166,13 +166,29 @@ export function isHonorificVariant(name: string): boolean {
   // 前缀尊称：老/小/阿 + 姓（≤3 字）
   if (PREFIX_HONORIFICS.includes(n[0]) && n.length <= 3) return true;
   const rest = n.slice(1); // 去掉姓
+  // 风险 token（王/皇/帝/后/妃）可能是真实人名结尾（如「武帝」「王后」），保持严格判定，避免误并
+  const RISKY_TITLE = new Set(["王", "皇", "帝", "后", "妃"]);
   for (const t of HONORIFIC_TOKENS) {
     const idx = rest.indexOf(t);
     if (idx === -1) continue;
     const before = rest.slice(0, idx);
     const after = rest.slice(idx + t.length);
-    // token 后必须为空，token 前只能是空或单个修饰字（大/小/姓…），避免把真实姓名误判
-    if (after.length === 0 && BEFORE_FILLERS.includes(before)) return true;
+    // token 后必须为空；token 前允许：空（单字姓+尊称，如「韩先生」）/ 单个修饰字（大/小/姓…）/ 1~2 字姓（「迭戈先生」「欧阳女士」）。
+    // 风险 token（帝/王/后…）即使 before 为空也禁止——避免把「武帝」「王后」这类真实人名误判为「武+帝(尊称)」。
+    // token 前允许的「姓/修饰」结构：
+    //  - 风险 token（帝/王/后/妃/皇）：仅允许修饰字 filler 且非空，避免「武帝」「王后」误判为「武+帝(尊称)」；
+    //  - 双字尊称（先生/女士/公子…）：before 可为空，或单字名余（欧阳女士→阳 / 迭戈先生→戈）；
+    //  - 单字尊称（君/公/翁…）：before 必须为空（整段 rest 即 token），否则「山君」会被拆成「韩+君」误判
+    //    （韩山君 是真实人名「韩山·君」，非「韩」的尊称变体，归入正主会错并）。
+    let beforeOk: boolean;
+    if (RISKY_TITLE.has(t)) {
+      beforeOk = BEFORE_FILLERS.includes(before) && before !== "";
+    } else if (t.length >= 2) {
+      beforeOk = before === "" || /^[一-龥]$/.test(before);
+    } else {
+      beforeOk = before === "";
+    }
+    if (after.length === 0 && beforeOk) return true;
   }
   return false;
 }

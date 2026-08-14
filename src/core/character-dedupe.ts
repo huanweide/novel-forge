@@ -60,7 +60,7 @@ function charFingerprint(c: CharLite): string {
   return (h >>> 0).toString(36);
 }
 
-const dedupeGroupCache = new Map<string, { fp: string; groups: string[][] }>();
+const dedupeGroupCache = new Map<string, { fp: string; high: string[][]; pending: string[][] }>();
 
 /** 从可能包裹了说明文字的模型输出里抠出第一个 JSON 对象 */
 function extractJson(raw: string): any {
@@ -201,7 +201,8 @@ function coreTokenOf(name: string): string {
     const idx = t.indexOf(h);
     if (idx !== -1 && t.slice(idx + h.length).length === 0) {
       const before = t.slice(0, idx);
-      if (before.length <= 1) { t = before; break; }
+      // 修复：任意长度核心名后的拖尾尊称都剥离（之前 only 剥 1 字姓，导致「迭戈先生」→「迭戈先生」未归并，漏检 Diego 三兄弟）
+      if (before.length >= 1) { t = before; break; }
     }
   }
   if (t.length > 1 && t[1] === "姓") {
@@ -258,11 +259,31 @@ function canMergeIntoMain(m: CharLite, main: CharLite, allNames: string[]): bool
   return mt.length > 0 && mt === pt && m.name.trim().toLowerCase() !== main.name.trim().toLowerCase();
 }
 
-/** 主卡选择：普通姓名优先，其次内容更丰富者 */
+/**
+ * 主卡选择：干净 canonical 名绝对优先存活为主卡；
+ * 没有干净名时才在变体里挑内容更丰富者。合并后保留的是可读真名而非「迭戈先生」「韩姓男子」这类称呼卡。
+ * canonical 卡内容为空也安全——applyMerge 会取被并卡中最长背景、并把所有名字并入主卡别名。
+ */
+const HONORIFIC_SUFFIXES = [
+  "先生", "女士", "小姐", "公子", "夫人", "阁下", "大人", "殿下", "陛下", "兄台",
+  "师傅", "师父", "老板", "少侠", "大侠", "壮士", "道友", "前辈", "掌门", "宗主",
+  "将军", "书生", "侠女", "女侠", "兄", "姐", "君", "公", "翁", "婆", "徒弟",
+  "管家", "仆", "婢", "朋友", "姑娘", "少年", "少女", "女子", "男子", "姓", "某", "氏",
+];
 function pickMain(members: CharLite[]): CharLite {
   const richness = (x: CharLite) => (x.background || "").length + (x.storyLine || "").length;
-  const plain = members.filter((x) => !isHonorificVariant(x.name) && !isSurnameAbbrevOrDescriptor(x.name));
-  return (plain.length > 0 ? plain : members).reduce((m, x) => (richness(x) > richness(m) ? x : m));
+  // 干净名：不含「·」马甲、非尊称/姓+描述变体、且不以尊称 token 结尾（覆盖「迭戈先生」这类多字姓+先生漏检）。
+  // 注：刻意排除「王/皇/帝/后/妃」以免误伤「武帝」「王后」等真实人名。
+  const isClean = (x: CharLite) => {
+    const name = x.name.trim().toLowerCase();
+    if (/[·•・]/.test(name)) return false;
+    if (isHonorificVariant(name) || isSurnameAbbrevOrDescriptor(name)) return false;
+    if (HONORIFIC_SUFFIXES.some((t) => name.endsWith(t))) return false;
+    return true;
+  };
+  const clean = members.filter(isClean);
+  const pool = clean.length > 0 ? clean : members;
+  return pool.reduce((best, x) => (richness(x) > richness(best) ? x : best));
 }
 
 /**
@@ -279,7 +300,18 @@ export function computeConfidence(members: CharLite[], allNames: string[]): "hig
   const main = pickMain(members);
   const merged = members.filter((x) => x.id !== main.id);
   if (merged.length === 0) return "high";
-  // 主卡本身是脏卡/变体/单字/带后缀，或组内任一含「·」（隐藏身份/马甲）→ 整组降 low，进 pending 等用户确认
+  // v2.17（round-22 契约更新）：同核心名（coreTokenOf 坍缩尊称 / 姓+描述 / ·后缀后一致）即视为同一真实人物候选，
+  // 直接 high 自动合并；覆盖此前漏判的两类：变体+变体（韩先生/韩姓男子 同核「韩」）、
+  // 全名 + 单「·」后缀变体（迭戈 / 迭戈·美第奇）。
+  // 安全闸门：同一核心名下若有多于一个「·」马甲（如 迭戈·美第奇 / 迭戈·桑切斯），可能指向不同真实人物，
+  // 不自动合并，降 low 交用户确认。
+  const core = coreTokenOf(main.name);
+  const allSameCore = core.length > 0 && members.every((m) => coreTokenOf(m.name) === core);
+  if (allSameCore) {
+    const pseudoCount = members.filter((m) => /[·•・]/.test(m.name)).length;
+    if (pseudoCount <= 1) return "high";
+  }
+  // 主卡本身是脏卡/变体/单字/带后缀，或组内任一含「·」（隐藏身份/马甲）且同核马甲多于一个 → 整组降 low
   const mainIsPlain = !isHonorificVariant(main.name) && !isSurnameAbbrevOrDescriptor(main.name) && !main.name.includes("·") && main.name.trim().length > 1;
   const hasPseudo = members.some((m) => m.name.includes("·") || m.name.includes("•") || m.name.includes("・"));
   if (!mainIsPlain || hasPseudo) return "low";
@@ -322,6 +354,8 @@ export async function applyMerge(main: CharLite, merged: CharLite[]): Promise<Re
       background: bestBg || main.background,
       storyLine: bestSl || main.storyLine,
       relationships: newRels,
+      // 合并时顺手清掉主卡残留的「🆕 自动发现」脏标记（旧版本自动发现遗留），保持主卡标签干净
+      tags: Array.from(new Set((main.tags || []).filter((t: string) => t !== "🆕 自动发现"))),
     } as any,
   });
   for (const x of merged) {
@@ -371,53 +405,63 @@ export async function dedupeCharacters(
     },
   });
 
-  const lite: CharLite[] = chars.map((c) => ({
-    id: c.id,
-    name: c.name,
-    aliases: Array.isArray(c.aliases) ? (c.aliases as string[]) : [],
-    background: c.background || "",
-    storyLine: c.storyLine || "",
-    relationships: c.relationships,
-    tags: Array.isArray(c.tags) ? (c.tags as string[]) : [],
-  }));
+  const lite: CharLite[] = chars
+    // v2.17：已被合并（软删）的卡片不再参与去重候选，避免每次加载都把它们重新合并、反复生成重复 revision
+    .filter((c) => !(Array.isArray(c.tags) ? (c.tags as string[]) : []).includes("🗂 已合并"))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      aliases: Array.isArray(c.aliases) ? (c.aliases as string[]) : [],
+      background: c.background || "",
+      storyLine: c.storyLine || "",
+      relationships: c.relationships,
+      tags: Array.isArray(c.tags) ? (c.tags as string[]) : [],
+    }));
 
-  // v2.0.15：LLM 分组 ∪ 规则分组 ∪ 核心名 token 宽松分组（去重合并来源三路并集，共享 id 归并）；
-  // 项目级语义缓存：角色集内容指纹未变则跳过 LLM（#314 增量/语义缓存）。LOOSE_V1 戳强制升级后旧缓存失效。
+  // v2.17 分组策略（修复 LLM 误判拖累自动清除）：
+  //  - 确定性组（规则 + 核心名宽松）= 高置信自动合并候选，基于确定性匹配，绝不误并不同人；
+  //  - LLM 组拆分：成员全部共享同一核心名 → 并入高置信自动合并；跨核心名（如把「顾望舒」误并入「迭戈」组）
+  //    则作为独立低置信待确认提案，且不并入确定性组，避免误判拖垮真实重复卡的自动清除。
   const outlineFp = await getOutlineContextSummary(projectId);
-  const allFp = "LOOSE_V2|" + lite.map(charFingerprint).sort().join("|") + "|" + outlineFp;
+  const allFp = "LOOSE_V3|" + lite.map(charFingerprint).sort().join("|") + "|" + outlineFp;
   const cached = dedupeGroupCache.get(projectId);
-  let finalGroups: string[][];
+  let highGroups: string[][];
+  let pendingGroupsRaw: string[][];
   let source: "llm" | "rule" | "loose" | "cache";
   if (cached && cached.fp === allFp) {
     // 语义缓存命中：角色集内容未变，完全跳过 LLM 分组调用（增量 + 缓存收益）
-    finalGroups = cached.groups;
+    highGroups = cached.high;
+    pendingGroupsRaw = cached.pending;
     source = "cache";
   } else {
     const outlineContext = outlineFp; // 复用缓存 key 阶段已取过的同一份上下文，避免重复查库
     const llmGroups = await llmDetectSamePersonGroups(lite, outlineContext);
     const ruleGroups = ruleBasedGroups(lite);
     const looseGroups = looseTokenGroups(lite);
-    finalGroups = mergeOverlappingGroups([...llmGroups, ...ruleGroups, ...looseGroups]);
+    const deterministic = mergeOverlappingGroups([...ruleGroups, ...looseGroups]);
+    const llmSameCore: string[][] = [];
+    const llmCrossCore: string[][] = [];
+    for (const g of llmGroups) {
+      const cores = new Set(
+        g.map((id) => coreTokenOf(lite.find((c) => c.id === id)?.name ?? "")).filter(Boolean),
+      );
+      if (cores.size <= 1) llmSameCore.push(g);
+      else llmCrossCore.push(g);
+    }
+    highGroups = mergeOverlappingGroups([...deterministic, ...llmSameCore]);
+    pendingGroupsRaw = llmCrossCore;
     source = llmGroups.length > 0 ? "llm" : ruleGroups.length > 0 ? "rule" : "loose";
-    dedupeGroupCache.set(projectId, { fp: allFp, groups: finalGroups });
+    dedupeGroupCache.set(projectId, { fp: allFp, high: highGroups, pending: pendingGroupsRaw });
   }
-  const allNames = lite.map((c) => c.name);
 
   const consumed = new Set<string>();
   const mergedGroups: DedupeResult["mergedGroups"] = [];
   const pendingGroups: DedupeResult["pendingGroups"] = [];
 
-  for (const g of finalGroups) {
-    const members = g
-      .map((id) => lite.find((c) => c.id === id))
-      .filter((x): x is CharLite => Boolean(x) && !consumed.has(x!.id));
-    if (members.length < 2) continue;
-
+  // 组内快照构造（合并前完整字段，供回滚）
+  const buildGroup = (members: CharLite[]) => {
     const main = pickMain(members);
     const merged = members.filter((x) => x.id !== main.id);
-    const confidence = computeConfidence(members, allNames);
-
-    // 合并前完整字段快照（回滚用）
     const mainBefore = {
       aliases: main.aliases,
       background: main.background,
@@ -435,21 +479,57 @@ export async function dedupeCharacters(
       tags: x.tags,
     }));
     const summary = `${main.name} ← ${merged.map((x) => x.name).join(" / ")}`;
+    return { main, merged, mainBefore, mergedBefore, summary };
+  };
 
+  // 高置信组：直接自动合并（detectOnly 阶段也执行——高置信合并是安全且已认可的快速路径；仅低置信进 pending）
+  for (const g of highGroups) {
+    const members = g
+      .map((id) => lite.find((c) => c.id === id))
+      .filter((x): x is CharLite => Boolean(x) && !consumed.has(x!.id));
+    if (members.length < 2) continue;
+    const { main, merged, mainBefore, mergedBefore, summary } = buildGroup(members);
     consumed.add(main.id);
     merged.forEach((x) => consumed.add(x.id));
+    mergedGroups.push({
+      mainId: main.id,
+      mainName: main.name,
+      merged: merged.map((x) => ({ id: x.id, name: x.name })),
+      confidence: "high",
+    });
+    const mainAfter = await applyMerge(main, merged);
+    await prisma.characterCardRevision.create({
+      data: {
+        projectId,
+        mainCardId: main.id,
+        mergedIds: merged.map((x) => x.id),
+        mainBefore: mainBefore as any,
+        mergedBefore: mergedBefore as any,
+        mainAfter: mainAfter as any,
+        confidence: "high",
+        source,
+        status: "applied",
+        summary,
+      },
+    });
+  }
 
-    if (confidence === "high") {
-      // 高置信度：直接合并，并留快照可回滚。
-      // detectOnly（加载时静默）也执行自动合并——高置信合并是安全且用户已认可的快速路径，无需每项目每次确认；
-      // 仅低置信组保留进 pending 提示，由用户在 MergePendingPanel 手动确认（见 else 分支）。
-      mergedGroups.push({
-        mainId: main.id,
-        mainName: main.name,
-        merged: merged.map((x) => ({ id: x.id, name: x.name })),
-        confidence,
-      });
-      const mainAfter = await applyMerge(main, merged);
+  // 低置信提案（仅 LLM 跨核心建议）：只写 pending 不合并，并剔除已被高置信消耗的成员
+  for (const g of pendingGroupsRaw) {
+    const members = g
+      .map((id) => lite.find((c) => c.id === id))
+      .filter((x): x is CharLite => Boolean(x) && !consumed.has(x!.id));
+    if (members.length < 2) continue;
+    const { main, merged, mainBefore, mergedBefore, summary } = buildGroup(members);
+    consumed.add(main.id);
+    merged.forEach((x) => consumed.add(x.id));
+    pendingGroups.push({
+      mainId: main.id,
+      mainName: main.name,
+      merged: merged.map((x) => ({ id: x.id, name: x.name })),
+      confidence: "low",
+    });
+    if (!opts?.detectOnly) {
       await prisma.characterCardRevision.create({
         data: {
           projectId,
@@ -457,36 +537,12 @@ export async function dedupeCharacters(
           mergedIds: merged.map((x) => x.id),
           mainBefore: mainBefore as any,
           mergedBefore: mergedBefore as any,
-          mainAfter: mainAfter as any,
-          confidence,
+          confidence: "low",
           source,
-          status: "applied",
+          status: "pending",
           summary,
         },
       });
-    } else {
-      // 低置信度：只存快照写 pending，不合并，等用户确认（detectOnly 模式仅分组提示、不写库）
-      pendingGroups.push({
-        mainId: main.id,
-        mainName: main.name,
-        merged: merged.map((x) => ({ id: x.id, name: x.name })),
-        confidence,
-      });
-      if (!opts?.detectOnly) {
-        await prisma.characterCardRevision.create({
-          data: {
-            projectId,
-            mainCardId: main.id,
-            mergedIds: merged.map((x) => x.id),
-            mainBefore: mainBefore as any,
-            mergedBefore: mergedBefore as any,
-            confidence,
-            source,
-            status: "pending",
-            summary,
-          },
-        });
-      }
     }
   }
 

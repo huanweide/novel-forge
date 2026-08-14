@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import { Icon } from "@/components/ui/icons";
+import { TagChip } from "./TagChip";
 import type { CharacterData } from "./types";
 
 function CharacterRowImpl({
@@ -40,35 +41,35 @@ function CharacterRowImpl({
         </span>
         <div className="flex-1 min-w-0">
           <span className="truncate block hover:text-[var(--nv-text-primary)]">{character.name}</span>
-          {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0 && (
+          {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 0 && (
             <div className="flex gap-0.5 mt-0.5 flex-wrap">
-              {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).slice(0, 5).map((t: string) => (
-                <button
+              {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").slice(0, 5).map((t: string) => (
+                <TagChip
                   key={t}
-                  onClick={e => { e.stopPropagation(); onTagClick(t); }}
-                  className={`text-[9px] px-1 py-0 rounded transition-colors ${
-                    tagFilter === t ? "bg-[var(--nv-creative)] text-[var(--nv-text-primary)]" : "bg-[var(--nv-surface-1)] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
-                  }`}
-                >{t}</button>
+                  label={t}
+                  active={tagFilter === t}
+                  size="xs"
+                  onClick={() => onTagClick(t)}
+                />
               ))}
-              {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 5 && (
-                <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length - 5}</span>
+              {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 5 && (
+                <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length - 5}</span>
               )}
             </div>
           )}
         </div>
       </div>
       {character.reviewStatus === "pending" && (
-        <span className="ml-1 shrink-0 rounded-full bg-[var(--nv-warning)]/20 px-1 py-0.5 text-[9px] text-[var(--nv-warning)]">待审</span>
+        <span className="ml-1 shrink-0 rounded-full bg-[var(--nv-warning)]/20 px-1.5 py-0.5 text-[9px] text-[var(--nv-warning)]">待审</span>
       )}
       {character.reviewStatus === "pending" && onConfirm && (
         <button
           onClick={(e) => { e.stopPropagation(); onConfirm(character.id); }}
           disabled={deleting}
-          className="ml-1 shrink-0 text-[var(--nv-success)] opacity-0 transition-all hover:text-[var(--nv-success)] group-hover:opacity-100 disabled:opacity-40"
+          className="ml-1 shrink-0 inline-flex items-center gap-0.5 rounded-full bg-[var(--nv-success)]/15 px-1.5 py-0.5 text-[9px] text-[var(--nv-success)] transition-colors hover:bg-[var(--nv-success)]/25 disabled:opacity-40"
           aria-label="确认并入"
           title="确认并入角色卡（审批后才会注入生成）"
-        ><Icon name="check" size={12} className="align-middle" /></button>
+        ><Icon name="check" size={11} className="align-middle" />确认</button>
       )}
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}

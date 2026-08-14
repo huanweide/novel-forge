@@ -97,6 +97,9 @@ export function CharacterList({
   };
 
   const filtered = characters.filter(c => {
+    // v2.17：被合并（软删）的角色卡默认从列表隐藏，实现「去重后自动清除重复名」；
+    // 如需恢复可在「合并提案」面板回滚。
+    if ((c.tags || []).includes("🗂 已合并")) return false;
     if (roleFilter !== "all" && c.role !== roleFilter) return false;
     // tagFilter: 特殊值 + 具体标签值
     if (tagFilter === "no-tags" && (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0) return false;

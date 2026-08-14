@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.16.0";
+export const LATEST_VERSION = "v2.17.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.17.0 角色去重硬化：高/低置信分组 + 已合并卡隐藏 + 尊称误判护栏（马斯克 CEO 循环运营交付）：重构 dedupeCharacters 分组策略——确定性组（规则+核心名宽松）直接高置信自动合并、LLM 跨核心名建议仅进低置信 pending 待确认，避免 LLM 误判拖垮真实重复卡自动清除；computeConfidence 补同核名 high 判定（变体+变体如韩先生/韩姓男子、全名+单「·」后缀如迭戈/迭戈·美第奇直接自动合并），多「·」马甲同核仍降 low 交用户确认；pickMain 改干净 canonical 名优先、coreTokenOf 修复拖尾尊称剥离（修「迭戈先生」漏检 Diego 三兄弟）；isHonorificVariant 加风险 token 护栏（王/皇/帝/后/妃）避免「武帝」「王后」误并；dedupeCharacters 跳过已合并软删卡防反复重合并；角色栏抽统一 TagChip 组件、默认隐藏已合并卡。tsc 0 错误，vitest 全量 80 文件 776/776 全绿。",
   "v2.16.0 实时多 Agent 编排控制台 + Round-26 UI/前后端实测（maxloop 深度体检 Round-26）：新增开发期诊断工具 agent-forge/（Node 内置 http + SSE，零依赖），主代理并行调度 5 个真实 Worker Agent（类型门禁 tsc/架构体检/版本一致性/代码质量/安全扫描）实时扫描 novel-forge 源码并流式推进度与日志，浏览器开 http://localhost:8787 即可看到一批 Agent 实时干活，直接回应「要看到 Agent 干活、有进度」诉求且不依赖本环境故障的子代理通道；主代理亲验对前端 12 页面 + 3 动态页面 SSR 实测全 200、无 error boundary、dev 零报错零 hydration 警告，核心 API 全 200 返回真实数据，诚实排除 3 处根路径 GET 405（设计对称）与项目名乱码（终端 locale 显示问题）4 个误报；修复 Round-25 漏同步——package.json version 仍 2.14.0 与源码 v2.15.0 不一致，本轮升 v2.16.0 三处对齐；本轮为 maxloop 深度体检 Round-26，子代理通道派发自定义 agent 报 Tool Read not found，继续按「六之二」降级主代理 Chair 亲验（见 PROCESS/meetings/round-26/chair-self-audit.md）；agent-forge 控制台独立运行于 8787 不受影响。",
   "v2.15.0 确认路径一致性基线刷新对称修复（maxloop 深度体检 Round-25）：自动确认（auto-confirm）与批量确认（batch-confirm）两条确认路径在批量定稿后只触发了伏笔收束率检测，漏触发一致性事实基线抽取，而手动确认路径两者都做——导致自动/批量确认定稿后一致性面板不刷新、比手动确认滞后；本轮对称补齐两条路径确认成功后统一补触发 extractConsistencyFacts（fire-and-forget，不阻塞响应），与手动确认路径一致；配套 auto-confirm 路由单测新增 extractConsistencyFacts mock，消除偶发 500 的测试不稳定；本轮为 maxloop 深度体检 Round-25，子代理通道仍故障按「六之二」降级主代理 Chair 亲验（见 PROCESS/meetings/round-25/chair-self-audit.md）；tsc 0 错误，确认路由单测全绿。",
   "v2.14.0 确认栏类型逃逸收尾（maxloop 深度体检 Round-24）：章节确认栏 ChapterConfirmBar 清除 `const logs: any[]` 与 `logs[logs.length - 1] as any` 两处类型逃逸——确认定稿时原本靠 any 绕过类型检查去读 reviewLogs 最后一条的 fill 状态，改为 `Array<{ fill?: string }>` + 可选链 `?.fill`，类型安全地决定「已填/未填」文案，对齐 v2.13 类型安全收尾主题；本轮为 maxloop 深度体检 Round-24，子代理（Agent 工具）通道在本环境返回空、不落盘，已按 SKILL.md「六之二」自动降级为主代理 Chair 亲验（见 PROCESS/meetings/round-24/chair-self-audit.md）；tsc 0 错误，vitest 全量 80 文件 775/775 全绿。",
@@ -63,6 +64,28 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.17.0",
+    date: "2026-08-14",
+    title: "v2.17.0 角色去重硬化：高/低置信分组 + 已合并卡隐藏 + 尊称误判护栏",
+    sections: [
+      {
+        label: "角色去重硬化（character-dedupe）",
+        items: [
+          "重构 dedupeCharacters 分组策略：确定性组（规则分组 + 核心名宽松分组）直接高置信自动合并，LLM 跨核心名建议仅进低置信 pending 待确认，避免 LLM 误判（如把「顾望舒」误并入「迭戈」组）拖垮真实重复卡的自动清除；合并前完整字段快照可回滚。",
+          "computeConfidence 补「同核心名即同一真实人物」判定：变体+变体（韩先生/韩姓男子）、全名+单「·」后缀变体（迭戈/迭戈·美第奇）这类此前漏判的同核组直接 high 自动合并；安全闸门——同一核心名下多于一个「·」马甲（如迭戈·美第奇/迭戈·桑切斯 可能不同人）仍降 low 交用户确认。",
+          "pickMain 改为干净 canonical 名绝对优先存活为主卡，合并后保留可读真名而非「迭戈先生」「韩姓男子」类称呼卡；coreTokenOf 修复拖尾尊称剥离（此前仅剥 1 字姓，导致「迭戈先生」未归并漏检 Diego 三兄弟）。",
+          "entity-auto-creator.isHonorificVariant 加风险 token 护栏（王/皇/帝/后/妃），避免把「武帝」「王后」这类真实人名误判为「武+帝(尊称)」错并；dedupeCharacters 跳过已合并（软删「🗂 已合并」）卡片，避免每次加载反复重合并生成重复 revision。",
+        ],
+      },
+      {
+        label: "角色栏 UI 收敛（TagChip）",
+        items: [
+          "角色筛选栏与角色行标签抽出统一 TagChip 组件（active 态 / 计数 / 尺寸），角色列表默认隐藏已合并软删卡，标签过滤剔除「🗂 已合并」系统标记，确认按钮加「确认」文案更直白；纯前端组件收敛，零额外接口、零额外 LLM 开销。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.16.0",
     date: "2026-08-14",

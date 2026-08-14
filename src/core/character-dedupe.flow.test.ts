@@ -78,16 +78,17 @@ describe("dedupeCharacters 主流程（v2.0.19/2.0.20 集成守护）", () => {
     expect(h.mockCreate.mock.calls[0][0].data.status).toBe("applied");
   });
 
-  it("detectOnly + low（迭戈·美第奇+迭戈）：只进 pending、不写库不合并", async () => {
+  it("detectOnly + high（迭戈·美第奇+迭戈 单·同核）：v2.17 视为同一人，静默自动合并并写 applied 快照", async () => {
     h.mockFindMany.mockResolvedValue([
       card("d1", "迭戈·美第奇"),
       card("d2", "迭戈"),
     ]);
     const r = await dedupeCharacters("p-low-detect", { detectOnly: true });
-    expect(r.mergedGroups.length).toBe(0);
-    expect(r.pendingGroups.length).toBe(1);
-    expect(h.mockUpdate).not.toHaveBeenCalled(); // 不合并
-    expect(h.mockCreate).not.toHaveBeenCalled(); // detectOnly 低置信不写库
+    expect(r.mergedGroups.length).toBe(1);
+    expect(r.pendingGroups.length).toBe(0);
+    expect(h.mockUpdate).toHaveBeenCalledTimes(2); // 主卡 + 被并卡各一次 update
+    expect(h.mockCreate).toHaveBeenCalledTimes(1);
+    expect(h.mockCreate.mock.calls[0][0].data.status).toBe("applied");
   });
 
   it("非 detectOnly + high：合并并写 applied 快照（与 detectOnly 行为一致）", async () => {
@@ -102,16 +103,17 @@ describe("dedupeCharacters 主流程（v2.0.19/2.0.20 集成守护）", () => {
     expect(h.mockCreate.mock.calls[0][0].data.status).toBe("applied");
   });
 
-  it("非 detectOnly + low：写 pending 快照、不合并", async () => {
+  it("非 detectOnly + high（迭戈·美第奇+迭戈 单·同核）：合并并写 applied 快照", async () => {
     h.mockFindMany.mockResolvedValue([
       card("d1", "迭戈·美第奇"),
       card("d2", "迭戈"),
     ]);
     const r = await dedupeCharacters("p-low-merge");
-    expect(r.pendingGroups.length).toBe(1);
-    expect(h.mockUpdate).not.toHaveBeenCalled(); // 不合并
+    expect(r.mergedGroups.length).toBe(1);
+    expect(r.pendingGroups.length).toBe(0);
+    expect(h.mockUpdate).toHaveBeenCalledTimes(2);
     expect(h.mockCreate).toHaveBeenCalledTimes(1);
-    expect(h.mockCreate.mock.calls[0][0].data.status).toBe("pending");
+    expect(h.mockCreate.mock.calls[0][0].data.status).toBe("applied");
   });
 
   it("无重复角色：返回空分组、任何模式都不写库", async () => {

@@ -42,13 +42,12 @@ describe("computeConfidence（v2.0.5 置信度分级 + 单字缩写修复）", (
     expect(computeConfidence(members, ["林惊羽", "林惊雨"])).toBe("low");
   });
 
-  it("同姓多正主导致尊称歧义 → low（不自动合并，防错并）", () => {
-    // 「韩先生」同姓有韩立、韩雪两个正主，无法无歧义判定 → low
+  it("同姓多正主导致尊称歧义 → low（韩立/韩先生 核心名「韩立」≠「韩」，不触发 v2.17 同核 high，仍走歧义闸门防错并）", () => {
     const members = [c("1", "韩立"), c("2", "韩先生")];
     expect(computeConfidence(members, ["韩立", "韩先生", "韩雪"])).toBe("low");
   });
 
-  it("单字缩写但同姓多正主 → low（防歧义错并）", () => {
+  it("单字缩写但同姓多正主 → low（樊斯瑞/樊 核心名「樊斯瑞」≠「樊」，歧义闸门防错并）", () => {
     const members = [c("1", "樊斯瑞"), c("2", "樊")];
     expect(computeConfidence(members, ["樊斯瑞", "樊", "樊无解"])).toBe("low");
   });
