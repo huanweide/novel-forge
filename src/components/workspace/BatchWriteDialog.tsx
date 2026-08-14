@@ -74,6 +74,7 @@ export function BatchWriteDialog({
               type="number"
               min={1}
               max={10}
+              aria-label="章节数量（1-10，默认 3）"
               value={count}
               onChange={(e) => onCountChange(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
               className="input-glass w-24 rounded-lg px-3 py-2 text-sm"
@@ -129,6 +130,7 @@ export function BatchWriteDialog({
                     <span className="text-sm font-medium text-[var(--nv-text-primary)]">第 {idx + 1} 章 · 章纲</span>
                   </label>
                   <textarea
+                    aria-label={`第 ${idx + 1} 章 章纲`}
                     value={item.outline}
                     onChange={(e) => onEdit(item.nodeId, e.target.value)}
                     rows={4}

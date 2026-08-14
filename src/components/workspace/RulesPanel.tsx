@@ -177,7 +177,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-[var(--nv-text-tertiary)]">优先级</label>
-                  <input type="number" className="input-glass w-full rounded px-2 py-1.5 text-xs"
+                  <input type="number" className="input-glass w-full rounded px-2 py-1.5 text-xs" aria-label="优先级"
                     value={form.priority} onChange={e => setForm({ ...form, priority: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>

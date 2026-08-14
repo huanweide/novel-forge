@@ -1085,6 +1085,7 @@ export function StorylineWorkbench({
                             ) : isEditing ? (
                               <textarea
                                 autoFocus
+                                aria-label="编辑情节内容"
                                 value={draft}
                                 onChange={(e) => setDraft(e.target.value)}
                                 onBlur={commitElement}

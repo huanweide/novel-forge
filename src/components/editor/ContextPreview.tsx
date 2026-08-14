@@ -446,6 +446,7 @@ export function ContextPreview({
           <div>
             <label className="text-xs text-[var(--nv-text-muted)]">章节摘要（可编辑后保存）</label>
             <textarea
+              aria-label="章节摘要（可编辑后保存）"
               value={editedSummary}
               onChange={(e) => setEditedSummary(e.target.value)}
               rows={6}

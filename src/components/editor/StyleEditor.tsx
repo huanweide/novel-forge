@@ -575,7 +575,7 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs text-[var(--nv-text-muted)] mb-1 block">Temperature</label>
-                  <input type="number" step="0.05" min="0" max="2"
+                  <input type="number" step="0.05" min="0" max="2" aria-label="Temperature 采样温度"
                     value={config.temperature}
                     onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) || 0.85 })}
                     className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-[var(--nv-primary)]" />
@@ -583,14 +583,14 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
                 </div>
                 <div>
                   <label className="text-xs text-[var(--nv-text-muted)] mb-1 block">Top-P</label>
-                  <input type="number" step="0.05" min="0" max="1"
+                  <input type="number" step="0.05" min="0" max="1" aria-label="Top-P 核采样概率"
                     value={config.topP}
                     onChange={(e) => setConfig({ ...config, topP: parseFloat(e.target.value) || 0.95 })}
                     className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-[var(--nv-primary)]" />
                 </div>
                 <div>
                   <label className="text-xs text-[var(--nv-text-muted)] mb-1 block">每节字数</label>
-                  <input type="number" step="100" min="200" max="5000"
+                  <input type="number" step="100" min="200" max="5000" aria-label="每节字数"
                     value={config.targetWordsPerSection}
                     onChange={(e) => setConfig({ ...config, targetWordsPerSection: parseInt(e.target.value) || 1000 })}
                     className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-2 py-2 text-sm text-center focus:outline-none focus:border-[var(--nv-primary)]" />

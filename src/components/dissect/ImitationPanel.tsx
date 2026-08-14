@@ -299,6 +299,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">目标字数</label>
           <input
             type="number"
+            aria-label="目标字数"
             value={targetWordCount}
             onChange={(e) => setTargetWordCount(Math.max(500, Number(e.target.value)))}
             min={500}
@@ -311,6 +312,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           <label className="block text-sm text-[var(--nv-text-tertiary)] mb-1.5">章节数</label>
           <input
             type="number"
+            aria-label="章节数"
             value={chapterCount}
             onChange={(e) => setChapterCount(Math.max(1, Math.min(20, Number(e.target.value))))}
             min={1}

@@ -535,6 +535,7 @@ export default function Workshop() {
               <div>
                 <label className="text-xs text-[var(--nv-text-tertiary)]">描述</label>
                 <input
+                  aria-label="描述"
                   value={upload.description}
                   onChange={(e) => setUpload({ ...upload, description: e.target.value })}
                   className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"
@@ -543,6 +544,7 @@ export default function Workshop() {
               <div>
                 <label className="text-xs text-[var(--nv-text-tertiary)]">标签（逗号分隔，如：古风,仙侠）</label>
                 <input
+                  aria-label="标签（逗号分隔）"
                   value={upload.tags}
                   onChange={(e) => setUpload({ ...upload, tags: e.target.value })}
                   className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm"

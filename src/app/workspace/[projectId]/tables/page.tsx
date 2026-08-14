@@ -444,6 +444,7 @@ function LoreTableGrid({ table, busy, flaggedRows, onUpdateCell, onAddRow, onSav
                   {cols.map((c) => (
                     <td key={c.key} className="p-1 align-middle" style={{ display: "inline-block", width: dataColWidth }}>
                       <input
+                        aria-label={`编辑${c.label}`}
                         value={r[c.key] ?? ""}
                         onChange={(e) => onUpdateCell(table, Number(r.row_id), c.key, e.target.value)}
                         className="input-glass w-full rounded px-2 py-1"
@@ -473,6 +474,7 @@ function LoreTableGrid({ table, busy, flaggedRows, onUpdateCell, onAddRow, onSav
                   {cols.map((c) => (
                     <td key={c.key} className="p-1">
                       <input
+                        aria-label={`编辑${c.label}`}
                         value={r[c.key] ?? ""}
                         onChange={(e) => onUpdateCell(table, Number(r.row_id), c.key, e.target.value)}
                         className="input-glass w-32 rounded px-2 py-1"

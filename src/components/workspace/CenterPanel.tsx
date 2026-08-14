@@ -397,7 +397,7 @@ export function CenterPanel({
                 )}
                 <div className="flex items-center gap-1 ml-auto">
                   <input type="number" value={targetWordCount} onChange={(e) => onTargetWordCountChange(parseInt(e.target.value) || 3000)}
-                    className="input-glass w-16 h-8 rounded-lg px-2 text-xs text-center" title="目标字数" />
+                    className="input-glass w-16 h-8 rounded-lg px-2 text-xs text-center" title="目标字数" aria-label="目标字数" />
                   <span className="text-xs text-[var(--nv-text-tertiary)]">字</span>
                 </div>
               </div>

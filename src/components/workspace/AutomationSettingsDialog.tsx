@@ -192,7 +192,7 @@ export function AutomationSettingsDialog({
               {/* 频率 */}
               <div className={`rounded-xl border border-[var(--nv-border-2)] px-4 py-3 ${autoFillEnabled ? "" : "opacity-50"}`}>
                 <label className="text-sm text-[var(--nv-text-secondary)] block mb-2">填表频率（每 N 章填一次）</label>
-                <input type="number" min={1} max={50} value={fillFrequency}
+                <input type="number" min={1} max={50} value={fillFrequency} aria-label="填表频率（每 N 章填一次）"
                   disabled={!autoFillEnabled}
                   onChange={(e) => setFillFrequency(Number(e.target.value))}
                   className="input-glass w-28 rounded-lg px-3 py-2 text-sm focus:border-[var(--nv-primary)] disabled:opacity-60" />
@@ -211,7 +211,7 @@ export function AutomationSettingsDialog({
               {/* 上下文楼层 */}
               <div className="rounded-xl border border-[var(--nv-border-2)] px-4 py-3">
                 <label className="text-sm text-[var(--nv-text-secondary)] block mb-2">上下文楼层数（前文窗口）</label>
-                <input type="number" min={1} max={50} value={contextKeepChapters}
+                <input type="number" min={1} max={50} value={contextKeepChapters} aria-label="上下文楼层数（前文窗口）"
                   onChange={(e) => setContextKeepChapters(Number(e.target.value))}
                   className="input-glass w-28 rounded-lg px-3 py-2 text-sm focus:border-[var(--nv-primary)]" />
                 <p className="text-xs text-[var(--nv-text-tertiary)] mt-1.5">生成每章时向前保留的最大章节数（前文上下文窗口）。结构化表格本身持久保存，会持续注入上下文。</p>

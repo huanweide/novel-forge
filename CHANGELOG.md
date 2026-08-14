@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.23.0 — 2026-08-14
+
+### 文本输入框可访问名补齐（maxloop 多视角持续亲验，可访问性视角）
+- 用 TypeScript AST 全量扫描 124 个 tsx 组件（避开此前 Grep 截断 + 正则假阳性的工具陷阱），精准定位 18 处「既无 aria-label、又无 placeholder、且不在 `<label>` 内」的文本输入框真实缺口：14 处为视觉 `<label>` 文字与兄弟 input 缺少 `htmlFor`/`id` 关联（读屏器不会把标签名绑到 input），4 处为完全无名（含 CenterPanel 目标字数仅 `title` 弱兜底、OutlineDialog 编辑章节标题、StorylineWorkbench 编辑情节内容、BatchWriteDialog 逐章章纲）。
+- 统一补 `aria-label`（内容与视觉文字一致），与 v2.19 纯图标按钮修复同风格、最小侵入、不破坏视觉；读屏与键盘用户进入这些输入框时能听到正确名称，不再报「编辑文字、未命名」。
+- tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮纯 a11y 属性补充、无逻辑改动、测试数不变）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.22.0 — 2026-08-14
 
 ### 角色栏组件测试闭环（maxloop 多视角持续亲验，主对话模拟多审查员）

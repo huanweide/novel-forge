@@ -127,7 +127,7 @@ export function OutlineDialog({
                     {editingIndex === i ? (
                       <div className="space-y-2">
                         <input className="input-glass w-full rounded px-2 py-1 text-sm text-[var(--nv-text-primary)] focus:border-[var(--nv-primary)]"
-                          value={ch.title} onChange={(e) => handleUpdateChapter(i, "title", e.target.value)} autoFocus />
+                          aria-label="章节标题" value={ch.title} onChange={(e) => handleUpdateChapter(i, "title", e.target.value)} autoFocus />
                         <textarea className="input-glass w-full rounded px-2 py-1 text-sm text-[var(--nv-text-secondary)] resize-none focus:border-[var(--nv-primary)]"
                           rows={3} value={ch.summary} onChange={(e) => handleUpdateChapter(i, "summary", e.target.value)} placeholder="本章梗概…" />
                         <div className="flex gap-2">
