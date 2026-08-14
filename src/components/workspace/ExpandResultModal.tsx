@@ -67,7 +67,7 @@ export function ExpandResultModal({
               <h3 id="expand-result-title" className="text-base font-bold text-[var(--nv-text-primary)]">
                 {result.failList.length === 0 ? <span className="flex items-center gap-1.5"><Icon name="check" size={15} className="text-[var(--nv-success)]" /> 全部扩展成功</span> : <span className="flex items-center gap-1.5"><Icon name="clipboard" size={15} /> 扩展结果</span>}
               </h3>
-              <button onClick={onClose} className="text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] text-lg leading-none"><Icon name="x" size={12} className="align-middle" /></button>
+              <button onClick={onClose} aria-label="关闭扩展结果" className="text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] text-lg leading-none"><Icon name="x" size={12} className="align-middle" /></button>
             </div>
 
             {/* 统计 */}

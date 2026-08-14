@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.19.0 — 2026-08-14
+
+### UI 无障碍收尾 + 组件测试补强（maxloop 多视角持续亲验，主对话模拟多审查员）
+- 补 4 处无障碍缺口：CharacterToolbar 新建标签输入框补 aria-label「新建标签名」、RangeSelector 范围输入框补 aria-label「选择角色范围（如 1-50 或 1,3,5）」、MergePendingPanel 刷新按钮补 aria-label「刷新合并提案」、ExpandResultModal 关闭按钮补 aria-label「关闭扩展结果」——纯图标按钮与纯 placeholder 输入框此前读屏无名称，键盘与读屏用户无法定位。
+- 修 CharacterList.handleRangeSelect 引用后置声明的 filtered（const 暂时性死区隐患 + 阅读歧义，v2.17 遗留待办）：把 filterCharacters 调用前置到 handleRangeSelect / handleToggleAll 之前声明，消除隐患并提升可读性。
+- MergePendingPanel.load 补 AbortController：组件卸载或切换项目时中止在途的 merge-pending 请求，避免 fetch 回调在卸载后 setState 触发 React 警告，与 v2.18 去重探针同类的 fire-and-forget 修复；刷新按钮 onClick 改 () => void load() 适配新签名。
+- 新增 RangeSelector.test.tsx（parseRange 纯函数 9 分支 + 输入框回车/失焦/Esc 提交共 13 例）、CharacterToolbar.test.tsx（input aria-label + 全选/AI扩展/去重/打标/清空按钮回调共 7 例）。
+- tsc 0 错误；vitest 全量 86 文件 824/824 全绿（较 v2.18 的 804 增 20）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.18.0 — 2026-08-14
 
 ### UI 优化 + 测试流程优化（maxloop 多视角亲验，主对话模拟子 Agent 多轮检验）

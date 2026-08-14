@@ -28,14 +28,17 @@ export function MergePendingPanel({
   const [loading, setLoading] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  // v2.19：load 支持中止信号；effect 内创建 AbortController 并在卸载/切项目时 abort，
+  // 避免 fetch 回调在卸载后 setState 触发 React 警告（与 v2.18 去重探针同类的 fire-and-forget 修复）。
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/characters/merge-pending?projectId=${encodeURIComponent(projectId)}`);
+      const res = await fetch(`/api/characters/merge-pending?projectId=${encodeURIComponent(projectId)}`, { signal });
       const d = await res.json().catch(() => ({ ok: false, items: [] }));
       if (res.ok && d.ok) setItems(d.items || []);
       else setItems([]);
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return; // 卸载中止，静默
       setItems([]);
     } finally {
       setLoading(false);
@@ -43,7 +46,9 @@ export function MergePendingPanel({
   }, [projectId]);
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const act = async (url: string, id: string, okMsg: string, errMsg: string) => {
@@ -82,7 +87,7 @@ export function MergePendingPanel({
           {pendingCount > 0 && <span className="text-[10px] px-1 rounded bg-[var(--nv-warn-soft)] text-[var(--nv-warn)]">{pendingCount} 待确认</span>}
           {appliedCount > 0 && <span className="text-[10px] px-1 rounded bg-[var(--nv-border-1)] text-[var(--nv-text-secondary)]">{appliedCount} 可回滚</span>}
         </span>
-        <button onClick={load} className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] inline-flex items-center gap-1" disabled={loading}>
+        <button onClick={() => void load()} aria-label="刷新合并提案" className="text-[10px] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] inline-flex items-center gap-1" disabled={loading}>
           {loading ? <Icon name="loader" size={10} className="animate-spin" /> : <Icon name="refresh" size={10} />} 刷新
         </button>
       </div>

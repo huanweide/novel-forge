@@ -98,6 +98,7 @@ export function CharacterToolbar({
         value={newTag}
         onChange={(e) => onNewTagChange(e.target.value)}
         placeholder="新建标签名（如：龙陨卫）"
+        aria-label="新建标签名"
         className="text-xs px-2 py-0.5 rounded border border-[var(--nv-border-1)] bg-transparent text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)] w-36"
       />
       <button

@@ -69,6 +69,10 @@ export function CharacterList({
     });
   }, []);
 
+  // v2.18：过滤逻辑抽为纯函数 filterCharacters（便于单测），行为与原内联逻辑一致。
+  // 前置声明：handleRangeSelect / handleToggleAll 都引用它，提前到此避免函数体引用后置 const（TDZ 隐患 + 阅读歧义）。
+  const filtered = filterCharacters(characters, { search, roleFilter, tagFilter, statusFilter });
+
   // 范围选择——对筛选后的可见列表生效
   const handleRangeSelect = (indices: Set<number>) => {
     const visible = filtered; // filtered 是筛选+搜索后的结果
@@ -96,9 +100,6 @@ export function CharacterList({
       setSelectedIds(next);
     }
   };
-
-  // v2.18：过滤逻辑抽为纯函数 filterCharacters（便于单测），行为与原内联逻辑一致
-  const filtered = filterCharacters(characters, { search, roleFilter, tagFilter, statusFilter });
 
   const roleOrder = CHARACTER_ROLE_OPTIONS.map((o) => o.value as CharacterRole);
   const roleLabel: Record<string, string> = Object.fromEntries(CHARACTER_ROLE_OPTIONS.map((o) => [o.value, o.label]));

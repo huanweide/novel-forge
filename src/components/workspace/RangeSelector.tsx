@@ -101,6 +101,7 @@ export function RangeSelector({
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         placeholder={placeholder || `1-${total}`}
+        aria-label="选择角色范围（如 1-50 或 1,3,5）"
         className="w-24 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded px-1.5 py-0.5 text-[10px] text-[var(--nv-text-secondary)] placeholder-[var(--nv-text-muted)] focus:outline-none focus:border-warning"
       />
       {lastApplied && (
