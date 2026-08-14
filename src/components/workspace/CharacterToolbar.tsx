@@ -15,10 +15,8 @@ export function CharacterToolbar({
   expanding,
   expandDone,
   expandTotal,
-  deduping,
   onToggleAll,
   onExpand,
-  onDedupe,
   onRange,
   onClear,
   // v2.0.14：自建标签输入与打标——移入工具栏保持同一 base 样式
@@ -34,10 +32,8 @@ export function CharacterToolbar({
   expanding: boolean;
   expandDone: number;
   expandTotal: number;
-  deduping: boolean;
   onToggleAll: () => void;
   onExpand: () => void;
-  onDedupe: () => void;
   onRange: (indices: Set<number>) => void;
   onClear: () => void;
   // v2.0.14：自建标签输入与打标
@@ -74,18 +70,6 @@ export function CharacterToolbar({
           <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" />{expandDone}/{expandTotal}</span>
         ) : (
           <span className="flex items-center gap-1"><Icon name="sparkles" size={10} className="text-[var(--nv-accent)]" />AI扩展 ({selectedIds.size})</span>
-        )}
-      </button>
-      <button
-        onClick={onDedupe}
-        disabled={deduping}
-        className={`${base} ${deduping ? "border-[var(--nv-border-1)] text-[var(--nv-text-tertiary)] cursor-not-allowed" : neutral}`}
-        title="扫描全部角色卡：合并同一真实人物（昵称 / 尊称 / 别名 / 小名 / 隐藏身份揭露，由 AI 判定并接管别名与关系，被并卡软删标记「🗂 已合并」）。批量写作后默认自动跑，此按钮用于手动补救。"
-      >
-        {deduping ? (
-          <span className="flex items-center gap-1"><Icon name="loader" size={10} className="animate-spin" /> 去重中…</span>
-        ) : (
-          <span className="flex items-center gap-1">自动去重合并</span>
         )}
       </button>
       {selectedIds.size > 0 && !expanding && (

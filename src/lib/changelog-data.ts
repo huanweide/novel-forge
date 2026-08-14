@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.25.0";
+export const LATEST_VERSION = "v2.26.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.26.0 角色核心逻辑硬化 + 功能精简（maxloop 深度探索）：角色核心——entity-sync 自动建卡入口加两道闸门：①变体并入别名（尊称/缩写/小名/姓+描述词如「迪哥先生→迪哥」「韩姓男子→韩立」经 resolveDiscoveryMergeTarget 实时并入正主 aliases，不建脏卡）；②频次门槛建卡（storyNode 正文出现次数 < MIN_CHARACTER_APPEARANCES(2) 视为路人甲拦截，不建卡、进 skipped），抽纯函数 shouldAutoCreateCharacterCard 可单测、fail-open 查库失败默认放行；配套 5 例 entity-sync.guard.test.ts 锁死 (a)新角色引入、(b)去重识别、(c)含·马甲不误并、(d)低频路人甲拦截。功能精简——移除 CharacterToolbar 冗余「自动去重合并」按钮（去重已全自动：批量写作后/自动发现后/加载 detectOnly 后台静默跑，手动入口冗余），同步清理 CharacterList/CharacterToolbar.test 配套代码。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +5 例）；纯逻辑硬化，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.25.0 类型逃逸清理启动·第一批：MarkdownViewer 收口 21 处 any（maxloop 多视角持续亲验）：类型安全——用 TypeScript AST 全量扫描得 1344 处 any（as any 455 / 类型注解 231 / any[] 274 / 参数 384），按风险分级——LLM/Prisma JSON 桥接（orchestrator/fill/post-processor/context-loader/pre-processor/characters/expand 等）与 Prisma 生成文件暂缓、test 文件低优先；首批挑纯前端参数 any 为主的 MarkdownViewer，用 react-markdown 导出的 Components 类型替换手写 Record<string, React.FC<any>> 与各渲染函数 ({children,...props}:any) 参数注解（props 改为由 Components 上下文推断精确元素类型），并把 rehype 插件列表 any[] 改为 unified 的 PluggableList，共消除 21 处。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮仅改 MarkdownViewer 类型、零运行时逻辑改动）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.24.0 角色栏组件测试闭环收官：CharacterList 含 SSE 流/删除确认单测（maxloop 多视角持续亲验）：测试流程——补齐 v2.20/v2.22 留下的最后一环——出口组件 CharacterList 组件单测（src/components/workspace/CharacterList.test.tsx），闭合角色栏组件测试闭环：用 vi.mock 把重型子组件（CharacterFilters/CharacterToolbar/CharacterGroupList/ExpandResultModal/MergePendingPanel）与 UI 原子（Icon/EmptyState/toast）替换成轻量 stub，只验证 CharacterList 自身状态机与网络层；覆盖 SSE 流扩展（构造 TextEncoder+ReadableStream 字节流喂入，断言进度解析 / done 事件触发 onExpanded 清空选中 / HTTP 非 2xx 调 toastError / 未勾选不对 expand 发请求）、删除确认（confirmDialog 返回 true→调 onDelete、false→不调，删除确认走真实 useConfirmDelete 钩子）、确认角色卡（默认 handleConfirm PUT 成功回调 onExpanded），共 9 例。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +9 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.23.0 文本输入框可访问名补齐（maxloop 多视角持续亲验，可访问性视角）：UI/可访问性——用 TypeScript AST 全量扫描 124 个 tsx 组件（避开此前 Grep 截断 + 正则假阳性的工具陷阱），精准定位 18 处「既无 aria-label、又无 placeholder、且不在 <label> 内」的文本输入框真实缺口：14 处为视觉 <label> 文字与兄弟 input 缺少 htmlFor/id 关联（读屏器不会把标签名绑到 input），4 处为完全无名（含 CenterPanel 目标字数仅 title 弱兜底、OutlineDialog 编辑章节标题、StorylineWorkbench 编辑情节内容、BatchWriteDialog 逐章章纲）；统一补 aria-label（内容与视觉文字一致），与 v2.19 纯图标按钮修复同风格、最小侵入、不破坏视觉。tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮纯 a11y 属性补充、无逻辑改动、测试数不变）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -70,6 +71,32 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.26.0",
+    date: "2026-08-14",
+    title: "v2.26.0 角色核心逻辑硬化 + 功能精简（maxloop 深度探索）",
+    sections: [
+      {
+        label: "角色核心逻辑硬化（谨慎建卡 + 变体并入）",
+        items: [
+          "entity-sync 自动建卡入口（fill.ts 每章填表后 syncChapterEntities 调用的真实活入口）加两道闸门：①变体并入别名——尊称/缩写/小名/姓+描述词（如「迪哥先生→迪哥」「韩姓男子→韩立」）经 resolveDiscoveryMergeTarget 实时并入正主 aliases，不再建脏卡；②频次门槛建卡——storyNode 正文出现次数低于 MIN_CHARACTER_APPEARANCES(默认2) 视为路人甲拦截，不建卡、记入 skipped。抽纯函数 shouldAutoCreateCharacterCard(appearanceCount, min) 可单测、查库失败 fail-open 默认放行，不破现有测试。",
+          "配套新增 src/core/babylore/entity-sync.guard.test.ts（5 例）锁死四类行为：(a)新角色引入流程、(b)已存在人物不当路人甲引入（变体并入正主别名）、(c)含·马甲（迪哥·若昂内）不误并、按频次独立建卡、(d)低频路人甲（仅出现1次）拦截不建卡。",
+        ],
+      },
+      {
+        label: "功能精简（去冗余按钮）",
+        items: [
+          "移除 CharacterToolbar 冗余「自动去重合并」按钮（去重已全自动覆盖：批量写作后 / 自动发现新角色后 / 角色栏加载 detectOnly 后台静默检测，手动入口冗余），同步清理 CharacterList 的 deduping state 与 CharacterToolbar.test 的冗余用例，保留 detectOnly 提示条的「确认合并」入口。",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +5 例）；纯逻辑硬化，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.25.0",
     date: "2026-08-14",

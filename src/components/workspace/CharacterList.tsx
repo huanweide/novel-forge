@@ -41,8 +41,8 @@ export function CharacterList({
   const [expandResult, setExpandResult] = useState<{
     okList: string[]; failList: Array<{ name: string; reason: string }>; total: number;
   } | null>(null);
-  // 自动去重合并（v1.4.0）
-  const [deduping, setDeduping] = useState(false);
+  // 自动去重合并（v1.4.0）：扫描全部角色卡合并同一真实人物，结果弹窗预览后由 onExpanded 刷新；
+  // 现仅由 detectOnly 提示条的「确认合并」触发，工具条手动按钮已移除（去重已全自动：batch-write/autoCreate/加载静默检测）
   const [dedupeResult, setDedupeResult] = useState<{
     mergedGroups: Array<{ mainId: string; mainName: string; merged: Array<{ id: string; name: string }> }>;
     pendingGroups: Array<{ mainId: string; mainName: string; merged: Array<{ id: string; name: string }> }>;
@@ -230,7 +230,6 @@ export function CharacterList({
 
   // v1.4.0：自动去重合并——扫描全部角色卡，合并同一真实人物（昵称/尊称/别名/小名/隐藏身份揭露），结果弹窗预览后由 onExpanded 刷新
   const handleDedupe = async () => {
-    setDeduping(true);
     setDedupeResult(null);
     try {
       const res = await fetch("/api/characters/dedupe", {
@@ -258,8 +257,6 @@ export function CharacterList({
       }
     } catch (e) {
       toastError("去重合并失败：" + (e instanceof Error ? e.message : "网络错误"));
-    } finally {
-      setDeduping(false);
     }
   };
 
@@ -405,10 +402,8 @@ export function CharacterList({
         expanding={expanding}
         expandDone={expandDone}
         expandTotal={expandTotal}
-        deduping={deduping}
         onToggleAll={handleToggleAll}
         onExpand={handleExpand}
-        onDedupe={handleDedupe}
         onRange={handleRangeSelect}
         onClear={() => setSelectedIds(new Set())}
         newTag={newTag}

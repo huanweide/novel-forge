@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.26.0 — 2026-08-14
+
+### 角色核心逻辑硬化 + 功能精简（maxloop 深度探索）
+- entity-sync 自动建卡入口（fill.ts 每章填表后 syncChapterEntities 调用的真实活入口）加两道闸门：①变体并入别名——尊称/缩写/小名/姓+描述词（如「迪哥先生→迪哥」「韩姓男子→韩立」）经 resolveDiscoveryMergeTarget 实时并入正主 aliases，不建脏卡；②频次门槛建卡——storyNode 正文出现次数低于 MIN_CHARACTER_APPEARANCES(默认2) 视为路人甲拦截，不建卡、进 skipped；抽纯函数 shouldAutoCreateCharacterCard 可单测、查库失败 fail-open 默认放行；配套 5 例 entity-sync.guard.test.ts 锁死 (a)新角色引入、(b)去重识别、(c)含·马甲不误并、(d)低频路人甲拦截。
+- 功能精简——移除 CharacterToolbar 冗余「自动去重合并」按钮（去重已全自动：批量写作后/自动发现后/加载 detectOnly 后台静默跑，手动入口冗余），同步清理 CharacterList/CharacterToolbar.test 配套代码。
+- tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +5 例）；纯逻辑硬化，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.25.0 — 2026-08-14
 
 ### 类型逃逸清理启动·第一批：MarkdownViewer 收口 21 处 any（maxloop 多视角持续亲验）

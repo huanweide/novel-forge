@@ -13,7 +13,12 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { isSimilarName } from "@/lib/entity-auto-creator";
+import {
+  isSimilarName,
+  resolveDiscoveryMergeTarget,
+  shouldAutoCreateCharacterCard,
+  MIN_CHARACTER_APPEARANCES,
+} from "@/lib/entity-auto-creator";
 import { fillModelOf } from "./fill";
 import {
   classifyWorldCategory,
@@ -201,31 +206,74 @@ export async function syncChapterEntities(
     }
     addName(name);
     try {
-      if (type === "character") {
-        const roleText = String(e.role || "配角");
-        const roleEnum =
-          ROLE_TEXT_TO_ENUM[roleText] ||
-          (roleText.includes("反") ? "antagonist" : roleText.includes("主") ? "protagonist" : "supporting");
-        await prisma.characterCard.create({
-          data: {
-            projectId,
-            name,
-            role: roleEnum,
-            age: "未知",
-            gender: "未知",
-            background: description,
-            storyLine: summary,
-            personality: { dominant: String(e.personality || ""), surface: "", middle: "", core: "" },
-            appearance: { features: String(e.appearance || "") },
-            abilities: [],
-            currentStatus: "alive",
-            relationships: newRels as any,
-            tags: [],
-            reviewStatus: "pending",
-          } as any,
+    if (type === "character") {
+      // (a/b/c) 变体（尊称/缩写/小名/姓+描述）并入唯一同姓正主别名，不建独立脏卡。
+      // 例：「迪哥先生」「迪哥·若昂内」在「迪哥」已存在时并入其别名，而非拆成两张脏卡；
+      // 小名、单字缩写（樊）、「韩姓男子」等同理。与 dedupe 协同：变体优先实时并入，避免闪现脏卡。
+      const variantTargetName = resolveDiscoveryMergeTarget(existingList, name);
+      if (variantTargetName) {
+        const tgt = existingChars.find((c) => c.name.toLowerCase() === variantTargetName.toLowerCase());
+        if (tgt) {
+          const curAliases = Array.isArray(tgt.aliases) ? (tgt.aliases as string[]) : [];
+          if (!curAliases.some((al) => al.toLowerCase() === name.toLowerCase())) {
+            try {
+              await prisma.characterCard.update({
+                where: { id: tgt.id },
+                data: { aliases: Array.from(new Set([...curAliases, name])).slice(0, 50) },
+              });
+              result.createdChars.push(`${name}（并入「${variantTargetName}」别名）`);
+            } catch {
+              result.skipped.push(`${name}（并入别名失败）`);
+            }
+          } else {
+            result.createdChars.push(`${name}（已是「${variantTargetName}」别名）`);
+          }
+        }
+        addName(name);
+        continue;
+      }
+      // (d) 谨慎建卡：仅当全项目正文出现次数 ≥ 门槛才自动建卡，避免把只出现一两次的次要小角色
+      // （如某章只出现一次的服务员）误建角色卡污染数据。查库失败时 fail-open 放行（不误伤真实建卡）；
+      // count 含本章（填表时本章正文已入库），故本章高频出现的主角/重要配角自然达标，仅出现一次的路人被拦截。
+      let appearanceCount = MIN_CHARACTER_APPEARANCES;
+      try {
+        appearanceCount = await prisma.storyNode.count({
+          where: { projectId, content: { contains: name } },
         });
-        result.createdChars.push(name);
-      } else {
+      } catch {
+        /* 查库失败默认放行 */
+      }
+      if (!shouldAutoCreateCharacterCard(appearanceCount)) {
+        result.skipped.push(
+          `${name}(仅出现${appearanceCount}次，低于建卡门槛${MIN_CHARACTER_APPEARANCES}，疑似路人甲)`,
+        );
+        addName(name);
+        continue;
+      }
+      const roleText = String(e.role || "配角");
+      const roleEnum =
+        ROLE_TEXT_TO_ENUM[roleText] ||
+        (roleText.includes("反") ? "antagonist" : roleText.includes("主") ? "protagonist" : "supporting");
+      await prisma.characterCard.create({
+        data: {
+          projectId,
+          name,
+          role: roleEnum,
+          age: "未知",
+          gender: "未知",
+          background: description,
+          storyLine: summary,
+          personality: { dominant: String(e.personality || ""), surface: "", middle: "", core: "" },
+          appearance: { features: String(e.appearance || "") },
+          abilities: [],
+          currentStatus: "alive",
+          relationships: newRels as any,
+          tags: [],
+          reviewStatus: "pending",
+        } as any,
+      });
+      result.createdChars.push(name);
+    } else {
         let category: WorldCategory = (TYPE_TO_CATEGORY[type] || "custom") as WorldCategory;
         // R2-001：当 LLM 给的 type 不可信（落在 custom / 未映射）时，
         // 用确定性世界卡分类器对「名称+描述」重新路由，避免力量/文化/历史/法则/货币

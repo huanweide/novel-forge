@@ -52,13 +52,6 @@ describe("CharacterToolbar（v2.0.4 自建标签 + 工具条按钮）", () => {
     expect(onExpand).toHaveBeenCalledTimes(1);
   });
 
-  it("自动去重合并按钮调用 onDedupe", () => {
-    const onDedupe = vi.fn();
-    render(<CharacterToolbar {...baseProps} onDedupe={onDedupe} />);
-    fireEvent.click(screen.getByRole("button", { name: /自动去重合并/ }));
-    expect(onDedupe).toHaveBeenCalledTimes(1);
-  });
-
   it("打标到选中按钮（标签非空 + 选中非空时可用）调用 onApplyTags", () => {
     const onApplyTags = vi.fn();
     render(<CharacterToolbar {...baseProps} onApplyTags={onApplyTags} />);

@@ -350,6 +350,22 @@ export function resolveDiscoveryMergeTarget(allNames: string[], variantName: str
   return cands.length === 1 ? cands[0] : null;
 }
 
+/**
+ * 自动建角色卡门槛（夜间深度优化·(d) 谨慎建卡）：
+ * 仅当候选名在全项目正文出现次数 ≥ 阈值才自动建角色卡，避免把只出现一两次的次要小角色
+ * （如某章只出现一次的服务员）误建成角色卡污染数据。变体（尊称/缩写/小名）并入正主别名
+ * 不走此判定（变体本就不建独立卡）。
+ * 抽成纯函数便于单测（不依赖 prisma）。默认阈值 2：本章高频出现的主角/重要配角自然达标，
+ * 仅出现一次的路人被拦截；后续若该名多次出现再自动建卡（自愈）。
+ */
+export const MIN_CHARACTER_APPEARANCES = 2;
+export function shouldAutoCreateCharacterCard(
+  appearanceCount: number,
+  min = MIN_CHARACTER_APPEARANCES,
+): boolean {
+  return appearanceCount >= min;
+}
+
 // ─── 主函数 ──────────────────────────────────────────────────
 
 /**
