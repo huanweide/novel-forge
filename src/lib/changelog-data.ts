@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.23.0";
+export const LATEST_VERSION = "v2.24.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.24.0 角色栏组件测试闭环收官：CharacterList 含 SSE 流/删除确认单测（maxloop 多视角持续亲验）：测试流程——补齐 v2.20/v2.22 留下的最后一环——出口组件 CharacterList 组件单测（src/components/workspace/CharacterList.test.tsx），闭合角色栏组件测试闭环：用 vi.mock 把重型子组件（CharacterFilters/CharacterToolbar/CharacterGroupList/ExpandResultModal/MergePendingPanel）与 UI 原子（Icon/EmptyState/toast）替换成轻量 stub，只验证 CharacterList 自身状态机与网络层；覆盖 SSE 流扩展（构造 TextEncoder+ReadableStream 字节流喂入，断言进度解析 / done 事件触发 onExpanded 清空选中 / HTTP 非 2xx 调 toastError / 未勾选不对 expand 发请求）、删除确认（confirmDialog 返回 true→调 onDelete、false→不调，删除确认走真实 useConfirmDelete 钩子）、确认角色卡（默认 handleConfirm PUT 成功回调 onExpanded），共 9 例。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +9 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.23.0 文本输入框可访问名补齐（maxloop 多视角持续亲验，可访问性视角）：UI/可访问性——用 TypeScript AST 全量扫描 124 个 tsx 组件（避开此前 Grep 截断 + 正则假阳性的工具陷阱），精准定位 18 处「既无 aria-label、又无 placeholder、且不在 <label> 内」的文本输入框真实缺口：14 处为视觉 <label> 文字与兄弟 input 缺少 htmlFor/id 关联（读屏器不会把标签名绑到 input），4 处为完全无名（含 CenterPanel 目标字数仅 title 弱兜底、OutlineDialog 编辑章节标题、StorylineWorkbench 编辑情节内容、BatchWriteDialog 逐章章纲）；统一补 aria-label（内容与视觉文字一致），与 v2.19 纯图标按钮修复同风格、最小侵入、不破坏视觉。tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮纯 a11y 属性补充、无逻辑改动、测试数不变）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.22.0 角色栏组件测试闭环（maxloop 多视角持续亲验，主对话模拟多审查员）：测试流程——把 v2.20 留下的两个含网络层组件测试补齐，闭合角色栏组件测试闭环：新增 src/lib/character-filter.test.ts（覆盖 v2.18 抽出的过滤纯函数 filterCharacters 与 isUserTag 的全部分支：已合并软删卡默认隐藏、role 精确匹配、tag 的 no-tags/has-tags/具体用户标签/系统标签不计入、status 的 alive 与 dead 覆盖 dead/missing/presumed_dead、search 命中 name 与 aliases 子串、组合过滤，共 14 例）；新增 src/components/workspace/MergePendingPanel.test.tsx（jsdom + fetch mock，覆盖挂载拉取提案并渲染待确认/可回滚徽标、挂载请求携带 AbortSignal、点击刷新按钮重新拉取、点击确认合并发起 POST 并回调 onChanged，共 4 例）。tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮 +2 文件 +18 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.21.0 弹窗关闭按钮无障碍收尾（maxloop 多视角持续亲验，主对话模拟多审查员）：UI/可访问性——全局扫描纯图标按钮缺口，补齐 3 处弹窗/抽屉关闭按钮的 aria-label：SettingsImporter（批量导入设定弹窗）、AutomationSettingsDialog（自动填表弹窗）、BuildConfigDialog（项目设定弹窗）的关闭 X 按钮此前只有图标无文字名，读屏与键盘用户无法定位；统一补 aria-label「关闭」，与 Modal/ExpandResultModal 等同类修复保持一致。tsc 0 错误，vitest 全量 88 文件 832/832 全绿（本轮纯 a11y 属性补充、无逻辑改动）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -68,6 +69,26 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.24.0",
+    date: "2026-08-14",
+    title: "v2.24.0 角色栏组件测试闭环收官：CharacterList 含 SSE 流/删除确认单测（maxloop 多视角持续亲验）",
+    sections: [
+      {
+        label: "测试流程优化（组件测试闭环收官）",
+        items: [
+          "补齐 v2.20/v2.22 留下的最后一环——出口组件 CharacterList 组件单测（src/components/workspace/CharacterList.test.tsx），闭合角色栏组件测试闭环：用 vi.mock 把重型子组件（CharacterFilters/CharacterToolbar/CharacterGroupList/ExpandResultModal/MergePendingPanel）与 UI 原子（Icon/EmptyState/toast）替换成轻量 stub，只验证 CharacterList 自身状态机与网络层。",
+          "覆盖 SSE 流扩展（构造 TextEncoder+ReadableStream 字节流喂入，断言进度解析 / done 事件触发 onExpanded 清空选中 / HTTP 非 2xx 调 toastError / 未勾选不对 /api/characters/expand 发请求）、删除确认（confirmDialog 返回 true→调 onDelete、false→不调，删除确认走真实 useConfirmDelete 钩子）、确认角色卡（默认 handleConfirm PUT 成功回调 onExpanded），共 9 例。",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +9 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.23.0",
     date: "2026-08-14",

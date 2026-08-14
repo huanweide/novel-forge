@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.24.0 — 2026-08-14
+
+### 角色栏组件测试闭环收官：CharacterList 含 SSE 流/删除确认单测（maxloop 多视角持续亲验）
+- 补齐 v2.20/v2.22 留下的最后一环——出口组件 CharacterList 组件单测（src/components/workspace/CharacterList.test.tsx），闭合角色栏组件测试闭环：用 vi.mock 把重型子组件（CharacterFilters/CharacterToolbar/CharacterGroupList/ExpandResultModal/MergePendingPanel）与 UI 原子（Icon/EmptyState/toast）替换成轻量 stub，只验证 CharacterList 自身状态机与网络层。
+- 覆盖 SSE 流扩展（构造 TextEncoder+ReadableStream 字节流喂入，断言进度解析 / done 事件触发 onExpanded 清空选中 / HTTP 非 2xx 调 toastError / 未勾选不对 /api/characters/expand 发请求）、删除确认（confirmDialog 返回 true→调 onDelete、false→不调，删除确认走真实 useConfirmDelete 钩子）、确认角色卡（默认 handleConfirm PUT 成功回调 onExpanded），共 9 例。
+- tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +9 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.23.0 — 2026-08-14
 
 ### 文本输入框可访问名补齐（maxloop 多视角持续亲验，可访问性视角）
