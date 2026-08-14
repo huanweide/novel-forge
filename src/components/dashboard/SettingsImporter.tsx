@@ -109,7 +109,7 @@ export function SettingsImporter({
     <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" labelledBy="settings-importer-title">
         <div className="flex items-center justify-between mb-4">
           <h2 id="settings-importer-title" className="text-lg font-semibold flex items-center gap-2"><Icon name="clipboard" size={18} /> 批量导入设定</h2>
-          <button onClick={onClose} className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">
+          <button onClick={onClose} aria-label="关闭" className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">
             <Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" />
                                 </button>
         </div>

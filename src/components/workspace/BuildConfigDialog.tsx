@@ -66,7 +66,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
           <h2 id="build-config-title" className="text-lg font-semibold flex items-center gap-2">
             <Icon name="settings" size={18} className="text-[var(--nv-primary)]" /> 项目设定
           </h2>
-            <button onClick={onClose} className="btn-ghost rounded-lg p-1.5">
+            <button onClick={onClose} aria-label="关闭" className="btn-ghost rounded-lg p-1.5">
             <Icon name="x" size={16} />
           </button>
         </div>

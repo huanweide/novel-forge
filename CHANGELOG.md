@@ -1,5 +1,11 @@
 ﻿# Novel Forge 更新公告
 
+## v2.21.0 — 2026-08-14
+
+### 弹窗关闭按钮无障碍收尾（maxloop 多视角持续亲验，主对话模拟多审查员）
+- 全局扫描纯图标按钮缺口，补齐 3 处弹窗/抽屉关闭按钮的 aria-label：SettingsImporter（批量导入设定弹窗）、AutomationSettingsDialog（自动填表弹窗）、BuildConfigDialog（项目设定弹窗）的关闭 X 按钮此前只有图标无文字名，读屏与键盘用户无法定位；统一补 aria-label「关闭」，与 Modal/ExpandResultModal 等同类修复保持一致。
+- tsc 0 错误；vitest 全量 88 文件 832/832 全绿（本轮纯 a11y 属性补充、无逻辑改动）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.20.0 — 2026-08-14
 
 ### 角色栏组件测试收口（maxloop 多视角持续亲验，主对话模拟多审查员）

@@ -159,7 +159,7 @@ export function AutomationSettingsDialog({
             </h2>
             <p className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">《{projectName}》</p>
           </div>
-          <button onClick={onClose} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] transition-colors"><Icon name="x" size={18} /></button>
+          <button onClick={onClose} aria-label="关闭" className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] transition-colors"><Icon name="x" size={18} /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 custom-scrollbar">
           {loading && <div className="text-sm text-[var(--nv-text-tertiary)]">加载配置中…</div>}
