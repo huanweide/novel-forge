@@ -100,7 +100,7 @@ export function VolumeGroup({
     <div>
       <div className="flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer text-xs bg-[var(--nv-accent-soft)] border border-[var(--nv-accent)]/20 hover:border-[var(--nv-accent)]/40 transition-colors"
         onClick={() => setCollapsed(!collapsed)}>
-        <Icon name={collapsed ? "arrowRight" : "arrowDown" as any} size={11} className="text-[var(--nv-accent)]" />
+        <Icon name={collapsed ? "arrowRight" : "arrowDown"} size={11} className="text-[var(--nv-accent)]" />
         <Icon name="bookmarked" size={12} className="text-[var(--nv-accent)]" />
         <span className="text-[var(--nv-accent)] font-medium flex-1">{volume.title}</span>
         <span className="text-[var(--nv-text-tertiary)] text-[10px]">{children.length}章 · {totalWords}字</span>

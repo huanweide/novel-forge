@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.12.0";
+export const LATEST_VERSION = "v2.13.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.13.0 体检链路无障碍与类型安全收尾（maxloop 深度体检 Round-23）：全书体检看板章节明细行补键盘可访问性——行加 role=button/tabIndex=0/Enter 与空格键触发跳转单章体检/焦点可见样式/aria-label，键盘与读屏用户不再只能靠鼠标点行；单章写作体检弹窗底部「关闭」统一走 handleClose（连带清空受控 trigger 状态），消除看板行点击跳转后关闭弹窗可能残留触发态的隐患；大纲树折叠箭头 Icon 清除 as any 类型逃逸（arrowRight/arrowDown 本就在 IconName 中，历史残留）。tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件纯前端改动，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.12.0 全书体检看板行点击跳转单章体检（UI/功能增强，魔王循环第12轮）：全书健康度体检看板章节明细表每行可点击，点某章行即关闭看板并一键弹出该章的「写作体检」弹窗（逐条命中明细 + 改稿建议），把 v2.11 的「高危/警示」列与 v2.10 的单章命中明细串成闭环，作者看到某章高危后无需再回大纲找该章点体检；ChapterAuditPanel 改造为「受控触发」模式（父层 ChapterConfirmBar 用 auditTrigger 状态记下待弹章 id，看板行点击 setAuditTrigger(id) 并关看板，单章体检监听 triggerNodeId 变化自动 fetch 并弹开、关闭后 onTriggerConsumed 清空），三个组件一个共享状态串成闭环，纯前端状态传递零额外接口；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件改动，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.10.0 内容安全命中明细显式化（UI/功能增强，魔王循环第9轮）：单章「写作体检」面板安全体检区块新增可折叠「命中明细」列表，后端 /api/generate/audit 在 forbidden 返回里透传 scanForbiddenWordsEnhanced 已算好的逐条 matches 明细（最多80条，含 category/severity/pattern/context 上下文片段/suggestion 修改建议），前端按 error→warning→info 严重度排序逐条展示——高危(error 级如精确禁用词)红色、警示(warning)黄色、提示(info)灰色，每条给出命中位置上下文与替换建议，让用户点开体检就能直接定位「雷在哪句、具体哪个词、怎么改」；复用纯函数零算法改动、零额外 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 1 组件改动 + 接口透传，纯函数已由 v2.3.0 单测覆盖）。",
   "v2.9.0 质量分回写大纲常驻徽章（UI/功能增强，魔王循环第8轮）：全书体检看板新增「保存质量分到大纲」按钮，点按调 POST /api/generate/audit/book?persist=true，把每章写作质量分批量回写 StoryNode.qualityScore（schema 已有字段）；左侧大纲树每章节点常驻显示彩色质量徽章（≥85绿/≥70主色/≥60警告/否则危险），体检一次后无需反复点开弹窗即可一眼看出哪章写得差；保存后自动刷新大纲与选中章节；纯本地零 LLM 开销；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮前端 2 组件改动 + 回写 API，纯函数已由 v2.3.0/v2.6.0 单测覆盖）。",
@@ -59,6 +60,22 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.13.0",
+    date: "2026-08-14",
+    title: "v2.13.0 体检链路无障碍与类型安全收尾（maxloop 深度体检 Round-23）",
+    sections: [
+      {
+        label: "体检链路无障碍与类型安全收尾",
+        items: [
+          "全书健康度体检看板（BookHealthBoard）章节明细行补键盘可访问性：行元素加 role=button + tabIndex=0 + Enter/空格键触发「跳转单章体检」+ focus-visible 焦点环 + aria-label，键盘/读屏用户不再只能靠鼠标点行，对齐 WCAG 2.1 键盘可达（2.1.1）。",
+          "单章写作体检弹窗（ChapterAuditPanel）底部「关闭」按钮由 setOpen(false) 统一改为 handleClose()，关闭时连带消费受控 trigger 状态，消除「看板行点击跳转后关闭弹窗可能残留触发态」的隐患。",
+          "大纲树（OutlineTree）卷折叠箭头 Icon 清除 as any 类型逃逸：arrowRight/arrowDown 本就在 IconName 联合类型中，as any 为历史残留，改回类型安全的直接引用。",
+          "本轮为 maxloop 深度体检 Round-23 首批落地（子代理通道故障降级，诊断由主代理 Chair 直接读码完成）；tsc 0 错误，vitest 全量 80 文件 775/775 全绿（本轮 3 组件纯前端改动，纯函数已由 v2.3.0 单测覆盖）。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.12.0",
     date: "2026-08-14",

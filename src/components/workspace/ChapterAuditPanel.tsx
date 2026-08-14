@@ -169,7 +169,7 @@ export function ChapterAuditPanel({
         size="2xl"
         footer={
           <ModalFooter>
-            <button onClick={() => setOpen(false)} className="btn-ghost">
+            <button onClick={handleClose} className="btn-ghost">
               关闭
             </button>
           </ModalFooter>

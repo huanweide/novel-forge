@@ -212,9 +212,19 @@ export function BookHealthBoard({ projectId, onPersisted, onRowAudit }: { projec
                   return (
                     <div
                       key={c.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => { setOpen(false); onRowAudit?.(c.id); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setOpen(false);
+                          onRowAudit?.(c.id);
+                        }
+                      }}
                       title="点击查看本章逐条命中明细与改稿建议"
-                      className={`grid grid-cols-[44px_1fr_64px_56px_56px_48px_76px_84px] items-center px-2 py-1.5 text-[11px] border-t border-[var(--nv-border-2)] cursor-pointer hover:bg-[var(--nv-primary)]/5 ${
+                      aria-label={`查看《${c.title || "未命名"}》的逐条命中明细与改稿建议`}
+                      className={`grid grid-cols-[44px_1fr_64px_56px_56px_48px_76px_84px] items-center px-2 py-1.5 text-[11px] border-t border-[var(--nv-border-2)] cursor-pointer hover:bg-[var(--nv-primary)]/5 focus-visible:outline-2 focus-visible:outline-[var(--nv-primary)] ${
                         flag ? "bg-danger/5" : ""
                       }`}
                     >
