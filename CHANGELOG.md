@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.20.0 — 2026-08-14
+
+### 角色栏组件测试收口（maxloop 多视角持续亲验，主对话模拟多审查员）
+- 补齐 workspace 剩余可渲染 UI 组件的组件单测，覆盖度闭环：新增 CharacterGroupList.test.tsx（按 role 分组渲染、分组标题带数量、勾选角色回调 onToggleSelect、空分组跳过，共 4 例）与 ExpandResultModal.test.tsx（无结果不渲染 / 结果弹窗成功·失败计数与关闭按钮 onClose / 全部成功标题 / 扩展进度百分比，共 4 例）。
+- 至此 v2.18 起抽出的角色栏 6 大 UI 组件（TagChip/CharacterFilters/CharacterRow/CharacterToolbar/CharacterGroupList/ExpandResultModal）+ 新增 RangeSelector 的组件单测基本覆盖完整（CharacterList/MergePendingPanel 因含 fetch/stream/confirm，留待后续 mock 网络层再补）。
+- tsc 0 错误；vitest 全量 88 文件 832/832 全绿（较 v2.19 的 824 增 8）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.19.0 — 2026-08-14
 
 ### UI 无障碍收尾 + 组件测试补强（maxloop 多视角持续亲验，主对话模拟多审查员）

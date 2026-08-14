@@ -25,11 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.19.0";
+export const LATEST_VERSION = "v2.20.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
-  "v2.19.0 UI 无障碍收尾 + 组件测试补强（maxloop 多视角持续亲验，主对话模拟多审查员）：UI/可访问性——补 4 处无障碍缺口：CharacterToolbar 新建标签输入框补 aria-label「新建标签名」、RangeSelector 范围输入框补 aria-label「选择角色范围」、MergePendingPanel 刷新按钮补 aria-label「刷新合并提案」、ExpandResultModal 关闭按钮补 aria-label「关闭扩展结果」（纯图标/纯 placeholder 按钮此前读屏无名称）。React 反模式——修 CharacterList.handleRangeSelect 引用后置声明的 filtered（TDZ 隐患，v2.17 遗留待办，前置声明消解）；MergePendingPanel.load 补 AbortController，组件卸载/切项目时中止在途请求，与 v2.18 去重探针同类的 fire-and-forget 修复。测试——补 RangeSelector（parseRange 纯函数 9 分支 + 输入框回车/失焦/Esc 提交）与 CharacterToolbar（input aria-label + 全选/AI扩展/去重/打标/清空按钮回调）组件单测共 20 例。tsc 0 错误，vitest 全量 86 文件 824/824 全绿（较 v2.18 的 804 增 20）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+  "v2.20.0 角色栏组件测试收口（maxloop 多视角持续亲验，主对话模拟多审查员）：测试——补齐 workspace 剩余可渲染 UI 组件的组件单测，覆盖度闭环：新增 CharacterGroupList.test.tsx（按 role 分组渲染、分组标题带数量、勾选角色回调 onToggleSelect、空分组跳过）与 ExpandResultModal.test.tsx（无结果不渲染 / 结果弹窗成功·失败计数与关闭按钮 onClose / 全部成功标题 / 扩展进度百分比），共 8 例；至此 v2.18 起抽出的角色栏 6 大 UI 组件（TagChip/CharacterFilters/CharacterRow/CharacterToolbar/CharacterGroupList/ExpandResultModal）+ 新增 RangeSelector 的组件单测基本覆盖完整。tsc 0 错误，vitest 全量 88 文件 832/832 全绿（较 v2.19 的 824 增 8）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.18.0 UI 优化 + 测试流程优化（maxloop 多视角亲验，主对话模拟子 Agent 多轮检验）：UI——修 CharacterList 后台静默去重探测 fire-and-forget 反模式（补 AbortController，防组件卸载后 setState 告警）；CharacterRow 删除图标按钮补 aria-label「删除角色」（图标唯一按钮可访问性缺口）；v2.17 已修搜索框 aria-label、去重提示 banner 改 button、关闭按钮 aria-label。测试流程——抽角色过滤逻辑为纯函数 filterCharacters（src/lib/character-filter.ts，含 isUserTag）便于单测；vitest 配 jsdom 组件测试基础设施（setupFiles 注册 jest-dom 匹配器 + .test.tsx include + afterEach cleanup 隔离）；为 v2.17 的 6 个 UI 组件补组件单测（TagChip/CharacterRow/CharacterFilters）与过滤逻辑单测共 28 例，coverage 纳入 src/components/workspace；tsc 0 错误，vitest 全量 84 文件 804/804 全绿（较 v2.17 的 776 增 28）。",
   "v2.17.0 角色去重硬化：高/低置信分组 + 已合并卡隐藏 + 尊称误判护栏（马斯克 CEO 循环运营交付）：重构 dedupeCharacters 分组策略——确定性组（规则+核心名宽松）直接高置信自动合并、LLM 跨核心名建议仅进低置信 pending 待确认，避免 LLM 误判拖垮真实重复卡自动清除；computeConfidence 补同核名 high 判定（变体+变体如韩先生/韩姓男子、全名+单「·」后缀如迭戈/迭戈·美第奇直接自动合并），多「·」马甲同核仍降 low 交用户确认；pickMain 改干净 canonical 名优先、coreTokenOf 修复拖尾尊称剥离（修「迭戈先生」漏检 Diego 三兄弟）；isHonorificVariant 加风险 token 护栏（王/皇/帝/后/妃）避免「武帝」「王后」误并；dedupeCharacters 跳过已合并软删卡防反复重合并；角色栏抽统一 TagChip 组件、默认隐藏已合并卡。tsc 0 错误，vitest 全量 80 文件 776/776 全绿。",
   "v2.16.0 实时多 Agent 编排控制台 + Round-26 UI/前后端实测（maxloop 深度体检 Round-26）：新增开发期诊断工具 agent-forge/（Node 内置 http + SSE，零依赖），主代理并行调度 5 个真实 Worker Agent（类型门禁 tsc/架构体检/版本一致性/代码质量/安全扫描）实时扫描 novel-forge 源码并流式推进度与日志，浏览器开 http://localhost:8787 即可看到一批 Agent 实时干活，直接回应「要看到 Agent 干活、有进度」诉求且不依赖本环境故障的子代理通道；主代理亲验对前端 12 页面 + 3 动态页面 SSR 实测全 200、无 error boundary、dev 零报错零 hydration 警告，核心 API 全 200 返回真实数据，诚实排除 3 处根路径 GET 405（设计对称）与项目名乱码（终端 locale 显示问题）4 个误报；修复 Round-25 漏同步——package.json version 仍 2.14.0 与源码 v2.15.0 不一致，本轮升 v2.16.0 三处对齐；本轮为 maxloop 深度体检 Round-26，子代理通道派发自定义 agent 报 Tool Read not found，继续按「六之二」降级主代理 Chair 亲验（见 PROCESS/meetings/round-26/chair-self-audit.md）；agent-forge 控制台独立运行于 8787 不受影响。",
@@ -66,6 +66,27 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.20.0",
+    date: "2026-08-14",
+    title: "v2.20.0 角色栏组件测试收口（maxloop 多视角持续亲验）",
+    sections: [
+      {
+        label: "测试流程优化（组件测试收口）",
+        items: [
+          "新增 CharacterGroupList.test.tsx：按 role 分组渲染、分组标题带数量、勾选角色回调 onToggleSelect、空分组跳过，共 4 例。",
+          "新增 ExpandResultModal.test.tsx：无结果不渲染 / 结果弹窗成功·失败计数与关闭按钮 onClose / 全部成功标题 / 扩展进度百分比，共 4 例。",
+          "至此 v2.18 起抽出的角色栏 6 大 UI 组件（TagChip/CharacterFilters/CharacterRow/CharacterToolbar/CharacterGroupList/ExpandResultModal）+ 新增 RangeSelector 的组件单测基本覆盖完整（CharacterList/MergePendingPanel 因含 fetch/stream/confirm 留待后续 mock 网络层再补）。",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 0 错误；vitest 全量 88 文件 832/832 全绿（较 v2.19 的 824 增 8）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.19.0",
     date: "2026-08-14",
