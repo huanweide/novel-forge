@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agent Forge · 实时多 Agent 编排控制台</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #141925;
+    --panel2: #1b2230;
+    --line: #283142;
+    --txt: #e6edf3;
+    --muted: #8b98a9;
+    --accent: #4f8cff;
+    --green: #2ec27e;
+    --red: #ff5c5c;
+    --yellow: #f0b429;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--txt);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 20px 24px 48px;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 18px;
+  }
+  .title { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+  .title small { display:block; color: var(--muted); font-weight: 400; font-size: 12px; margin-top:4px; }
+  .controls { display:flex; gap:10px; align-items:center; }
+  button {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 9px 16px; font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .overall { font-size: 13px; color: var(--muted); }
+  .overall b { color: var(--txt); }
+
+  .master {
+    background: linear-gradient(180deg, var(--panel2), var(--panel));
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .master .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 4px rgba(79,140,255,.15); }
+  .master.running .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+  .master .label { font-weight: 600; }
+  .master .sub { color: var(--muted); font-size: 12px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column; min-height: 230px;
+  }
+  .card .head { display:flex; align-items:center; gap:10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .card .icon { font-size: 20px; }
+  .card .name { font-weight: 600; font-size: 14px; }
+  .card .desc { color: var(--muted); font-size: 11px; margin-top:2px; }
+  .pill { margin-left:auto; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--panel2); color: var(--muted); border:1px solid var(--line); }
+  .pill.queued { color: var(--muted); }
+  .pill.running { color: var(--accent); border-color: var(--accent); }
+  .pill.done { color: var(--green); border-color: var(--green); }
+  .pill.error { color: var(--red); border-color: var(--red); }
+
+  .bar { height: 6px; background: var(--panel2); }
+  .bar > i { display:block; height:100%; width:0%; background: var(--accent); transition: width .25s ease; }
+  .card.done .bar > i { background: var(--green); }
+  .card.error .bar > i { background: var(--red); }
+
+  .log {
+    flex: 1; overflow-y: auto; padding: 10px 14px; font-family: "SF Mono", Consolas, monospace;
+    font-size: 11.5px; line-height: 1.55; color: #b9c4d4; white-space: pre-wrap; word-break: break-word;
+  }
+  .result { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12.5px; }
+  .result .ok { color: var(--green); }
+  .result .bad { color: var(--red); }
+  .result .warn { color: var(--yellow); }
+
+  .report {
+    margin-top: 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+    display: none;
+  }
+  .report.show { display: block; }
+  .report h2 { margin: 0 0 12px; font-size: 16px; }
+  .report .row { display:flex; align-items:center; gap:10px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .report .row:last-child { border-bottom: none; }
+  .report .badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; }
+  .badge.pass { background: rgba(46,194,126,.15); color: var(--green); }
+  .badge.fail { background: rgba(255,92,92,.15); color: var(--red); }
+  .badge.skip { background: rgba(240,180,41,.15); color: var(--yellow); }
+  code { background: var(--panel2); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="title">🛰️ Agent Forge · 实时多 Agent 编排控制台
+      <small>主代理（编排器）实时调度 5 个 Worker Agent 体检 novel-forge 项目</small>
+    </div>
+    <div class="controls">
+      <span class="overall" id="overall">就绪</span>
+      <button id="runBtn">▶ 运行一轮</button>
+    </div>
+  </header>
+
+  <div class="master" id="master">
+    <div class="dot"></div>
+    <div>
+      <div class="label">主代理 · Orchestrator</div>
+      <div class="sub" id="masterSub">等待启动…</div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="report" id="report">
+    <h2>📋 本轮体检总报告</h2>
+    <div id="reportBody"></div>
+  </div>
+
+<script>
+  const grid = document.getElementById('grid');
+  const overall = document.getElementById('overall');
+  const runBtn = document.getElementById('runBtn');
+  const master = document.getElementById('master');
+  const masterSub = document.getElementById('masterSub');
+  const report = document.getElementById('report');
+  const reportBody = document.getElementById('reportBody');
+
+  let agents = {};
+
+  function clearAll() {
+    agents = {};
+    grid.innerHTML = '';
+    report.classList.remove('show');
+    reportBody.innerHTML = '';
+  }
+
+  function makeCard(a) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-' + a.id;
+    card.innerHTML = `
+      <div class="head">
+        <span class="icon">${a.icon || '🤖'}</span>
+        <div><div class="name">${a.name}</div><div class="desc">${a.desc || ''}</div></div>
+        <span class="pill queued" id="pill-${a.id}">排队中</span>
+      </div>
+      <div class="bar"><i id="bar-${a.id}"></i></div>
+      <div class="log" id="log-${a.id}"></div>
+      <div class="result" id="result-${a.id}" style="display:none"></div>
+    `;
+    grid.appendChild(card);
+    agents[a.id] = { el: card };
+  }
+
+  function setPill(id, text, cls) {
+    const p = document.getElementById('pill-' + id);
+    p.textContent = text; p.className = 'pill ' + cls;
+  }
+
+  function appendLog(id, line) {
+    const el = document.getElementById('log-' + id);
+    if (!el) return;
+    el.textContent += line + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setResult(id, r) {
+    const el = document.getElementById('result-' + id);
+    el.style.display = 'block';
+    let cls = 'ok', tag = '通过';
+    if (r.ok === false) { cls = 'bad'; tag = '异常'; }
+    else if (r.ok === null) { cls = 'warn'; tag = '跳过'; }
+    el.innerHTML = `<span class="${cls}">● ${tag}：${r.summary}</span>` +
+      (r.detail ? `<pre style="margin:8px 0 0;color:#8b98a9;font-size:11px;white-space:pre-wrap">${escapeHtml(r.detail)}</pre>` : '');
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+  const es = new EventSource('/api/stream');
+  es.onopen = () => { fetch('/api/run', { method: 'POST' }); };
+
+  es.addEventListener('run:start', e => {
+    const data = JSON.parse(e.data);
+    clearAll();
+    master.classList.add('running');
+    masterSub.textContent = `已调度 ${data.agents.length} 个 Worker Agent`;
+    overall.innerHTML = `0 / ${data.agents.length} 完成`;
+    data.agents.forEach(makeCard);
+    runBtn.disabled = true;
+  });
+
+  es.addEventListener('agent:start', e => {
+    const a = JSON.parse(e.data);
+    setPill(a.id, '运行中', 'running');
+    document.getElementById('card-' + a.id).classList.add('running');
+  });
+
+  es.addEventListener('agent:log', e => {
+    const d = JSON.parse(e.data);
+    appendLog(d.id, d.line);
+  });
+
+  es.addEventListener('agent:progress', e => {
+    const d = JSON.parse(e.data);
+    document.getElementById('bar-' + d.id).style.width = d.progress + '%';
+  });
+
+  es.addEventListener('agent:done', e => {
+    const d = JSON.parse(e.data);
+    setPill(d.id, '完成', 'done');
+    document.getElementById('card-' + d.id).classList.remove('running');
+    document.getElementById('card-' + d.id).classList.add('done');
+    setResult(d.id, d.result);
+  });
+
+  es.addEventListener('agent:error', e => {
+    const d = JSON.parse(e.data);
+    setPill(d.id, '异常', 'error');
+    document.getElementById('card-' + d.id).classList.add('error');
+    appendLog(d.id, '执行异常: ' + d.error);
+  });
+
+  es.addEventListener('run:progress', e => {
+    const d = JSON.parse(e.data);
+    overall.innerHTML = `<b>${d.done}</b> / ${d.total} 完成`;
+  });
+
+  es.addEventListener('run:end', () => {
+    master.classList.remove('running');
+    masterSub.textContent = '本轮编排完成 ✅';
+    runBtn.disabled = false;
+    buildReport();
+  });
+
+  es.addEventListener('run:busy', () => { masterSub.textContent = '上一轮仍在运行，请稍候…'; });
+
+  function buildReport() {
+    let pass = 0, fail = 0, skip = 0;
+    let html = '';
+    Object.keys(agents).forEach(id => {
+      const card = document.getElementById('card-' + id);
+      const name = card.querySelector('.name').textContent;
+      const pill = card.querySelector('.pill').textContent;
+      const resultEl = document.getElementById('result-' + id);
+      let badge = 'skip', btext = '跳过', summary = '—';
+      if (pill === '完成') {
+        badge = 'pass'; btext = '通过';
+        const m = resultEl.querySelector('.ok,.bad,.warn');
+        summary = resultEl.textContent.replace(/●\s*(通过|异常|跳过)：/, '');
+        pass++;
+      } else if (pill === '异常') {
+        badge = 'fail'; btext = '异常';
+        summary = resultEl ? resultEl.textContent : '执行异常';
+        fail++;
+      } else { skip++; }
+      html += `<div class="row"><span class="badge ${badge}">${btext}</span><b style="min-width:130px">${name}</b><span style="color:#8b98a9">${escapeHtml(summary)}</span></div>`;
+    });
+    reportBody.innerHTML = html;
+    report.classList.add('show');
+  }
+
+  runBtn.onclick = () => { fetch('/api/run', { method: 'POST' }); };
+</script>
+</body>
+</html>

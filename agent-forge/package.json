@@ -1,0 +1,9 @@
+{
+  "name": "agent-forge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "实时多 Agent 编排控制台 —— 主代理调度 Worker Agent 体检 novel-forge 项目",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

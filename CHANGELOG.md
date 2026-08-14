@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.16.0 — 2026-08-14
+
+### 实时多 Agent 编排控制台 + Round-26 UI/前后端实测（maxloop 深度体检 Round-26）
+- 新增开发期诊断工具 agent-forge/（Node 内置 http + SSE，零依赖）：主代理（编排器）并行调度 5 个真实干活的 Worker Agent（类型门禁 tsc / 架构体检 / 版本一致性 / 代码质量 / 安全扫描），它们真实扫描 novel-forge 源码，进度条 + 流式日志 + 总报告实时刷新；浏览器开 http://localhost:8787 即可看到一批 Agent 实时体检，直接回应「要看到 Agent 干活、有进度」的诉求，且不依赖本环境故障的子代理（Agent 工具）通道。
+- maxloop Round-26 主代理亲验（子代理通道仍故障，继续降级）对前端 12 个页面路由 + 3 个动态页面逐一 SSR 实测：全部 HTTP 200、无 error boundary；dev 运行时日志零报错、零 hydration 警告；核心 API（health/projects/projects/[id]/foreshadowing/storylines/generation-metrics）全部 200 且返回真实数据；诚实排除 4 个误报（3 处根路径 GET 405 属设计对称——前端改用子路由或项目详情子树、项目名乱码为终端 locale 显示问题，数据库 UTF-8 正常）。
+- 修复版本号一致性：Round-25 漏同步——package.json version 仍为 2.14.0，而源码 changelog-data.ts 与 CHANGELOG.md 已标 v2.15.0，三者不一致；本轮升 v2.16.0 时三处真正对齐。本轮为 maxloop 深度体检 Round-26，子代理（Agent 工具）通道派发的自定义 agent 报 `Tool Read not found`（运行时未注入工具），继续按「六之二」降级为主代理 Chair 亲验（见 PROCESS/meetings/round-26/chair-self-audit.md）；agent-forge 控制台独立运行于 8787 不受影响。
+
 ## v2.15.0 — 2026-08-14
 
 ### 确认路径一致性基线刷新对称修复（maxloop 深度体检 Round-25）
