@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.25.0 — 2026-08-14
+
+### 类型逃逸清理启动·第一批：MarkdownViewer 收口 21 处 any（maxloop 多视角持续亲验）
+- 用 TypeScript AST 全量扫描 src 得 1344 处 any（as any 455 / 类型注解 231 / any[] 274 / 参数 384），分布在 200/501 个文件；按风险分级：LLM/Prisma JSON 桥接（orchestrator/fill/post-processor/context-loader/pre-processor/characters/expand 等）与 Prisma 生成文件暂缓、test 文件低优先。
+- 首批挑纯前端参数 any 为主的 MarkdownViewer，用 react-markdown 导出的 Components 类型替换手写 Record<string, React.FC<any>> 与各渲染函数 ({children,...props}:any) 参数注解（props 改为由 Components 上下文推断精确元素类型，而非隐式 any），并把 rehype 插件列表 any[] 改为 unified 的 PluggableList，共消除 21 处。
+- tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮仅改 MarkdownViewer 类型、零运行时逻辑改动）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.24.0 — 2026-08-14
 
 ### 角色栏组件测试闭环收官：CharacterList 含 SSE 流/删除确认单测（maxloop 多视角持续亲验）

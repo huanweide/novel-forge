@@ -8,8 +8,9 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { PluggableList } from "unified";
 import type { EntityHighlight } from "@/core/entity-highlighter";
 import { getEntityMap } from "@/core/entity-highlighter";
 import { rehypeEntityHighlight } from "@/lib/rehype-entity-highlight";
@@ -30,58 +31,58 @@ interface MarkdownViewerProps {
 // 自定义 Markdown 组件样式
 // ═══════════════════════════════════════════
 
-const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
-  h1: ({ children, ...props }: any) => (
+const MARKDOWN_COMPONENTS: Components = {
+  h1: ({ children, ...props }) => (
     <h1 className="text-2xl font-bold text-foreground mt-8 mb-4 pb-2 text-center tracking-wide" {...props}>
       {children}
     </h1>
   ),
-  h2: ({ children, ...props }: any) => (
+  h2: ({ children, ...props }) => (
     <h2 className="text-xl font-bold text-foreground mt-6 mb-3" {...props}>
       {children}
     </h2>
   ),
-  h3: ({ children, ...props }: any) => (
+  h3: ({ children, ...props }) => (
     <h3 className="text-lg font-semibold text-[var(--nv-text-secondary)] mt-5 mb-2" {...props}>
       {children}
     </h3>
   ),
-  p: ({ children, ...props }: any) => (
+  p: ({ children, ...props }) => (
     <p className="my-3 text-[17px] leading-[1.85] text-[var(--nv-text-secondary)] tracking-[0.02em]" {...props}>
       {children}
     </p>
   ),
-  strong: ({ children, ...props }: any) => (
+  strong: ({ children, ...props }) => (
     <strong className="font-bold text-foreground" {...props}>
       {children}
     </strong>
   ),
-  em: ({ children, ...props }: any) => (
+  em: ({ children, ...props }) => (
     <em className="italic text-[var(--nv-text-secondary)]" {...props}>
       {children}
     </em>
   ),
-  blockquote: ({ children, ...props }: any) => (
+  blockquote: ({ children, ...props }) => (
     <blockquote className="border-l-[3px] border-[var(--nv-border-2)] pl-5 my-4 text-[var(--nv-text-tertiary)] italic text-[16px] leading-[1.75]" {...props}>
       {children}
     </blockquote>
   ),
-  ul: ({ children, ...props }: any) => (
+  ul: ({ children, ...props }) => (
     <ul className="list-disc list-outside ml-5 my-3 space-y-1.5 text-[16px] leading-[1.8] text-[var(--nv-text-secondary)]" {...props}>
       {children}
     </ul>
   ),
-  ol: ({ children, ...props }: any) => (
+  ol: ({ children, ...props }) => (
     <ol className="list-decimal list-outside ml-5 my-3 space-y-1.5 text-[16px] leading-[1.8] text-[var(--nv-text-secondary)]" {...props}>
       {children}
     </ol>
   ),
-  li: ({ children, ...props }: any) => (
+  li: ({ children, ...props }) => (
     <li className="pl-1" {...props}>
       {children}
     </li>
   ),
-  code: ({ className, children, ...props }: any) => {
+  code: ({ className, children, ...props }) => {
     const isInline = !className;
     if (isInline) {
       return (
@@ -96,40 +97,40 @@ const MARKDOWN_COMPONENTS: Record<string, React.FC<any>> = {
       </code>
     );
   },
-  pre: ({ children, ...props }: any) => (
+  pre: ({ children, ...props }) => (
     <pre className="bg-[var(--nv-abyss)] rounded-lg my-3 overflow-x-auto" {...props}>
       {children}
     </pre>
   ),
-  hr: (props: any) => <hr className="border-[var(--nv-border-2)] my-8" {...props} />,
-  table: ({ children, ...props }: any) => (
+  hr: (props) => <hr className="border-[var(--nv-border-2)] my-8" {...props} />,
+  table: ({ children, ...props }) => (
     <div className="overflow-x-auto my-4">
       <table className="min-w-full border-collapse text-[15px]" {...props}>
         {children}
       </table>
     </div>
   ),
-  thead: ({ children, ...props }: any) => (
+  thead: ({ children, ...props }) => (
     <thead className="border-b border-[var(--nv-border-2)]" {...props}>
       {children}
     </thead>
   ),
-  th: ({ children, ...props }: any) => (
+  th: ({ children, ...props }) => (
     <th className="text-left px-3 py-2 text-[var(--nv-text-secondary)] font-semibold" {...props}>
       {children}
     </th>
   ),
-  td: ({ children, ...props }: any) => (
+  td: ({ children, ...props }) => (
     <td className="px-3 py-2 text-[var(--nv-text-secondary)] border-t border-[var(--nv-border-2)]" {...props}>
       {children}
     </td>
   ),
-  a: ({ children, href, ...props }: any) => (
+  a: ({ children, href, ...props }) => (
     <a className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)] underline decoration-[var(--nv-border-2)] underline-offset-2" href={href} target="_blank" rel="noopener" {...props}>
       {children}
     </a>
   ),
-  del: ({ children, ...props }: any) => (
+  del: ({ children, ...props }) => (
     <del className="line-through text-[var(--nv-text-muted)]" {...props}>
       {children}
     </del>
@@ -170,7 +171,7 @@ export function MarkdownViewer({ content, projectId, isStreaming = false, onEnti
 
   // 构建 rehype 插件列表
   const rehypePlugins = useMemo(() => {
-    const plugins: any[] = [];
+    const plugins: PluggableList = [];
     // 只有非流式 + 实体加载完成后才加高亮
     if (!isStreaming && loaded && entityMap.size > 0) {
       plugins.push([rehypeEntityHighlight(entityMap)]);
