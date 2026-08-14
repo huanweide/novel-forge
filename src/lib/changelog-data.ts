@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.21.0";
+export const LATEST_VERSION = "v2.22.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.22.0 角色栏组件测试闭环（maxloop 多视角持续亲验，主对话模拟多审查员）：测试流程——把 v2.20 留下的两个含网络层组件测试补齐，闭合角色栏组件测试闭环：新增 src/lib/character-filter.test.ts（覆盖 v2.18 抽出的过滤纯函数 filterCharacters 与 isUserTag 的全部分支：已合并软删卡默认隐藏、role 精确匹配、tag 的 no-tags/has-tags/具体用户标签/系统标签不计入、status 的 alive 与 dead 覆盖 dead/missing/presumed_dead、search 命中 name 与 aliases 子串、组合过滤，共 14 例）；新增 src/components/workspace/MergePendingPanel.test.tsx（jsdom + fetch mock，覆盖挂载拉取提案并渲染待确认/可回滚徽标、挂载请求携带 AbortSignal、点击刷新按钮重新拉取、点击确认合并发起 POST 并回调 onChanged，共 4 例）。tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮 +2 文件 +18 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.21.0 弹窗关闭按钮无障碍收尾（maxloop 多视角持续亲验，主对话模拟多审查员）：UI/可访问性——全局扫描纯图标按钮缺口，补齐 3 处弹窗/抽屉关闭按钮的 aria-label：SettingsImporter（批量导入设定弹窗）、AutomationSettingsDialog（自动填表弹窗）、BuildConfigDialog（项目设定弹窗）的关闭 X 按钮此前只有图标无文字名，读屏与键盘用户无法定位；统一补 aria-label「关闭」，与 Modal/ExpandResultModal 等同类修复保持一致。tsc 0 错误，vitest 全量 88 文件 832/832 全绿（本轮纯 a11y 属性补充、无逻辑改动）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.18.0 UI 优化 + 测试流程优化（maxloop 多视角亲验，主对话模拟子 Agent 多轮检验）：UI——修 CharacterList 后台静默去重探测 fire-and-forget 反模式（补 AbortController，防组件卸载后 setState 告警）；CharacterRow 删除图标按钮补 aria-label「删除角色」（图标唯一按钮可访问性缺口）；v2.17 已修搜索框 aria-label、去重提示 banner 改 button、关闭按钮 aria-label。测试流程——抽角色过滤逻辑为纯函数 filterCharacters（src/lib/character-filter.ts，含 isUserTag）便于单测；vitest 配 jsdom 组件测试基础设施（setupFiles 注册 jest-dom 匹配器 + .test.tsx include + afterEach cleanup 隔离）；为 v2.17 的 6 个 UI 组件补组件单测（TagChip/CharacterRow/CharacterFilters）与过滤逻辑单测共 28 例，coverage 纳入 src/components/workspace；tsc 0 错误，vitest 全量 84 文件 804/804 全绿（较 v2.17 的 776 增 28）。",
   "v2.17.0 角色去重硬化：高/低置信分组 + 已合并卡隐藏 + 尊称误判护栏（马斯克 CEO 循环运营交付）：重构 dedupeCharacters 分组策略——确定性组（规则+核心名宽松）直接高置信自动合并、LLM 跨核心名建议仅进低置信 pending 待确认，避免 LLM 误判拖垮真实重复卡自动清除；computeConfidence 补同核名 high 判定（变体+变体如韩先生/韩姓男子、全名+单「·」后缀如迭戈/迭戈·美第奇直接自动合并），多「·」马甲同核仍降 low 交用户确认；pickMain 改干净 canonical 名优先、coreTokenOf 修复拖尾尊称剥离（修「迭戈先生」漏检 Diego 三兄弟）；isHonorificVariant 加风险 token 护栏（王/皇/帝/后/妃）避免「武帝」「王后」误并；dedupeCharacters 跳过已合并软删卡防反复重合并；角色栏抽统一 TagChip 组件、默认隐藏已合并卡。tsc 0 错误，vitest 全量 80 文件 776/776 全绿。",
@@ -66,6 +67,26 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.22.0",
+    date: "2026-08-14",
+    title: "v2.22.0 角色栏组件测试闭环（maxloop 多视角持续亲验）",
+    sections: [
+      {
+        label: "测试流程优化（组件测试闭环）",
+        items: [
+          "新增 src/lib/character-filter.test.ts：覆盖 v2.18 抽出的过滤纯函数 filterCharacters 与 isUserTag 的全部分支——已合并软删卡默认隐藏、role 精确匹配、tag 的 no-tags / has-tags / 具体用户标签 / 系统标签（📥📝🗂）不计入、status 的 alive 与 dead 覆盖 dead/missing/presumed_dead、search 命中 name 与 aliases 子串、组合过滤，共 14 例。",
+          "新增 src/components/workspace/MergePendingPanel.test.tsx：jsdom + fetch mock，覆盖挂载拉取提案并渲染待确认/可回滚徽标、挂载请求携带 AbortSignal（卸载可中止在途请求）、点击刷新按钮重新拉取、点击确认合并发起 POST 并回调 onChanged，共 4 例；闭合 v2.20 留下的角色栏组件测试缺口（仅剩 CharacterList 含 SSE 流/stream 暂未补）。",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮新增 character-filter 14 例 + MergePendingPanel 4 例，共 +2 文件 +18 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v2.21.0",
     date: "2026-08-14",

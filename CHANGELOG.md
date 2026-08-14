@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.22.0 — 2026-08-14
+
+### 角色栏组件测试闭环（maxloop 多视角持续亲验，主对话模拟多审查员）
+- 把 v2.20 留下的两个含网络层组件测试补齐，闭合角色栏组件测试闭环：新增 src/lib/character-filter.test.ts（覆盖 v2.18 抽出的过滤纯函数 filterCharacters 与 isUserTag 全部分支：已合并软删卡默认隐藏 / role 精确匹配 / tag 的 no-tags·has-tags·具体用户标签·系统标签不计入 / status 的 alive 与 dead 覆盖 dead·missing·presumed_dead / search 命中 name 与 aliases 子串 / 组合过滤，共 14 例）。
+- 新增 src/components/workspace/MergePendingPanel.test.tsx（jsdom + fetch mock，覆盖挂载拉取提案并渲染待确认/可回滚徽标 / 挂载请求携带 AbortSignal / 点击刷新按钮重新拉取 / 点击确认合并发起 POST 并回调 onChanged，共 4 例）；至此角色栏组件单测基本覆盖完整（仅剩 CharacterList 含 SSE 流/stream 暂未补）。
+- tsc 0 错误；vitest 全量 89 文件 839/839 全绿（本轮 +2 文件 +18 例）；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.21.0 — 2026-08-14
 
 ### 弹窗关闭按钮无障碍收尾（maxloop 多视角持续亲验，主对话模拟多审查员）
