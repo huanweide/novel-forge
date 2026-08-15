@@ -24,7 +24,7 @@ describe("storylineStyleDesc（#201 风格轴提示）", () => {
   });
 });
 
-describe("generateStorylineSuggestions thread 解析（#223）", () => {
+describe("generateStorylineSuggestions 不再产出 thread（去冗余 #223→v2.33）", () => {
   const baseInput = {
     project: { name: "测试作", genre: ["都市"], toneKeywords: [] },
     characters: [],
@@ -32,7 +32,7 @@ describe("generateStorylineSuggestions thread 解析（#223）", () => {
     existingStorylines: [{ type: "main", title: "主线", status: "active" }],
   } as any;
 
-  it("AI 返回 type=thread 时正确解析为 thread，且七要素留空", async () => {
+  it("AI 返回 type=thread 时统一降级为 side，不再生成故事线伏笔", async () => {
     (completeText as any).mockResolvedValue(
       JSON.stringify({
         lines: [
@@ -64,13 +64,12 @@ describe("generateStorylineSuggestions thread 解析（#223）", () => {
       }),
     );
     const res = await generateStorylineSuggestions(baseInput);
-    expect(res.map((r) => r.type)).toEqual(["side", "thread"]);
-    const thread = res.find((r) => r.type === "thread")!;
-    expect(thread.title).toBe("掩埋之钥");
-    expect(thread.sevenElements.desire).toBe("");
+    expect(res.map((r) => r.type)).toEqual(["side", "side"]);
+    // 确认不再有任何 thread 类型产出（伏笔交给专门的伏笔面板）
+    expect(res.some((r) => r.type === "thread")).toBe(false);
   });
 
-  it("无活跃主线时 thread 无法独立成树，降级为 side", async () => {
+  it("无活跃主线时 thread 同样降级为 side（不要求挂主线）", async () => {
     (completeText as any).mockResolvedValue(
       JSON.stringify({ lines: [{ type: "thread", title: "孤立伏笔", description: "d" }] }),
     );

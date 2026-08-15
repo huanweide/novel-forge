@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.32.0";
+export const LATEST_VERSION = "v2.33.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.33.0 故事线生成去 thread 冗余（伏笔统一归口伏笔面板）：源头收口——删除 generate.ts 的【伏笔/线索铁律】prompt 块（原指令 AI 把「悬而未解的谜团/物证/暗线」写成 type=thread 的伏笔线），替换为【伏笔/线索（悬念）归属说明】明确引导 AI「伏笔/线索请用专门的伏笔面板、不要作为故事线生成」；输出格式注释「type: main | side | thread」收敛为「main | side」，删 allowThread 分支、rawType 只映射 main→main 其余→side、sevenElements 去掉 thread 分支；route.ts 内联 prompt 副本同步、落库逻辑保留兼容存量 2 条 thread 行无损读取；generate.test.ts 用例重写为「AI 返回 thread 统一降级为 side」断言。经 pg 直连核库：thread 仅 2 条半废弃、伏笔面板已在用（5 条），故不强行迁移、只掐源头消除重复入口。tsc 0 错误；vitest 全量 93 文件 870/870 全绿（generate.test.ts 用例重写成降级断言、测试数不变）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.32.0 测试流程优化：补核心散文→HTML 转换 proseToHtml 单测（导出质量地基加固）：测试覆盖——给被 HTML / EPUB / DOCX 三大导出复用、却长期零单测覆盖的核心转换函数 proseToHtml 补 11 例自动化测试，锁死段落包裹、空行分段、**粗体**/*斜体*/---分割线/>引用块/HTML 特殊字符转义（防 XSS 与渲染错乱）/段落内换行等既有行为；用 node 实锤确认该函数行为健康、无丢内容或崩溃级缺陷，导出渲染地基稳固。纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 93 文件 870/870 全绿（较 v2.31.0 基线 +1 文件 +11 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.31.0 内部死代码清理：删除 entity-auto-creator.ts 中零调用方的 autoCreateEntities 死函数（含其独有 AutoCreateResult 接口、TYPE_LABELS 常量与 4 个未使用 import：prisma/Prisma/DetectedEntity/isCompleteEntityName）；该函数从未被任何 src 入口调用、测试也未引用，属确认冗余。保留 resolveEntityCategory/isSimilarName/normalizeDiscoveryName/resolveDiscoveryMergeTarget/shouldAutoCreateCharacterCard 等仍被 entity-sync 使用的纯函数与确定性分类器，建卡清洗逻辑不受影响。tsc 0 错误；vitest 全量全绿；纯内部瘦身，零功能/接口/LLM 行为变化。",
   "v2.30.0 角色筛选「已分类/未分类」冗余标签清理（瑞宝宝 UI 收口）：移除角色栏筛选栏「已分类」「未分类」两个派生筛选芯片（仅按有没有标签二分、与具体标签筛选语义重叠、用户明确不需要）及其 statHasTags/statNoTags 统计；同步清理 filterCharacters 纯函数里 has-tags/no-tags 两个不可达死分支与对应 4 个单元测试用例（character-filter.test.ts 两例 + CharacterFilters.test.tsx 两例）；清理后筛选栏只剩角色定位+状态+具体用户标签三层，更干净。tsc 0 错误；vitest 受影响 15 测试全绿；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -76,6 +77,24 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.33.0",
+    date: "2026-08-14",
+    title: "故事线生成去 thread 冗余（伏笔统一归口伏笔面板）",
+    sections: [
+      { label: "源头收口", items: [
+        "删除 generate.ts 的【伏笔/线索铁律】prompt 块（原指令 AI 把「悬而未解的谜团/物证/暗线」写成 type=thread 的伏笔线），替换为【伏笔/线索（悬念）归属说明】明确引导 AI：伏笔/线索请使用专门的伏笔面板、不要作为故事线生成",
+        "输出格式注释 \"type\":\"main\"|\"side\"|\"thread\" 收敛为 \"main\"|\"side\"；删 allowThread 分支、rawType 只映射 main→main 其余→side、sevenElements 去掉 thread 分支，AI 即便误返 thread 也统一降级为 side",
+        "route.ts 内联 prompt 副本同步更新；落库逻辑（threadLines/createdThreads）保留未删，兼容存量 2 条 thread 行无损读取、照常显示",
+        "generate.test.ts 用例重写：原「AI 返回 thread 解析为 thread」2 例替换为「AI 返回 type=thread 时统一降级为 side（含无活跃主线场景）」断言",
+      ] },
+      { label: "合并评估结论", items: [
+        "经 pg 直连核库：故事线 thread 仅 2 条且半废弃、独立伏笔面板 PendingCommitment 已在用（5 条）；两套本就重叠追踪同类「悬疑种子」",
+        "PendingCommitment 无「归属主线」字段，无损迁移不可行（强迁丢可视化维度）且需不可逆库迁移；故决策不强行迁移、只掐 AI 源头消除重复入口，存量保留兼容",
+        "tsc 0 错误；vitest 全量 93 文件 870/870 全绿（generate.test.ts 用例重写成降级断言、测试数不变）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.32.0",
     date: "2026-08-15",

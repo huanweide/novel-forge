@@ -72,18 +72,15 @@ const SYSTEM = `你是小说故事线架构师。你为小说设计事件线（S
 - 如果已有主线存在（非前主线已完结的 newMain 场景），你只能生成支线，绝不能再开第二条主线。多开主线会被系统强制降级为支线。
 - 主线七要素默认留空：大主线不预填七要素，等主线全部推进完结后由系统/AI 自动回填；支线可正常填七要素。
 
-【伏笔/线索铁律（最高优先级，与主线/支线并列，务必遵守）】
-- 伏笔/线索（thread）= 一个悬而未解的谜团、物证、人物暗线、未明真相——它"不是一条完整的小故事"，而是一颗埋下的种子。典型如"掩埋之钥""龙元裂缝的第七个白日""谁留下的血字"。
-- 判断法（最重要）：这条内容是"一个待解的点"（伏笔）？还是"一段有起承转合的情节"（支线/主线）？前者必须生成 type="thread"，绝不允许生成 type="side"（支线）。支线必须是能撑起情节的小故事，绝不能把线索/伏笔塞进支线。
-- thread 不要求完整七要素因果链，只需一句话 description 概述这个悬念即可；七要素留空。
-- thread 必须归属于某条主线（parentId=主线），不能独立成树；若项目中尚无主线，则不要生成 thread（降级为不生成）。
-- 严禁把"对话/发现/前往某地"这类小事开成支线——它们应是 thread（伏笔）或主线时间轴事件（MILESTONE/CLUE），绝不是支线。
+【伏笔/线索（悬念）归属说明】
+- 伏笔/线索（悬念）请不要作为故事线生成。本系统有专门的「伏笔面板」负责埋设、追踪与收束率统计——悬念请在那里记录，不要在故事线里另开一条线。
+- 严禁把"对话/发现/前往某地"这类小事开成支线——它们应作为主线时间轴上的事件节点（MILESTONE/CLUE），或并入已有支线，绝不是一条新线。
 
 【输出格式——纯JSON】
 {
   "lines": [
     {
-      "type": "main" | "side" | "thread",  // 主线 / 支线 / 伏笔线索（见上方铁律，线索绝不可填 side）
+      "type": "main" | "side",  // 主线 / 支线（伏笔/线索请使用专门的伏笔面板）
       "title": "事件线名称",
       "description": "一句话概述这条线",
       "desire": "...", "obstacle": "...", "action": "...", "result": "...",
@@ -182,27 +179,18 @@ ${
   const hasActiveMain = existingStorylines.some((s) => s.type === "main" && s.status === "active");
   const isNewMainMode = mode === "newMain";
 
-  // #223 伏笔铁律：thread 必须依附主线存在；无活跃主线时 thread 无法独立成树，降级为 side（后续落库强制挂主线）。
-  const allowThread = hasActiveMain || isNewMainMode;
+  // 故事线只规划主线/支线；伏笔/线索（悬念）交给专门的伏笔面板，此处不再产出 type="thread"。
 
   return parsedLines.map((l, i) => {
-    const rawType =
-      (l.type as string) === "main"
-        ? "main"
-        : (l.type as string) === "thread"
-          ? (allowThread ? "thread" : "side")
-          : "side";
+    const rawType = (l.type as string) === "main" ? "main" : "side";
     // 主线降级（已有活跃主线且非 newMain）
     const effectiveType = rawType === "main" && hasActiveMain && !isNewMainMode ? "side" : rawType;
     return {
       type: effectiveType,
       title: (l.title as string) || `事件线${i + 1}`,
       description: (l.description as string) || "",
-      // 主线七要素留空；伏笔(thread)不要求七要素，留空由 UI 以线索事件数展示；支线正常填充
-      sevenElements:
-        effectiveType === "main" || effectiveType === "thread"
-          ? emptySevenElements()
-          : toSevenElements(l),
+      // 主线七要素留空；支线正常填充
+      sevenElements: effectiveType === "main" ? emptySevenElements() : toSevenElements(l),
     };
   });
 }

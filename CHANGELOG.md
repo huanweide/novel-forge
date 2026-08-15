@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v2.33.0 — 2026-08-14
+
+### 故事线生成去 thread 冗余（伏笔统一归口伏笔面板）
+- **源头收口**：删除 `generate.ts` 的【伏笔/线索铁律】prompt 块（原指令 AI 把「悬而未解的谜团/物证/暗线」写成 `type=thread` 的伏笔线），替换为【伏笔/线索（悬念）归属说明】明确引导 AI：伏笔/线索请使用专门的伏笔面板、不要作为故事线生成。
+- **输出格式收敛**：输出格式注释 `"type":"main"|"side"|"thread"` 收敛为 `"main"|"side"`；删 `allowThread` 分支、`rawType` 只映射 main→main 其余→side、`sevenElements` 去掉 thread 分支——AI 即便误返 thread 也统一降级为 side。
+- **存量兼容**：`route.ts` 内联 prompt 副本同步更新；落库逻辑（threadLines/createdThreads）保留未删，兼容存量 2 条 thread 行无损读取、照常显示。
+- **测试重写**：`generate.test.ts` 原「AI 返回 thread 解析为 thread」2 例替换为「AI 返回 type=thread 时统一降级为 side（含无活跃主线场景）」断言。
+- **合并评估结论**：经 pg 直连核库，故事线 thread 仅 2 条半废弃、独立伏笔面板 PendingCommitment 已在用（5 条）；两套本就重叠追踪同类「悬疑种子」，且 PendingCommitment 无「归属主线」字段，无损迁移不可行。故决策不强行迁移、只掐 AI 源头消除重复入口，存量保留兼容。
+- **门禁**：tsc 0 错误；vitest 全量 93 文件 870/870 全绿（generate.test.ts 用例重写成降级断言、测试数不变）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.32.0 — 2026-08-15
 
 ### 测试流程优化：补核心散文→HTML 转换 proseToHtml 单测（导出质量地基加固）
