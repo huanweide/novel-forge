@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.39.0";
+export const LATEST_VERSION = "v2.40.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.40.0 功能精简与内置化（任务 #12）：删除三个确凿死依赖——@bubblewrap/core（TWA 安卓打包、本地 Web 工具零用处）、uuid、dotenv（全项目零 import/require；Next.js 内置 .env 加载、代码用 crypto.randomUUID，均不需要），依赖树更干净、安装更快；创作铁律面板(RulesPanel)头部补对称区分说明，明确「不同于项目配置里的正则后处理规则——后者生成后清洗正文、两者各管一段互不影响」，两套规则系统双向闭环、彻底消除用户混淆（UI_FIX_PLAN I-2 项）；实证前端资源全内置（globals.css 仅 @import 本地 npm 包、src 零外部 CDN 依赖），内置化已达标、无需改动。tsc 0 错误；vitest 全量 879/879 全绿。",
   "v2.39.0 页面无障碍(a11y)复验与修复（任务 #10）：实测三套主题关键文字令牌对比度（WCAG AA 阈值 4.5:1），浅色主题主色 --nv-primary 由 oklch(0.55) 压暗至 oklch(0.52)，文字对比度从临界 4.42 提升至 5.00 稳达 AA；写作正文编辑区补 break-words 防超长英文/链接横向溢出；核查确认浅色金色文字对比度(F01)、生成状态 aria-live 播报(F03) 历史已修，AIChatBar 预设按钮含可见文字标签已可访问(F05 不适用)。零逻辑改动、纯令牌与样式加固；tsc 0 错误；vitest 全量全绿。",
   "v2.38.0 角色核心逻辑深度优化（任务 #16）：智能去重与谨慎建卡回归防护网——补 3 个「迪哥」复杂称呼场景测试（迪哥先生/迪哥/迪哥·若昂内 同核高置信合并、迪哥·若昂内/迪哥·桑切斯 两马甲降 low 待确认、迪哥/小迪 前缀缩写合并）+ 6 个谨慎建卡门槛边界测试（出现 0/1 次拦截、2/3 次放行、自定义阈值）；实证任务 #16 四诉求已落地并钉死防回归。零生产代码改动、纯测试加固；tsc 0 错误；vitest 全量 870/870 全绿。",
   "v2.37.0 类型逃逸逐文件精修·第四批（灰区 interface 字段透传态收窄）：core/babylore/fill.ts 的 SkippedOp 接口 op: any→unknown（被跳过的无效填表操作仅透传进告警、下游不访问内部，unknown 强制后续若访问需守卫）；app/workshop/page.tsx 的 PresetRec 接口 content: any→unknown（预设内容整体透传进 JSON 请求体序列化、无属性访问）。tsc 0 错误；babylore 40/40 测试全绿。经复扫灰区（非测试/非生成物 :any 注解共 319 处），低垂果实已被历史五轮（v2.25/v2.28/v2.34/v2.35/v2.36）摘完，剩余多为上游 Prisma 模型与 AI 桥接返回的连锁 any（如 outline-context 整片、memory-decay 的 eventImportances、tool-registry 的 prisma:any），独立收窄任一处会向下游属性访问扩散报错，需整体上游类型化大改，按路线图红区标注暂缓、不硬啃。",
@@ -83,6 +84,25 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.40.0",
+    date: "2026-08-15",
+    title: "功能精简与内置化（任务 #12）：删除三个死依赖 + 创作铁律面板双向闭环说明",
+    sections: [
+      { label: "功能精简：删除确凿死依赖", items: [
+        "删除 @bubblewrap/core（TWA 安卓离线包打包依赖，本地 Web 工具零用处）、uuid、dotenv 三个确凿死依赖——全项目（src/scripts/配置）零 import/require，Next.js 内置 .env 加载、代码用 crypto.randomUUID，均不再需要",
+        "依赖树瘦身、安装更快、仓库更干净；已 npm install 同步 lock 并确认零残留引用、tsc 0 错误",
+      ] },
+      { label: "创作铁律面板双向闭环（UI_FIX_PLAN I-2）", items: [
+        "RulesPanel 头部补对称区分说明：「创作铁律」会直接注入 AI 提示词约定写法，不同于「项目配置」里的「正则后处理规则」（生成完成后对正文做替换/清洗），两者各管一段、互不影响",
+        "此前仅 ProjectConfigPanel 单向说明，现双向闭合，彻底消除「两套规则系统并存让用户混淆」的痛点",
+      ] },
+      { label: "内置化实证与门禁", items: [
+        "实证前端资源全内置：globals.css 仅 @import 本地 npm 包（tailwindcss / tw-animate-css / shadcn），src 内零外部 CDN 依赖，内置化已达标无需改动",
+        "tsc 0 错误；vitest 全量 879/879 全绿；四版本文件对齐 v2.40.0；个人 IP 仍归瑞宝宝",
+      ] },
+    ],
+  },
   {
     version: "v2.39.0",
     date: "2026-08-15",

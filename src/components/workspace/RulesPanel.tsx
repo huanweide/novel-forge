@@ -119,6 +119,10 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         </Button>
       </div>
 
+      <p className="px-3 pt-2 text-[10px] leading-relaxed text-[var(--nv-text-muted)]">
+        这些是约束 AI 创作的「创作铁律」，会直接写进写作提示词、约定它怎么写。它不同于「项目配置」里的「正则后处理规则」——后者在生成完成后对正文做替换/清洗，两者各管一段、互不影响。
+      </p>
+
       {/* 列表 */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
         {rules.length === 0 && (
