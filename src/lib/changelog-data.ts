@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.36.0";
+export const LATEST_VERSION = "v2.37.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.37.0 类型逃逸逐文件精修·第四批（灰区 interface 字段透传态收窄）：core/babylore/fill.ts 的 SkippedOp 接口 op: any→unknown（被跳过的无效填表操作仅透传进告警、下游不访问内部，unknown 强制后续若访问需守卫）；app/workshop/page.tsx 的 PresetRec 接口 content: any→unknown（预设内容整体透传进 JSON 请求体序列化、无属性访问）。tsc 0 错误；babylore 40/40 测试全绿。经复扫灰区（非测试/非生成物 :any 注解共 319 处），低垂果实已被历史五轮（v2.25/v2.28/v2.34/v2.35/v2.36）摘完，剩余多为上游 Prisma 模型与 AI 桥接返回的连锁 any（如 outline-context 整片、memory-decay 的 eventImportances、tool-registry 的 prisma:any），独立收窄任一处会向下游属性访问扩散报错，需整体上游类型化大改，按路线图红区标注暂缓、不硬啃。",
   "v2.36.0 类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）：core/write-generation.ts 的 WriteInput 接口 5 字段（confirmedCardIds?: string[]、cardNotes?: Record<string,string>、newCharacterRequests?: string[]、storylineId?: string、diffuseCompleted?: boolean）对齐下游具体类型契约；core/sync-global-prompt.ts 的 buildGlobalPrompt 入参 project 内联类型 llmConfig?/buildConfig? 由 any 降级 unknown（下游已 as 显式收窄）；lib/storyline-progress.ts 的 computeStorylineProgress(s: any) 改 s: unknown 加内部 in/typeof 守卫提取七要素。tsc 0 错误；vitest 全量 870/870 全绿；灰区剩余 find/map 回调元素 any 与 catch(err:any) 宽松场景按路线图分批推进。",
   "v2.35.0 类型逃逸逐文件精修·第二批（tables 页 useState<any> 精确接口化）：app/workspace/[projectId]/tables/page.tsx 三处结果态收窄——单表填表 fillResult（ok/operations/applied/error/at/warnings）与召回 recallItems（source/title/content）定义精确接口 TableFillResult/RecallItem 替代 useState<any>/<any>，删 1 处 as any[]（自检 issues 直接吃精确类型）；一键填表 fillAllResult 因后端返回动态自检报告（selfCheck 含多类 issues + fillErrorMeta）结构随后端演化、硬类型化脆弱，保留 any 并注释说明（合理动态豁免）。tsc 0 错误；组件测试稀疏（tsc 类型门禁替代）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.34.0 类型逃逸逐文件精修·第一批（蓝区 4 处 unknown 收窄 + 2 处动态豁免标注）：纯前端/store/纯函数层——store/index.ts 的 patchProject 参数、components/explore/OutlinePanel.tsx 角色 personality/appearance、core/babylore/ifcell.ts 的 IfCellTable.rows、core/explore/utils.ts 的 extractCharacterKeys 的 char 参数，共 4 处 Record<string,any> 收窄为 Record<string,unknown>（unknown 强制下游做类型检查、比 any 安全）；tables/page.tsx 动态列表格 rows 与 babylore/fill.ts 填表溯源 Json 快照 2 处保留 any 并注释说明（动态列运行时取值直接进 React 渲染、prisma Json 字段仅接受 any 形态，硬改会破坏渲染/落库），诚实标注不假收敛。门禁：tsc 0 错误；vitest 受影响 6 文件 64/64 全绿；API 路由桥接层（adopt/autofill/import）属红区暂缓，后续批次推进。个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -80,6 +81,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.37.0",
+    date: "2026-08-15",
+    title: "类型逃逸逐文件精修·第四批（灰区 interface 字段透传态收窄）",
+    sections: [
+      { label: "透传态接口字段收窄", items: [
+        "core/babylore/fill.ts 的 SkippedOp 接口 op: any 收窄为 unknown（被跳过的无效填表操作仅透传进告警、下游不访问内部，unknown 强制后续若访问需守卫）",
+        "app/workshop/page.tsx 的 PresetRec 接口 content: any 收窄为 unknown（预设内容整体透传进 JSON 请求体序列化、无属性访问）",
+      ] },
+      { label: "门禁与灰区收口判断", items: [
+        "tsc 0 错误；src/core/babylore 40/40 测试全绿（workshop 为前端页、tsc 类型门禁覆盖）",
+        "经复扫灰区（非测试/非生成物 :any 注解共 319 处），低垂果实已被历史五轮摘完；剩余多为上游 Prisma 模型与 AI 桥接返回的连锁 any，独立收窄会向下游属性访问扩散报错，需整体上游类型化大改，按路线图红区标注暂缓、不硬啃",
+      ] },
+    ],
+  },
   {
     version: "v2.36.0",
     date: "2026-08-15",

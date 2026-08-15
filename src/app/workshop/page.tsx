@@ -17,7 +17,7 @@ interface Preset {
   tags: string[];
   downloads: number;
   isBuiltin: boolean;
-  content: any;
+  content: unknown;
 }
 
 const TABS = [

@@ -38,7 +38,7 @@ export interface FillResult {
 
 /** P1-C（墨白）：被跳过的无效 op（丢失的写入），与 warning 一一对应 */
 export interface SkippedOp {
-  op: any;
+  op: unknown;
   reason: string;
   table: string;
 }

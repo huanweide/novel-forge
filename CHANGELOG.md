@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.37.0 — 2026-08-15
+
+### 类型逃逸逐文件精修·第四批（灰区 interface 字段透传态收窄）
+- **填表跳过操作透传态收窄**：`core/babylore/fill.ts` 的 `SkippedOp` 接口 `op: any` 收窄为 `unknown`——被跳过的无效填表操作仅透传进告警列表、下游从不访问其内部结构，`unknown` 强制后续若访问需先做类型守卫，比 `any` 安全。
+- **预设内容透传态收窄**：`app/workshop/page.tsx` 的 `PresetRec` 接口 `content: any` 收窄为 `unknown`——创意工坊预设内容整体透传进 JSON 请求体序列化、无任何属性访问，`unknown` 零风险收口。
+- **门禁**：tsc 0 错误；`src/core/babylore` 40/40 测试全绿（workshop 为前端页、tsc 类型门禁覆盖）。
+- **灰区收口判断**：经复扫，非测试/非生成物的 `:any` 注解共 319 处，历史五轮（v2.25/v2.28/v2.34/v2.35/v2.36）已将低垂果实摘完；剩余多为「上游 Prisma 模型 / AI 桥接返回」的连锁 any（如 `outline-context.ts` 整片、`memory-decay.ts` 的 `eventImportances`、`tool-registry.ts` 的 `prisma: any`），独立收窄任一处会向下游属性访问扩散报错，需整体上游类型化大改，按路线图红区标注暂缓、不硬啃。
+
 ## v2.36.0 — 2026-08-15
 
 ### 类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）
