@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LATEST_VERSION, CHANGELOG_BRIEF } from "@/lib/changelog-data";
+import { LATEST_VERSION, CHANGELOG_USER_BRIEF } from "@/lib/changelog-data";
 import { useQuery } from "@/hooks/useApi";
 import { GENRE_TEMPLATES } from "@/core/templates/genres";
 import { Icon } from "@/components/ui/icons";
@@ -363,7 +363,7 @@ export default function Dashboard() {
               <h2 id="changelog-modal-title" className="text-lg font-semibold text-foreground">更新公告 · {LATEST_VERSION}</h2>
             </div>
             <ul className="space-y-2.5 mb-5">
-              {CHANGELOG_BRIEF.map((item, i) => (
+              {CHANGELOG_USER_BRIEF.map((item, i) => (
                 <li key={i} className="text-sm text-[var(--nv-text-secondary)] flex items-start gap-2.5">
                   <span className="w-1 h-1 rounded-full bg-primary/60 mt-2 shrink-0" />
                   <span>{item}</span>
