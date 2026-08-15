@@ -2,6 +2,11 @@
 
 > automation-1786201646373（每小时触发）。目标：v1.6.x → v1.8.0 不空转推进。CEO 由马斯克人格代理拍板，反馈即用户本人，绝不回头问；个人 IP 永远归瑞宝宝，严禁另立 IP/品牌/项目。
 
+## 最新状态（2026-08-15 22:xx）
+- 当前 HEAD = **v2.45.0**（commit 53d3f86，本地已提交并 SSH 推送 ghssh main 成功：0203178..53d3f86）。
+- 本轮演进：v2.44.0（开关重做）→ v2.45.0 更新弹窗接上「用户视角」大白话摘要（收口上一轮漏接线缺陷：CHANGELOG_USER_BRIEF 已写好却未接进首页弹窗，弹窗此前满屏技术黑话）。
+- v2.45.0：page.tsx 更新公告弹窗由渲染技术向 CHANGELOG_BRIEF 改为 CHANGELOG_USER_BRIEF（三条大白话），技术完整版仅保留给 /changelog「查看完整公告」页；零运行时逻辑改动；tsc 0 + vitest 94 文件 896/896 全绿。
+
 ## 最新状态（2026-08-09 14:xx）
 - 当前 HEAD = **v1.6.51.4**（commit 3b449d9，本地已提交；推送因代理上游网络硬阻塞失败，待补推）。
 - 主线演进：v1.6.51 跨章一致性事实基线(最小垂直切片) → v1.6.51.1 注入生成提示词(功能闭环) → v1.6.51.2 归档定稿自动触发抽取(基线首次非空) → v1.6.51.3 基线最小UI(作者可见·手动重抽) → v1.6.51.4 主动矛盾检测(B任务·标红不改写·作者逐条已修正/忽略)。
@@ -79,3 +84,20 @@
 - 双门禁：tsc 0 错；vitest 全量 93 文件 870/870 全绿（较 v2.31.0 基线 +1 文件 +11 例）。注：首次全量遇 storyline/generate.test.ts「type=thread 解析」用例偶发失败，但单独重跑 3 次全绿、二次全量重跑均 870 全绿；git blame 显示 generate.ts:185 为「Not Committed Yet 11:32」即用户在并行主对话实时编辑未提交的改动（强制 thread→side 属伏笔归伏笔面板设计），非本轮引入、属测试间状态污染/用户并行编辑时序，未触碰该用户领地文件。
 - 交付：四文件同步 v2.32.0（package.json/changelog-data.ts LATEST_VERSION+CHANGELOG_BRIEF头条+VERSIONS[0]/CHANGELOG.md/更新报告.md）；commit + SSH 推送 ghssh main；IP 仍归瑞宝宝。
 - 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：本轮连贯/已验证/低风险/高价值（导出地基测试防护），直接收口 v2.32.0；不假收敛重做已闭环项。
+
+
+## 2026-08-15 轮次（v2.34.0 残缺发布收口 · 自动化运营）
+- 检测：工作树存在上一轮（主对话）写入但未提交的 v2.34.0 改动（6 源文件 Record<string,any>→Record<string,unknown> 收窄 + 2 处动态豁免标注 + 双 changelog 已 bump 到 v2.34.0）。初查 changelog-data.ts 三处疑似滞后 v2.33.0（双 changelog 漏改陷阱），复核（重新 Read 权威内容）确认实际已为 v2.34.0，初查为读取快照滞后误判。
+- 修复：无新源码——v2.34.0 代码已完整健康；仅收口发布（提交 + 推送）。
+- 双门禁：SAFE_DELETE_DISABLE=1 npx tsc --noEmit --incremental false = 0 错；npx vitest run = 93 文件 870/870 全绿。
+- 交付：并行提交 f9a97d2 已含 v2.34.0 全部代码（10 文件：6 源文件 + CHANGELOG.md + package.json + changelog-data.ts + 更新报告.md）；本轮补 commit b362678（项目记忆本章）；SSH 推送 ghssh main 成功（f9a97d2..b362678，连带此前未推送的 v2.33.0 / chore 共 4 笔）。
+- 马斯克 CEO 拍板（子代理通道仍故障，主代理代行如实标注）：残缺发布即真实缺陷——未提交半版本 + changelog 不一致会让线上公告与代码错位，直接收口上线、不假收敛；IP 仍归瑞宝宝，无新 IP/品牌/引流。
+- 下一步候选：v2.35.0 推进灰区 :any 注解收窄（582 处/136 文件，先前路线图阶段2）；红区 API 桥接层暂缓。
+
+## 2026-08-15 轮次（v2.41.0 → v2.42.0 朗读清洗纯函数化 + 单测锁死）
+- 检测：本轮回合初 HEAD=v2.40.0，工作树四文件已 bump v2.41.0 + TTSPlayer.tsx 新增（untracked，CenterPanel 引用却漏 add）；运行期间用户/主对话实时收口 v2.41.0 并推送（a3fa8f0，含 TTSPlayer 181行 + 偏好持久化 localStorage），故 v2.41.0 无残缺，无需重复收口。转向 v2.42.0 真实缺口。
+- 决策：子代理通道（review-worker/deepseek-v4-pro）本环境仍故障，按用户 2026-08-14 纠偏主代理代行马斯克 CEO 拍板——TTSPlayer 朗读前 Markdown 清洗 stripMarkdown 零单测是真防护缺口（回归会让用户听到符号），抽纯函数 + 补 17 例测试，复刻 v2.32 已验证路径；类型逃逸红区高危暂缓；不假收敛。
+- 修复：抽 stripMarkdown 到 src/lib/stripMarkdown.ts（行为原样），TTSPlayer 改引用（仅动 v2.41.0 原块 line 13-33，保留用户并行新增偏好持久化 line 35-52）；新增 stripMarkdown.test.ts 17 例；测试 2 例初始期望写错（代码块保留换行、多余空格压缩），修正期望匹配真实行为，未改函数。
+- 双门禁：tsc 0 错；vitest 全量 94 文件 896/896 全绿（较 v2.41.0 基线 +17）。
+- 交付：四文件 bump v2.42.0（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit 6846d8f（7 文件 +195/-26，含用户偏好持久化顺带收口）；GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（a3fa8f0..6846d8f）；dev server /changelog 含 v2.42.0。
+- 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：本轮连贯/已验证/低风险/高价值（朗读清洗防护），直接收口 v2.42.0；IP 仍归瑞宝宝，无新 IP/品牌/引流。
