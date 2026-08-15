@@ -427,7 +427,7 @@ export function CenterPanel({
                 {displayContent && (
                   <div className="flex justify-center mb-5">
                     {showTTS ? (
-                      <TTSPlayer text={displayContent} onClose={() => setShowTTS(false)} />
+                      <TTSPlayer text={displayContent} title={selectedNode?.title ?? undefined} onClose={() => setShowTTS(false)} />
                     ) : (
                       <button
                         onClick={() => setShowTTS(true)}

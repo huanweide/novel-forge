@@ -27,11 +27,59 @@ export function CharacterChatDialog({ projectId, characterId, characterName, onC
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<Record<number, string>>({});
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  // P0-C：附身产出一键落正文——复制到剪贴板 / 插入到项目最后一节正文末尾
+  const flash = (i: number, msg: string, ms: number) => {
+    setFeedback((f) => ({ ...f, [i]: msg }));
+    setTimeout(() => setFeedback((f) => {
+      const n = { ...f };
+      delete n[i];
+      return n;
+    }), ms);
+  };
+  const copyText = async (content: string, i: number) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      flash(i, "已复制", 1800);
+    } catch {
+      flash(i, "复制失败", 1800);
+    }
+  };
+  const insertToBody = async (content: string, i: number) => {
+    try {
+      const projRes = await fetch(`/api/projects/${projectId}`);
+      const proj = await projRes.json();
+      const nodes = (proj.storyNodes || []).filter((n: { type?: string }) => n.type === "section");
+      if (!nodes.length) {
+        flash(i, "暂无章节可插入", 2000);
+        return;
+      }
+      nodes.sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+      const target = nodes[nodes.length - 1];
+      const detailRes = await fetch(`/api/story/nodes/${target.id}`);
+      const detail = await detailRes.json();
+      if (detail.error) throw new Error(detail.error);
+      const existing: string = detail.content || "";
+      const appended = existing.trim()
+        ? existing.replace(/\s+$/, "") + "\n\n" + content
+        : content;
+      const putRes = await fetch(`/api/story/nodes/${target.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: appended }),
+      });
+      if (!putRes.ok) throw new Error("保存失败");
+      flash(i, `已插入《${target.title}》末尾`, 2400);
+    } catch (e) {
+      flash(i, "插入失败：" + (e instanceof Error ? e.message : "网络错误"), 2600);
+    }
+  };
 
   const send = async () => {
     const text = input.trim();
@@ -105,7 +153,7 @@ export function CharacterChatDialog({ projectId, characterId, characterName, onC
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
             <div
               className={`max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
                 msg.role === "user"
@@ -115,6 +163,25 @@ export function CharacterChatDialog({ projectId, characterId, characterName, onC
             >
               {msg.content}
             </div>
+            {msg.role === "character" && mode === "possess" && (
+              <div className="mt-1 flex items-center gap-2.5">
+                <button
+                  onClick={() => copyText(msg.content, i)}
+                  className="text-[10px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] transition-colors"
+                >
+                  复制
+                </button>
+                <button
+                  onClick={() => insertToBody(msg.content, i)}
+                  className="text-[10px] text-[var(--nv-creative)] hover:text-[var(--nv-creative)]/70 transition-colors"
+                >
+                  插入正文
+                </button>
+                {feedback[i] && (
+                  <span className="text-[10px] text-[var(--nv-text-tertiary)]">{feedback[i]}</span>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {loading && (

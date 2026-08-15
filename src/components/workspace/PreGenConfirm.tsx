@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 
@@ -14,11 +14,13 @@ export interface ScheduledCard {
 // 只留「人物（可选）」+ 作者指令 + 确认。onConfirm 签名不变以兼容父组件。
 export function PreGenConfirm({
   projectId, nodeId, authorNote, title, onAuthorNoteChange, onConfirm, onCancel, presetCharacterIds,
-  storylineId,
+  storylineId, autoConfirm,
 }: {
   projectId: string; nodeId?: string; authorNote: string; title?: string;
   presetCharacterIds?: string[];
   storylineId?: string;
+  /** 已勾选「本次会话直接生成」时由父组件传入，跳过弹窗直接生成（不再打断写手） */
+  autoConfirm?: boolean;
   onAuthorNoteChange: (v: string) => void;
   onConfirm: (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string) => void;
   onCancel: () => void;
@@ -28,6 +30,7 @@ export function PreGenConfirm({
   const [charInput, setCharInput] = useState("");
   const [error, setError] = useState("");
   const [localAuthorNote, setLocalAuthorNote] = useState(authorNote);
+  const [skip, setSkip] = useState(false);
   // v1.6.0：章纲确认循环——可选先生成章纲 → 编辑/修复 → 确认生成正文
   const [outlineText, setOutlineText] = useState("");
   const [outlineLoaded, setOutlineLoaded] = useState(false);
@@ -103,6 +106,27 @@ export function PreGenConfirm({
     const confirmedIds = matchedIds.length > 0 ? matchedIds : cards.map((c) => c.id);
     onConfirm(confirmedIds, {}, newChars, localAuthorNote, storylineId);
   };
+
+  // P0-C：本次会话直接生成——父组件传入 autoConfirm 时，卡片加载完即自动确认，
+  // 全程不打断写手（勾选状态由父组件在打开前读 localStorage 决定）。
+  const confirmRef = useRef<() => void>(() => {});
+  confirmRef.current = handleConfirm;
+  const autoFiredRef = useRef(false);
+  useEffect(() => {
+    if (!autoConfirm || autoFiredRef.current || loading || error) return;
+    autoFiredRef.current = true;
+    confirmRef.current();
+  }, [autoConfirm, loading, error]);
+
+  // 本次会话直接生成：不弹确认窗，仅底部轻提示，卡片加载完即自动确认
+  if (autoConfirm) {
+    return (
+      <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-4 py-2 text-xs text-[var(--nv-text-secondary)] shadow-lg">
+        <div className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--nv-primary)]/30 border-t-[var(--nv-primary)]" />
+        正在直接生成…
+      </div>
+    );
+  }
 
   return (
     <Modal open onClose={onCancel} bare panelClassName="w-full max-w-lg" labelledBy="pregen-confirm-title">
@@ -182,9 +206,28 @@ export function PreGenConfirm({
                 )}
               </div>
             )}
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]">取消</button>
-              <button onClick={handleConfirm} className="btn-primary px-4 py-1.5 text-xs rounded-lg font-medium"><Icon name="check" size={13} /> 确认生成</button>
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-1.5 text-[10px] text-[var(--nv-text-tertiary)] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={skip}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setSkip(v);
+                    try {
+                      if (v) window.localStorage.setItem(`pregen-skip-${projectId}`, "1");
+                      else window.localStorage.removeItem(`pregen-skip-${projectId}`);
+                    } catch {
+                      /* 隐私模式下静默降级 */
+                    }
+                  }}
+                />
+                本次会话直接生成（不再询问）
+              </label>
+              <div className="flex items-center gap-2">
+                <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)]">取消</button>
+                <button onClick={handleConfirm} className="btn-primary px-4 py-1.5 text-xs rounded-lg font-medium"><Icon name="check" size={13} /> 确认生成</button>
+              </div>
             </div>
           </div>
         )}

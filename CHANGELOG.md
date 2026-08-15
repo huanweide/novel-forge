@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.46.0 — 2026-08-16
+
+### 朗读切句分段 + 生成前确认不打断 + 附身产出一键插正文 + 凭据安全加固
+- **AI 念书升级为「听书级」可控朗读**：TTSPlayer 从「整章一坨念」升级为「整章切句分段 + 进度条 + 上/下句跳转 + 章节报幕 + 关掉再开从断点续播」；新抽 segmentText 纯函数按句/段把清洗后正文切成数组逐句播放、localStorage 记住断点续播、章节标题作第 0 句报幕「第一章 XXX」；stripMarkdown 新增 preserveParagraphs 选项（保留段落断点供 TTS 分段、txt 导出保留章节分段）+ segmentText 切句函数配套 9 例自动化测试；朗读不再念符号、分段自然。
+- **写手不再被打断**：PreGenConfirm 新增 autoConfirm 模式，弹窗底部「本次会话直接生成（不再询问）」勾选写入 localStorage（pregen-skip-{projectId}），本次会话再开生成前确认即自动跳过、底部轻提示、卡片加载完自动确认，全程不打断写作心流。
+- **附身产出直接可用**：CharacterChatDialog 在 possess 模式给 AI 回复加「复制」「插入正文」按钮；插入调 /api/story/nodes/{最后一节} PUT 追加到当前章正文末尾，AI 写的东西一键进稿。
+- **凭据安全加固**：.gitignore 补「凭据安全补充（强制）」段（.env/密钥/凭据/.npmrc/.workbuddy 等禁入库）从源头防误推；零功能变化。
+- **门禁**：零破坏现有朗读 API；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 94 文件 905/905 全绿（较 v2.45.0 +9 例）；四版本文件对齐 v2.46.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.45.0 — 2026-08-15
 
 ### 更新弹窗接上「用户视角」大白话摘要（收口漏接线缺陷）

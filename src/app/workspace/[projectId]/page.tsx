@@ -1454,10 +1454,15 @@ export default function WorkspacePage() {
       )}
 
       {/* 生成前角色确认弹窗 */}
-      {preGenOpen && (
+      {preGenOpen && (() => {
+        const skipConfirm =
+          typeof window !== "undefined" &&
+          window.localStorage.getItem(`pregen-skip-${project.id}`) === "1";
+        return (
         <PreGenConfirm projectId={project.id} nodeId={preGenMode === "outline" ? undefined : selectedNode?.id} presetCharacterIds={drawSelectedCharIds}
           authorNote={authorNote}
           storylineId={writeFromStorylineId.current ?? undefined}
+          autoConfirm={skipConfirm}
           title={preGenMode === "write" ? "生成前确认——角色调度" : preGenMode === "refine" ? "微调前确认——角色调度" : preGenMode === "continue" ? "续写前确认——角色调度" : "大纲生成前确认——角色调度"}
           onAuthorNoteChange={handleAuthorNoteChange}
           onConfirm={(cards, notes, newChars, finalAuthorNote, storylineId) => {
@@ -1484,7 +1489,8 @@ export default function WorkspacePage() {
             }
           }}
           onCancel={() => { setPreGenOpen(false); setOutlineGenConfig(null); }} />
-      )}
+        );
+      })()}
 
     </div>
     </ErrorBoundary>

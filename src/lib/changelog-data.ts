@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.45.0";
+export const LATEST_VERSION = "v2.46.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.46.0 朗读切句分段 + 生成前确认不打断 + 附身产出一键插正文 + 凭据安全加固（马斯克 CEO 循环运营收口）：①AI 念书升级为「听书级」可控朗读——TTSPlayer 从「整章一坨念」升级为「整章切句分段 + 进度条 + 上/下句跳转 + 章节报幕 + 关掉再开从断点续播」，新抽 segmentText 纯函数按句/段切数组逐句播放、localStorage 记住断点续播、标题作第 0 句报幕；stripMarkdown 新增 preserveParagraphs 选项 + segmentText 切句函数配套 9 例测试；②写手不再被打断——PreGenConfirm 新增「本次会话直接生成」勾选写入 localStorage，本次会话再开生成前确认即自动跳过、底部轻提示、卡片加载完自动确认；③附身产出直接可用——CharacterChatDialog 在 possess 模式给 AI 回复加「复制」「插入正文」按钮，插入调 /api/story/nodes/{最后一节} PUT 追加到当前章正文末尾；④凭据安全加固——.gitignore 补「凭据安全补充（强制）」段（.env/密钥/凭据/.npmrc/.workbuddy 等禁入库）源头防误推。零破坏现有朗读 API；tsc 0 错误；vitest 全量 94 文件 905/905 全绿（较 v2.45.0 +9 例）；四版本文件对齐 v2.46.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.45.0 更新弹窗接上「用户视角」大白话摘要（马斯克 CEO 循环运营收口）：上一轮写好的 CHANGELOG_USER_BRIEF（新手引导更贴心 / 设置页大瘦身 / 工作区正文更耐看，三条大白话）此前漏接线，首页更新公告弹窗仍在渲染技术向的 CHANGELOG_BRIEF（满屏「SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误」黑话，普通用户看不懂）；本轮把弹窗改为渲染 CHANGELOG_USER_BRIEF，技术向 CHANGELOG_BRIEF 完整版仅保留给「查看完整公告」跳转的 /changelog 页，普通用户与开发者各取所需。零运行时逻辑改动、纯展示层切换；tsc 0 错误；vitest 全量 94 文件 896/896 全绿；四版本文件对齐 v2.45.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
 "v2.44.0 开关按钮（Switch）彻底重做（瑞宝宝指令）：你长期吐槽的「可开启/关闭按钮」丑、滑动不顺、开/关没区别，这一版逐条修掉——①顺滑滑动：尺寸加大（滑块滑动距离从~20px拉到~26px）、动画时长200ms→300ms、换成弹簧回弹缓动cubic-bezier(0.34,1.56,0.64,1)，并加 hover 轨道微亮 + active 滑块微缩的按压反馈；②开/关明显区分：关闭态滑块半透明白「熄灭」、开启态纯白 + 柔和光晕阴影「点亮」，两态辨识度彻底拉开；③更好看：滑块改为纯白质感 + 阴影，不再是死白圆块。API 不变、全局~25处调用点零改动；配套对 v2.42(语音朗读)/v2.43(章名/设置/芯片字体/创意工坊)全部改动补「究极截图」视觉证据。tsc 0 错误；vitest 全量 94 文件 896/896 全绿；四版本文件对齐 v2.44.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.43.0 四项体验收口（瑞宝宝指令）：①章名规则——摘要 LLM 新增专用短章名字段（≤5字、不含人名），post-processor 再叠加「剔角色名/别名 + 截5字」兜底，仅当标题为空/仍为「第N章」占位才回填，绝不覆盖你手动改的章名，导出时自动生成简短且不带人名的章名；②设置简化——删除确认流程里那一大段看不懂的「这是什么」折叠说明，智能审阅/自动交付开关本就默认开启，极简状态条+开关即够用；③角色类型芯片——筛选栏角色/状态芯片字体从偏大改为 text-xs，与世界面板按钮对齐，间距放宽排版更顺；④创意工坊——删除「骰子随机事件表」预设（全项目无掷骰引擎、且作为表格模板会被每章自动填表接管，既用不了又和填表功能冲突），并把误导性的「共创社区」标签改为「我的本地预设」、文案如实说明预设只存本机、不上传不共享，人人都能自建专属预设。tsc 0 错误；vitest 全量 94 文件 896/896 全绿；四版本文件对齐 v2.43.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -100,6 +101,29 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.46.0",
+    date: "2026-08-16",
+    title: "朗读切句分段 + 生成前确认不打断 + 附身产出一键插正文 + 凭据安全加固",
+    sections: [
+      { label: "AI 念书升级为「听书级」可控朗读", items: [
+        "TTSPlayer 从「整章一坨念」升级为「整章切句分段 + 进度条 + 上/下句跳转 + 章节报幕 + 关掉再开从断点续播」：新抽 segmentText 纯函数按句/段把清洗后正文切成数组，逐句播放、进度条按句数走、点进度条跳到对应句、上一句/下一句按钮、用 localStorage 记住听到第几句（关掉再开接着听）；章节标题作为第 0 句报幕「第一章 XXX」",
+        "清洗逻辑 stripMarkdown 新增 preserveParagraphs 选项（保留段落断点供 TTS 分段、txt 导出保留章节分段），新增 segmentText 切句函数配套 9 例自动化测试锁死行为（空串/中英文句末切分/段落停顿/首尾清理），朗读不再念出符号、分段自然",
+      ] },
+      { label: "写手不再被打断（生成前确认「本次会话直接生成」）", items: [
+        "PreGenConfirm 新增 autoConfirm 模式：弹窗底部新增「本次会话直接生成（不再询问）」勾选，勾选写入 localStorage（pregen-skip-{projectId}），本次会话再次打开生成前确认弹窗时自动跳过、底部轻提示「正在直接生成…」、卡片加载完即自动确认，全程不打断写手的写作心流",
+      ] },
+      { label: "附身产出直接可用（角色对话 possess 模式）", items: [
+        "CharacterChatDialog 在附身（possess）模式下给 AI 回复新增「复制」「插入正文」两个按钮：复制走剪贴板；插入正文调 /api/story/nodes/{最后一节} PUT 把 AI 产出追加到当前章节正文末尾，AI 写的东西一键进稿、不用手动复制粘贴",
+      ] },
+      { label: "凭据安全加固（安全铁律）", items: [
+        ".gitignore 补齐「凭据安全补充（强制）」段：.env/.env.*（保留 .env.example/.env.template 占位）、密钥（*.pem/*.key/*.p12/id_rsa 等）、凭据（credentials*.json/auth.json/tokens.json/secrets.json 等）、.npmrc/.netrc/.git-credentials、.workbuddy/ 等全部禁入版本库，从源头防 .env/密钥误推；零功能变化",
+      ] },
+      { label: "质量门禁", items: [
+        "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 94 文件 905/905 全绿（较 v2.45.0 基线 896 +9 例 segmentText/preserveParagraphs 测试）；四版本文件对齐 v2.46.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.45.0",
     date: "2026-08-15",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { stripMarkdown } from "./stripMarkdown";
+import { stripMarkdown, segmentText } from "./stripMarkdown";
 
 describe("stripMarkdown 朗读前清洗", () => {
   it("空串返回空串", () => {
@@ -91,5 +91,59 @@ describe("stripMarkdown 朗读前清洗", () => {
     expect(out).toContain("伏笔");
     expect(out).toContain("第一项");
     expect(out).toContain("设定集");
+  });
+});
+
+describe("stripMarkdown preserveParagraphs 保留段落结构", () => {
+  it("默认行为压缩多空行为单换行", () => {
+    expect(stripMarkdown("第一段。\n\n\n第二段。")).toBe("第一段。\n第二段。");
+  });
+
+  it("preserveParagraphs 保留双换行段落断点", () => {
+    expect(stripMarkdown("第一段。\n\n\n第二段。", { preserveParagraphs: true })).toBe(
+      "第一段。\n\n第二段。",
+    );
+  });
+
+  it("preserveParagraphs 不残留 Markdown 符号", () => {
+    const out = stripMarkdown("# 标题\n\n这是**重点**，*轻声*说完。\n\n> 引语", {
+      preserveParagraphs: true,
+    });
+    expect(out).not.toContain("#");
+    expect(out).not.toContain("*");
+    expect(out).not.toContain(">");
+    expect(out).toBe("标题\n\n这是重点，轻声说完。\n\n引语");
+  });
+});
+
+describe("segmentText 朗读切句分段", () => {
+  it("空串/纯空白返回空数组", () => {
+    expect(segmentText("")).toEqual([]);
+    expect(segmentText("   \n  ")).toEqual([]);
+  });
+
+  it("按中文句末标点切分，标点保留在句尾", () => {
+    const segs = segmentText("他转身走了。她没有回头。雨下起来了！");
+    expect(segs).toEqual(["他转身走了。", "她没有回头。", "雨下起来了！"]);
+  });
+
+  it("英文标点也切分", () => {
+    const segs = segmentText("Hello world. How are you? I'm fine!");
+    expect(segs).toEqual(["Hello world.", "How are you?", "I'm fine!"]);
+  });
+
+  it("段落之间按双换行切分，段落停顿自然形成", () => {
+    const segs = segmentText("第一段第一句。第一段第二句。\n\n第二段只有一句。");
+    expect(segs).toEqual(["第一段第一句。", "第一段第二句。", "第二段只有一句。"]);
+  });
+
+  it("单换行也视为停顿点（拆成独立朗读单元）", () => {
+    const segs = segmentText("第一行\n第二行");
+    expect(segs).toEqual(["第一行", "第二行"]);
+  });
+
+  it("首尾空白与空段被清理", () => {
+    const segs = segmentText("\n\n  他笑了。  \n\n  她也笑了。  \n");
+    expect(segs).toEqual(["他笑了。", "她也笑了。"]);
   });
 });
