@@ -10,9 +10,10 @@ import { Modal } from "@/components/ui/Modal";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
 import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
+import { useWriterStore } from "@/store";
 
 export function CenterPanel({
-  selectedNode, streamContent, isGenerating, reviewResult,
+  selectedNode, isGenerating, reviewResult,
   authorNote, onAuthorNoteChange, targetWordCount, onTargetWordCountChange,
   onWrite, onStop, onEditOutline, onGenerateChapterOutline, onDrawChapterOutline,
   projectId,
@@ -25,7 +26,7 @@ export function CenterPanel({
   loadProject,
   narrativeStage,
 }: {
-  selectedNode: StoryNodeData | null; streamContent: string; isGenerating: boolean;
+  selectedNode: StoryNodeData | null; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
   authorNote: string; onAuthorNoteChange: (v: string) => void;
   targetWordCount: number; onTargetWordCountChange: (v: number) => void;
@@ -49,6 +50,8 @@ export function CenterPanel({
   narrativeStage?: NarrativeStage | null;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  // v2.49：流式正文下沉到 useWriterStore，父组件（WorkspacePage）逐 token 不再重渲染，只这里局部更新
+  const streamContent = useWriterStore((s) => s.generatedContent);
   const [editingOutline, setEditingOutline] = useState(false);
   const [outlineDraft, setOutlineDraft] = useState("");
   const [outlineExpanded, setOutlineExpanded] = useState(false);

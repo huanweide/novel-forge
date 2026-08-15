@@ -9,7 +9,7 @@
 
 ## 质量门禁
 - `SAFE_DELETE_DISABLE=1 npx tsc --noEmit` 必须 0 错误。
-- `npx vitest run` 必须全绿（当前基线 93 文件 879 测试，v2.40.0）。
+- `npx vitest run` 必须全绿（当前基线 98 文件 931 测试，v2.49.0）。
 - 每次改 schema.prisma 后必须杀 dev server 重启，否则 stale Prisma client 会 503。
 
 ## 已知环境限制
@@ -31,6 +31,8 @@
 - v2.0.1 摘要大纲根治：digest-aggregate 纯函数去重+垃圾过滤+标题归一；入口 isGarbageSummary 守卫拒收脏数据；清理 新城/星辰 脏行（commit 49635e0）。
 - v2.0.2 游戏模式 SSE 流式 + 写作节奏后台收尾修复 + 摘要入口整合 + 正文内联编辑（commit 6602e26）。
 - v2.0.3 批量写作进度UX/章纲延续自查、角色去重改 LLM 驱动+默认开启、删自动分类死代码改自建标签、移除死板自动发现改 LLM 发现源头防脏卡、摘要大纲直连章纲（commit 5bf0d6b）。
+- v2.4x→v2.48 体验打磨与地基止血收口：v2.41 语音朗读、v2.42 stripMarkdown 纯函数化、v2.43 章名/设置/芯片/创意工坊收口、v2.44 Switch 重做、v2.45 更新弹窗接「用户视角」大白话、v2.46 听书级朗读+生成前确认不打断+附身插正文+凭据加固、v2.47 地基止血第一刀（SSE 错误收敛可读/api-body 校验统一/NODE_TYPE 常量）、v2.48 地基止血收口（WorkspacePage 纯逻辑外提 src/core/workspace-derive.ts + 保存同步回写 store.updateNode 修脏数据）。双门禁：tsc 0 错 / vitest 97 文件 927 全绿（v2.48.0）。
+- v2.49 性能止血：①streamContent 高频状态从 WorkspacePage 本地 useState 下沉到 useWriterStore（generatedContent/appendContent/resetStream 复用既有），CenterPanel 改从 store 订阅——AI 逐 token 生成时整棵工作区组件树不再每 token 重渲染、只正文区局部更新，大书生成流畅度直接提升；②game/action 路由 catch 复用 sseError() 收敛可读错误、保留 error 字段名（前端 game/[nodeId] 只读 event.error）补齐 v2.47 漏项；③done 后 GET /api/story/nodes/:id 单节点 → updateNode 局部刷新替整本 loadProject 重载（大书保存卡顿根因消除，失败兜底全量）。配套 writer-store.test.ts 4 例。双门禁：tsc 0 错 / vitest 98 文件 931 全绿（v2.49.0）。
 
 ## 工作原则
 - IP 永远归瑞宝宝；不另立 IP/品牌/项目。

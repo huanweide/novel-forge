@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useProjectStore } from "@/store";
+import { useProjectStore, useWriterStore } from "@/store";
 import { invalidateQueries } from "@/hooks/useApi";
 import { NODE_TYPE } from "@/core/node-type";
 import { chapterNodesOf, allConfirmedOf, narrativeStageOf } from "@/core/workspace-derive";
@@ -76,7 +76,7 @@ export default function WorkspacePage() {
 
   const handleSelectNode = (node: StoryNodeData) => {
     if (selectedNode?.id !== node.id) {
-      setStreamContent("");
+      useWriterStore.getState().resetStream();
       setReviewResult(null);
       setChapterOutlinePrompt("");
       if (typeof window !== "undefined" && projectId) localStorage.removeItem(`novel-forge-flash-prompt-${projectId}`);
@@ -110,7 +110,6 @@ export default function WorkspacePage() {
 
   // ── 生成状态 ──────────────────────────────
   const [isGenerating, setIsGenerating] = useState(false);
-  const [streamContent, setStreamContent] = useState("");
   const [reviewResult, setReviewResult] = useState<{ passed: boolean; issues: ReviewIssue[] } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -745,6 +744,23 @@ export default function WorkspacePage() {
   // 本次生成自动填表信息（Max Loop Round6·toast 收敛：合并进 done toast，避免填表/召回/完成三连弹）
   const lastFillInfoRef = useRef<string | null>(null);
 
+  // v2.49：生成完成后局部刷新单节点（仅 GET 当前章节，替代整本 loadProject 重载——大书保存卡顿根因）
+  const refreshNodeAfterGen = async (nodeId: string): Promise<boolean> => {
+    if (!nodeId) return false;
+    try {
+      const res = await fetch(`/api/story/nodes/${nodeId}`);
+      if (!res.ok) return false;
+      const node = await res.json();
+      if (node?.error) return false;
+      useProjectStore.getState().updateNode(node.id, node);
+      setSelectedNode((prev) => (prev && prev.id === nodeId ? node : prev));
+      refreshMonitorToday();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const streamSSE = async (url: string, body: Record<string, unknown>, onDone?: () => void) => {
     const controller = new AbortController();
     abortRef.current = controller;
@@ -770,7 +786,7 @@ export default function WorkspacePage() {
           if (!trimmed.startsWith("data: ")) continue;
           try {
             const event: SSEEvent = JSON.parse(trimmed.slice(6));
-            if (event.type === "token") { accumulated += event.content; setStreamContent((prev) => prev + event.content); }
+            if (event.type === "token") { accumulated += event.content; useWriterStore.getState().appendContent(event.content); }
             else if (event.type === "review_start") setGenStep("reviewing");
             else if (event.type === "summarize_start") setGenStep("summarizing");
             else if (event.type === "review_result") setReviewResult({ passed: event.passed ?? false, issues: event.issues || [] });
@@ -860,7 +876,9 @@ export default function WorkspacePage() {
               }
 
               toastSuccess(lastFillInfoRef.current ? `正文已生成并保存 ✓（${lastFillInfoRef.current}）` : "正文已生成并保存 ✓");
-              loadProject();
+              // v2.49：done 后局部刷新当前节点（单节点 GET），失败兜底全量 loadProject
+              const refreshed = await refreshNodeAfterGen(selectedNode?.id ?? "");
+              if (!refreshed) { await loadProject(); }
               autoExtractChapter(finalContent, selectedNode?.title || "");
               onDone?.();
             }
@@ -885,14 +903,14 @@ export default function WorkspacePage() {
 
   const handleWriteConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string, diffuseCompleted?: boolean) => {
     if (!selectedNode || !project) return;
-    setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); setStreamContent(""); setReviewResult(null);
+    setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); useWriterStore.getState().resetStream(); setReviewResult(null);
     await streamSSE("/api/generate/write", { projectId: project.id, nodeId: selectedNode.id, authorNote: finalAuthorNote || undefined, targetWordCount, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, storylineId, diffuseCompleted: !!diffuseCompleted });
     setIsGenerating(false);
   };
 
   const handleRefineConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string, diffuseCompleted?: boolean) => {
     if (!selectedNode || !project) return;
-    setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); setStreamContent(""); setReviewResult(null);
+    setPreGenOpen(false); setGenStep("generating"); setIsGenerating(true); useWriterStore.getState().resetStream(); setReviewResult(null);
     // #124：精修的「续写字数」收敛为合理增量（≤1500），避免传入全本 targetWordCount（星辰=30万）导致预算恒超上限、
     // 长章静默失效。仅当章节本身已很长（>上限-增量）时才触发 cap 告警，提示用户「分段精修」。
     const refineTarget = Math.min(targetWordCount, 1500);
@@ -928,7 +946,7 @@ export default function WorkspacePage() {
 
   const handleContinueConfirmed = async (cards: string[], notes: Record<string, string>, newChars: string[], finalAuthorNote: string, storylineId?: string, diffuseCompleted?: boolean) => {
     if (!selectedNode || !project) return;
-    setPreGenOpen(false); setGenStep("generating"); setContinueLoading(true); setStreamContent(""); setReviewResult(null);
+    setPreGenOpen(false); setGenStep("generating"); setContinueLoading(true); useWriterStore.getState().resetStream(); setReviewResult(null);
     await streamSSE("/api/generate/continue", { projectId: project.id, currentNodeId: selectedNode.id, styleTemplateId, authorNote: finalAuthorNote || authorNote || undefined, autoOutline: true, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars, storylineId, diffuseCompleted: !!diffuseCompleted }, () => setContextRefreshKey((k) => k + 1));
     setContinueLoading(false);
   };
@@ -972,7 +990,7 @@ export default function WorkspacePage() {
       if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(err.error || `HTTP ${res.status}`); }
     },
     onSuccess: (nodeId) => {
-      if (selectedNode?.id === nodeId) { setSelectedNode(null); setStreamContent(""); setReviewResult(null); }
+      if (selectedNode?.id === nodeId) { setSelectedNode(null); useWriterStore.getState().resetStream(); setReviewResult(null); }
       loadProject();
     },
     errorPrefix: "删除失败",
@@ -1137,7 +1155,7 @@ export default function WorkspacePage() {
         {/* 中间列：正文 + 分析面板 */}
         <ErrorBoundary name="编辑器">
         <div className="flex flex-col flex-1 overflow-hidden" inert={leftDrawerOpen || rightDrawerOpen}>
-          <CenterPanel selectedNode={selectedNode} streamContent={streamContent}
+          <CenterPanel selectedNode={selectedNode}
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
             narrativeStage={narrativeStage}
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}

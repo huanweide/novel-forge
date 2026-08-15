@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.49.0 — 2026-08-16
+
+### 性能止血：流式不再抖全树 + 报错收敛 + 生成后局部刷新
+- **流式渲染性能（P0-E 性能）**：把高频的 `streamContent` 状态从工作区上帝组件（`WorkspacePage`）本地 `useState` 下沉到已有的 `useWriterStore`（`generatedContent` / `appendContent` / `resetStream` 早就在、此前没被流式主路径用）；`CenterPanel` 改为从 store 订阅流式正文。效果——AI 逐 token 生成时，整棵工作区组件树不再每 token 重渲染，只有正文显示区局部更新，大书（几十万字、数百节点）生成流畅度直接提升，卡顿肉眼可见地减少。store 零改动、复用既有能力，行为不变、风险低。
+- **game/action 路由 SSE 错误收敛（P0-E 补齐 v2.47 漏项）**：`/api/game/action` 的 catch 此前硬编码 `write({ type:"error", error: err.message })` 泄露原始异常信息；现复用既有 `sseError()` 收敛为可读错误文案，**保留 `error` 字段名**（前端 `game/[nodeId]` 客户端只读 `event.error`，改字段名会读不到），与 write/continue/refine 三路由一致，既堵泄露又不破坏前端契约。
+- **生成完成后局部刷新（P1 架构健康）**：done 事件后不再整本 `loadProject()` 重载（大书保存卡顿根因——每次生成完都重拉整本书），改为 `GET /api/story/nodes/:id` 单节点 → `useProjectStore.updateNode` 局部更新当前章节（开销从「整本书」降到「一条记录」），仅当单节点刷新失败时才兜底全量；导入/新建/删除节点等确需全量刷新的保留 `loadProject()`。
+- **配套测试**：新增 `src/store/writer-store.test.ts` 4 例锁死 `appendContent` 累加 / `resetStream` 清空 / `setGenerating` 切换（验证下沉后 store 行为）。
+- **门禁**：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 98 文件 931/931 全绿（较 v2.48.0 基线 927 +4 例 writer-store 测试）；四版本文件对齐 v2.49.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.48.0 — 2026-08-16
 
 ### 地基止血·收口：上帝组件纯逻辑外提 + 保存同步回写 store

@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { processGameTurn } from "@/core/game/game-engine";
 import type { GameActionType } from "@/core/game/types";
+import { sseError } from "@/lib/sse-error";
 
 export async function POST(req: Request) {
   const { sessionId, actionType, actionText, selectedOption, targetItem } =
@@ -46,8 +47,10 @@ export async function POST(req: Request) {
           write(event);
           if (event.type === "error") break;
         }
-      } catch (err: any) {
-        write({ type: "error", error: err.message || "未知错误" });
+      } catch (err: unknown) {
+        // 收敛为可读错误，避免泄露原始 err.message（与 write/continue/refine 三路由一致）
+        const info = sseError(err);
+        write({ type: "error", error: info.content });
       } finally {
         controller.close();
       }
