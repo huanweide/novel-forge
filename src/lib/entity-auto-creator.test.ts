@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget, resolveVariantTarget, resolveEntityCategory } from "./entity-auto-creator";
+import { isSimilarName, isHonorificVariant, samePersonByHonorific, resolveHonorificTarget, resolveVariantTarget, resolveEntityCategory, shouldAutoCreateCharacterCard, MIN_CHARACTER_APPEARANCES } from "./entity-auto-creator";
 
 // 验证 entity-auto-creator 的相似名去重（尤其中文短名繁简归一化，青砚 P2）。
 describe("isSimilarName —— 短名繁简去重", () => {
@@ -118,5 +118,30 @@ describe("resolveEntityCategory（F5）—— 15 类兜底不静默落 custom", 
 
   it("无法识别的名称 → 安全兜底 custom（不误判）", () => {
     expect(resolveEntityCategory("mystery", "张三")).toBe("custom");
+  });
+});
+
+// ── 任务 #16：谨慎建卡门槛（次要小角色不入卡）──
+// 仅当候选名在全项目正文出现次数 ≥ 阈值（默认 2）才自动建卡，
+// 把只出现一两次的路人甲（如某章只出现一次的服务员）拦截，避免污染角色卡数据。
+describe("任务#16 谨慎建卡门槛 shouldAutoCreateCharacterCard（次要小角色不入卡）", () => {
+  it("默认阈值常量 = 2", () => {
+    expect(MIN_CHARACTER_APPEARANCES).toBe(2);
+  });
+  it("出现 0 次 → false（完全没出现，绝不建卡）", () => {
+    expect(shouldAutoCreateCharacterCard(0)).toBe(false);
+  });
+  it("出现 1 次 → false（疑似路人甲，拦截）", () => {
+    expect(shouldAutoCreateCharacterCard(1)).toBe(false);
+  });
+  it("出现 2 次 → true（刚好达标，主角/重要配角）", () => {
+    expect(shouldAutoCreateCharacterCard(2)).toBe(true);
+  });
+  it("出现 3 次 → true（高频，建卡）", () => {
+    expect(shouldAutoCreateCharacterCard(3)).toBe(true);
+  });
+  it("自定义更高阈值：出现 2 次但阈值=3 → false（新人作者小项目可放宽/收紧）", () => {
+    expect(shouldAutoCreateCharacterCard(2, 3)).toBe(false);
+    expect(shouldAutoCreateCharacterCard(3, 3)).toBe(true);
   });
 });

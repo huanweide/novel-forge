@@ -55,6 +55,22 @@ describe("computeConfidence（v2.0.5 置信度分级 + 单字缩写修复）", (
   it("单成员（无被并者） → high", () => {
     expect(computeConfidence([c("1", "独行侠")], ["独行侠"])).toBe("high");
   });
+
+  // ── 任务 #16 点名场景：复杂称呼同一人识别（迪哥先生 / 迪哥 / 迪哥·若昂内）──
+  it("任务#16 复杂称呼同一人：迪哥先生/迪哥/迪哥·若昂内 同核「迪哥」→ high（自动合并）", () => {
+    const members = [c("1", "迪哥"), c("2", "迪哥先生"), c("3", "迪哥·若昂内")];
+    expect(computeConfidence(members, ["迪哥", "迪哥先生", "迪哥·若昂内"])).toBe("high");
+  });
+
+  it("任务#16 复杂称呼防错并：迪哥·若昂内/迪哥·桑切斯 两马甲同核但可能指向不同人 → low（交用户确认）", () => {
+    const members = [c("1", "迪哥·若昂内"), c("2", "迪哥·桑切斯")];
+    expect(computeConfidence(members, ["迪哥·若昂内", "迪哥·桑切斯"])).toBe("low");
+  });
+
+  it("任务#16 复杂称呼前缀缩写：迪哥/小迪（小+单字姓缩写）→ high", () => {
+    const members = [c("1", "迪哥"), c("2", "小迪")];
+    expect(computeConfidence(members, ["迪哥", "小迪"])).toBe("high");
+  });
 });
 
 describe("toCharLite（DB 行 → CharLite 归一化）", () => {

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.37.0";
+export const LATEST_VERSION = "v2.38.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.38.0 角色核心逻辑深度优化（任务 #16）：智能去重与谨慎建卡回归防护网——补 3 个「迪哥」复杂称呼场景测试（迪哥先生/迪哥/迪哥·若昂内 同核高置信合并、迪哥·若昂内/迪哥·桑切斯 两马甲降 low 待确认、迪哥/小迪 前缀缩写合并）+ 6 个谨慎建卡门槛边界测试（出现 0/1 次拦截、2/3 次放行、自定义阈值）；实证任务 #16 四诉求已落地并钉死防回归。零生产代码改动、纯测试加固；tsc 0 错误；vitest 全量 870/870 全绿。",
   "v2.37.0 类型逃逸逐文件精修·第四批（灰区 interface 字段透传态收窄）：core/babylore/fill.ts 的 SkippedOp 接口 op: any→unknown（被跳过的无效填表操作仅透传进告警、下游不访问内部，unknown 强制后续若访问需守卫）；app/workshop/page.tsx 的 PresetRec 接口 content: any→unknown（预设内容整体透传进 JSON 请求体序列化、无属性访问）。tsc 0 错误；babylore 40/40 测试全绿。经复扫灰区（非测试/非生成物 :any 注解共 319 处），低垂果实已被历史五轮（v2.25/v2.28/v2.34/v2.35/v2.36）摘完，剩余多为上游 Prisma 模型与 AI 桥接返回的连锁 any（如 outline-context 整片、memory-decay 的 eventImportances、tool-registry 的 prisma:any），独立收窄任一处会向下游属性访问扩散报错，需整体上游类型化大改，按路线图红区标注暂缓、不硬啃。",
   "v2.36.0 类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）：core/write-generation.ts 的 WriteInput 接口 5 字段（confirmedCardIds?: string[]、cardNotes?: Record<string,string>、newCharacterRequests?: string[]、storylineId?: string、diffuseCompleted?: boolean）对齐下游具体类型契约；core/sync-global-prompt.ts 的 buildGlobalPrompt 入参 project 内联类型 llmConfig?/buildConfig? 由 any 降级 unknown（下游已 as 显式收窄）；lib/storyline-progress.ts 的 computeStorylineProgress(s: any) 改 s: unknown 加内部 in/typeof 守卫提取七要素。tsc 0 错误；vitest 全量 870/870 全绿；灰区剩余 find/map 回调元素 any 与 catch(err:any) 宽松场景按路线图分批推进。",
   "v2.35.0 类型逃逸逐文件精修·第二批（tables 页 useState<any> 精确接口化）：app/workspace/[projectId]/tables/page.tsx 三处结果态收窄——单表填表 fillResult（ok/operations/applied/error/at/warnings）与召回 recallItems（source/title/content）定义精确接口 TableFillResult/RecallItem 替代 useState<any>/<any>，删 1 处 as any[]（自检 issues 直接吃精确类型）；一键填表 fillAllResult 因后端返回动态自检报告（selfCheck 含多类 issues + fillErrorMeta）结构随后端演化、硬类型化脆弱，保留 any 并注释说明（合理动态豁免）。tsc 0 错误；组件测试稀疏（tsc 类型门禁替代）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -81,6 +82,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.38.0",
+    date: "2026-08-15",
+    title: "角色核心逻辑深度优化（任务 #16）：智能去重与谨慎建卡回归防护网",
+    sections: [
+      { label: "任务 #16 回归防护网", items: [
+        "补 3 个「迪哥」复杂称呼场景测试（character-dedupe）：迪哥先生/迪哥/迪哥·若昂内 同核「迪哥」高置信自动合并、迪哥·若昂内/迪哥·桑切斯 两马甲同核但可能指向不同人降 low 待确认、迪哥/小迪 前缀缩写合并——钉死任务 #16 点名的复杂称呼同一人识别逻辑防回归",
+        "补 6 个谨慎建卡门槛边界测试（entity-auto-creator）：shouldAutoCreateCharacterCard 出现 0/1 次拦截、2/3 次放行、自定义阈值生效——钉死「次要小角色不入卡」防回归",
+      ] },
+      { label: "实证结论与门禁", items: [
+        "实证任务 #16 四诉求已全部落地并真实生效（新角色引入 / 小名尊称去重 / 复杂称呼同一人 / 谨慎加卡），非空壳；本轮纯测试加固、零生产代码改动",
+        "tsc 0 错误；vitest 全量 870/870 全绿（新增 2 文件内 +6 例）；四版本文件对齐 v2.38.0；个人 IP 仍归瑞宝宝",
+      ] },
+    ],
+  },
   {
     version: "v2.37.0",
     date: "2026-08-15",
