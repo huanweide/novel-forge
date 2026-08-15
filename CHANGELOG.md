@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.35.0 — 2026-08-15
+
+### 类型逃逸逐文件精修·第二批（tables 页 useState&lt;any&gt; 精确接口化）
+- **精确接口化**：`app/workspace/[projectId]/tables/page.tsx` 三处结果态收窄——单表填表 `fillResult`（ok/operations/applied/error/at/warnings）、召回列表 `recallItems`（source/title/content）定义精确接口 `TableFillResult`/`RecallItem` 替代 `useState<any>`/`useState<any[]>`；自检问题 `issues` 删 `as any[]` 直接吃精确类型。未来维护者（含 AI）能直接看懂这两个状态长什么样。
+- **动态豁免标注**：一键填表 `fillAllResult` 保留 `useState<any>` 并注释——后端返回动态自检报告（`selfCheck` 含 checkedTables/nameIssues/completenessIssues/crossTableIssues 四类 + `fillErrorMeta`），结构随后端演化，硬类型化会随后端加字段编译崩，属合理动态豁免，不假收敛。
+- **门禁**：tsc 0 错误；组件测试稀疏，以 tsc 类型门禁替代。
+
 ## v2.34.0 — 2026-08-15
 
 ### 类型逃逸逐文件精修·第一批（蓝区 4 处 unknown 收窄 + 2 处动态豁免标注）

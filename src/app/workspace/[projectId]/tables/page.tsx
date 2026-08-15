@@ -17,10 +17,27 @@ interface LoreTableT {
   category: string;
   columns: { key: string; label: string; type: string }[];
   rows: Record<string, any>[]; // 动态列表格数据载体：col.key 运行时确定，值直接进 React 渲染（key/ReactNode/value），any 为合理动态豁免
-  marker: string;
-}
+    marker: string;
+  }
 
-export default function TablesPage() {
+  /** 单表填表结果（POST /api/babylore/fill 返回，前端补 at 字段） */
+  interface TableFillResult {
+    ok?: boolean;
+    operations?: number;
+    applied?: number;
+    error?: string;
+    at?: string;
+    warnings?: string[];
+  }
+
+  /** 召回条目（POST /api/babylore/recall 的 d.items 元素） */
+  interface RecallItem {
+    source: string;
+    title: string;
+    content: string;
+  }
+
+  export default function TablesPage() {
   const params = useParams();
   const projectId = String(params.projectId);
   const [tables, setTables] = useState<LoreTableT[]>([]);
@@ -32,10 +49,10 @@ export default function TablesPage() {
   const [create, setCreate] = useState({ name: "", key: "", note: "", category: "custom", columnsText: "name:名称,status:状态" });
 
   const [chapterText, setChapterText] = useState("");
-  const [fillResult, setFillResult] = useState<any>(null);
+  const [fillResult, setFillResult] = useState<TableFillResult | null>(null);
   const [recallCtx, setRecallCtx] = useState("");
-  const [recallItems, setRecallItems] = useState<any[]>([]);
-  const [fillAllResult, setFillAllResult] = useState<any>(null);
+  const [recallItems, setRecallItems] = useState<RecallItem[]>([]);
+  const [fillAllResult, setFillAllResult] = useState<any>(null); // 一键填表自检报告：后端返回动态结构（selfCheck 含多类 issues + fillErrorMeta），硬类型化会随后端加字段脆弱，保留 any 为合理动态豁免
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,7 +67,7 @@ export default function TablesPage() {
   // 「跨表」类问题没有具体 row_id，不参与行级标红。
   const flaggedByTable = useMemo(() => {
     const m = new Map<string, Set<number>>();
-    const issues = (fillAllResult?.selfCheck?.issues || []) as any[];
+    const issues = fillAllResult?.selfCheck?.issues || [];
     for (const it of issues) {
       if (it?.row == null || it.row === "跨表") continue;
       const num = Number(it.row);
@@ -242,11 +259,11 @@ export default function TablesPage() {
                   )}
                 </div>
                 <div className="mt-1 opacity-70">执行时间：{fillResult.at}</div>
-                {fillResult.warnings?.length > 0 && (
+                {(fillResult.warnings ?? []).length > 0 && (
                   <div className="mt-2 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-2 py-1.5 text-[var(--nv-text-primary)]">
-                    <div className="font-medium mb-1">⚠ 疑似错误地名/名称（{fillResult.warnings.length}）</div>
+                    <div className="font-medium mb-1">⚠ 疑似错误地名/名称（{fillResult.warnings?.length}）</div>
                     <ul className="list-disc pl-4 space-y-0.5 max-h-40 overflow-auto">
-                      {fillResult.warnings.slice(0, 30).map((w: string, i: number) => <li key={i}>{w}</li>)}
+                      {(fillResult.warnings ?? []).slice(0, 30).map((w, i) => <li key={i}>{w}</li>)}
                     </ul>
                   </div>
                 )}
