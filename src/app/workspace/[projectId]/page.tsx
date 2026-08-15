@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjectStore } from "@/store";
 import { invalidateQueries } from "@/hooks/useApi";
 import { computeNarrativeStage } from "@/core/pipeline/narrative-stage";
+import { NODE_TYPE } from "@/core/node-type";
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -63,7 +64,7 @@ export default function WorkspacePage() {
   // FE-8：project 数据统一收口到 useProjectStore（loadProject 写入，面板直接读取），消除本地 project 与 store 并存
   const project = useProjectStore((s) => s.project);
   // 确认流程：全书确认进度派生值
-  const chapterNodes = project?.storyNodes.filter((n) => n.type === "chapter" || n.type === "section" || n.type === "scene") || [];
+  const chapterNodes = project?.storyNodes.filter((n) => n.type === NODE_TYPE.CHAPTER || n.type === NODE_TYPE.SECTION || n.type === NODE_TYPE.SCENE) || [];
   const allConfirmed = chapterNodes.length > 0 && chapterNodes.every((n) => n.status === "confirmed");
   const projectConfirmedAt = project?.confirmedAt || null;
   const [loading, setLoading] = useState(true);
@@ -338,7 +339,7 @@ export default function WorkspacePage() {
   >([]);
   const [outlineRaw, setOutlineRaw] = useState("");
   const [outlineError, setOutlineError] = useState("");
-  const existingChapterCount = project?.storyNodes.filter(n => n.type === "chapter" && !n.parentId).length || 0;
+  const existingChapterCount = project?.storyNodes.filter(n => n.type === NODE_TYPE.CHAPTER && !n.parentId).length || 0;
   const [outlineAppendMode, setOutlineAppendMode] = useState(existingChapterCount > 0);
 
   // ── 抽卡模式 ──────────────────────────────
@@ -866,7 +867,14 @@ export default function WorkspacePage() {
               autoExtractChapter(finalContent, selectedNode?.title || "");
               onDone?.();
             }
-            else if (event.type === "error") { setGenStep("error"); console.error("生成错误:", event.content); }
+            else if (event.type === "error") {
+              setGenStep("error");
+              console.error("生成错误:", event.content, event.hint ?? "");
+              const errMsg = event.hint
+                ? `${event.content}（${event.hint}）`
+                : (event.content || "生成失败，请查看日志");
+              toastError(errMsg);
+            }
             else if (event.type === "postprocess_skip") {
               // IMP-023：后处理（摘要/审校）失败被静默降级时给出非阻塞提示，不阻塞正文交付主流程
               toastWarning(`后处理（摘要/审校）已跳过：${event.content || "未知原因"}。正文已生成并保存，可稍后手动重试。`);
@@ -1397,7 +1405,7 @@ export default function WorkspacePage() {
           projectName={project.name}
           chapters={project.storyNodes.map((n) => ({
             id: n.id,
-            title: `${n.type === "volume" ? "卷：" : n.type === "section" ? "节：" : n.type === "scene" ? "幕：" : ""}${n.title}`,
+            title: `${n.type === NODE_TYPE.VOLUME ? "卷：" : n.type === NODE_TYPE.SECTION ? "节：" : n.type === NODE_TYPE.SCENE ? "幕：" : ""}${n.title}`,
           }))}
           onClose={() => setShowExportDialog(false)}
         />

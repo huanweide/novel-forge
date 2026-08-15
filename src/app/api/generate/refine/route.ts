@@ -6,6 +6,8 @@
  */
 export const maxDuration = 300;
 import { jsonError } from "@/lib/api-error";
+import { sseError } from "@/lib/sse-error";
+import { requireFields } from "@/lib/api-body";
 import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 import { prisma } from "@/lib/prisma";
@@ -43,10 +45,8 @@ export async function POST(request: Request) {
       confirmedCardIds, cardNotes, newCharacterRequests, authorNote,
       selectedText, storylineId, diffuseCompleted,
     } = await request.json();
-
-    if (!projectId || !nodeId) {
-      return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
-    }
+    const reqCheck = requireFields({ projectId, nodeId }, ["projectId", "nodeId"]);
+    if (!reqCheck.ok) return reqCheck.response;
 
     // ── 1. 加载上下文 ──
     const data = await loadGenerationContext(projectId, nodeId);
@@ -420,9 +420,9 @@ ${selectedText.trim()}
             budgetCapped: isContinuationIntent ? false : budgetCapped, budgetCeiling: BUDGET_CEILING, existingLen: existingContent.length, newLen: newContent.length,
           });
         } catch (err) {
-          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message；用 sseError 收敛为可读错误事件
           console.error("[generate/refine] 微调失败:", err);
-          send({ type: "error", content: "服务器内部错误，请查看日志" });
+          send(sseError(err));
         } finally {
           controller.close();
         }

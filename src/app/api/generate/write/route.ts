@@ -1,4 +1,6 @@
 import { jsonError } from "@/lib/api-error";
+import { sseError } from "@/lib/sse-error";
+import { requireFields } from "@/lib/api-body";
 import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { runWriteGeneration, WriteInput, WriteSend } from "@/core/write-generation";
@@ -18,6 +20,8 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json();
+    const reqCheck = requireFields(body, ["projectId", "nodeId"]);
+    if (!reqCheck.ok) return reqCheck.response;
     const {
       projectId,
       nodeId,
@@ -29,10 +33,6 @@ export async function POST(request: Request) {
       storylineId,
       diffuseCompleted,
     } = body;
-
-    if (!projectId || !nodeId) {
-      return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
-    }
 
     const input: WriteInput = {
       projectId,
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         } catch (e) {
           // 前置校验失败（不存在/回收站）——推 error 事件后关闭，等价于原 404/410 HTTP 响应
           console.error("[generate/write] 前置校验失败:", e);
-          send({ type: "error", content: "服务器内部错误，请查看日志" });
+          send(sseError(e));
         } finally {
           controller.close();
         }

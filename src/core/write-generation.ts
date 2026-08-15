@@ -33,6 +33,7 @@ import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipel
 import { applyRegexRules } from "@/core/post-process/regex";
 import { STATUS_COMPLETED, STATUS_DRAFTING, STATUS_OUTLINE_ONLY } from "@/core/story-status";
 import { classifyTruncation } from "@/core/finish-reason";
+import { sseError } from "@/lib/sse-error";
 
 export type WriteSend = (obj: object) => void;
 
@@ -306,7 +307,7 @@ export async function runWriteGeneration(
         // L5-01：流式末尾携带 finish_reason（'length' 表示被 max_tokens 截断）
         if (chunk.finishReason) finishReason = chunk.finishReason;
       } else if (chunk.type === "error") {
-        send({ type: "error", content: chunk.content });
+        send(sseError(chunk.content));
         return;
       }
     }
@@ -434,11 +435,8 @@ export async function runWriteGeneration(
       },
     });
   } catch (err) {
-    // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+    // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message；用 sseError 收敛为可读错误事件
     console.error("[generate/write] 生成失败:", err);
-    send({
-      type: "error",
-      content: "服务器内部错误，请查看日志",
-    });
+    send(sseError(err));
   }
 }

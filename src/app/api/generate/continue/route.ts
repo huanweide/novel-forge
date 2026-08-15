@@ -1,4 +1,6 @@
 import { jsonError } from "@/lib/api-error";
+import { sseError } from "@/lib/sse-error";
+import { requireFields } from "@/lib/api-body";
 import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -24,6 +26,7 @@ import { buildRecallBlock } from "@/core/babylore/loop";
 import { classifyTruncation } from "@/core/finish-reason";
 import { STATUS_OUTLINE_ONLY } from "@/core/story-status";
 import { toAppStoryNode } from "@/core/story-node-bridge";
+import { NODE_TYPE } from "@/core/node-type";
 
 /**
  * POST /api/generate/continue
@@ -41,10 +44,8 @@ export async function POST(request: Request) {
       projectId, currentNodeId, styleTemplateId, authorNote, autoOutline = true,
       confirmedCardIds, cardNotes, newCharacterRequests, storylineId, diffuseCompleted,
     } = await request.json();
-
-    if (!projectId || !currentNodeId) {
-      return NextResponse.json({ error: "缺少 projectId 或 currentNodeId" }, { status: 400 });
-    }
+    const reqCheck = requireFields({ projectId, currentNodeId }, ["projectId", "currentNodeId"]);
+    if (!reqCheck.ok) return reqCheck.response;
 
     // ── 加载上下文（复用 loadGenerationContext，与 write/refine 一致）──
     const genData = await loadGenerationContext(projectId, currentNodeId, 5);
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       return await tx.storyNode.create({
         data: {
           projectId, parentId: currentNode.parentId,
-          type: currentNode.type || "section",
+          type: currentNode.type || NODE_TYPE.SECTION,
           title: nextTitle, order: nextOrder, status: "drafting",
           outline: nextOutline || null,
           activeCharacters: currentNode.activeCharacters,
@@ -369,9 +370,9 @@ ${lastParagraphs}
               });
             } catch { /* 删除失败不阻塞报错返回 */ }
           }
-          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message
+          // L2-003：SSE 错误路径泛化，不向客户端回显原始 err.message；用 sseError 收敛为可读错误事件
           console.error("[generate/continue] 续写失败:", err);
-          send({ type: "error", content: "服务器内部错误，请查看日志" });
+          send(sseError(err));
         } finally {
           controller.close();
         }

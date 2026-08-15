@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v2.47.0 — 2026-08-16
+
+### 地基止血：SSE 错误收敛可读 + 入参校验统一 + 节点类型常量化
+- **SSE 流式错误收敛为可读事件**：新增 `src/lib/sse-error.ts` 的 `sseError(e)`，把生成链路抛出的异常用既有 `classifyError` 收敛为结构化 SSE error 事件（可读 content + 错误 code + 修复 hint）；`generate/write`、`generate/continue`、`generate/refine` 三个 SSE 路由的 catch 块，以及 `write-generation` 内部 catch 与编排器错误块，从硬编码「服务器内部错误，请查看日志」改为发送可读错误——数据库没连 / 表没建 / 网络不通时前端直接看到原因，不再永远白屏猜谜；配套 `sse-error.test.ts` 5 例锁死不向客户端回显原始 message（防泄露 .env 路径等内部细节）。
+- **API 入参校验统一**：新增 `src/lib/api-body.ts` 的 `requireFields`，把三个生成路由手写的 `if (!projectId || !nodeId)` 散落校验收敛为单一入口，缺失即返回标准化 400（含 `code:BAD_REQUEST` + `hint`）；配套 `api-body.test.ts` 6 例。
+- **节点类型常量单一真相源**：新增 `src/core/node-type.ts` 的 `NODE_TYPE`（`as const satisfies StoryNodeType` 联合），取代散落的 `'section'`/`'chapter'`/`'volume'`/`'scene'` 裸串，TS 编译期保证取值合法、消除拼写错误导致的静默 bug；`story-node-bridge.ts` 复用 `NODE_TYPE` 去掉本地重复数组，工作区前端章节筛选 / 导出标题前缀统一引用，`SSEEvent` 类型补 `code?`/`hint?` 收敛契约。
+- **前端生成错误可读化**：工作区生成出错时不再只 `console.error`，改用 `toastError` 弹出可读错误（content + hint），作者一眼知道是数据库还是网络问题。
+- **范围说明**：本版聚焦「地基止血」第一刀（错误收敛 / 入参校验 / 类型常量）；上帝组件 `WorkspacePage` 拆解、Prisma 表名小写迁移、局部更新替代全量 `loadProject`、移动端真机测试属更大风险改动（需对线上库跑迁移），按路线图留待 v2.48，不在此版冒险。
+- **门禁**：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 96 文件 916/916 全绿（较 v2.46.0 基线 905 +11 例）；四版本文件对齐 v2.47.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.46.0 — 2026-08-16
 
 ### 朗读切句分段 + 生成前确认不打断 + 附身产出一键插正文 + 凭据安全加固

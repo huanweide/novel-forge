@@ -112,6 +112,8 @@ export interface SSEEvent {
   type: string;
   content: string;
   severity?: string;
+  code?: string;
+  hint?: string;
   passed?: boolean;
   issues?: ReviewIssue[];
   usage?: { completionTokens: number; totalTokens: number };

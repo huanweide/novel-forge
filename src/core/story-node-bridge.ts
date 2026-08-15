@@ -10,8 +10,9 @@
 
 import type { StoryNode, StoryNodeType, ContentStatus, ReviewLog } from "@/core/types";
 import type { StoryNode as PrismaStoryNode } from "@/generated/prisma/client";
+import { NODE_TYPE } from "./node-type";
 
-const STORY_NODE_TYPES: StoryNodeType[] = ["volume", "chapter", "section", "scene"];
+const STORY_NODE_TYPES: StoryNodeType[] = Object.values(NODE_TYPE);
 const CONTENT_STATUSES: ContentStatus[] = [
   "outline_only", "drafting", "completed", "reviewing",
   "rejected", "revised", "pending_confirm", "confirmed",
@@ -25,7 +26,7 @@ const CONTENT_STATUSES: ContentStatus[] = [
 export function toAppStoryNode(raw: PrismaStoryNode): StoryNode {
   const type: StoryNodeType = (STORY_NODE_TYPES as string[]).includes(raw.type)
     ? (raw.type as StoryNodeType)
-    : "section";
+    : NODE_TYPE.SECTION;
   const status: ContentStatus = (CONTENT_STATUSES as string[]).includes(raw.status)
     ? (raw.status as ContentStatus)
     : "outline_only";
