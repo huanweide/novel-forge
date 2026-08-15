@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.41.0";
+export const LATEST_VERSION = "v2.42.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.42.0 朗读前 Markdown 清洗纯函数化 + 单测锁死（防把符号念出）：把 TTSPlayer 内联的 Markdown 清洗逻辑抽为纯函数 src/lib/stripMarkdown.ts（行为原样不变），TTSPlayer 改为引用，消除重复实现；新增 src/lib/stripMarkdown.test.ts 17 例自动化测试，锁死代码块/行内代码/图片/链接/标题/粗斜体/引用/列表/残余符号的清洗与首尾 trim、多空行压缩，覆盖真实章节正文综合场景，确保未来改写不会让用户听到「**」「#」「>」等符号；纯函数 node 环境测试、零运行时逻辑改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 94 文件 896/896 全绿（较 v2.41.0 基线 +17 例）；本版同时收口用户并行新增的朗读偏好（语速/音色）localStorage 持久化。个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.41.0 AI 念书（语音朗读）：写作正文区新增「朗读本章」入口，点按弹出控制条用浏览器内置 Web Speech API 朗读当前章节正文——零依赖、零网络、零密钥（不依赖任何外部 TTS 服务，贴合 novel-forge 本地工具定位）；组件先表层清洗 Markdown 标记（代码块/链接/粗斜体/标题/引用/列表等）避免把符号念出；控制条支持播放/暂停/继续/停止、语速 0.5–2x 实时调节、多中文音色切换，浏览器不支持时给友好提示（换 Chrome/Edge）；卸载自动 cancel 防声音泄漏。纯前端新增，无后端/接口/LLM 变化；tsc 0 错误；vitest 全量 93 文件 879/879 全绿。个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.40.0 功能精简与内置化（任务 #12）：删除三个确凿死依赖——@bubblewrap/core（TWA 安卓打包、本地 Web 工具零用处）、uuid、dotenv（全项目零 import/require；Next.js 内置 .env 加载、代码用 crypto.randomUUID，均不需要），依赖树更干净、安装更快；创作铁律面板(RulesPanel)头部补对称区分说明，明确「不同于项目配置里的正则后处理规则——后者生成后清洗正文、两者各管一段互不影响」，两套规则系统双向闭环、彻底消除用户混淆（UI_FIX_PLAN I-2 项）；实证前端资源全内置（globals.css 仅 @import 本地 npm 包、src 零外部 CDN 依赖），内置化已达标、无需改动。tsc 0 错误；vitest 全量 879/879 全绿。",
   "v2.39.0 页面无障碍(a11y)复验与修复（任务 #10）：实测三套主题关键文字令牌对比度（WCAG AA 阈值 4.5:1），浅色主题主色 --nv-primary 由 oklch(0.55) 压暗至 oklch(0.52)，文字对比度从临界 4.42 提升至 5.00 稳达 AA；写作正文编辑区补 break-words 防超长英文/链接横向溢出；核查确认浅色金色文字对比度(F01)、生成状态 aria-live 播报(F03) 历史已修，AIChatBar 预设按钮含可见文字标签已可访问(F05 不适用)。零逻辑改动、纯令牌与样式加固；tsc 0 错误；vitest 全量全绿。",
@@ -85,6 +86,21 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.42.0",
+    date: "2026-08-15",
+    title: "朗读前 Markdown 清洗纯函数化 + 单测锁死（防把符号念出）",
+    sections: [
+      { label: "朗读清洗纯函数化", items: [
+        "把 TTSPlayer 内联的 Markdown 清洗逻辑抽为纯函数 src/lib/stripMarkdown.ts（行为原样不变），TTSPlayer 改为引用，消除重复实现、便于单测",
+        "新增 src/lib/stripMarkdown.test.ts 17 例自动化测试，锁死代码块/行内代码/图片/链接/标题/粗斜体/引用/列表/残余符号的清洗与首尾 trim、多空行压缩，覆盖真实章节正文综合场景",
+      ] },
+      { label: "质量门禁与收口", items: [
+        "确保未来改写清洗逻辑不会让用户听到「**」「#」「>」等 Markdown 符号，纯函数 node 环境测试、零运行时逻辑改动、零接口/LLM 变化",
+        "本版同时收口用户并行新增的朗读偏好（语速/音色）localStorage 持久化；tsc 0 错误；vitest 全量 94 文件 896/896 全绿（较 v2.41.0 基线 +17 例）；四版本文件对齐 v2.42.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.41.0",
     date: "2026-08-15",

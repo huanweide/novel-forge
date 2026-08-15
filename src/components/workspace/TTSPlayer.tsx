@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icons";
+import { stripMarkdown } from "@/lib/stripMarkdown";
 
 interface TTSPlayerProps {
   /** 待朗读文本（通常为正文 Markdown，组件内部会清洗标记） */
@@ -10,26 +11,23 @@ interface TTSPlayerProps {
   onClose?: () => void;
 }
 
-/**
- * 轻量清洗 Markdown 标记，避免朗读时把 **、*、#、> 这类符号也念出来。
- * 只做表层去除，不解析语义——朗读场景够用。
- */
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/```[\s\S]*?```/g, " ") // 代码块
-    .replace(/`([^`]+)`/g, "$1") // 行内代码
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // 图片
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // 链接 → 仅保留文字
-    .replace(/^#{1,6}\s+/gm, "") // 标题 #
-    .replace(/(\*\*|__)(.*?)\1/g, "$2") // 粗体
-    .replace(/(\*|_)(.*?)\1/g, "$2") // 斜体
-    .replace(/^>\s?/gm, "") // 引用 >
-    .replace(/^[-*+]\s+/gm, "") // 无序列表
-    .replace(/^\d+\.\s+/gm, "") // 有序列表
-    .replace(/[*_~`>#]/g, " ") // 残余符号
-    .replace(/[ \t]{2,}/g, " ") // 多余空格
-    .replace(/\n{2,}/g, "\n") // 多余空行
-    .trim();
+const TTS_PREFS_KEY = "nf_tts_prefs";
+function loadTTSPrefs(): { rate?: number; voiceURI?: string } {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(TTS_PREFS_KEY);
+    return raw ? (JSON.parse(raw) as { rate?: number; voiceURI?: string }) : {};
+  } catch {
+    return {};
+  }
+}
+function saveTTSPrefs(p: { rate?: number; voiceURI?: string }) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(TTS_PREFS_KEY, JSON.stringify(p));
+  } catch {
+    /* 隐私模式 / 配额满 时静默忽略 */
+  }
 }
 
 /**
@@ -39,8 +37,13 @@ function stripMarkdown(md: string): string {
  */
 export function TTSPlayer({ text, onClose }: TTSPlayerProps) {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceURI, setVoiceURI] = useState<string>("");
-  const [rate, setRate] = useState(1);
+  const initialPrefs = loadTTSPrefs();
+  const [voiceURI, setVoiceURI] = useState<string>(initialPrefs.voiceURI || "");
+  const [rate, setRate] = useState<number>(
+    initialPrefs.rate && initialPrefs.rate >= 0.5 && initialPrefs.rate <= 2
+      ? initialPrefs.rate
+      : 1,
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
@@ -58,7 +61,13 @@ export function TTSPlayer({ text, onClose }: TTSPlayerProps) {
       const zh = all.filter((v) => /zh|chinese|中文|普通话|国语/i.test(v.lang + " " + v.name));
       const picked = zh.length ? zh : all;
       setVoices(picked);
-      if (!voiceURI && picked.length) setVoiceURI(picked[0].voiceURI);
+      const savedUri = loadTTSPrefs().voiceURI;
+      const savedMatch = savedUri && picked.find((v) => v.voiceURI === savedUri);
+      if (savedMatch) {
+        setVoiceURI(savedUri);
+      } else if (!voiceURI || !picked.find((v) => v.voiceURI === voiceURI)) {
+        setVoiceURI(picked.length ? picked[0].voiceURI : "");
+      }
     };
     loadVoices();
     synth.addEventListener("voiceschanged", loadVoices);
@@ -136,6 +145,12 @@ export function TTSPlayer({ text, onClose }: TTSPlayerProps) {
         <Icon name="stop" size={13} />
       </button>
 
+      {isPlaying && (
+        <span className="text-xs font-medium text-[var(--nv-primary)]">
+          {isPaused ? "已暂停" : "朗读中"}
+        </span>
+      )}
+
       <div className="flex items-center gap-1.5 text-xs text-[var(--nv-text-tertiary)]">
         <span>语速</span>
         <input
@@ -148,6 +163,7 @@ export function TTSPlayer({ text, onClose }: TTSPlayerProps) {
             const r = parseFloat(e.target.value);
             setRate(r);
             if (utterRef.current) utterRef.current.rate = r;
+            saveTTSPrefs({ rate: r, voiceURI });
           }}
           className="w-20 accent-[var(--nv-primary)]"
           aria-label="语速"
@@ -158,7 +174,11 @@ export function TTSPlayer({ text, onClose }: TTSPlayerProps) {
       {voices.length > 1 && (
         <select
           value={voiceURI}
-          onChange={(e) => setVoiceURI(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setVoiceURI(v);
+            saveTTSPrefs({ rate, voiceURI: v });
+          }}
           className="max-w-[140px] truncate rounded-md border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-1.5 py-1 text-xs text-[var(--nv-text-primary)]"
           aria-label="音色"
           title="选择朗读音色"
