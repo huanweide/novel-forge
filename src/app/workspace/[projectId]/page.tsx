@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjectStore } from "@/store";
 import { invalidateQueries } from "@/hooks/useApi";
-import { computeNarrativeStage } from "@/core/pipeline/narrative-stage";
 import { NODE_TYPE } from "@/core/node-type";
+import { chapterNodesOf, allConfirmedOf, narrativeStageOf } from "@/core/workspace-derive";
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -64,22 +64,15 @@ export default function WorkspacePage() {
   // FE-8：project 数据统一收口到 useProjectStore（loadProject 写入，面板直接读取），消除本地 project 与 store 并存
   const project = useProjectStore((s) => s.project);
   // 确认流程：全书确认进度派生值
-  const chapterNodes = project?.storyNodes.filter((n) => n.type === NODE_TYPE.CHAPTER || n.type === NODE_TYPE.SECTION || n.type === NODE_TYPE.SCENE) || [];
-  const allConfirmed = chapterNodes.length > 0 && chapterNodes.every((n) => n.status === "confirmed");
+  const chapterNodes = chapterNodesOf(project);
+  const allConfirmed = allConfirmedOf(chapterNodes);
   const projectConfirmedAt = project?.confirmedAt || null;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
   // P2-2：被动展示叙事阶段名——基于当前章在全书章节列表中的进度位置推导，复用 computeNarrativeStage。
   // 主线被标记 completed 时视为收尾；否则不靠章数硬判（用户可写数百章而不被提前结局）。
-  const narrativeStage = (() => {
-    if (!selectedNode || chapterNodes.length === 0) return null;
-    const idx = chapterNodes.findIndex((n) => n.id === selectedNode.id);
-    if (idx < 0) return null;
-    const mainQuestComplete = Array.isArray(project?.storylines) &&
-      project!.storylines!.some((sl: any) => sl?.type === "main" && sl?.status === "completed");
-    return computeNarrativeStage(idx, chapterNodes.length, { mainQuestComplete });
-  })();
+  const narrativeStage = narrativeStageOf(selectedNode?.id, chapterNodes, project?.storylines);
 
   const handleSelectNode = (node: StoryNodeData) => {
     if (selectedNode?.id !== node.id) {
@@ -190,6 +183,8 @@ export default function WorkspacePage() {
       if (res.ok) {
         const node = await res.json();
         setSelectedNode(node);
+        // FE-8 一致性：保存成功后把服务端权威节点同步回 store，避免「本地选中新、store 旧」的脏数据
+        useProjectStore.getState().updateNode(node.id, node);
         toastSuccess("已保存 ✓");
       } else if (res.status === 409) {
         const d = (await res.json().catch(() => ({} as any)));
@@ -231,6 +226,8 @@ export default function WorkspacePage() {
       if (res.ok) {
         const node = await res.json();
         setSelectedNode(node);
+        // FE-8 一致性：解决冲突后同样同步回 store
+        useProjectStore.getState().updateNode(node.id, node);
         setConflict(null);
         toastSuccess(action === "both" ? "已保留双方（库里版本存为备注，您的版本已覆盖）" : "已用您的版本覆盖");
       } else {

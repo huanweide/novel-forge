@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.48.0 — 2026-08-16
+
+### 地基止血·收口：上帝组件纯逻辑外提 + 保存同步回写 store
+- **上帝组件安全解耦（P1 架构健康）**：把 `WorkspacePage`（1506 行上帝组件）里三个纯派生逻辑——章节级节点筛选（`chapterNodesOf`，过滤掉卷、只留章/节/幕）、全书确认统计（`allConfirmedOf`）、叙事阶段推导（`narrativeStageOf`，复用 `computeNarrativeStage` 且主线 Storyline 标 completed 即收尾）——外提为独立可测模块 `src/core/workspace-derive.ts`；外提行为原样不变（纯函数、无 React/副作用），`WorkspacePage` 改为调用这三个函数，并删除不再直接使用的 `computeNarrativeStage` 引用（改由 `workspace-derive` 内部调用）；配套 `workspace-derive.test.ts` 11 例锁死筛选/统计/阶段推导（含主线 completed→收尾、空列表/未选中→null），降低上帝组件体积与逻辑重复、为后续真·拆解铺路。
+- **保存一致性修复（FE-8 脏数据）**：`handleSaveNode` 与 `resolveConflict` 在拿到服务端权威节点后，除更新本地选中态 `setSelectedNode(node)` 外，额外用 `useProjectStore.getState().updateNode(node.id, node)` 把节点同步回 `store.storyNodes`；修复此前「手动保存只更新本地选中态、store 节点要等下次 `loadProject` 才刷新」导致的脏数据隐患——确认状态/正文在左栏大纲树等读 store 的位置能立即反映最新保存结果，不再出现「本地是新、库里是旧」的不一致。
+- **范围说明**：本版聚焦「地基止血」第二刀（上帝组件安全切片 + 保存一致性）；Prisma 表名小写迁移、全量 `loadProject` 替换为局部更新仍属线上库受控迁移风险项（需对 Neon 跑迁移、改动生成完成后刷新链路），本版不冒险、留待治理，避免误伤线上数据。
+- **门禁**：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 97 文件 927/927 全绿（较 v2.47.0 基线 916 +11 例 workspace-derive 测试）；四版本文件对齐 v2.48.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.47.0 — 2026-08-16
 
 ### 地基止血：SSE 错误收敛可读 + 入参校验统一 + 节点类型常量化
