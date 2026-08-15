@@ -41,3 +41,41 @@
 - 交付：changelog-data.ts 三处升版（LATEST_VERSION=v1.8.1 / CHANGELOG_BRIEF 四行 / VERSIONS 头条）+ 根 CHANGELOG.md 头条；费曼报告 PROCESS/WORK_REPORT-dedupe-fence-v1.8.1-2026-08-09.md；commit + push main（代理旁路 PR）。
 - 坑：CHANGELOG_BRIEF 首次只用前缀替换，导致四行残留旧 v1.8.0 正文拼接成胡话（tsc 不报错），grep 复核发现后用整行干净替换修正。Read 工具对 src/core/consistency/* 路径假失败，全程改用 Bash/Python 读写。
 - IP 铁律：仅 novel-forge 工程迭代，无新 IP/品牌/引流。
+
+## 2026-08-14 轮次（v2.16.0 → v2.17.0 角色去重硬化收口）
+- 检测：工作树有一批上一轮未收口的「角色去重硬化」改动（character-dedupe.ts 重构 + entity-auto-creator.ts 尊称护栏 + 3 角色组件 + 新 TagChip.tsx），将其作为本轮交付；类型逃逸 586 as any / 775 :any 多属 LLM/Prisma JSON 桥接（马斯克此前暂缓高风险项），不碰。
+- 修复/验证：dedupeCharacters 拆高/低置信分组（确定性组 high 自动合并、LLM 跨核心名仅 pending）；computeConfidence 落地注释声明的 allSameCore 同核 high 判定（多·马甲同核仍 low 安全闸）；pickMain canonical 优先 + coreTokenOf 拖尾尊称修复 + isHonorificVariant 风险 token 护栏 + 跳过已合并软删卡。
+- 测试对齐：原去重单测锁旧行为（含·/变体+变体→low）与新集成（同核单·变体→high）冲突，把 allSameCore 真正落地使单元/集成一致；「同姓多正主」(韩立/韩先生、樊斯瑞/樊，核心名不同) 断言保留 low（歧义闸仍生效）。
+- 双门禁：tsc 0 错；vitest 80 文件 776/776 全绿。
+- 交付：三处版本号对齐 v2.17.0（package.json 上轮已升、changelog-data.ts LATEST_VERSION/CHANGELOG_BRIEF/VERSIONS + 根 CHANGELOG.md 头条 + 更新报告.md 顶部 + 项目记忆追加）；commit f3a767b（14 文件 +380/-160），SSH 推送 ghssh main 成功（22fff78..f3a767b）；dev server HTTP 200 且 /changelog 显示 v2.17.0。
+- 马斯克 CEO 拍板：子代理通道仍故障，主代理自决收口（该活连贯/已验证/低风险/高价值）；零散未跟踪 maxloop 残件与 2026-08-13.md 日志压缩不纳入本次交付。IP 仍归瑞宝宝。
+
+## 2026-08-15 轮次（v2.27.0 → v2.28.0 类型逃逸清理·第二批：Icon 图标名 as any 收口）
+- 检测：真实基线确认 HEAD=v2.27.0（commit 2b98b8f），自动化记忆滞后写 v2.14.0 以代码为准；工作树仅 .workbuddy memory 改动 + untracked 临时目录（PROCESS/meetings、tmp_any_audit.mjs 等），无未收口源码。候选核验：重新摘要按钮(#221 v2.2.0 已落地)、大书导出流式(v1.6.38/39 已落地)、fire-and-forget 已闭环、a11y 已闭环——均无新工作；zod 输入校验骨架 grep 证实 src 下零 zod 引用（#221 计划未落地，属 API 层大型改造，暂缓）；类型逃逸第二批——AST+grep 交叉核验纯前端组件仍残留 ~119 处 any（27 as any + 75 :any + 17 any[]），AST 脚本因 TSX 细节漏检，grep 才是可靠源。
+- 决策：子代理通道（review-worker/deepseek-v4-pro）本环境仍故障，按用户纠偏主代理代行马斯克 CEO 拍板——不假收敛重复已闭环项；zod 骨架暂缓（高风险设计，非本轮硬啃）；类型逃逸第二批延续 v2.25 已验证低风险路径，采取小批次精确收窄。
+- 修复：锁定 6 处「图标名合法却被 as any 绕过 IconName 类型检查」的冗余写法（CommandPalette/AIChatHeader/ChatSuggestions/ProjectSettingsDialog/ChapterEntitiesPanel/ForeshadowingPanel），5 个文件补 `type IconName` 导入、三元折叠箭头整体收窄为 `(cond ? "arrowRight" : "arrowDown") as IconName`；统一 `as any`→`as IconName`（IconName=keyof 图标注册表联合类型），从源头消除任意类型逃逸、编译期约束图标名；零运行时逻辑改动。
+- 双门禁：SAFE_DELETE_DISABLE=1 npx tsc --noEmit --incremental false = 0 错；npx vitest run = 91 文件 852/852 全绿（与 v2.27 基线一致，零回归）。
+- 交付：四文件同步 v2.28.0（package.json/changelog-data.ts LATEST_VERSION+CHANGELOG_BRIEF头条+VERSIONS[0]/CHANGELOG.md/更新报告.md）；commit cc51056（10 文件 +42/-13）；SSH 推送 ghssh main 成功（2b98b8f..cc51056）；dev server /changelog HTTP 200 且含 v2.28.0。
+- 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：本轮连贯/已验证/低风险/高价值，直接收口；ContextPreview 的 (d as any) JSON 动态访问属 LLM/JSON 桥接类暂缓（马斯克此前拍板），StyleEditor 2 处对象字面量 as any 不在图标范围暂缓；IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
+## 2026-08-15 第二轮（v2.28.0 基线 · 诚实归零轮，未升版不 commit）
+- 检测：真实 HEAD=v2.28.0（cc51056，已推 ghssh main）；工作树无未收口源码（仅 memory 改动 + untracked 临时目录）。三候选方向全部实证核验：① 类型逃逸 1517 处（595 as any + 660 :any + 262 any[]）绝大多数为 LLM/Prisma JSON 桥接（马斯克此前暂缓）与 test/生成物（禁改），纯前端组件已在 v2.25/v2.28 收口干净（useState/useRef any=0）；② 重新摘要/大书导出/fire-and-forget/a11y 历史轮均已闭环；③ **zod 骨架纠偏**——记忆误记「零 zod 未落地」，实证 src/lib/validators.ts 已存在（手写轻量校验层，零新依赖）+ 8 核心路由已接入 + validators.test.ts 22 describe 全绿，即 #221 以等价手写层落地，硬套 zod 反冗余；v2.28 遗留候选#② StyleEditor 373-374 的 as any 实证为 `StyleTemplate.icon:string`→`<Icon name:IconName>` 诚实桥接（`⬜` 是 emoji 不在 iconMap，硬标必 TS2322，Icon 已有 null 兜底），不假收敛硬改。另扫 64 写路由裸用 request.json() 未走骨架，但 56 个为 AI 生成/自由文本类，全量接入属高危边际重构，先算风险不扩大范围。
+- 决策：子代理通道仍故障，主代理代行马斯克 CEO 拍板并如实标注，不回头问；结论＝无安全可落地硬缺口，按「不假收敛」红线**本轮不升版、不 commit**，避免为不空转制造虚假改动。
+- 验证：tsc 0 错；vitest 91 文件 852/852 全绿（与 v2.28 基线一致，零回归）；dev server :3001 监听、/changelog 200。
+- 交付：无代码升版；回写自动化 memory + 新建 2026-08-15.md 项目记忆追加本轮章节。下一轮候选（避重复盲区）：① LLM/Prisma 桥接项仅在有「tsc 实证低成本可去」确定项时收；② agent-browser 抓 accessibility-tree 真页面复验历轮 a11y/类型修复；③ 用户新明确诉求优先。IP 仍归瑞宝宝。
+
+## 2026-08-15 第三轮（v2.28.0 → v2.29.0 手稿导入解析两处真实 bug 修复）
+- 检测：工作树干净（仅 memory 改动 + 临时目录）。候选复盘：类型逃逸 1144 处全在 LLM/Prisma/路由 JSON 桥接（暂缓高危）、zod 以等价手写 validators 落地、历史轮缺口全闭环、TODO 零真实待办、console 低价值不碰。转向「找真实 bug」：读 manuscript-parse.ts + node 实锤两处「导入丢内容」缺陷——docxToText 只认裸 </p> 漏 </w:p>（整篇当一段）、parseManifest 要求 id 在 href 前（href 在前被漏匹配→缺章）。
+- 决策：子代理通道仍故障，主代理代行马斯克 CEO 拍板（如实标注），修复已实测/低风险/高频链路/高价值→收口 v2.29.0。
+- 修复：docxToText 正则兼容 </w:p>；parseManifest 顺序无关；stripHtml 补数字实体解码（&#160;→空格）；导出 4 纯函数供测；新增 manuscript-parse.test.ts 12 例。
+- 双门禁：tsc 0 错；vitest 92 文件 864/864 全绿（较 v2.28 +12）。
+- 交付：四文件升 v2.29.0（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit 683f60f（6 文件 +130/-12）；SSH 推送 ghssh main 成功（cc51056..683f60f）；dev server HTTP 200 + /changelog 含 v2.29.0。IP 仍归瑞宝宝。
+
+
+## 2026-08-15 轮次（v2.31.0 → v2.32.0 补 proseToHtml 单测·导出地基加固）
+- 检测：真实 HEAD 实为 v2.31.0（05d3f36，用户在主对话做「删 autoCreateEntities 死代码」已推送），非自动化记忆滞后写的 v2.14.0/2.30.0；工作树仅 .workbuddy memory 改动 + untracked 临时目录。候选核验：导出链路（export/route.ts + epub/docx 流式）质量高——格式白名单/空内容拦截/选章级联/流式分块俱全无崩溃 bug；导入 commit 路由防御充分（空载荷校验/DB 幂等锁/deadline/逐章 content 校验/结构化错误分类）无崩溃缺陷；类型逃逸 1620 处（as any 642/:any 692/any[] 286）绝大多数为 LLM/Prisma JSON 桥接（马斯克此前暂缓高危项），纯前端组件仅 46 处 as any 多属 DOM/event/JSON 桥接，继续清理边际收益低；v2.30 验收干净无遗留。
+- 决策：子代理通道仍故障，主代理代行马斯克 CEO 拍板（如实标注），不假收敛重复已闭环项；聚焦真实测试覆盖缺口。
+- 修复：导出链路核心散文→HTML 转换 proseToHtml（被 HTML/EPUB/DOCX 三大导出复用、长期零单测）补 11 例自动化测试（src/core/proseToHtml.test.ts），锁死段落包裹/空行分段/**粗体*/*斜体*/---分割线/>引用块/HTML 特殊字符转义/段落内换行；node 实锤确认行为健康、无丢内容或崩溃级缺陷。纯测试补全、零生产代码改动。
+- 双门禁：tsc 0 错；vitest 全量 93 文件 870/870 全绿（较 v2.31.0 基线 +1 文件 +11 例）。注：首次全量遇 storyline/generate.test.ts「type=thread 解析」用例偶发失败，但单独重跑 3 次全绿、二次全量重跑均 870 全绿；git blame 显示 generate.ts:185 为「Not Committed Yet 11:32」即用户在并行主对话实时编辑未提交的改动（强制 thread→side 属伏笔归伏笔面板设计），非本轮引入、属测试间状态污染/用户并行编辑时序，未触碰该用户领地文件。
+- 交付：四文件同步 v2.32.0（package.json/changelog-data.ts LATEST_VERSION+CHANGELOG_BRIEF头条+VERSIONS[0]/CHANGELOG.md/更新报告.md）；commit + SSH 推送 ghssh main；IP 仍归瑞宝宝。
+- 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：本轮连贯/已验证/低风险/高价值（导出地基测试防护），直接收口 v2.32.0；不假收敛重做已闭环项。
