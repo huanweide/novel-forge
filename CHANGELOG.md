@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.31.0 — 2026-08-15
+
+### 内部死代码清理：删除 autoCreateEntities 冗函数（架构瘦身）
+- **确认死代码**：`entity-auto-creator.ts` 的 `autoCreateEntities` 函数在整个 `src` 中无任何调用方（仅 `changelog-data.ts` 历史文本提及），单元测试也未引用。
+- **连带清理**：删除该函数及其独有的 `AutoCreateResult` 接口、`TYPE_LABELS` 常量，并清理因此变为未使用的 4 个 import（`prisma` / `Prisma` / `DetectedEntity` / `isCompleteEntityName`）。
+- **保留有效代码**：仍被 `entity-sync` 等使用的纯函数与确定性分类器（`resolveEntityCategory` / `isSimilarName` / `normalizeDiscoveryName` / `resolveDiscoveryMergeTarget` / `shouldAutoCreateCharacterCard` 等）全部保留，建卡清洗逻辑不受影响。
+- **零风险**：纯内部删除，tsc 0 错误；vitest 全量全绿；零功能、零接口、零 LLM 行为变化。
+
 ## v2.30.0 — 2026-08-15
 
 ### 角色筛选「已分类/未分类」冗余标签清理（瑞宝宝 UI 收口）
