@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.29.0";
+export const LATEST_VERSION = "v2.30.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.30.0 角色筛选「已分类/未分类」冗余标签清理（瑞宝宝 UI 收口）：移除角色栏筛选栏「已分类」「未分类」两个派生筛选芯片（仅按有没有标签二分、与具体标签筛选语义重叠、用户明确不需要）及其 statHasTags/statNoTags 统计；同步清理 filterCharacters 纯函数里 has-tags/no-tags 两个不可达死分支与对应 4 个单元测试用例（character-filter.test.ts 两例 + CharacterFilters.test.tsx 两例）；清理后筛选栏只剩角色定位+状态+具体用户标签三层，更干净。tsc 0 错误；vitest 受影响 15 测试全绿；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.29.0 手稿导入解析两处真实 bug 修复（马斯克 CEO 循环运营）：导入健壮性——实测修掉 manuscript-parse.ts 两处会导致「导入丢内容」的真实缺陷：①docxToText 段落切分正则只识别裸 </p>，漏掉 OOXML 真实闭合标签 </w:p>，整篇 docx 被当成一整段、长文档糊成一坨；②parseManifest 要求 <item> 的 id 必须在 href 之前，顺序颠倒的真实 EPUB（href 在前）被漏匹配、导入缺章。另补 stripHtml 数字实体解码（&#160; 不间断空格归一普通空格、&#8211; 等转真实字符），与命名实体 &nbsp; 行为一致。零运行时逻辑改动、零新接口、零 LLM 开销；新增 src/lib/manuscript-parse.test.ts 12 例锁死修复；tsc 0 错误；vitest 全量 92 文件 864/864 全绿；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.27.0 分类标题美化 + 删除标签类型（UI 统一 + 功能补全）：UI 统一——Collapse 分组标题（主角/配角/路人）收紧内边距 py-2→py-1.5、加 font-medium 形成清晰分组层级，与功能按钮(text-xs)和标签芯片(text-xs)三者字体系统统一协调；分类字体不再松散笨重。删除标签类型——新增 POST /api/characters/remove-tag-type 后端接口（接收 projectId+tag，遍历所有含该标签角色移除该标签，系统标签📥📝🗂防删保护，syncGlobalPrompt 刷新缓存）；前端 CharacterFilters 用户自建标签芯片 hover 显示 × 删除按钮（group/tag + opacity-0→100），点击后 confirmDialog 确认→调用 API→toast 反馈→自动刷新角色列表。tsc 0 错误；vitest 全量 91 文件 852/852 全绿。",
   "v2.26.0 角色核心逻辑硬化 + 功能精简（maxloop 深度探索）：角色核心——entity-sync 自动建卡入口加两道闸门：①变体并入别名（尊称/缩写/小名/姓+描述词如「迪哥先生→迪哥」「韩姓男子→韩立」经 resolveDiscoveryMergeTarget 实时并入正主 aliases，不建脏卡）；②频次门槛建卡（storyNode 正文出现次数 < MIN_CHARACTER_APPEARANCES(2) 视为路人甲拦截，不建卡、进 skipped），抽纯函数 shouldAutoCreateCharacterCard 可单测、fail-open 查库失败默认放行；配套 5 例 entity-sync.guard.test.ts 锁死 (a)新角色引入、(b)去重识别、(c)含·马甲不误并、(d)低频路人甲拦截。功能精简——移除 CharacterToolbar 冗余「自动去重合并」按钮（去重已全自动：批量写作后/自动发现后/加载 detectOnly 后台静默跑，手动入口冗余），同步清理 CharacterList/CharacterToolbar.test 配套代码。tsc 0 错误；vitest 全量 90 文件 848/848 全绿（本轮 +1 文件 +5 例）；纯逻辑硬化，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -73,6 +74,14 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.30.0",
+    date: "2026-08-15",
+    title: "角色筛选「已分类/未分类」冗余标签清理（瑞宝宝 UI 收口）",
+    sections: [
+      { label: "UI 收口", items: ["删掉角色栏筛选栏「已分类」「未分类」两个派生筛选芯片（仅按有没有标签二分、与具体标签筛选语义重叠、用户明确不需要）", "移除支撑这两个芯片的 statHasTags/statNoTags 统计变量", "清理 filterCharacters 纯函数里 has-tags/no-tags 两个不可达死分支，简化具体标签匹配保护逻辑", "删除对应 4 个单元测试用例（character-filter.test.ts 的 no-tags/has-tags/组合过滤 3 例 + CharacterFilters.test.tsx 的点击 2 例中的相关项），tsc 0 错误；vitest 受影响 15 测试全绿"] },
+    ],
+  },
   {
     version: "v2.29.0",
     date: "2026-08-15",

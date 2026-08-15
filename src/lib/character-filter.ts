@@ -20,7 +20,7 @@ export function isUserTag(tag: string): boolean {
  * 规则（与旧 CharacterList 内联逻辑完全一致）：
  * - 已合并（软删「🗂 已合并」）卡默认隐藏，实现「去重后自动清除重复名」；
  * - roleFilter：all 或具体角色值；
- * - tagFilter：all / has-tags（有用户标签）/ no-tags（无用户标签）/ 具体标签；
+ * - tagFilter：all / 具体用户标签；
  * - statusFilter：all / alive / dead（dead 含 missing、presumed_dead）；
  * - search：匹配 name 或任一 alias 子串。
  */
@@ -33,15 +33,7 @@ export function filterCharacters(
     if ((ch.tags || []).includes("🗂 已合并")) return false;
     if (c.roleFilter !== "all" && ch.role !== c.roleFilter) return false;
     const userTags = (ch.tags || []).filter(isUserTag);
-    if (c.tagFilter === "no-tags" && userTags.length > 0) return false;
-    if (c.tagFilter === "has-tags" && userTags.length === 0) return false;
-    if (
-      c.tagFilter !== "all" &&
-      c.tagFilter !== "no-tags" &&
-      c.tagFilter !== "has-tags" &&
-      !userTags.includes(c.tagFilter)
-    )
-      return false;
+    if (c.tagFilter !== "all" && !userTags.includes(c.tagFilter)) return false;
     if (c.statusFilter === "alive" && ch.currentStatus !== "alive") return false;
     if (
       c.statusFilter === "dead" &&

@@ -44,15 +44,6 @@ describe("filterCharacters（角色列表过滤，v2.17 引入 / v2.18 抽纯函
     expect(filterCharacters(chars, { ...ALL, roleFilter: "antagonist" }).map((c) => c.id)).toEqual(["3"]);
   });
 
-  it("tagFilter=no-tags → 仅无用户标签者", () => {
-    // id1 有龙陨卫（用户标签）、id4 有药人；id2 已合并隐藏；仅 id3 无标签
-    expect(filterCharacters(chars, { ...ALL, tagFilter: "no-tags" }).map((c) => c.id)).toEqual(["3"]);
-  });
-
-  it("tagFilter=has-tags → 含任一用户标签", () => {
-    expect(filterCharacters(chars, { ...ALL, tagFilter: "has-tags" }).map((c) => c.id).sort()).toEqual(["1", "4"]);
-  });
-
   it("tagFilter=具体用户标签", () => {
     expect(filterCharacters(chars, { ...ALL, tagFilter: "药人" }).map((c) => c.id)).toEqual(["4"]);
   });
@@ -80,10 +71,5 @@ describe("filterCharacters（角色列表过滤，v2.17 引入 / v2.18 抽纯函
 
   it("search 无匹配 → 空", () => {
     expect(filterCharacters(chars, { ...ALL, search: "zzz" })).toHaveLength(0);
-  });
-
-  it("组合过滤：role=supporting + has-tags → 仅 id4", () => {
-    const r = filterCharacters(chars, { search: "", roleFilter: "supporting", tagFilter: "has-tags", statusFilter: "all" });
-    expect(r.map((c) => c.id)).toEqual(["4"]);
   });
 });

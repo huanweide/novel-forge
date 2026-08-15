@@ -50,18 +50,4 @@ describe("CharacterFilters（v2.17 统一筛选栏）", () => {
     expect(screen.queryByRole("button", { name: "📥系统导入" })).toBeNull();
     expect(screen.queryByRole("button", { name: "🗂 已合并" })).toBeNull();
   });
-
-  it("点击「已分类」芯片调用 onTag('has-tags')", () => {
-    const onTag = vi.fn();
-    render(<CharacterFilters {...defaultProps} onTag={onTag} />);
-    fireEvent.click(screen.getByRole("button", { name: /已分类/ }));
-    expect(onTag).toHaveBeenCalledWith("has-tags");
-  });
-
-  it("点击「未分类」芯片调用 onTag('no-tags')", () => {
-    const onTag = vi.fn();
-    render(<CharacterFilters {...defaultProps} onTag={onTag} />);
-    fireEvent.click(screen.getByRole("button", { name: /未分类/ }));
-    expect(onTag).toHaveBeenCalledWith("no-tags");
-  });
 });

@@ -40,8 +40,6 @@ export function CharacterFilters({
   ).sort();
 
   const statRole = (r: string) => characters.filter(c => c.role === r).length;
-  const statHasTags = characters.filter(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length > 0).length;
-  const statNoTags = characters.filter(c => (c.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝")).length === 0).length;
   const statDead = characters.filter(c => ["dead", "missing", "presumed_dead"].includes(c.currentStatus)).length;
 
   return (
@@ -93,20 +91,8 @@ export function CharacterFilters({
         )}
       </div>
 
-      {/* 标签筛选：已分类/未分类 + 具体标签 */}
+      {/* 标签筛选：具体用户标签 */}
       <div className="flex gap-0.5 mb-1.5 flex-wrap items-center">
-        {([
-          { key: "has-tags", label: <span className="flex items-center gap-1"><Icon name="tag" size={10} /> 已分类</span>, count: statHasTags },
-          { key: "no-tags", label: "未分类", count: statNoTags },
-        ] as { key: string; label: ReactNode; count: number }[]).filter(o => o.count > 0).map(o => (
-          <TagChip
-            key={o.key}
-            label={o.label}
-            count={o.count}
-            active={tagFilter === o.key}
-            onClick={() => onTag(tagFilter === o.key ? "all" : o.key)}
-          />
-        ))}
         {allTags.length > 0 && <span className="text-[var(--nv-border-3)] mx-0.5">·</span>}
         {allTags.slice(0, 12).map(t => (
           <span key={t} className="group/tag relative inline-flex items-center">
