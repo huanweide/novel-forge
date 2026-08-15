@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.28.0 — 2026-08-15
+
+### 类型逃逸清理·第二批：Icon 图标名冗余 as any 收口 6 处（马斯克 CEO 循环运营）
+- **类型安全**：用 TypeScript AST + grep 交叉核验定位纯前端组件残留的任意类型逃逸，锁定 6 处「图标名本就合法却被 as any 绕过 IconName 类型检查」的冗余写法——命令面板(CommandPalette)、AI 对话能力/建议图标(AIChatHeader/ChatSuggestions)、项目设置入口图标(ProjectSettingsDialog)、分组折叠箭头(ChapterEntitiesPanel/ForeshadowingPanel)。
+- **精准收窄**：6 处统一将 as any 收紧为精确的 as IconName（IconName = keyof 图标注册表联合类型），从源头消除任意类型逃逸，让图标名在编译期受图标表约束，杜绝拼写错误/未注册图标名逃逸到运行期（Icon 组件对未知名有 null 兜底，但类型层现在就拦住）。
+- **零风险**：纯类型收窄，零运行时逻辑改动、零新接口、零额外 LLM 开销；前端组件仍 91 文件 852/852 全绿。
+- tsc 0 错误；vitest 全量 91 文件 852/852 全绿。
+
 ## v2.27.0 — 2026-08-15
 
 ### 分类标题美化 + 删除标签类型（UI 统一 + 功能补全）

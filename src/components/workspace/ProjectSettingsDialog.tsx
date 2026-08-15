@@ -1,7 +1,7 @@
 "use client";
 
 import { Modal } from "@/components/ui/Modal";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { ChapterConfirmBar } from "@/components/workspace/ChapterConfirmBar";
 import { ProjectDiagnostics } from "@/components/workspace/ProjectDiagnostics";
 
@@ -130,7 +130,7 @@ function SettingsEntry({
       onClick={onOpen}
       className="w-full text-left flex items-center gap-3 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] hover:bg-[var(--nv-surface-2)] px-4 py-3 mb-3 transition-colors"
     >
-      <Icon name={icon as any} size={18} className="text-[var(--nv-primary)] shrink-0" />
+      <Icon name={icon as IconName} size={18} className="text-[var(--nv-primary)] shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium">{title}</div>
         <div className="text-xs text-[var(--nv-text-muted)] mt-0.5">{desc}</div>

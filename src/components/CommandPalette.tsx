@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type Item = {
@@ -176,7 +176,7 @@ export function CommandPalette() {
                 onClick={() => { setOpen(false); it.action(); }}
                 className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${i === active ? "bg-[var(--nv-primary-soft)]" : "hover:bg-[var(--nv-surface-2)]"}`}
               >
-                <Icon name={TYPE_ICON[it.type] as any} size={15} className="text-[var(--nv-text-tertiary)] shrink-0" />
+                <Icon name={TYPE_ICON[it.type] as IconName} size={15} className="text-[var(--nv-text-tertiary)] shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm text-[var(--nv-text-primary)] truncate">{it.title}</div>
                   {it.subtitle && <div className="text-[10px] text-[var(--nv-text-tertiary)] truncate">{it.subtitle}</div>}

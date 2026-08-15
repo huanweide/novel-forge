@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 interface AIChatHeaderProps {
   loading: boolean;
@@ -87,7 +87,7 @@ export function AIChatHeader({ loading, readonlyMode }: AIChatHeaderProps) {
             {CAPABILITIES.map((c) => (
               <div key={c.label} className="rounded-lg bg-[var(--nv-surface-1)] px-2 py-1.5">
                 <div className="flex items-center gap-1 text-[10px] font-medium text-[var(--nv-text-secondary)]">
-                  <Icon name={c.icon as any} size={10} className="text-[var(--nv-creative)]" /> {c.label}
+                  <Icon name={c.icon as IconName} size={10} className="text-[var(--nv-creative)]" /> {c.label}
                 </div>
                 <div className="text-[9px] text-[var(--nv-text-muted)] mt-0.5">{c.desc}</div>
               </div>

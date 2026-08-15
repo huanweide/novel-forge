@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 
 const SUGGESTIONS: { text: string; icon: string }[] = [
   { text: "列出所有角色", icon: "users" },
@@ -22,7 +22,7 @@ export function ChatSuggestions({ onSuggestion }: ChatSuggestionsProps) {
           onClick={() => onSuggestion(s.text)}
           className="group shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full border border-[var(--nv-border-1)] bg-[var(--nv-surface-1)] hover:border-[var(--nv-primary)] hover:bg-[var(--nv-primary-soft)] hover:text-[var(--nv-primary)] transition-all"
         >
-          <Icon name={s.icon as any} size={11} className="text-[var(--nv-creative)] group-hover:text-[var(--nv-primary)] transition-colors" />
+          <Icon name={s.icon as IconName} size={11} className="text-[var(--nv-creative)] group-hover:text-[var(--nv-primary)] transition-colors" />
           {s.text}
         </button>
       ))}

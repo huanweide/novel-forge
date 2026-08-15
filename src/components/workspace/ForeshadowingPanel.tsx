@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { StatusDot, Icon } from "@/components/ui/icons";
+import { StatusDot, Icon, type IconName } from "@/components/ui/icons";
 import { useProjectStore } from "@/store";
 
 // ═══════════════════════════════════════════
@@ -355,7 +355,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
                 onClick={() => toggleGroup(key)}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-[var(--nv-surface-2)] transition-colors sticky top-0 bg-[var(--nv-surface-2)] backdrop-blur"
               >
-                <Icon name={isCollapsed ? "arrowRight" : "arrowDown" as any} size={10} className="text-[var(--nv-text-tertiary)]" />
+                <Icon name={(isCollapsed ? "arrowRight" : "arrowDown") as IconName} size={10} className="text-[var(--nv-text-tertiary)]" />
                 <span className="text-[var(--nv-text-secondary)]">{group.label}</span>
                 <span className="text-[var(--nv-text-tertiary)] ml-auto text-[10px]">{group.count}</span>
               </button>

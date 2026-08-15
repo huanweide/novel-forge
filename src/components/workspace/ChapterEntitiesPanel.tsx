@@ -189,7 +189,7 @@ export function ChapterEntitiesPanel({
             onClick={() => toggleGroup(group.key)}
             className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-[var(--nv-surface-2)] transition-colors"
           >
-            <Icon name={collapsed.has(group.key) ? "arrowRight" : "arrowDown" as any} size={11} className="text-[var(--nv-text-tertiary)] w-3" />
+            <Icon name={(collapsed.has(group.key) ? "arrowRight" : "arrowDown") as IconName} size={11} className="text-[var(--nv-text-tertiary)] w-3" />
             <span className="text-sm">{group.icon}</span>
             <span className="text-xs font-medium text-[var(--nv-text-secondary)]">{group.label}</span>
             <span className="text-[10px] text-[var(--nv-text-muted)] ml-auto">{group.entities.length}</span>
