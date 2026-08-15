@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.33.0";
+export const LATEST_VERSION = "v2.34.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.34.0 类型逃逸逐文件精修·第一批（蓝区 4 处 unknown 收窄 + 2 处动态豁免标注）：纯前端/store/纯函数层——store/index.ts 的 patchProject 参数、components/explore/OutlinePanel.tsx 角色 personality/appearance、core/babylore/ifcell.ts 的 IfCellTable.rows、core/explore/utils.ts 的 extractCharacterKeys 的 char 参数，共 4 处 Record<string,any> 收窄为 Record<string,unknown>（unknown 强制下游做类型检查、比 any 安全）；tables/page.tsx 动态列表格 rows 与 babylore/fill.ts 填表溯源 Json 快照 2 处保留 any 并注释说明（动态列运行时取值直接进 React 渲染、prisma Json 字段仅接受 any 形态，硬改会破坏渲染/落库），诚实标注不假收敛。门禁：tsc 0 错误；vitest 受影响 6 文件 64/64 全绿；API 路由桥接层（adopt/autofill/import）属红区暂缓，后续批次推进。个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.33.0 故事线生成去 thread 冗余（伏笔统一归口伏笔面板）：源头收口——删除 generate.ts 的【伏笔/线索铁律】prompt 块（原指令 AI 把「悬而未解的谜团/物证/暗线」写成 type=thread 的伏笔线），替换为【伏笔/线索（悬念）归属说明】明确引导 AI「伏笔/线索请用专门的伏笔面板、不要作为故事线生成」；输出格式注释「type: main | side | thread」收敛为「main | side」，删 allowThread 分支、rawType 只映射 main→main 其余→side、sevenElements 去掉 thread 分支；route.ts 内联 prompt 副本同步、落库逻辑保留兼容存量 2 条 thread 行无损读取；generate.test.ts 用例重写为「AI 返回 thread 统一降级为 side」断言。经 pg 直连核库：thread 仅 2 条半废弃、伏笔面板已在用（5 条），故不强行迁移、只掐源头消除重复入口。tsc 0 错误；vitest 全量 93 文件 870/870 全绿（generate.test.ts 用例重写成降级断言、测试数不变）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.32.0 测试流程优化：补核心散文→HTML 转换 proseToHtml 单测（导出质量地基加固）：测试覆盖——给被 HTML / EPUB / DOCX 三大导出复用、却长期零单测覆盖的核心转换函数 proseToHtml 补 11 例自动化测试，锁死段落包裹、空行分段、**粗体**/*斜体*/---分割线/>引用块/HTML 特殊字符转义（防 XSS 与渲染错乱）/段落内换行等既有行为；用 node 实锤确认该函数行为健康、无丢内容或崩溃级缺陷，导出渲染地基稳固。纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 93 文件 870/870 全绿（较 v2.31.0 基线 +1 文件 +11 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.31.0 内部死代码清理：删除 entity-auto-creator.ts 中零调用方的 autoCreateEntities 死函数（含其独有 AutoCreateResult 接口、TYPE_LABELS 常量与 4 个未使用 import：prisma/Prisma/DetectedEntity/isCompleteEntityName）；该函数从未被任何 src 入口调用、测试也未引用，属确认冗余。保留 resolveEntityCategory/isSimilarName/normalizeDiscoveryName/resolveDiscoveryMergeTarget/shouldAutoCreateCharacterCard 等仍被 entity-sync 使用的纯函数与确定性分类器，建卡清洗逻辑不受影响。tsc 0 错误；vitest 全量全绿；纯内部瘦身，零功能/接口/LLM 行为变化。",
@@ -77,6 +78,27 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.34.0",
+    date: "2026-08-15",
+    title: "类型逃逸逐文件精修·第一批（蓝区 4 处 unknown 收窄 + 2 处动态豁免标注）",
+    sections: [
+      { label: "蓝区收窄（4 处）", items: [
+        "store/index.ts 的 patchProject 参数 Record<string,any> → Record<string,unknown>",
+        "components/explore/OutlinePanel.tsx 角色 personality/appearance Record<string,any> → Record<string,unknown>",
+        "core/babylore/ifcell.ts 的 IfCellTable.rows Record<string,any>[] → Record<string,unknown>[]",
+        "core/explore/utils.ts 的 extractCharacterKeys 的 char 参数 Record<string,any> → Record<string,unknown>",
+      ] },
+      { label: "动态豁免标注（2 处，不假收敛）", items: [
+        "tables/page.tsx 动态列表格 rows 保留 Record<string,any>[] 并注释：col.key 运行时确定、值直接进 React 渲染（key/ReactNode/value），any 为合理动态豁免",
+        "babylore/fill.ts 填表溯源 Json 快照 updatedBefore 保留 Record<string,any> 并注释：整行写回 prisma Json 字段、Json 输入类型仅接受 any 形态",
+      ] },
+      { label: "门禁与路线", items: [
+        "tsc 0 错误；vitest 受影响 6 文件 64/64 全绿（utils.test / fill.*.test 等）",
+        "API 路由桥接层（adopt/autofill/import 的 Record<string,any>）属红区暂缓，后续批次逐文件推进；: any 注解（582 处/136 文件）属灰区，下一批次",
+      ] },
+    ],
+  },
   {
     version: "v2.33.0",
     date: "2026-08-14",

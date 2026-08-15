@@ -18,7 +18,7 @@ export interface IfCellTable {
   name?: string | null;
   key?: string | null;
   columns?: { key: string; label?: string }[];
-  rows?: Record<string, any>[];
+  rows?: Record<string, unknown>[];
 }
 
 const OPS: Record<string, (a: number, b: number) => boolean> = {

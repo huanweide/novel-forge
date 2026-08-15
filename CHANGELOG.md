@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.34.0 — 2026-08-15
+
+### 类型逃逸逐文件精修·第一批（蓝区 4 处 unknown 收窄 + 2 处动态豁免标注）
+- **蓝区收窄**：纯前端/store/纯函数层 4 处 `Record<string,any>` 收窄为 `Record<string,unknown>`——`store/index.ts` 的 `patchProject` 参数、`components/explore/OutlinePanel.tsx` 角色 `personality`/`appearance`、`core/babylore/ifcell.ts` 的 `IfCellTable.rows`、`core/explore/utils.ts` 的 `extractCharacterKeys` 的 `char` 参数。`unknown` 强制下游做类型检查，比 `any` 安全。
+- **动态豁免标注**：`tables/page.tsx` 动态列表格 `rows` 与 `babylore/fill.ts` 填表溯源 Json 快照 `updatedBefore` 2 处保留 `any` 并注释说明——动态列运行时取值直接进 React 渲染（key/ReactNode/value）、Prisma Json 字段仅接受 `any` 形态，硬改会破坏渲染/落库。诚实标注不假收敛。
+- **门禁**：tsc 0 错误；vitest 受影响 6 文件 64/64 全绿。
+- **路线**：API 路由桥接层（adopt/autofill/import）属红区暂缓，后续批次推进；`: any` 注解（582 处/136 文件）属灰区，下一批次。
+
 ## v2.33.0 — 2026-08-14
 
 ### 故事线生成去 thread 冗余（伏笔统一归口伏笔面板）

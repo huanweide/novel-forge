@@ -89,7 +89,7 @@ export function tryExtractStructured(card: {
  */
 export function extractCharacterKeys(
   name: string,
-  char: Record<string, any>,
+  char: Record<string, unknown>,
 ): string[] {
   const keys: string[] = [name];
   if (Array.isArray(char.aliases)) keys.push(...char.aliases);

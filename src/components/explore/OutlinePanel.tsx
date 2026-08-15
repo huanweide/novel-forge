@@ -18,8 +18,8 @@ interface OutlineResult {
     age?: string;
     gender?: string;
     abilities?: string[];
-    personality?: Record<string, any>;
-    appearance?: Record<string, any>;
+    personality?: Record<string, unknown>;
+    appearance?: Record<string, unknown>;
     aliases?: string[];
   }>;
   loreEntries: Array<{

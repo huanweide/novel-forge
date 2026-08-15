@@ -18,7 +18,7 @@ interface ProjectState {
   /** loadProject 成功后全量写入（含 rules 提取） */
   setProjectData: (data: ProjectData) => void;
   /** 局部打补丁（如 buildConfig / styleCard / postProcessingRules / llmConfig 保存后；ProjectData 未穷举所有持久化字段，故用宽松类型） */
-  patchProject: (patch: Record<string, any>) => void;
+  patchProject: (patch: Record<string, unknown>) => void;
   updateNode: (id: string, updates: Partial<StoryNodeData>) => void;
   addNode: (node: StoryNodeData) => void;
   removeNode: (id: string) => void;

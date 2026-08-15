@@ -16,7 +16,7 @@ interface LoreTableT {
   note: string;
   category: string;
   columns: { key: string; label: string; type: string }[];
-  rows: Record<string, any>[];
+  rows: Record<string, any>[]; // 动态列表格数据载体：col.key 运行时确定，值直接进 React 渲染（key/ReactNode/value），any 为合理动态豁免
   marker: string;
 }
 

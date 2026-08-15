@@ -607,6 +607,7 @@ export async function babyloreFill(
       const beforeById = new Map(beforeArr.map((row: any) => [row.row_id, row]));
       const afterRows = (t.rows as any[]) || [];
       const inserted: number[] = [];
+      // 填表溯源快照：整行原样写回 prisma Json 字段，Json 输入类型仅接受 any 形态，保留 any
       const updatedBefore: Record<string, any> = {};
       for (const row of afterRows) {
         if (!beforeIds.has(row.row_id)) {
