@@ -138,50 +138,6 @@ export const BUILTINS: any[] = [
       ],
     },
   },
-  {
-    type: "table_template",
-    title: "骰子随机事件表（骰子前端）",
-    description: "文档「进阶-骰子脚本」表格：维护随机事件/战斗结果，AI 写章节时按骰子触发，增加不确定性与玩法。",
-    tags: ["通用", "表格模板", "骰子", "随机事件"],
-    content: {
-      tables: [
-        {
-          key: "dice_event",
-          name: "随机事件表",
-          note: "维护随机事件池。列：事件名/触发条件/结果描述/权重。写章节时由骰子或关键词触发，注入正文增加变数。",
-          category: "event",
-          columns: [
-            { key: "name", label: "事件名", type: "text" },
-            { key: "cond", label: "触发条件", type: "text" },
-            { key: "result", label: "结果描述", type: "text" },
-            { key: "weight", label: "权重", type: "number" },
-          ],
-          rows: [
-            { name: "遭遇伏击", cond: "野外/夜晚", result: "角色遭遇不明身份者伏击，须临机应变。", weight: 3 },
-            { name: "拾得秘宝", cond: "遗迹/随机", result: "角色偶然发现一件蕴含灵气的古物。", weight: 2 },
-            { name: "贵人相助", cond: "困境", result: "一名神秘人物出手相助，埋下后续伏笔。", weight: 2 },
-          ],
-        },
-        {
-          key: "dice_combat",
-          name: "战斗结果表",
-          note: "维护战斗骰子判定。列：情形/成功结果/失败结果/阈值。点数大于阈值则成功。",
-          category: "event",
-          columns: [
-            { key: "scene", label: "情形", type: "text" },
-            { key: "success", label: "成功结果", type: "text" },
-            { key: "fail", label: "失败结果", type: "text" },
-            { key: "threshold", label: "阈值", type: "number" },
-          ],
-          rows: [
-            { scene: "普通攻击", success: "攻击命中，敌方受创。", fail: "攻击落空，露出破绽。", threshold: 4 },
-            { scene: "关键决斗", success: "一击制胜，震慑全场。", fail: "险胜或受创，战局胶着。", threshold: 5 },
-          ],
-        },
-      ],
-    },
-  },
-
   // —— 新增：文档明确命名的剧情推进预设 ——
   {
     type: "story_progression",

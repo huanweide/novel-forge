@@ -343,7 +343,7 @@ export default function Workshop() {
             <Link href="/" className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1">
               <Icon name="arrowRight" size={13} className="rotate-180" /> 返回
             </Link>
-            <h1 className="text-lg font-bold tracking-tight">创意工坊 · 共创社区</h1>
+            <h1 className="text-lg font-bold tracking-tight">创意工坊 · 我的本地预设</h1>
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -393,8 +393,8 @@ export default function Workshop() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <p className="text-[var(--nv-text-muted)] text-sm mb-6">
-          把参考资料里的「预设」变成可共享资产：表格模板预设、剧情推进预设、文风、世界观、角色卡。
-          免费、非商业——你上传、他人套用、可一键复刻二创。
+          把参考资料里的「预设」变成你自己的写作资产：表格模板、剧情推进、文风、世界观、角色卡。
+          全部保存在本机数据库，不上传、不共享——方便你随时套用、导出备份、或复刻改造。人人都能在这里自建专属预设。
         </p>
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">

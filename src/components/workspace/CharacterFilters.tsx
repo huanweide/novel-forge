@@ -57,7 +57,7 @@ export function CharacterFilters({
       </div>
 
       {/* 筛选栏：角色定位 + 状态 */}
-      <div className="flex gap-0.5 mb-1 flex-wrap items-center">
+      <div className="flex gap-1 mb-1 flex-wrap items-center text-xs">
         {([
           { key: "all", label: "全部", count: characters.length },
           ...CHARACTER_ROLE_OPTIONS.map((o) => ({ key: o.value, label: o.label, count: statRole(o.value) })),
@@ -92,7 +92,7 @@ export function CharacterFilters({
       </div>
 
       {/* 标签筛选：具体用户标签 */}
-      <div className="flex gap-0.5 mb-1.5 flex-wrap items-center">
+      <div className="flex gap-1 mb-1.5 flex-wrap items-center text-xs">
         {allTags.length > 0 && <span className="text-[var(--nv-border-3)] mx-0.5">·</span>}
         {allTags.slice(0, 12).map(t => (
           <span key={t} className="group/tag relative inline-flex items-center">

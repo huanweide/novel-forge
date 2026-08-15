@@ -362,6 +362,7 @@ ${generatedContent}
     threadProgress: Array<{ storylineId: string; stage: string; progressNote: string }>;
     unresolvedQuestions: string[];
     impactScore: number;
+    chapterTitle: string; // v2.43.0：专用短章名（≤5字、不含人名），供 post-processor 自动命名使用
     eventImportances: EventImportances; // S/A/B/C四级事件分层
   }> {
     const charNames = characters.map((c) => c.name).join("、");
@@ -396,10 +397,11 @@ ${generatedContent}
 - [角色名]：[一句话的当下冲动]
 ---
 
-额外输出字段（JSON 格式——在上述文本格式输出全部结束后，另起一行用 json 代码块包裹输出以下三个字段）：
+额外输出字段（JSON 格式——在上述文本格式输出全部结束后，另起一行用 json 代码块包裹输出以下四个字段）：
 - "threadProgress": 数组，每项 { storylineId: "故事线ID", stage: "所在阶段", progressNote: "一句话——本线在本章的推进" }
   阶段可选值: desire(欲望)/obstacle(阻碍)/action(行动)/result(结果)/twist(意外)/turn(转折)/ending(结局)
 - "unresolvedQuestions": 字符串数组，本章留下的悬念/伏笔（每条一句话，如"剑的秘密仍未解开"）
+- "chapterTitle": 字符串，本章的简短章名（≤5个汉字）。要求：纯名词/短语，概括本章核心意象或关键事件；绝对不能包含任何角色人名（如"龙渊""李雷"），也不能含"第N章"字样；可含地点/物品/氛围/动作，示例："祭坛觉醒""边城夜雨""血脉异动""密室对峙"。若实在无法概括可留空字符串。
 - "impactScore": 数字 1-10，本章对主线剧情的整体影响力
   - 1-3: 日常过渡章节（角色互动、日常描写）
   - 4-6: 有实质性剧情推进（新线索、新冲突）
@@ -518,6 +520,7 @@ ${generatedContent}
     threadProgress: Array<{ storylineId: string; stage: string; progressNote: string }>;
     unresolvedQuestions: string[];
     impactScore: number;
+    chapterTitle: string;
   } {
     const summaryMatch = response.match(/摘要[：:]\s*(.+)/);
     const eventsMatch = response.match(/关键事件[：:]\s*\n([\s\S]*?)(?=\n角色状态|$)/);
@@ -550,6 +553,7 @@ ${generatedContent}
     let threadProgress: Array<{ storylineId: string; stage: string; progressNote: string }> = [];
     let unresolvedQuestions: string[] = [];
     let impactScore = 5;
+    let chapterTitle = ""; // v2.43.0：解析 LLM 摘要里的专用短章名
 
     // 1) 优先匹配末尾的 ```json 代码块
     const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
@@ -564,6 +568,7 @@ ${generatedContent}
         if (Array.isArray(parsed.threadProgress)) threadProgress = parsed.threadProgress;
         if (Array.isArray(parsed.unresolvedQuestions)) unresolvedQuestions = parsed.unresolvedQuestions;
         if (typeof parsed.impactScore === "number") impactScore = parsed.impactScore;
+        if (typeof parsed.chapterTitle === "string") chapterTitle = parsed.chapterTitle;
       } catch { /* ignore parse failure */ }
     } else {
       // 2) 回退：尝试从响应末尾提取 {} 对象
@@ -575,6 +580,7 @@ ${generatedContent}
           if (Array.isArray(fallback.threadProgress)) threadProgress = fallback.threadProgress;
           if (Array.isArray(fallback.unresolvedQuestions)) unresolvedQuestions = fallback.unresolvedQuestions;
           if (typeof fallback.impactScore === "number") impactScore = fallback.impactScore;
+        if (typeof fallback.chapterTitle === "string") chapterTitle = fallback.chapterTitle;
         } catch { /* ignore fallback failure */ }
       }
     }
@@ -588,6 +594,7 @@ ${generatedContent}
       threadProgress,
       unresolvedQuestions,
       impactScore,
+      chapterTitle: chapterTitle.trim(),
     };
   }
 }

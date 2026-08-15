@@ -25,6 +25,40 @@ import { detectConsistencyConflicts } from "@/core/consistency/detectConflicts";
 import { rebuildProjectDigest } from "./digest";
 
 /**
+ * 推导章名（v2.43.0）：简短（≤5 字）+ 不含任何人名。
+ *
+ * 候选来源优先级：LLM 专用短标题（chapterTitle）> 摘要首行。
+ * 两者都做「剔人名/别名 + 截 5 字」兜底，确保最终章名满足约束。
+ * 返回空串表示无任何可用候选（调用方应保留「第N章」占位，不写垃圾标题）。
+ */
+function deriveChapterName(opts: {
+  llmTitle?: string;
+  summaryFirstLine?: string;
+  characterNames: string[];
+}): string {
+  // 人名/别名按长度降序剔除：先删长名，避免短名先删导致长名残留（如「小龙女」先删，再处理「龙」）
+  const names = Array.from(new Set((opts.characterNames || []).filter(Boolean)))
+    .sort((a, b) => b.length - a.length);
+  const sources = [opts.llmTitle || "", opts.summaryFirstLine || ""];
+  for (const raw of sources) {
+    let t = String(raw).trim();
+    if (!t) continue;
+    // 剥自带「第N章」前缀（正文首行即章节标题时摘要会原样摘到）
+    t = t.replace(/^第\s*\d+\s*章[\s:：·]*/, "");
+    // 剔人名/别名——章名不应包含任何人名
+    for (const n of names) {
+      if (n && t.includes(n)) t = t.split(n).join("");
+    }
+    t = t.trim();
+    if (!t) continue;
+    // 章名要简短：截首 5 字（汉字/字符）
+    t = Array.from(t).slice(0, 5).join("");
+    if (t.length > 0) return t;
+  }
+  return "";
+}
+
+/**
  * 运行完整的生成后处理管线。
  *
  * 管线步骤：
@@ -508,6 +542,7 @@ export async function runPostGenerationPipeline(
       let threadProgress: any[] = [];
       let unresolvedQuestions: any[] = [];
       let impactScore = 0;
+      let chapterTitleGen = ""; // v2.43.0：LLM 摘要产出的专用短章名（≤5字、不含人名）
       let eventImportances: any[] = [];
       let summarized = false;
       for (let attempt = 1; attempt <= 3 && !summarized; attempt++) {
@@ -528,6 +563,7 @@ export async function runPostGenerationPipeline(
             threadProgress = (r.threadProgress as any[]) || [];
             unresolvedQuestions = (r.unresolvedQuestions as any[]) || [];
             impactScore = (r.impactScore as number) || 0;
+            chapterTitleGen = (r.chapterTitle as string) || "";
             eventImportances = (r.eventImportances as any) || [];
             summarized = true;
           } else if (attempt < 3) {
@@ -615,33 +651,41 @@ export async function runPostGenerationPipeline(
 
       send({ type: "summarize_done", summary, keyEvents });
 
-      // ── 4.1 章节命名（v1.6.1 修复：用户要求章名由 LLM 对整章总结生成，并标注第几章）──
-      // 取 summary 首行作为章节名，前缀「第N章：」，仅当标题为空或仍为「第N章」占位时才回填，
-      // 绝不覆盖用户已自定义的真实标题。
+      // ── 4.1 章节命名（v2.43.0：章名约束——简短≤5字 + 不含任何人名）──
+      // 优先用 LLM 摘要里的专用短标题字段 chapterTitle；其次回退到摘要首行；
+      // 两者都经 deriveChapterName 做「剔人名/别名 + 截 5 字」兜底。
+      // 仅当标题为空或仍为「第N章」占位时才回填，绝不覆盖用户已自定义的真实标题（满足「可更改章名」）。
       try {
         const cleanSummary = String(summary || "")
           .split("\n")
           .map((s) => s.trim())
           .filter((s) => s.length > 0)[0] || "";
-        // v1.6.2 修复：summary 可能自带「第N章」前缀（正文首行本身即章节标题时，
-        // 摘要会原样摘到「第一章 · 龙髓石」），此处先剥离，避免拼接出「第N章：第N章：xxx」重复标题。
-        let titleBase = cleanSummary.slice(0, 40).trim().replace(/^第\s*\d+\s*章[\s:：·]*/, "");
         const curTitle = String(currentNode?.title || "").trim();
         const isPlaceholder = !curTitle || /^第\s*\d+\s*章$/.test(curTitle);
         // 守卫：仅当正文非空时才回填标题。正文为空（模型偶发空返回）时摘要 LLM 会对空内容胡说，
         // 此时不该写标题，保留占位，交由上层错误流程处理。
-        if (content && content.trim().length > 0 && isPlaceholder && titleBase) {
-          const newTitle = `第${chapterOrder + 1}章：${titleBase}`;
-          await prisma.storyNode.update({
-            where: { id: nodeId },
-            data: { title: newTitle },
+        if (content && content.trim().length > 0 && isPlaceholder) {
+          const candidate = deriveChapterName({
+            llmTitle: chapterTitleGen,
+            summaryFirstLine: cleanSummary,
+            // 角色名 + 别名都纳入剔名名单（章名不应包含任何人名）
+            characterNames: activeCharacters.map((c: any) => c.name).filter(Boolean).concat(
+              activeCharacters.flatMap((c: any) => (Array.isArray((c as any).aliases) ? (c as any).aliases : [])),
+            ),
           });
-          // 复用 4 段 create 返回值（L1-006）：同步刚创建的 ChapterSummary.chapterTitle
-          if (createdSummary) {
-            await prisma.chapterSummary.update({
-              where: { id: createdSummary.id },
-              data: { chapterTitle: newTitle },
+          if (candidate) {
+            const newTitle = `第${chapterOrder + 1}章：${candidate}`;
+            await prisma.storyNode.update({
+              where: { id: nodeId },
+              data: { title: newTitle },
             });
+            // 复用 4 段 create 返回值（L1-006）：同步刚创建的 ChapterSummary.chapterTitle
+            if (createdSummary) {
+              await prisma.chapterSummary.update({
+                where: { id: createdSummary.id },
+                data: { chapterTitle: newTitle },
+              });
+            }
           }
         }
       } catch (titleErr) {

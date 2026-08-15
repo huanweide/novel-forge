@@ -14,7 +14,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Switch } from "@/components/ui/switch";
-import { Collapse } from "@/components/ui/collapse";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toastSuccess, toastError, toastInfo } from "@/components/ui/toast";
 import { ChapterAuditPanel } from "./ChapterAuditPanel";
@@ -246,18 +245,6 @@ export function ChapterConfirmBar({
         </button>
         {!collapsed && (
           <>
-            {/* 用途说明（默认收起，解答「这有什么用」） */}
-            <Collapse title="这是什么？确认流程怎么用" defaultOpen={false} size="sm" className="w-full border-t border-[var(--nv-border-2)] pt-2">
-              <div className="text-[10px] text-[var(--nv-text-tertiary)] leading-relaxed space-y-1">
-                <p>每章写完后，从这里把章节「定稿」。状态依次为：仅大纲 → 草稿 → 已生成·待提交 → 待确认 → 审校中 → 已定稿。</p>
-                <p><b className="text-[var(--nv-primary)]">智能审阅</b>：开启后合格章由系统自动定稿，你只在被拦截或想亲自把关时点「人工接管」；关闭则每章手动确认。</p>
-                <p><b className="text-[var(--nv-primary)]">AI诊断</b>：让 AI 通读本章，给出综合评分与具体问题清单（错别字/逻辑/违禁等），帮你决定能否定稿。</p>
-                <p><b className="text-[var(--nv-primary)]">人工接管</b>：临时切回逐章人工审批（提交/确认通过/打回），系统不再自动判定。</p>
-                <p><b className="text-[var(--nv-primary)]">自动交付</b>：全书章节全部定稿后自动完成整本交付，无需手动点。</p>
-                <p><b className="text-[var(--nv-primary)]">智能交付全书</b>：一键扫描全书，合格自动放行、仅拦异常，最后整本交付。</p>
-              </div>
-            </Collapse>
-
             <div className="flex items-center gap-2 flex-wrap">
           {/* v2.7.0：写作安全/质量体检入口——复用 forbidden-checker + quality-analyzer 纯函数，定稿前给可见的踩线/质量报告 */}
           <ChapterAuditPanel projectId={projectId} nodeId={nodeId} disabled={busy} triggerNodeId={auditTrigger} onTriggerConsumed={() => setAuditTrigger(null)} />
