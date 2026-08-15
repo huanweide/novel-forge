@@ -1,6 +1,12 @@
 ﻿# Novel Forge 更新公告
 
-## v2.35.0 — 2026-08-15
+## v2.36.0 — 2026-08-15
+
+### 类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）
+- **核心输入契约明确化**：`core/write-generation.ts` 的 `WriteInput` 接口 5 个 `any` 字段收窄为具体类型——`confirmedCardIds?: string[]`、`cardNotes?: Record<string, string>`、`newCharacterRequests?: string[]`、`storylineId?: string`、`diffuseCompleted?: boolean`（下游 `filterByConfirmedCards`/`prepareAuthorNote`/`handleNewCharacters`/`formatStorylines` 早已是对应的具体类型，中间层契约终于对齐，喂正文生成的请求体形状一目了然）。
+- **动态配置降级 unknown**：`core/sync-global-prompt.ts` 的 `buildGlobalPrompt` 入参 `project` 内联类型里 `llmConfig?: any`/`buildConfig?: any` 收窄为 `unknown`——二者下游已用 `as ...` 显式收窄（llmConfig 当 `Record<string, unknown>`、buildConfig 当 `BuildConfig`），`any` 纯属多余免检口子。
+- **纯函数参数守卫化**：`lib/storyline-progress.ts` 的 `computeStorylineProgress(s: any)` 改为 `s: unknown` 并在函数体用 `"sevenElements" in s` + `typeof === "object"` 守卫提取七要素（该函数只算故事线进度条填充度，入参是 Storyline 对象但不依赖任何 any 行为），真正堵住免检通道。
+- **门禁**：tsc 0 错误；vitest 全量 870/870 全绿（受影响模块 write-generation / storyline-progress / sync-global-prompt 类型门禁达标）。灰区（`: any` 注解 375 处/94 文件）其余大量为 `.find((n:any)=>...)` 上游数组 any[] 与 `catch(err:any)` 宽松场景，按路线图分批推进、不硬啃。
 
 ### 类型逃逸逐文件精修·第二批（tables 页 useState&lt;any&gt; 精确接口化）
 - **精确接口化**：`app/workspace/[projectId]/tables/page.tsx` 三处结果态收窄——单表填表 `fillResult`（ok/operations/applied/error/at/warnings）、召回列表 `recallItems`（source/title/content）定义精确接口 `TableFillResult`/`RecallItem` 替代 `useState<any>`/`useState<any[]>`；自检问题 `issues` 删 `as any[]` 直接吃精确类型。未来维护者（含 AI）能直接看懂这两个状态长什么样。

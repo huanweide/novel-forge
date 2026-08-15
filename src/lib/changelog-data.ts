@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.35.0";
+export const LATEST_VERSION = "v2.36.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.36.0 类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）：core/write-generation.ts 的 WriteInput 接口 5 字段（confirmedCardIds?: string[]、cardNotes?: Record<string,string>、newCharacterRequests?: string[]、storylineId?: string、diffuseCompleted?: boolean）对齐下游具体类型契约；core/sync-global-prompt.ts 的 buildGlobalPrompt 入参 project 内联类型 llmConfig?/buildConfig? 由 any 降级 unknown（下游已 as 显式收窄）；lib/storyline-progress.ts 的 computeStorylineProgress(s: any) 改 s: unknown 加内部 in/typeof 守卫提取七要素。tsc 0 错误；vitest 全量 870/870 全绿；灰区剩余 find/map 回调元素 any 与 catch(err:any) 宽松场景按路线图分批推进。",
   "v2.35.0 类型逃逸逐文件精修·第二批（tables 页 useState<any> 精确接口化）：app/workspace/[projectId]/tables/page.tsx 三处结果态收窄——单表填表 fillResult（ok/operations/applied/error/at/warnings）与召回 recallItems（source/title/content）定义精确接口 TableFillResult/RecallItem 替代 useState<any>/<any>，删 1 处 as any[]（自检 issues 直接吃精确类型）；一键填表 fillAllResult 因后端返回动态自检报告（selfCheck 含多类 issues + fillErrorMeta）结构随后端演化、硬类型化脆弱，保留 any 并注释说明（合理动态豁免）。tsc 0 错误；组件测试稀疏（tsc 类型门禁替代）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.34.0 类型逃逸逐文件精修·第一批（蓝区 4 处 unknown 收窄 + 2 处动态豁免标注）：纯前端/store/纯函数层——store/index.ts 的 patchProject 参数、components/explore/OutlinePanel.tsx 角色 personality/appearance、core/babylore/ifcell.ts 的 IfCellTable.rows、core/explore/utils.ts 的 extractCharacterKeys 的 char 参数，共 4 处 Record<string,any> 收窄为 Record<string,unknown>（unknown 强制下游做类型检查、比 any 安全）；tables/page.tsx 动态列表格 rows 与 babylore/fill.ts 填表溯源 Json 快照 2 处保留 any 并注释说明（动态列运行时取值直接进 React 渲染、prisma Json 字段仅接受 any 形态，硬改会破坏渲染/落库），诚实标注不假收敛。门禁：tsc 0 错误；vitest 受影响 6 文件 64/64 全绿；API 路由桥接层（adopt/autofill/import）属红区暂缓，后续批次推进。个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.33.0 故事线生成去 thread 冗余（伏笔统一归口伏笔面板）：源头收口——删除 generate.ts 的【伏笔/线索铁律】prompt 块（原指令 AI 把「悬而未解的谜团/物证/暗线」写成 type=thread 的伏笔线），替换为【伏笔/线索（悬念）归属说明】明确引导 AI「伏笔/线索请用专门的伏笔面板、不要作为故事线生成」；输出格式注释「type: main | side | thread」收敛为「main | side」，删 allowThread 分支、rawType 只映射 main→main 其余→side、sevenElements 去掉 thread 分支；route.ts 内联 prompt 副本同步、落库逻辑保留兼容存量 2 条 thread 行无损读取；generate.test.ts 用例重写为「AI 返回 thread 统一降级为 side」断言。经 pg 直连核库：thread 仅 2 条半废弃、伏笔面板已在用（5 条），故不强行迁移、只掐源头消除重复入口。tsc 0 错误；vitest 全量 93 文件 870/870 全绿（generate.test.ts 用例重写成降级断言、测试数不变）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -79,6 +80,24 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.36.0",
+    date: "2026-08-15",
+    title: "类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）",
+    sections: [
+      { label: "核心输入契约明确化（WriteInput 5 字段）", items: [
+        "core/write-generation.ts 的 WriteInput 接口 5 个 any 字段收窄为具体类型——confirmedCardIds?: string[]、cardNotes?: Record<string,string>、newCharacterRequests?: string[]、storylineId?: string、diffuseCompleted?: boolean（下游 filterByConfirmedCards/prepareAuthorNote/handleNewCharacters/formatStorylines 早已是对应的具体类型，中间层契约终于对齐）",
+      ] },
+      { label: "动态配置降级 unknown + 纯函数守卫化", items: [
+        "core/sync-global-prompt.ts 的 buildGlobalPrompt 入参 project 内联类型 llmConfig?/buildConfig? 由 any 降级 unknown（下游已 as 显式收窄，any 纯属多余免检口子）",
+        "lib/storyline-progress.ts 的 computeStorylineProgress(s: any) 改 s: unknown 并在函数体用 in/typeof 守卫提取七要素（只算进度条、不依赖任何 any 行为）",
+      ] },
+      { label: "门禁与路线图", items: [
+        "tsc 0 错误；vitest 全量 870/870 全绿",
+        "灰区（: any 注解 375 处/94 文件）剩余大量 find/map 回调元素 any（上游数组 any[]）与 catch(err:any) 宽松场景，按路线图分批推进、不硬啃",
+      ] },
+    ],
+  },
   {
     version: "v2.35.0",
     date: "2026-08-15",

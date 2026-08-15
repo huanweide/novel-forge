@@ -41,11 +41,11 @@ export interface WriteInput {
   nodeId: string;
   authorNote?: string;
   targetWordCount?: number;
-  confirmedCardIds?: any;
-  cardNotes?: any;
-  newCharacterRequests?: any;
-  storylineId?: any;
-  diffuseCompleted?: any;
+  confirmedCardIds?: string[];
+  cardNotes?: Record<string, string>;
+  newCharacterRequests?: string[];
+  storylineId?: string;
+  diffuseCompleted?: boolean;
 }
 
 /** 抽离层向前置校验失败（非生成期错误）传达业务边界，便于路由映射。 */

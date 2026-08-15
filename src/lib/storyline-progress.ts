@@ -22,8 +22,11 @@ export interface StorylineProgress {
   label: string;
 }
 
-export function computeStorylineProgress(s: any): StorylineProgress {
-  const se = s?.sevenElements && typeof s.sevenElements === "object" ? s.sevenElements : {};
+export function computeStorylineProgress(s: unknown): StorylineProgress {
+  const rawSe = s && typeof s === "object" && "sevenElements" in s
+    ? (s as { sevenElements?: unknown }).sevenElements
+    : undefined;
+  const se: Record<string, unknown> = rawSe && typeof rawSe === "object" ? (rawSe as Record<string, unknown>) : {};
   const filled = SEVEN_ELEMENT_FILL_KEYS.filter(
     (k) => typeof se[k] === "string" && (se[k] as string).trim().length > 0,
   ).length;
