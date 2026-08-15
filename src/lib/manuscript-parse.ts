@@ -58,17 +58,22 @@ async function parseDocx(buf: ArrayBuffer): Promise<string> {
   return docxToText(xml);
 }
 
-function parseManifest(opf: string): Record<string, string> {
+export function parseManifest(opf: string): Record<string, string> {
   const map: Record<string, string> = {};
-  const re = /<item\b[^>]*\bid="([^"]+)"[^>]*\bhref="([^"]+)"[^>]*\/?>/g;
+  // 顺序无关：分别提取每个 <item> 的 id 与 href，
+  // 兼容「href 在前、id 在后」的真实 EPUB（旧正则要求 id 在前会漏掉这类 item 导致导入缺章）。
+  const itemRe = /<item\b[^>]*>/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(opf)) !== null) {
-    map[m[1]] = m[2];
+  while ((m = itemRe.exec(opf)) !== null) {
+    const tag = m[0];
+    const idM = tag.match(/\bid="([^"]+)"/);
+    const hrefM = tag.match(/\bhref="([^"]+)"/);
+    if (idM && hrefM) map[idM[1]] = hrefM[1];
   }
   return map;
 }
 
-function parseSpine(opf: string): string[] {
+export function parseSpine(opf: string): string[] {
   const ids: string[] = [];
   const spineMatch = opf.match(/<spine\b[^>]*>([\s\S]*?)<\/spine>/);
   if (!spineMatch) return ids;
@@ -78,7 +83,7 @@ function parseSpine(opf: string): string[] {
   return ids;
 }
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   let s = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
   s = s.replace(/<\s*(br|\/p|\/div|\/h[1-6]|\/li|\/tr)\s*>/gi, "\n");
   s = s.replace(/<[^>]+>/g, " ");
@@ -89,12 +94,19 @@ function stripHtml(html: string): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, d) => {
+      const n = parseInt(d, 10);
+      // &#160; 不间断空格与命名实体 &nbsp; 一致归一为普通空格，避免混入 U+00A0 破坏下游分词/显示
+      return n === 160 ? " " : String.fromCharCode(n);
+    });
   return s.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function docxToText(xml: string): string {
-  const paras = xml.split(/<\s*\/\s*p\s*>/i);
+export function docxToText(xml: string): string {
+  // 兼容 OOXML 真实闭合标签 </w:p>（带 w: 命名空间前缀）；旧正则只匹配裸 </p>，
+  // 导致整篇 docx 被当成一整段、导入长文档糊成一坨。
+  const paras = xml.split(/<\/\s*(?:w:)?p\s*>/gi);
   const lines: string[] = [];
   for (const p of paras) {
     const textParts: string[] = [];
