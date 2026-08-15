@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.38.0";
+export const LATEST_VERSION = "v2.39.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.39.0 页面无障碍(a11y)复验与修复（任务 #10）：实测三套主题关键文字令牌对比度（WCAG AA 阈值 4.5:1），浅色主题主色 --nv-primary 由 oklch(0.55) 压暗至 oklch(0.52)，文字对比度从临界 4.42 提升至 5.00 稳达 AA；写作正文编辑区补 break-words 防超长英文/链接横向溢出；核查确认浅色金色文字对比度(F01)、生成状态 aria-live 播报(F03) 历史已修，AIChatBar 预设按钮含可见文字标签已可访问(F05 不适用)。零逻辑改动、纯令牌与样式加固；tsc 0 错误；vitest 全量全绿。",
   "v2.38.0 角色核心逻辑深度优化（任务 #16）：智能去重与谨慎建卡回归防护网——补 3 个「迪哥」复杂称呼场景测试（迪哥先生/迪哥/迪哥·若昂内 同核高置信合并、迪哥·若昂内/迪哥·桑切斯 两马甲降 low 待确认、迪哥/小迪 前缀缩写合并）+ 6 个谨慎建卡门槛边界测试（出现 0/1 次拦截、2/3 次放行、自定义阈值）；实证任务 #16 四诉求已落地并钉死防回归。零生产代码改动、纯测试加固；tsc 0 错误；vitest 全量 870/870 全绿。",
   "v2.37.0 类型逃逸逐文件精修·第四批（灰区 interface 字段透传态收窄）：core/babylore/fill.ts 的 SkippedOp 接口 op: any→unknown（被跳过的无效填表操作仅透传进告警、下游不访问内部，unknown 强制后续若访问需守卫）；app/workshop/page.tsx 的 PresetRec 接口 content: any→unknown（预设内容整体透传进 JSON 请求体序列化、无属性访问）。tsc 0 错误；babylore 40/40 测试全绿。经复扫灰区（非测试/非生成物 :any 注解共 319 处），低垂果实已被历史五轮（v2.25/v2.28/v2.34/v2.35/v2.36）摘完，剩余多为上游 Prisma 模型与 AI 桥接返回的连锁 any（如 outline-context 整片、memory-decay 的 eventImportances、tool-registry 的 prisma:any），独立收窄任一处会向下游属性访问扩散报错，需整体上游类型化大改，按路线图红区标注暂缓、不硬啃。",
   "v2.36.0 类型逃逸逐文件精修·第三批（灰区接口字段/函数参数具体类型化）：core/write-generation.ts 的 WriteInput 接口 5 字段（confirmedCardIds?: string[]、cardNotes?: Record<string,string>、newCharacterRequests?: string[]、storylineId?: string、diffuseCompleted?: boolean）对齐下游具体类型契约；core/sync-global-prompt.ts 的 buildGlobalPrompt 入参 project 内联类型 llmConfig?/buildConfig? 由 any 降级 unknown（下游已 as 显式收窄）；lib/storyline-progress.ts 的 computeStorylineProgress(s: any) 改 s: unknown 加内部 in/typeof 守卫提取七要素。tsc 0 错误；vitest 全量 870/870 全绿；灰区剩余 find/map 回调元素 any 与 catch(err:any) 宽松场景按路线图分批推进。",
@@ -82,6 +83,22 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.39.0",
+    date: "2026-08-15",
+    title: "页面无障碍(a11y)复验与修复（任务 #10）：三主题对比度达标 + 正文溢出防护",
+    sections: [
+      { label: "a11y 复验实测（任务 #10）", items: [
+        "实测三套主题关键文字令牌对比度（WCAG AA 阈值 4.5:1）：深色（主色5.61/金9.20/次级9.12/弱6.18）、苍青（主色8.04/金10.78/次级9.35/弱5.99）、浅色（次级7.36/弱5.39/暗金5.20）全部达标",
+        "浅色主题主色 --nv-primary 由 oklch(0.55 0.17 270) 压暗至 oklch(0.52 0.17 270)，文字对比度从临界 4.42 提升至 5.00 稳达 AA（此前唯一硬性失败项 F02）",
+        "核查确认浅色金色文字对比度(F01：accent-text-on-light 0.50 实测 5.20 AA)、生成状态 aria-live 播报(F03：CenterPanel 已有 aria-live 区域) 历史已修；AIChatBar 预设按钮含可见文字标签已可访问(F05 不适用)",
+      ] },
+      { label: "正文溢出防护 + 门禁", items: [
+        "写作正文编辑区（CenterPanel 章节正文 contentEditable）补 break-words，防超长英文单词/链接横向溢出破坏窄屏布局（F06 收口）",
+        "tsc 0 错误；vitest 全量全绿；四版本文件对齐 v2.39.0；个人 IP 仍归瑞宝宝",
+      ] },
+    ],
+  },
   {
     version: "v2.38.0",
     date: "2026-08-15",

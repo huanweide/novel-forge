@@ -284,8 +284,8 @@
   --nv-border-2:    rgba(15, 18, 30, 0.11);
   --nv-border-3:    rgba(15, 18, 30, 0.16);
 
-  --nv-primary:      oklch(0.55 0.17 270);
-  --nv-primary-soft: oklch(0.55 0.17 270 / 0.12);
+  --nv-primary:      oklch(0.52 0.17 270);  /* F02：浅色主色文字由 0.55(CR4.42<4.5 AA) 压暗至 0.52(CR5.00≥AA)，消除浅色主题主色/链接文字临界不达标 */
+  --nv-primary-soft: oklch(0.52 0.17 270 / 0.12);
   --nv-success:      oklch(0.55 0.16 160);
   --nv-success-soft: oklch(0.55 0.16 160 / 0.12);
   --nv-warning:      oklch(0.72 0.16 85);
