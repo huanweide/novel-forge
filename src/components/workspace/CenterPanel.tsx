@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { Icon } from "@/components/ui/icons";
+import { TTSPlayer } from "./TTSPlayer";
 import { ENTITY_LEGEND } from "@/core/entity-highlighter";
 import { Modal } from "@/components/ui/Modal";
 import { toastSuccess, toastError } from "@/components/ui/toast";
@@ -51,6 +52,8 @@ export function CenterPanel({
   const [editingOutline, setEditingOutline] = useState(false);
   const [outlineDraft, setOutlineDraft] = useState("");
   const [outlineExpanded, setOutlineExpanded] = useState(false);
+  // ── AI 念书（语音朗读）：标题下方「朗读本章」入口的展开态 ──
+  const [showTTS, setShowTTS] = useState(false);
 
   // ── 正文内联编辑：点击「编辑正文」后页面外观不变，仅正文变为可编辑状态（无外框界面）──
   const [inlineEditing, setInlineEditing] = useState(false);
@@ -419,6 +422,22 @@ export function CenterPanel({
                   <h1 className="text-xl font-bold text-[var(--nv-text-primary)] text-center mb-6 mt-2 tracking-wide">
                     {selectedNode.title}
                   </h1>
+                )}
+                {/* AI 念书（语音朗读）：标题下方一键朗读本章正文 */}
+                {displayContent && (
+                  <div className="flex justify-center mb-5">
+                    {showTTS ? (
+                      <TTSPlayer text={displayContent} onClose={() => setShowTTS(false)} />
+                    ) : (
+                      <button
+                        onClick={() => setShowTTS(true)}
+                        className="flex items-center gap-1.5 h-8 px-3 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
+                        title="用浏览器语音朗读本章正文"
+                      >
+                        <Icon name="radio" size={13} /> 朗读本章
+                      </button>
+                    )}
+                  </div>
                 )}
                 {/* 固定色图例：角色 / 世界书各分类的标注色说明（v0.46.81） */}
                 <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-4 text-[10px] text-[var(--nv-text-tertiary)]">

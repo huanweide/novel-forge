@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.40.0";
+export const LATEST_VERSION = "v2.41.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.41.0 AI 念书（语音朗读）：写作正文区新增「朗读本章」入口，点按弹出控制条用浏览器内置 Web Speech API 朗读当前章节正文——零依赖、零网络、零密钥（不依赖任何外部 TTS 服务，贴合 novel-forge 本地工具定位）；组件先表层清洗 Markdown 标记（代码块/链接/粗斜体/标题/引用/列表等）避免把符号念出；控制条支持播放/暂停/继续/停止、语速 0.5–2x 实时调节、多中文音色切换，浏览器不支持时给友好提示（换 Chrome/Edge）；卸载自动 cancel 防声音泄漏。纯前端新增，无后端/接口/LLM 变化；tsc 0 错误；vitest 全量 93 文件 879/879 全绿。个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.40.0 功能精简与内置化（任务 #12）：删除三个确凿死依赖——@bubblewrap/core（TWA 安卓打包、本地 Web 工具零用处）、uuid、dotenv（全项目零 import/require；Next.js 内置 .env 加载、代码用 crypto.randomUUID，均不需要），依赖树更干净、安装更快；创作铁律面板(RulesPanel)头部补对称区分说明，明确「不同于项目配置里的正则后处理规则——后者生成后清洗正文、两者各管一段互不影响」，两套规则系统双向闭环、彻底消除用户混淆（UI_FIX_PLAN I-2 项）；实证前端资源全内置（globals.css 仅 @import 本地 npm 包、src 零外部 CDN 依赖），内置化已达标、无需改动。tsc 0 错误；vitest 全量 879/879 全绿。",
   "v2.39.0 页面无障碍(a11y)复验与修复（任务 #10）：实测三套主题关键文字令牌对比度（WCAG AA 阈值 4.5:1），浅色主题主色 --nv-primary 由 oklch(0.55) 压暗至 oklch(0.52)，文字对比度从临界 4.42 提升至 5.00 稳达 AA；写作正文编辑区补 break-words 防超长英文/链接横向溢出；核查确认浅色金色文字对比度(F01)、生成状态 aria-live 播报(F03) 历史已修，AIChatBar 预设按钮含可见文字标签已可访问(F05 不适用)。零逻辑改动、纯令牌与样式加固；tsc 0 错误；vitest 全量全绿。",
   "v2.38.0 角色核心逻辑深度优化（任务 #16）：智能去重与谨慎建卡回归防护网——补 3 个「迪哥」复杂称呼场景测试（迪哥先生/迪哥/迪哥·若昂内 同核高置信合并、迪哥·若昂内/迪哥·桑切斯 两马甲降 low 待确认、迪哥/小迪 前缀缩写合并）+ 6 个谨慎建卡门槛边界测试（出现 0/1 次拦截、2/3 次放行、自定义阈值）；实证任务 #16 四诉求已落地并钉死防回归。零生产代码改动、纯测试加固；tsc 0 错误；vitest 全量 870/870 全绿。",
@@ -84,6 +85,22 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.41.0",
+    date: "2026-08-15",
+    title: "AI 念书（语音朗读）：写作正文区「朗读本章」入口 + 浏览器语音控制条",
+    sections: [
+      { label: "新增 AI 念书（语音朗读）", items: [
+        "写作正文区章节标题下方新增「朗读本章」按钮，点按弹出控制条，用浏览器内置 Web Speech API（window.speechSynthesis）朗读当前章节正文——零依赖、零网络、零密钥，不依赖任何外部 TTS 服务（如 Edge TTS 需联网+密钥），贴合 novel-forge 本地工具定位",
+        "朗读前先表层清洗 Markdown 标记（代码块/行内代码/图片/链接/标题/粗斜体/引用/列表/残余符号），避免把 **、*、#、> 这类符号也念出来；语音加载优先中文音色（lang 含 zh / 名称含 中文/普通话/国语/Chinese）",
+      ] },
+      { label: "控制条与健壮性", items: [
+        "控制条支持播放/暂停/继续/停止、语速 0.5–2x 实时调节（拖动即时作用于正在朗读的语句）、多中文音色下拉切换（音色>1 时才显示）；浏览器不支持语音合成时给友好提示（建议换 Chrome/Edge）",
+        "组件卸载时自动 speechSynthesis.cancel()，避免声音泄漏到其它页面；纯前端新增 src/components/workspace/TTSPlayer.tsx + CenterPanel 接入，无后端/接口/LLM 变化",
+        "tsc 0 错误；vitest 全量 93 文件 879/879 全绿；四版本文件对齐 v2.41.0；个人 IP 仍归瑞宝宝",
+      ] },
+    ],
+  },
   {
     version: "v2.40.0",
     date: "2026-08-15",
