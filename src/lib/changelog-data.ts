@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.31.0";
+export const LATEST_VERSION = "v2.32.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.32.0 测试流程优化：补核心散文→HTML 转换 proseToHtml 单测（导出质量地基加固）：测试覆盖——给被 HTML / EPUB / DOCX 三大导出复用、却长期零单测覆盖的核心转换函数 proseToHtml 补 11 例自动化测试，锁死段落包裹、空行分段、**粗体**/*斜体*/---分割线/>引用块/HTML 特殊字符转义（防 XSS 与渲染错乱）/段落内换行等既有行为；用 node 实锤确认该函数行为健康、无丢内容或崩溃级缺陷，导出渲染地基稳固。纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 93 文件 870/870 全绿（较 v2.31.0 基线 +1 文件 +11 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.31.0 内部死代码清理：删除 entity-auto-creator.ts 中零调用方的 autoCreateEntities 死函数（含其独有 AutoCreateResult 接口、TYPE_LABELS 常量与 4 个未使用 import：prisma/Prisma/DetectedEntity/isCompleteEntityName）；该函数从未被任何 src 入口调用、测试也未引用，属确认冗余。保留 resolveEntityCategory/isSimilarName/normalizeDiscoveryName/resolveDiscoveryMergeTarget/shouldAutoCreateCharacterCard 等仍被 entity-sync 使用的纯函数与确定性分类器，建卡清洗逻辑不受影响。tsc 0 错误；vitest 全量全绿；纯内部瘦身，零功能/接口/LLM 行为变化。",
   "v2.30.0 角色筛选「已分类/未分类」冗余标签清理（瑞宝宝 UI 收口）：移除角色栏筛选栏「已分类」「未分类」两个派生筛选芯片（仅按有没有标签二分、与具体标签筛选语义重叠、用户明确不需要）及其 statHasTags/statNoTags 统计；同步清理 filterCharacters 纯函数里 has-tags/no-tags 两个不可达死分支与对应 4 个单元测试用例（character-filter.test.ts 两例 + CharacterFilters.test.tsx 两例）；清理后筛选栏只剩角色定位+状态+具体用户标签三层，更干净。tsc 0 错误；vitest 受影响 15 测试全绿；纯前端收敛，零额外接口、零额外 LLM 开销；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.29.0 手稿导入解析两处真实 bug 修复（马斯克 CEO 循环运营）：导入健壮性——实测修掉 manuscript-parse.ts 两处会导致「导入丢内容」的真实缺陷：①docxToText 段落切分正则只识别裸 </p>，漏掉 OOXML 真实闭合标签 </w:p>，整篇 docx 被当成一整段、长文档糊成一坨；②parseManifest 要求 <item> 的 id 必须在 href 之前，顺序颠倒的真实 EPUB（href 在前）被漏匹配、导入缺章。另补 stripHtml 数字实体解码（&#160; 不间断空格归一普通空格、&#8211; 等转真实字符），与命名实体 &nbsp; 行为一致。零运行时逻辑改动、零新接口、零 LLM 开销；新增 src/lib/manuscript-parse.test.ts 12 例锁死修复；tsc 0 错误；vitest 全量 92 文件 864/864 全绿；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -75,6 +76,19 @@ export const CHANGELOG_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.32.0",
+    date: "2026-08-15",
+    title: "测试流程优化：补核心散文→HTML 转换 proseToHtml 单测（导出质量地基加固）",
+    sections: [
+      { label: "测试流程优化", items: [
+        "给被 HTML / EPUB / DOCX 三大导出复用、却长期零单测覆盖的核心转换函数 proseToHtml 补 11 例自动化测试（src/core/proseToHtml.test.ts）",
+        "锁死段落包裹、空行分段、**粗体**/*斜体*/---分割线/>引用块/HTML 特殊字符转义（防 XSS 与渲染错乱）/段落内换行等既有行为",
+        "用 node 实锤确认该函数行为健康、无丢内容或崩溃级缺陷，导出渲染地基稳固；纯测试补全，零生产代码改动、零接口/LLM 变化",
+        "tsc 0 错误；vitest 全量 93 文件 870/870 全绿（较 v2.31.0 基线 +1 文件 +11 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.31.0",
     date: "2026-08-15",
