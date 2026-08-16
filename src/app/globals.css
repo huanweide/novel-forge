@@ -653,7 +653,8 @@
 .btn-creative:active,
 .btn-ghost:active,
 .btn-success:active,
-.btn-danger:active {
+.btn-danger:active,
+[data-slot="button"]:active {
   animation: nf-btn-ping 0.45s var(--ease-out-smooth);
 }
 

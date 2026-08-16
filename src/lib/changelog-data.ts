@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.58.0";
+export const LATEST_VERSION = "v2.59.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.59.0 创造前弹窗深度美化（UI 设计师·虚空玻璃体系·Stage 2）：①新手引导 OnboardingModal（首次进入工作区弹出）重做——三步上手卡（选个开局/让 AI 写/导出成书）stagger 入场（@keyframes nf-hero-rise 错开 animation-delay）、序号徽章发光（box-shadow 题材色辉光）、功能特性行图标瓷砖渐变描边 + hover 辉光、CTA「开始创作 →」箭头 hover 右移；②项目设定 BuildConfigDialog 重做——四个分区（基础信息/风格与设定/流派标签/生成选项）加分区图标（book/palette/tag/sliders）+ 分节 stagger 入场、分段选项（缝合怪节奏/故事线风格/自动化程度）选中态加题材色辉光 + 点击缩放 active:scale-[0.97]、流派标签选中态题材色辉光 + 点击缩放；③导入备份包 ImportDialog 重做——头部包图标瓷砖、选项行选中态题材色辉光 + 勾选发光、stagger 入场；④点击反馈全域增强——把金色光环脉冲 @keyframes nf-btn-ping 从仅 .btn-* 扩展到全站 [data-slot=button]（即 <Button> 组件），所有按钮按下都有金色环扩散（回应「很缺点击交互」）；⑤质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.58.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.59.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.58.0 首页全站级深度美化（UI 设计师·虚空玻璃体系收敛 + 交互巧思）：①删「纸舟星海」WebGL 纸船动画（用户明确不要、占资源）换「灵感文体墙」——12 种文学体裁悬浮卡（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠…），实体化玻璃（深色铺底 + color-mix 题材色微染 + 悬浮投影 + 题材色光晕），悬浮上浮发光、点即用该体裁一键开局（/api/seed/genre-project）；②收敛滤纸——文体卡原各叠 40px 毛玻璃模糊八张糊成片，改不靠模糊出层次（回应「不要一堆滤纸效果」）；③交互巧思——Hero 首屏 stagger 入场（@keyframes nf-hero-rise 淡入+上浮+轻收焦、各元素 animation-delay 错开）、按钮点击金色光环脉冲（:active outline 扩散 @keyframes nf-btn-ping）、文体卡点击中心光晕（:active ::after 径向渐变）、加载态呼吸边线（@keyframes nf-gtile-pulse 替代静态置灰）、箭头 hover 位移（group-hover:translate-x）；④删空状态与文体墙重复的「按题材开局」展开区，首页不繁杂；⑤质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.57.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.58.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.57.0 生成关键路径三纯函数测试补锁（马斯克 CEO 循环运营收口）：①测试加固——给被 write/refine/continue 三路由与批量 write-generation 主路径共用、此前零直接单测的生成预处理纯函数 src/core/pipeline/pre-processor.ts 补 22 例自动化测试（src/core/pipeline/pre-processor.test.ts），锁死 extractLLMConfig / filterByConfirmedCards / buildCardNotesText 三函数契约；②extractLLMConfig 温度/topP 优先级解析——项目自定义 > 文风模板默认 > 硬编码兜底（温度 0.85 / topP 0.95），重点钉死「项目 temperature 设为 0（合法值）必须保留、不被 ?? 兜底吞掉」与「styleTemplateId 空串/不存在时回退兜底、template 为 undefined」与「customForbiddenPatterns 原样透传、缺省回退空数组」，该函数是生成风格控制总闸门、一旦优先级被静默改坏全站生成都会跑偏；③filterByConfirmedCards——confirmedCardIds 为 undefined/空数组时原样返回全部、按 id 集合过滤、不存在 id 不凭空补、重复 id 不重复计数；④buildCardNotesText——undefined/空对象/全空白备注返回空串、指向不存在角色的备注跳过、有效备注拼成「[角色名] 备注」并加「最高优先级」头部；纯测试补全、零生产代码改动、零接口/LLM 变化；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 全量 111 文件 1111/1111 全绿（较 v2.56.0 基线 110 文件 1089 +1 文件 +22 例）；四版本文件对齐 v2.57.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.56.0 填表默认关 + 确认/交付开关集中管控（Task #91·P0·瑞宝宝指令「能精简就精简」）：①填表默认关——autoFillEnabled 默认由 true 改为 false（schema db push 已同步真实库），babylore/loop.ts 读取兜底 ?? true 改为 ?? false，新项目默认不自动填表（避免每章自动抽表产生脏卡/干扰），存量项目保持原值可在「自动填表」设置开启；②确认/交付开关集中——把散落在章节确认栏的「自动确认（智能审阅）」「自动交付全书」两个开关收拢进「自动填表」设置弹窗，与填表总开关/频率/跳过最新章/上下文楼层同处可见可切，且保存时经 patchProject 同步前端 store 使工作区确认栏即时反映；config 路由 GET/PUT 扩展支持 autoConfirmEnabled/autoDeliverEnabled（与 /api/projects/[id] PATCH 并存）；③「新实体默认同意」即填表开启时的语义（开启后自动抽新角色/世界实体写入结构化表），在总开关文案讲清、不另建字段保持精简；④双门禁——tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（本版零新增测试）；四处版本文件对齐 v2.56.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -116,6 +117,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v2.59.0 进书前的弹窗更好看了：①第一次进工作区会弹「新手引导」——三步上手（选个开局→让 AI 写→导出成书）依次淡入、序号亮起光晕、下面几个功能特性图标卡片悬浮发光，点「开始创作」箭头会轻轻右移；②「项目设定」弹窗（决定整本书基调的地方）四个分区加了小图标、依次进场，分段选项（快/慢节奏、创意/平常/简约、自动/自由/全权）选中时亮起题材色光晕、按下会微微缩一下；③「导入备份包」弹窗头部加了图标、勾选项会亮起光晕、勾选对勾发光；④全站所有按钮按下都会冒出一圈金色光环（之前只有部分按钮有），点击反馈更明确。质量门禁 tsc 零错误、vitest 全量 1111 例全绿。个人 IP 仍归瑞宝宝。",
   "v2.58.0 首页大变样：①删掉你说过不要的 WebGL 纸船动画，换成「灵感文体墙」——一排文学体裁卡片（仙侠/悬疑/科幻…12 种），悬浮浮起发光、点一下就用那个体裁一键开局；②之前文体卡是大糊玻璃八张叠一起发晕，现在改成清爽实体卡、淡淡染上每种体裁自己的颜色、悬浮才亮光晕——不晕也不简陋；③打开首页有进场感：标题按钮依次淡入上浮；点按钮有金色光环脉冲；点文体卡有题材色光晕漫开、开局中时边框呼吸；鼠标移到「进入工作台/开始探讨」上箭头轻轻右移。",
   "新手引导更贴心：首页新增一步一步的上手引导——配好 AI 钥匙 → 建第一本书 → 让 AI 写第一章 → 导出成书，第一次打开也不懵。",
   "设置页大瘦身：原本 8 项配置收敛成「2 步配置」（选服务商 + 填 Key 测试），违禁词 / 快捷键 / 记忆衰减等高级选项收进折叠，找不到的东西不再吓人。",
@@ -124,6 +126,30 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.59.0",
+    date: "2026-08-16",
+    title: "创造前弹窗深度美化（虚空玻璃 · Stage 2）",
+    sections: [
+      { label: "新手引导 OnboardingModal 重做", items: [
+        "首次进入工作区弹出的三步引导（选个开局 / 让 AI 写 / 导出成书）改为 stagger 依次入场（@keyframes nf-hero-rise，各卡 animation-delay 错开）",
+        "序号徽章加题材色辉光（box-shadow），功能特性行图标瓷砖改渐变描边 + hover 辉光，CTA「开始创作 →」箭头 hover 右移（group-hover/button:translate-x）",
+      ] },
+      { label: "项目设定 BuildConfigDialog 重做", items: [
+        "四个分区（基础信息/风格与设定/流派标签/生成选项）加分区图标（book/palette/tag/sliders）+ 分节 stagger 入场",
+        "分段选项（缝合怪节奏/故事线风格/自动化程度）选中态加题材色辉光、点击缩放 active:scale-[0.97]；流派标签选中态题材色辉光 + 点击缩放 active:scale-95",
+      ] },
+      { label: "导入备份包 ImportDialog 重做", items: [
+        "头部加包图标瓷砖（package），选项行选中态题材色辉光、勾选对勾发光（drop-shadow），整体 stagger 入场",
+      ] },
+      { label: "点击反馈全域增强", items: [
+        "金色光环脉冲 @keyframes nf-btn-ping 从仅 .btn-* 扩展到全站 [data-slot=button]（即 <Button> 组件），所有按钮按下都有金色环扩散，回应「很缺点击交互」",
+      ] },
+      { label: "质量门禁", items: [
+        "tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.58.0 同基线、本版零新增测试、纯 UI/CSS 改动）；四版本文件对齐 v2.59.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.58.0",
     date: "2026-08-16",

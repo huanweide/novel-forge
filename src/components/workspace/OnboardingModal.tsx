@@ -60,12 +60,16 @@ export function OnboardingModal() {
       size="lg"
     >
       {/* 三步上手路径 */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        {STEPS.map((s) => (
-          <div key={s.n} className="rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3">
-            <div className="mb-1 flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--nv-primary)] text-[10px] font-bold text-white">{s.n}</span>
-              <span className="text-xs font-medium text-[var(--nv-text-primary)]">{s.title}</span>
+      <div className="mb-4 grid grid-cols-3 gap-2 nf-accent-bar">
+        {STEPS.map((s, i) => (
+          <div
+            key={s.n}
+            className="nf-hero-rise group rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 transition-all duration-300 hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] hover:shadow-[var(--shadow-glass-rest)]"
+            style={{ animationDelay: `${100 + i * 110}ms` }}
+          >
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--nv-primary)] text-[11px] font-bold text-white shadow-[0_0_14px_color-mix(in_oklch,var(--nv-primary)_55%,transparent)]">{s.n}</span>
+              <span className="text-xs font-semibold text-[var(--nv-text-primary)]">{s.title}</span>
             </div>
             <p className="text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">{s.desc}</p>
           </div>
@@ -73,9 +77,13 @@ export function OnboardingModal() {
       </div>
 
       <div className="space-y-2.5">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="flex items-start gap-3 rounded-xl bg-[var(--nv-surface-1)] p-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]">
+        {FEATURES.map((f, i) => (
+          <div
+            key={f.title}
+            className="nf-hero-rise group flex items-start gap-3 rounded-xl border border-transparent bg-[var(--nv-surface-1)] p-3 transition-all duration-300 hover:border-[var(--nv-border-2)] hover:bg-[var(--nv-surface-2)] hover:shadow-[var(--shadow-glass-rest)]"
+            style={{ animationDelay: `${430 + i * 90}ms` }}
+          >
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--nv-primary-soft)] to-[var(--nv-surface-2)] text-[var(--nv-primary)] ring-1 ring-inset ring-[color-mix(in_oklch,var(--nv-primary)_25%,transparent)] transition-all duration-300 group-hover:shadow-[0_0_16px_color-mix(in_oklch,var(--nv-primary)_45%,transparent)] group-hover:ring-[color-mix(in_oklch,var(--nv-primary)_45%,transparent)]">
               <Icon name={f.icon} size={16} />
             </div>
             <div className="min-w-0">
@@ -86,7 +94,10 @@ export function OnboardingModal() {
         ))}
       </div>
       <ModalFooter>
-        <Button onClick={dismiss}>开始创作 →</Button>
+        <Button onClick={dismiss} className="w-full">
+          开始创作
+          <span className="ml-1 inline-block transition-transform duration-200 group-hover/button:translate-x-1">→</span>
+        </Button>
       </ModalFooter>
     </Modal>
   );

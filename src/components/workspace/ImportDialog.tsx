@@ -67,20 +67,26 @@ export function ImportDialog({
 
   return (
     <Modal open onClose={onClose} bare ariaLabel="导入备份包" panelClassName="max-w-md max-h-[88vh] overflow-y-auto">
-      <div className="p-5">
+      <div className="nf-accent-bar p-5">
         <div className="mb-1 flex items-start justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">导入备份包</h3>
-            <p className="mt-1 text-xs text-[var(--nv-text-tertiary)]">《{file.name}》— 勾选要导入的设定（默认全选），将作为新项目导入</p>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--nv-primary-soft)] to-[var(--nv-surface-2)] text-[var(--nv-primary)] ring-1 ring-inset ring-[color-mix(in_oklch,var(--nv-primary)_25%,transparent)]">
+              <Icon name="package" size={17} />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">导入备份包</h3>
+              <p className="mt-1 text-xs text-[var(--nv-text-tertiary)]">《{file.name}》— 勾选要导入的设定（默认全选），将作为新项目导入</p>
+            </div>
           </div>
-          <button onClick={onClose} className="shrink-0 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" aria-label="关闭"><Icon name="x" size={16} /></button>
+          <button onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]" aria-label="关闭"><Icon name="x" size={16} /></button>
         </div>
 
         <div className="mt-4 space-y-1.5">
-          {IMPORT_ITEMS.map((item) => (
+          {IMPORT_ITEMS.map((item, i) => (
             <label
               key={item.key}
-              className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-[var(--nv-border-1)] bg-[var(--nv-surface-1)] px-3 py-2.5 transition-colors hover:border-[var(--nv-border-3)]"
+              className={`nf-hero-rise flex cursor-pointer items-center justify-between gap-3 rounded-lg border bg-[var(--nv-surface-1)] px-3 py-2.5 transition-all duration-200 hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] hover:shadow-[var(--shadow-glass-rest)] ${selected.has(item.key) ? "border-[var(--nv-primary)]/40 shadow-[0_0_12px_color-mix(in_oklch,var(--nv-primary)_22%,transparent)]" : "border-[var(--nv-border-1)]"}`}
+              style={{ animationDelay: `${60 + i * 60}ms` }}
             >
               <span className="flex items-center gap-2.5">
                 <input
@@ -94,7 +100,7 @@ export function ImportDialog({
                   <span className="block text-[10px] text-[var(--nv-text-muted)]">{item.desc}</span>
                 </span>
               </span>
-              {selected.has(item.key) && <Icon name="check" size={12} className="text-[var(--nv-success)]" />}
+              {selected.has(item.key) && <Icon name="check" size={12} className="text-[var(--nv-success)] drop-shadow-[0_0_6px_color-mix(in_oklch,var(--nv-success)_60%,transparent)]" />}
             </label>
           ))}
         </div>
@@ -105,9 +111,9 @@ export function ImportDialog({
           <button
             onClick={doImport}
             disabled={selected.size === 0 || importing}
-            className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50"
+            className="group flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50"
           >
-            {importing ? <span className="inline-flex items-center gap-1.5"><Icon name="loader" size={13} className="animate-spin" /> 导入中…</span> : <>导入为新项目（{selected.size} 项）</>}
+            {importing ? <span className="inline-flex items-center gap-1.5"><Icon name="loader" size={13} className="animate-spin" /> 导入中…</span> : <><Icon name="package" size={13} className="mr-1 inline-block" /> 导入为新项目（{selected.size} 项）</>}
           </button>
           <button onClick={onClose} className="btn-ghost rounded-xl px-4 py-2.5 text-sm">取消</button>
         </div>

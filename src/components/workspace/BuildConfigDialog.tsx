@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { Switch } from "@/components/ui/switch";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { BuildConfig } from "@/core/explore/types";
@@ -61,7 +61,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
 
   return (
     <Modal open onClose={onClose} bare panelClassName="max-w-2xl max-h-[90vh] overflow-y-auto" closeOnOverlay={false} labelledBy="build-config-title">
-      <div className="p-6">
+      <div className="p-6 nf-accent-bar">
         <div className="flex items-center justify-between mb-5">
           <h2 id="build-config-title" className="text-lg font-semibold flex items-center gap-2">
             <Icon name="settings" size={18} className="text-[var(--nv-primary)]" /> 项目设定
@@ -77,7 +77,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
 
         <div className="space-y-5">
           {/* 基础信息 */}
-          <Section title="基础信息">
+          <Section title="基础信息" icon="book" index={0}>
             <Field label="书名">
               <input value={cfg.novelName} onChange={(e) => set("novelName", e.target.value)} className="input-glass w-full rounded-xl px-3 py-2 text-sm" placeholder="小说书名" />
             </Field>
@@ -102,7 +102,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
           </Section>
 
           {/* 风格与设定 */}
-          <Section title="风格与设定">
+          <Section title="风格与设定" icon="palette" index={1}>
             <Field label="风格偏好">
               <select value={cfg.stylePreference} onChange={(e) => set("stylePreference", e.target.value)} className="input-glass w-full rounded-xl px-3 py-2 text-sm">
                 <option value="">（未指定）</option>
@@ -121,16 +121,16 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
           </Section>
 
           {/* 流派标签 */}
-          <Section title={`流派标签（已选 ${cfg.styleTags.length}）`}>
+          <Section title={`流派标签（已选 ${cfg.styleTags.length}）`} icon="tag" index={2}>
             <input value={tagSearch} onChange={(e) => setTagSearch(e.target.value)} placeholder="搜索流派标签…" className="input-glass w-full rounded-xl px-3 py-2 text-xs mb-2" />
             <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
               {filteredTags.map((t) => (
                 <button
                   key={t}
                   onClick={() => toggleTag(t)}
-                  className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                  className={`text-xs px-2 py-1 rounded-full transition-all active:scale-95 ${
                     cfg.styleTags.includes(t)
-                      ? "bg-[var(--nv-creative)]/20 text-[var(--nv-creative)]"
+                      ? "bg-[var(--nv-creative)]/20 text-[var(--nv-creative)] shadow-[0_0_12px_color-mix(in_oklch,var(--nv-creative)_35%,transparent)]"
                       : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
                   }`}
                 >
@@ -141,7 +141,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
           </Section>
 
           {/* 开关 */}
-          <Section title="生成选项">
+          <Section title="生成选项" icon="sliders" index={3}>
             <div className="flex items-center justify-between gap-3 py-1">
               <span>
                 <span className="text-sm text-[var(--nv-text-primary)]">强制原创人名</span>
@@ -175,7 +175,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
                   <button
                     key={key}
                     onClick={() => set("stitchPace", key as any)}
-                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors ${cfg.stitchPace === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass-rest)] active:scale-[0.97] ${cfg.stitchPace === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)] shadow-[0_0_14px_color-mix(in_oklch,var(--nv-primary)_30%,transparent)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
                   >
                     <span className={`block text-xs font-medium ${cfg.stitchPace === key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{label}</span>
                     <span className="block text-[10px] text-[var(--nv-text-tertiary)] leading-snug mt-0.5">{desc}</span>
@@ -195,7 +195,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
                   <button
                     key={key}
                     onClick={() => set("storylineStyle", key as any)}
-                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors ${cfg.storylineStyle === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass-rest)] active:scale-[0.97] ${cfg.storylineStyle === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)] shadow-[0_0_14px_color-mix(in_oklch,var(--nv-primary)_30%,transparent)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
                   >
                     <span className={`block text-xs font-medium ${cfg.storylineStyle === key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{label}</span>
                     <span className="block text-[10px] text-[var(--nv-text-tertiary)] leading-snug mt-0.5">{desc}</span>
@@ -215,7 +215,7 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
                   <button
                     key={key}
                     onClick={() => set("storylineAutomation", key as any)}
-                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-colors ${cfg.storylineAutomation === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass-rest)] active:scale-[0.97] ${cfg.storylineAutomation === key ? "border-[var(--nv-primary)]/60 bg-[var(--nv-primary-soft)] shadow-[0_0_14px_color-mix(in_oklch,var(--nv-primary)_30%,transparent)]" : "border-[var(--nv-border-2)] hover:border-[var(--nv-border-3)]"}`}
                   >
                     <span className={`block text-xs font-medium ${cfg.storylineAutomation === key ? "text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)]"}`}>{label}</span>
                     <span className="block text-[10px] text-[var(--nv-text-tertiary)] leading-snug mt-0.5">{desc}</span>
@@ -237,10 +237,16 @@ export function BuildConfigDialog({ projectId, buildConfig, onSaved, onClose }: 
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, icon, index = 0, children }: { title: string; icon?: IconName; index?: number; children: React.ReactNode }) {
   return (
-    <div className="surface-elevated rounded-xl p-4 space-y-3">
-      <h3 className="text-xs font-semibold text-[var(--nv-text-secondary)] uppercase tracking-wide">{title}</h3>
+    <div
+      className="nf-hero-rise surface-elevated nf-accent-bar rounded-xl p-4 space-y-3"
+      style={{ animationDelay: `${70 + index * 90}ms` }}
+    >
+      <h3 className="flex items-center gap-1.5 text-xs font-semibold text-[var(--nv-text-secondary)] uppercase tracking-wide">
+        {icon ? <Icon name={icon} size={13} className="text-[var(--nv-primary)]" /> : null}
+        {title}
+      </h3>
       {children}
     </div>
   );
