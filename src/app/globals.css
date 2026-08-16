@@ -644,6 +644,19 @@
   transform: scale(0.97);
 }
 
+/* 点击光环脉冲：按下时金色 outline 向外扩散淡出，明确点击反馈（点击交互巧思） */
+@keyframes nf-btn-ping {
+  0%   { outline: 2px solid color-mix(in oklch, var(--nv-gold) 55%, transparent); outline-offset: 0; }
+  100% { outline: 2px solid transparent; outline-offset: 7px; }
+}
+.btn-primary:active,
+.btn-creative:active,
+.btn-ghost:active,
+.btn-success:active,
+.btn-danger:active {
+  animation: nf-btn-ping 0.45s var(--ease-out-smooth);
+}
+
 /* 基础按压反馈（兼容旧 btn-press） */
 .btn-press {
   transition: transform var(--dur-micro) cubic-bezier(0.2, 0, 0, 1),
@@ -1053,6 +1066,16 @@
   filter: drop-shadow(0 0 20px rgba(228, 184, 99, 0.30)) drop-shadow(0 0 44px rgba(228, 184, 99, 0.14));
 }
 .nf-hero-sub { color: #B7B4AC !important; }
+
+/* 首屏入场：Hero 元素渐显上浮 + 轻微收焦，stagger 由内联 animation-delay 控制（转场巧思） */
+@keyframes nf-hero-rise {
+  from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+}
+.nf-hero-rise { opacity: 0; animation: nf-hero-rise 0.7s var(--ease-out-expo) both; }
+@media (prefers-reduced-motion: reduce) {
+  .nf-hero-rise { opacity: 1; animation: none; }
+}
 .light .nf-hero-sub { color: var(--nv-text-secondary) !important; }
 
 /* Hero 轨道装饰：同心圆环 + 光点 */
@@ -1221,6 +1244,113 @@
 }
 .nf-genre-card:hover .gi { transform: translateY(-2px) scale(1.06); }
 
+/* ─────────────────────────────────────────────
+   首页 Phase 5b · 顶部强调条 + 文体悬浮墙 + 漂浮文体大字
+   参考瑞宝宝给的 UI 效果图：① 悬浮凸起 + 阴影 ② 顶部细强调条 ③ 整体舒适悬浮态
+   ───────────────────────────────────────────── */
+
+/* 顶部强调条：对话框 / 区块顶部的蓝色→金色渐变细条（呼应参考图「细节处顶部蓝色条」） */
+.nf-accent-bar { position: relative; }
+.nf-accent-bar::before {
+  content: "";
+  position: absolute; left: 16px; right: 16px; top: 0; height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--nv-primary), var(--nv-creative), transparent);
+  opacity: 0.7; pointer-events: none; z-index: 2;
+}
+
+/* 文体悬浮墙：响应式网格，每片文体卡虚空玻璃 + 悬浮凸起 + 题材色光晕 */
+.nf-genrewall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+/* 实体化玻璃卡：深色铺底 + 题材色微染，不靠模糊（回应「不要滤纸」），靠 elevation + 题材色光晕出层次 */
+.nf-gtile {
+  position: relative; overflow: hidden;
+  border-radius: 18px; padding: 18px 16px 16px;
+  text-align: left;
+  background:
+    linear-gradient(155deg, color-mix(in oklch, var(--spine, var(--nv-primary)) 9%, transparent) 0%, transparent 58%),
+    var(--nv-abyss);
+  border: 1px solid var(--nv-border-2);
+  box-shadow: var(--shadow-glass-rest);
+  transition: transform var(--dur-standard) var(--ease-out-expo),
+              box-shadow var(--dur-standard) var(--ease-out-expo),
+              border-color var(--dur-standard) var(--ease-out-expo),
+              background var(--dur-standard) var(--ease-out-expo);
+}
+.nf-gtile:hover {
+  transform: translateY(-5px);
+  border-color: color-mix(in oklch, var(--spine, var(--nv-primary)) 50%, transparent);
+  box-shadow: var(--shadow-glass-hover), 0 0 30px color-mix(in oklch, var(--spine, var(--nv-primary)) 30%, transparent);
+  background:
+    linear-gradient(155deg, color-mix(in oklch, var(--spine, var(--nv-primary)) 16%, transparent) 0%, transparent 62%),
+    color-mix(in oklch, var(--spine, var(--nv-primary)) 6%, var(--nv-abyss));
+}
+.nf-gtile:active { transform: translateY(-2px) scale(0.99); }
+/* 点击光晕：按下时题材色从中心漫开，给出明确的点击交互反馈 */
+.nf-gtile::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(circle at 50% 58%, color-mix(in oklch, var(--spine, var(--nv-primary)) 34%, transparent) 0%, transparent 62%);
+  opacity: 0; transition: opacity var(--dur-micro) ease-out;
+}
+.nf-gtile:active::after { opacity: 0.55; }
+/* 加载态：题材色呼吸边线，给出「开局中」的确定反馈（替代静态置灰） */
+.nf-gtile:disabled { opacity: 0.72; cursor: progress; animation: nf-gtile-pulse 1.5s var(--ease-out-smooth) infinite; }
+@keyframes nf-gtile-pulse {
+  0%, 100% { box-shadow: var(--shadow-glass-rest); }
+  50% { box-shadow: var(--shadow-glass-rest), 0 0 0 2px color-mix(in oklch, var(--spine, var(--nv-primary)) 38%, transparent), 0 0 22px color-mix(in oklch, var(--spine, var(--nv-primary)) 22%, transparent); }
+}
+.nf-gtile .gtile-icon {
+  width: 42px; height: 42px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in oklch, var(--spine, var(--nv-primary)) 40%, transparent);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.08);
+  color: var(--spine, var(--nv-creative));
+  transition: transform var(--dur-standard) var(--ease-out-expo);
+}
+.nf-gtile:hover .gtile-icon { transform: translateY(-2px) scale(1.08); }
+
+/* 漂浮文体大字：每片卡右下角的水印字，悬浮时上浮增亮 */
+.nf-float-word {
+  position: absolute; pointer-events: none; user-select: none;
+  font-weight: 800; letter-spacing: 0.06em; line-height: 1;
+  font-size: 56px; right: 10px; bottom: 4px;
+  color: var(--spine, var(--nv-creative));
+  opacity: 0.05;
+  transition: opacity var(--dur-standard) var(--ease-out-expo),
+              transform var(--dur-standard) var(--ease-out-expo);
+}
+.nf-gtile:hover .nf-float-word { opacity: 0.13; transform: translateY(-6px) rotate(-3deg); }
+
+/* 区块级漂浮文体大字（Hero / 文体墙标题背后的装饰） */
+.nf-section-float {
+  position: absolute; pointer-events: none; user-select: none;
+  font-weight: 800; line-height: 1; z-index: 0;
+  font-size: clamp(72px, 12vw, 130px);
+  color: var(--nv-creative);
+  opacity: 0.035;
+  transition: opacity var(--dur-standard) var(--ease-out-expo);
+}
+.nf-gtile:hover ~ .nf-section-float,
+.group:hover .nf-section-float { opacity: 0.06; }
+
+/* 轻柔漂浮动画 */
+@keyframes nf-float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.nf-float { animation: nf-float-soft 7s var(--ease-out-smooth) infinite; }
+.nf-float-2 { animation-duration: 9s; animation-delay: -2.5s; }
+.nf-float-3 { animation-duration: 8s; animation-delay: -5s; }
+
+/* 浅色主题：漂浮大字与光晕提亮 */
+.light .nf-float-word { opacity: 0.06; }
+.light .nf-gtile:hover .nf-float-word { opacity: 0.14; }
+.light .nf-section-float { opacity: 0.05; }
+
 /* 空状态引导：分隔光 */
 .nf-glow-line {
   height: 1px; border: none; margin: 26px auto; width: min(420px, 70%);
@@ -1344,27 +1474,8 @@ html.azure .btn-danger { color: oklch(0.76 0.18 20); border-color: oklch(0.62 0.
     linear-gradient(90deg, color-mix(in oklch, var(--spine) 28%, #05070f 72%) 0%, color-mix(in oklch, var(--spine) 42%, #0a0e1c 58%) 100%);
 }
 
-/* 纸舟星海舞台：切角棱框 + 折纸角装饰（有棱有角，不堆砌） */
-.nf-boat-stage {
-  position: relative;
-  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
-  background:
-    linear-gradient(180deg, rgba(10, 14, 28, 0.6), rgba(8, 11, 22, 0.75)),
-    repeating-linear-gradient(90deg, rgba(124, 92, 255, 0.05) 0 1px, transparent 1px 42px);
-}
-.nf-boat-stage::before { /* 左上折纸角 */
-  content: "";
-  position: absolute; left: -1px; top: -1px; z-index: 1; pointer-events: none;
-  border-top: 34px solid color-mix(in oklch, var(--nv-creative) 55%, transparent);
-  border-right: 34px solid transparent;
-  border-radius: 2px 0 0 0;
-}
-.nf-boat-stage::after { /* 右下折纸角 */
-  content: "";
-  position: absolute; right: -1px; bottom: -1px; z-index: 1; pointer-events: none;
-  border-bottom: 26px solid color-mix(in oklch, var(--nv-creative) 40%, transparent);
-  border-left: 26px solid transparent;
-}
+/* 纸舟星海（nf-boat-stage）已于 v2.57.0 移除：瑞宝宝决定删掉「船」，
+   首页以「灵感文体墙」（.nf-genrewall / .nf-gtile）取代，更贴合虚空玻璃风格。 */
 
 /* I-1：原生 select/option 暗色适配——避免暗色主题下下拉展开呈高亮白底（原生控件不受 Tailwind 暗色变量约束） */
 @layer base {

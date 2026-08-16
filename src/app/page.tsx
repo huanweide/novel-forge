@@ -12,7 +12,6 @@ import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
 import { ImportDialog } from "@/components/workspace/ImportDialog";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import PaperBoats from "@/components/home/PaperBoats";
 
 // ─── 类型 ────────────────────────────────────────────────────
 
@@ -93,7 +92,6 @@ export default function Dashboard() {
     }
   };
 
-  const [showGenres, setShowGenres] = useState(false);
   const [loadingGenre, setLoadingGenre] = useState<string | null>(null);
   const loadGenre = async (genreId: string) => {
     setLoadingGenre(genreId);
@@ -215,17 +213,17 @@ export default function Dashboard() {
         <div className="relative max-w-7xl mx-auto px-6 py-14 md:py-20">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
+              <div className="nf-hero-rise inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]" style={{ animationDelay: "0ms" }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-accent)] glow-dot" /> AI 驱动的小说创作引擎
               </div>
-              <h2 className="nf-hero-title text-4xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.15]">
+              <h2 className="nf-hero-rise nf-hero-title text-4xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.15]" style={{ animationDelay: "120ms" }}>
                 构建你的<span className="text-gradient">小说宇宙</span>
               </h2>
-              <p className="nf-hero-sub mt-5 text-base leading-relaxed max-w-xl">
+              <p className="nf-hero-rise nf-hero-sub mt-5 text-base leading-relaxed max-w-xl" style={{ animationDelay: "240ms" }}>
                 用 AI 探讨灵感、拆解好书、管理角色与世界观——从一句话构思到完整成稿，一站式完成。
               </p>
             </div>
-            <div className="flex shrink-0 gap-3">
+            <div className="nf-hero-rise flex shrink-0 gap-3" style={{ animationDelay: "360ms" }}>
               <Link href="/explore" className="btn-primary nf-btn-flow text-sm px-7 py-3.5 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-[0_0_24px_rgba(228,184,99,0.30)]">
                 <Icon name="sparkles" size={15} /> 开始创作
               </Link>
@@ -237,32 +235,8 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* 纸舟星海：墨色海面漂着各式真实船型（船型即作品），随机巡游、点击进入写作区 · 下方选择一本书 */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 py-14">
-        <div className="mb-6 max-w-2xl">
-          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-creative)] glow-dot" /> 纸舟星海 · Paper Boats
-          </div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-tight">
-            每一艘船，<span className="text-gradient">都是一部作品</span>
-          </h2>
-          <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
-            每一艘船都是一部尚未写完的故事——有的披着暗夜的金帆，有的在幽海里浮着磷光，有的驮着云港巨舰的宏图。它们在水面随机巡游，各自航速不同却始终相守。悬浮可窥书影，点击确认后登上你的那一艘，进入写作区；拖拽旋转视角、滚轮缩放海面。
-          </p>
-        </div>
-        <div className="nf-boat-stage relative rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/30 p-4">
-          <PaperBoats
-            projects={projects.map((p) => ({
-              id: p.id,
-              name: p.name,
-              genre: p.genre,
-              targetWordCount: p.targetWordCount,
-              updatedAt: p.updatedAt,
-              storyNodes: p._count.storyNodes,
-            }))}
-          />
-        </div>
-      </section>
+      {/* 灵感文体墙：精选文体悬浮卡，点击即以该文体开局（取代旧版「纸舟星海」） */}
+      <GenreWall onPick={loadGenre} loadingId={loadingGenre} />
 
       {/* 主区 */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
@@ -289,7 +263,7 @@ export default function Dashboard() {
           </div>
         ) : projects.length === 0 ? (
           <div className="py-10">
-            <p className="text-center text-[var(--nv-text-tertiary)] text-sm mb-8">还没有小说项目，从下面任选一种方式开始：</p>
+            <p className="text-center text-[var(--nv-text-tertiary)] text-sm mb-8">还没有小说项目，挑一种方式开始你的故事：</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FeatureCard featured icon="sparkles" title="探讨模式" desc="对话式构建世界观、角色与大纲，从一句话灵感聊到完整纲要" href="/explore" cta="开始探讨" />
               <FeatureCard icon="book" title="拆书分析" desc="上传文本，逆向学习结构与文风" href="/dissect" cta="去拆书" />
@@ -300,28 +274,11 @@ export default function Dashboard() {
               </Link>
             </div>
             <hr className="nf-glow-line" />
-            <div className="mt-2 flex flex-col items-center gap-4">
+            <div className="mt-2 flex flex-col items-center">
               <button onClick={loadSample} disabled={loadingSample}
                 className="btn-primary text-sm px-6 py-3 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-[0_0_24px_rgba(228,184,99,0.30)]">
                 <Icon name="sparkles" size={15} /> {loadingSample ? "正在载入示例…" : "一键载入示例项目（仙侠）"}
               </button>
-              <button onClick={() => setShowGenres((v) => !v)} disabled={loadingSample}
-                className="btn-ghost text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5">
-                <Icon name="book" size={13} /> {showGenres ? "收起题材库" : "按题材开局"}
-              </button>
-              {showGenres && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
-                  {GENRE_TEMPLATES.map((g) => (
-                    <button key={g.id} onClick={() => loadGenre(g.id)} disabled={loadingGenre !== null}
-                      className="nf-genre-card surface-elevated rounded-xl p-3.5 text-left transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] disabled:opacity-60">
-                      <div className="gi mb-2.5">{g.icon}</div>
-                      <div className="text-sm font-medium text-[var(--nv-text-primary)]">{g.name}</div>
-                      <div className="text-[11px] text-[var(--nv-text-tertiary)] mt-0.5 leading-snug">{g.desc}</div>
-                      {loadingGenre === g.id && <div className="text-[10px] text-accent-label mt-1">创建中…</div>}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         ) : (
@@ -408,6 +365,54 @@ export default function Dashboard() {
   );
 }
 
+// ─── 子组件：灵感文体墙（取代旧版纸舟星海 · v2.57.0） ────────
+
+function GenreWall({ onPick, loadingId }: { onPick: (id: string) => void; loadingId: string | null }) {
+  const featured = GENRE_TEMPLATES;
+  return (
+    <section className="relative z-10 max-w-7xl mx-auto px-6 py-14">
+      <div className="mb-7 max-w-2xl relative">
+        {/* 漂浮文体大字装饰（呼应参考图：整体舒适悬浮态） */}
+        <span className="nf-section-float nf-float select-none" style={{ right: "1%", top: "-34px" }} aria-hidden="true">文</span>
+        <span className="nf-section-float nf-float-2 select-none" style={{ right: "15%", top: "8px" }} aria-hidden="true">星</span>
+        <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-primary)] glow-dot" /> 灵感文体墙 · Genre Wall
+        </div>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-tight">
+          选一种<span className="text-gradient">文体</span>，开启你的世界
+        </h2>
+        <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
+          每一种文体都是一种讲故事的呼吸——仙侠剑歌、悬疑迷雾、科幻星海。悬浮可窥其气质，点击即以此文体一键开局，AI 带着对应的世界观与节奏陪你写到完稿。
+        </p>
+      </div>
+      <div className="nf-genrewall">
+        {featured.map((g) => {
+          const spine = genreColor([g.name]);
+          const picking = loadingId === g.id;
+          return (
+            <button
+              key={g.id}
+              onClick={() => onPick(g.id)}
+              disabled={loadingId !== null}
+              className="nf-gtile group"
+              style={{ "--spine": spine } as React.CSSProperties}
+              aria-label={`以${g.name}开局`}
+            >
+              <span className="nf-float-word" aria-hidden="true">{g.name.charAt(0)}</span>
+              <div className="gtile-icon mb-3">{g.icon}</div>
+              <div className="text-sm font-semibold text-[var(--nv-text-primary)]">{g.name}</div>
+              <div className="text-[11px] text-[var(--nv-text-tertiary)] mt-0.5 leading-snug line-clamp-2">{g.desc}</div>
+              <div className="mt-3 text-[11px] text-accent-label opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                {picking ? "开局中…" : <>以此开局 <span className="transition-transform duration-200 group-hover:translate-x-1">→</span></>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ─── 子组件：项目卡片 ───────────────────────────────────────
 
 function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; index?: number; }) {
@@ -461,12 +466,12 @@ function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: Pr
 
       <div className="flex items-center justify-between pt-3 border-t border-[var(--nv-border-2)] relative z-[1]">
         <span className="text-[10px] text-[var(--nv-text-muted)]">{timeAgo}</span>
-        <Link
-          href={`/workspace/${project.id}`}
-          className="text-xs text-primary hover:text-primary font-medium transition-colors"
-        >
-          进入工作台 →
-        </Link>
+              <Link
+                href={`/workspace/${project.id}`}
+                className="text-xs text-primary hover:text-primary font-medium inline-flex items-center gap-1 transition-colors"
+              >
+                进入工作台 <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Link>
       </div>
     </div>
   );
@@ -518,7 +523,7 @@ function FeatureCard({
       <h3 className={`font-semibold text-foreground mb-1 ${featured ? "text-xl" : ""}`}>{title}</h3>
       <p className="text-sm text-[var(--nv-text-tertiary)] leading-relaxed flex-1 mb-3">{desc}</p>
       <span className="text-xs text-primary group-hover:text-primary font-medium inline-flex items-center gap-1">
-        {cta} <Icon name="arrowRight" size={12} />
+        {cta} <Icon name="arrowRight" size={12} className="transition-transform duration-200 group-hover:translate-x-1" />
       </span>
     </Link>
   );
