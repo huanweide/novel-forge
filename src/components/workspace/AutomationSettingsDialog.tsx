@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { toastError, toastSuccess, toastInfo, confirmDialog } from "@/components/ui/toast";
 import { Switch } from "@/components/ui/switch";
+import { useProjectStore } from "@/store";
 
 // 自动填表弹窗（v0.33.0 原「自动化填表设置」；v1.2.0 改名「自动填表」并加一键追评）
 // 配置项：
-// - autoFillEnabled：生成后自动填表总开关
+// - autoFillEnabled：生成后自动填表总开关（v2.56.0 起默认关）
 // - fillFrequency：每 N 章填一次表
 // - skipLatestChapter：默认跳过最近一章（用户可能重 roll 改写）
 // - contextKeepChapters：上下文楼层数（前文窗口大小）
+// - autoConfirmEnabled / autoDeliverEnabled：确认/交付模式开关（与确认栏同源，集中此处管控）
 // 操作：一键追评所有未填表章节（POST /api/babylore/fill-all）
 export function AutomationSettingsDialog({
   projectId, projectName, onClose,
@@ -21,10 +23,12 @@ export function AutomationSettingsDialog({
   projectName: string;
   onClose: () => void;
 }) {
-  const [autoFillEnabled, setAutoFillEnabled] = useState(true);
+  const [autoFillEnabled, setAutoFillEnabled] = useState(false);
   const [fillFrequency, setFillFrequency] = useState(3);
   const [skipLatestChapter, setSkipLatestChapter] = useState(true);
   const [contextKeepChapters, setContextKeepChapters] = useState(4);
+  const [autoConfirmEnabled, setAutoConfirmEnabled] = useState(true);
+  const [autoDeliverEnabled, setAutoDeliverEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -113,6 +117,8 @@ export function AutomationSettingsDialog({
         if (typeof d.fillFrequency === "number") setFillFrequency(d.fillFrequency);
         if (typeof d.skipLatestChapter === "boolean") setSkipLatestChapter(d.skipLatestChapter);
         if (typeof d.contextKeepChapters === "number") setContextKeepChapters(d.contextKeepChapters);
+        if (typeof d.autoConfirmEnabled === "boolean") setAutoConfirmEnabled(d.autoConfirmEnabled);
+        if (typeof d.autoDeliverEnabled === "boolean") setAutoDeliverEnabled(d.autoDeliverEnabled);
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "网络错误");
       } finally {
@@ -133,6 +139,8 @@ export function AutomationSettingsDialog({
           fillFrequency: Math.max(1, Math.min(50, Math.trunc(fillFrequency) || 3)),
           skipLatestChapter,
           contextKeepChapters: Math.max(1, Math.min(50, Math.trunc(contextKeepChapters) || 4)),
+          autoConfirmEnabled,
+          autoDeliverEnabled,
         }),
       });
       const d = await res.json();
@@ -140,6 +148,8 @@ export function AutomationSettingsDialog({
         toastError(d.error || "保存失败");
         return;
       }
+      // 同步前端 store，使工作区确认栏即时反映（无需重挂载）
+      useProjectStore.getState().patchProject({ autoConfirmEnabled, autoDeliverEnabled });
       toastSuccess("自动填表配置已保存");
       onClose();
     } catch (err) {
@@ -184,9 +194,27 @@ export function AutomationSettingsDialog({
               <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-[var(--nv-text-primary)]">生成后自动填表</div>
-                  <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">每章写完后自动抽取事实，回填结构化表格（创意工坊数据库），并持续注入永久上下文</div>
+                  <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">每章写完后自动抽取事实，回填结构化表格（创意工坊数据库），并持续注入永久上下文。开启后，发现的新角色/世界实体会默认同意写入结构化表（v2.56.0 起默认关闭，避免每章自动填表产生脏卡）</div>
                 </div>
                 <Switch checked={autoFillEnabled} onCheckedChange={setAutoFillEnabled} size="sm" />
+              </div>
+
+              {/* 自动确认（智能审阅） */}
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium text-[var(--nv-text-primary)]">自动确认（智能审阅）</div>
+                  <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">合格章生成后由系统自动定稿，你从审批者降级为异常处理者；关闭则逐章人工确认（默认开启）</div>
+                </div>
+                <Switch checked={autoConfirmEnabled} onCheckedChange={setAutoConfirmEnabled} size="sm" />
+              </div>
+
+              {/* 自动交付全书 */}
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--nv-border-2)] px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium text-[var(--nv-text-primary)]">自动交付全书</div>
+                  <div className="text-xs text-[var(--nv-text-tertiary)] mt-0.5">全书章节全部定稿后自动完成整本交付，无需手动点「确认整本交付」（默认开启）</div>
+                </div>
+                <Switch checked={autoDeliverEnabled} onCheckedChange={setAutoDeliverEnabled} size="sm" />
               </div>
 
               {/* 频率 */}

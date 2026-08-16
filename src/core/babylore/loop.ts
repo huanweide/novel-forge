@@ -118,7 +118,7 @@ export async function safeFillAfterWriting(input: FillAfterWritingInput): Promis
   } catch {
     /* 配置读取失败则用默认（开启 + 每3章 + 跳过最近章） */
   }
-  const autoFill = cfg?.autoFillEnabled ?? true;
+  const autoFill = cfg?.autoFillEnabled ?? false;
   if (!autoFill) {
     if (send) send({ type: "babylore_fill", skipped: true, reason: "disabled" });
     return { ok: false, operations: 0, applied: 0, error: "自动填表已关闭" };

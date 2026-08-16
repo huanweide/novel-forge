@@ -17,6 +17,8 @@ export async function GET(
         fillFrequency: true,
         skipLatestChapter: true,
         contextKeepChapters: true,
+        autoConfirmEnabled: true,
+        autoDeliverEnabled: true,
       },
     });
     if (!p) return jsonError("项目不存在", 404);
@@ -55,6 +57,12 @@ export async function PUT(
     if (typeof body.skipLatestChapter === "boolean") {
       data.skipLatestChapter = body.skipLatestChapter;
     }
+    if (typeof body.autoConfirmEnabled === "boolean") {
+      data.autoConfirmEnabled = body.autoConfirmEnabled;
+    }
+    if (typeof body.autoDeliverEnabled === "boolean") {
+      data.autoDeliverEnabled = body.autoDeliverEnabled;
+    }
     if (typeof body.contextKeepChapters === "number") {
       const n = Math.trunc(body.contextKeepChapters);
       if (n < 1 || n > 50) return jsonError("上下文楼层须为 1–50 的整数", 400);
@@ -73,6 +81,8 @@ export async function PUT(
         fillFrequency: true,
         skipLatestChapter: true,
         contextKeepChapters: true,
+        autoConfirmEnabled: true,
+        autoDeliverEnabled: true,
       },
     });
     return NextResponse.json(p);
