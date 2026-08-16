@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v2.50.1 — 2026-08-16
+
+### 上帝组件拆解第一刀：WorkspacePage 弹窗子系统抽离为 hook + 组件
+- **弹窗子系统抽离（最低风险第一刀）**：把 `WorkspacePage`（1521 行 / 66 个 `useState` 的上帝组件）里 14 个独立对话框的渲染与开关状态全部抽离为独立 hook `src/hooks/useWorkspaceDialogs.ts` + 渲染组件 `src/components/workspace/WorkspaceDialogs.tsx`——角色卡 / 词条 / 文风 / 导入向导 / 批量写作 / 大纲生成 / 自动化设置 / 项目设置 / 构建配置 / 记忆衰减 / 项目配置 / 导出 / 备份 / 冲突推演。状态集中管理、字段名与原 `useState` 变量名保持一致；`WorkspacePage` 通过 `const dialogs = useWorkspaceDialogs(...)` 全解构，原有引用（`setShowOutlineDialog` / `batchWrite` / `outlineChapterCount` 等）零改名，回归面最小。
+- **边界与轮询分工**：只搬「独立对话框」渲染，主流程弹窗（保存冲突 `SaveConflictModal` / 精修 diff `RefineDiffModal` / 抽卡 `DrawCards` / 生成前确认 `PreGenConfirm`）仍留 `WorkspacePage`；5 个弹窗处理函数（`startBatchOutline` / `confirmBatchWrite` / `handleGenerateOutlinePreview` / `handleConfirmOutline` / `updatePreviewChapter`）作为 `handlers` prop 透传、函数体留 page 不动，避免污染生成主流程；章纲轮询 + 实时耗时两个纯弹窗内轮询收敛进 hook，正文任务轮询因依赖 `loadProject` 仍留 page。
+- **配套测试**：新增 `src/components/workspace/WorkspaceDialogs.test.tsx` 3 例锁死 prop 契约——默认只渲染 `BatchWriteDialog`（不渲染其它对话框）、`editingCharacter` 接线 `onClose`→`setEditingCharacter(null)` + `onSave`→`refreshAfterMutate`、`showConflict`→`ConflictPanel.onOpenCharacter` 命中项目角色。
+- **门禁**：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 99 文件 934/934 全绿（较 v2.50.0 基线 931 +3 例）；四版本文件对齐 v2.50.1；路线 v2.50.0（注册表减负）→ v2.50.1（上帝组件拆解·本版）→ v2.51.0（Prisma 表名小写迁移 + 注册表去 `any`），避免 v2.47 式半吊子；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.50.0 — 2026-08-16
 
 ### 架构拆弹·Agent 注册表减负：枚举/映射常量单一真相源

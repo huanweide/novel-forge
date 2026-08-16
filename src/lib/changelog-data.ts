@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.50.0";
+export const LATEST_VERSION = "v2.50.1";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.50.1 上帝组件拆解第一刀：WorkspacePage 弹窗子系统抽离（千惠 CEO 循环运营收口）：①把 WorkspacePage（1521 行/66 个 useState 的上帝组件）里 14 个独立对话框的渲染与开关状态全部抽离为独立 hook src/hooks/useWorkspaceDialogs.ts + 渲染组件 src/components/workspace/WorkspaceDialogs.tsx——角色卡/词条/文风/导入向导/批量写作/大纲生成/自动化设置/项目设置/构建配置/记忆衰减/项目配置/导出/备份/冲突推演；状态集中管理、字段名与原 useState 变量名保持一致，page 通过 const dialogs = useWorkspaceDialogs(...) 全解构、原有引用（setShowOutlineDialog / batchWrite / outlineChapterCount 等）零改名；②最低风险第一刀——只搬「独立对话框」渲染，主流程弹窗（保存冲突 SaveConflictModal / 精修 diff RefineDiffModal / 抽卡 DrawCards / 生成前确认 PreGenConfirm）仍留 WorkspacePage，5 个弹窗处理函数（startBatchOutline / confirmBatchWrite / handleGenerateOutlinePreview / handleConfirmOutline / updatePreviewChapter）作为 handlers prop 透传、函数体留 page 不动，避免污染生成主流程；③把「章纲轮询 + 实时耗时」两个纯弹窗内轮询收敛进 hook（正文任务轮询因依赖 loadProject 仍留 page）；④配套 WorkspaceDialogs.test.tsx 3 例锁死 prop 契约（默认只渲染 BatchWriteDialog / editingCharacter 接线 onClose→setEditingCharacter(null)+onSave→refreshAfterMutate / showConflict→ConflictPanel.onOpenCharacter 命中项目角色）；⑤行为零变化、降低回归面——SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 99 文件 934/934 全绿（较 v2.50.0 基线 931 +3 例）；四版本文件对齐 v2.50.1；按重切路线 v2.50.0(注册表减负)→v2.50.1(上帝组件拆解·本版)→v2.51.0(Prisma 表名小写+注册表去 any) 推进；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.0 架构拆弹·Agent 注册表减负：把 Agent 工具注册表里逐字重复的枚举数组与世界书「中文分类→英文」映射抽成单一常量源（千惠 CEO 循环运营收口）：①共享枚举常量——角色定位(7)/角色状态(6)/世界书分类(15)/节点类型(4)/节点状态(6)/伏笔状态(5)/故事线状态(3) 七组此前在每个工具 schema 里逐字抄写、易漂移，现抽出 CHARACTER_ROLES / CHARACTER_STATUSES / LORE_CATEGORIES / STORY_NODE_TYPES / NODE_STATUSES / FORESHADOWING_STATUSES / STORYLINE_STATUSES 七个 as const 常量，schema 改用 enum: [...X] 引用，取值一处改处处同步；②世界书分类映射单一真相源——lore_create 与 lore_update 各写了一份「中文→英文」映射且两份不一致（lore_update 漏了物品/功法/魔法/生物/货币/命运/物理/公开/角色关系等键），现合并为唯一 LORE_CATEGORY_MAP 常量（取并集更全），两处统一引用，既消重又修了 lore_update 漏映射的隐患；③行为零变化、风险低——纯常量外提，无增减任何工具、无运行时逻辑改动；tsc 0 错误；vitest 全量 98 文件 931/931 全绿（与 v2.49.0 同基线，本版纯重构回回归门禁全绿）；四版本文件对齐 v2.50.0；按价值/风险/依赖把原 v2.50「架构拆弹」三项拆为 v2.50.0(注册表减负·本版) / v2.50.1(上帝组件拆解) / v2.51.0(Prisma 表名小写迁移+注册表去 any)，避免 v2.47 式半吊子；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.49.0 性能止血：AI 写长书不再卡成 PPT + 游戏模式报错不再露内部黑话 + 保存完不再整本重载（千惠 CEO 循环运营收口）：①流式渲染性能——把高频的 streamContent 状态从工作区上帝组件（WorkspacePage）本地 useState 下沉到已有的 useWriterStore（generatedContent/appendContent/resetStream 早就在、此前没被流式主路径用），CenterPanel 改为从 store 订阅流式正文；AI 逐 token 生成时整棵工作区组件树不再每 token 重渲染、只有正文显示区局部更新，大书（几十万字、数百节点）生成流畅度直接提升、卡顿肉眼可见减少；store 零改动、复用既有能力、行为不变、风险低；②game/action 路由 SSE 错误收敛——/api/game/action 的 catch 此前硬编码 write({type:error, error: err.message}) 泄露原始异常，现复用既有 sseError() 收敛为可读错误文案、且保留 error 字段名（前端 game/[nodeId] 客户端只读 event.error，改字段名会读不到），与 write/continue/refine 三路由一致、既堵泄露又不破坏前端契约、补齐 v2.47 漏项；③生成完成后局部刷新——done 事件后不再整本 loadProject() 重载（大书保存卡顿根因），改为 GET /api/story/nodes/:id 单节点 → useProjectStore.updateNode 局部更新当前章节（开销从「整本书」降到「一条记录」）、仅失败兜底全量；导入/新建/删除等确需全量刷新的保留 loadProject()；④配套 writer-store.test.ts 4 例锁死 appendContent 累加/resetStream 清空/setGenerating 切换。tsc 0 错误；vitest 全量 98 文件 931/931 全绿（较 v2.48.0 基线 927 +4 例）；四版本文件对齐 v2.49.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.48.0 地基止血·收口：上帝组件纯逻辑外提 + 保存同步回写 store（千惠 CEO 循环运营收口）：①上帝组件安全解耦——把 WorkspacePage（1506 行）里三个纯派生（章节级节点筛选 chapterNodesOf / 全书确认统计 allConfirmedOf / 叙事阶段推导 narrativeStageOf）外提为独立可测模块 src/core/workspace-derive.ts，行为原样不变、纯函数无副作用、配套 workspace-derive.test.ts 11 例锁死筛选/统计/阶段推导（含主线 completed→收尾），降低上帝组件体积与重复、便于后续真·拆解；②保存一致性修复——handleSaveNode 与 resolveConflict 在拿到服务端权威节点后，除更新本地选中态外，额外用 useProjectStore.getState().updateNode(node.id, node) 把节点同步回 store.storyNodes，消除「本地选中已是新版、store 仍是旧版」的脏数据隐患（此前手动保存只更新本地选中态、store 节点要等下次 loadProject 才刷新）；③删除外提后无用的 computeNarrativeStage 直接引用（改由 workspace-derive 内部调用），无行为变化。tsc 0 错误；vitest 全量 97 文件 927/927 全绿（较 v2.47.0 基线 916 +11 例 workspace-derive 测试）；四版本文件对齐 v2.48.0；Prisma 表名小写迁移与全量 loadProject 替换仍属线上库受控迁移风险项，本版不冒险、留待治理；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -105,6 +106,27 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.50.1",
+    date: "2026-08-16",
+    title: "上帝组件拆解第一刀：WorkspacePage 弹窗子系统抽离为 hook + 组件",
+    sections: [
+      { label: "弹窗子系统抽离（最低风险第一刀）", items: [
+        "把 WorkspacePage（1521 行/66 个 useState 的上帝组件）里 14 个独立对话框的渲染与开关状态全部抽离为独立 hook src/hooks/useWorkspaceDialogs.ts + 渲染组件 src/components/workspace/WorkspaceDialogs.tsx——角色卡/词条/文风/导入向导/批量写作/大纲生成/自动化设置/项目设置/构建配置/记忆衰减/项目配置/导出/备份/冲突推演",
+        "状态集中管理、字段名与原 useState 变量名保持一致；WorkspacePage 通过 const dialogs = useWorkspaceDialogs(...) 全解构，原有引用（setShowOutlineDialog / batchWrite / outlineChapterCount 等）零改名、回归面最小",
+      ] },
+      { label: "边界与轮询分工", items: [
+        "只搬「独立对话框」渲染，主流程弹窗（保存冲突 SaveConflictModal / 精修 diff RefineDiffModal / 抽卡 DrawCards / 生成前确认 PreGenConfirm）仍留 WorkspacePage",
+        "5 个弹窗处理函数（startBatchOutline / confirmBatchWrite / handleGenerateOutlinePreview / handleConfirmOutline / updatePreviewChapter）作为 handlers prop 透传、函数体留 page 不动，避免污染生成主流程",
+        "章纲轮询 + 实时耗时两个纯弹窗内轮询收敛进 hook；正文任务轮询因依赖 loadProject 仍留 page",
+      ] },
+      { label: "质量门禁与测试", items: [
+        "配套 WorkspaceDialogs.test.tsx 3 例锁死 prop 契约：默认只渲染 BatchWriteDialog（不渲染其它对话框）、editingCharacter 接线 onClose→setEditingCharacter(null)+onSave→refreshAfterMutate、showConflict→ConflictPanel.onOpenCharacter 命中项目角色",
+        "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 99 文件 934/934 全绿（较 v2.50.0 基线 931 +3 例）；四版本文件对齐 v2.50.1；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+        "路线：v2.50.0(注册表减负) → v2.50.1(上帝组件拆解·本版) → v2.51.0(Prisma 表名小写迁移 + 注册表去 any)，避免 v2.47 式半吊子",
+      ] },
+    ],
+  },
   {
     version: "v2.50.0",
     date: "2026-08-16",

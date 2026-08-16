@@ -9,29 +9,16 @@ import { chapterNodesOf, allConfirmedOf, narrativeStageOf } from "@/core/workspa
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { StyleEditor } from "@/components/editor/StyleEditor";
-import { ImportWizard } from "@/components/editor/ImportWizard";
 import { PostGenPanel } from "@/components/workspace/PostGenPanel";
 import { Toolbar } from "@/components/workspace/Toolbar";
 import type { ToolboxItem } from "@/components/workspace/ToolboxDialog";
-import { ExportDialog } from "@/components/workspace/ExportDialog";
-import { BackupDialog } from "@/components/workspace/BackupDialog";
-import { ConflictPanel } from "@/components/workspace/ConflictPanel";
 import { SaveConflictModal } from "@/components/workspace/SaveConflictModal";
 import { LeftPanel } from "@/components/workspace/LeftPanel";
 import { CenterPanel } from "@/components/workspace/CenterPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
-import { CharacterDialog } from "@/components/workspace/CharacterDialog";
-import { LorebookEditDialog } from "@/components/workspace/LorebookEditDialog";
-import { BatchWriteDialog, type OutlineItem } from "@/components/workspace/BatchWriteDialog";
-import { OutlineDialog } from "@/components/workspace/OutlineDialog";
-import { AutomationSettingsDialog } from "@/components/workspace/AutomationSettingsDialog";
+import { type OutlineItem } from "@/components/workspace/BatchWriteDialog";
 import { PreGenConfirm } from "@/components/workspace/PreGenConfirm";
 import { DrawCards } from "@/components/workspace/DrawCards";
-import { BuildConfigDialog } from "@/components/workspace/BuildConfigDialog";
-import { MemoryDecayDialog } from "@/components/workspace/MemoryDecayDialog";
-import { ProjectConfigPanel } from "@/components/workspace/ProjectConfigPanel";
-import { ProjectSettingsDialog } from "@/components/workspace/ProjectSettingsDialog";
 import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo, toastWarning } from "@/components/ui/toast";
@@ -40,6 +27,8 @@ import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { RefineDiffModal } from "@/components/workspace/RefineDiffModal";
 import { useShortcut } from "@/components/ShortcutProvider";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useWorkspaceDialogs } from "@/hooks/useWorkspaceDialogs";
+import { WorkspaceDialogs } from "@/components/workspace/WorkspaceDialogs";
 
 export default function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -63,6 +52,38 @@ export default function WorkspacePage() {
   // ── 项目数据 ──────────────────────────────
   // FE-8：project 数据统一收口到 useProjectStore（loadProject 写入，面板直接读取），消除本地 project 与 store 并存
   const project = useProjectStore((s) => s.project);
+  // v2.50.1：弹窗状态集中到 useWorkspaceDialogs（早于所有弹窗引用，规避 TDZ）
+  const existingChapterCount = project?.storyNodes.filter((n) => n.type === NODE_TYPE.CHAPTER && !n.parentId).length || 0;
+  const dialogs = useWorkspaceDialogs({ defaultOutlineAppend: existingChapterCount > 0 });
+  // 解构弹窗状态，下方原有引用（setShowOutlineDialog / batchWrite / outlineChapterCount 等）零改动
+  const {
+    editingCharacter, setEditingCharacter,
+    editingLore, setEditingLore,
+    showNewCharacter, setShowNewCharacter,
+    showStyleEditor, setShowStyleEditor,
+    showImportWizard, setShowImportWizard,
+    importWizardMode, setImportWizardMode,
+    showAutomationSettings, setShowAutomationSettings,
+    showBuildConfig, setShowBuildConfig,
+    showMemoryDecay, setShowMemoryDecay,
+    showProjectConfig, setShowProjectConfig,
+    showProjectSettings, setShowProjectSettings,
+    showOutlineDialog, setShowOutlineDialog,
+    outlineChapterCount, setOutlineChapterCount,
+    outlineCustomChapterCount, setOutlineCustomChapterCount,
+    outlineCustomPrompt, setOutlineCustomPrompt,
+    outlineGenerating, setOutlineGenerating,
+    outlineGenRunning, setOutlineGenRunning,
+    outlineCapsuleHidden, setOutlineCapsuleHidden,
+    outlinePreviewChapters, setOutlinePreviewChapters,
+    outlineRaw, setOutlineRaw,
+    outlineError, setOutlineError,
+    outlineAppendMode, setOutlineAppendMode,
+    batchWrite, setBatchWrite,
+    showExportDialog, setShowExportDialog,
+    showBackupDialog, setShowBackupDialog,
+    showConflict, setShowConflict,
+  } = dialogs;
   // 确认流程：全书确认进度派生值
   const chapterNodes = chapterNodesOf(project);
   const allConfirmed = allConfirmedOf(chapterNodes);
@@ -140,20 +161,7 @@ export default function WorkspacePage() {
   // FE-N5：桌面端左栏折叠（[ 触发）
   const [leftCollapsed, setLeftCollapsed] = useState(false);
 
-  // ── 角色/词条编辑弹窗 ──────────────────────
-  const [editingCharacter, setEditingCharacter] = useState<CharacterData | null>(null);
-  const [editingLore, setEditingLore] = useState<LorebookData | null>(null);
-  const [showNewCharacter, setShowNewCharacter] = useState(false);
-
-  // ── 弹窗状态 ──────────────────────────────
-  const [showStyleEditor, setShowStyleEditor] = useState(false);
-  const [showImportWizard, setShowImportWizard] = useState(false);
-  const [importWizardMode, setImportWizardMode] = useState<"auto" | "settings" | "quick">("auto");
-  const [showAutomationSettings, setShowAutomationSettings] = useState(false);
-  const [showBuildConfig, setShowBuildConfig] = useState(false);
-  const [showMemoryDecay, setShowMemoryDecay] = useState(false);
-  const [showProjectConfig, setShowProjectConfig] = useState(false);
-  const [showProjectSettings, setShowProjectSettings] = useState(false);
+  // ── 弹窗状态已迁移至 useWorkspaceDialogs（v2.50.1）──
   const [extractionData, setExtractionData] = useState<any>(null);
   const [extractionLoading, setExtractionLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -288,55 +296,9 @@ export default function WorkspacePage() {
     passed: boolean; issues: any[]; summary: string;
   } | null>(null);
 
-  // ── 批量写作（A4 后台任务，受控统一入口）────────
-  // 全部状态集中于此：phase 决定弹窗视图；taskId=章纲任务 / writeTaskId=正文任务；
-  // 轮询在父层进行，弹窗关闭后任务仍继续，章纲完成后自动重开弹窗（review）。
-  const [batchWrite, setBatchWrite] = useState<{
-    open: boolean;
-    phase: "input" | "running" | "review";
-    count: number;
-    note: string;
-    progress: { done: number; total: number; pct: number };
-    outlines: OutlineItem[];
-    checked: Set<string>;
-    taskId: string | null;
-    writeTaskId: string | null;
-    startedAt: number | null;
-    elapsedSec: number;
-    confirming: boolean;
-    capsuleHidden: boolean;
-  }>({
-    open: false,
-    phase: "input",
-    count: 3,
-    note: "",
-    progress: { done: 0, total: 0, pct: 0 },
-    outlines: [],
-    checked: new Set(),
-    taskId: null,
-    writeTaskId: null,
-    startedAt: null,
-    elapsedSec: 0,
-    confirming: false,
-    capsuleHidden: false,
-  });
+  // ── 批量写作状态已迁移至 useWorkspaceDialogs（v2.50.1）──
 
-  // ── 大纲生成对话框 ────────────────────────
-  const [showOutlineDialog, setShowOutlineDialog] = useState(false);
-  const [outlineChapterCount, setOutlineChapterCount] = useState(8);
-  const [outlineCustomChapterCount, setOutlineCustomChapterCount] = useState("");
-  const [outlineCustomPrompt, setOutlineCustomPrompt] = useState("");
-  const [outlineGenerating, setOutlineGenerating] = useState(false);
-  // v2.0.14：大纲后台生成运行时标记——驱动右下角进度胶囊，与"确认写入"阶段的 outlineGenerating 区分
-  const [outlineGenRunning, setOutlineGenRunning] = useState(false);
-  const [outlineCapsuleHidden, setOutlineCapsuleHidden] = useState(false);
-  const [outlinePreviewChapters, setOutlinePreviewChapters] = useState<
-    { title: string; summary: string; coreConflict: string; characters: string[] }[]
-  >([]);
-  const [outlineRaw, setOutlineRaw] = useState("");
-  const [outlineError, setOutlineError] = useState("");
-  const existingChapterCount = project?.storyNodes.filter(n => n.type === NODE_TYPE.CHAPTER && !n.parentId).length || 0;
-  const [outlineAppendMode, setOutlineAppendMode] = useState(existingChapterCount > 0);
+  // ── 大纲生成状态已迁移至 useWorkspaceDialogs（v2.50.1）──
 
   // ── 抽卡模式 ──────────────────────────────
   const [showDrawCards, setShowDrawCards] = useState(false);
@@ -1047,10 +1009,7 @@ export default function WorkspacePage() {
   // 导出
   // ═══════════════════════════════════════════
 
-  // ── 导出弹窗状态 ──
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showBackupDialog, setShowBackupDialog] = useState(false);
-  const [showConflict, setShowConflict] = useState(false);
+  // ── 导出/备份/冲突推演弹窗状态已迁移至 useWorkspaceDialogs（v2.50.1）──
 
   // ── 工具箱能力清单（收拢分散入口，按用途分类）──
   const toolboxItems: ToolboxItem[] = [
@@ -1297,153 +1256,20 @@ export default function WorkspacePage() {
       )}
       </div>
 
-      {/* 弹窗 */}
-      {editingCharacter && <CharacterDialog character={editingCharacter} projectId={project.id} allCharacters={project.characters as any} onClose={() => setEditingCharacter(null)} onSave={refreshAfterMutate} />}
-      {showNewCharacter && <CharacterDialog projectId={project.id} allCharacters={project.characters as any} onClose={() => setShowNewCharacter(false)} onSave={refreshAfterMutate} />}
-      {editingLore && <LorebookEditDialog entry={editingLore} projectId={project.id} onClose={() => setEditingLore(null)} onSave={refreshAfterMutate} />}
-      {showStyleEditor && <StyleEditor projectId={project.id} currentStyleId={styleTemplateId} onSaved={(id) => setStyleTemplateId(id)} onClose={() => setShowStyleEditor(false)} chapterContent={selectedNode?.content} />}
-      {showImportWizard && <ImportWizard projectId={project.id} initialMode={importWizardMode} onClose={() => setShowImportWizard(false)} onImported={refreshAfterMutate} />}
-
-      {/* v2.0.4 批量写作弹窗（受控）+ 后台进度胶囊 */}
-      <BatchWriteDialog
-        open={batchWrite.open}
-        phase={batchWrite.phase}
-        count={batchWrite.count}
-        note={batchWrite.note}
-        progress={batchWrite.progress}
-        elapsedSec={batchWrite.elapsedSec}
-        outlines={batchWrite.outlines}
-        checked={batchWrite.checked}
-        confirming={batchWrite.confirming}
-        onCountChange={(n) => setBatchWrite((s) => ({ ...s, count: n }))}
-        onNoteChange={(t) => setBatchWrite((s) => ({ ...s, note: t }))}
-        onStart={startBatchOutline}
-        onClose={() => setBatchWrite((s) => ({ ...s, open: false }))}
-        onToggle={(id) => setBatchWrite((s) => {
-          const next = new Set(s.checked);
-          if (next.has(id)) next.delete(id); else next.add(id);
-          return { ...s, checked: next };
-        })}
-        onEdit={(id, text) => setBatchWrite((s) => ({ ...s, outlines: s.outlines.map((i) => (i.nodeId === id ? { ...i, outline: text } : i)) }))}
-        onConfirm={confirmBatchWrite}
+      {/* 弹窗（v2.50.1 已抽离至 WorkspaceDialogs 组件） */}
+      <WorkspaceDialogs
+        dialogs={dialogs}
+        project={project}
+        selectedNode={selectedNode}
+        allConfirmed={allConfirmed}
+        projectConfirmedAt={projectConfirmedAt}
+        refreshAfterMutate={refreshAfterMutate}
+        loadProject={loadProject}
+        setReviewResult={setReviewResult}
+        styleTemplateId={styleTemplateId}
+        onStyleSaved={(id) => setStyleTemplateId(id)}
+        handlers={{ handleGenerateOutlinePreview, handleConfirmOutline, updatePreviewChapter, startBatchOutline, confirmBatchWrite }}
       />
-      {(batchWrite.writeTaskId || (batchWrite.taskId && !batchWrite.open)) && !batchWrite.capsuleHidden && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/95 backdrop-blur px-3 py-1.5 shadow-lg text-xs text-[var(--nv-text-secondary)]">
-          <Icon name="loader" size={12} className="animate-spin text-[var(--nv-primary)]" />
-          批量写作中… {batchWrite.progress.done}/{batchWrite.progress.total} 章（{batchWrite.progress.pct}%）
-          <button onClick={() => setBatchWrite((s) => ({ ...s, capsuleHidden: true }))} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" title="隐藏进度提示（任务仍在后台继续）"><Icon name="x" size={12} /></button>
-        </div>
-      )}
-
-      {/* 大纲生成对话框 */}
-      {showOutlineDialog && (
-        <OutlineDialog projectName={project.name} chapterCount={outlineChapterCount}
-          customChapterCount={outlineCustomChapterCount} customPrompt={outlineCustomPrompt}
-          previewChapters={outlinePreviewChapters} rawOutline={outlineRaw}
-          error={outlineError} isGenerating={outlineGenerating} onChapterCountChange={setOutlineChapterCount}
-          onCustomChapterCountChange={setOutlineCustomChapterCount} onCustomPromptChange={setOutlineCustomPrompt}
-          onGenerate={handleGenerateOutlinePreview}
-          onConfirm={handleConfirmOutline} onUpdateChapter={updatePreviewChapter}
-          appendMode={outlineAppendMode} onAppendModeChange={setOutlineAppendMode}
-          hasExistingChapters={existingChapterCount > 0}
-          // v2.0.14：叉掉对话框不清空预览/错误/原始大纲——允许关闭后重开仍可见，且后台继续生成；进度通过下方胶囊显示
-          onClose={() => { setShowOutlineDialog(false); }} />
-      )}
-      {/* v2.0.14：大纲后台生成进度胶囊——关掉弹窗任务仍在后台继续，完成自动重开预览 */}
-      {outlineGenRunning && !outlineCapsuleHidden && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/95 backdrop-blur px-3 py-1.5 shadow-lg text-xs text-[var(--nv-text-secondary)]">
-          <Icon name="loader" size={12} className="animate-spin text-[var(--nv-primary)]" />
-          大纲生成中…（后台运行，可关闭弹窗，完成后自动返回）
-          <button onClick={() => setOutlineCapsuleHidden(true)} className="text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]" title="隐藏进度提示（任务仍在后台继续）"><Icon name="x" size={12} /></button>
-        </div>
-      )}
-      {showAutomationSettings && project && (
-        <AutomationSettingsDialog projectId={project.id} projectName={project.name} onClose={() => setShowAutomationSettings(false)} />
-      )}
-
-      {showProjectSettings && project && (
-        <ProjectSettingsDialog
-          projectId={project.id}
-          project={project}
-          selectedNode={selectedNode}
-          allConfirmed={allConfirmed}
-          projectConfirmedAt={projectConfirmedAt}
-          onClose={() => setShowProjectSettings(false)}
-          onOpenBuildConfig={() => { setShowProjectSettings(false); setShowBuildConfig(true); }}
-          onOpenProjectConfig={() => { setShowProjectSettings(false); setShowProjectConfig(true); }}
-          onOpenMemoryDecay={() => { setShowProjectSettings(false); setShowMemoryDecay(true); }}
-          onAction={() => { void loadProject(); }}
-          onDiagnose={async () => {
-            if (!selectedNode) return;
-            try {
-              const res = await fetch(`/api/story/nodes/${selectedNode.id}/review`, { method: "POST" });
-              const d = await res.json().catch(() => ({}));
-              if (res.ok) {
-                setReviewResult({ passed: d.passed, issues: d.issues || [] });
-                toastSuccess(`AI 诊断完成：综合 ${d.overallScore} 分（${d.grade} 级）`);
-              } else {
-                toastError(d.error || "诊断失败");
-              }
-            } catch (e) {
-              toastError("诊断失败：" + (e instanceof Error ? e.message : "网络错误"));
-            }
-          }}
-        />
-      )}
-
-      {showBuildConfig && project && (
-        <BuildConfigDialog
-          projectId={project.id}
-          buildConfig={project.buildConfig as any}
-          onSaved={(cfg) => useProjectStore.getState().patchProject({ buildConfig: cfg as any })}
-          onClose={() => setShowBuildConfig(false)}
-        />
-      )}
-
-      {showMemoryDecay && project && (
-        <MemoryDecayDialog projectId={project.id} projectName={project.name} onClose={() => setShowMemoryDecay(false)} />
-      )}
-
-      {showProjectConfig && project && (
-        <ProjectConfigPanel
-          projectId={project.id}
-          project={project}
-          onSaved={(patch) => useProjectStore.getState().patchProject(patch)}
-          onClose={() => setShowProjectConfig(false)}
-        />
-      )}
-
-      {/* 导出弹窗 */}
-      {showExportDialog && project && (
-        <ExportDialog
-          projectId={project.id}
-          projectName={project.name}
-          chapters={project.storyNodes.map((n) => ({
-            id: n.id,
-            title: `${n.type === NODE_TYPE.VOLUME ? "卷：" : n.type === NODE_TYPE.SECTION ? "节：" : n.type === NODE_TYPE.SCENE ? "幕：" : ""}${n.title}`,
-          }))}
-          onClose={() => setShowExportDialog(false)}
-        />
-      )}
-      {showBackupDialog && project && (
-        <BackupDialog
-          projectId={project.id}
-          projectName={project.name}
-          onClose={() => setShowBackupDialog(false)}
-        />
-      )}
-
-      {/* D4 冲突推演 */}
-      {showConflict && project && (
-        <ConflictPanel
-          open={showConflict}
-          projectId={project.id}
-          projectName={project.name}
-          onClose={() => setShowConflict(false)}
-          onApplied={loadProject}
-          onOpenCharacter={(id) => { const c = project.characters.find((x) => x.id === id); if (c) setEditingCharacter(c); }}
-        />
-      )}
 
       {/* FE-N8 保存冲突解决面板 */}
       {conflict && selectedNode && (
