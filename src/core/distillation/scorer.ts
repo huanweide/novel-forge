@@ -205,24 +205,27 @@ export function scoreAndClassifyEvents(
   // 按分数降序
   scored.sort((a, b) => b.score - a.score);
 
-  // 分层截断
-  const sTier = scored
-    .filter((r) => r.tier === "S")
-    .slice(0, 5)
-    .map((r) => r.importance);
+  // 分层截断 + 降级保留：超出上限的高重要度事件降级到下层，绝不静默丢弃用户记忆
+  const sEvents = scored.filter((r) => r.tier === "S");
+  const aEvents = scored.filter((r) => r.tier === "A");
+  const bEvents = scored.filter((r) => r.tier === "B");
+  const cEvents = scored.filter((r) => r.tier === "C");
 
-  const aTier = scored
-    .filter((r) => r.tier === "A")
-    .slice(0, 15)
-    .map((r) => r.importance);
+  // S 层严格 5 条上限；超额 S 降级进 A 层（按分数重新排序）
+  const sTier = sEvents.slice(0, 5).map((r) => r.importance);
+  const demotedS = sEvents.slice(5);
 
-  const bTier = scored
-    .filter((r) => r.tier === "B")
-    .map((r) => r.importance);
+  // A 层 15 条上限；原生 A 与降级 S 合并后按分数降序取前 15，超额降级进 B 层
+  const aCombined = [...aEvents, ...demotedS].sort((x, y) => y.score - x.score);
+  const aTier = aCombined.slice(0, 15).map((r) => r.importance);
+  const demotedA = aCombined.slice(15);
 
-  const cTier = scored
-    .filter((r) => r.tier === "C")
-    .map((r) => r.importance);
+  // B 层承接降级 A；按分数排序保留关键词索引（B 层无上限，全部保留）
+  const bCombined = [...bEvents, ...demotedA].sort((x, y) => y.score - x.score);
+  const bTier = bCombined.map((r) => r.importance);
+
+  // C 层全部保留
+  const cTier = cEvents.map((r) => r.importance);
 
   return { sTier, aTier, bTier, cTier };
 }

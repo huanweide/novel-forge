@@ -258,7 +258,7 @@ describe("scoreAndClassifyEvents —— 排序与分层截断", () => {
     expect(new Set(all).size).toBe(8);
   });
 
-  it("S 层最多 5 条：超出的 S 级事件被截断丢弃（不降级到 A 层）", () => {
+  it("S 层最多 5 条：超出的 S 级事件降级到 A 层保留（不静默丢弃）", () => {
     const events = Array.from({ length: 7 }, (_, i) => ({
       description: `主角陨落${i}`,
       chapterDiff: 0,
@@ -267,22 +267,83 @@ describe("scoreAndClassifyEvents —— 排序与分层截断", () => {
     }));
     const out = scoreAndClassifyEvents(events);
     expect(out.sTier.length).toBe(5);
-    // 注：超出 5 条的 S 级事件（score 仍 ≥40）当前被直接丢弃，未降级到 A 层。
-    // 这是 scoreAndClassifyEvents 按精确 tier 过滤 + slice 的现行为，记为待评估项：
-    // 高重要度事件被静默丢弃可能损失上下文，未来可改为「超出 S 上限降级到 A」。
-    expect(out.aTier.length).toBe(0);
+    // 超出 5 条的 2 个 S 级事件不再被丢弃，降级进 A 层保留在 AI 上下文中
+    expect(out.aTier.length).toBe(2);
+    const aDesc = out.aTier.map((e) => e.description);
+    expect(aDesc).toContain("主角陨落5");
+    expect(aDesc).toContain("主角陨落6");
+    // 总数守恒：7 个事件全部保留，无丢失
+    expect(out.sTier.length + out.aTier.length + out.bTier.length + out.cTier.length).toBe(7);
   });
 
-  it("A 层最多 15 条（超出截断，多余不降级到 B）", () => {
+  it("A 层最多 15 条：超出的 A 级事件降级到 B 层保留（不静默丢弃）", () => {
     const events = Array.from({ length: 20 }, (_, i) => ({
       description: `他突破了${i}`,
       chapterDiff: 20, // breakthrough=20 → A
     }));
     const out = scoreAndClassifyEvents(events);
     expect(out.aTier.length).toBe(15);
-    expect(out.bTier.length).toBe(0);
+    // 超出 15 条的 5 个 A 级事件降级进 B 层（关键词索引）保留，不丢弃
+    expect(out.bTier.length).toBe(5);
+    const bDesc = out.bTier.map((e) => e.description);
+    expect(bDesc).toContain("他突破了15");
+    expect(bDesc).toContain("他突破了19");
     expect(out.sTier.length).toBe(0);
     expect(out.cTier.length).toBe(0);
+    // 总数守恒：20 个事件全部保留
+    expect(out.aTier.length + out.bTier.length).toBe(20);
+  });
+
+  it("降级顺序正确：降级 S 按分数排在原生 A 之前", () => {
+    const events = [
+      // 3 个 S（score 45）
+      ...Array.from({ length: 3 }, (_, i) => ({
+        description: `s陨落${i}`,
+        chapterDiff: 0,
+        characterIds: ["x"],
+        characterRoleMap: { x: "protagonist" },
+      })),
+      // 4 个原生 A（score 30：breakthrough20+时效10）
+      ...Array.from({ length: 4 }, (_, i) => ({
+        description: `a突破${i}`,
+        chapterDiff: 0,
+      })),
+    ];
+    const out = scoreAndClassifyEvents(events);
+    // S 取满 3（<5 上限），无降级
+    expect(out.sTier.length).toBe(3);
+    // 无降级时 A 层为 4 个原生 A，全部保留
+    expect(out.aTier.map((e) => e.description)).toEqual([
+      "a突破0",
+      "a突破1",
+      "a突破2",
+      "a突破3",
+    ]);
+  });
+
+  it("降级 S 排在原生 A 之前：S 溢出时溢出项按分数高于 A 而入 A 前列", () => {
+    const events = [
+      // 7 个 S（score 45）→ 5 入 S，2 降级 A
+      ...Array.from({ length: 7 }, (_, i) => ({
+        description: `s陨落${i}`,
+        chapterDiff: 0,
+        characterIds: ["x"],
+        characterRoleMap: { x: "protagonist" },
+      })),
+      // 3 个原生 A（score 30）
+      ...Array.from({ length: 3 }, (_, i) => ({
+        description: `a突破${i}`,
+        chapterDiff: 0,
+      })),
+    ];
+    const out = scoreAndClassifyEvents(events);
+    expect(out.sTier.length).toBe(5);
+    // A 层 = 降级 S(2, score45) + 原生 A(3, score30)，按分数降序共 5 条（A 上限 15 未触顶）
+    expect(out.aTier.length).toBe(5);
+    const aDesc = out.aTier.map((e) => e.description);
+    // 前 2 个必是降级 S（score 更高），其后为原生 A
+    expect(aDesc.slice(0, 2)).toEqual(["s陨落5", "s陨落6"]);
+    expect(aDesc.slice(2)).toEqual(["a突破0", "a突破1", "a突破2"]);
   });
 
   it("分层内按分数降序排列", () => {
