@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { ContextPreview } from "@/components/editor/ContextPreview";
+import { ChapterWordCountChart } from "./ChapterWordCountChart";
 import { ChapterEntitiesPanel } from "./ChapterEntitiesPanel";
 import { ForeshadowingPanel } from "./ForeshadowingPanel";
 import { ConsistencyPanel } from "./ConsistencyPanel";
@@ -255,6 +256,17 @@ export function RightPanel(props: RightPanelProps) {
               <StatRow label="角色" value={String(project.characters.length)} />
               <StatRow label="词条" value={String(project.lorebookEntries.length)} />
               <StatRow label="节点" value={String(project.storyNodes.length)} />
+            </div>
+
+            {/* 章节字数分布（纯前端零 token，与统计条同源 wordCount） */}
+            <div className="px-4 py-2">
+              <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-[var(--nv-text-muted)]">
+                <Icon name="chart" size={13} className="inline-block align-text-bottom shrink-0" />
+                章节字数分布
+              </div>
+              <ChapterWordCountChart
+                nodes={project.storyNodes.filter((n) => (n.type || "") !== "volume")}
+              />
             </div>
 
             {/* 监测三块 section（可折叠，复用监测 tab 渲染模式） */}

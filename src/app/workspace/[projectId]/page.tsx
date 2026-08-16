@@ -91,6 +91,8 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
+  // v2.50.2：专注写作模式（Zen）——隐藏侧栏/工具栏，只留正文 + 打字机滚动
+  const [zenMode, setZenMode] = useState(false);
   // P2-2：被动展示叙事阶段名——基于当前章在全书章节列表中的进度位置推导，复用 computeNarrativeStage。
   // 主线被标记 completed 时视为收尾；否则不靠章数硬判（用户可写数百章而不被提前结局）。
   const narrativeStage = narrativeStageOf(selectedNode?.id, chapterNodes, project?.storylines);
@@ -253,6 +255,7 @@ export default function WorkspacePage() {
   // v2.0.14：右侧栏快捷键改为 toggle 最小化（默认=false=展开），展开时自动收起左栏（互斥，只一侧可见）
   useShortcut("toggle-right", "]", "切换右侧栏", () => setRightMinimized((v) => { const next = !v; if (!next) setLeftCollapsed(true); return next; }));
   useShortcut("toggle-left", "[", "切换左侧栏", () => setLeftCollapsed((v) => !v));
+  useShortcut("zen-mode", "mod+.", "专注写作模式（禅模式）", () => setZenMode((v) => !v));
 
   // ── 文风模板 ──────────────────────────────
   const [styleTemplateId, setStyleTemplateId] = useState<string | undefined>();
@@ -1057,7 +1060,7 @@ export default function WorkspacePage() {
     <ErrorBoundary name="工作台">
     <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
       <OnboardingModal />
-      <div inert={leftDrawerOpen || rightDrawerOpen}>
+      <div inert={leftDrawerOpen || rightDrawerOpen} className={`${zenMode ? "hidden" : ""}`}>
       <Toolbar
         projectName={project.name} onBack={() => router.push("/")}
         onGenerateOutline={() => setShowOutlineDialog(true)}
@@ -1071,7 +1074,7 @@ export default function WorkspacePage() {
       />
       </div>
 
-      <div className="px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2" inert={leftDrawerOpen || rightDrawerOpen}>
+      <div className={`px-4 py-2 border-b border-[var(--nv-border-2)] flex items-center gap-2 ${zenMode ? "hidden" : ""}`} inert={leftDrawerOpen || rightDrawerOpen}>
         <button onClick={() => setLeftDrawerOpen(o => !o)} className="lg:hidden text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="切换大纲栏（窄屏）">
           <Icon name="book" size={13} /> 大纲
         </button>
@@ -1096,7 +1099,7 @@ export default function WorkspacePage() {
           className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] h-full transition-transform duration-200
           ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"}
           lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-64 lg:translate-x-0 lg:transition-none
-          ${leftCollapsed ? "lg:hidden" : ""}`}
+          ${leftCollapsed ? "lg:hidden" : ""} ${zenMode ? "hidden" : ""}`}
         >
           <h2 id={leftDrawerTitleId} className="sr-only">大纲栏</h2>
         <ErrorBoundary name="大纲">
@@ -1114,7 +1117,7 @@ export default function WorkspacePage() {
         {/* 中间列：正文 + 分析面板 */}
         <ErrorBoundary name="编辑器">
         <div className="flex flex-col flex-1 overflow-hidden" inert={leftDrawerOpen || rightDrawerOpen}>
-          <CenterPanel selectedNode={selectedNode}
+          <CenterPanel zen={zenMode} onEnterZen={() => setZenMode(true)} selectedNode={selectedNode}
             isGenerating={isGenerating || continueLoading} reviewResult={reviewResult}
             narrativeStage={narrativeStage}
             authorNote={authorNote} onAuthorNoteChange={handleAuthorNoteChange}
@@ -1181,6 +1184,7 @@ export default function WorkspacePage() {
             onEditCharacter={(id) => { const c = project.characters.find((x) => x.id === id); if (c) setEditingCharacter(c); }}
             onEditLore={(id) => { const l = project.lorebookEntries.find((x) => x.id === id); if (l) setEditingLore(l); }}
             loadProject={loadProject}
+            onExitZen={() => setZenMode(false)}
           />
 
           {/* P1-3：宝宝流记忆召回面板已合并入右栏「统计 → 上下文监控」（单一记忆透出组件），此处不再重复渲染 */}
@@ -1189,7 +1193,7 @@ export default function WorkspacePage() {
 
           {/* 统一分析面板（替代旧版浮动横幅+弹窗+按钮） */}
           {(extractionData || distillSummary || forbiddenScanResult || logicCheckResult || reviewResult) && selectedNode && (
-            <div className="px-6 pb-4 max-w-[700px] mx-auto w-full">
+            <div className={`px-6 pb-4 max-w-[700px] mx-auto w-full ${zenMode ? "hidden" : ""}`}>
               <PostGenPanel
                 projectId={project.id}
                 nodeId={selectedNode.id}
@@ -1226,7 +1230,7 @@ export default function WorkspacePage() {
             aria-labelledby={rightDrawerOpen ? rightDrawerTitleId : undefined}
             className={`fixed inset-y-0 right-0 z-40 ${rightMinimized ? "w-10" : "w-80"} max-w-[85vw] h-full transition-all duration-200
             ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"}
-            lg:static lg:z-auto lg:h-auto lg:shrink-0 ${rightMinimized ? "lg:w-10" : "lg:w-80"} lg:translate-x-0 lg:transition-all`}
+            lg:static lg:z-auto lg:h-auto lg:shrink-0 ${rightMinimized ? "lg:w-10" : "lg:w-80"} lg:translate-x-0 lg:transition-all ${zenMode ? "hidden" : ""}`}
           >
             <h2 id={rightDrawerTitleId} className="sr-only">侧栏</h2>
           <ErrorBoundary name="侧栏">
@@ -1268,6 +1272,12 @@ export default function WorkspacePage() {
         setReviewResult={setReviewResult}
         styleTemplateId={styleTemplateId}
         onStyleSaved={(id) => setStyleTemplateId(id)}
+        storyNodes={project?.storyNodes}
+        onSelectChapter={(id) => {
+          const node = project?.storyNodes.find((n) => n.id === id);
+          if (node) setSelectedNode(node);
+          dialogs.setEditingCharacter(null);
+        }}
         handlers={{ handleGenerateOutlinePreview, handleConfirmOutline, updatePreviewChapter, startBatchOutline, confirmBatchWrite }}
       />
 

@@ -41,6 +41,8 @@ export interface WorkspaceDialogsProps {
   styleTemplateId?: string;
   onStyleSaved: (id: string) => void;
   handlers: WorkspaceDialogsHandlers;
+  storyNodes?: { id: string; title?: string | null; content?: string | null }[];
+  onSelectChapter?: (nodeId: string) => void;
 }
 
 /**
@@ -53,16 +55,21 @@ export interface WorkspaceDialogsProps {
 export function WorkspaceDialogs({
   dialogs, project, selectedNode, allConfirmed, projectConfirmedAt,
   refreshAfterMutate, loadProject, setReviewResult, styleTemplateId, onStyleSaved, handlers,
+  storyNodes, onSelectChapter,
 }: WorkspaceDialogsProps) {
   const existingChapterCount = project?.storyNodes.filter((n) => n.type === NODE_TYPE.CHAPTER && !n.parentId).length || 0;
 
   return (
     <>
       {dialogs.editingCharacter && (
-        <CharacterDialog character={dialogs.editingCharacter} projectId={project.id} allCharacters={project.characters as any} onClose={() => dialogs.setEditingCharacter(null)} onSave={refreshAfterMutate} />
+        <CharacterDialog character={dialogs.editingCharacter} projectId={project.id} allCharacters={project.characters as any} onClose={() => dialogs.setEditingCharacter(null)} onSave={refreshAfterMutate}
+          storyNodes={storyNodes} onSelectChapter={onSelectChapter}
+          onEditCharacter={(id) => { const c = (project.characters || []).find((x: any) => x.id === id); if (c) dialogs.setEditingCharacter(c); }} />
       )}
       {dialogs.showNewCharacter && (
-        <CharacterDialog projectId={project.id} allCharacters={project.characters as any} onClose={() => dialogs.setShowNewCharacter(false)} onSave={refreshAfterMutate} />
+        <CharacterDialog projectId={project.id} allCharacters={project.characters as any} onClose={() => dialogs.setShowNewCharacter(false)} onSave={refreshAfterMutate}
+          storyNodes={storyNodes} onSelectChapter={onSelectChapter}
+          onEditCharacter={(id) => { const c = (project.characters || []).find((x: any) => x.id === id); if (c) dialogs.setEditingCharacter(c); }} />
       )}
       {dialogs.editingLore && (
         <LorebookEditDialog entry={dialogs.editingLore} projectId={project.id} onClose={() => dialogs.setEditingLore(null)} onSave={refreshAfterMutate} />

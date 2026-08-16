@@ -24,6 +24,7 @@ export function CenterPanel({
   onBatchWrite,
   onEditCharacter, onEditLore,   todayWords = 0,
   loadProject,
+  zen = false, onExitZen, onEnterZen,
   narrativeStage,
 }: {
   selectedNode: StoryNodeData | null; isGenerating: boolean;
@@ -47,6 +48,9 @@ export function CenterPanel({
   onEditLore?: (id: string) => void;
   todayWords?: number;
   loadProject?: () => void | Promise<void>;
+  zen?: boolean;
+  onExitZen?: () => void;
+  onEnterZen?: () => void;
   narrativeStage?: NarrativeStage | null;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -112,6 +116,30 @@ export function CenterPanel({
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
   }, [streamContent, isGenerating]);
+
+  // v2.50.2 打字机滚动：专注模式下手动编辑正文时，把光标所在行滚动到视口中间
+  useEffect(() => {
+    if (!zen || !inlineEditing) return;
+    const el = inlineRef.current;
+    const sc = contentRef.current;
+    if (!el || !sc) return;
+    const scrollToCursor = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      const scRect = sc.getBoundingClientRect();
+      const target = sc.scrollTop + (rect.top - scRect.top) - sc.clientHeight / 2 + 24;
+      sc.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+    };
+    el.addEventListener("input", scrollToCursor);
+    el.addEventListener("keyup", scrollToCursor);
+    el.addEventListener("click", scrollToCursor);
+    return () => {
+      el.removeEventListener("input", scrollToCursor);
+      el.removeEventListener("keyup", scrollToCursor);
+      el.removeEventListener("click", scrollToCursor);
+    };
+  }, [zen, inlineEditing]);
 
   const displayContent = streamContent || selectedNode?.content || "";
 
@@ -258,7 +286,25 @@ export function CenterPanel({
       </div>
       {selectedNode ? (
         <>
-          {/* 控制栏 */}
+          {/* 控制栏 / 专注顶栏 */}
+          {zen ? (
+            <div className="shrink-0 flex items-center justify-between border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)] px-4 py-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <button onClick={onExitZen} title="退出专注（Ctrl/Cmd + .）" className="flex h-7 items-center gap-1.5 rounded-lg border border-[var(--nv-border-2)] px-2.5 text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors">
+                  <Icon name="x" size={13} /> 退出
+                </button>
+                <h2 className="text-sm font-medium truncate max-w-[50vw]">{selectedNode.title}</h2>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {inlineEditing ? (
+                  <button onClick={saveInlineEdit} disabled={savingInline} className="flex h-7 items-center gap-1 rounded-lg border border-[var(--nv-success)]/50 text-[var(--nv-success)] bg-[var(--nv-success-soft)] px-2.5 text-xs hover:bg-[var(--nv-success)]/15 disabled:opacity-50"><Icon name="check" size={12} /> 完成</button>
+                ) : (
+                  <button onClick={startInlineEdit} className="flex h-7 items-center gap-1 rounded-lg border border-[var(--nv-border-2)] px-2.5 text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors"><Icon name="pencil" size={12} /> 编辑</button>
+                )}
+                <span className="text-xs text-[var(--nv-text-tertiary)]">{currentWords.toLocaleString()} 字 · 目标 {targetWordCount}</span>
+              </div>
+            </div>
+          ) : (
           <div className="border-b border-[var(--nv-border-2)] px-4 py-3 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">{selectedNode.title}</h2>
@@ -387,6 +433,13 @@ export function CenterPanel({
                         <Icon name="pencil" size={12} /> 编辑正文
                       </button>
                     )}
+                    {!isGenerating && (
+                      <button onClick={onEnterZen}
+                        className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
+                        title="进入专注写作模式：隐藏侧栏工具栏，只留正文，支持打字机滚动（Ctrl/Cmd + .）">
+                        <Icon name="target" size={12} /> 专注
+                      </button>
+                    )}
                     {inlineEditing && (
                       <>
                         <button onClick={saveInlineEdit} disabled={savingInline}
@@ -416,6 +469,7 @@ export function CenterPanel({
               )}
             </div>
           </div>
+          )}
           {/* 正文显示区 */}
           <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-4">
             {displayContent ? (
@@ -548,10 +602,10 @@ export function CenterPanel({
               </span>
             </div>
             <span className="flex items-center gap-2">
-              {genStep === "generating" && (
+              {!zen && genStep === "generating" && (
                 <span className="inline-flex items-center gap-1 text-[var(--nv-primary)]"><Icon name="loader" size={11} className="animate-spin" /> 草稿保存中…</span>
               )}
-              {genStep === "done" && (
+              {!zen && genStep === "done" && (
                 <span className="inline-flex items-center gap-1 text-[var(--nv-success)]"><Icon name="check" size={11} /> 已落库 <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" />{selectedNode?.wordCount ? ` · 本章 ${selectedNode.wordCount} 字` : ""}</span>
               )}
               <span className="flex items-center gap-1"><Icon name="file" size={11} /> UTF-8</span>

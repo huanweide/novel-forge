@@ -23,12 +23,18 @@ export function CharacterDialog({
   onClose,
   onSave,
   allCharacters,
+  storyNodes,
+  onSelectChapter,
+  onEditCharacter,
 }: {
   character?: CharacterData;
   projectId: string;
   onClose: () => void;
   onSave: () => void;
   allCharacters?: CharacterData[];
+  storyNodes?: { id: string; title?: string | null; content?: string | null }[];
+  onSelectChapter?: (nodeId: string) => void;
+  onEditCharacter?: (id: string) => void;
 }) {
   const isEdit = !!character;
   const [relView, setRelView] = useState<"list" | "graph">("list");
@@ -513,7 +519,13 @@ export function CharacterDialog({
                   <div className="rounded-xl border border-[var(--nv-border-2)] overflow-hidden">
                     {allCharacters && allCharacters.length > 0 ? (
                       <div className="h-72 overflow-auto">
-                        <RelationshipGraph characters={allCharacters as any} projectId={projectId} />
+                        <RelationshipGraph
+                          characters={allCharacters as any}
+                          projectId={projectId}
+                          onEditCharacter={onEditCharacter}
+                          storyNodes={storyNodes}
+                          onSelectChapter={onSelectChapter}
+                        />
                       </div>
                     ) : (
                       <p className="text-xs text-[var(--nv-text-muted)] p-4">
