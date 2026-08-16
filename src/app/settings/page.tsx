@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { loadCustomBannedWords, saveCustomBannedWords, DEFAULT_BANNED_WORDS } from "@/lib/banned-words";
 import { useShortcutHelp } from "@/components/ShortcutProvider";
@@ -23,6 +23,15 @@ const PROVIDERS: ProviderDef[] = [
   { key: "local", name: "本地推理 (Ollama)", defaultModel: "", desc: "本机 GPU 跑模型，零 API 费用，需先装 Ollama", defaultBaseUrl: "http://localhost:11434/v1" },
   { key: "custom", name: "自定义 (OpenAI 兼容)", defaultModel: "", desc: "任何兼容 OpenAI API 的服务" },
 ];
+
+function SectionHeader({ icon, children }: { icon: IconName; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <span className="settings-badge"><Icon name={icon} size={15} /></span>
+      <label className="text-sm font-semibold text-[var(--nv-text-secondary)]">{children}</label>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const [provider, setProvider] = useState("deepseek");
@@ -204,7 +213,7 @@ export default function SettingsPage() {
   return (
     <main className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {/* 顶栏 */}
-      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-sm transition-colors">
@@ -218,7 +227,7 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+      <div className="max-w-2xl mx-auto px-6 py-10 space-y-8 animate-in fade-in slide-in-from-bottom-2">
         {/* 说明 */}
         <div className="p-4 rounded-2xl surface-elevated">
           <p className="text-sm text-[var(--nv-text-tertiary)] leading-relaxed">
@@ -232,9 +241,9 @@ export default function SettingsPage() {
 
         {/* 外观 / 主题 */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="palette">
             0. 外观
-          </label>
+          </SectionHeader>
           <div className="flex items-center justify-between p-4 rounded-2xl surface-elevated">
             <div>
               <p className="text-sm text-[var(--nv-text-primary)] font-medium">界面风格</p>
@@ -248,9 +257,9 @@ export default function SettingsPage() {
 
         {/* 提供商选择 */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="cloud">
             1. 选择 LLM 提供商
-          </label>
+          </SectionHeader>
           <div className="space-y-2">
             {PROVIDERS.map((p) => {
               const active = provider === p.key;
@@ -281,12 +290,12 @@ export default function SettingsPage() {
 
         {/* API Key */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="key">
             2. API Key
             {hasExistingKey && (
               <span className="text-xs text-success/80 ml-2 font-normal">（已保存 <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 留空则不修改）</span>
             )}
-          </label>
+          </SectionHeader>
           {provider === "local" && (
             <p className="text-xs text-[var(--nv-text-muted)] -mt-1 mb-3">本地推理无需 API Key，填好上方 Ollama Base URL 与模型名即可。</p>
           )}
@@ -346,14 +355,14 @@ export default function SettingsPage() {
 
         {/* Model（可下拉检索） */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="bot">
             3. 模型
             {models.length > 0 && (
               <span className="text-xs text-[var(--nv-text-muted)] ml-2 font-normal">
                 （已检索到 {models.length} 个，可下拉选择或手动输入）
               </span>
             )}
-          </label>
+          </SectionHeader>
           <div className="flex gap-2">
             <input
               list="model-list"
@@ -411,9 +420,9 @@ export default function SettingsPage() {
 
         {/* FE-N7 违禁词预检词库 */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="shield">
             4. 违禁词预检词库
-          </label>
+          </SectionHeader>
           <div className="p-4 rounded-2xl surface-elevated space-y-3">
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
               导出前会自动扫描正文中的违禁词。内置 {DEFAULT_BANNED_WORDS.length} 个各平台普遍禁止的引流 / 广告 / 联系方式词，你可在此追加自己投稿平台的专有违禁词（每行一个）。扫描结果仅供参考，是否违禁由你判断，工具不自动删改。
@@ -439,9 +448,9 @@ export default function SettingsPage() {
 
         {/* FE-N5 快捷键速查 */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="zap">
             5. 键盘快捷键
-          </label>
+          </SectionHeader>
           <div className="p-4 rounded-2xl surface-elevated space-y-3">
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
               工作台支持全局快捷键，提升长篇写作流畅度。首次进入工作台会自动弹出速查；在输入框内打字时，非 Ctrl/⌘ 组合（如 N、[、]）不会触发，避免打断输入。
@@ -467,22 +476,22 @@ export default function SettingsPage() {
 
         {/* 记忆衰减说明（v0.46.58） */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="history">
             6. 记忆衰减
-          </label>
+          </SectionHeader>
           <div className="p-4 rounded-2xl surface-elevated space-y-3">
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
               记忆衰减模拟人类的自然遗忘曲线：越久远的章节记忆越模糊，系统按重要度自动降级或清理，防止旧设定无限堆积挤占上下文。
             </p>
             <ul className="space-y-1">
               {[
-                { t: "S 级 · 核心记忆", d: "永久保留，不衰减" },
-                { t: "A 级 · 重要", d: "超过 30 章降级为 B" },
-                { t: "B 级 · 一般", d: "超过 15 章降级为 C" },
-                { t: "C 级 · 琐碎", d: "超过 5 章直接删除" },
+                { t: "S 级 · 核心记忆", d: "永久保留，不衰减", tier: "s" },
+                { t: "A 级 · 重要", d: "超过 30 章降级为 B", tier: "a" },
+                { t: "B 级 · 一般", d: "超过 15 章降级为 C", tier: "b" },
+                { t: "C 级 · 琐碎", d: "超过 5 章直接删除", tier: "c" },
               ].map((r) => (
                 <li key={r.t} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--nv-surface-1)] px-3 py-2">
-                  <span className="text-xs text-[var(--nv-text-secondary)]">{r.t}</span>
+                  <span className={`mem-tier mem-tier-${r.tier}`}>{r.t}</span>
                   <span className="text-[11px] text-[var(--nv-text-muted)]">{r.d}</span>
                 </li>
               ))}
@@ -496,9 +505,9 @@ export default function SettingsPage() {
 
         {/* Agent 助手模式（v0.46.58） */}
         <section>
-          <label className="text-sm font-semibold text-[var(--nv-text-secondary)] block mb-3">
+          <SectionHeader icon="sparkles">
             7. Agent 助手 · 墨灵
-          </label>
+          </SectionHeader>
           <div className="p-4 rounded-2xl surface-elevated space-y-3">
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
               墨灵是会使用项目工具的写作 Agent：能查询角色/词条/大纲，也能直接填写、修改、生成（如「把樊斯瑞的性格改成更外放」）。

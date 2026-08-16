@@ -1709,3 +1709,35 @@ html.azure .btn-danger { color: oklch(0.76 0.18 20); border-color: oklch(0.62 0.
   .preset-card { transition: none; }
   .preset-card:hover { transform: none; }
 }
+
+/* ═══════════════════════════════════════════
+   设置页 · section 图标徽章（v3.1.9）：统一语义图标头
+   圆角方块 + 主色浅底描边，与全站虚空玻璃/香槟金体系一致，建立分组层次而不杂乱
+   ═══════════════════════════════════════════ */
+.settings-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--nv-primary) 13%, transparent);
+  color: var(--nv-primary);
+  border: 1px solid color-mix(in oklch, var(--nv-primary) 26%, transparent);
+  flex-shrink: 0;
+}
+/* 记忆衰减等级色徽章（S/A/B/C） */
+.mem-tier {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 7px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.mem-tier-s { background: color-mix(in oklch, var(--nv-creative) 16%, transparent); color: var(--nv-creative); }
+.mem-tier-a { background: color-mix(in oklch, var(--nv-primary) 16%, transparent); color: var(--nv-primary); }
+.mem-tier-b { background: color-mix(in oklch, var(--nv-info) 16%, transparent); color: var(--nv-info); }
+.mem-tier-c { background: var(--nv-surface-3); color: var(--nv-text-muted); }
