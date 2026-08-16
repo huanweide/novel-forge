@@ -2,8 +2,14 @@
 
 > automation-1786201646373（每小时触发）。目标：v1.6.x → v1.8.0 不空转推进。CEO 由马斯克人格代理拍板，反馈即用户本人，绝不回头问；个人 IP 永远归瑞宝宝，严禁另立 IP/品牌/项目。
 
-## 最新状态（2026-08-16 15:xx）
-- 当前 HEAD = **v2.51.2**（commit 待生成，本地已提交并 SSH 推送 ghssh main 成功）。
+## 最新状态（2026-08-16 21:xx）
+- 当前 HEAD = **v2.55.1**（commit cba934e，本地已提交并 SSH 推送 ghssh main 成功）。
+- 本轮演进：v2.55.0（章节标题风格设置，已推）→ v2.55.1 探索模块全局提示词纯函数测试补锁——把上一轮已备好、此前仅工作树 untracked 的 src/core/explore/build-prompt.test.ts（15 例）正式纳入版本管理，给「探索」模块全局提示词构建纯函数 buildGlobalPromptFromExplore 补自动化测试；锁死段落固定顺序/空字段不输出对应段/styleTags 中文顿号连接/plotStructure 未知回退/adopted 按固定 stepOrder 排序/单条超 600 字截断/无内容跳过/中文与「」& 特殊字符原样保留；零生产代码改动。tsc 0 错；vitest 全量 110 文件 1089/1089 全绿（与 v2.55.0 同基线、本版零新增行为、仅把已在工作树的测试纳入提交）；四版本文件对齐 v2.55.1；dev server /changelog HTTP 200 含 v2.55.1。
+- 马斯克 CEO 拍板（子代理通道 review-worker/deepseek-v4-pro 本环境仍故障，主代理代行如实标注，不回头问用户）：探索模块全局提示词构建零直接单测=未来重构可静默改坏用户探索填的设定、AI 上下文出错，第一性原理直接锁契约；低风险高杠杆收口 v2.55.1。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
+## 最新状态（2026-08-16 16:xx）
+- 当前 HEAD = **v2.51.3**（commit bd700f0，本地已提交并 SSH 推送 ghssh main 成功：4ddf876..bd700f0）。
+- 本轮演进：v2.51.2（背包前后端对账语义对齐）→ v2.51.3 智能填表三卡解析器纯函数测试补锁——给 `/api/parse-settings` 真实调用的三卡归一化核心 src/core/settings/parser.ts 补 21 例自动化测试（src/core/settings/parser.test.ts），锁死 JSON 清洗/缺字段兜底/数值强制/散文包裹容错/转换映射契约；零生产代码改动。tsc 0 错；vitest 108 文件 1059/1059 全绿（较 v2.51.2 +26 例）；四版本文件对齐 v2.51.3；dev server /changelog HTTP 200 含 v2.51.3。
 - 本轮演进：v2.51.1（残缺发布收口）→ v2.51.2 游戏背包前后端对账语义对齐——前端 applyFrontendItemChanges 补 GAIN_LIKE/SAFE_SKIP 兜底（与后端 applyItemChanges 一致，修复 OP_MAP 外「获得类」近义词后端入库/前端静默丢弃导致的背包暂态错位）；新增 reconcile.test.ts 21 例锁死全部 operation 分支 + 兜底 + 不可变 + 归属隔离 + 断网回拉。
 - v2.51.2：tsc 0 错；vitest 106 文件 1033/1033 全绿（较 v2.51.1 基线 1012 +21）；四版本文件对齐 v2.51.2；零生产逻辑删除、不碰用户并行 WIP。
 - 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问用户）：背包对账错位=真实缺陷，第一性原理直接对齐锁契约；低风险高杠杆收口。
@@ -158,3 +164,20 @@
 - 交付：四文件同步 v2.50.5（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit 5b7c870（5 文件 +163/-2，仅交付文件、未碰用户 WIP/.workbuddy）；GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（4e4ab58..5b7c870）；dev server HTTP 200 且 /changelog 含 v2.50.5。
 - 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：EPUB 容器格式生死线零测=未来重构可静默损坏用户导出的电子书，第一性原理直接锁契约；低风险高杠杆收口 v2.50.5。IP 仍归瑞宝宝，无新 IP/品牌/引流。
 - 下一轮候选：① 其他 src/core 零测纯函数（narrative-energy 仅重型 async、node-type/quality-thresholds 仅常量、write-generation 重编排，补测价值低，暂不）；② 用户新明确诉求优先；③ agent-browser 真页面复验历轮修复。
+
+## 最新状态（2026-08-16 17:xx）
+- 当前 HEAD = **v2.53.0**（commit 751c14c，本地已提交并 SSH 推送 ghssh main 成功：4457516..751c14c）。
+- 本轮演进：v2.52.0（写作速率三连击，已推）→ v2.53.0 globalPrompt 去重/截断纯函数测试补锁——给 v2.52.0 引入、此前零直接单测的两个 globalPrompt 聚合摘要底层纯函数（dedupeLore 世界卡去重 / hardTruncate 预算兜底截断）补 15 例自动化测试（src/core/sync-global-prompt.pure.test.ts）；零生产逻辑改动（仅加 export 标注）。tsc 全量 0 错；vitest 109 文件 1074/1074 全绿（较 v2.52.0 基线 +15 例）；四版本文件对齐 v2.53.0；dev server /changelog HTTP 200 含 v2.53.0。
+- 马斯克 CEO 拍板（子代理通道 review-worker/deepseek-v4-pro 本环境仍故障，主代理代行如实标注，不回头问用户）：去重/截断纯函数零测=未来重构可静默损坏用户世界设定/撑爆上下文窗，第一性原理直接锁契约；低风险高杠杆收口 v2.53.0。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
+## 最新状态（2026-08-16 18:xx）
+- 当前 HEAD = **v2.53.0**（commit 751c14c，已推 ghssh main）。检测发现工作树有一批未提交的 v2.54.0 改动（用户主对话并行进行中）：package.json/changelog-data.ts（LATEST_VERSION=v2.54.0 + VERSIONS[0] 已是 v2.54.0 条目「回滚富化后台化+分阶段进度+修 hardTruncate 真 bug」）/CHANGELOG.md 头条/更新报告.md 顶部 全部改 v2.54.0，连同 batch-write/route.ts + write-generation.ts 两个核心代码 WIP（git diff HEAD --stat 实证）。
+- 本轮演进：原计划 v2.53.0→v2.54.0 给 explore/build-prompt.ts 的 buildGlobalPromptFromExplore 补纯函数测试（15 例已写好全绿），但 v2.54.0 版本号已被用户并行工作占用。按「不碰并行领地」铁律 + 「不假收敛」红线，**本轮诚实归零：不升版、不 commit**，避免污染用户 v2.54.0 或把半成品 WIP 一起提交。测试文件 src/core/explore/build-prompt.test.ts 保留工作树（untracked 无害），待用户 v2.54.0 收口时一并纳入。
+- 双门禁验证（为本轮测试正确性）：tsc 全量 TSC_EXIT=0（0 错）；vitest 全量 110 文件 1089/1089 全绿（较 v2.53.0 基线 1074 +15 例）。
+- 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问）：并行领地占用即硬阻塞，不得为不空转制造虚假改动；测试已备好、待用户收口 v2.54.0 后自然并入。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
+## 最新状态（2026-08-16 19:xx）
+- 当前 HEAD = **v2.54.0**（commit c529579，用户已收口上线）。
+- 本轮演进：**诚实归零（不升版、不 commit）**。检测发现用户并行的 v2.55.0 WIP（orchestrator.ts）在第 357 行把参数列表闭合 `  ): Promise<{` 误写成 `  }): Promise<{`（多一个 `}`），导致整项目 tsc 从 374 行起重磅 TS1005 级联、编译失败。按「不碰并行领地」铁律不擅自改用户半成品，严守「tsc 0 错才升版」门禁归零；已把精准修复指引（删 357 行多余 `}`）交还用户。
+- 备好待并入：src/core/explore/build-prompt.test.ts（buildGlobalPromptFromExplore 纯函数测试，15 例，独立 15/15 全绿），待用户修好 orchestrator.ts 后作为 v2.54.1 补丁或并进 v2.55.0。
+- 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问用户）：用户半成品领地哪怕一个错别字也不碰，归零交还修复指引；不假收敛抢版本号、不推坏文件、不造无关改动。IP 仍归瑞宝宝，无新 IP/品牌/引流。
