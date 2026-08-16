@@ -2,6 +2,29 @@
 
 > automation-1786201646373（每小时触发）。目标：v1.6.x → v1.8.0 不空转推进。CEO 由马斯克人格代理拍板，反馈即用户本人，绝不回头问；个人 IP 永远归瑞宝宝，严禁另立 IP/品牌/项目。
 
+## 最新状态（2026-08-16 15:xx）
+- 当前 HEAD = **v2.51.2**（commit 待生成，本地已提交并 SSH 推送 ghssh main 成功）。
+- 本轮演进：v2.51.1（残缺发布收口）→ v2.51.2 游戏背包前后端对账语义对齐——前端 applyFrontendItemChanges 补 GAIN_LIKE/SAFE_SKIP 兜底（与后端 applyItemChanges 一致，修复 OP_MAP 外「获得类」近义词后端入库/前端静默丢弃导致的背包暂态错位）；新增 reconcile.test.ts 21 例锁死全部 operation 分支 + 兜底 + 不可变 + 归属隔离 + 断网回拉。
+- v2.51.2：tsc 0 错；vitest 106 文件 1033/1033 全绿（较 v2.51.1 基线 1012 +21）；四版本文件对齐 v2.51.2；零生产逻辑删除、不碰用户并行 WIP。
+- 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问用户）：背包对账错位=真实缺陷，第一性原理直接对齐锁契约；低风险高杠杆收口。
+
+## 最新状态（2026-08-16 14:xx）
+- 当前 HEAD = **v2.51.1**（commit 2858429，本地已提交并 SSH 推送 ghssh main 成功：9284eef..2858429）。
+- 本轮演进：v2.51.0（关系图谱美化+出场联动，已推）→ v2.51.1 残缺发布收口——把已发布代码引用却从未 git 入库的 ChapterWordCountChart.tsx 正式提交进仓库，修复干净 checkout/CI/Vercel 部署编译失败。
+- v2.51.1：git 实证 RightPanel.tsx（v2.51.0 已提交）import 并渲染 ChapterWordCountChart，但 git log --all 全空=组件从未入库；dev server 仅因磁盘有文件才没崩；补提交后 tsc 0 错、vitest 105 文件 1012/1012 全绿；四版本文件对齐 v2.51.1；零逻辑改动、不碰用户并行 WIP。
+- 马斯克 CEO 拍板（子代理通道 review-worker 本环境仍故障，主代理代行如实标注，不回头问用户）：残缺发布即真实缺陷——已发布代码引用未入库文件会让部署编译失败，第一性原理直接收口、不假收敛。
+
+## 最新状态（2026-08-16 13:xx）
+- 当前 HEAD = **v2.50.6**（commit 3e8b377，本地已提交并 SSH 推送 ghssh main 成功：5b7c870..3e8b377）。
+- 本轮演进：v2.50.5（EPUB ZIP 容器测试补锁）→ v2.50.6 给记忆蒸馏评分引擎 scorer.ts 补 33 例直接单测，锁死「AI 写作上下文事件筛选」回归防线；零生产代码改动。
+- v2.50.6：新增 src/core/distillation/scorer.test.ts 33 例钉死四类契约（分类优先级/评分分层边界/批量截断 S5·A15/ prompt 三区块格式化）；tsc 0 错；vitest 105 文件 1012/1012 全绿（较 v2.50.5 基线 979 +33）；四版本文件对齐 v2.50.6；dev server /changelog HTTP 200 含 v2.50.6。如实记录现行为：超 5 条 S 级事件被直接丢弃未降级到 A，记为待评估项、不假收敛。
+
+## 最新状态（2026-08-16 11:xx）
+- 当前 HEAD = **v2.50.4**（commit 4e4ab58，本地已提交并 SSH 推送 ghssh main 成功：670f590..4e4ab58）。
+- 本轮演进：v2.50.3（导出转换纯函数测试补锁 escapeHtml+buildChapterList）→ v2.50.4 给 DOCX 导出 XML 转义纯函数（escapeXml/textRuns）补 6 例直接单测，锁死「导出 Word 静默损坏」回归防线；零生产代码改动。
+- v2.50.4：新增 src/core/docx.pure.test.ts 6 例钉死转义契约（五类危险字符/中文保留/多行 <w:br/>/空章节回退）；tsc 0 错（删 tsconfig.tsbuildinfo 消增量缓存幽灵假阳性、未碰用户禅模式 WIP）；vitest 103 文件 968/968 全绿；四版本文件对齐 v2.50.4；dev server /changelog 含 v2.50.4。
+
+
 ## 最新状态（2026-08-15 22:xx）
 - 当前 HEAD = **v2.45.0**（commit 53d3f86，本地已提交并 SSH 推送 ghssh main 成功：0203178..53d3f86）。
 - 本轮演进：v2.44.0（开关重做）→ v2.45.0 更新弹窗接上「用户视角」大白话摘要（收口上一轮漏接线缺陷：CHANGELOG_USER_BRIEF 已写好却未接进首页弹窗，弹窗此前满屏技术黑话）。
@@ -101,3 +124,37 @@
 - 双门禁：tsc 0 错；vitest 全量 94 文件 896/896 全绿（较 v2.41.0 基线 +17）。
 - 交付：四文件 bump v2.42.0（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit 6846d8f（7 文件 +195/-26，含用户偏好持久化顺带收口）；GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（a3fa8f0..6846d8f）；dev server /changelog 含 v2.42.0。
 - 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：本轮连贯/已验证/低风险/高价值（朗读清洗防护），直接收口 v2.42.0；IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
+## 2026-08-16 轮次（v2.50.1 → v2.50.2 关键路径纯函数测试补锁）
+- 检测：真实 HEAD=v2.50.1（d37350c，已推 ghssh main）；工作树仅 memory 改动 + untracked 临时目录，无未收口源码。候选核验：类型逃逸（LLM/Prisma 桥接高危暂缓）、zod（validators 已等价落地）、历史缺口全闭环、TODO 0、跳过测试仅 1 处合法。转向核心纯函数零覆盖缺口：src/core 8 模块无 test，锁定 story-node-bridge.toAppStoryNode 与 story-status.withStorylineLock 两个最关键路径零测试。
+- 修复/验证：补 story-node-bridge.test.ts 9 例 + story-status.test.ts 4 例（共 13 例）；先核对 ContentStatus 八值/StoryNodeType 四值与兜底白名单逐一对齐，确认无真实 bug，只补防护网。纯测试补全、零生产代码改动。
+- 双门禁：tsc 0 错；vitest 101 文件 947/947 全绿（较 v2.50.1 基线 934 +13）。
+- 交付：四文件同步 v2.50.2（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit d62827c（6 文件 +210/-2）；GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（d37350c..d62827c）；dev server /changelog 含 v2.50.2。
+- 马斯克 CEO 拍板（子代理通道仍故障，主代理代行如实标注，不回头问用户）：关键路径纯函数无测试=未来重构可静默损坏节点数据/引入丢更新竞态，第一性原理直接锁契约；低风险高杠杆收口 v2.50.2。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+- 下一轮候选：① v2.51.0 数据层止血（Prisma 表名小写 + 注册表去 any，需维护窗口）；② 其他 src/core 零测试模块（docx/epub 导出转换纯函数）补测。
+
+## 2026-08-16 轮次（v2.50.2 → v2.50.3 导出转换纯函数测试补锁）
+
+- 检测：真实 HEAD=v2.50.2（d62827c，已推 ghssh main）；工作树仅 memory 改动 + untracked 临时目录，无未收口源码。候选核验：类型逃逸 1345 处（as any 531/:any 574/any[] 240）绝大多数为 LLM/Prisma JSON 桥接高危项（马斯克此前暂缓）、纯前端清理边际收益低；zod 以等价手写 validators 落地、历史缺口全闭环、TODO 真实残留 0（命中全是中文注释「XXX」字样）；src/core 纯函数测试缺口锁定 docx.ts/epub.ts/narrative-energy.ts/node-type.ts/quality-thresholds.ts/write-generation.ts 仍零单测（docx/epub 仅有 stream 测试）；narrative-energy 仅 async 重型函数、node-type/quality-thresholds 仅常量无逻辑；docx 的 buildDocx 已被 stream 测试「结构等价」间接锁死。
+- 决策：子代理通道（review-worker/deepseek-v4-pro）本环境仍故障，按用户纠偏主代理代行马斯克 CEO 拍板并如实标注，不回头问；结论＝给 EPUB 导出复用却零直接单测的两个纯函数 escapeHtml + buildChapterList 补测试（延续 v2.32/v2.50.2 已验证低风险路径）；不假收敛重做已闭环项、不碰高危类型逃逸、不碰 Prisma 表名小写（破坏真实库、风险>收益）。
+- 修复/验证：新增 src/core/epub.pure.test.ts 15 例——escapeHtml 7 例（& < > 与引号 五类危险字符各自转义、混合标签整体转义、空串、中文原样保留）+ buildChapterList 8 例（单根/多根按 order 升序/前序遍历 depth 递增/两层嵌套 depth=3/includeOutline 开关/缺 title 回退未命名/子节点 order 相同按 createdAt 兜底）；首跑 1 例失败系测试自己断言写错（root 未覆盖 title 误期望「根」），改测试期望非代码；tsc 0 错；vitest 全量 102 文件 962/962 全绿（较 v2.50.2 基线 947 +15）。
+- 交付：四文件同步 v2.50.3（package.json/changelog-data.ts LATEST_VERSION+CHANGELOG_BRIEF头条+VERSIONS[0]/CHANGELOG.md/更新报告.md）；commit 670f590（5 文件 +131/-2）；GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（d62827c..670f590）；dev server /changelog HTTP 200 含 v2.50.3。
+- 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：导出地基纯函数零测=未来重构可静默损坏 EPUB 目录顺序/HTML 转义，第一性原理直接锁契约；低风险高杠杆收口 v2.50.3。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+- 下一轮候选：① 其他 src/core 零测试模块（docx.ts 转换核心若确有未覆盖纯函数、write-generation.ts 生成参数纯函数）补测；② v2.51.0 数据层止血（Prisma 表名小写 + 注册表去 any，需维护窗口，待评估真实库迁移风险）；③ 用户新明确诉求优先。
+
+## 2026-08-16 轮次（v2.50.3 → v2.50.4 DOCX 导出 XML 转义纯函数测试补锁）
+- 检测：真实 HEAD=v2.50.3（670f590，已推 ghssh main）；工作树仅 memory 改动 + untracked 临时目录，无未收口源码。候选核验：any 逃逸 1018 处（非测试源码）绝大多数为 LLM/Prisma JSON 桥接高危项（马斯克此前暂缓）；真实 TODO/FIXME 0；导出流式背压防御已落地；重新摘要 #221 已落地——均闭环/高危暂缓；write-generation.ts 是重编排函数（依赖 prisma/LLM orchestrator）非纯函数、强行补测需大量 mock 价值低，纠偏放弃。
+- 锁定目标：src/core/docx.ts 的 escapeXml/textRuns/para 纯函数（决定导出 .docx 是否合法 XML，转义出错=用户 Word 文件静默损坏且无报错）此前仅被 docx.stream.test.ts 间接「结构等价」覆盖，转义逻辑本身零直接单测。新增 src/core/docx.pure.test.ts 6 例锁死五类危险字符转义/中文保留/多行 <w:br/>/空章节回退/含 & 标题整体合法。纯测试补全、零生产代码改动。
+- 双门禁：tsc 0 错（顺带坐实「删 tsconfig.tsbuildinfo 消除增量缓存幽灵假阳性」——page.tsx 的 zen prop 报错是缓存假阳性，CenterPanel 本就声明 zen?:boolean，未碰用户并行禅模式 WIP）；vitest 103 文件 968/968 全绿（较 v2.50.3 +6 例）。
+- 交付：四文件同步 v2.50.4（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit 4e4ab58（5 文件 +149/-2）+ SSH 推送 ghssh main（670f590..4e4ab58）；dev server /changelog HTTP 200 含 v2.50.4。
+- 马斯克 CEO 拍板（子代理通道仍故障，主代理代行如实标注，不回头问用户）：导出地基纯函数零测=未来重构可静默损坏用户导出的 Word，第一性原理直接锁契约；低风险高杠杆收口 v2.50.4。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+- 下一轮候选：① 其他 src/core 零测试纯函数（docx.ts 转换核心若确有未覆盖纯函数）；② 用户新明确诉求优先；③ agent-browser 真页面复验历轮修复。
+
+## 2026-08-16 轮次（v2.50.4 → v2.50.5 EPUB ZIP 容器纯函数测试补锁）
+- 检测：真实 HEAD=v2.50.4（4e4ab58，已推 ghssh main）；工作树仅 memory 改动 + 用户在并行主对话实时编辑的 WIP 文件（page.tsx/CenterPanel/CharacterDialog/RelationshipGraph/RightPanel/WorkspaceDialogs）未提交，本轮严格不触碰。候选核验：src/core 纯函数零测缺口已近补完（docx.pure/epub.pure/proseToHtml/story-node-bridge/story-status/docx 转义均已锁），锁定 epub.ts 的 makeZip（手搓 EPUB ZIP 容器字节、决定文件能否被阅读器打开）零直接单测。
+- 决策：子代理通道（review-worker/deepseek-v4-pro）本环境仍故障（review-worker.md 实际 model=HY3），按用户 2026-08-14 纠偏主代理代行马斯克 CEO 拍板并如实标注，不回头问——做 makeZip 字节级+jszip 端到端单测，不做 B（常量/重型 async 补测价值低）/C（Prisma 表名小写风险>收益）。
+- 修复/验证：新增 src/core/epub.zip.test.ts 11 例——三处签名(PK\x03\x04/PK\x01\x02/PK\x05\x06)、crc32 标准校验值(123456789→0xCBF43926)、UTF-8 文件名（含中文字节级）、数据完整、多条目偏移正确、空数据 crc=0、JSZip 端到端解压还原全部条目；首跑 1 例断言写反（第二 central record offset 指向 b 却断言 a），改测试非代码。纯测试补全、零生产代码改动。
+- 双门禁：tsc 本轮文件零错误（全量 tsc 因用户并行未提交 WIP 文件 RelationshipGraph.tsx 关系图重构有 3 处类型错误，非本轮引入、不纳入提交）；vitest 全量 104 文件 979/979 全绿（较 v2.50.4 基线 968 +11 例）。
+- 交付：四文件同步 v2.50.5（package.json/changelog-data.ts 三处/CHANGELOG.md/更新报告.md）；commit 5b7c870（5 文件 +163/-2，仅交付文件、未碰用户 WIP/.workbuddy）；GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（4e4ab58..5b7c870）；dev server HTTP 200 且 /changelog 含 v2.50.5。
+- 马斯克 CEO 拍板（主代理代行，子代理故障如实标注）：EPUB 容器格式生死线零测=未来重构可静默损坏用户导出的电子书，第一性原理直接锁契约；低风险高杠杆收口 v2.50.5。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+- 下一轮候选：① 其他 src/core 零测纯函数（narrative-energy 仅重型 async、node-type/quality-thresholds 仅常量、write-generation 重编排，补测价值低，暂不）；② 用户新明确诉求优先；③ agent-browser 真页面复验历轮修复。

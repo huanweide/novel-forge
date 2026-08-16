@@ -98,6 +98,41 @@ export function applyFrontendItemChanges(
     } else if (change.operation === "skip") {
       // 与后端 game-engine.ts:96-98 对齐：流转/出售类，安全跳过，不改动背包。
       // no-op
+    } else {
+      // 与后端 applyItemChanges 兜底对齐（阿游 P1-1）：未知动词不全盘丢弃。
+      // 解析器仅归一 OP_MAP 内动词，OP_MAP 外的「获得类」近义词（如「捞到」「赢取」）
+      // 会原样透传；后端 GAIN_LIKE 兜底按 gain 入库，前端此前静默丢弃 → 背包暂态错位。
+      // 此处与后端同语义：GAIN_LIKE 类按 gain 处理，SAFE_SKIP 类（流转/出售）与真正未知动词安全跳过（不污染背包计数）。
+      const SAFE_SKIP = new Set([
+        "出售", "售卖", "交换", "交易", "卖出", "买出", "当掉", "典当", "抵押", "典押",
+      ]);
+      const GAIN_LIKE = new Set([
+        "获得", "得到", "获取", "收下", "赢得", "缴获", "收到", "得手", "到手",
+        "拾取", "捡到", "取得", "拾起", "拿", "捞到", "赢取", "劫得", "霸占",
+      ]);
+      if (GAIN_LIKE.has(change.operation)) {
+        const idx = items.findIndex(match);
+        if (idx >= 0) {
+          items = items.map((i, k) =>
+            k === idx
+              ? { ...i, quantity: i.quantity + (change.quantity || 1), owner: i.owner || owner }
+              : i
+          );
+        } else {
+          items = [
+            ...items,
+            {
+              name: change.name,
+              quantity: change.quantity || 1,
+              category: "other",
+              source: `第${newRound}轮获得`,
+              acquiredRound: newRound,
+              owner,
+            },
+          ];
+        }
+      }
+      // SAFE_SKIP / 其余真正未知动词：no-op（不改动背包，与后端一致）
     }
   }
   return items;

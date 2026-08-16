@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.51.2 — 2026-08-16
+
+### 游戏模式背包对账与后端语义对齐 + 单测锁死
+- **真实缺陷**：前端游戏背包对账 `applyFrontendItemChanges`（reconcile.ts）与后端 `applyItemChanges`（game-engine.ts）语义不一致——解析器 `parseGameOutput` 对 OP_MAP 未收录的中文动词原样透传（如「捞到」「赢取」），后端 GAIN_LIKE 兜底按 gain 入库、前端此前静默丢弃，导致玩家背包在乐观更新与后端对账回拉之间出现暂态错位（原注释「与后端语义一致」不实）。
+- **修复动作**：前端补 GAIN_LIKE/SAFE_SKIP 兜底分支，与后端完全一致——获得类近义词按 gain 入库、流转类（出售/抵押等）与真正未知动词安全跳过不污染背包计数；纯函数加法、零逻辑删除、零接口/LLM 变化。
+- **门禁**：补 `src/core/game/reconcile.test.ts` 21 例直接单测，锁死全部 operation 分支 + 新兜底 + 不可变更新 + 同名异主归属隔离 + `reconcileFromSummary` 断网回拉契约；tsc 0 错误；vitest 全量 106 文件 1033/1033 全绿（较 v2.51.1 基线 1012 +21 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.51.1 — 2026-08-16
 
 ### 残缺发布收口·补全缺失的章节字数分布组件

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.51.1";
+export const LATEST_VERSION = "v2.51.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.51.2 游戏模式背包对账与后端语义对齐 + 单测锁死（马斯克 CEO 循环运营）：①真实缺陷——前端游戏背包对账 applyFrontendItemChanges（reconcile.ts）与后端 applyItemChanges（game-engine.ts）语义不一致：解析器 parseGameOutput 对 OP_MAP 未收录的中文动词原样透传（如「捞到」「赢取」），后端 GAIN_LIKE 兜底按 gain 入库、前端此前静默丢弃 → 玩家背包在乐观更新与后端对账回拉之间出现暂态错位（注释「与后端语义一致」是假的）；②修复——前端补 GAIN_LIKE/SAFE_SKIP 兜底分支（与后端完全一致：获得类近义词按 gain 入库、流转类与真正未知动词安全跳过不污染背包），纯函数加法、零逻辑删除、零接口/LLM 变化；③补 src/core/game/reconcile.test.ts 21 例直接单测锁死全部 operation 分支（gain/consume/discard/equip/unequip/destroy/skip）+ 新兜底（OP_MAP 外获得类近义词入库、流转类/未知动词 no-op）+ 不可变更新（不原地改写入参）+ 同名异主归属隔离 + reconcileFromSummary 断网回拉（allNarrative 优先/narrative 回退/options lastOptions 优先/turns 剥离 options/空摘要安全默认）；tsc 0 错误；vitest 全量 106 文件 1033/1033 全绿（较 v2.51.1 基线 1012 +21 例）；四版本文件对齐 v2.51.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.51.1 残缺发布收口·补全缺失的章节字数分布组件（马斯克 CEO 循环运营）：缺陷——v2.51.0 已发布的 RightPanel.tsx 始终 import 并渲染 ChapterWordCountChart 章节字数分布图，但该组件源文件从未 git 入库（git 历史全空），当前 dev server 仅因磁盘上有该文件才没崩；任何干净 checkout / CI / Vercel 部署都会因 import 指向仓库中不存在的文件而编译失败（典型残缺发布）。本轮把该组件（src/components/workspace/ChapterWordCountChart.tsx：纯前端零 token、以均值 60%/150% 自适应阈值标记太水/超长章、圆角柱+均值参考虚线+悬停高亮+最水/最长章摘要）正式提交进仓库，使线上代码与仓库一致、部署可复现；纯补提交、零逻辑改动、零接口/LLM 变化、不碰用户并行领地；tsc 0 错误；vitest 全量 105 文件 1012/1012 全绿（本版零新增测试、未降门禁）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.51.0 角色关系图谱美化 + 出场章节联动（瑞宝宝指令 + 自用写手视角真机实测收口）：①关系图谱重做——RelationshipGraph.tsx 从直连线改力导向布局（斥力/弹簧/阻尼迭代收敛）+ 二次贝塞尔曲线边（不再一坨直线打结），焦点高亮（点某角色只显示它的边与邻居），节点可拖拽且 localStorage 持久化位置，角色卡/世界卡 UI 直接能看；②出场章节联动——把 CharacterDialog 角色卡编辑对话框接入项目 storyNodes，图谱节点点角色→列出「正文出场」前 6 章（扫描章节正文匹配角色名正则）→点章节直接跳转到该章（onSelectChapter 回调一路从 WorkspaceDialogs→page 接通），角色卡从此不是孤岛、能顺着关系线摸到它在哪几章出场；③多章写作真机实测（硅基流动 DeepSeek-V4-Flash）全链路跑通——建 3 章+章纲→写 3 章正文，跨章节信息保存完美（第9-11章精准续用前8章主角/配角/设定）、角色卡·世界卡确实注入生效（生成文本出现出自卡的「修为/时间」结构化设定）、后台任务+进度可视化可用、创意工坊预设创建+套用/规则创建+运行/文风卡即时生效全部验证通过；④实测暴露待优化项已出《最终优化版本计划-2026-08-16.md》——globalPrompt 膨胀到18万字每次全量注入超上下文窗口（速率头号杀手）、进度章级粗粒度（0%挂3分钟才跳）、单章≈206s偏慢、剧情校准HUD格式忽有忽无、批量流缺章纲确认闸门；路线图 v2.51.x 做 globalPrompt 聚合摘要+字级流式进度、v2.52.x 速率再榨+HUD开关、v2.53.x 章纲确认闸门+创意工坊套用增强。零破改动、复用既有链路；tsc 0 错误；vitest 全量 105 文件 1012/1012 全绿（与 v2.50.6 同基线、本版纯前端图谱+联动零新增测试未降门禁）；四版本文件对齐 v2.51.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.6 记忆注入评分引擎纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给被记忆蒸馏系统复用、此前零直接单测的事件重要性评分引擎 scorer.ts 补 33 例自动化测试（src/core/distillation/scorer.test.ts），钉死四类契约——①事件分类 classifyEventCategory 八类关键词命中与优先级（死亡优先于战斗、突破优先于战斗、无关键词兜底 daily）；②单事件评分 scoreEvent 的时效分（距今越远越低、触底 0 不转负）+ 类型基础分 + 伏笔关联分（回收+20 高于 仅关联+15）+ 角色重要性取最高值、以及 S≥40 / A≥20 / B≥10 / C<10 四级分层边界（含等号）；③批量评分 scoreAndClassifyEvents 按分数降序、S 层截断 5 条 / A 层截断 15 条、各层内保序、每个事件互斥落入唯一分层；④prompt 格式化 formatEventsForPrompt 的 🔴核心/🟡重要/🟢背景 三区块渲染、空层省略、C 层不注入、B 层描述截断 30 字。该引擎决定哪些事件（S/A/B）注入 AI 写作上下文、哪些（C）仅存档——零测试=未来重构可静默改变注入内容、退化故事连贯性，本轮锁死契约防回归（实测发现并如实记录一项现行为：超出 5 条的 S 级事件被直接截断丢弃、未降级到 A 层，记为待评估项，不假收敛）；纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 105 文件 1012/1012 全绿（较 v2.50.5 基线 979 +33 例）；四版本文件对齐 v2.50.6；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -113,6 +114,20 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.51.2",
+    date: "2026-08-16",
+    title: "游戏模式背包对账与后端语义对齐 + 单测锁死",
+    sections: [
+      { label: "真实缺陷", items: [
+        "前端游戏背包对账 applyFrontendItemChanges（reconcile.ts）与后端 applyItemChanges（game-engine.ts）语义不一致：解析器 parseGameOutput 对 OP_MAP 未收录的中文动词原样透传（如「捞到」「赢取」），后端 GAIN_LIKE 兜底按 gain 入库、前端此前静默丢弃 → 玩家背包在乐观更新与后端对账回拉之间出现暂态错位（注释「与后端语义一致」是假的）",
+      ] },
+      { label: "修复动作", items: [
+        "前端补 GAIN_LIKE/SAFE_SKIP 兜底分支，与后端完全一致——获得类近义词按 gain 入库、流转类（出售/抵押等）与真正未知动词安全跳过不污染背包计数，纯函数加法、零逻辑删除、零接口/LLM 变化",
+        "补 src/core/game/reconcile.test.ts 21 例直接单测，锁死全部 operation 分支 + 新兜底 + 不可变更新（不原地改写入参）+ 同名异主归属隔离 + reconcileFromSummary 断网回拉契约；tsc 0 错误；vitest 全量 106 文件 1033/1033 全绿（较 v2.51.1 基线 1012 +21 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.51.1",
     date: "2026-08-16",
