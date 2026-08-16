@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.51.3";
+export const LATEST_VERSION = "v2.52.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.52.0 写作速率三连击（瑞宝宝指令·多章写作真机实测收口）：①全局提示词聚合摘要——重写 buildGlobalPrompt 加标题去重+每字段截断+4 档预算环，真机把 globalPrompt 从 181574 字符压到 12021（15.1 倍、≈8K token，不再撑爆 131072 上下文窗口），角色卡核心字段保真、只裁世界书长尾，配套 5 例单测；②字级流式进度——批量写正文按「已生成字数/目标字数」实时回写 FillTask.progress，前端进度条从章级跳变(0%→33%→67%)变按字数平滑爬升，预置 3%+下限 5% 防 0% 像卡死；③后置富化后台化（头号残留瓶颈）——实测单章 222s 里仅 ~25s 真写作、~141s 被审校+摘要 2 次 LLM 调用卡在 99%；新增 deferEnrichment 开关，批量写作时正文落库即 done、审校/摘要/伏笔/逻辑自查 fire-and-forget 后台跑，单章流式(SSE)仍同步即时推送；真机复测单章 222s→91.3s（2.4 倍提速）、进度平滑到 100% 不再卡 99%。tsc 0 错误；vitest 全量 108 文件 1059/1059 全绿（较 v2.51.3 +5 例）；四版本文件对齐 v2.52.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.51.3 智能填表三卡解析器纯函数测试补锁（马斯克 CEO 循环运营）：①测试加固——给「智能填表」三卡解析核心 src/core/settings/parser.ts（被 /api/parse-settings 真实调用、是角色卡/世界卡/风格卡归一化唯一权威源）补 21 例自动化测试（src/core/settings/parser.test.ts），锁死三条解析入口的 JSON 清洗与归一化契约——parseSettings 的代码围栏剥离/纯 JSON/缺字段兜底（空名回退「未命名角色」、role 缺省 supporting、appearance 全字段空串、category 缺省 custom、insertionOrder 缺省 50）/非法 JSON 抛错、normalizeStyleProfile 数值强制（字符串数字与 NaN 回落默认、非对象 tonalMarkers 回落空对象、空对象按默认归一化非 null）、parseLorebookOnly 散文包裹容错提取首个数组与缺字段兜底、parseStyleOnly 非字符串写作规则过滤与散文包裹提取、to*CreateParams 关系 target→targetName 映射/导入标签「📥导入」/默认存活/启用；②价值——该函数决定用户导入的三卡数据正确性，零测试=未来重构可静默把角色/世界/风格卡归一化改坏、用户世界设定悄悄丢失，本轮把「肉眼难查」的归一化边界钉死；纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 108 文件 1059/1059 全绿（较 v2.51.2 基线 106 文件 1033 +26 例：本轮 parser 测试 21 例 + 用户并行 build-global-prompt 测试 5 例）；四版本文件对齐 v2.51.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.51.2 游戏模式背包对账与后端语义对齐 + 单测锁死（马斯克 CEO 循环运营）：①真实缺陷——前端游戏背包对账 applyFrontendItemChanges（reconcile.ts）与后端 applyItemChanges（game-engine.ts）语义不一致：解析器 parseGameOutput 对 OP_MAP 未收录的中文动词原样透传（如「捞到」「赢取」），后端 GAIN_LIKE 兜底按 gain 入库、前端此前静默丢弃 → 玩家背包在乐观更新与后端对账回拉之间出现暂态错位（注释「与后端语义一致」是假的）；②修复——前端补 GAIN_LIKE/SAFE_SKIP 兜底分支（与后端完全一致：获得类近义词按 gain 入库、流转类与真正未知动词安全跳过不污染背包），纯函数加法、零逻辑删除、零接口/LLM 变化；③补 src/core/game/reconcile.test.ts 21 例直接单测锁死全部 operation 分支（gain/consume/discard/equip/unequip/destroy/skip）+ 新兜底（OP_MAP 外获得类近义词入库、流转类/未知动词 no-op）+ 不可变更新（不原地改写入参）+ 同名异主归属隔离 + reconcileFromSummary 断网回拉（allNarrative 优先/narrative 回退/options lastOptions 优先/turns 剥离 options/空摘要安全默认）；tsc 0 错误；vitest 全量 106 文件 1033/1033 全绿（较 v2.51.1 基线 1012 +21 例）；四版本文件对齐 v2.51.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.51.1 残缺发布收口·补全缺失的章节字数分布组件（马斯克 CEO 循环运营）：缺陷——v2.51.0 已发布的 RightPanel.tsx 始终 import 并渲染 ChapterWordCountChart 章节字数分布图，但该组件源文件从未 git 入库（git 历史全空），当前 dev server 仅因磁盘上有该文件才没崩；任何干净 checkout / CI / Vercel 部署都会因 import 指向仓库中不存在的文件而编译失败（典型残缺发布）。本轮把该组件（src/components/workspace/ChapterWordCountChart.tsx：纯前端零 token、以均值 60%/150% 自适应阈值标记太水/超长章、圆角柱+均值参考虚线+悬停高亮+最水/最长章摘要）正式提交进仓库，使线上代码与仓库一致、部署可复现；纯补提交、零逻辑改动、零接口/LLM 变化、不碰用户并行领地；tsc 0 错误；vitest 全量 105 文件 1012/1012 全绿（本版零新增测试、未降门禁）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -115,6 +116,28 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.52.0",
+    date: "2026-08-16",
+    title: "写作速率三连击：全局提示词瘦身 + 字级进度 + 后置富化后台化",
+    sections: [
+      { label: "全局提示词聚合摘要（头号速率杀手）", items: [
+        "重写 src/core/sync-global-prompt.ts 的 buildGlobalPrompt：新增标题去重（同标题只留最长内容）+ 每字段按预算截断 + 4 档递减 severity 预算环（loreCap/bgCap/maxPerCat/maxChars 逐档收紧），任一档凑进 14000 字符预算即采用、都不进则硬截断（带「全局设定已智能精简」后缀）；角色卡外貌/能力/关系等核心字段始终保真，只裁世界书长尾",
+        "真机实测「新城·龙陨之地」项目：globalPrompt 从 181574 字符压到 12021 字符（15.1 倍压缩，≈8K token，远低于 131072 上下文窗口），喂给写作模型的提示词不再超窗、token 生成更快；配套 src/core/build-global-prompt.test.ts 5 例锁死去重/截断/预算内/核心字段保真/无标题不丢数据",
+      ] },
+      { label: "字级流式进度（不再 0% 挂三分钟）", items: [
+        "批量写作 Mode B（写正文）的 send 回调改为累计 token 字数、按「已生成字数 / 目标总字数(每章3000)」节流(700ms)回写 FillTask.progress；前端 workspace 进度条直接读 t.progress 自动平滑走动，从「每章完成才跳 33%/67%」变「按字数实时爬升」",
+        "预置进度 3%（写前上下文加载+剧情规划约数十秒给活信号），流式下限 5% 防首个 token 把进度从 3% 回落 0% 的视觉回跳；进度条不再像卡死",
+      ] },
+      { label: "后置富化管线后台化（解决 99% 挂死）", items: [
+        "实测单章 222s 中仅 ~25s 是真流式写作，~141s 被 runPostGenerationPipeline 的 2 次 LLM 调用（审校+摘要）阻塞，进度条卡在 99% 像死机；新增 deferEnrichment 开关：批量写作置 true 时正文落库即发 done 并 return，审校/摘要/伏笔/逻辑自查改为 fire-and-forget 后台跑（项目本就约定富化 best-effort 不阻断交付），单章流式(SSE)模式保持同步即时推送富化事件",
+        "真机复测（硅基流动 DeepSeek-V4-Flash）：单章耗时从 222s 降至 91.3s（2.4 倍提速），FillTask 正常 completed、进度平滑到 100%，不再卡 99%；整轮 P0 落地后单章速率较优化前(206s)提速约 2.3 倍",
+      ] },
+      { label: "质量门禁", items: [
+        "tsc 0 错误；vitest 全量 108 文件 1059/1059 全绿（较 v2.51.3 基线 +5 例 build-global-prompt 测试）；四版本文件对齐 v2.52.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.51.3",
     date: "2026-08-16",

@@ -47,6 +47,12 @@ export interface WriteInput {
   newCharacterRequests?: string[];
   storylineId?: string;
   diffuseCompleted?: boolean;
+  /**
+   * v2.52.0 性能开关：批量写作（后台任务）置 true 时，正文落库即发 done 并 return，
+   * 后置富化管线（审校/摘要/伏笔/逻辑自查，含 2 次 LLM 调用 ~140s）改为 fire-and-forget 后台跑，
+   * 避免进度条在 99% 挂死。单章流式（SSE）不传此位，保持同步即时推送富化事件。
+   */
+  deferEnrichment?: boolean;
 }
 
 /** 抽离层向前置校验失败（非生成期错误）传达业务边界，便于路由映射。 */
@@ -75,6 +81,7 @@ export async function runWriteGeneration(
     newCharacterRequests,
     storylineId,
     diffuseCompleted,
+    deferEnrichment,
   } = input;
 
   // ── 1. 加载上下文 ──
@@ -373,7 +380,7 @@ export async function runWriteGeneration(
       return;
     }
 
-    // Phase 2-4: 后处理管线（扫描 → 审校 → 摘要）
+    // ── 后置富化（审校/摘要/伏笔/逻辑自查）前置准备 ──
     const activeCharIds = Array.isArray(data.currentNode.activeCharacters)
       ? (data.currentNode.activeCharacters as string[])
       : [];
@@ -383,9 +390,49 @@ export async function runWriteGeneration(
 
     const forbiddenPatterns = collectForbiddenPatterns(template?.forbiddenPatterns || [], customForbidden);
 
-    // Phase 2-4: 后处理管线（扫描 → 审校 → 摘要）
+    // v2.52.0 性能：批量写作（deferEnrichment=true）下，正文落库即视为交付完成，
+    // 后置富化管线改为后台 fire-and-forget，避免 ~140s 的 2 次 LLM 调用把进度条卡在 99% 像死机。
+    // 单章流式（SSE）模式保持同步：用户正盯着实时流，审校/摘要事件需即时推送。
+    if (deferEnrichment) {
+      try {
+        await prisma.storyNode.update({
+          where: { id: nodeId },
+          data: { content: fullContent, wordCount: fullContent.length, status: STATUS_DRAFTING },
+        });
+      } catch (se) {
+        console.error("正文落库失败:", se instanceof Error ? se.message : String(se));
+      }
+      send({
+        type: "done",
+        content: "",
+        nodeId,
+        status: STATUS_DRAFTING,
+        usage: { completionTokens: countTokens(fullContent), totalTokens: countTokens(fullContent) },
+      });
+      // 后台异步富化（不 await，不阻塞 done 交付）；失败仅日志，章节已落库。
+      void runPostGenerationPipeline({
+        send,
+        orchestrator,
+        projectId,
+        nodeId,
+        content: fullContent,
+        nodeOutline: data.currentNode.outline || "",
+        activeCharacters: activeChars.filter((c: any) => activeCharIds.includes(c.id)) as any,
+        activeLore: data.loreEntries.filter((l: any) => activeLoreIds.includes(l.id)) as any,
+        chapterSummaries: data.summaries as any,
+        currentNode: data.currentNode,
+        chapterTitle: data.currentNode.title || `第${data.currentNode.order + 1}章`,
+        chapterOrder: data.currentNode.order,
+        forbiddenPatterns,
+      }).catch((e) =>
+        console.error("[post-pipeline] 后台富化失败（章节已交付）:", e instanceof Error ? e.message : e),
+      );
+      return;
+    }
+
+    // 同步模式（SSE 单章）：保留原行为——富化完成才发 done。
     // 容错：后处理（含 LLM 审校/摘要）若因限流/超时失败，不阻断正文交付——
-    // 直接降级为"仅生成"，仍继续自动填表并发送 done。
+    // 直接降级为"仅生成"，仍发送 done。
     let result: any = { nodeId, status: STATUS_COMPLETED };
     try {
       result = await runPostGenerationPipeline({
