@@ -406,6 +406,7 @@ export async function runWriteGeneration(
         currentNode: data.currentNode,
         chapterTitle: data.currentNode.title || `第${data.currentNode.order + 1}章`,
         chapterOrder: data.currentNode.order,
+        titleStyle: data.project?.titleStyle ?? "default",
         forbiddenPatterns,
       });
     } catch (e) {

@@ -453,6 +453,7 @@ export interface Project {
   fillFrequency?: number;         // 每 N 章填一次表
   skipLatestChapter?: boolean;    // 当前章也填
   contextKeepChapters?: number;   // 上下文保留最近 N 章（context-loader 取用）
+  titleStyle?: string;            // v2.55.0：章节标题风格 default/verse/prose/brief/suspense
   deletedAt?: Date | null;        // 软删除（回收站）
   confirmedAt?: Date | null;      // 整本交付时间戳
   autoConfirmEnabled?: boolean;   // 智能审阅（auto-confirm）开关

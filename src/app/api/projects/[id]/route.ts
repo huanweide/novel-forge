@@ -64,6 +64,8 @@ export async function PATCH(
       autoConfirmEnabled: optBool(raw.autoConfirmEnabled),
       // v1.1.0：全书智能交付自动执行开关 API 写入入口
       autoDeliverEnabled: optBool(raw.autoDeliverEnabled),
+      // v2.55.0：章节标题风格（default/verse/prose/brief/suspense）
+      titleStyle: optStr(raw.titleStyle, "titleStyle", 20),
     }));
     if (body instanceof NextResponse) return body;
 

@@ -68,6 +68,8 @@ export interface PostPipelineParams {
   chapterTitle: string;
   /** 章节序号 */
   chapterOrder: number;
+  /** v2.55.0：标题风格（default/verse/prose/brief/suspense），决定 LLM 章名生成规则与章名最大长度 */
+  titleStyle?: string;
   /** 禁用词列表 */
   forbiddenPatterns: (string | import("@/lib/forbidden-checker").ForbiddenPattern)[];
   /** 跳过审校（refine 用） */

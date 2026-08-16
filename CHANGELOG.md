@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.55.0 — 2026-08-16
+
+### 章节标题风格设置（Task #90·一键选章名风格）
+- **设置可配章名风格**：项目设置新增「章节标题风格」五选一分段按钮（默认极简≤5字 / 诗句五七言韵味 / 文笔文艺抒情 / 简短直白点题 / 悬念抛疑问勾好奇），点按即时 PATCH 保存到 `Project.titleStyle`，不弹窗不啰嗦；schema 已 `db push` 加列、默认 `"default"`。
+- **风格化生成 + 链路贯通**：`deriveChapterName` 改为风格感知——不同风格允许不同最大字数（default 5 / brief 9 / verse·prose·suspense 14），通用硬约束保留（剔角色人名/别名 + 禁含「第N章」占位），不再一刀切截 5 字；`summarizeChapter` 的 `chapterTitle` 字段提示词按当前 `titleStyle` 动态生成多风格示例，让 AI 按你选的风格出章名。链路：write-generation 把 `data.project?.titleStyle` 透传进 `PostPipelineParams`，PATCH 路由 `projects/[id]/route.ts` 新增 `titleStyle` 解析，`Project` 手写 interface 补字段，端到端（设置→落库→生成→章名）打通。
+- **质量门禁**：tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（本版零新增测试）；四处版本文件对齐 v2.55.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.54.0 — 2026-08-16
 
 ### 回滚危险的「富化后台化」+ 分阶段进度保不冻结（慢模型上下文零丢失）

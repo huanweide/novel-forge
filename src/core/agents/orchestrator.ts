@@ -353,6 +353,7 @@ ${generatedContent}
     characters: CharacterCard[],
     chapterOrder?: number, // 当前章节序号，用于时效性计算
     existingSummariesCount?: number, // 已有摘要数，用于计算 chapterDiff
+    titleStyle?: string, // v2.55.0：章节标题风格 default/verse/prose/brief/suspense
   ): Promise<{
     summary: string;
     keyEvents: string[];
@@ -401,7 +402,13 @@ ${generatedContent}
 - "threadProgress": 数组，每项 { storylineId: "故事线ID", stage: "所在阶段", progressNote: "一句话——本线在本章的推进" }
   阶段可选值: desire(欲望)/obstacle(阻碍)/action(行动)/result(结果)/twist(意外)/turn(转折)/ending(结局)
 - "unresolvedQuestions": 字符串数组，本章留下的悬念/伏笔（每条一句话，如"剑的秘密仍未解开"）
-- "chapterTitle": 字符串，本章的简短章名（≤5个汉字）。要求：纯名词/短语，概括本章核心意象或关键事件；绝对不能包含任何角色人名（如"龙渊""李雷"），也不能含"第N章"字样；可含地点/物品/氛围/动作，示例："祭坛觉醒""边城夜雨""血脉异动""密室对峙"。若实在无法概括可留空字符串。
+- "chapterTitle": 字符串，本章章名，**按当前风格生成（当前风格="${titleStyle || "default"}"）**：
+    · default：≤5字极简短语（如"祭坛觉醒""边城夜雨""血脉异动""密室对峙"）
+    · verse（诗句）：五/七言感、有韵味（如"雨落忆往昔""剑舞风云变""月满西厢念君归"）
+    · prose（文笔）：文艺抒情、有画面（如"月夜幽思""血影将至的静谧""悲恸之夜"）
+    · brief（简短）：直白点题、含关键事件/冲突（如"得宝剑""正邪初遇""踏入新门派"）
+    · suspense（悬念）：抛疑问/暗示真相、勾起好奇（如"谁盗走了灵珠""古宅里的低语""神秘的包裹"）
+  通用约束：纯名词/短语，概括核心意象或关键事件；绝对不能包含任何角色人名，也不能含"第N章"字样；可含地点/物品/氛围/动作。若实在无法概括可留空字符串。
 - "impactScore": 数字 1-10，本章对主线剧情的整体影响力
   - 1-3: 日常过渡章节（角色互动、日常描写）
   - 4-6: 有实质性剧情推进（新线索、新冲突）

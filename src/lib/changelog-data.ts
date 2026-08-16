@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.54.0";
+export const LATEST_VERSION = "v2.55.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.55.0 章节标题风格设置（Task #90·P0·瑞宝宝指令「能精简就精简」）：①设置可配章名风格——项目设置新增「章节标题风格」五选一分段按钮（默认极简≤5字 / 诗句五七言韵味 / 文笔文艺抒情 / 简短直白点题 / 悬念抛疑问勾好奇），点按即时 PATCH 保存到 Project.titleStyle（db push 已加列、默认 default），不弹窗不啰嗦；②风格化生成——deriveChapterName 改为风格感知：不同风格允许不同最大字数（default 5 / brief 9 / verse·prose·suspense 14），通用硬约束保留（剔角色人名/别名 + 禁含「第N章」占位），不再把所有章名一刀切截 5 字；summarizeChapter 的 chapterTitle 字段提示词按当前 titleStyle 动态生成多风格示例（之前只有极简样例、诗/文笔/悬念风格会生成出格章名），让 AI 按你选的风格出章名；③链路贯通——write-generation 把 data.project?.titleStyle 透传进 PostPipelineParams，PATCH 路由 projects/[id]/route.ts 新增 titleStyle 解析，Project 手写 interface 补字段，端到端（设置→落库→生成→章名）打通；④质量门禁——tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（与 v2.54.0 基线同、本版零新增测试）；四处版本文件对齐 v2.55.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.54.0 回滚危险的富化后台化 + 分阶段进度保不冻结（慢模型上下文零丢失）：①回滚 deferEnrichment——v2.52.0 为让进度条不卡 99% 把批量写作后置富化（审校+摘要 2 次 LLM ~140s）改成正文落库即 done、富化 fire-and-forget 后台跑；但批量写章是顺序 for 循环、下一章生成前经 loadGenerationContext 按 order 读上一章 ChapterSummary 当上下文，fire-and-forget 下上一章摘要未落库下一章已开写→后续章静默丢前章上下文（跨章信息断链），直接违反「快的前提是能有的东西都有、能有的输出条件都有、限制条件都有」硬要求；本轮把富化重新放回关键路径同步 await，保证上一章摘要落库后下一章才加载上下文——慢模型（硅基流动 DeepSeek-V4-Flash）与快模型都零上下文丢失；降级容错：富化因限流/超时失败不阻断正文交付、仍发 done 降级「仅生成」；②分阶段进度不冻结——富化回关键路径后单章会在 ~140s 富化期看起来卡住，改 FillTask.progress 按章分阶段：写作 0..85%（字级实时爬升）、审校 86/90%、摘要 92/97%、逻辑自查 99%、完成 100%，每章起点 max(2, 本章基准) 永不回落预置信号以下，条子全程平滑走动绝不冻结且上下文完整；实机验证：新城项目第13章正文落库比第12章摘要落库晚约 2 分 49 秒，证第13章确在第12章摘要已存在后才开写（上下文链未断）；③质量门禁 + 审计纠偏——tsc 0 错误；vitest 全量 109 文件 1074/1074 全绿（与 v2.53.0 同基线、本版零新增测试；注：本机工作树另有未入库的 src/core/explore/build-prompt.test.ts 15 例，本地实跑为 110 文件 1089/1089 全绿）；另实测复核发现 v2.53.0 的「零生产代码改动 / 无真实 bug」表述不实——v2.53.0 提交（751c14c）实际已含 hardTruncate 实现修复（测试当时抓到的真 bug 已在 v2.53.0 内修好、随测全绿），本版不重复修；四版本文件对齐 v2.54.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.53.0 globalPrompt 去重与截断纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给 v2.52.0 引入、此前零直接单测的两个 globalPrompt 聚合摘要底层纯函数补自动化测试（src/core/sync-global-prompt.pure.test.ts 共 15 例）：①dedupeLore（世界卡去重，套用创意工坊预设会累积同名世界卡、去重错了会静默丢你的世界观设定）9 例锁死「空数组返回空 / 同 title 只留最长一条（含三条取最长、首条更长不覆盖）/ 无 title 同 category+同内容前缀只留一条不堆叠 / 同 category 但前缀不同两条都留不丢 / title 前后空格 trim 碰撞去重 / 跨 category 同前缀不误并」；②hardTruncate（预算兜底截断，决定喂给写作模型的提示词超不超 131072 上下文窗、断不断半句）6 例锁死「不超预算原样返回 / 刚好等于预算原样 / 换行落在预算 80% 之后切在换行不切半句（\\n 之后内容丢弃）/ 换行在 80% 之前切到预算边界保长度 / 超长单段总长恰好等于预算 / 预算等于后缀长度边界不超」。两函数逻辑与既有行为一致、无真实 bug（node 实锤行为健康），本轮只补防护网；纯测试补全、零生产代码改动（仅给两个内部纯函数加 export 标注、零行为变化）、零接口/LLM 变化；tsc 本轮文件零错误（全量 tsc 因用户并行未提交 WIP 文件 batch-write/route.ts 有 1 处类型错误，非本轮引入、本轮严格不触碰用户领地、不纳入提交）；vitest 全量 109 文件 1074/1074 全绿（较 v2.52.0 基线 108 文件 1059 例 +1 文件 +15 例）；四版本文件对齐 v2.53.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.52.0 写作速率三连击（瑞宝宝指令·多章写作真机实测收口）：①全局提示词聚合摘要——重写 buildGlobalPrompt 加标题去重+每字段截断+4 档预算环，真机把 globalPrompt 从 181574 字符压到 12021（15.1 倍、≈8K token，不再撑爆 131072 上下文窗口），角色卡核心字段保真、只裁世界书长尾，配套 5 例单测；②字级流式进度——批量写正文按「已生成字数/目标字数」实时回写 FillTask.progress，前端进度条从章级跳变(0%→33%→67%)变按字数平滑爬升，预置 3%+下限 5% 防 0% 像卡死；③后置富化后台化（头号残留瓶颈）——实测单章 222s 里仅 ~25s 真写作、~141s 被审校+摘要 2 次 LLM 调用卡在 99%；新增 deferEnrichment 开关，批量写作时正文落库即 done、审校/摘要/伏笔/逻辑自查 fire-and-forget 后台跑，单章流式(SSE)仍同步即时推送；真机复测单章 222s→91.3s（2.4 倍提速）、进度平滑到 100% 不再卡 99%。tsc 0 错误；vitest 全量 108 文件 1059/1059 全绿（较 v2.51.3 +5 例）；四版本文件对齐 v2.52.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -118,6 +119,20 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.55.0",
+    date: "2026-08-16",
+    title: "章节标题风格设置（Task #90·可一键选章名风格）",
+    sections: [
+      { label: "设置可配章名风格", items: [
+        "项目设置新增「章节标题风格」五选一分段按钮（默认极简≤5字 / 诗句五七言韵味 / 文笔文艺抒情 / 简短直白点题 / 悬念抛疑问勾好奇），点按即时 PATCH 保存到 Project.titleStyle，不弹窗不啰嗦；schema 已 db push 加列、默认 default",
+      ] },
+      { label: "风格化生成 + 链路贯通", items: [
+        "deriveChapterName 改为风格感知：不同风格允许不同最大字数（default 5 / brief 9 / verse·prose·suspense 14），通用硬约束保留（剔角色人名/别名 + 禁含「第N章」占位），不再一刀切截 5 字；summarizeChapter 的 chapterTitle 字段提示词按当前 titleStyle 动态生成多风格示例，让 AI 按你选的风格出章名",
+        "链路贯通：write-generation 把 data.project?.titleStyle 透传进 PostPipelineParams，PATCH 路由 projects/[id]/route.ts 新增 titleStyle 解析，Project 手书 interface 补字段，端到端（设置→落库→生成→章名）打通；tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（本版零新增测试）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.54.0",
     date: "2026-08-16",

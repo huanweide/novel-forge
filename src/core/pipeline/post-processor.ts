@@ -35,7 +35,20 @@ function deriveChapterName(opts: {
   llmTitle?: string;
   summaryFirstLine?: string;
   characterNames: string[];
+  /** v2.55.0：标题风格，决定章名允许的最大字数（default 极简 5 字，其余风格放宽） */
+  titleStyle?: string;
 }): string {
+  // v2.55.0：不同标题风格允许不同最大长度（按字符数）。default 维持极简 5 字；
+  // verse/prose/suspense 诗句·文笔·悬念风格本质就是 5–7 字短语，但给到 14 字上限防 LLM 偶发超长失控；
+  // brief 简短风格允许 9 字（需含关键事件点题）。
+  const STYLE_MAX: Record<string, number> = {
+    default: 5,
+    brief: 9,
+    verse: 14,
+    prose: 14,
+    suspense: 14,
+  };
+  const maxLen = STYLE_MAX[(opts.titleStyle || "default")] ?? 5;
   // 人名/别名按长度降序剔除：先删长名，避免短名先删导致长名残留（如「小龙女」先删，再处理「龙」）
   const names = Array.from(new Set((opts.characterNames || []).filter(Boolean)))
     .sort((a, b) => b.length - a.length);
@@ -45,14 +58,14 @@ function deriveChapterName(opts: {
     if (!t) continue;
     // 剥自带「第N章」前缀（正文首行即章节标题时摘要会原样摘到）
     t = t.replace(/^第\s*\d+\s*章[\s:：·]*/, "");
-    // 剔人名/别名——章名不应包含任何人名
+    // 剔人名/别名——章名不应包含任何人名（所有风格通用硬约束）
     for (const n of names) {
       if (n && t.includes(n)) t = t.split(n).join("");
     }
     t = t.trim();
     if (!t) continue;
-    // 章名要简短：截首 5 字（汉字/字符）
-    t = Array.from(t).slice(0, 5).join("");
+    // 章名按当前风格允许的最大长度截断
+    t = Array.from(t).slice(0, maxLen).join("");
     if (t.length > 0) return t;
   }
   return "";
@@ -553,6 +566,7 @@ export async function runPostGenerationPipeline(
             activeCharacters as any,
             chapterOrder,
             chapterSummaries.length,
+            params.titleStyle,
           );
           if (r && r.summary && String(r.summary).trim().length > 0) {
             summary = r.summary;
@@ -668,6 +682,7 @@ export async function runPostGenerationPipeline(
           const candidate = deriveChapterName({
             llmTitle: chapterTitleGen,
             summaryFirstLine: cleanSummary,
+            titleStyle: params.titleStyle,
             // 角色名 + 别名都纳入剔名名单（章名不应包含任何人名）
             characterNames: activeCharacters.map((c: any) => c.name).filter(Boolean).concat(
               activeCharacters.flatMap((c: any) => (Array.isArray((c as any).aliases) ? (c as any).aliases : [])),

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { ChapterConfirmBar } from "@/components/workspace/ChapterConfirmBar";
@@ -7,7 +8,7 @@ import { ProjectDiagnostics } from "@/components/workspace/ProjectDiagnostics";
 
 interface Props {
   projectId: string;
-  project: { name?: string; autoConfirmEnabled?: boolean; autoDeliverEnabled?: boolean } | null;
+  project: { name?: string; autoConfirmEnabled?: boolean; autoDeliverEnabled?: boolean; titleStyle?: string } | null;
   selectedNode?: { id: string; status: string } | null;
   allConfirmed: boolean;
   projectConfirmedAt: string | null;
@@ -32,6 +33,31 @@ export function ProjectSettingsDialog({
   onAction,
   onDiagnose,
 }: Props) {
+  // v2.55.0：章节标题风格（本地态 + 即时 PATCH 保存）
+  const [titleStyle, setTitleStyle] = useState<string>(project?.titleStyle || "default");
+  const [titleSaving, setTitleSaving] = useState(false);
+
+  async function handleTitleStyle(value: string) {
+    setTitleStyle(value);
+    setTitleSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titleStyle: value }),
+      });
+      if (res.ok) {
+        onAction(); // 刷新 store，使 project.titleStyle 与全局状态同步
+      } else {
+        setTitleStyle(project?.titleStyle || "default");
+      }
+    } catch {
+      setTitleStyle(project?.titleStyle || "default");
+    } finally {
+      setTitleSaving(false);
+    }
+  }
+
   return (
     <Modal
       open
@@ -76,6 +102,33 @@ export function ProjectSettingsDialog({
 
         <div className="mt-5 border-t border-[var(--nv-border-2)] pt-4">
           <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
+            <Icon name="tag" size={15} className="text-[var(--nv-primary)]" /> 章节标题风格
+          </h3>
+          <p className="text-xs text-[var(--nv-text-muted)] mb-2">
+            生成章节后自动命名采用的风格。诗句 / 文笔 / 悬念可更长更有韵味，默认极简短语。
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {TITLE_STYLES.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => handleTitleStyle(s.value)}
+                disabled={titleSaving}
+                className={`rounded-lg px-3 py-1.5 text-xs border transition-colors ${
+                  titleStyle === s.value
+                    ? "border-[var(--nv-primary)] bg-[var(--nv-primary)]/10 text-[var(--nv-primary)]"
+                    : "border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:border-[var(--nv-primary)]/50"
+                }`}
+                aria-pressed={titleStyle === s.value}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 border-t border-[var(--nv-border-2)] pt-4">
+          <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
             <Icon name="check" size={15} className="text-[var(--nv-primary)]" /> 确认与交付
           </h3>
           <p className="text-xs text-[var(--nv-text-muted)] mb-2">
@@ -113,6 +166,14 @@ export function ProjectSettingsDialog({
     </Modal>
   );
 }
+
+const TITLE_STYLES: Array<{ value: string; label: string }> = [
+  { value: "default", label: "默认（极简）" },
+  { value: "verse", label: "诗句" },
+  { value: "prose", label: "文笔" },
+  { value: "brief", label: "简短" },
+  { value: "suspense", label: "悬念" },
+];
 
 function SettingsEntry({
   icon,
