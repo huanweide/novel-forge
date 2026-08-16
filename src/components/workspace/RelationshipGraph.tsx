@@ -85,27 +85,30 @@ interface RelationshipGraphProps {
 // 常量和辅助
 // ═══════════════════════════════════════════
 
+// 角色色：全部收敛到品牌语义令牌（虚空玻璃·五色语义系统 + 香槟金单一强调色）。
+// 原先的靛/粉/紫（#818cf8/#f472b6/#a78bfa）属离谱色，已替换为品牌主色/辅助色，保证 8 色互不撞色且深浅主题自适应。
 function roleColor(role: string): string {
   const map: Record<string, string> = {
-    protagonist: "#818cf8",
-    antagonist: "#f87171",
-    supporting: "#4ade80",
-    mentor: "#fbbf24",
-    love_interest: "#f472b6",
-    comic_relief: "#a78bfa",
-    catalyst: "#38bdf8",
-    background: "#9ca3af",
+    protagonist: "var(--nv-creative)", // 香槟金——主角唯一强调身份
+    antagonist: "var(--nv-danger)",     // 玫瑰——敌对
+    supporting: "var(--nv-success)",    // 翠绿——正面配角
+    mentor: "var(--nv-warning)",        // 琥珀——师长引导
+    love_interest: "var(--nv-primary)", // 靛蓝——情感线（品牌主色，非离谱靛）
+    comic_relief: "var(--nv-info)",     // 青——调剂
+    catalyst: "#7C8DB0",                // 数据可视化专用冷调石板蓝（去饱和，贴合虚空玻璃冷色基调）
+    background: "var(--nv-text-tertiary)",
   };
-  return map[role] || "#9ca3af";
+  return map[role] || "var(--nv-text-tertiary)";
 }
 
+// 关系连线色：同样收敛到品牌语义令牌，去掉粉/紫离谱色。
 function relationStroke(relation: string): string {
-  if (/师|父|母|兄|弟|姐|妹|长辈|传承/.test(relation)) return "#fbbf24";
-  if (/敌|仇|恨|杀|对立|竞争/.test(relation)) return "#f87171";
-  if (/爱|恋|暗恋|情|婚|夫妻/.test(relation)) return "#f472b6";
-  if (/友|盟|伴|搭档|守护/.test(relation)) return "#4ade80";
-  if (/暗|秘|隐藏|利用/.test(relation)) return "#a78bfa";
-  return "#6b7280";
+  if (/师|父|母|兄|弟|姐|妹|长辈|传承/.test(relation)) return "var(--nv-warning)";
+  if (/敌|仇|恨|杀|对立|竞争/.test(relation)) return "var(--nv-danger)";
+  if (/爱|恋|暗恋|情|婚|夫妻/.test(relation)) return "var(--nv-primary)";
+  if (/友|盟|伴|搭档|守护/.test(relation)) return "var(--nv-success)";
+  if (/暗|秘|隐藏|利用/.test(relation)) return "var(--nv-info)";
+  return "var(--nv-text-tertiary)";
 }
 
 // 从角色卡 relationships 聚合出等价 ExtractedRelation[]（图的真源）
@@ -613,11 +616,11 @@ export function RelationshipGraph({
                     stroke={isFocus ? "#fff" : "transparent"} strokeWidth={isFocus ? 1.5 : 0} />
                   {/* 主角星标 */}
                   {isProtagonist && (
-                    <text x={p.x} y={p.y + 1} textAnchor="middle" fill="#1e1b4b" fontSize={9} fontWeight="bold" className="pointer-events-none select-none">★</text>
+                    <text x={p.x} y={p.y + 1} textAnchor="middle" fill="#1A1C22" fontSize={9} fontWeight="bold" className="pointer-events-none select-none">★</text>
                   )}
                   {/* 名字 */}
                   <text x={p.x} y={p.y + r + 13} textAnchor="middle"
-                    fill={isFocus ? "#e4e4e7" : "#a1a1aa"}
+                    fill={isFocus ? "var(--nv-text-primary)" : "var(--nv-text-secondary)"}
                     fontSize={fontSize} fontWeight={isFocus ? "bold" : "normal"}
                     className="pointer-events-none select-none">
                     {node.name.length > 5 ? node.name.slice(0, 4) + "\u2026" : node.name}

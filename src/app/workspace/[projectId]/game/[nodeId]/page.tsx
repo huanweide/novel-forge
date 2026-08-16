@@ -283,7 +283,7 @@ export default function GamePage() {
   const fireDiscoveries = (list: Array<{ name: string; type?: string; color?: string }> | undefined) => {
     if (!list || list.length === 0) return;
     for (const ne of list) {
-      const color = ne.color || "#a78bfa";
+      const color = ne.color || "#E4B863"; // 品牌香槟金（--nv-gold）兜底，去紫离谱色
       particlesRef.current?.emitBurst({ color });
       const id = ++discoveryIdRef.current;
       const typeLabel = ne.type === "角色" ? "角色" : ne.type === "势力" ? "势力" : ne.type === "物品" ? "物品" : ne.type === "地点" ? "地点" : "实体";
