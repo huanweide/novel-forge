@@ -1,5 +1,11 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.2 — 2026-08-17
+
+### 文风模板纯函数测试补锁（styles.ts）
+- **文风模板核心纯函数测试补锁**：给被 9+ 处生成路由/组件真实重度消费的文风模板核心纯函数 src/core/templates/styles.ts 补 11 例自动化测试（src/core/templates/styles.test.ts），锁死 getTemplate / applyTemplate / forbiddenPatternsToPrompt 三函数契约；getTemplate 按 id 从 STYLE_TEMPLATES 查模板返回正确模板、不存在 id/空串返回 undefined（文风模板查询总入口）；applyTemplate 把文风约束以【文风约束——最高优先级】合并到基础系统提示词尾部、stylePrompt 为空时直接返回基础提示词；forbiddenPatternsToPrompt 有禁用句式时生成【禁止以下表达】逐条列出、空数组返回空串。
+- **质量门禁**：零生产代码改动、纯测试补全；tsc 0 错误；vitest 全量 114 文件 1147/1147 全绿（较 v3.1.1 基线 113 文件 1136 +1 文件 +11 例）；四处版本文件对齐 v3.1.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.1 — 2026-08-17
 
 ### 剧情推进求值器纯函数测试补锁（宝宝流·ifcell + recall）

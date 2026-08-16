@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.1";
+export const LATEST_VERSION = "v3.1.2";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.2 文风模板纯函数测试补锁（马斯克 CEO 循环运营收口）：①测试加固——给被 9+ 处生成路由/组件真实重度消费的文风模板核心纯函数 src/core/templates/styles.ts 补 11 例自动化测试（src/core/templates/styles.test.ts），锁死 getTemplate / applyTemplate / forbiddenPatternsToPrompt 三函数契约；②getTemplate——按 id 从 STYLE_TEMPLATES 查模板（如 hot_blooded）返回正确模板、不存在 id/空串返回 undefined（不抛错），该函数是文风模板查询总入口、一旦回归会让用户选的文风模板解析失败；③applyTemplate——有 stylePrompt 时把文风约束以【文风约束——最高优先级】合并到基础系统提示词尾部、基础提示词原样保留不丢字符、stylePrompt 为空/undefined 时直接返回基础提示词；④forbiddenPatternsToPrompt——有禁用句式时生成【禁止以下表达】段落逐条列出、空数组返回空串、条目数与原数组一致，该函数决定喂给 AI 的禁用句式约束、回归会让用户禁用的表达悄悄溜进正文；纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 114 文件 1147/1147 全绿（较 v3.1.1 基线 113 文件 1136 +1 文件 +11 例）；四处版本文件对齐 v3.1.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.1 剧情推进求值器纯函数测试补锁（马斯克 CEO 循环运营收口）：①剧情推进求值器（宝宝流）零测纯函数补锁——给「剧情推进=记忆召回」核心的两个纯函数补 25 例自动化测试：ifcell 的 evaluateIfCell（解析 <if cell=表/行/列 <= 阈值> 语法、按结构化表格数值选出当前激活的人设/剧情阶段）补 15 例 + recall 的 recallContext（按上下文命中世界书/结构化表格、返回应注入正文 AI 的记忆片段）补 10 例，锁死分支求值（单/嵌套 if-else、六类比较操作符、缺失表/行/列/非数字值回退并列展示、通过表名或 key 匹配、列按 label 或行按值匹配、解析失败降级原文）/记忆召回（命中与未命中、enabled=false 排除、结构化表格关键列命中、最长匹配优先去重、多命中、空上下文）；②零生产代码改动、纯测试补全、零接口/LLM 变化；③质量门禁——tsc 0 错误；vitest 全量 113 文件 1136/1136 全绿（较 v3.1.0 基线 111 文件 1111 +2 文件 +25 例）；④四处版本文件对齐 v3.1.1；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.0.0 完全体·上线版（maxloop 魔王系统深度自查收官）：①完全体收官——经 maxloop 魔王系统多轮深度架构自查（本轮主代理亲验降级模式，子代理通道本环境不可用）确认 novel-forge 已完成「创造→写作→写长篇小说不降智→高质量」完整闭环，可进化至完全体并上线；②预设即开写——15 个内置示范预设（世界观骨架/文风卡/角色卡/故事线推进/表格模板/世界书条目/删除思维链正则/LLM 配置）一键套用即物化进项目并即时聚合进全局提示词，下一章生成直接生效，流程上不要求任何手填表（自动填表自 v2.56.0 起默认关：新项目不自动抽表、不污染结构化卡、填表是可选项非写作前置）；③长篇小说不降智——分层记忆引擎 + AI 远楼层压缩（同模型真实压缩被预算挤掉的远章节为摘要、保留情节要义）+ 滑动窗口（近 4 章全文 / 近 3 章摘要 / 故事线节拍）全程在线，写 100 章设定/人物/伏笔不丢、不退化；④残留裸色值收口——极罕见全局错误页 #0a0a0f 改为虚空令牌 --nv-void，全站色值彻底统一语义令牌；⑤UI 体系定稿——虚空玻璃（无色玻璃身份、非用户反对的廉价彩色滤纸）覆盖首页/拆书/创造前/创造后 + 探讨/抽卡/预设全链路，转场/转屏/点击交互齐备；⑥质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.61.0 同基线、本版零新增测试、纯令牌收口 + 版本收口）；四版本文件对齐 v3.0.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.61.0 拆书页深度美化（UI 设计师·虚空玻璃体系·Stage 4）：①emoji 全换图标——拆书结果里 15 个维度图标从 emoji（📋🌍💎👥🧵📑🔮🗺️⚔️⚡🔧💰🎒📜✍️）全部换成 Lucide 图标组件（clipboard/globe/gem/users/gitBranch/file/sparkles/map/swords/zap/wrench/coins/backpack/scroll/pencil），拆解完成/失败页的 ✅❌、任务不存在页的 📭 也换成 Icon 组件，全站图标语言统一（不靠 emoji 凑数）；②去裸色值——DissectProgress 进度条填充从写死 hex（#ef4444/#22c55e/#6366f1）改 --nv-danger/--nv-success/--nv-primary 语义令牌，换主题不再串色；③压平滤纸——拆书页 ≥7 处 backdrop-blur-sm（总览卡/分组卡/维度卡/章节卡）剥掉，改用 surface-elevated 实体层次出层次（回应「不要滤纸」），拆书导航顶栏半透明+模糊改纯色实心；④输入框统一——DissectUpload / ImitationPanel 的 9 处手搓输入框/下拉/文本域改 input-glass 设计系统输入态（聚焦描边、悬浮微变），不再各写各的；⑤按钮真反馈——拆书页所有「悬浮无变化」的按钮（开始拆解/查看结果/进入工作区/原样转项目/改编后转项目/应用修改/仿写生成/底部转项目）改 btn-primary/btn-success 或用 hover 位移/上浮，点击与悬浮终于有反馈；维度行 hover 加左侧高亮条（inset 题材色）、任务卡/分组卡/维度卡/章节卡悬浮微浮起 + 投影，手感跟工作台一致；⑥质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.60.0 同基线、本版零新增测试、纯 UI/CSS 改动）；四处版本文件对齐 v2.61.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -134,6 +135,23 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.2",
+    date: "2026-08-17",
+    title: "文风模板纯函数测试补锁",
+    sections: [
+      {
+        label: "测试加固",
+        items: [
+          "给被 9+ 处生成路由/组件真实重度消费的文风模板核心纯函数 src/core/templates/styles.ts 补 11 例自动化测试（src/core/templates/styles.test.ts），锁死 getTemplate / applyTemplate / forbiddenPatternsToPrompt 三函数契约。",
+          "getTemplate——按 id 从 STYLE_TEMPLATES 查模板返回正确模板、不存在 id/空串返回 undefined（不抛错），是文风模板查询总入口。",
+          "applyTemplate——有 stylePrompt 时以【文风约束——最高优先级】合并到基础系统提示词尾部、基础提示词原样保留、stylePrompt 为空时直接返回基础提示词。",
+          "forbiddenPatternsToPrompt——有禁用句式时生成【禁止以下表达】逐条列出、空数组返回空串，决定喂给 AI 的禁用句式约束。",
+          "纯测试补全、零生产代码改动；tsc 0 错误；vitest 全量 114 文件 1147/1147 全绿（较 v3.1.1 +11 例）；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.1",
     date: "2026-08-17",
