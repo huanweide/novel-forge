@@ -145,7 +145,7 @@ export default function RecyclePage() {
 
   return (
     <div className="min-h-screen bg-transparent text-foreground">
-      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] transition-colors">
@@ -161,7 +161,7 @@ export default function RecyclePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10 animate-in fade-in slide-in-from-bottom-2">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <span className="inline-flex items-center gap-2 text-[var(--nv-text-tertiary)]">
@@ -183,6 +183,9 @@ export default function RecyclePage() {
               </div>
             ) : (
               <>
+                <h2 className="text-base font-bold tracking-tight flex items-center gap-2 mb-1">
+                  <Icon name="package" size={16} className="text-accent-label" /> 项目回收站
+                </h2>
                 <p className="text-xs text-[var(--nv-text-tertiary)] mb-5">
                   共 {projects.length} 个项目在回收站。恢复将回到主页；彻底删除会永久清除全部内容。
                 </p>
