@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.50.3 — 2026-08-16
+
+### 导出转换纯函数测试补锁：escapeHtml + buildChapterList
+- **HTML 转义纯函数测试（escapeHtml）**：给被 proseToHtml 与导出文档复用、此前零单测的 HTML 实体转义纯函数补 7 例单测，钉死 & < > 与引号 五类危险字符各自正确转义、混合标签整体转义、空串返回空串、中文与正常字符原样保留仅危险字符被转义；该函数是导出文档防乱码与 XSS 的第一道关，此前无防护网，改写可能让导出 HTML 漏转义导致渲染错乱或被注入。
+- **EPUB/HTML 目录遍历排序测试（buildChapterList）**：给决定 EPUB/HTML 导出目录顺序的前序遍历纯函数补 8 例单测，钉死单根无子节点 depth=1、多根按 order 升序、前序遍历子节点 depth 逐层递增、两层嵌套孙节点 depth=3、includeOutline 开关控制 outline 字段、缺 title 回退未命名、子节点 order 相同按 createdAt 兜底排序；该顺序是导出电子书目录的真实顺序，顺序错=目录章节乱序，此前零单测覆盖，本轮补齐回归护栏。
+- **门禁**：纯测试补全，零生产代码改动、零接口/LLM 变化、行为不变、风险低；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 102 文件 962/962 全绿（较 v2.50.2 基线 947 +15 例）；四版本文件对齐 v2.50.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.50.2 — 2026-08-16
 
 ### 关键路径纯函数测试补锁：StoryNode 桥接 + 故事线并发护栏

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.50.2";
+export const LATEST_VERSION = "v2.50.3";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.50.3 导出转换纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给被 EPUB/HTML 导出全流程复用、却长期零单测的两个核心纯函数补自动化测试：①epub.ts 的 escapeHtml（HTML 实体转义，防导出文档乱码与 XSS）补 7 例，锁死 & < > 与引号 五类危险字符各自正确转义、混合标签整体转义、空串、中文原样保留；②epub.ts 的 buildChapterList（EPUB/HTML 目录前序遍历与排序，顺序错=目录乱）补 8 例，锁死单根/多根按 order 升序/前序遍历子节点 depth 递增/两层嵌套/includeOutline 开关控制/缺 title 回退未命名/子节点 order 相同按 createdAt 兜底排序。两函数逻辑与既有行为一致、无真实 bug（已 node 实锤行为健康），本轮只补防护网；零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 102 文件 962/962 全绿（较 v2.50.2 基线 947 +15 例）；四版本文件对齐 v2.50.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.2 关键路径纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给两个在关键链路上却长期零单测的核心纯函数补自动化测试：①story-node-bridge.ts 的 toAppStoryNode（每个 StoryNode 从数据库读出都要经它桥接成应用层强类型，字段/兜底白名单一旦改错会静默把合法状态降级成 outline_only）补 9 例，锁死「已知 type/status 与数组字段透传 + 未知 type 兜底 section + 未知 status 兜底 outline_only + reviewLogs/activeCharacters/activeLoreIds 非数组兜底空数组 + deletedAt 为 undefined 兜底 null」；②story-status.ts 的 withStorylineLock（每条故事线章节绑定写都经它按 storylineId 串行化，退化会丢失更新）补 4 例，锁死「同 id 严格串行 / 异 id 互不阻塞 / 前任务抛错不破坏后续调度且错误向上传播 / 多次调用 FIFO 保序」。两函数逻辑与既有行为一致、无真实 bug（ContentStatus 八值与兜底白名单已逐一核对对齐），本轮只补防护网；零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 101 文件 947/947 全绿（较 v2.50.1 基线 934 +13 例）；四版本文件对齐 v2.50.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.1 上帝组件拆解第一刀：WorkspacePage 弹窗子系统抽离（千惠 CEO 循环运营收口）：①把 WorkspacePage（1521 行/66 个 useState 的上帝组件）里 14 个独立对话框的渲染与开关状态全部抽离为独立 hook src/hooks/useWorkspaceDialogs.ts + 渲染组件 src/components/workspace/WorkspaceDialogs.tsx——角色卡/词条/文风/导入向导/批量写作/大纲生成/自动化设置/项目设置/构建配置/记忆衰减/项目配置/导出/备份/冲突推演；状态集中管理、字段名与原 useState 变量名保持一致，page 通过 const dialogs = useWorkspaceDialogs(...) 全解构、原有引用（setShowOutlineDialog / batchWrite / outlineChapterCount 等）零改名；②最低风险第一刀——只搬「独立对话框」渲染，主流程弹窗（保存冲突 SaveConflictModal / 精修 diff RefineDiffModal / 抽卡 DrawCards / 生成前确认 PreGenConfirm）仍留 WorkspacePage，5 个弹窗处理函数（startBatchOutline / confirmBatchWrite / handleGenerateOutlinePreview / handleConfirmOutline / updatePreviewChapter）作为 handlers prop 透传、函数体留 page 不动，避免污染生成主流程；③把「章纲轮询 + 实时耗时」两个纯弹窗内轮询收敛进 hook（正文任务轮询因依赖 loadProject 仍留 page）；④配套 WorkspaceDialogs.test.tsx 3 例锁死 prop 契约（默认只渲染 BatchWriteDialog / editingCharacter 接线 onClose→setEditingCharacter(null)+onSave→refreshAfterMutate / showConflict→ConflictPanel.onOpenCharacter 命中项目角色）；⑤行为零变化、降低回归面——SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 99 文件 934/934 全绿（较 v2.50.0 基线 931 +3 例）；四版本文件对齐 v2.50.1；按重切路线 v2.50.0(注册表减负)→v2.50.1(上帝组件拆解·本版)→v2.51.0(Prisma 表名小写+注册表去 any) 推进；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.0 架构拆弹·Agent 注册表减负：把 Agent 工具注册表里逐字重复的枚举数组与世界书「中文分类→英文」映射抽成单一常量源（千惠 CEO 循环运营收口）：①共享枚举常量——角色定位(7)/角色状态(6)/世界书分类(15)/节点类型(4)/节点状态(6)/伏笔状态(5)/故事线状态(3) 七组此前在每个工具 schema 里逐字抄写、易漂移，现抽出 CHARACTER_ROLES / CHARACTER_STATUSES / LORE_CATEGORIES / STORY_NODE_TYPES / NODE_STATUSES / FORESHADOWING_STATUSES / STORYLINE_STATUSES 七个 as const 常量，schema 改用 enum: [...X] 引用，取值一处改处处同步；②世界书分类映射单一真相源——lore_create 与 lore_update 各写了一份「中文→英文」映射且两份不一致（lore_update 漏了物品/功法/魔法/生物/货币/命运/物理/公开/角色关系等键），现合并为唯一 LORE_CATEGORY_MAP 常量（取并集更全），两处统一引用，既消重又修了 lore_update 漏映射的隐患；③行为零变化、风险低——纯常量外提，无增减任何工具、无运行时逻辑改动；tsc 0 错误；vitest 全量 98 文件 931/931 全绿（与 v2.49.0 同基线，本版纯重构回回归门禁全绿）；四版本文件对齐 v2.50.0；按价值/风险/依赖把原 v2.50「架构拆弹」三项拆为 v2.50.0(注册表减负·本版) / v2.50.1(上帝组件拆解) / v2.51.0(Prisma 表名小写迁移+注册表去 any)，避免 v2.47 式半吊子；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -107,6 +108,25 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.50.3",
+    date: "2026-08-16",
+    title: "导出转换纯函数测试补锁：escapeHtml + buildChapterList",
+    sections: [
+      { label: "HTML 转义纯函数测试（escapeHtml）", items: [
+        "给被 proseToHtml 与导出文档复用、此前零单测的 HTML 实体转义纯函数补 7 例单测，钉死 & < > 与引号 五类危险字符各自正确转义、混合标签整体转义、空串返回空串、中文与正常字符原样保留仅危险字符被转义",
+        "该函数是导出文档防乱码与 XSS 的第一道关，此前无防护网，改写可能让导出 HTML 漏转义导致渲染错乱或被注入",
+      ] },
+      { label: "EPUB/HTML 目录遍历排序测试（buildChapterList）", items: [
+        "给决定 EPUB/HTML 导出目录顺序的前序遍历纯函数补 8 例单测，钉死单根无子节点 depth=1、多根按 order 升序、前序遍历子节点 depth 逐层递增、两层嵌套孙节点 depth=3、includeOutline 开关控制 outline 字段、缺 title 回退未命名、子节点 order 相同按 createdAt 兜底排序",
+        "该顺序是导出电子书目录的真实顺序，顺序错=目录章节乱序，此前零单测覆盖，本轮补齐回归护栏",
+      ] },
+      { label: "质量门禁与范围", items: [
+        "纯测试补全，零生产代码改动、零接口/LLM 变化、行为不变、风险低",
+        "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 102 文件 962/962 全绿（较 v2.50.2 基线 947 +15 例）；四版本文件对齐 v2.50.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.50.2",
     date: "2026-08-16",
