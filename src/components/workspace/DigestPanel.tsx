@@ -74,7 +74,7 @@ export function DigestPanel({
       </div>
 
       {error && (
-        <div className="mx-1 text-[11px] text-[var(--nv-error)] bg-[var(--nv-error)]/10 rounded-md px-2 py-1.5">
+        <div className="mx-1 text-[11px] text-[var(--nv-danger)] bg-[var(--nv-danger)]/10 rounded-md px-2 py-1.5">
           {error}
         </div>
       )}

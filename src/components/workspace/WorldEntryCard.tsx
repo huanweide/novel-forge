@@ -18,7 +18,7 @@ interface WorldEntryCardProps {
 function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm }: WorldEntryCardProps) {
   return (
     <div
-      className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-colors hover:border-[var(--nv-border-3)]" + (entry.enabled ? "" : " opacity-60")}
+      className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-all hover:-translate-y-0.5 hover:border-[var(--nv-border-3)] hover:shadow-[var(--shadow-glass-rest)]" + (entry.enabled ? "" : " opacity-60")}
     >
       <div className="flex items-start justify-between">
         <span

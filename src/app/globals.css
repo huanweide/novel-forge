@@ -111,6 +111,7 @@
   --nv-creative:     oklch(0.74 0.13 95);        /* 香槟金 —— AI/魔法（收敛为唯一强调色，去除紫粉） */
   --nv-creative-soft:oklch(0.74 0.13 95 / 0.16);
   --nv-creative-fill:#8A6A2E;                    /* 香槟金暗调——AI 按钮填充，浅字 #F0EEE8 对比度达标 */
+  --nv-creative-text:#F0EEE8;                    /* 香槟金底上的可读奶油字（AI 按钮文字） */
   --nv-info:         oklch(0.66 0.15 230);       /* 青 —— 提示/信息 */
   --nv-info-soft:    oklch(0.66 0.15 230 / 0.14);
   --nv-accent:       oklch(0.78 0.14 95);        /* 金色 —— 强调/高亮 */

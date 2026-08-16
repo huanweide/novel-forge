@@ -27,7 +27,7 @@ function CharacterRowImpl({
   onTagClick: (tag: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-1 px-2 rounded text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] group">
+    <div className="flex items-center gap-2 py-1 px-2 rounded text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:shadow-[inset_2px_0_0_0_var(--nv-border-3)] transition-shadow group">
       <input
         type="checkbox"
         checked={selected}

@@ -71,7 +71,7 @@ export function LeftPanel({
               onClick={() => onTabChange(t.key)}
               className={`flex shrink-0 items-center justify-center gap-1 rounded-t-lg px-2.5 py-1.5 text-[11px] transition-all ${
                 active
-                  ? "bg-[var(--nv-primary-soft)] font-semibold text-[var(--nv-primary)] shadow-sm"
+                  ? "bg-[var(--nv-primary-soft)] font-semibold text-[var(--nv-primary)] shadow-[0_0_12px_color-mix(in_oklch,var(--nv-primary)_30%,transparent)]"
                   : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
               }`}
               title={t.label}
@@ -87,7 +87,7 @@ export function LeftPanel({
             onClick={() => setMoreMenuOpen((o) => !o)}
             className={`flex items-center gap-0.5 rounded-t-lg px-2.5 py-1.5 text-[11px] transition-all ${
               moreActive || moreMenuOpen
-                ? "bg-[var(--nv-primary-soft)] font-semibold text-[var(--nv-primary)]"
+                ? "bg-[var(--nv-primary-soft)] font-semibold text-[var(--nv-primary)] shadow-[0_0_12px_color-mix(in_oklch,var(--nv-primary)_30%,transparent)]"
                 : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
             }`}
           >
@@ -114,7 +114,7 @@ export function LeftPanel({
           )}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div key={activeTab} className="flex-1 overflow-y-auto p-2 animate-in">
         {activeTab === "outline" && (
           <>
             <div className="flex items-center justify-between px-1 mb-1 flex-wrap gap-1">

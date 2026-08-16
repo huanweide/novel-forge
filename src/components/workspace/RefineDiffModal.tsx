@@ -31,7 +31,7 @@ export function RefineDiffModal({ open, oldContent, newContent, onApply, onUndo,
   const deltaText = delta === 0 ? "字数不变" : delta > 0 ? `增加 ${delta} 字` : `减少 ${Math.abs(delta)} 字`;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[var(--nv-void)]/70 p-4 backdrop-blur-sm">
       <div ref={panelRef} tabIndex={-1} className="surface-floating w-full max-w-5xl max-h-[88vh] flex flex-col rounded-2xl p-6 animate-spring">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">

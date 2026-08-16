@@ -156,7 +156,7 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
             const expanded = expandedMains.has(mainLine.id);
             const p = computeStorylineProgress(mainLine);
             return (
-              <div key={mainLine.id} className="overflow-hidden rounded-lg border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)]">
+              <div key={mainLine.id} className="overflow-hidden rounded-lg border border-[var(--nv-accent)]/30 bg-[var(--nv-accent-soft)] transition-all hover:-translate-y-0.5 hover:shadow-[0_0_14px_color-mix(in_oklch,var(--nv-accent)_30%,transparent)]">
                 <div className="flex w-full items-center gap-1 px-2 py-1.5">
                   <button
                     onClick={() => setWorkbenchId(mainLine.id)}

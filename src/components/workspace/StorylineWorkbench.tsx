@@ -655,7 +655,7 @@ export function StorylineWorkbench({
           <button
             onClick={handleGenerate}
             disabled={generating || !!genSuggestions}
-            className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-creative-fill)] px-3 py-1.5 text-xs font-medium text-[#F0EEE8] transition-colors hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--nv-creative-fill)] px-3 py-1.5 text-xs font-medium text-[var(--nv-creative-text)] transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {generating ? (
               <>

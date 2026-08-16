@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.59.0";
+export const LATEST_VERSION = "v2.60.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.60.0 创造后工作台深度美化（UI 设计师·虚空玻璃体系·Stage 3）：①Tab 切换转场——左栏内容区按 activeTab 加 @keyframes fade-in-up 入场（animate-in），切到「角色/世界/故事」等页会整体淡入上浮，回应「很缺转场效果」；②激活态高光——左栏与右栏的当前 Tab 加靛蓝光晕（shadow color-mix 题材色），一眼看出在哪一页；③卡片悬浮微交互——大纲树/角色行悬浮显左侧高亮条（inset 题材色）、世界书条目卡悬浮升起 + 投影、故事线主线卡悬浮升起 + 金色光晕、右栏工具箱卡片悬浮升起 + 投影 + 图标发光，全站点击/悬浮手感一致（不靠滤纸）；④游戏模式一致性收口——GameCanvas 九个操作徽标从原始 hex（#38bdf8 等）全部改语义令牌（青/翠绿/玫瑰/靛蓝/金/灰/琥珀/纯金），新实体/物品变动徽标改用 --nv-warning/--nv-success；GameOutlineEditor 原始 hex 背景（#0a0a1f/#0d0d2a）改 --nv-void/--nv-abyss，语法高亮 cyan/orange/teal/purple/pink 全改 --nv-* 语义色，emoji（✏️👁💬⚡✅❌）全换 Icon 组件、AI 生成按钮改暗金底+奶油字；⑤正确性修复——DigestPanel 误用未定义 --nv-error 改 --nv-danger（错误文案此前无颜色）、StorylineWorkbench 硬编码 #F0EEE8 奶油字提成 --nv-creative-text 令牌、RefineDiffModal 原始 bg-black/60 遮罩改 --nv-void/70；⑥质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.59.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.60.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.59.0 创造前弹窗深度美化（UI 设计师·虚空玻璃体系·Stage 2）：①新手引导 OnboardingModal（首次进入工作区弹出）重做——三步上手卡（选个开局/让 AI 写/导出成书）stagger 入场（@keyframes nf-hero-rise 错开 animation-delay）、序号徽章发光（box-shadow 题材色辉光）、功能特性行图标瓷砖渐变描边 + hover 辉光、CTA「开始创作 →」箭头 hover 右移；②项目设定 BuildConfigDialog 重做——四个分区（基础信息/风格与设定/流派标签/生成选项）加分区图标（book/palette/tag/sliders）+ 分节 stagger 入场、分段选项（缝合怪节奏/故事线风格/自动化程度）选中态加题材色辉光 + 点击缩放 active:scale-[0.97]、流派标签选中态题材色辉光 + 点击缩放；③导入备份包 ImportDialog 重做——头部包图标瓷砖、选项行选中态题材色辉光 + 勾选发光、stagger 入场；④点击反馈全域增强——把金色光环脉冲 @keyframes nf-btn-ping 从仅 .btn-* 扩展到全站 [data-slot=button]（即 <Button> 组件），所有按钮按下都有金色环扩散（回应「很缺点击交互」）；⑤质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.58.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.59.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.58.0 首页全站级深度美化（UI 设计师·虚空玻璃体系收敛 + 交互巧思）：①删「纸舟星海」WebGL 纸船动画（用户明确不要、占资源）换「灵感文体墙」——12 种文学体裁悬浮卡（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠…），实体化玻璃（深色铺底 + color-mix 题材色微染 + 悬浮投影 + 题材色光晕），悬浮上浮发光、点即用该体裁一键开局（/api/seed/genre-project）；②收敛滤纸——文体卡原各叠 40px 毛玻璃模糊八张糊成片，改不靠模糊出层次（回应「不要一堆滤纸效果」）；③交互巧思——Hero 首屏 stagger 入场（@keyframes nf-hero-rise 淡入+上浮+轻收焦、各元素 animation-delay 错开）、按钮点击金色光环脉冲（:active outline 扩散 @keyframes nf-btn-ping）、文体卡点击中心光晕（:active ::after 径向渐变）、加载态呼吸边线（@keyframes nf-gtile-pulse 替代静态置灰）、箭头 hover 位移（group-hover:translate-x）；④删空状态与文体墙重复的「按题材开局」展开区，首页不繁杂；⑤质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.57.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.58.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.57.0 生成关键路径三纯函数测试补锁（马斯克 CEO 循环运营收口）：①测试加固——给被 write/refine/continue 三路由与批量 write-generation 主路径共用、此前零直接单测的生成预处理纯函数 src/core/pipeline/pre-processor.ts 补 22 例自动化测试（src/core/pipeline/pre-processor.test.ts），锁死 extractLLMConfig / filterByConfirmedCards / buildCardNotesText 三函数契约；②extractLLMConfig 温度/topP 优先级解析——项目自定义 > 文风模板默认 > 硬编码兜底（温度 0.85 / topP 0.95），重点钉死「项目 temperature 设为 0（合法值）必须保留、不被 ?? 兜底吞掉」与「styleTemplateId 空串/不存在时回退兜底、template 为 undefined」与「customForbiddenPatterns 原样透传、缺省回退空数组」，该函数是生成风格控制总闸门、一旦优先级被静默改坏全站生成都会跑偏；③filterByConfirmedCards——confirmedCardIds 为 undefined/空数组时原样返回全部、按 id 集合过滤、不存在 id 不凭空补、重复 id 不重复计数；④buildCardNotesText——undefined/空对象/全空白备注返回空串、指向不存在角色的备注跳过、有效备注拼成「[角色名] 备注」并加「最高优先级」头部；纯测试补全、零生产代码改动、零接口/LLM 变化；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 全量 111 文件 1111/1111 全绿（较 v2.56.0 基线 110 文件 1089 +1 文件 +22 例）；四版本文件对齐 v2.57.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -117,6 +118,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v2.60.0 进书后的工作台更有「活气」了：①切到「角色/世界/故事/大纲」任一页，整块内容会轻轻淡入上浮（不是硬切），终于有了转场感；②当前所在的那一页标签会亮起一圈靛蓝光晕，一眼就知道你在哪；③卡片更跟手——大纲里的章节、角色行鼠标移上去会亮起左侧细条，世界书卡片和故事线卡片会微微浮起带影子，右边工具箱卡片浮起时图标还发光，点点划划都更顺；④游戏模式大扫除——操作小徽标（战斗/对话/探索…）从花花绿绿的杂色统一成整套金色系配色，章纲编辑器里一堆 emoji 全换成图标、AI 生成按钮改成暗金底奶油字，整体不再「另一个 APP」；⑤顺手修了三个显示 bug——摘要大纲的错误提示此前没颜色（消失了）、故事线 AI 按钮的奶油字是写死的颜色、精修弹窗的黑遮罩统一成主题深色。质量门禁 tsc 零错误、vitest 全量 1111 例全绿。个人 IP 仍归瑞宝宝。",
   "v2.59.0 进书前的弹窗更好看了：①第一次进工作区会弹「新手引导」——三步上手（选个开局→让 AI 写→导出成书）依次淡入、序号亮起光晕、下面几个功能特性图标卡片悬浮发光，点「开始创作」箭头会轻轻右移；②「项目设定」弹窗（决定整本书基调的地方）四个分区加了小图标、依次进场，分段选项（快/慢节奏、创意/平常/简约、自动/自由/全权）选中时亮起题材色光晕、按下会微微缩一下；③「导入备份包」弹窗头部加了图标、勾选项会亮起光晕、勾选对勾发光；④全站所有按钮按下都会冒出一圈金色光环（之前只有部分按钮有），点击反馈更明确。质量门禁 tsc 零错误、vitest 全量 1111 例全绿。个人 IP 仍归瑞宝宝。",
   "v2.58.0 首页大变样：①删掉你说过不要的 WebGL 纸船动画，换成「灵感文体墙」——一排文学体裁卡片（仙侠/悬疑/科幻…12 种），悬浮浮起发光、点一下就用那个体裁一键开局；②之前文体卡是大糊玻璃八张叠一起发晕，现在改成清爽实体卡、淡淡染上每种体裁自己的颜色、悬浮才亮光晕——不晕也不简陋；③打开首页有进场感：标题按钮依次淡入上浮；点按钮有金色光环脉冲；点文体卡有题材色光晕漫开、开局中时边框呼吸；鼠标移到「进入工作台/开始探讨」上箭头轻轻右移。",
   "新手引导更贴心：首页新增一步一步的上手引导——配好 AI 钥匙 → 建第一本书 → 让 AI 写第一章 → 导出成书，第一次打开也不懵。",
@@ -126,6 +128,33 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.60.0",
+    date: "2026-08-16",
+    title: "创造后工作台深度美化（虚空玻璃 · Stage 3）",
+    sections: [
+      { label: "Tab 切换转场 + 激活态高光", items: [
+        "左栏内容区按 activeTab 加 @keyframes fade-in-up 入场（animate-in），切换面板整体淡入上浮，回应「很缺转场效果」",
+        "左栏与右栏的当前 Tab 加靛蓝光晕（shadow color-mix 题材色），明确当前所在页",
+      ] },
+      { label: "卡片悬浮微交互（无滤纸）", items: [
+        "大纲树/角色行悬浮显左侧高亮条（inset 题材色）定位当前项",
+        "世界书条目卡悬浮升起 + 投影；故事线主线卡悬浮升起 + 金色光晕；右栏工具箱卡片悬浮升起 + 投影 + 图标发光",
+      ] },
+      { label: "游戏模式一致性收口", items: [
+        "GameCanvas 九个操作徽标原始 hex 全改语义令牌（info/success/danger/primary/accent/warning/creative/gold）",
+        "GameOutlineEditor 原始 hex 背景改 --nv-void/--nv-abyss；语法高亮 cyan/orange/teal/purple/pink 全改 --nv-*；emoji 全换 Icon 组件；AI 生成按钮改暗金底+奶油字",
+      ] },
+      { label: "正确性修复", items: [
+        "DigestPanel 误用未定义 --nv-error → --nv-danger（错误文案此前无颜色）",
+        "StorylineWorkbench 硬编码 #F0EEE8 奶油字提成 --nv-creative-text 令牌",
+        "RefineDiffModal 原始 bg-black/60 遮罩改 --nv-void/70",
+      ] },
+      { label: "质量门禁", items: [
+        "tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.59.0 同基线、本版零新增测试、纯 UI/CSS 改动）；四版本文件对齐 v2.60.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.59.0",
     date: "2026-08-16",

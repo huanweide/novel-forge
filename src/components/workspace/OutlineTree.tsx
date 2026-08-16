@@ -30,8 +30,8 @@ export function NodeTreeItem({
   return (
     <div>
       <div onClick={() => onSelectNode(node)}
-        className={`flex items-center gap-1.5 py-1 px-1.5 rounded cursor-pointer text-xs group ${
-          isSelected ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+        className={`flex items-center gap-1.5 py-1 px-1.5 rounded cursor-pointer text-xs group transition-shadow ${
+          isSelected ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-[inset_2px_0_0_0_var(--nv-primary)]" : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] hover:shadow-[inset_2px_0_0_0_var(--nv-border-3)]"
         }`}
         style={{ paddingLeft: `${depth * 12 + 6}px` }}>
         {batchMode && isChapter && (

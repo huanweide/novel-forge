@@ -131,7 +131,7 @@ export function RightPanel(props: RightPanelProps) {
             onClick={() => setTopTab(t.key)}
             className={`flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               topTab === t.key
-                ? "border-b-2 border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]"
+                ? "border-b-2 border-[var(--nv-primary)] bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-[0_0_12px_color-mix(in_oklch,var(--nv-primary)_28%,transparent)]"
                 : "border-b-2 border-transparent text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-2)]"
             }`}
           >
@@ -223,11 +223,11 @@ export function RightPanel(props: RightPanelProps) {
                       <button
                         key={item.id}
                         onClick={() => item.action()}
-                        className="group flex flex-col gap-1.5 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 text-left transition-colors hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)]"
+                        className="group flex flex-col gap-1.5 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-2)] hover:shadow-[var(--shadow-glass-rest)]"
                       >
                         <div className="flex items-center gap-2">
                           <span
-                            className="flex h-7 w-7 items-center justify-center rounded-lg"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg transition-shadow group-hover:shadow-[0_0_12px_color-mix(in_oklch,var(--nv-primary)_45%,transparent)]"
                             style={{ background: `${meta.accent}1a`, color: meta.accent }}
                           >
                             <Icon name={item.icon} size={15} />

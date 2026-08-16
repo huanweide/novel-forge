@@ -26,21 +26,21 @@ interface Props {
 // ─── 行类型着色 ─────────────────────────────────────────────────
 
 const LINE_COLORS: Record<string, string> = {
-  "C|": "text-cyan-400",
-  "L0|": "text-danger/70",
-  "L1|": "text-warning/70",
-  "L2|": "text-orange-400/70",
-  "R|": "text-success",
-  "L|": "text-teal-400",
-  "G|": "text-warning",
+  "C|": "text-[var(--nv-creative)]",
+  "L0|": "text-[var(--nv-danger)]/70",
+  "L1|": "text-[var(--nv-warning)]/70",
+  "L2|": "text-[var(--nv-accent)]/70",
+  "R|": "text-[var(--nv-success)]",
+  "L|": "text-[var(--nv-info)]",
+  "G|": "text-[var(--nv-warning)]",
   "P|": "text-[var(--nv-text-tertiary)]",
-  "CF|": "text-purple-400",
-  "M|": "text-danger",
-  "K|": "text-warning",
-  "EL|": "text-pink-400",
-  "T|": "text-cyan-300",
-  "【章首衔接】": "text-info",
-  "【章尾悬念】": "text-info",
+  "CF|": "text-[var(--nv-primary)]",
+  "M|": "text-[var(--nv-danger)]",
+  "K|": "text-[var(--nv-warning)]",
+  "EL|": "text-[var(--nv-accent)]",
+  "T|": "text-[var(--nv-info)]",
+  "【章首衔接】": "text-[var(--nv-info)]",
+  "【章尾悬念】": "text-[var(--nv-info)]",
   "⟨✍": "text-[var(--nv-creative)]/60 italic",
 };
 
@@ -121,10 +121,10 @@ export default function GameOutlineEditor({
       if (!res.ok) throw new Error(data.error);
 
       setOutlineText(data.outline);
-      setStatusMsg("✅ 章纲已生成，可切换预览查看效果");
+      setStatusMsg("章纲已生成，可切换预览查看效果");
       setMode("preview");
     } catch (err: any) {
-      setStatusMsg(`❌ 生成失败：${err.message}`);
+      setStatusMsg(`生成失败：${err.message}`);
     } finally {
       setIsGenerating(false);
     }
@@ -191,7 +191,7 @@ export default function GameOutlineEditor({
                   { role: "assistant", response: event.outline },
                 ]);
                 if (event.isFinal) {
-                  setStatusMsg("✅ 章纲已定稿");
+                  setStatusMsg("章纲已定稿");
                 }
               } else if (event.type === "error") {
                 throw new Error(event.error);
@@ -203,7 +203,7 @@ export default function GameOutlineEditor({
         }
       }
     } catch (err: any) {
-      setStatusMsg(`❌ 对话失败：${err.message}`);
+      setStatusMsg(`对话失败：${err.message}`);
     }
   };
 
@@ -217,19 +217,19 @@ export default function GameOutlineEditor({
         body: JSON.stringify({ outline: outlineText }),
       });
       if (!res.ok) throw new Error("保存失败");
-      setStatusMsg("✅ 章纲已保存");
+      setStatusMsg("章纲已保存");
       onOutlineSaved(outlineText);
     } catch (err: any) {
-      setStatusMsg(`❌ 保存失败：${err.message}`);
+      setStatusMsg(`保存失败：${err.message}`);
     }
   };
 
   // ── Tab切换 ─────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a1f]/95 border border-[var(--nv-creative)]/30 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--nv-void)] border border-[var(--nv-creative)]/30 rounded-lg overflow-hidden">
       {/* 顶栏 */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--nv-creative)]/20 bg-[#0d0d2a]">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--nv-creative)]/20 bg-[var(--nv-abyss)]">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-[var(--nv-creative)]">
             <Icon name="clipboard" size={15} className="inline-block align-text-bottom shrink-0" /> 章纲编辑器
@@ -243,22 +243,27 @@ export default function GameOutlineEditor({
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`px-3 py-1 text-xs transition-colors ${
+                className={`flex items-center gap-1 px-3 py-1 text-xs transition-colors ${
                   mode === m
                     ? "bg-[var(--nv-creative)]/40 text-[var(--nv-creative)]"
                     : "bg-transparent text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]"
                 }`}
               >
-                {{ edit: "✏️ 编辑", preview: "👁 预览", chat: "💬 对话" }[m]}
+                <Icon
+                  name={m === "edit" ? "pencil" : m === "preview" ? "eye" : "message"}
+                  size={12}
+                  className="shrink-0"
+                />
+                {{ edit: "编辑", preview: "预览", chat: "对话" }[m]}
               </button>
             ))}
           </div>
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="px-3 py-1 text-xs bg-cyan-800/40 hover:bg-cyan-700/40 text-cyan-300 border border-cyan-700/30 rounded transition-colors disabled:opacity-40"
+            className="flex items-center gap-1 px-3 py-1 text-xs bg-[var(--nv-creative)]/20 hover:bg-[var(--nv-creative)]/30 text-[var(--nv-creative)] border border-[var(--nv-creative)]/30 rounded transition-colors disabled:opacity-40"
           >
-            {isGenerating ? "⏳ 生成中..." : "⚡ AI生成"}
+            {isGenerating ? (<><Icon name="loader" size={12} className="animate-spin" /> 生成中…</>) : (<><Icon name="bot" size={12} /> AI 生成</>)}
           </button>
           <button
             onClick={handleSave}
@@ -269,8 +274,9 @@ export default function GameOutlineEditor({
           <button
             onClick={onClose}
             className="text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] text-lg leading-none"
+            aria-label="关闭"
           >
-            ×
+            <Icon name="x" size={16} />
           </button>
         </div>
       </div>
@@ -279,10 +285,10 @@ export default function GameOutlineEditor({
       {statusMsg && (
         <div
           className={`px-4 py-1.5 text-xs ${
-            statusMsg.startsWith("✅")
-              ? "text-success bg-success/10"
-              : statusMsg.startsWith("❌")
-                ? "text-danger bg-danger/10"
+            statusMsg.includes("失败")
+              ? "text-[var(--nv-danger)] bg-[var(--nv-danger)]/10"
+              : statusMsg.includes("已")
+                ? "text-[var(--nv-success)] bg-[var(--nv-success)]/10"
                 : "text-[var(--nv-creative)] bg-[var(--nv-creative)]/10"
           }`}
         >
@@ -351,8 +357,8 @@ export default function GameOutlineEditor({
                   </div>
                 )}
                 {turn.role === "assistant" && turn.response && (
-                  <div className="bg-[var(--nv-abyss)]/40 border border-[var(--nv-border-2)]/30 rounded-lg p-3">
-                    <p className="text-xs text-cyan-400 font-medium mb-2">
+                  <div className="bg-[var(--nv-abyss)]/40 border border-[var(--nv-creative)]/30 rounded-lg p-3">
+                    <p className="text-xs text-[var(--nv-creative)] font-medium mb-2">
                       <Icon name="bot" size={15} className="inline-block align-text-bottom shrink-0" /> AI 修改后的章纲
                                                     </p>
                     <HighlightedOutline text={turn.response} />
@@ -361,8 +367,8 @@ export default function GameOutlineEditor({
               </div>
             ))}
             {chatStreaming && (
-              <div className="bg-[var(--nv-abyss)]/40 border border-cyan-800/30 rounded-lg p-3 animate-pulse">
-                <p className="text-xs text-cyan-400 font-medium mb-2">
+              <div className="bg-[var(--nv-abyss)]/40 border border-[var(--nv-creative)]/30 rounded-lg p-3 animate-pulse">
+                <p className="text-xs text-[var(--nv-creative)] font-medium mb-2">
                   <Icon name="bot" size={15} className="inline-block align-text-bottom shrink-0" /> AI 正在修改...
                                                   </p>
                 <HighlightedOutline text={chatStreaming} />
@@ -384,7 +390,7 @@ export default function GameOutlineEditor({
             <button
               onClick={handleChatSend}
               disabled={!chatInput.trim() || !outlineText}
-              className="px-4 py-2 bg-[var(--nv-creative)] hover:bg-[var(--nv-creative)] text-[var(--nv-text-primary)] rounded-lg text-sm transition-all disabled:opacity-40"
+              className="px-4 py-2 bg-[var(--nv-creative-fill)] hover:opacity-90 text-[var(--nv-creative-text)] rounded-lg text-sm transition-all disabled:opacity-40"
             >
               发送
             </button>
