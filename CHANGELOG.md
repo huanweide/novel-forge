@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.4 — 2026-08-17
+
+### 记忆分类 S/A/B 分级纯函数测试补锁 + 两处真实缺陷修复（马斯克 CEO 循环运营）
+- **真实缺陷修复①（中间章静默丢记忆）**：记忆分级引擎 `src/lib/memory-classifier.ts` 的 B 级归档阈值原为 `cn <= currentChapter - 6`，而 A 级近 5 章窗口为 `cn > currentChapter - 5`，二者之间存在夹缝——第 (currentChapter-5) 章的摘要既不满足 A 也不满足 B，被静默丢弃，AI 在该章附近丢失上下文且无任何报错。改为 `cn <= currentChapter - 5`，A/B 互补覆盖全部章节。
+- **真实缺陷修复②（critical 排序反了）**：同文件的 `dedupeAndSort` 用 `order[critical]=0` 配合 `|| 2` 兜底，但 `0 || 2` 在 JS 里会把 0 当 falsy 吞掉、回退成 2，导致 critical 伏笔的权重与 medium 同级、最终排在 S 级最后，与注释「critical 最优先」意图完全相反；改为 `?? 2`（nullish 兜底，不吞 0），critical 伏笔恢复排最前。
+- **测试加固**：给记忆分级引擎补 28 例自动化测试（`src/lib/memory-classifier.test.ts`），锁死 classifyEvents（未回收伏笔→S 级 / 已回收伏笔排除 / 即将到期伏笔→critical / 远期伏笔→high / major beat→S 级 / 核心角色弧光>5字→S 级 / minor beat 近 5 章→A 级 / 早于归档阈值的摘要→B 级 slice(0,80) / 中间章修复后进 B 级 / S 级去重 / critical 排最前）/ tieredMemoryToImportances（score 映射 50/30/10、source 分类映射、cTier 恒空）/ formatTieredMemory（S 级全注入、A/B 按 token 预算 40%/20% 截断）。该引擎决定 AI 写作时注入哪些记忆、哪些仅存档，零测试=未来重构可静默改坏用户记忆召回。
+- **质量门禁**：零生产逻辑删除、不碰用户并行领地；tsc 0 错误；vitest 全量 115 文件 1177/1177 全绿（较 v3.1.3 基线 114 文件 1149 +1 文件 +28 例）；四处版本文件对齐 v3.1.4；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.3 — 2026-08-17
 
 ### 记忆蒸馏评分·超额事件降级保留（防静默丢记忆）

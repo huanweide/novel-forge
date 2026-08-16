@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.3";
+export const LATEST_VERSION = "v3.1.4";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.4 记忆分类 S/A/B 分级纯函数测试补锁 + 两处真实缺陷修复（马斯克 CEO 循环运营收口）：①真实缺陷①——记忆分级引擎 memory-classifier.ts 的 B 级归档阈值原为 cn <= currentChapter-6、而 A 级近 5 章窗口为 cn > currentChapter-5，二者夹缝导致第 (currentChapter-5) 章摘要既不满足 A 也不满足 B 被静默丢弃、AI 在该章附近丢失上下文且无报错；改为 cn <= currentChapter-5 让 A/B 互补覆盖全部章节；②真实缺陷②——同文件 dedupeAndSort 用 order[critical]=0 配 || 2 兜底，0||2 在 JS 把 0 当 falsy 吞掉变 2、导致 critical 伏笔权重与 medium 同级排到 S 级最后、与「critical 最优先」意图相反，改为 ?? 2 不吞 0、critical 恢复排最前；③测试加固——给记忆分级引擎补 28 例自动化测试（src/lib/memory-classifier.test.ts）锁死 classifyEvents / tieredMemoryToImportances / formatTieredMemory 契约（S/A/B 三级分类、critical 排最前、token 预算截断）；④质量门禁——零生产逻辑删除、tsc 0 错误、vitest 全量 115 文件 1177/1177 全绿（较 v3.1.3 基线 114 文件 1149 +1 文件 +28 例）、四处版本文件对齐 v3.1.4、个人 IP 仍归瑞宝宝无新 IP/品牌/引流。",
   "v3.1.3 记忆蒸馏评分·超额事件降级保留（防静默丢记忆）（马斯克 CEO 循环运营收口）：①真实缺陷修复——记忆蒸馏评分引擎 scorer.ts 此前对超出上限的高重要度事件直接丢弃：S 层超过 5 条、A 层超过 15 条的事件被静默踢出 AI 写作上下文，用户最关键的剧情/角色记忆（如 7 个 S 级主线转折点）有 2 个永远不会被 AI 读到、等于「写了但 AI 忘了」；②改为分级降级保留——S 层超额事件降级进 A 层、A 层超额事件降级进 B 层关键词索引，绝不丢弃任何用户事件，降级时仍按分数降序排列保证最重要的记忆排在更显眼层级；③该引擎决定哪些事件注入 AI 写作上下文、哪些仅存档，修复后写长篇小说用户的关键设定/人物不再因数量超限而静默丢失；④质量门禁——scorer.ts 实现改动 + scorer.test.ts 同步修正 2 条旧「丢弃」预期为新「降级保留」、新增 2 条降级排序用例（共 35 例）；tsc 0 错误；vitest 全量 114 文件 1149/1149 全绿（较 v3.1.2 基线 1147 +2 例）；四处版本文件对齐 v3.1.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.2 文风模板纯函数测试补锁（马斯克 CEO 循环运营收口）：①测试加固——给被 9+ 处生成路由/组件真实重度消费的文风模板核心纯函数 src/core/templates/styles.ts 补 11 例自动化测试（src/core/templates/styles.test.ts），锁死 getTemplate / applyTemplate / forbiddenPatternsToPrompt 三函数契约；②getTemplate——按 id 从 STYLE_TEMPLATES 查模板（如 hot_blooded）返回正确模板、不存在 id/空串返回 undefined（不抛错），该函数是文风模板查询总入口、一旦回归会让用户选的文风模板解析失败；③applyTemplate——有 stylePrompt 时把文风约束以【文风约束——最高优先级】合并到基础系统提示词尾部、基础提示词原样保留不丢字符、stylePrompt 为空/undefined 时直接返回基础提示词；④forbiddenPatternsToPrompt——有禁用句式时生成【禁止以下表达】段落逐条列出、空数组返回空串、条目数与原数组一致，该函数决定喂给 AI 的禁用句式约束、回归会让用户禁用的表达悄悄溜进正文；纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 114 文件 1147/1147 全绿（较 v3.1.1 基线 113 文件 1136 +1 文件 +11 例）；四处版本文件对齐 v3.1.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.1 剧情推进求值器纯函数测试补锁（马斯克 CEO 循环运营收口）：①剧情推进求值器（宝宝流）零测纯函数补锁——给「剧情推进=记忆召回」核心的两个纯函数补 25 例自动化测试：ifcell 的 evaluateIfCell（解析 <if cell=表/行/列 <= 阈值> 语法、按结构化表格数值选出当前激活的人设/剧情阶段）补 15 例 + recall 的 recallContext（按上下文命中世界书/结构化表格、返回应注入正文 AI 的记忆片段）补 10 例，锁死分支求值（单/嵌套 if-else、六类比较操作符、缺失表/行/列/非数字值回退并列展示、通过表名或 key 匹配、列按 label 或行按值匹配、解析失败降级原文）/记忆召回（命中与未命中、enabled=false 排除、结构化表格关键列命中、最长匹配优先去重、多命中、空上下文）；②零生产代码改动、纯测试补全、零接口/LLM 变化；③质量门禁——tsc 0 错误；vitest 全量 113 文件 1136/1136 全绿（较 v3.1.0 基线 111 文件 1111 +2 文件 +25 例）；④四处版本文件对齐 v3.1.1；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -136,6 +137,27 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.4",
+    date: "2026-08-17",
+    title: "记忆分类 S/A/B 分级纯函数测试补锁 + 两处真实缺陷修复",
+    sections: [
+      {
+        label: "真实缺陷修复",
+        items: [
+          "中间章静默丢记忆——记忆分级引擎 memory-classifier.ts 的 B 级归档阈值原为 cn <= currentChapter-6、而 A 级近 5 章窗口为 cn > currentChapter-5，二者夹缝导致第 (currentChapter-5) 章摘要既不满足 A 也不满足 B 被静默丢弃、AI 在该章附近丢失上下文且无报错；改为 cn <= currentChapter-5 让 A/B 互补覆盖全部章节。",
+          "critical 排序反了——同文件 dedupeAndSort 用 order[critical]=0 配 || 2 兜底，0||2 在 JS 把 0 当 falsy 吞掉变 2、导致 critical 伏笔权重与 medium 同级排到 S 级最后、与「critical 最优先」意图相反；改为 ?? 2 不吞 0、critical 伏笔恢复排最前（测试已锁死）。",
+        ],
+      },
+      {
+        label: "测试加固",
+        items: [
+          "给记忆分级引擎补 28 例自动化测试（src/lib/memory-classifier.test.ts），锁死 classifyEvents（未回收伏笔→S 级 / 已回收伏笔排除 / 即将到期伏笔→critical / 远期伏笔→high / major beat→S 级 / 核心角色弧光>5字→S 级 / minor beat 近 5 章→A 级 / 早期摘要→B 级 / 中间章修复后进 B 级 / 去重 / critical 排最前）/ tieredMemoryToImportances（score 50/30/10、source 分类映射、cTier 恒空）/ formatTieredMemory（S 全注入、A/B 按 token 预算 40%/20% 截断）。",
+          "该引擎决定 AI 写作时注入哪些记忆、哪些仅存档，零测试=未来重构可静默改坏用户记忆召回；tsc 0 错误；vitest 全量 115 文件 1177/1177 全绿（较 v3.1.3 基线 114 文件 1149 +1 文件 +28 例）；四处版本文件对齐 v3.1.4；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.3",
     date: "2026-08-17",

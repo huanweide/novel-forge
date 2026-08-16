@@ -149,7 +149,10 @@ export function classifyEvents(
   // ── B 级：更早章节的 1 行摘要（归档） ──
   const oldSummaries = summaries.filter((s) => {
     const cn = extractChapterNumber(s);
-    return cn <= currentChapter - 6;
+    // 修复 off-by-one：原阈值 `cn <= currentChapter - 6` 与 A 级 `cn > currentChapter - 5`
+    // 之间存在夹缝——第 (currentChapter-5) 章摘要既不满足 A（严格大于）也不满足 B（<= -6），
+    // 被静默丢弃，AI 在该章附近丢失上下文且无报错。改为 `- 5` 让中间章归 B 归档，A/B 互补覆盖全部 cn<=current。
+    return cn <= currentChapter - 5;
   });
 
   for (const s of oldSummaries) {
@@ -197,7 +200,9 @@ function dedupeAndSort(events: TieredEvent[]): TieredEvent[] {
   }
   // critical > high > medium
   const order = { critical: 0, high: 1, medium: 2 };
-  result.sort((a, b) => (order[a.importance] || 2) - (order[b.importance] || 2));
+  // 修复：critical 权重是 0，必须用 ?? 兜底（不能 ||，否则 0 被 falsy 吞掉变成 2，
+  // 导致 critical 反而排到 medium 同级、最终排在 S 级最后，与「critical 最优先」意图相反）。
+  result.sort((a, b) => (order[a.importance] ?? 2) - (order[b.importance] ?? 2));
   return result;
 }
 
