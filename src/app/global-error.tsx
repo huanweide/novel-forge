@@ -12,7 +12,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="zh-CN">
-      <body className="min-h-screen bg-[#0a0a0f] text-[var(--nv-text-primary)] flex items-center justify-center p-6">
+      <body className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)] flex items-center justify-center p-6">
         <div className="w-full max-w-lg rounded-2xl border border-danger/20 bg-danger/5 p-6">
           <h2 className="text-lg font-semibold text-danger">应用级错误</h2>
           <p className="mt-2 text-sm text-[var(--nv-text-tertiary)]">
