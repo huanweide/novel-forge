@@ -46,7 +46,7 @@ const ROLE_LABEL: Record<string, string> = {
  * 只保留最长的一条，避免重复内容无限撑大 globalPrompt。无 title 的卡用
  * category+内容前缀做引用去重，避免丢数据。
  */
-function dedupeLore(entries: any[]): any[] {
+export function dedupeLore(entries: any[]): any[] {
   const map = new Map<string, any>();
   for (const e of entries) {
     const key = (e?.title || "").trim();
@@ -369,13 +369,22 @@ function buildTemplateSection(project: { llmConfig?: unknown }): string | null {
   return parts.join("\n");
 }
 
-/** 兜底硬截断：在段落边界（换行）切到预算内，避免切断半句；附一句精简说明。后缀长度计入预算，保证总长不超过 budget。 */
-function hardTruncate(s: string, budget: number): string {
+/**
+ * 兜底硬截断：把长度压到预算内、附一句精简说明。后缀长度计入预算（总长绝不超 budget）。
+ * 截断策略（v2.53.0 钉死契约）：
+ *  - 仅在「最后一个换行落在预算 80% 之后」时切到段落边界——即含该换行（slice 到 nl+1），
+ *    只丢极少内容、绝不切断半句（写作提示词不能被腰斩，否则世界设定信息断裂）。
+ *  - 否则（换行在前 80% 或无换行）硬切到预算边界（maxContent），优先保长度不超预算
+ *    （宁可断半句也不能让 globalPrompt 撑爆上下文窗）。
+ */
+export function hardTruncate(s: string, budget: number): string {
   if (s.length <= budget) return s;
   const suffix = "\n\n# （全局设定因体量已智能精简，完整体请见「角色卡 / 世界书」面板）";
-  const cut = s.lastIndexOf("\n", Math.max(0, budget - suffix.length));
-  const safe = cut > (budget - suffix.length) * 0.8 ? cut : budget - suffix.length;
-  return `${s.slice(0, safe)}${suffix}`;
+  const maxContent = budget - suffix.length;
+  if (maxContent <= 0) return suffix.slice(0, budget); // 预算比后缀还小：只能放下后缀本身
+  const nl = s.lastIndexOf("\n", maxContent); // 预算内最后一个换行
+  const cut = nl > maxContent * 0.8 && nl + 1 <= maxContent ? nl + 1 : maxContent;
+  return `${s.slice(0, cut)}${suffix}`;
 }
 
 // ─── prompt 版本化（#316/#317）─────────────────────────────
