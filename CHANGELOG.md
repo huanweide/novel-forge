@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.50.2 — 2026-08-16
+
+### 关键路径纯函数测试补锁：StoryNode 桥接 + 故事线并发护栏
+- **StoryNode 桥接映射测试（`toAppStoryNode`）**：给「每个 StoryNode 从数据库读出都要经它桥接成应用层强类型」的核心纯函数补 9 例单测，钉死契约——已知 `type`/`status` 与 `activeCharacters`/`activeLoreIds`/`reviewLogs` 数组字段透传、未知 `type` 兜底 `section`、未知 `status` 兜底 `outline_only`、`reviewLogs`/`activeCharacters`/`activeLoreIds` 非数组兜底空数组、`deletedAt` 为 `undefined` 兜底 `null`；并核验 `ContentStatus` 八值与兜底白名单逐一对齐、`StoryNodeType` 四值与 `NODE_TYPE` 完全一致，无静默降级真实 bug。
+- **故事线并发护栏测试（`withStorylineLock`）**：给「每条故事线章节绑定写都经它按 `storylineId` 串行化、退化会丢失更新」的 per-id 互斥原语补 4 例单测，钉死契约——同 id 严格串行（后者在前者的 `settle` 之后才执行）、不同 id 互不阻塞可并发、前任务抛错不破坏后续同 id 调度且错误向上传播给调用者、多次调用保持 FIFO 顺序。
+- **门禁**：纯测试补全，零生产代码改动、零接口/LLM 变化、行为不变、风险低；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 101 文件 947/947 全绿（较 v2.50.1 基线 934 +13 例）；四版本文件对齐 v2.50.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.50.1 — 2026-08-16
 
 ### 上帝组件拆解第一刀：WorkspacePage 弹窗子系统抽离为 hook + 组件
