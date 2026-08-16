@@ -47,43 +47,66 @@ export async function POST(request: Request) {
       void (async () => {
       let done = 0;
       let failed = 0;
-      // v2.52.0 字级进度：按「已生成 token 字数 / 目标总字数」实时推进 FillTask.progress，
-      // 避免 0% 长时间挂起像卡死（之前每章完成才跳一次，单章 ~200s 时 0% 挂 3 分钟）。
-      const totalTarget = ids.length * 3000;
-      let generatedChars = 0;
+      const total = ids.length;
+      const chapterTarget = 3000;
+      // v2.52+ 分阶段进度：写作占本章 0..85%，后置富化（审校/摘要/逻辑自查）占 85..100%；
+      // 富化始终在关键路径同步跑完，保证下一章拿到上一章摘要（不丢上下文）；进度条靠映射富化事件
+      // 持续走动，慢模型下也绝不冻结、不丢失任何输出/约束。
       let lastFlush = 0;
-      // 预置 3%：写前还有上下文加载 + 剧情线规划（1 次 LLM 调用，约数十秒），
-      // 先给个非零活信号，避免进度条在 0% 看着像卡死。
-      await prisma.fillTask.update({ where: { id: task.id }, data: { progress: 3 } }).catch(() => {});
+      let totalGeneratedChars = 0; // 跨章累计已生成字数（供最终 result 展示）
+      // 预置 2% 活信号：写前加载+规划期间进度条非零、不卡死。
+      await prisma.fillTask.update({ where: { id: task.id }, data: { progress: 2 } }).catch(() => {});
       try {
-          for (const nodeId of ids) {
+          for (let idx = 0; idx < ids.length; idx++) {
+            const nodeId = ids[idx];
             try {
               // #313：直接调用核心逻辑，移除 fetch(${ORIGIN}/api/generate/write) 自回环
               const events: any[] = [];
-              // v2.52.0：字级进度——累计 token 增量字数，节流（700ms）回写 FillTask.progress，
-              // 进度条从「章级跳变」变「按字数平滑走动」，同时把 generatedChars 写进 result 供前端展示。
+              let localChars = 0;
+              const base = (idx / total) * 100;        // 本章在整体进度条起点
+              const slice = 100 / total;               // 本章占整体进度比例
+              const floorOverall = Math.max(2, base);  // 进度下限：绝不回落到预置活信号以下
+              let lastReported = -1;
+              const report = (localPct: number) => {
+                const pct = Math.max(0, Math.min(100, localPct));
+                const overall = Math.min(100, Math.max(floorOverall, Math.round(base + (pct / 100) * slice)));
+                const now = Date.now();
+                if (overall === lastReported) return;
+                if (now - lastFlush < 500 && overall < 100) return;
+                lastFlush = now;
+                lastReported = overall;
+                prisma.fillTask.update({
+                  where: { id: task.id },
+                  data: { progress: overall, result: { chapter: idx + 1, totalChapters: total, generatedChars: localChars, targetWordCount: chapterTarget } },
+                }).catch(() => {});
+              };
+              // 富化事件 → 分阶段进度映射（85→100），慢模型下进度条持续走动不冻结
               const send: WriteSend = (obj: any) => {
                 if (obj && obj.type === "token" && typeof obj.content === "string") {
-                  generatedChars += obj.content.length;
-                  const now = Date.now();
-                  if (now - lastFlush > 700 || generatedChars >= totalTarget) {
-                    lastFlush = now;
-                    // 下限 5%：避免首个 token 把进度从预置的 3% 回落到 0% 造成视觉回跳；
-                    // 流式阶段进度只增不减，与预置活信号平滑衔接。
-                    const prog = Math.max(5, Math.min(99, Math.round((generatedChars / totalTarget) * 100)));
-                    prisma.fillTask.update({
-                      where: { id: task.id },
-                      data: { progress: prog, result: { generatedChars, targetWordCount: totalTarget } },
-                    }).catch(() => {});
-                  }
+                  localChars += obj.content.length;
+                  report(Math.min(85, (localChars / chapterTarget) * 85)); // 写作阶段 0..85%
+                } else if (obj?.type === "chapter_plan" || obj?.type === "babylore_recall") {
+                  report(4); // 写前规划/记忆召回：本章已开工
+                } else if (obj?.type === "review_start") {
+                  report(86);
+                } else if (obj?.type === "review_result" || obj?.type === "review_skip") {
+                  report(90);
+                } else if (obj?.type === "summarize_start") {
+                  report(92);
+                } else if (obj?.type === "summarize_done" || obj?.type === "summarize_empty" || obj?.type === "summarize_error") {
+                  report(97);
+                } else if (obj?.type === "logic_check_done" || obj?.type === "logic_check_error") {
+                  report(99);
                 }
                 events.push(obj);
               };
               await runWriteGeneration(
-                { projectId, nodeId, authorNote: authorNote || undefined, targetWordCount: 3000, deferEnrichment: true },
+                { projectId, nodeId, authorNote: authorNote || undefined, targetWordCount: chapterTarget },
                 // 后台任务不依赖客户端断连信号，用独立 AbortController 占位
                 { send, signal: new AbortController().signal },
               );
+              report(100); // 本章（含富化）完成，整体进度推进到本章末尾
+              totalGeneratedChars += localChars;
               // 与原 consumeSSE 等价：仅在明确成功（无 error、无截断）时记 done
               const okDone = events.some((e) => e.type === "done" && !e.truncated);
               const errored = events.some((e) => e.type === "error");
@@ -101,7 +124,7 @@ export async function POST(request: Request) {
           }
           await prisma.fillTask.update({
             where: { id: task.id },
-            data: { status: done > 0 ? "completed" : "failed", progress: 100, result: { done, failed, total: ids.length, generatedChars } },
+            data: { status: done > 0 ? "completed" : "failed", progress: 100, result: { done, failed, total: ids.length, generatedChars: totalGeneratedChars } },
           });
           // #297：批量写作完成后默认自动跑一次去重合并（LLM 判定同一人，清理昵称缩写/尊称脏卡）。
           // P0 护栏（round-2 董事会）：去重结果/异常必须可观测，不再用 .catch(()=>{}) 静默吞掉——
@@ -116,7 +139,7 @@ export async function POST(request: Request) {
                     done,
                     failed,
                     total: ids.length,
-                    generatedChars,
+                    generatedChars: totalGeneratedChars,
                     dedupe: { merged: dres.mergedGroups.length, rockets: dres.markedRockets.length, total: dres.total },
                   },
                 },
