@@ -1,6 +1,6 @@
 {
   "name": "novel-forge",
-  "version": "2.50.3",
+  "version": "2.50.4",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",

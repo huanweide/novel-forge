@@ -1,5 +1,11 @@
 ﻿# Novel Forge 更新公告
 
+## v2.50.4 — 2026-08-16
+
+### DOCX 导出 XML 转义纯函数测试补锁（escapeXml / textRuns）
+- **DOCX 转义契约测试（escapeXml / textRuns）**：给被 DOCX 导出复用、此前零直接单测的 XML 转义纯函数补 6 例单测（src/core/docx.pure.test.ts），钉死正文/标题/作者名里 < > & 引号 五类危险字符各自正确转义为实体、中文原样保留、多行正文拆成 <w:t> 并以 <w:br/> 衔接、空正文章节回退提示语；该函数决定生成的 .docx 是否为合法 XML——转义一旦出错，用户导出的 Word 文件会静默损坏且无任何运行时报错，此前 docx 仅被流式测试间接「结构等价」覆盖、转义逻辑本身零防护网，本轮锁死契约防回归。
+- **门禁**：纯测试补全，零生产代码改动、零接口/LLM 变化、行为不变、风险低；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误（顺带确认删 tsconfig.tsbuildinfo 消除增量缓存幽灵假阳性、未碰用户并行禅模式 WIP）；npx vitest run 103 文件 968/968 全绿（较 v2.50.3 基线 962 +6 例）；四版本文件对齐 v2.50.4；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.50.3 — 2026-08-16
 
 ### 导出转换纯函数测试补锁：escapeHtml + buildChapterList
