@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v2.50.0 — 2026-08-16
+
+### 架构拆弹·Agent 注册表减负：枚举/映射常量单一真相源
+- **共享枚举常量（去重·防漂移）**：Agent 工具注册表 `src/core/agents/tool-registry.ts` 里，角色定位（7 值）/角色状态（6 值）/世界书分类（15 值）/节点类型（4 值）/节点状态（6 值）/伏笔状态（5 值）/故事线状态（3 值）七组枚举，此前在每个工具的 `schema.parameters.properties.enum` 里逐字抄写，极易漂移不一致。现抽出 `CHARACTER_ROLES` / `CHARACTER_STATUSES` / `LORE_CATEGORIES` / `STORY_NODE_TYPES` / `NODE_STATUSES` / `FORESHADOWING_STATUSES` / `STORYLINE_STATUSES` 七个 `as const` 常量，所有 schema 改用 `enum: [...X]` 引用——取值一处改、处处同步，TS 编译期保证合法。
+- **世界书分类映射单一真相源**：`lore_create` 与 `lore_update` 此前各写了一份「中文分类→英文 key」映射表（`CATEGORY_MAP` / `CAT_MAP`），且两份**不一致**——`lore_update` 漏了 物品/功法/魔法/生物/货币/命运/物理/公开/角色关系 等键，会导致传入中文分类不被识别。现合并为唯一 `LORE_CATEGORY_MAP` 常量（取两份并集、更全），两处统一引用——既消除重复代码，又修了 `lore_update` 漏映射的隐患，映射结果更正确。
+- **行为零变化、风险低**：纯常量外提，无新增/删除任何工具、无运行时逻辑改动；`toolRegistry` 导出与工具数量（27）完全不变。
+- **路线说明**：按价值/风险/依赖把原 v2.50「架构拆弹」三项拆为 v2.50.0（注册表减负·本版）/ v2.50.1（上帝组件 `WorkspacePage` 拆解）/ v2.51.0（Prisma 表名小写迁移 + 注册表去 `any`），避免 v2.47 式半吊子。
+- **门禁**：SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 98 文件 931/931 全绿（与 v2.49.0 同基线，本版纯重构回回归门禁全绿）；四版本文件对齐 v2.50.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.49.0 — 2026-08-16
 
 ### 性能止血：流式不再抖全树 + 报错收敛 + 生成后局部刷新

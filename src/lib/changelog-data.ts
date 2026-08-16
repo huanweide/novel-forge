@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.49.0";
+export const LATEST_VERSION = "v2.50.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.50.0 架构拆弹·Agent 注册表减负：把 Agent 工具注册表里逐字重复的枚举数组与世界书「中文分类→英文」映射抽成单一常量源（千惠 CEO 循环运营收口）：①共享枚举常量——角色定位(7)/角色状态(6)/世界书分类(15)/节点类型(4)/节点状态(6)/伏笔状态(5)/故事线状态(3) 七组此前在每个工具 schema 里逐字抄写、易漂移，现抽出 CHARACTER_ROLES / CHARACTER_STATUSES / LORE_CATEGORIES / STORY_NODE_TYPES / NODE_STATUSES / FORESHADOWING_STATUSES / STORYLINE_STATUSES 七个 as const 常量，schema 改用 enum: [...X] 引用，取值一处改处处同步；②世界书分类映射单一真相源——lore_create 与 lore_update 各写了一份「中文→英文」映射且两份不一致（lore_update 漏了物品/功法/魔法/生物/货币/命运/物理/公开/角色关系等键），现合并为唯一 LORE_CATEGORY_MAP 常量（取并集更全），两处统一引用，既消重又修了 lore_update 漏映射的隐患；③行为零变化、风险低——纯常量外提，无增减任何工具、无运行时逻辑改动；tsc 0 错误；vitest 全量 98 文件 931/931 全绿（与 v2.49.0 同基线，本版纯重构回回归门禁全绿）；四版本文件对齐 v2.50.0；按价值/风险/依赖把原 v2.50「架构拆弹」三项拆为 v2.50.0(注册表减负·本版) / v2.50.1(上帝组件拆解) / v2.51.0(Prisma 表名小写迁移+注册表去 any)，避免 v2.47 式半吊子；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.49.0 性能止血：AI 写长书不再卡成 PPT + 游戏模式报错不再露内部黑话 + 保存完不再整本重载（千惠 CEO 循环运营收口）：①流式渲染性能——把高频的 streamContent 状态从工作区上帝组件（WorkspacePage）本地 useState 下沉到已有的 useWriterStore（generatedContent/appendContent/resetStream 早就在、此前没被流式主路径用），CenterPanel 改为从 store 订阅流式正文；AI 逐 token 生成时整棵工作区组件树不再每 token 重渲染、只有正文显示区局部更新，大书（几十万字、数百节点）生成流畅度直接提升、卡顿肉眼可见减少；store 零改动、复用既有能力、行为不变、风险低；②game/action 路由 SSE 错误收敛——/api/game/action 的 catch 此前硬编码 write({type:error, error: err.message}) 泄露原始异常，现复用既有 sseError() 收敛为可读错误文案、且保留 error 字段名（前端 game/[nodeId] 客户端只读 event.error，改字段名会读不到），与 write/continue/refine 三路由一致、既堵泄露又不破坏前端契约、补齐 v2.47 漏项；③生成完成后局部刷新——done 事件后不再整本 loadProject() 重载（大书保存卡顿根因），改为 GET /api/story/nodes/:id 单节点 → useProjectStore.updateNode 局部更新当前章节（开销从「整本书」降到「一条记录」）、仅失败兜底全量；导入/新建/删除等确需全量刷新的保留 loadProject()；④配套 writer-store.test.ts 4 例锁死 appendContent 累加/resetStream 清空/setGenerating 切换。tsc 0 错误；vitest 全量 98 文件 931/931 全绿（较 v2.48.0 基线 927 +4 例）；四版本文件对齐 v2.49.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.48.0 地基止血·收口：上帝组件纯逻辑外提 + 保存同步回写 store（千惠 CEO 循环运营收口）：①上帝组件安全解耦——把 WorkspacePage（1506 行）里三个纯派生（章节级节点筛选 chapterNodesOf / 全书确认统计 allConfirmedOf / 叙事阶段推导 narrativeStageOf）外提为独立可测模块 src/core/workspace-derive.ts，行为原样不变、纯函数无副作用、配套 workspace-derive.test.ts 11 例锁死筛选/统计/阶段推导（含主线 completed→收尾），降低上帝组件体积与重复、便于后续真·拆解；②保存一致性修复——handleSaveNode 与 resolveConflict 在拿到服务端权威节点后，除更新本地选中态外，额外用 useProjectStore.getState().updateNode(node.id, node) 把节点同步回 store.storyNodes，消除「本地选中已是新版、store 仍是旧版」的脏数据隐患（此前手动保存只更新本地选中态、store 节点要等下次 loadProject 才刷新）；③删除外提后无用的 computeNarrativeStage 直接引用（改由 workspace-derive 内部调用），无行为变化。tsc 0 错误；vitest 全量 97 文件 927/927 全绿（较 v2.47.0 基线 916 +11 例 workspace-derive 测试）；四版本文件对齐 v2.48.0；Prisma 表名小写迁移与全量 loadProject 替换仍属线上库受控迁移风险项，本版不冒险、留待治理；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.47.0 地基止血：SSE 错误收敛可读 + 入参校验统一 + 节点类型常量化（千惠 CEO 循环运营收口）：①SSE 流式错误收敛——新增 src/lib/sse-error.ts 的 sseError(e) 用既有 classifyError 把生成链路异常收敛为结构化 SSE error 事件（可读 content + 错误 code + 修复 hint），generate/write、generate/continue、generate/refine 三个 SSE 路由 catch 块与 write-generation 内部 catch 从硬编码「服务器内部错误，请查看日志」改为发送可读错误，数据库没连/表没建/网络不通时前端直接看到原因，配套 5 例单测锁死不回显原始 message；②API 入参校验统一——新增 src/lib/api-body.ts 的 requireFields 把三个生成路由手写的 if (!projectId||!nodeId) 散落校验收敛为单一入口、响应体形状统一（code:BAD_REQUEST+hint），配套 6 例单测；③节点类型常量单一真相源——新增 src/core/node-type.ts 的 NODE_TYPE（as const satisfies StoryNodeType）取代散落 'section'/'chapter' 裸串、TS 编译期保证合法、story-node-bridge 复用去掉重复、工作区前端章节筛选/导出标题统一引用，SSEEvent 补 code?/hint? 收敛契约；④前端生成错误可读化——工作区生成出错改用 toastError 弹出可读错误（content+hint）。tsc 0 错误；vitest 全量 96 文件 916/916 全绿（较 v2.46.0 +11 例）；四版本文件对齐 v2.47.0；上帝组件拆解/Prisma 表名小写/局部更新/移动端真测留 v2.48；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -104,6 +105,26 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.50.0",
+    date: "2026-08-16",
+    title: "架构拆弹·Agent 注册表减负：枚举/映射常量单一真相源",
+    sections: [
+      { label: "共享枚举常量（去重·防漂移）", items: [
+        "Agent 工具注册表 src/core/agents/tool-registry.ts 里，角色定位(7值)/角色状态(6值)/世界书分类(15值)/节点类型(4值)/节点状态(6值)/伏笔状态(5值)/故事线状态(3值) 七组枚举此前在每个工具的 schema.parameters.properties.enum 里逐字抄写，极易漂移不一致",
+        "现抽出 CHARACTER_ROLES / CHARACTER_STATUSES / LORE_CATEGORIES / STORY_NODE_TYPES / NODE_STATUSES / FORESHADOWING_STATUSES / STORYLINE_STATUSES 七个 as const 常量，所有 schema 改用 enum: [...X] 引用——取值一处改、处处同步，TS 编译期保证合法",
+      ] },
+      { label: "世界书分类映射单一真相源", items: [
+        "lore_create 与 lore_update 此前各写了一份「中文分类→英文 key」映射表（CATEGORY_MAP / CAT_MAP），且两份不一致——lore_update 漏了 物品/功法/魔法/生物/货币/命运/物理/公开/角色关系 等键，会导致传入中文分类不被识别",
+        "现合并为唯一 LORE_CATEGORY_MAP 常量（取两份并集、更全），两处统一引用——既消除重复代码，又修了 lore_update 漏映射的隐患，映射结果更正确",
+      ] },
+      { label: "质量门禁与范围说明", items: [
+        "纯常量外提，无新增/删除任何工具、无运行时逻辑改动、行为零变化、风险低",
+        "SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 98 文件 931/931 全绿（与 v2.49.0 同基线，本版纯重构回回归门禁全绿）；四版本文件对齐 v2.50.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+        "按价值/风险/依赖把原 v2.50「架构拆弹」三项拆为 v2.50.0(注册表减负·本版) / v2.50.1(上帝组件 WorkspacePage 拆解) / v2.51.0(Prisma 表名小写迁移 + 注册表去 any)，避免 v2.47 式半吊子",
+      ] },
+    ],
+  },
   {
     version: "v2.49.0",
     date: "2026-08-16",

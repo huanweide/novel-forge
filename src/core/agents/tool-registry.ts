@@ -61,6 +61,61 @@ export interface ToolDefinition {
 }
 
 // ═══════════════════════════════════════════
+// 共享常量（去重：各工具 schema 的 enum / 分类映射此前逐字重复，易漂移不一致）
+// ═══════════════════════════════════════════
+
+/** 角色定位（character_* 工具共用） */
+export const CHARACTER_ROLES = [
+  "protagonist", "antagonist", "mentor", "supporting", "love_interest", "catalyst", "background",
+] as const;
+
+/** 角色状态（character_create / character_update 共用） */
+export const CHARACTER_STATUSES = [
+  "alive", "dead", "missing", "incapacitated", "presumed_dead", "transformed",
+] as const;
+
+/** 世界书分类（lore_* 工具共用，必须与 category enum 一致） */
+export const LORE_CATEGORIES = [
+  "geography", "faction", "item", "magic_system", "technique", "creature",
+  "culture", "history", "law", "currency", "character_relationship",
+  "fate_system", "physics", "public_system", "custom",
+] as const;
+
+/** 节点类型（outline_create 用） */
+export const STORY_NODE_TYPES = ["volume", "chapter", "section", "scene"] as const;
+
+/** 节点状态（outline_update 用） */
+export const NODE_STATUSES = [
+  "outline_only", "drafting", "completed", "reviewing", "rejected", "revised",
+] as const;
+
+/** 伏笔状态（foreshadowing_* 工具共用） */
+export const FORESHADOWING_STATUSES = [
+  "pending", "detected", "partially_fulfilled", "fulfilled", "voided",
+] as const;
+
+/** 故事线状态（storyline_list 用） */
+export const STORYLINE_STATUSES = ["active", "completed", "abandoned"] as const;
+
+/** 中文分类 → 英文 key 映射（lore_create / lore_update 共用，合并两处不一致的旧定义，取并集更全） */
+export const LORE_CATEGORY_MAP: Record<string, string> = {
+  "势力": "faction", "宗门": "faction", "组织": "faction", "帮派": "faction", "家族": "faction",
+  "地理": "geography", "地点": "geography", "城市": "geography", "大陆": "geography",
+  "物品": "item", "法宝": "item", "丹药": "item", "武器": "item",
+  "魔法": "magic_system", "力量体系": "magic_system", "修炼体系": "magic_system",
+  "功法": "technique", "技能": "technique", "武技": "technique",
+  "生物": "creature", "种族": "creature", "妖兽": "creature",
+  "文化": "culture", "风俗": "culture",
+  "历史": "history", "事件": "history",
+  "法则": "law", "规则": "law",
+  "货币": "currency", "灵石": "currency", "经济": "currency",
+  "命运": "fate_system", "天命": "fate_system", "因果": "fate_system", "预言": "fate_system",
+  "物理": "physics", "物理规则": "physics", "时空": "physics",
+  "公开": "public_system", "制度": "public_system", "律法": "public_system", "阶级": "public_system",
+  "角色关系": "character_relationship", "关系": "character_relationship",
+};
+
+// ═══════════════════════════════════════════
 // 辅助函数
 // ═══════════════════════════════════════════
 
@@ -122,7 +177,7 @@ toolRegistry.register({
     parameters: {
       type: "object",
       properties: {
-        role: { type: "string", description: "角色类型筛选（protagonist/antagonist/mentor/supporting/love_interest/catalyst/background），不传则返回全部", enum: ["protagonist", "antagonist", "mentor", "supporting", "love_interest", "catalyst", "background"] },
+        role: { type: "string", description: "角色类型筛选（protagonist/antagonist/mentor/supporting/love_interest/catalyst/background），不传则返回全部", enum: [...CHARACTER_ROLES] },
       },
       required: [],
     },
@@ -194,12 +249,12 @@ toolRegistry.register({
       type: "object",
       properties: {
         name: { type: "string", description: "角色名（必填）" },
-        role: { type: "string", description: "角色定位", enum: ["protagonist", "antagonist", "mentor", "supporting", "love_interest", "catalyst", "background"] },
+        role: { type: "string", description: "角色定位", enum: [...CHARACTER_ROLES] },
         age: { type: "string", description: "年龄（可写范围如'16-18'或'未知'）" },
         gender: { type: "string", description: "性别" },
         personality: { type: "string", description: "性格关键词，逗号分隔" },
         background: { type: "string", description: "背景故事摘要" },
-        currentStatus: { type: "string", description: "当前状态", enum: ["alive", "dead", "missing", "incapacitated", "presumed_dead", "transformed"] },
+        currentStatus: { type: "string", description: "当前状态", enum: [...CHARACTER_STATUSES] },
         aliases: { type: "string", description: "别名/称号，逗号分隔" },
         abilities: { type: "string", description: "能力/技能，逗号分隔" },
         quickImportContent: { type: "string", description: "快速导入原文——AI 从一段描述中提取角色信息" },
@@ -257,10 +312,10 @@ toolRegistry.register({
       properties: {
         characterId: { type: "string", description: "角色ID（从 character_list 或 character_get 获取）" },
         name: { type: "string", description: "新角色名" },
-        role: { type: "string", description: "角色定位", enum: ["protagonist", "antagonist", "mentor", "supporting", "love_interest", "catalyst", "background"] },
+        role: { type: "string", description: "角色定位", enum: [...CHARACTER_ROLES] },
         personality: { type: "string", description: "性格关键词，逗号分隔（会替换原性格）" },
         background: { type: "string", description: "背景故事" },
-        currentStatus: { type: "string", description: "当前状态", enum: ["alive", "dead", "missing", "incapacitated", "presumed_dead", "transformed"] },
+        currentStatus: { type: "string", description: "当前状态", enum: [...CHARACTER_STATUSES] },
         arcProgress: { type: "string", description: "弧光进展描述" },
         aliases: { type: "string", description: "别名/称号，逗号分隔（会替换原别名）" },
         abilities: { type: "string", description: "能力/技能，逗号分隔（会替换原能力）" },
@@ -325,7 +380,7 @@ toolRegistry.register({
     parameters: {
       type: "object",
       properties: {
-        category: { type: "string", description: "分类筛选", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
+        category: { type: "string", description: "分类筛选", enum: [...LORE_CATEGORIES] },
         enabled: { type: "boolean", description: "只显示启用的词条（默认 true）" },
       },
       required: [],
@@ -353,7 +408,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         keywords: { type: "string", description: "查询关键词，多个用逗号分隔" },
-        category: { type: "string", description: "可选：限定分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
+        category: { type: "string", description: "可选：限定分类", enum: [...LORE_CATEGORIES] },
       },
       required: ["keywords"],
     },
@@ -383,7 +438,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         title: { type: "string", description: "词条标题（必填）" },
-        category: { type: "string", description: "分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
+        category: { type: "string", description: "分类", enum: [...LORE_CATEGORIES] },
         content: { type: "string", description: "设定内容" },
         keys: { type: "string", description: "触发关键词，逗号分隔（正文出现这些词时自动注入该设定）" },
         insertionOrder: { type: "number", description: "插入优先级 0-100，越大越靠前" },
@@ -399,25 +454,8 @@ toolRegistry.register({
     });
     if (existing) return fail("lore_create", `词条"${title}"已存在（ID: ${existing.id}）`);
     const keysArr = args.keys ? String(args.keys).split(/[,，]/).map((s: string) => s.trim()).filter(Boolean) : [];
-    // 中英文分类映射
-    const CATEGORY_MAP: Record<string, string> = {
-      "势力": "faction", "宗门": "faction", "组织": "faction", "帮派": "faction", "家族": "faction",
-      "地理": "geography", "地点": "geography", "城市": "geography", "大陆": "geography",
-      "物品": "item", "法宝": "item", "丹药": "item", "武器": "item",
-      "魔法": "magic_system", "力量体系": "magic_system", "修炼体系": "magic_system",
-      "功法": "technique", "技能": "technique", "武技": "technique",
-      "生物": "creature", "种族": "creature", "妖兽": "creature",
-      "文化": "culture", "风俗": "culture",
-      "历史": "history", "事件": "history",
-      "法则": "law", "规则": "law",
-      "货币": "currency", "灵石": "currency", "经济": "currency",
-      "命运": "fate_system", "天命": "fate_system", "因果": "fate_system", "预言": "fate_system",
-      "物理": "physics", "物理规则": "physics", "时空": "physics",
-      "公开": "public_system", "制度": "public_system", "律法": "public_system", "阶级": "public_system",
-      "角色关系": "character_relationship", "关系": "character_relationship",
-    };
     const rawCategory = (args.category as string) || "custom";
-    const mappedCategory = CATEGORY_MAP[rawCategory] || rawCategory;
+    const mappedCategory = LORE_CATEGORY_MAP[rawCategory] || rawCategory;
 
     const created = await ctx.prisma.lorebookEntry.create({
       data: {
@@ -448,7 +486,7 @@ toolRegistry.register({
       properties: {
         entryId: { type: "string", description: "词条ID" },
         title: { type: "string", description: "新标题" },
-        category: { type: "string", description: "新分类", enum: ["geography", "faction", "item", "magic_system", "technique", "creature", "culture", "history", "law", "currency", "character_relationship", "fate_system", "physics", "public_system", "custom"] },
+        category: { type: "string", description: "新分类", enum: [...LORE_CATEGORIES] },
         content: { type: "string", description: "新内容" },
         keys: { type: "string", description: "触发关键词，逗号分隔（会替换原关键词）" },
       },
@@ -463,18 +501,7 @@ toolRegistry.register({
     if (args.title) data.title = String(args.title);
     if (args.category) {
       const rawCat = String(args.category);
-      const CAT_MAP: Record<string, string> = {
-        "势力": "faction", "宗门": "faction", "组织": "faction", "帮派": "faction", "家族": "faction",
-        "地理": "geography", "地点": "geography", "物品": "item", "功法": "technique", "技能": "technique",
-        "魔法": "magic_system", "力量体系": "magic_system", "生物": "creature", "种族": "creature",
-        "文化": "culture", "历史": "history", "法则": "law",
-        "货币": "currency", "灵石": "currency",
-        "命运": "fate_system", "天命": "fate_system", "因果": "fate_system", "预言": "fate_system",
-        "物理": "physics", "物理规则": "physics", "时空": "physics",
-        "公开": "public_system", "制度": "public_system", "律法": "public_system", "阶级": "public_system",
-        "角色关系": "character_relationship", "关系": "character_relationship",
-      };
-      data.category = CAT_MAP[rawCat] || rawCat;
+      data.category = LORE_CATEGORY_MAP[rawCat] || rawCat;
     }
     if (args.content !== undefined) data.content = String(args.content);
     if (args.keys) data.keys = String(args.keys).split(/[,，]/).map((s: string) => s.trim()).filter(Boolean);
@@ -546,7 +573,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         title: { type: "string", description: "节点标题（必填）" },
-        type: { type: "string", description: "节点类型", enum: ["volume", "chapter", "section", "scene"] },
+        type: { type: "string", description: "节点类型", enum: [...STORY_NODE_TYPES] },
         parentId: { type: "string", description: "父节点ID（不传则创建为根节点/卷）" },
         outline: { type: "string", description: "节点大纲/摘要" },
         order: { type: "number", description: "排序序号（默认自动追加到末尾）" },
@@ -598,7 +625,7 @@ toolRegistry.register({
         nodeId: { type: "string", description: "节点ID" },
         title: { type: "string", description: "新标题" },
         outline: { type: "string", description: "新大纲/摘要文本" },
-        status: { type: "string", description: "新状态", enum: ["outline_only", "drafting", "completed", "reviewing", "rejected", "revised"] },
+        status: { type: "string", description: "新状态", enum: [...NODE_STATUSES] },
       },
       required: ["nodeId"],
     },
@@ -661,7 +688,7 @@ toolRegistry.register({
     parameters: {
       type: "object",
       properties: {
-        status: { type: "string", description: "按状态筛选", enum: ["pending", "detected", "partially_fulfilled", "fulfilled", "voided"] },
+        status: { type: "string", description: "按状态筛选", enum: [...FORESHADOWING_STATUSES] },
       },
       required: [],
     },
@@ -738,7 +765,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         foreshadowId: { type: "string", description: "伏笔ID" },
-        status: { type: "string", description: "新状态", enum: ["pending", "detected", "partially_fulfilled", "fulfilled", "voided"] },
+        status: { type: "string", description: "新状态", enum: [...FORESHADOWING_STATUSES] },
         description: { type: "string", description: "更新描述" },
         fulfillmentRatio: { type: "number", description: "兑现比例 0.0~1.0" },
       },
@@ -907,7 +934,7 @@ toolRegistry.register({
       type: "object",
       properties: {
         // F6 修复（Round-7）：移除 "paused"（Storyline.status 无此合法值，属死枚举，会误导 LLM 传入）。
-        status: { type: "string", description: "按状态筛选", enum: ["active", "completed", "abandoned"] },
+        status: { type: "string", description: "按状态筛选", enum: [...STORYLINE_STATUSES] },
       },
       required: [],
     },
