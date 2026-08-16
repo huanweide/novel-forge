@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { toastSuccess, toastError, toastInfo, confirmDialog, toastAdded, toastCreated } from "@/components/ui/toast";
 import { EmptyState, Loading } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
@@ -42,6 +42,20 @@ const TYPE_LABEL: Record<string, string> = {
   lorebook: "世界书",
   api_config: "API参数",
 };
+
+// 预设类型 → 语义色族 + 图标（全部取自品牌令牌 --nv-*，不引入离谱色；分色只为氛围辅助，
+// 主区分靠图标 + 文字。技术配置类（表格/API）同归靛蓝族，靠图标区分）。
+const PRESET_TYPE_META: Record<string, { icon: IconName; colorVar: string }> = {
+  table_template:    { icon: "grid",       colorVar: "var(--nv-primary)" },
+  story_progression: { icon: "gitBranch",  colorVar: "var(--nv-success)" },
+  style:             { icon: "palette",    colorVar: "var(--nv-creative)" },
+  worldview:         { icon: "globe",      colorVar: "var(--nv-info)" },
+  character:         { icon: "user",       colorVar: "var(--nv-warning)" },
+  lorebook:          { icon: "bookmarked", colorVar: "var(--nv-accent)" },
+  regex:             { icon: "shield",     colorVar: "var(--nv-danger)" },
+  api_config:        { icon: "settings",   colorVar: "var(--nv-primary)" },
+};
+const presetMeta = (type: string) => PRESET_TYPE_META[type] ?? { icon: "package" as IconName, colorVar: "var(--nv-creative)" };
 
 const PLACEHOLDER: Record<string, string> = {
   table_template: `{\n  "tables": [\n    { "key": "my_table", "name": "我的表", "note": "说明", "category": "custom",\n      "columns": [{"key":"name","label":"名称","type":"text"}], "rows": [] }\n  ]\n}`,
@@ -337,7 +351,7 @@ export default function Workshop() {
 
   return (
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)]">
-      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <Link href="/" className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1">
@@ -431,11 +445,14 @@ export default function Workshop() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {presets.map((p, idx) => (
-              <div key={p.id} className="surface-elevated rounded-2xl p-5 flex flex-col gap-3 group relative overflow-hidden animate-in" style={{ animationDelay: `${Math.min(idx, 18) * 45}ms` }}>
+              <div key={p.id} className="preset-card surface-elevated rounded-2xl p-5 flex flex-col gap-3 group relative overflow-hidden animate-in" style={{ animationDelay: `${Math.min(idx, 18) * 45}ms`, "--card-accent": presetMeta(p.type).colorVar } as React.CSSProperties}>
                 <span className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-[var(--nv-creative)]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--nv-primary)]/15 text-[var(--nv-primary)]">
-                    {TYPE_LABEL[p.type] || p.type}
+                  <span
+                    className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+                    style={{ background: `color-mix(in oklch, ${presetMeta(p.type).colorVar} 16%, transparent)`, color: presetMeta(p.type).colorVar }}
+                  >
+                    <Icon name={presetMeta(p.type).icon} size={11} /> {TYPE_LABEL[p.type] || p.type}
                   </span>
                   {p.isBuiltin && <span className="text-[11px] text-accent-label">内置</span>}
                 </div>

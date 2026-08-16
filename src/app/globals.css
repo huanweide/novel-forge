@@ -1690,3 +1690,22 @@ html.azure .btn-danger { color: oklch(0.76 0.18 20); border-color: oklch(0.62 0.
   .nv-glow, .nv-glow-strong, .pointer-blob, .item-detected { transition: none; animation: none; }
   .pointer-blob { display: none; }
 }
+
+/* ═══════════════════════════════════════════
+   创意工坊 · 预设卡片（v3.1.8）：类型色描边发光 + 悬浮上浮
+   卡片按预设类型设置 --card-accent（品牌语义色），hover 时整卡描边发光、上浮
+   ═══════════════════════════════════════════ */
+.preset-card {
+  --card-accent: var(--nv-creative);
+  border: 1px solid var(--nv-border-2);
+  transition: transform 260ms var(--ease-out-smooth, ease), box-shadow 260ms var(--ease-out-smooth, ease), border-color 260ms var(--ease-out-smooth, ease);
+}
+.preset-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklch, var(--card-accent) 45%, transparent);
+  box-shadow: var(--shadow-glass-hover), 0 0 26px color-mix(in oklch, var(--card-accent) 22%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .preset-card { transition: none; }
+  .preset-card:hover { transform: none; }
+}
