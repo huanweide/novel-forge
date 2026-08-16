@@ -381,8 +381,8 @@ function ChipGroup({
     indigo: { bg: "bg-[var(--nv-primary)]/20", text: "text-[var(--nv-primary)]", border: "border-[var(--nv-primary)]/30", shadow: "shadow-[0_0_8px_rgba(99,102,241,0.1)]" },
     emerald: { bg: "bg-[var(--nv-success)]/20", text: "text-[var(--nv-success)]", border: "border-[var(--nv-success)]/30", shadow: "shadow-[0_0_8px_rgba(16,185,129,0.1)]" },
     amber: { bg: "bg-[var(--nv-warning)]/20", text: "text-[var(--nv-warning)]", border: "border-[var(--nv-warning)]/30", shadow: "shadow-[0_0_8px_rgba(245,158,11,0.1)]" },
-    purple: { bg: "bg-[var(--nv-creative)]/20", text: "text-[var(--nv-creative)]", border: "border-[var(--nv-creative)]/30", shadow: "shadow-[0_0_8px_rgba(168,85,247,0.1)]" },
-    pink: { bg: "bg-pink-500/20", text: "text-pink-300", border: "border-pink-400/30", shadow: "shadow-[0_0_8px_rgba(236,72,153,0.1)]" },
+    purple: { bg: "bg-[var(--nv-creative)]/20", text: "text-[var(--nv-creative)]", border: "border-[var(--nv-creative)]/30", shadow: "shadow-[0_0_8px_rgba(228,184,99,0.12)]" },
+    pink: { bg: "bg-[var(--nv-creative)]/20", text: "text-[var(--nv-creative)]", border: "border-[var(--nv-creative)]/30", shadow: "shadow-[0_0_8px_rgba(228,184,99,0.12)]" },
   };
   const c = colorMap[color];
   return (

@@ -681,7 +681,7 @@ export function ImportWizard({
                       <Button
                         onClick={() => handleParse(true)}
                         disabled={rawText.trim().length < 50}
-                        className="flex-1 bg-purple-600 hover:bg-purple-500"
+                        className="flex-1 bg-[var(--nv-creative)] hover:brightness-110"
                       >
                         <Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 仅人物卡
                                                                         </Button>
@@ -794,9 +794,9 @@ export function ImportWizard({
               {(currentStage === "path-a" || currentStage === "path-b" || currentStage === "path-a-done" || currentStage === "path-b-done") && (
                 <div className="w-full max-w-md space-y-1.5 mt-2">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-pink-400 w-24 shrink-0"><Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> A路 DeepSeek</span>
+                    <span className="text-[var(--nv-creative)] w-24 shrink-0"><Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> A路 DeepSeek</span>
                     <div className="flex-1 h-1.5 bg-[var(--nv-surface-2)] rounded-full overflow-hidden">
-                      <div className="h-full bg-pink-600 rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-a-done" ? "100" : "40"}%` }} />
+                      <div className="h-full bg-[var(--nv-creative)] rounded-full transition-all duration-500" style={{ width: `${currentStage === "path-a-done" ? "100" : "40"}%` }} />
                     </div>
                     <span className="text-[var(--nv-text-muted)] w-16 text-right text-[10px]">{currentStage === "path-a-done" ? "✅完成" : "进行中"}</span>
                   </div>
@@ -813,7 +813,7 @@ export function ImportWizard({
               {/* 实时统计：角色+词条计数 */}
               {(charsFound > 0 || loreFound > 0) && (
                 <div className="flex gap-4 text-xs">
-                  <span className="text-pink-400"><Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 角色 {charsFound}</span>
+                  <span className="text-[var(--nv-creative)]"><Icon name="user" size={15} className="inline-block align-text-bottom shrink-0" /> 角色 {charsFound}</span>
                   <span className="text-success"><Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /> 词条 {loreFound}</span>
                 </div>
               )}
@@ -863,7 +863,7 @@ export function ImportWizard({
               {/* 概要 */}
               <div className="grid grid-cols-4 gap-3">
                 <StatBox label="识别章节" value={String(editedChapters.length)} color="text-[var(--nv-primary)]" />
-                <StatBox label="抽取角色" value={String(editedCharacters.length)} color="text-pink-400" />
+                <StatBox label="抽取角色" value={String(editedCharacters.length)} color="text-[var(--nv-creative)]" />
                 <StatBox label="世界观词条" value={String(editedLore.length)} color="text-success" />
                 <StatBox label="分卷模式" value={volumeMode ? "ON" : "OFF"} color="text-warning" />
               </div>
@@ -947,7 +947,7 @@ export function ImportWizard({
                   <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
                     {editedCharacters.map((char, i) => (
                       <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs border transition-colors ${
-                        selectedChars.has(i) ? "border-pink-700 bg-pink-950/30" : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm"
+                        selectedChars.has(i) ? "border-[var(--nv-creative)]/40 bg-[var(--nv-creative)]/15" : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm"
                       }`}>
                         <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                           <input
@@ -1109,7 +1109,7 @@ export function ImportWizard({
           {step === "committing" && (
             <div className="flex flex-col py-8 space-y-4">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-10 h-10 border-3 border-[var(--nv-primary)] border-t-transparent rounded-full animate-spin" />
                 <div>
                   <p className="text-sm text-[var(--nv-text-secondary)] font-medium">正在写入数据库...</p>
                   <p className="text-xs text-[var(--nv-text-muted)]">
@@ -1127,7 +1127,7 @@ export function ImportWizard({
 
                   return (
                     <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      i === commitProgress.length - 1 ? "bg-purple-950/30 border border-purple-800/30" : "text-[var(--nv-text-muted)]"
+                      i === commitProgress.length - 1 ? "bg-[var(--nv-primary)]/30 border border-[var(--nv-primary)]/20" : "text-[var(--nv-text-muted)]"
                     }`}>
                       {isDone ? (
                         <span className="text-success shrink-0"><Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /></span>

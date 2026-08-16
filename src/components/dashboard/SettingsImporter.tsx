@@ -222,7 +222,7 @@ ${
               )}
               {result.styleCard && (
                 <p>
-                  创建了 <span className="text-pink-400 font-bold">1</span> 张风格卡
+                  创建了 <span className="text-[var(--nv-creative)] font-bold">1</span> 张风格卡
                 </p>
               )}
               {result.writingRules > 0 && (
