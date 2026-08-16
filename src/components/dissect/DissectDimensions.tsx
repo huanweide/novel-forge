@@ -115,7 +115,7 @@ export function DissectDimensions({
       {/* ── 导入预设总览卡片 ── */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {/* 角色卡片——迷你角色卡格式，匹配工作区CharacterList */}
-        <div className={`p-4 rounded-xl border ${charPreview.length > 0 ? "bg-[var(--nv-primary)]/5 border-[var(--nv-primary)]/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
+        <div className={`p-4 rounded-xl border ${charPreview.length > 0 ? "bg-[var(--nv-primary)]/5 border-[var(--nv-primary)]/30" : "surface-elevated border-[var(--nv-border-2)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass-rest)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl"><Icon name="users" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">角色</span>
@@ -154,7 +154,7 @@ export function DissectDimensions({
         </div>
 
         {/* 世界书卡片 */}
-        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-success/5 border-success/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
+        <div className={`p-4 rounded-xl border ${loreCount > 0 ? "bg-success/5 border-success/30" : "surface-elevated border-[var(--nv-border-2)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass-rest)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl"><Icon name="book" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">世界书词条</span>
@@ -194,7 +194,7 @@ export function DissectDimensions({
         </div>
 
         {/* 文风卡片 */}
-        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-warning/5 border-warning/30" : "bg-[var(--nv-surface-2)] backdrop-blur-sm border-[var(--nv-border-2)]"}`}>
+        <div className={`p-4 rounded-xl border ${hasStyle ? "bg-warning/5 border-warning/30" : "surface-elevated border-[var(--nv-border-2)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass-rest)]"}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl"><Icon name="pencil" size={15} className="inline-block align-text-bottom shrink-0" /></span>
             <span className="text-sm font-semibold text-[var(--nv-text-secondary)]">文笔风格</span>
@@ -222,7 +222,7 @@ export function DissectDimensions({
         return (
           <div
             key={group.id}
-            className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl overflow-hidden"
+            className="surface-elevated border border-[var(--nv-border-2)] rounded-xl overflow-hidden transition-all hover:border-[var(--nv-border-3)] hover:shadow-[var(--shadow-glass-rest)]"
           >
             {/* 组标题 */}
             <button
@@ -249,16 +249,18 @@ export function DissectDimensions({
                   return (
                     <div
                       key={key}
-                      className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)]/50 rounded-lg overflow-hidden"
+                      className="surface-elevated border border-[var(--nv-border-2)]/50 rounded-lg overflow-hidden transition-all hover:border-[var(--nv-border-2)] hover:shadow-[var(--shadow-glass-rest)]"
                     >
                       {/* 维度标题行 */}
                       <button
                         onClick={() => toggleDim(key)}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[var(--nv-surface-3)]/30 transition-colors text-left"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[var(--nv-surface-3)]/40 transition-all hover:shadow-[inset_2px_0_0_0_var(--nv-primary)] text-left"
                       >
-                        <span className="text-sm shrink-0">
-                          {DIMENSION_ICONS[key as keyof typeof DIMENSION_ICONS]}
-                        </span>
+                        <Icon
+                          name={DIMENSION_ICONS[key as keyof typeof DIMENSION_ICONS] as IconName}
+                          size={14}
+                          className="shrink-0 text-[var(--nv-text-tertiary)]"
+                        />
                         <span className="text-sm font-medium text-[var(--nv-text-secondary)]">
                           {DIMENSION_LABELS[key as keyof typeof DIMENSION_LABELS]}
                         </span>
@@ -302,7 +304,7 @@ export function DissectDimensions({
 
       {/* 章节列表（如果有摘要） */}
       {chapterList && chapterList.length > 0 && chapterList.some((c) => c.summary) && (
-        <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl overflow-hidden">
+        <div className="surface-elevated border border-[var(--nv-border-2)] rounded-xl overflow-hidden">
           <button
             onClick={() => toggleGroup("chapters")}
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-[var(--nv-surface-3)]/50 transition-colors text-left"
@@ -321,7 +323,7 @@ export function DissectDimensions({
                 .map((ch: any) => (
                   <div
                     key={ch.index}
-                    className="p-3 bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)]/50 rounded-lg"
+                    className="p-3 surface-elevated border border-[var(--nv-border-2)]/50 rounded-lg transition-all hover:border-[var(--nv-border-2)] hover:shadow-[var(--shadow-glass-rest)]"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs text-[var(--nv-text-muted)] font-mono">#{ch.index}</span>
@@ -345,7 +347,7 @@ export function DissectDimensions({
           {convertedToProjectId ? (
             <a
               href={`/workspace/${convertedToProjectId}`}
-              className="block w-full py-3 rounded-lg bg-success text-[var(--nv-text-primary)] text-sm font-medium text-center hover:bg-success transition-colors"
+              className="block w-full py-3 rounded-lg btn-success text-sm font-medium text-center"
             >
               <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" /> 项目已创建，点击进入工作区 →
                                       </a>
@@ -357,7 +359,7 @@ export function DissectDimensions({
                 className={`flex-1 py-3 rounded-lg text-sm font-medium transition-colors ${
                   converting
                     ? "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
-                    : "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
+                    : "btn-primary"
                 }`}
               >
                 {converting ? (<><Icon name="loader" size={13} className="animate-spin" /> 转换中...</>) : (<><Icon name="package" size={13} className="inline-block align-text-bottom" /> 原样转为项目（100%还原）</>)}

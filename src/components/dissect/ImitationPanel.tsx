@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { DimensionKey, ImitationMode } from "@/core/dissect/types";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import {
   DISSECT_DIMENSIONS,
   DIMENSION_LABELS,
@@ -184,7 +184,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
         <select
           value={selectedTaskId}
           onChange={(e) => handleTaskSelect(e.target.value)}
-          className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]"
+          className="input-glass w-full px-3 py-2 text-sm"
         >
           <option value="">请选择拆书记录...</option>
           {tasks.map((t) => (
@@ -217,7 +217,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
               className={`p-2.5 rounded-lg border text-left transition-colors ${
                 mode === opt.id
                   ? "border-[var(--nv-primary)] bg-[var(--nv-primary)]/10"
-                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm hover:border-[var(--nv-border-3)]"
+                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] hover:border-[var(--nv-border-3)] hover:-translate-y-0.5 transition-all"
               }`}
             >
               <div className="text-xs font-medium text-[var(--nv-text-secondary)]">{opt.label}</div>
@@ -285,7 +285,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
                   onChange={() => toggleDimension(dim.key as DimensionKey)}
                   className="sr-only"
                 />
-                <span>{dim.icon}</span>
+                <Icon name={dim.icon as IconName} size={13} className="shrink-0" />
                 <span>{dim.label}</span>
               </label>
             ))}
@@ -305,7 +305,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
             min={500}
             max={50000}
             step={500}
-            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]"
+            className="input-glass w-full px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -317,7 +317,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
             onChange={(e) => setChapterCount(Math.max(1, Math.min(20, Number(e.target.value))))}
             min={1}
             max={20}
-            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] focus:outline-none focus:border-[var(--nv-primary)]"
+            className="input-glass w-full px-3 py-2 text-sm"
           />
         </div>
       </div>
@@ -333,7 +333,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
           onChange={(e) => setCustomRequirement(e.target.value)}
           placeholder="可填写额外的仿写要求，如：主角改为女性、背景设定在现代都市..."
           rows={3}
-          className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)] resize-y"
+          className="input-glass w-full px-3 py-2 text-sm resize-y"
         />
       </div>
 
@@ -343,7 +343,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
         disabled={!selectedTaskId || selectedDimensions.length === 0 || generating}
         className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
           selectedTaskId && selectedDimensions.length > 0 && !generating
-            ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
+            ? "btn-primary"
             : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >
@@ -371,7 +371,7 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
               <Icon name="clipboard" size={15} className="inline-block align-text-bottom shrink-0" /> 复制
                                       </button>
           </div>
-          <div className="p-4 bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg max-h-96 overflow-y-auto">
+          <div className="p-4 surface-elevated border border-[var(--nv-border-2)] rounded-lg max-h-96 overflow-y-auto">
             <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-sm text-[var(--nv-text-secondary)] leading-relaxed">
               {output}
             </div>

@@ -147,7 +147,7 @@ export default function DissectDetailPage() {
     return (
       <div className="min-h-screen bg-[var(--nv-void)] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4">📭</div>
+          <div className="mb-4 flex justify-center"><Icon name="inbox" size={36} className="text-[var(--nv-text-tertiary)]" /></div>
           <p className="text-[var(--nv-text-tertiary)] mb-4">任务不存在</p>
           <Link href="/dissect" className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)]">
             返回拆书导航
@@ -227,7 +227,7 @@ export default function DissectDetailPage() {
             </div>
             <a
               href={`/workspace/${convertSuccess}`}
-              className="px-4 py-2 bg-success text-[var(--nv-text-primary)] rounded-lg text-sm font-medium hover:bg-success transition-colors"
+              className="px-4 py-2 btn-success rounded-lg text-sm font-medium"
             >
               进入工作区 →
             </a>
@@ -247,7 +247,7 @@ export default function DissectDetailPage() {
                 <button
                   onClick={handleDirectConvert}
                   disabled={converting}
-                  className="p-4 rounded-xl border border-[var(--nv-primary)]/30 bg-[var(--nv-primary)]/5 hover:bg-[var(--nv-primary)]/10 hover:border-[var(--nv-primary)]/60 transition-all text-left group"
+                  className="p-4 rounded-xl border border-[var(--nv-primary)]/30 bg-[var(--nv-primary)]/5 hover:bg-[var(--nv-primary)]/10 hover:-translate-y-0.5 hover:border-[var(--nv-primary)]/60 transition-all text-left group"
                 >
                   <div className="text-2xl mb-2"><Icon name="package" size={18} className="inline-block align-text-bottom shrink-0" /></div>
                   <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-[var(--nv-primary)]">
@@ -265,7 +265,7 @@ export default function DissectDetailPage() {
                 <button
                   onClick={() => setMode("adapt")}
                   disabled={converting}
-                  className="p-4 rounded-xl border border-warning/30 bg-warning/5 hover:bg-warning/10 hover:border-warning/60 transition-all text-left group"
+                  className="p-4 rounded-xl border border-warning/30 bg-warning/5 hover:bg-warning/10 hover:-translate-y-0.5 hover:border-warning/60 transition-all text-left group"
                 >
                   <div className="text-2xl mb-2"><Icon name="palette" size={18} className="inline-block align-text-bottom shrink-0" /></div>
                   <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-warning">

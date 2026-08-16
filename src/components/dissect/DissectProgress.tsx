@@ -39,10 +39,10 @@ export function DissectProgress({
 
   const barColor =
     status === "failed"
-      ? "#ef4444"
+      ? "var(--nv-danger)"
       : status === "completed"
-        ? "#22c55e"
-        : "#6366f1";
+        ? "var(--nv-success)"
+        : "var(--nv-primary)";
 
   // progress 保证在 0-100 之间
   const pct = Math.min(100, Math.max(0, progress));

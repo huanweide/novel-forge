@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v2.61.0 — 2026-08-16
+
+### 拆书页深度美化（UI 设计师·虚空玻璃体系 · Stage 4）
+- **emoji 全换图标**：拆书结果 15 个维度图标从 emoji（📋🌍💎👥🧵📑🔮🗺️⚔️⚡🔧💰🎒📜✍️）全换 Lucide 图标组件（clipboard/globe/gem/users/gitBranch/file/sparkles/map/swords/zap/wrench/coins/backpack/scroll/pencil）；拆解完成/失败页 ✅❌、任务不存在页 📭 同步换 Icon 组件，全站图标语言统一。
+- **去裸色值**：DissectProgress 进度条填充从写死 hex（#ef4444/#22c55e/#6366f1）改 --nv-danger/--nv-success/--nv-primary 语义令牌，换主题不串色。
+- **压平滤纸（回应「不要滤纸」）**：拆书页 ≥7 处 backdrop-blur-sm（总览卡/分组卡/维度卡/章节卡）剥掉改 surface-elevated 实体层次；拆书导航顶栏半透明+模糊改纯色实心。
+- **输入框统一**：DissectUpload / ImitationPanel 共 9 处手搓输入框/下拉/文本域改 input-glass 设计系统输入态（聚焦描边、悬浮微变）。
+- **按钮真反馈**：拆书页所有「悬浮无变化」按钮（开始拆解/查看结果/进入工作区/原样转项目/改编后转项目/应用修改/仿写生成/底部转项目）改 btn-primary/btn-success 或 hover 位移/上浮；维度行 hover 加左侧高亮条（inset 题材色），任务卡/分组卡/维度卡/章节卡悬浮微浮起 + 投影，手感与工作台一致。
+- **质量门禁**：tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.60.0 同基线，本版零新增测试、纯 UI/CSS 改动）；四处版本文件对齐 v2.61.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.60.0 — 2026-08-16
 
 ### 创造后工作台深度美化（UI 设计师·虚空玻璃体系 · Stage 3）

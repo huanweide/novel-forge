@@ -169,15 +169,15 @@ export default function NewDissectPage() {
           )}
 
           {phase === "done" && (
-            <div className="text-center py-8">
-              <div className="text-5xl mb-4">✅</div>
-              <h2 className="text-xl font-bold text-success mb-2">拆解完成</h2>
+            <div className="text-center py-8 animate-in">
+              <div className="mb-4 flex justify-center"><Icon name="check" size={40} className="text-[var(--nv-success)]" /></div>
+              <h2 className="text-xl font-bold text-[var(--nv-success)] mb-2">拆解完成</h2>
               <p className="text-sm text-[var(--nv-text-muted)] mb-6">
                 {totalChapters > 0 ? `已识别 ${totalChapters} 章，15维度已提取` : "所有维度已提取完毕"}
               </p>
               <Link
                 href={`/dissect/${taskId}`}
-                className="inline-block px-6 py-3 bg-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-lg font-medium hover:bg-[var(--nv-primary)] transition-colors"
+                className="inline-block px-6 py-3 rounded-lg font-medium btn-primary"
               >
                 查看拆解结果 →
               </Link>
@@ -185,9 +185,9 @@ export default function NewDissectPage() {
           )}
 
           {phase === "error" && (
-            <div className="text-center py-8">
-              <div className="text-5xl mb-4">❌</div>
-              <h2 className="text-xl font-bold text-danger mb-2">拆解失败</h2>
+            <div className="text-center py-8 animate-in">
+              <div className="mb-4 flex justify-center"><Icon name="x" size={40} className="text-[var(--nv-danger)]" /></div>
+              <h2 className="text-xl font-bold text-[var(--nv-danger)] mb-2">拆解失败</h2>
               <p className="text-sm text-[var(--nv-text-tertiary)] mb-6">{error}</p>
               <div className="flex items-center justify-center gap-3">
                 <button
@@ -199,7 +199,7 @@ export default function NewDissectPage() {
                 {taskId && (
                   <Link
                     href={`/dissect/${taskId}`}
-                    className="px-4 py-2 bg-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-lg text-sm hover:bg-[var(--nv-primary)] transition-colors"
+                    className="px-4 py-2 rounded-lg text-sm btn-primary"
                   >
                     查看任务详情
                   </Link>

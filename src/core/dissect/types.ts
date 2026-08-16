@@ -55,21 +55,21 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
 
 /** 维度图标 */
 export const DIMENSION_ICONS: Record<DimensionKey, string> = {
-  basic_info: "📋",
-  worldview: "🌍",
-  story_core: "💎",
-  characters: "👥",
-  plot_thread: "🧵",
-  outline_summary: "📑",
-  foreshadowing: "🔮",
-  map: "🗺️",
-  factions: "⚔️",
-  power_system: "⚡",
-  special_settings: "🔧",
-  currency: "💰",
-  items: "🎒",
-  cultivation: "📜",
-  style_analysis: "✍️",
+  basic_info: "clipboard",
+  worldview: "globe",
+  story_core: "gem",
+  characters: "users",
+  plot_thread: "gitBranch",
+  outline_summary: "file",
+  foreshadowing: "sparkles",
+  map: "map",
+  factions: "swords",
+  power_system: "zap",
+  special_settings: "wrench",
+  currency: "coins",
+  items: "backpack",
+  cultivation: "scroll",
+  style_analysis: "pencil",
 };
 
 /** 维度分组（用于分批提取） */

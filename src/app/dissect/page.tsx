@@ -97,7 +97,7 @@ export default function DissectPage() {
   return (
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
       {/* 顶栏 */}
-      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-6 py-4 backdrop-blur-md">
+      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)] px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]" aria-label="返回">
@@ -161,7 +161,7 @@ export default function DissectPage() {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="surface-elevated rounded-xl p-4 transition-colors hover:border-[var(--nv-border-3)]"
+                className="surface-elevated rounded-xl p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--nv-border-3)] hover:shadow-[var(--shadow-glass-rest)]"
               >
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">

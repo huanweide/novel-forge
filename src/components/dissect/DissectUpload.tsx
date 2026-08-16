@@ -86,7 +86,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
             placeholder="为本次拆书取个名字..."
-            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]"
+            className="input-glass w-full px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -96,7 +96,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             value={bookName}
             onChange={(e) => setBookName(e.target.value)}
             placeholder="原著书名"
-            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]"
+            className="input-glass w-full px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -106,13 +106,13 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
             value={bookAuthor}
             onChange={(e) => setBookAuthor(e.target.value)}
             placeholder="原著作者"
-            className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-lg px-3 py-2 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]"
+            className="input-glass w-full px-3 py-2 text-sm"
           />
         </div>
       </div>
 
       {/* 输入模式切换 */}
-      <div className="flex gap-1 bg-[var(--nv-surface-2)] backdrop-blur-sm rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-[var(--nv-surface-2)] rounded-lg p-1 w-fit">
         <button
           onClick={() => setInputMode("file")}
           className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
@@ -167,7 +167,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
           onChange={handlePaste}
           placeholder="在此粘贴小说全文..."
           rows={12}
-          className="w-full bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] rounded-xl px-4 py-3 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)] resize-y"
+          className="input-glass w-full px-4 py-3 text-sm resize-y"
         />
       )}
 
@@ -198,7 +198,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
               className={`p-3 rounded-lg border text-left transition-colors ${
                 depth === opt.id
                   ? "border-[var(--nv-primary)] bg-[var(--nv-primary)]/10"
-                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm hover:border-[var(--nv-border-3)]"
+                  : "border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] hover:border-[var(--nv-border-3)] hover:-translate-y-0.5 transition-all"
               }`}
             >
               <div className="text-sm font-medium text-[var(--nv-text-secondary)]">
@@ -216,7 +216,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
           type="checkbox"
           checked={extractSummaries}
           onChange={(e) => setExtractSummaries(e.target.checked)}
-          className="w-4 h-4 rounded border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] backdrop-blur-sm accent-[var(--nv-primary)]"
+          className="w-4 h-4 rounded border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] accent-[var(--nv-primary)]"
         />
         <span className="text-sm text-[var(--nv-text-tertiary)]">
           提取章节摘要
@@ -232,7 +232,7 @@ export function DissectUpload({ onStart, loading }: DissectUploadProps) {
         disabled={!canStart}
         className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
           canStart
-            ? "bg-[var(--nv-primary)] text-[var(--nv-text-primary)] hover:bg-[var(--nv-primary)]"
+            ? "btn-primary"
             : "bg-[var(--nv-surface-2)] text-[var(--nv-text-muted)] cursor-not-allowed"
         }`}
       >

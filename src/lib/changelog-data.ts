@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.60.0";
+export const LATEST_VERSION = "v2.61.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.61.0 拆书页深度美化（UI 设计师·虚空玻璃体系·Stage 4）：①emoji 全换图标——拆书结果里 15 个维度图标从 emoji（📋🌍💎👥🧵📑🔮🗺️⚔️⚡🔧💰🎒📜✍️）全部换成 Lucide 图标组件（clipboard/globe/gem/users/gitBranch/file/sparkles/map/swords/zap/wrench/coins/backpack/scroll/pencil），拆解完成/失败页的 ✅❌、任务不存在页的 📭 也换成 Icon 组件，全站图标语言统一（不靠 emoji 凑数）；②去裸色值——DissectProgress 进度条填充从写死 hex（#ef4444/#22c55e/#6366f1）改 --nv-danger/--nv-success/--nv-primary 语义令牌，换主题不再串色；③压平滤纸——拆书页 ≥7 处 backdrop-blur-sm（总览卡/分组卡/维度卡/章节卡）剥掉，改用 surface-elevated 实体层次出层次（回应「不要滤纸」），拆书导航顶栏半透明+模糊改纯色实心；④输入框统一——DissectUpload / ImitationPanel 的 9 处手搓输入框/下拉/文本域改 input-glass 设计系统输入态（聚焦描边、悬浮微变），不再各写各的；⑤按钮真反馈——拆书页所有「悬浮无变化」的按钮（开始拆解/查看结果/进入工作区/原样转项目/改编后转项目/应用修改/仿写生成/底部转项目）改 btn-primary/btn-success 或用 hover 位移/上浮，点击与悬浮终于有反馈；维度行 hover 加左侧高亮条（inset 题材色）、任务卡/分组卡/维度卡/章节卡悬浮微浮起 + 投影，手感跟工作台一致；⑥质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.60.0 同基线、本版零新增测试、纯 UI/CSS 改动）；四处版本文件对齐 v2.61.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.60.0 创造后工作台深度美化（UI 设计师·虚空玻璃体系·Stage 3）：①Tab 切换转场——左栏内容区按 activeTab 加 @keyframes fade-in-up 入场（animate-in），切到「角色/世界/故事」等页会整体淡入上浮，回应「很缺转场效果」；②激活态高光——左栏与右栏的当前 Tab 加靛蓝光晕（shadow color-mix 题材色），一眼看出在哪一页；③卡片悬浮微交互——大纲树/角色行悬浮显左侧高亮条（inset 题材色）、世界书条目卡悬浮升起 + 投影、故事线主线卡悬浮升起 + 金色光晕、右栏工具箱卡片悬浮升起 + 投影 + 图标发光，全站点击/悬浮手感一致（不靠滤纸）；④游戏模式一致性收口——GameCanvas 九个操作徽标从原始 hex（#38bdf8 等）全部改语义令牌（青/翠绿/玫瑰/靛蓝/金/灰/琥珀/纯金），新实体/物品变动徽标改用 --nv-warning/--nv-success；GameOutlineEditor 原始 hex 背景（#0a0a1f/#0d0d2a）改 --nv-void/--nv-abyss，语法高亮 cyan/orange/teal/purple/pink 全改 --nv-* 语义色，emoji（✏️👁💬⚡✅❌）全换 Icon 组件、AI 生成按钮改暗金底+奶油字；⑤正确性修复——DigestPanel 误用未定义 --nv-error 改 --nv-danger（错误文案此前无颜色）、StorylineWorkbench 硬编码 #F0EEE8 奶油字提成 --nv-creative-text 令牌、RefineDiffModal 原始 bg-black/60 遮罩改 --nv-void/70；⑥质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.59.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.60.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.59.0 创造前弹窗深度美化（UI 设计师·虚空玻璃体系·Stage 2）：①新手引导 OnboardingModal（首次进入工作区弹出）重做——三步上手卡（选个开局/让 AI 写/导出成书）stagger 入场（@keyframes nf-hero-rise 错开 animation-delay）、序号徽章发光（box-shadow 题材色辉光）、功能特性行图标瓷砖渐变描边 + hover 辉光、CTA「开始创作 →」箭头 hover 右移；②项目设定 BuildConfigDialog 重做——四个分区（基础信息/风格与设定/流派标签/生成选项）加分区图标（book/palette/tag/sliders）+ 分节 stagger 入场、分段选项（缝合怪节奏/故事线风格/自动化程度）选中态加题材色辉光 + 点击缩放 active:scale-[0.97]、流派标签选中态题材色辉光 + 点击缩放；③导入备份包 ImportDialog 重做——头部包图标瓷砖、选项行选中态题材色辉光 + 勾选发光、stagger 入场；④点击反馈全域增强——把金色光环脉冲 @keyframes nf-btn-ping 从仅 .btn-* 扩展到全站 [data-slot=button]（即 <Button> 组件），所有按钮按下都有金色环扩散（回应「很缺点击交互」）；⑤质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.58.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.59.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.58.0 首页全站级深度美化（UI 设计师·虚空玻璃体系收敛 + 交互巧思）：①删「纸舟星海」WebGL 纸船动画（用户明确不要、占资源）换「灵感文体墙」——12 种文学体裁悬浮卡（仙侠/都市/西幻/历史/言情/科幻/悬疑/武侠…），实体化玻璃（深色铺底 + color-mix 题材色微染 + 悬浮投影 + 题材色光晕），悬浮上浮发光、点即用该体裁一键开局（/api/seed/genre-project）；②收敛滤纸——文体卡原各叠 40px 毛玻璃模糊八张糊成片，改不靠模糊出层次（回应「不要一堆滤纸效果」）；③交互巧思——Hero 首屏 stagger 入场（@keyframes nf-hero-rise 淡入+上浮+轻收焦、各元素 animation-delay 错开）、按钮点击金色光环脉冲（:active outline 扩散 @keyframes nf-btn-ping）、文体卡点击中心光晕（:active ::after 径向渐变）、加载态呼吸边线（@keyframes nf-gtile-pulse 替代静态置灰）、箭头 hover 位移（group-hover:translate-x）；④删空状态与文体墙重复的「按题材开局」展开区，首页不繁杂；⑤质量门禁——tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.57.0 同基线、零新增测试、纯 UI/CSS）；四版本文件对齐 v2.58.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -118,6 +119,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v2.61.0 拆书页也变好看了：①拆书结果里 15 个维度的小图标（原来是一堆 emoji）全换成统一风格的线性图标，拆解完成/失败页的大勾叉、空状态也换成图标，全站图标语言一致了；②进度条颜色从写死的大红大绿改成跟随主题，换主题不会串色；③把拆书页里一堆糊窗的毛玻璃（总览卡/分组卡/维度卡/章节卡共 7 处）全扒掉，改成清爽的实体卡片层次，拆书导航顶栏也从半透明模糊改成实心，不再发懵；④输入框统一成设计系统的样式（聚焦有描边、悬浮微变），不再各有各的写法；⑤所有按钮终于有反馈了——开始拆解/查看结果/进入工作区/原样转项目/改编后转项目/应用修改/仿写生成这些按钮，悬浮会浮起、点击有金环，维度行移上去亮起左侧细条，跟工作台一个手感。质量门禁 tsc 零错误、vitest 全量 1111 例全绿。个人 IP 仍归瑞宝宝。",
   "v2.60.0 进书后的工作台更有「活气」了：①切到「角色/世界/故事/大纲」任一页，整块内容会轻轻淡入上浮（不是硬切），终于有了转场感；②当前所在的那一页标签会亮起一圈靛蓝光晕，一眼就知道你在哪；③卡片更跟手——大纲里的章节、角色行鼠标移上去会亮起左侧细条，世界书卡片和故事线卡片会微微浮起带影子，右边工具箱卡片浮起时图标还发光，点点划划都更顺；④游戏模式大扫除——操作小徽标（战斗/对话/探索…）从花花绿绿的杂色统一成整套金色系配色，章纲编辑器里一堆 emoji 全换成图标、AI 生成按钮改成暗金底奶油字，整体不再「另一个 APP」；⑤顺手修了三个显示 bug——摘要大纲的错误提示此前没颜色（消失了）、故事线 AI 按钮的奶油字是写死的颜色、精修弹窗的黑遮罩统一成主题深色。质量门禁 tsc 零错误、vitest 全量 1111 例全绿。个人 IP 仍归瑞宝宝。",
   "v2.59.0 进书前的弹窗更好看了：①第一次进工作区会弹「新手引导」——三步上手（选个开局→让 AI 写→导出成书）依次淡入、序号亮起光晕、下面几个功能特性图标卡片悬浮发光，点「开始创作」箭头会轻轻右移；②「项目设定」弹窗（决定整本书基调的地方）四个分区加了小图标、依次进场，分段选项（快/慢节奏、创意/平常/简约、自动/自由/全权）选中时亮起题材色光晕、按下会微微缩一下；③「导入备份包」弹窗头部加了图标、勾选项会亮起光晕、勾选对勾发光；④全站所有按钮按下都会冒出一圈金色光环（之前只有部分按钮有），点击反馈更明确。质量门禁 tsc 零错误、vitest 全量 1111 例全绿。个人 IP 仍归瑞宝宝。",
   "v2.58.0 首页大变样：①删掉你说过不要的 WebGL 纸船动画，换成「灵感文体墙」——一排文学体裁卡片（仙侠/悬疑/科幻…12 种），悬浮浮起发光、点一下就用那个体裁一键开局；②之前文体卡是大糊玻璃八张叠一起发晕，现在改成清爽实体卡、淡淡染上每种体裁自己的颜色、悬浮才亮光晕——不晕也不简陋；③打开首页有进场感：标题按钮依次淡入上浮；点按钮有金色光环脉冲；点文体卡有题材色光晕漫开、开局中时边框呼吸；鼠标移到「进入工作台/开始探讨」上箭头轻轻右移。",
@@ -128,6 +130,28 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.61.0",
+    date: "2026-08-16",
+    title: "拆书页深度美化（虚空玻璃 · Stage 4）",
+    sections: [
+      { label: "emoji 全换图标", items: [
+        "拆书结果 15 个维度图标从 emoji（📋🌍💎👥🧵📑🔮🗺️⚔️⚡🔧💰🎒📜✍️）全换 Lucide 图标组件（clipboard/globe/gem/users/gitBranch/file/sparkles/map/swords/zap/wrench/coins/backpack/scroll/pencil）",
+        "拆解完成/失败页 ✅❌、任务不存在页 📭 同步换 Icon 组件，全站图标语言统一",
+      ] },
+      { label: "去裸色值 + 压平滤纸", items: [
+        "DissectProgress 进度条填充从写死 hex（#ef4444/#22c55e/#6366f1）改 --nv-danger/--nv-success/--nv-primary 语义令牌，换主题不串色",
+        "拆书页 ≥7 处 backdrop-blur-sm（总览卡/分组卡/维度卡/章节卡）剥掉改 surface-elevated 实体层次；拆书导航顶栏半透明+模糊改纯色实心",
+      ] },
+      { label: "输入框统一 + 按钮真反馈", items: [
+        "DissectUpload / ImitationPanel 共 9 处手搓输入框/下拉/文本域改 input-glass 设计系统输入态（聚焦描边、悬浮微变）",
+        "拆书页所有「悬浮无变化」按钮改 btn-primary/btn-success 或 hover 位移/上浮；维度行 hover 加左侧高亮条（inset 题材色），任务卡/分组卡/维度卡/章节卡悬浮微浮起 + 投影，手感与工作台一致",
+      ] },
+      { label: "质量门禁", items: [
+        "tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（与 v2.60.0 同基线、本版零新增测试、纯 UI/CSS 改动）；四版本文件对齐 v2.61.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.60.0",
     date: "2026-08-16",
