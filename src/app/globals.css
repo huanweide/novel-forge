@@ -737,6 +737,13 @@
   50%      { border-color: rgba(228, 184, 99, 0.30); }
 }
 
+/* 全站路由转场（template.tsx 挂载）：纯 opacity 安全淡入，不破坏 fixed/sticky */
+.page-transition { animation: page-fade 0.34s var(--ease-out-expo) both; }
+@keyframes page-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* 微光扫描（生成中效果） */
 @keyframes shimmer-scan {
   0%   { background-position: -200% 0; }

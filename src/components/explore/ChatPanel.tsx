@@ -52,9 +52,9 @@ export function ChatPanel({
             <button
               key={step}
               onClick={() => onStepChange(step)}
-              className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap font-medium transition-all duration-200 ${
+              className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap font-medium transition-all duration-200 hover:-translate-y-0.5 ${
                 active
-                  ? "bg-[var(--nv-primary)]/20 text-[var(--nv-primary)] shadow-[0_0_12px_rgba(99,102,241,0.15)] border border-[var(--nv-primary)]/30"
+                  ? "bg-[var(--nv-primary)]/20 text-[var(--nv-primary)] shadow-[0_0_14px_var(--nv-primary-soft)] border border-[var(--nv-primary)]/30"
                   : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] border border-transparent"
               } active:scale-95`}
             >
@@ -90,7 +90,7 @@ export function ChatPanel({
             >
               {/* 头像 */}
               {!isUser && (
-                <div className="w-7 h-7 rounded-full bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30 flex items-center justify-center shrink-0 mb-1">
+                <div className="w-7 h-7 rounded-full bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30 flex items-center justify-center shrink-0 mb-1 shadow-[0_0_12px_var(--nv-creative-soft)]">
                   <Icon name="bot" size={14} className="text-[var(--nv-creative)]" />
                 </div>
               )}
@@ -102,7 +102,7 @@ export function ChatPanel({
                   className={`px-4 py-3 rounded-2xl text-sm leading-relaxed transition-all duration-200 ${
                     isUser
                       ? "bg-gradient-to-br from-[var(--nv-primary)] to-[var(--nv-primary)] text-[var(--nv-text-primary)] rounded-br-md shadow-lg shadow-[var(--nv-primary)]/10"
-                      : "bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] rounded-bl-md"
+                      : "bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] rounded-bl-md hover:border-[var(--nv-creative)]/25"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -178,10 +178,10 @@ export function ChatPanel({
         })}
         {loading && (
           <div className="flex items-end gap-2 justify-start">
-            <div className="w-7 h-7 rounded-full bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30 flex items-center justify-center shrink-0 mb-1">
-              <Icon name="bot" size={14} className="text-[var(--nv-creative)]" />
-            </div>
-            <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-muted)] px-4 py-3 rounded-2xl rounded-bl-md text-sm">
+          <div className="w-7 h-7 rounded-full bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30 flex items-center justify-center shrink-0 mb-1 shadow-[0_0_12px_var(--nv-creative-soft)]">
+            <Icon name="bot" size={14} className="text-[var(--nv-creative)]" />
+          </div>
+          <div className="bg-[var(--nv-surface-2)] backdrop-blur-sm border border-[var(--nv-border-2)] text-[var(--nv-text-muted)] px-4 py-3 rounded-2xl rounded-bl-md text-sm">
               <span className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-[var(--nv-creative)] rounded-full animate-pulse" />
@@ -241,9 +241,9 @@ export function ChatPanel({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="btn-primary px-5 py-2.5 text-sm font-medium disabled:opacity-40"
+            className="btn-primary px-5 py-2.5 text-sm font-medium disabled:opacity-40 flex items-center gap-1.5"
           >
-            发送
+            <Icon name="arrowRight" size={13} /> 发送
           </button>
         </div>
       </div>

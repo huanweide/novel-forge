@@ -169,7 +169,7 @@ export function OutlinePanel({
           {outlineResult.characters?.length > 0 && (
             <div>
               <div className="text-[10px] text-[var(--nv-text-muted)] font-medium mb-2 flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-purple-400/60" />
+                <span className="w-1 h-1 rounded-full bg-[var(--nv-creative)]/60" />
                 角色 ({outlineResult.characters.length})
               </div>
               <div className="space-y-1.5 max-h-52 overflow-y-auto">

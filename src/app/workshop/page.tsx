@@ -402,8 +402,8 @@ export default function Workshop() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`text-xs px-3 py-1.5 rounded-xl transition-colors ${
-                tab === t.key ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
+              className={`text-xs px-3 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 ${
+                tab === t.key ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-[0_0_14px_var(--nv-primary-soft)]" : "bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
               }`}
             >
               {t.label}
@@ -430,8 +430,9 @@ export default function Workshop() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {presets.map((p) => (
-              <div key={p.id} className="surface-elevated rounded-2xl p-5 flex flex-col gap-3">
+            {presets.map((p, idx) => (
+              <div key={p.id} className="surface-elevated rounded-2xl p-5 flex flex-col gap-3 group relative overflow-hidden animate-in" style={{ animationDelay: `${Math.min(idx, 18) * 45}ms` }}>
+                <span className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-[var(--nv-creative)]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--nv-primary)]/15 text-[var(--nv-primary)]">
                     {TYPE_LABEL[p.type] || p.type}

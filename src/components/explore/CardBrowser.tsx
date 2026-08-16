@@ -29,7 +29,7 @@ export function CardBrowser({
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="w-1 h-3.5 rounded-full bg-purple-400/60" />
+          <span className="w-1 h-3.5 rounded-full bg-[var(--nv-creative)]/60 shadow-[0_0_8px_var(--nv-creative-soft)]" />
           <span className="text-xs font-semibold text-[var(--nv-text-secondary)]">
             {totalCards} 张设定卡片
           </span>
@@ -56,7 +56,7 @@ export function CardBrowser({
                 <span className="text-[var(--nv-text-primary)]">({cards.length})</span>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                {cards.map((card) => {
+                {cards.map((card, i) => {
                   const status = adoptStatus[card.id];
                   const active =
                     !status || (status !== "writing" && !status.startsWith("✅"));
@@ -65,6 +65,7 @@ export function CardBrowser({
                       key={card.id}
                       onClick={() => active && onAdoptCard(card)}
                       disabled={!active}
+                      style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
                       className={`text-left p-2.5 rounded-xl border transition-all duration-200 animate-[nf-card-in_0.4s_ease-out_both] ${
                         status?.startsWith("✅")
                           ? "bg-success/[0.04] border-success/15 animate-[nf-adopt-flash_0.6s_ease-out]"
@@ -72,7 +73,7 @@ export function CardBrowser({
                             ? "bg-danger/[0.04] border-danger/15"
                             : status === "writing"
                               ? "bg-warning/[0.04] border-warning/15 animate-pulse"
-                              : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-purple-400/25 hover:bg-[var(--nv-surface-2)] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
+                              : "bg-[var(--nv-surface-2)] border-[var(--nv-border-2)] hover:border-[var(--nv-creative)]/30 hover:bg-[var(--nv-surface-2)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(228,184,99,0.12)] active:scale-[0.98]"
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
