@@ -1,5 +1,11 @@
 ﻿# Novel Forge 更新公告
 
+## v2.51.3 — 2026-08-16
+
+### 智能填表三卡解析器纯函数测试补锁
+- **测试加固**：给「智能填表」三卡解析核心 src/core/settings/parser.ts（被 /api/parse-settings 真实调用，是角色卡/世界卡/风格卡归一化唯一权威源）补 21 例自动化测试（src/core/settings/parser.test.ts），锁死三条解析入口的 JSON 清洗与归一化契约：parseSettings 的代码围栏剥离/纯 JSON/缺字段兜底（空名回退「未命名角色」、role 缺省 supporting、category 缺省 custom、insertionOrder 缺省 50）/非法 JSON 抛错、normalizeStyleProfile 数值强制（字符串数字与 NaN 回落默认、非对象 tonalMarkers 回落空对象、空对象按默认归一化非 null）、parseLorebookOnly 散文包裹容错提取首个数组与缺字段兜底、parseStyleOnly 非字符串写作规则过滤与散文包裹提取、to*CreateParams 关系映射与导入标签/默认存活/启用。
+- **价值**：该函数决定用户导入的三卡数据正确性，零测试意味着未来重构可静默把归一化逻辑改坏、用户世界设定悄悄丢失；本轮把「肉眼难查」的归一化边界全部钉死防回归；纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 108 文件 1059/1059 全绿（较 v2.51.2 基线 106 文件 1033 +26 例：本轮 parser 测试 21 例 + 用户并行 build-global-prompt 测试 5 例）；四版本文件对齐 v2.51.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.51.2 — 2026-08-16
 
 ### 游戏模式背包对账与后端语义对齐 + 单测锁死
