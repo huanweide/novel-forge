@@ -464,7 +464,7 @@ toolRegistry.register({
         category: mappedCategory,
         content: (args.content as string) || "",
         keys: keysArr,
-        insertionOrder: (args.insertionOrder as number) || 50,
+        insertionOrder: (args.insertionOrder as number) ?? 50,
         enabled: true,
         relatedEntryIds: [],
         reviewStatus: "pending",
@@ -600,7 +600,7 @@ toolRegistry.register({
       data: {
         projectId: ctx.projectId,
         parentId: (args.parentId as string) || null,
-        title, type: nodeType, order: order || 1,
+        title, type: nodeType, order: order ?? 1,
         outline: (args.outline as string) || "",
         status: "outline_only",
         wordCount: 0, revisionCount: 0,
