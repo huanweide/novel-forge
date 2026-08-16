@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.50.4";
+export const LATEST_VERSION = "v2.50.5";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.50.5 EPUB 导出 ZIP 容器纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给被 EPUB 导出全流程复用、却长期零直接单测的 ZIP 容器构建纯函数 makeZip 补自动化测试（src/core/epub.zip.test.ts 共 11 例），钉死 ZIP(stored) 格式契约——本地文件头/中央目录/结束记录三处签名正确、crc32 实现通过标准校验值（CRC-32/ISO-HDLC：字符串「123456789」的 crc32 等于 0xCBF43926）、文件名按 UTF-8 正确写入（含中文文件名字节级验证）、数据完整原样落盘、多条目第二个中央目录条目指向正确的本地头偏移、空数据条目 crc 为 0、且用真实 zip 库 JSZip 端到端解压能还原全部条目数据（即「读者能打开用户导出的 EPUB」）；该函数手搓 ZIP 字节，一旦写错（签名错位/偏移算错/crc 错）用户导出的电子书会被阅读器判定损坏打不开却无任何报错，此前仅被流式测试间接「结构等价」覆盖、容器格式本身零防护网，本轮锁死契约防回归。零生产代码改动、零接口/LLM 变化；tsc 本轮改动文件零错误（全量 tsc 因用户并行未提交 WIP 文件 RelationshipGraph.tsx 关系图重构有 3 处类型错误，非本轮引入、本轮严格不触碰用户领地、不纳入提交）；vitest 全量 104 文件 979/979 全绿（较 v2.50.4 基线 968 +11 例）；四版本文件对齐 v2.50.5；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.4 DOCX 导出 XML 转义纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给被 DOCX 导出全流程复用、却长期零直接单测的 XML 转义纯函数补自动化测试（src/core/docx.pure.test.ts 共 6 例），钉死 escapeXml 对正文/标题/作者名里 < > & 引号 五类危险字符各自正确转义为实体（裸奔危险字符必然破坏 OOXML 结构、导致用户导出的 Word 文件静默损坏且无任何运行时报错）、中文原样保留、多行正文拆成 <w:t> 并以 <w:br/> 衔接、空正文章节回退提示语；此前 docx 仅被流式测试间接「结构等价」覆盖、转义逻辑本身零防护网，本轮锁死契约防回归。零生产代码改动、零接口/LLM 变化；tsc 0 错误（顺带坐实删 tsconfig.tsbuildinfo 消除增量缓存幽灵假阳性、未碰用户并行禅模式 WIP）；vitest 全量 103 文件 968/968 全绿（较 v2.50.3 基线 962 +6 例）；四版本文件对齐 v2.50.4；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.3 导出转换纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给被 EPUB/HTML 导出全流程复用、却长期零单测的两个核心纯函数补自动化测试：①epub.ts 的 escapeHtml（HTML 实体转义，防导出文档乱码与 XSS）补 7 例，锁死 & < > 与引号 五类危险字符各自正确转义、混合标签整体转义、空串、中文原样保留；②epub.ts 的 buildChapterList（EPUB/HTML 目录前序遍历与排序，顺序错=目录乱）补 8 例，锁死单根/多根按 order 升序/前序遍历子节点 depth 递增/两层嵌套/includeOutline 开关控制/缺 title 回退未命名/子节点 order 相同按 createdAt 兜底排序。两函数逻辑与既有行为一致、无真实 bug（已 node 实锤行为健康），本轮只补防护网；零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 102 文件 962/962 全绿（较 v2.50.2 基线 947 +15 例）；四版本文件对齐 v2.50.3；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.50.2 关键路径纯函数测试补锁（马斯克 CEO 循环运营）：测试加固——给两个在关键链路上却长期零单测的核心纯函数补自动化测试：①story-node-bridge.ts 的 toAppStoryNode（每个 StoryNode 从数据库读出都要经它桥接成应用层强类型，字段/兜底白名单一旦改错会静默把合法状态降级成 outline_only）补 9 例，锁死「已知 type/status 与数组字段透传 + 未知 type 兜底 section + 未知 status 兜底 outline_only + reviewLogs/activeCharacters/activeLoreIds 非数组兜底空数组 + deletedAt 为 undefined 兜底 null」；②story-status.ts 的 withStorylineLock（每条故事线章节绑定写都经它按 storylineId 串行化，退化会丢失更新）补 4 例，锁死「同 id 严格串行 / 异 id 互不阻塞 / 前任务抛错不破坏后续调度且错误向上传播 / 多次调用 FIFO 保序」。两函数逻辑与既有行为一致、无真实 bug（ContentStatus 八值与兜底白名单已逐一核对对齐），本轮只补防护网；零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 101 文件 947/947 全绿（较 v2.50.1 基线 934 +13 例）；四版本文件对齐 v2.50.2；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -109,6 +110,21 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.50.5",
+    date: "2026-08-16",
+    title: "EPUB 导出 ZIP 容器纯函数测试补锁",
+    sections: [
+      { label: "EPUB ZIP 容器契约测试（makeZip）", items: [
+        "给被 EPUB 导出复用、此前零直接单测的 ZIP 容器构建纯函数 makeZip 补 11 例单测（src/core/epub.zip.test.ts），钉死 ZIP(stored) 格式契约——本地文件头/中央目录/结束记录三处签名（PK\\x03\\x04 / PK\\x01\\x02 / PK\\x05\\x06）正确、crc32 实现通过标准校验值（CRC-32/ISO-HDLC：字符串「123456789」crc32 等于 0xCBF43926）、文件名按 UTF-8 正确写入（含中文文件名字节级验证）、数据完整原样落盘、多条目第二个中央目录条目指向正确的本地头偏移、空数据条目 crc 为 0、且用真实 zip 库 JSZip 端到端解压能还原全部条目数据",
+        "该函数手搓 ZIP 字节决定生成的 .epub 是否为合法压缩包——字节一旦写错（签名错位/偏移算错/crc 错）用户导出的电子书会被阅读器判定损坏打不开却无任何运行时报错；此前 EPUB 仅被流式测试间接「结构等价」覆盖、容器格式本身零防护网，本轮锁死契约防回归",
+      ] },
+      { label: "质量门禁与范围", items: [
+        "纯测试补全，零生产代码改动、零接口/LLM 变化、行为不变、风险低",
+        "tsc 本轮改动文件（epub.zip.test.ts）零类型错误（全量 tsc 因用户并行未提交 WIP 文件 RelationshipGraph.tsx 关系图重构有 3 处类型错误，非本轮引入、本轮严格不触碰用户领地、不纳入提交）；npx vitest run 104 文件 979/979 全绿（较 v2.50.4 基线 968 +11 例）；四版本文件对齐 v2.50.5；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.50.4",
     date: "2026-08-16",
