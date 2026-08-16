@@ -520,9 +520,9 @@ export default function ExplorePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)] animate-in fade-in">
       {/* ── 顶栏 ── */}
-      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-md" inert={leftDrawerOpen || rightDrawerOpen}>
+      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-sm" inert={leftDrawerOpen || rightDrawerOpen}>
         <div className="max-w-full mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
