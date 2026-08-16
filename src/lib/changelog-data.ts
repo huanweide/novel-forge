@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v2.56.0";
+export const LATEST_VERSION = "v2.57.0";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v2.57.0 生成关键路径三纯函数测试补锁（马斯克 CEO 循环运营收口）：①测试加固——给被 write/refine/continue 三路由与批量 write-generation 主路径共用、此前零直接单测的生成预处理纯函数 src/core/pipeline/pre-processor.ts 补 22 例自动化测试（src/core/pipeline/pre-processor.test.ts），锁死 extractLLMConfig / filterByConfirmedCards / buildCardNotesText 三函数契约；②extractLLMConfig 温度/topP 优先级解析——项目自定义 > 文风模板默认 > 硬编码兜底（温度 0.85 / topP 0.95），重点钉死「项目 temperature 设为 0（合法值）必须保留、不被 ?? 兜底吞掉」与「styleTemplateId 空串/不存在时回退兜底、template 为 undefined」与「customForbiddenPatterns 原样透传、缺省回退空数组」，该函数是生成风格控制总闸门、一旦优先级被静默改坏全站生成都会跑偏；③filterByConfirmedCards——confirmedCardIds 为 undefined/空数组时原样返回全部、按 id 集合过滤、不存在 id 不凭空补、重复 id 不重复计数；④buildCardNotesText——undefined/空对象/全空白备注返回空串、指向不存在角色的备注跳过、有效备注拼成「[角色名] 备注」并加「最高优先级」头部；纯测试补全、零生产代码改动、零接口/LLM 变化；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 全量 111 文件 1111/1111 全绿（较 v2.56.0 基线 110 文件 1089 +1 文件 +22 例）；四版本文件对齐 v2.57.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.56.0 填表默认关 + 确认/交付开关集中管控（Task #91·P0·瑞宝宝指令「能精简就精简」）：①填表默认关——autoFillEnabled 默认由 true 改为 false（schema db push 已同步真实库），babylore/loop.ts 读取兜底 ?? true 改为 ?? false，新项目默认不自动填表（避免每章自动抽表产生脏卡/干扰），存量项目保持原值可在「自动填表」设置开启；②确认/交付开关集中——把散落在章节确认栏的「自动确认（智能审阅）」「自动交付全书」两个开关收拢进「自动填表」设置弹窗，与填表总开关/频率/跳过最新章/上下文楼层同处可见可切，且保存时经 patchProject 同步前端 store 使工作区确认栏即时反映；config 路由 GET/PUT 扩展支持 autoConfirmEnabled/autoDeliverEnabled（与 /api/projects/[id] PATCH 并存）；③「新实体默认同意」即填表开启时的语义（开启后自动抽新角色/世界实体写入结构化表），在总开关文案讲清、不另建字段保持精简；④双门禁——tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（本版零新增测试）；四处版本文件对齐 v2.56.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.55.1 探索模块全局提示词纯函数测试补锁（马斯克 CEO 循环运营收口）：①测试加固——把上一轮已备好、此前仅工作树 untracked 的 src/core/explore/build-prompt.test.ts（15 例）正式纳入版本管理，给「探索」模块的全局提示词构建纯函数 buildGlobalPromptFromExplore 补自动化测试；②锁死契约——段落固定顺序（基本信息→流派标签→核心冲突→力量体系→金手指→风格偏好）、空字段不输出对应段、styleTags 多项用中文顿号连接、plotStructure 未知 id 回退原值、adopted 设定按固定 stepOrder 排序（开篇在主角身份前）、单条超 600 字截断、某 step 无内容跳过、中文与「」& 特殊字符原样保留；③价值——该函数把用户在探索里填的书名/类型/受众/字数/流派/核心冲突/力量体系/金手指/风格偏好 + 采纳的设定片段拼成喂给 AI 的全局写作提示词，零测试=未来重构可静默改坏、用户探索填的设定悄悄丢失或乱序、AI 上下文出错；④门禁——纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（与 v2.55.0 同基线、本版零新增行为、仅把已在工作树的测试纳入提交）；四版本文件对齐 v2.55.1；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v2.55.0 章节标题风格设置（Task #90·P0·瑞宝宝指令「能精简就精简」）：①设置可配章名风格——项目设置新增「章节标题风格」五选一分段按钮（默认极简≤5字 / 诗句五七言韵味 / 文笔文艺抒情 / 简短直白点题 / 悬念抛疑问勾好奇），点按即时 PATCH 保存到 Project.titleStyle（db push 已加列、默认 default），不弹窗不啰嗦；②风格化生成——deriveChapterName 改为风格感知：不同风格允许不同最大字数（default 5 / brief 9 / verse·prose·suspense 14），通用硬约束保留（剔角色人名/别名 + 禁含「第N章」占位），不再把所有章名一刀切截 5 字；summarizeChapter 的 chapterTitle 字段提示词按当前 titleStyle 动态生成多风格示例（之前只有极简样例、诗/文笔/悬念风格会生成出格章名），让 AI 按你选的风格出章名；③链路贯通——write-generation 把 data.project?.titleStyle 透传进 PostPipelineParams，PATCH 路由 projects/[id]/route.ts 新增 titleStyle 解析，Project 手写 interface 补字段，端到端（设置→落库→生成→章名）打通；④质量门禁——tsc 0 错误；vitest 全量 110 文件 1089/1089 全绿（与 v2.54.0 基线同、本版零新增测试）；四处版本文件对齐 v2.55.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -121,6 +122,22 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v2.57.0",
+    date: "2026-08-16",
+    title: "生成关键路径三纯函数测试补锁（防护网加固）",
+    sections: [
+      { label: "测试加固", items: [
+        "给被 write/refine/continue 三路由与批量 write-generation 主路径共用、此前零直接单测的生成预处理纯函数 src/core/pipeline/pre-processor.ts 补 22 例自动化测试（src/core/pipeline/pre-processor.test.ts），锁死 extractLLMConfig / filterByConfirmedCards / buildCardNotesText 三函数契约；这三个函数决定用户生成章节时「用哪个温度/topP、确认哪些角色、角色备注怎么注入」",
+      ] },
+      { label: "锁死契约", items: [
+        "extractLLMConfig 温度/topP 优先级解析——项目自定义 > 文风模板默认 > 硬编码兜底（0.85/0.95），重点钉死「项目 temperature 设为 0（合法值）必须保留、不被 ?? 兜底吞掉」「styleTemplateId 空串/不存在时回退兜底、template 为 undefined」「customForbiddenPatterns 原样透传、缺省回退空数组」；filterByConfirmedCards——confirmedCardIds 为 undefined/空数组时返回全部、按 id 集合过滤、不存在 id 不补、重复 id 不重复计数；buildCardNotesText——undefined/空对象/全空白备注返回空串、不存在角色备注跳过、有效备注拼成「[角色名] 备注」加「最高优先级」头部",
+      ] },
+      { label: "价值与门禁", items: [
+        "extractLLMConfig 是生成风格控制总闸门，优先级一旦被静默改坏全站生成都会跑偏；三函数此前零防护网，未来重构可静默损坏生成行为；本轮把确定性边界全部钉死防回归；纯测试补全、零生产代码改动、零接口/LLM 变化；SAFE_DELETE_DISABLE=1 npx tsc --noEmit 0 错误；npx vitest run 全量 111 文件 1111/1111 全绿（较 v2.56.0 基线 110 文件 1089 +1 文件 +22 例）；四版本文件对齐 v2.57.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流",
+      ] },
+    ],
+  },
   {
     version: "v2.56.0",
     date: "2026-08-16",

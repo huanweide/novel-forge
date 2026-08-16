@@ -2,6 +2,11 @@
 
 > automation-1786201646373（每小时触发）。目标：v1.6.x → v1.8.0 不空转推进。CEO 由马斯克人格代理拍板，反馈即用户本人，绝不回头问；个人 IP 永远归瑞宝宝，严禁另立 IP/品牌/项目。
 
+## 最新状态（2026-08-16 22:xx）
+- 当前 HEAD = **v2.57.0**（commit 待写，本地已提交并 SSH 推送 ghssh main 成功）。
+- 本轮演进：v2.56.0（填表默认关，已推）→ v2.57.0 生成关键路径三纯函数测试补锁——给被 write/refine/continue 三路由与批量 write-generation 主路径真实消费、此前零单测的生成预处理纯函数 src/core/pipeline/pre-processor.ts 补 22 例自动化测试（src/core/pipeline/pre-processor.test.ts），锁死 extractLLMConfig（温度/topP 优先级解析：项目自定义>模板默认>硬编码兜底 0.85/0.95，且 temperature=0 合法值不被 ?? 吞掉）/ filterByConfirmedCards（确认卡过滤）/ buildCardNotesText（角色备注拼文本）三函数契约；零生产代码改动。tsc 0 错；vitest 全量 111 文件 1111/1111 全绿（较 v2.56.0 基线 110 文件 1089 +1 文件 +22 例）；四版本文件对齐 v2.57.0；dev server /changelog HTTP 200 含 v2.57.0。
+- 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问用户）：生成风格总闸门优先级零测=未来重构可静默改坏全站生成，第一性原理直接锁契约；低风险高杠杆收口 v2.57.0。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## 最新状态（2026-08-16 21:xx）
 - 当前 HEAD = **v2.55.1**（commit cba934e，本地已提交并 SSH 推送 ghssh main 成功）。
 - 本轮演进：v2.55.0（章节标题风格设置，已推）→ v2.55.1 探索模块全局提示词纯函数测试补锁——把上一轮已备好、此前仅工作树 untracked 的 src/core/explore/build-prompt.test.ts（15 例）正式纳入版本管理，给「探索」模块全局提示词构建纯函数 buildGlobalPromptFromExplore 补自动化测试；锁死段落固定顺序/空字段不输出对应段/styleTags 中文顿号连接/plotStructure 未知回退/adopted 按固定 stepOrder 排序/单条超 600 字截断/无内容跳过/中文与「」& 特殊字符原样保留；零生产代码改动。tsc 0 错；vitest 全量 110 文件 1089/1089 全绿（与 v2.55.0 同基线、本版零新增行为、仅把已在工作树的测试纳入提交）；四版本文件对齐 v2.55.1；dev server /changelog HTTP 200 含 v2.55.1。

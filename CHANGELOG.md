@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v2.57.0 — 2026-08-16
+
+### 生成关键路径三纯函数测试补锁（防护网加固）
+- **测试加固**：给被 write/refine/continue 三路由与批量 write-generation 主路径共用、此前零直接单测的生成预处理纯函数 `src/core/pipeline/pre-processor.ts` 补 22 例自动化测试（`src/core/pipeline/pre-processor.test.ts`），锁死 `extractLLMConfig` / `filterByConfirmedCards` / `buildCardNotesText` 三函数契约。这三个函数决定用户生成章节时「用哪个温度/topP、确认哪些角色、角色备注怎么注入」。
+- **锁死契约**：`extractLLMConfig` 温度/topP 优先级解析——项目自定义 > 文风模板默认 > 硬编码兜底（0.85/0.95），重点钉死「项目 temperature 设为 0（合法值）必须保留、不被 `??` 兜底吞掉」「`styleTemplateId` 空串/不存在时回退兜底、template 为 undefined」「`customForbiddenPatterns` 原样透传、缺省回退空数组」；`filterByConfirmedCards`——`confirmedCardIds` 为 undefined/空数组时返回全部、按 id 集合过滤、不存在 id 不补、重复 id 不重复计数；`buildCardNotesText`——undefined/空对象/全空白备注返回空串、不存在角色备注跳过、有效备注拼成「[角色名] 备注」加「最高优先级」头部。
+- **质量门禁**：纯测试补全、零生产代码改动、零接口/LLM 变化；tsc 0 错误；vitest 全量 111 文件 1111/1111 全绿（较 v2.56.0 基线 110 文件 1089 +1 文件 +22 例）；四处版本文件对齐 v2.57.0；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v2.56.0 — 2026-08-16
 
 ### 填表默认关 + 确认/交付开关集中管控（Task #91·P0）
