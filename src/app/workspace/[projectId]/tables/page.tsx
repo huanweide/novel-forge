@@ -221,8 +221,8 @@ interface LoreTableT {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)]">
-      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)] animate-in fade-in">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href={`/workspace/${projectId}`} className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1">
