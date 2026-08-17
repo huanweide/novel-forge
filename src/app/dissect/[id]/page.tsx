@@ -249,7 +249,7 @@ export default function DissectDetailPage() {
                   disabled={converting}
                   className="p-4 rounded-xl border border-[var(--nv-primary)]/30 bg-[var(--nv-primary)]/5 hover:bg-[var(--nv-primary)]/10 hover:-translate-y-0.5 hover:border-[var(--nv-primary)]/60 transition-all text-left group"
                 >
-                  <div className="text-2xl mb-2"><Icon name="package" size={18} className="inline-block align-text-bottom shrink-0" /></div>
+                  <div className="mb-2"><Icon name="package" size={22} className="inline-block align-text-bottom shrink-0" /></div>
                   <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-[var(--nv-primary)]">
                     原样转为项目
                   </div>
@@ -267,7 +267,7 @@ export default function DissectDetailPage() {
                   disabled={converting}
                   className="p-4 rounded-xl border border-warning/30 bg-warning/5 hover:bg-warning/10 hover:-translate-y-0.5 hover:border-warning/60 transition-all text-left group"
                 >
-                  <div className="text-2xl mb-2"><Icon name="palette" size={18} className="inline-block align-text-bottom shrink-0" /></div>
+                  <div className="mb-2"><Icon name="palette" size={22} className="inline-block align-text-bottom shrink-0" /></div>
                   <div className="text-sm font-semibold text-[var(--nv-text-secondary)] group-hover:text-warning">
                     改编后转项目
                   </div>

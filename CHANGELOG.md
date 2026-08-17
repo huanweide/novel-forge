@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.35 — 2026-08-17
+
+### 世界级打磨·拆解页：死 class 清理 + 卡片图标放大（FIX-DISSECT-1）
+
+- **拆解页全站图标走查**：列表页 /dissect、新建页 /dissect/new、详情页 /dissect/[id] + 仿写面板 ImitationPanel + 5 个 UI 组件（DissectUpload / DissectDimensions / DissectProgress / DissectAdaptPanel / ImitationPanel）逐一走查，图标已全部采用 Lucide `<Icon>` 组件、无 emoji 违例；数据层 `DIMENSION_ICONS` 也全是 Lucide 名，与全站「虚空玻璃」设计体系图标语言一致；无头截图 DOM 断言 `emojiPresent:0`（list 页 svgCount=5 / new 页 svgCount=2，全站无 emoji）。
+- **详情页卡片死 class 清理（真实打磨点）**：详情页「原样转为项目 / 改编后转项目」两张卡片顶部图标区 `<div className="text-2xl mb-2"><Icon size={18}/></div>`，`text-2xl` 设置 font-size 对 svg 像素尺寸无效（Icon 用 `size` 属性控制宽高），既没把图标放大、又是误导死代码；作者本意「大图标」因 `size` 固定未实现。移除 `text-2xl` 死 class，并把 Icon 真正放大到 `size={22}` 匹配卡片标题区视觉权重，代码更干净、图标更醒目。
+- **质量门禁**：纯减法（删死 class）+ 视觉微调，零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.35；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.34 — 2026-08-17
 
 ### 世界级打磨·探讨页：步骤导航 emoji→Lucide 图标（FIX-EXPLORE-1）
