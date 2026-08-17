@@ -1,6 +1,7 @@
 // ============================================================
 // 探讨模式类型定义
 // ============================================================
+import type { IconName } from "@/components/ui/icons";
 
 /** 11个构建步骤 */
 export const EXPLORE_STEPS = [
@@ -45,6 +46,21 @@ export const STEP_ICONS: Record<ExploreStep, string> = {
   map: "🗺️",
   plot_thread: "🧵",
   free_talk: "💬",
+};
+
+/** 步骤导航 Lucide 图标映射（替代 STEP_ICONS 的 emoji，与全站图标体系统一；不污染图标数据层） */
+export const STEP_LUCIDE: Record<ExploreStep, IconName> = {
+  opening: "book",
+  worldview: "globe",
+  protagonist: "user",
+  golden_finger: "sparkles",
+  core_conflict: "swords",
+  factions: "landmark",
+  power_system: "zap",
+  currency: "coins",
+  map: "map",
+  plot_thread: "gitBranch",
+  free_talk: "message",
 };
 
 export const STEP_DESCRIPTIONS: Record<ExploreStep, string> = {

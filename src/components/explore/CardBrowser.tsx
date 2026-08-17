@@ -1,7 +1,7 @@
 "use client";
 
 import type { AdoptCard, ExploreStep } from "@/core/explore/types";
-import { EXPLORE_STEPS, STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
+import { EXPLORE_STEPS, STEP_LABELS, STEP_LUCIDE } from "@/core/explore/types";
 import { Icon } from "@/components/ui/icons";
 
 interface Props {
@@ -51,7 +51,7 @@ export function CardBrowser({
           return (
             <div key={step}>
               <div className="text-[10px] text-[var(--nv-text-muted)] font-medium mb-1.5 flex items-center gap-1.5">
-                <span>{STEP_ICONS[step]}</span>
+                <Icon name={STEP_LUCIDE[step]} size={12} className="shrink-0" />
                 <span>{STEP_LABELS[step]}</span>
                 <span className="text-[var(--nv-text-primary)]">({cards.length})</span>
               </div>

@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.34 — 2026-08-17
+
+### 世界级打磨·探讨页：步骤导航 emoji→Lucide 图标（FIX-EXPLORE-1）
+
+- **探讨页步骤导航图标统一（emoji→Lucide）**：`types.ts` 新增 `STEP_LUCIDE` 渲染层映射常量（`Record<ExploreStep, IconName>`），11 步构建引导（开篇/世界观/主角身份/金手指/核心冲突/势力阵营/力量体系/货币体系/地图/情节脉络/自由讨论）的 emoji（📖🌍🦸✨⚔️🏛️⚡💰🗺️🧵💬）全部替换为 Lucide 线性图标（book / globe / user / sparkles / swords / landmark / zap / coins / map / gitBranch / message），颜色走 `--nv-text-secondary` 语义令牌，与全站「虚空玻璃」设计体系图标语言彻底统一；4 个渲染点（page.tsx 的 StepGuide 步骤导航、ChatPanel 顶部步骤标签、CardBrowser 卡片分组标题、AdoptedContentPanel 已采纳分组标题）统一换 `<Icon>`；数据层 `STEP_ICONS` 定义保留不动（探讨历史/后端落库可能依赖），仅前端渲染层局部替换，与首页 `GENRE_LUCIDE` 同一范式。
+- **质量门禁**：零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；无头截图 DOM 断言 `emojiStepRemaining:0`（11 个步骤 emoji 彻底消失）+ `svgCount:28`（Lucide 图标正常渲染）；六处版本文件对齐 v3.1.34；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.33 — 2026-08-17
 
 ### 世界级打磨·首页门面：文体墙 emoji→Lucide 图标 + 删除按钮 a11y（FIX-HOME-1）

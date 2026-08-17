@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 import type { ExploreMessage, ExploreStep, AdoptCard } from "@/core/explore/types";
-import { EXPLORE_STEPS, STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
+import { EXPLORE_STEPS, STEP_LABELS, STEP_LUCIDE } from "@/core/explore/types";
 import { Icon } from "@/components/ui/icons";
 
 interface Props {
@@ -61,7 +61,7 @@ export function ChatPanel({
                   : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] border border-transparent"
               } active:scale-95`}
             >
-              {STEP_ICONS[step]} {STEP_LABELS[step]}
+              <Icon name={STEP_LUCIDE[step]} size={12} className="shrink-0" /> {STEP_LABELS[step]}
             </button>
           );
         })}

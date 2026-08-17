@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { AdoptedItem } from "@/core/explore/types";
-import { STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
+import { STEP_LABELS, STEP_LUCIDE } from "@/core/explore/types";
 import { Icon } from "@/components/ui/icons";
 
 interface Props {
@@ -57,7 +57,7 @@ export function AdoptedContentPanel({
           Object.entries(grouped).map(([step, items]) => (
             <div key={step}>
               <div className="text-[10px] text-[var(--nv-text-muted)] font-medium mb-1.5 flex items-center gap-1.5">
-                <span>{STEP_ICONS[step as keyof typeof STEP_ICONS]}</span>
+                <Icon name={STEP_LUCIDE[step as keyof typeof STEP_LUCIDE]} size={12} className="shrink-0" />
                 <span>{STEP_LABELS[step as keyof typeof STEP_LABELS]}</span>
                 <span className="text-[var(--nv-text-primary)]">· {items.length}</span>
               </div>

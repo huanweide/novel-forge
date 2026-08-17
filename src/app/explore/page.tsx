@@ -16,7 +16,7 @@ import type {
   AdoptedItem,
   AdoptCard,
 } from "@/core/explore/types";
-import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS, STEP_ICONS, STEP_PROMPTS } from "@/core/explore/types";
+import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS, STEP_LUCIDE, STEP_PROMPTS } from "@/core/explore/types";
 import { toastError, toastCreated, toastWarning } from "@/components/ui/toast";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useHealth } from "@/hooks/use-health";
@@ -759,7 +759,7 @@ function StepGuide({ step, aiConfigured, onSend }: { step: ExploreStep; aiConfig
     <section className="border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/60 px-5 py-3 shrink-0">
       <div className="max-w-full mx-auto flex flex-col gap-2.5">
         <div className="flex items-start gap-2.5">
-          <span className="text-lg leading-none mt-0.5 shrink-0" aria-hidden="true">{STEP_ICONS[step]}</span>
+          <Icon name={STEP_LUCIDE[step]} size={20} className="text-[var(--nv-text-secondary)] leading-none mt-0.5 shrink-0" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-semibold text-[var(--nv-primary)] tracking-wider uppercase">当前构思步骤</span>
