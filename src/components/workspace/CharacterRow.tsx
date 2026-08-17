@@ -27,7 +27,14 @@ function CharacterRowImpl({
   onTagClick: (tag: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-1 px-2 rounded text-xs text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:shadow-[inset_2px_0_0_0_var(--nv-border-3)] transition-shadow group">
+    <div
+      className={
+        "flex items-center gap-2 py-1 px-2 rounded text-xs text-[var(--nv-text-secondary)] hover:shadow-[inset_2px_0_0_0_var(--nv-border-3)] transition-all duration-150 group " +
+        (selected
+          ? "bg-[var(--nv-accent)]/10 ring-1 ring-inset ring-[var(--nv-accent)]/30"
+          : "hover:bg-[var(--nv-surface-2)]")
+      }
+    >
       <input
         type="checkbox"
         checked={selected}
@@ -40,7 +47,7 @@ function CharacterRowImpl({
           {character.name[0]}
         </span>
         <div className="flex-1 min-w-0">
-          <span className="truncate block hover:text-[var(--nv-text-primary)]">{character.name}</span>
+          <span className="truncate block hover:text-[var(--nv-text-primary)] transition-colors">{character.name}</span>
           {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 0 && (
             <div className="flex gap-0.5 mt-0.5 flex-wrap">
               {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").slice(0, 5).map((t: string) => (
@@ -76,7 +83,7 @@ function CharacterRowImpl({
         disabled={deleting}
         aria-label="删除角色"
         title="删除角色"
-        className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] shrink-0 disabled:opacity-40"
+        className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-danger)] transition-colors duration-150 shrink-0 disabled:opacity-40"
       ><Icon name="x" size={12} className="align-middle" />      </button>
     </div>
   );

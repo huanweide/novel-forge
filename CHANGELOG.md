@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.20 — 2026-08-17
+
+### 角色列表行项微交互柔化 + 选中态视觉反馈（UI 设计师·虚空玻璃体系·组件级精修·角色 Tab）
+
+- **角色行项微交互柔化**：`CharacterRow.tsx` 行项原 hover 背景/文字色/删除按钮浮现均为瞬间跳变（`transition-shadow` 仅过渡阴影、背景与文字色无过渡）；本轮外层 `transition-shadow` 升级为 `transition-all duration-150`（背景+阴影+文字色平滑过渡），名字 hover 变色加 `transition-colors`，删除按钮（`group-hover` 浮现 + hover 变红）加 `transition-colors duration-150`，悬停与浮现从生硬跳变变为丝滑过渡，贴合「巧妙的悬停/点击交互」。
+- **选中态视觉反馈补全**：`selected` prop 此前被接收却完全未渲染视觉（勾选角色时行项零反馈、仅靠 checkbox 自身）；本轮补上品牌香槟金淡背景 + inset 金环（`bg-[var(--nv-accent)]/10 ring-1 ring-inset ring-[var(--nv-accent)]/30`），与 hover 态清晰区分、符合单品牌色纪律。
+- **品牌一致性**：grep 全文件零裸 hex/离谱色命中、所有颜色走 `--nv-*` 令牌、本轮零新增色；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.20；个人 IP 仍归瑞宝宝。
+
 ## v3.1.19 — 2026-08-17
 
 ### 项目配置中心弹窗视觉层次升级（UI 设计师·虚空玻璃体系·弹窗级精修·持续扫冗余）

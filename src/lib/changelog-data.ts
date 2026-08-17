@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.19";
+export const LATEST_VERSION = "v3.1.20";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.20 角色列表行项微交互柔化 + 选中态视觉反馈（UI 设计师·虚空玻璃体系·组件级精修·角色 Tab）：①微交互柔化——CharacterRow 行项原 hover 背景/文字色/删除按钮浮现都是瞬间跳变（transition-shadow 只过渡阴影、背景与文字色无过渡）；本轮把外层 transition-shadow 升级为 transition-all duration-150（背景+阴影+文字色平滑过渡）、名字 hover 变色加 transition-colors、删除按钮（group-hover 浮现 + hover 变红）加 transition-colors duration-150，悬停与浮现从生硬跳变变为丝滑过渡，贴合「巧妙的悬停/点击交互」；②选中态视觉反馈补全——selected prop 此前被接收却完全未渲染视觉（勾选角色时行项零反馈、仅靠 checkbox 自身），本轮补上品牌香槟金淡背景 + inset 金环（bg-[var(--nv-accent)]/10 ring-1 ring-inset ring-[var(--nv-accent)]/30），与 hover 态清晰区分、符合单品牌色纪律；③品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色早已走 --nv-* 令牌、本轮零新增色；④质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.20；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.19 项目配置中心弹窗视觉层次升级（UI 设计师·虚空玻璃体系·弹窗级精修·持续扫冗余）：①项目配置中心弹窗去冗余自绘卡片——ProjectConfigPanel 主配置弹窗与「新增正则规则」子弹窗内部，套在 Modal 玻璃面板外的 rounded-2xl border bg-surface-2 shadow-2xl 实心卡片去除（主卡片仅留纯容器、次卡片保留 p-5 space-y-3），内容直接落进 Modal 的 surface-floating 玻璃体系，消除「玻璃套实心卡片+双阴影」的冗余层次、更通透统一，与 MemoryDecayDialog(v3.1.18) 同范式、全站弹窗视觉一致；②品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色早已走 --nv-* 令牌、本轮零新增色；③质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.19；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.18 记忆衰减弹窗视觉层次升级（UI 设计师·虚空玻璃体系·弹窗级精修）：①记忆衰减弹窗去冗余自绘卡片——MemoryDecayDialog 内部套在 Modal 玻璃面板外的 rounded-2xl border bg-surface-2 shadow-2xl 实心卡片去除（仅留 padding），内容直接落进 Modal 的 surface-floating 玻璃体系，消除「玻璃套实心卡片+双阴影」的冗余层次、更通透统一，与全站其他标准弹窗视觉一致；②品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色早已走 --nv-* 令牌、本轮零新增色；③质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.18；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.17 全站厚毛玻璃彻底清零（UI 设计师·虚空玻璃体系·滤纸清零收官）：①首页 header 去滤纸——page.tsx 首页悬浮顶栏（sticky top-2 圆角胶囊）的 backdrop-blur-md 降级为 backdrop-blur-sm（无色玻璃身份；背景本就 bg-abyss/90 半透实色、md 模糊纯属冗余滤纸），与更新公告/表格/探索/回收站/设置/工坊各页 header 一致；②全局状态横幅去滤纸——system-status-banner 顶部系统自检提示条的 backdrop-blur-md 降级为 backdrop-blur-sm（背景极透 bg-warning/[0.08]、薄玻璃更利落），贴合虚空玻璃纪律；③主题切换下拉去滤纸——ThemeToggle 主题下拉菜单的 backdrop-blur-md 降级为 backdrop-blur-sm（背景本就实色 bg-surface-3、md 模糊冗余），贴合虚空玻璃纪律；④质量门禁——grep 全 src 已无 backdrop-blur-md+ 残留（滤纸彻底清零）、零裸 hex/离谱色命中；零生产逻辑删除、纯视觉/CSS 增强；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.17；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -139,6 +140,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.20 角色列表（工作台里勾选角色那块）更好看了：①鼠标悬停在某个人物行上时，背景和文字颜色现在是丝滑过渡、不再是啪一下跳变；右侧的删除小按钮也是轻轻浮现、不再是突然蹦出来；②之前勾选一个角色，那一行除了勾选框本身，没有任何高亮提示；现在勾选的行会有淡淡的香槟金底色 + 内金边，一眼看出选了哪些，跟悬停态不打架。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.19 项目配置中心弹窗（设置里「项目配置」那个大弹窗、含新增正则规则的小弹窗）更好看了：①这两个弹窗之前跟记忆衰减弹窗一样，也是「玻璃面板里又套了一个实心卡片、还叠了两层阴影」，显得又重又不通透；现在去掉那层多余的实心卡片，内容直接落在玻璃面板上，更清爽统一，跟其他弹窗一个样；②顺手确认了这两个弹窗所有颜色都已走品牌色令牌、没有任何离谱色。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.18 记忆衰减弹窗（设置里「记忆衰减」那块、看遗忘曲线清理结果的弹窗）更好看了：①之前这个弹窗是「玻璃面板里又套了一个实心卡片、还叠了两层阴影」，显得又重又不通透；现在去掉那层多余的实心卡片，内容直接落在玻璃面板上，更清爽统一，跟其他弹窗一个样；②顺手确认了这弹窗所有颜色都已走品牌色令牌、没有任何离谱色。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.17 全站最后三处磨砂玻璃也调薄了：①首页顶上那根悬浮圆角胶囊工具栏的磨砂玻璃调薄了，更通透不糊窗；②系统自检发现问题的那条顶部黄色提示条的磨砂玻璃也调薄了，更利落；③右上角切主题（浅色/深色/跟随系统）那个下拉菜单的磨砂玻璃也调薄了。这三处是之前逐页精修漏网的全站通用组件，现在补齐后，整个站点再没有任何厚糊窗毛玻璃了。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
@@ -166,6 +168,21 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.20",
+    date: "2026-08-17",
+    title: "角色列表行项微交互柔化 + 选中态视觉反馈（UI 设计师·虚空玻璃体系·组件级精修·角色 Tab）",
+    sections: [
+      {
+        label: "角色列表行项微交互柔化与选中态反馈",
+        items: [
+          "CharacterRow.tsx 外层 transition-shadow 升级为 transition-all duration-150（背景+阴影+文字色平滑过渡）、名字 hover 变色加 transition-colors、删除按钮（group-hover 浮现 + hover 变红）加 transition-colors duration-150，悬停与操作按钮浮现从瞬间跳变变为丝滑过渡",
+          "补全 selected 选中态视觉——selected prop 此前被接收却未渲染（勾选角色行项零反馈），本轮补品牌香槟金淡背景 + inset 金环（bg-[var(--nv-accent)]/10 ring-1 ring-inset ring-[var(--nv-accent)]/30），与 hover 态区分、符合单品牌色纪律",
+          "grep 全文件零裸 hex/离谱色命中、所有颜色走 --nv-* 令牌、本轮零新增色；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.20；个人 IP 仍归瑞宝宝",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.19",
     date: "2026-08-17",
