@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.17 — 2026-08-17
+
+### 全站厚毛玻璃彻底清零（UI 设计师·虚空玻璃体系·滤纸清零收官）
+
+- **首页 header 去滤纸**：`page.tsx` 首页悬浮顶栏（sticky top-2 圆角胶囊）的 `backdrop-blur-md` 降级为 `backdrop-blur-sm`（无色玻璃身份；背景本就 `bg-abyss/90` 半透实色、md 模糊纯属冗余滤纸），与更新公告/表格/探索/回收站/设置/工坊各页 header 一致。
+- **全局状态横幅去滤纸**：`system-status-banner` 顶部系统自检提示条的 `backdrop-blur-md` 降级为 `backdrop-blur-sm`（背景极透 `bg-warning/[0.08]`、薄玻璃更利落），贴合虚空玻璃纪律。
+- **主题切换下拉去滤纸**：`ThemeToggle` 主题下拉菜单的 `backdrop-blur-md` 降级为 `backdrop-blur-sm`（背景本就实色 `bg-surface-3`、md 模糊冗余），贴合虚空玻璃纪律。
+- **品牌一致性 + 质量门禁**：grep 全 src 已无 `backdrop-blur-md+` 残留（滤纸彻底清零）、零裸 hex/离谱色命中；零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.17；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.16 — 2026-08-17
 
 ### 故事线工作台吸顶子栏去滤纸（UI 设计师·虚空玻璃体系·组件级精修）

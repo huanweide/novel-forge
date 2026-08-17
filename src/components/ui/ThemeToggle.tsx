@@ -73,7 +73,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
         <span className="text-xs font-medium">{cur.name}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[11rem] rounded-xl border border-[var(--nv-border-3)] bg-[var(--nv-surface-3)] p-1 shadow-xl backdrop-blur-md">
+        <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[11rem] rounded-xl border border-[var(--nv-border-3)] bg-[var(--nv-surface-3)] p-1 shadow-xl backdrop-blur-sm">
           {THEMES.map((t) => (
             <button
               key={t.id}

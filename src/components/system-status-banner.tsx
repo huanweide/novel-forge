@@ -84,7 +84,7 @@ export function SystemStatusBanner() {
   };
 
   return (
-    <div className="relative border-b border-warning/30 bg-warning/[0.08] backdrop-blur-md">
+    <div className="relative border-b border-warning/30 bg-warning/[0.08] backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-start gap-3">
         <Icon name="alert" size={18} className="text-warning mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">

@@ -159,7 +159,7 @@ export default function Dashboard() {
   return (
     <div className="nf-home min-h-screen bg-transparent text-foreground">
       {/* 顶栏：悬浮下移（不贴死顶部，让系统提示条可见）+ 主操作 / 导航 / 系统三组 */}
-      <header className="nf-header sticky top-2 z-40 mx-2 rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/90 shadow-lg backdrop-blur-md">
+      <header className="nf-header sticky top-2 z-40 mx-2 rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/90 shadow-lg backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <span className="nf-logo" aria-hidden="true">
