@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { safeJson } from "@/lib/api-body";
 
 const CHAT_SYSTEM_PROMPT = `你是一位资深小说架构顾问，正在与作者进行"章纲多轮对话确认"。
 
@@ -50,6 +51,8 @@ T| [下一章] | [目标]
 
 export async function POST(req: Request) {
   try {
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
     const {
       projectId,
       nodeId,
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
       userMessage,      // 作者反馈/要求
       history,          // 之前的对话轮次
       direction,        // 创作方向（首轮时用）
-    } = await req.json();
+    } = r.body;
 
     if (!currentOutline || !userMessage) {
       return NextResponse.json({ error: "缺少 currentOutline 或 userMessage" }, { status: 400 });

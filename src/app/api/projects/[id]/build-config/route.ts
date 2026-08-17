@@ -17,6 +17,7 @@ import type { BuildConfig } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG } from "@/core/explore/types";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { jsonError } from "@/lib/api-error";
+import { safeJson } from "@/lib/api-body";
 
 export const maxDuration = 60;
 
@@ -26,7 +27,9 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const patch = (await req.json()) as Partial<BuildConfig>;
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const patch = r.body as Partial<BuildConfig>;
 
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) return jsonError("项目不存在");

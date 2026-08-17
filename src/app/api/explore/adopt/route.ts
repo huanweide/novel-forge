@@ -17,6 +17,7 @@ import { jsonError } from "@/lib/api-error";
 import type { BuildConfig, ExploreStep } from "@/core/explore/types";
 import { STEP_LABELS } from "@/core/explore/types";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import { safeJson } from "@/lib/api-body";
 import {
   stepToCategory,
   tryExtractStructured,
@@ -27,8 +28,9 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { projectId, config, card } = body as {
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const { projectId, config, card } = r.body as {
       projectId?: string;
       config?: BuildConfig;
       card?: { title: string; content: string; step: ExploreStep };

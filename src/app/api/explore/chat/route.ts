@@ -21,12 +21,14 @@ import type { BuildConfig, AdoptedItem, ExploreStep, AdoptCard } from "@/core/ex
 import { EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS } from "@/core/explore/types";
 import { extractJson } from "@/core/explore/utils";
 import { jsonError } from "@/lib/api-error";
+import { safeJson } from "@/lib/api-body";
 
 export const maxDuration = 180;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
     const {
       message,
       history = [],
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
       mode = "chat",
       enrichPrompt,
       stream,
-    } = body as {
+    } = r.body as {
       message?: string;
       history?: Array<{ role: string; content: string }>;
       config?: BuildConfig;

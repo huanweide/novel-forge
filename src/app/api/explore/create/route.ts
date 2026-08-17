@@ -20,13 +20,15 @@ import { stepToCategory, extractKeysFromText } from "@/core/explore/utils";
 import { buildGlobalPromptFromExplore } from "@/core/explore/build-prompt";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { jsonError } from "@/lib/api-error";
+import { safeJson } from "@/lib/api-body";
 
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { config, adopted = [], mode = "direct" } = body as {
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const { config, adopted = [], mode = "direct" } = r.body as {
       config?: BuildConfig;
       adopted?: AdoptedItem[];
       mode?: "direct" | "ai_refine";

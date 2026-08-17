@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { formatStorylines, filterActiveStorylines } from "@/core/pipeline/outline-context";
+import { safeJson } from "@/lib/api-body";
 
 const OUTLINE_SYSTEM_PROMPT = `你是一位资深小说架构师，专精于将故事创意转化为可执行的"工程蓝图"。你的输出将被AI写作引擎直接解析和执行。
 
@@ -51,7 +52,9 @@ T| [下一章标题] | [剧情目标/需承接状态]
 
 export async function POST(req: Request) {
   try {
-    const { projectId, nodeId, direction, existingOutline } = await req.json();
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const { projectId, nodeId, direction, existingOutline } = r.body;
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
     }

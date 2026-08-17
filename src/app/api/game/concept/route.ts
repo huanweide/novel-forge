@@ -8,10 +8,13 @@ import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { buildGameSystemPrompt } from "@/core/game/game-prompts";
 import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
+import { safeJson } from "@/lib/api-body";
 
 export async function POST(req: Request) {
   try {
-    const { projectId, nodeId } = await req.json();
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const { projectId, nodeId } = r.body;
     if (!projectId || !nodeId) {
       return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
     }

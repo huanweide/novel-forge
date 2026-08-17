@@ -9,9 +9,12 @@
  */
 import { NextResponse } from "next/server";
 import { processGameStart } from "@/core/game/game-engine";
+import { safeJson } from "@/lib/api-body";
 
 export async function POST(req: Request) {
-  const { projectId, nodeId, concept } = await req.json();
+  const r = await safeJson(req);
+  if (!r.ok) return r.response;
+  const { projectId, nodeId, concept } = r.body;
   if (!projectId || !nodeId) {
     return NextResponse.json({ error: "缺少 projectId 或 nodeId" }, { status: 400 });
   }

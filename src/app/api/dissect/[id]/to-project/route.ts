@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { convertToProject } from "@/core/dissect/engine";
+import { safeJson } from "@/lib/api-body";
 
 /**
  * POST /api/dissect/[id]/to-project
@@ -19,12 +20,11 @@ export async function POST(
     const { id } = await params;
 
     let modifications: string | undefined;
-    try {
-      const body = await req.json();
-      modifications = body?.modifications || undefined;
-    } catch {
-      // 无 body 或解析失败 → 原样转换
+    const parsed = await safeJson(req);
+    if (parsed.ok) {
+      modifications = parsed.body?.modifications || undefined;
     }
+    // not-ok（无 body 或解析失败）→ 原样转换（100% 忠实还原原著）
 
     const projectId = await convertToProject(id, modifications);
 

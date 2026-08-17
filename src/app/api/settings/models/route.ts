@@ -2,6 +2,7 @@ import { jsonError } from "@/lib/api-error";
 import { NextRequest, NextResponse } from "next/server";
 import { PROVIDER_BASE_URLS } from "@/lib/llm";
 import { prisma } from "@/lib/prisma";
+import { safeJson } from "@/lib/api-body";
 
 export const runtime = "nodejs";
 
@@ -13,11 +14,11 @@ export const runtime = "nodejs";
  */
 export async function POST(req: NextRequest) {
   let body: { provider?: string; apiKey?: string; baseUrl?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    /* 空 body 也允许，下面会用 DB key */
+  const parsed = await safeJson(req);
+  if (parsed.ok) {
+    body = parsed.body;
   }
+  // not-ok（无 body 或解析失败）→ 允许空 body，下面会用 DB key
   const { provider, apiKey, baseUrl } = body;
 
   let key = (apiKey || "").trim();

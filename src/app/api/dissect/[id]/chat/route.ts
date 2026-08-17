@@ -10,6 +10,7 @@
  * Response: { reply: string }
  */
 import { jsonError } from "@/lib/api-error";
+import { safeJson } from "@/lib/api-body";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -34,8 +35,9 @@ export async function POST(
       return NextResponse.json({ error: "拆书任务不存在" }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { message, history = [] } = body as {
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const { message, history = [] } = r.body as {
       message?: string;
       history?: Array<{ role: string; content: string }>;
     };

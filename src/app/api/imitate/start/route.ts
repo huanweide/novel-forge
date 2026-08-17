@@ -3,6 +3,7 @@ import { streamImitation } from "@/core/dissect/imitation-engine";
 import type { ImitationRequest, ImitationMode, DimensionKey } from "@/core/dissect/types";
 import { DISSECT_DIMENSIONS } from "@/core/dissect/types";
 import { jsonError } from "@/lib/api-error";
+import { safeJson } from "@/lib/api-body";
 
 /**
  * POST /api/imitate/start
@@ -21,7 +22,9 @@ import { jsonError } from "@/lib/api-error";
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const body = r.body as ImitationRequest & { genre?: string };
     const {
       dissectionId,
       mode = "partial",
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
       targetWordCount = 3000,
       chapterCount = 1,
       genre,
-    } = body as ImitationRequest & { genre?: string };
+    } = body;
 
     // 验证
     if (!dissectionId) {

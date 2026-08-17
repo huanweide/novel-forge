@@ -10,10 +10,13 @@ import { jsonError } from "@/lib/api-error";
 
 import { NextResponse } from "next/server";
 import { endGameAndExport } from "@/core/game/game-engine";
+import { safeJson } from "@/lib/api-body";
 
 export async function POST(req: Request) {
   try {
-    const { sessionId } = await req.json();
+    const r = await safeJson(req);
+    if (!r.ok) return r.response;
+    const { sessionId } = r.body;
     if (!sessionId) {
       return NextResponse.json({ error: "缺少 sessionId" }, { status: 400 });
     }

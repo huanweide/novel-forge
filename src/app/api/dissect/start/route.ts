@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { runDissection } from "@/core/dissect/engine";
 import type { DissectDepth, DissectStatus } from "@/core/dissect/types";
 import { jsonError } from "@/lib/api-error";
+import { safeJson } from "@/lib/api-body";
 
 /**
  * POST /api/dissect/start
@@ -21,7 +22,9 @@ import { jsonError } from "@/lib/api-error";
  */
 export async function POST(req: NextRequest) {
   // 1. 解析和验证（在 SSE 之前——验证失败返回纯 JSON）
-  let body: {
+  const parsed = await safeJson(req);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body as {
     taskName?: string;
     bookName?: string;
     bookAuthor?: string;
@@ -29,15 +32,6 @@ export async function POST(req: NextRequest) {
     depth?: DissectDepth;
     extractChapterSummaries?: boolean;
   };
-
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "无效的请求体" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
 
   const {
     taskName,

@@ -40,3 +40,31 @@ export function requireFields(
   }
   return { ok: true };
 }
+
+/**
+ * 安全解析请求体 JSON —— Round-29 FIX-2 API 输入校验统一。
+ *
+ * 此前各路由直接 `await req.json()`，客户端发畸形 JSON 时 `req.json()`
+ * 抛 SyntaxError，导致路由返回未捕获的 500 + 堆栈。这里把解析收敛为
+ * 单一入口：
+ *   const r = await safeJson(req);
+ *   if (!r.ok) return r.response;   // 提前返回干净 400
+ *   const { ... } = r.body;
+ * 畸形输入时返回标准化 400（含 code:BAD_REQUEST + 友好文案），而非 500。
+ */
+export async function safeJson(
+  request: Request,
+): Promise<{ ok: true; body: any } | { ok: false; response: Response }> {
+  try {
+    const body = await request.json();
+    return { ok: true, body };
+  } catch {
+    return {
+      ok: false,
+      response: new Response(
+        JSON.stringify({ error: "请求体不是合法 JSON", code: "BAD_REQUEST" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    };
+  }
+}
