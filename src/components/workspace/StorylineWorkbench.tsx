@@ -1004,7 +1004,7 @@ export function StorylineWorkbench({
                 </div>
 
                 {/* sticky 子标签导航：把三块变可切换视图，核心七要素常驻为默认标签，不再被埋在底部 */}
-                <div className="sticky top-0 z-10 -mx-5 mb-3 border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-5 py-2 backdrop-blur-md">
+                <div className="sticky top-0 z-10 -mx-5 mb-3 border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] px-5 py-2 backdrop-blur-sm">
                   <div className="flex gap-1">
                     {(["elements", "timeline", "clues", "causal"] as const).map((t) => {
                       const labels: Record<"elements" | "timeline" | "clues" | "causal", string> = {
