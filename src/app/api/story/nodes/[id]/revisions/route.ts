@@ -9,8 +9,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    // #123 软删防泄漏：正常 GET 排除已软删节点，软删节点的版本历史按「不存在」返回 404。
     const node = await prisma.storyNode.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       select: { id: true },
     });
     if (!node) {

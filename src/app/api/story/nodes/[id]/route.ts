@@ -16,9 +16,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    // #123 软删防泄漏：正常 GET 必须排除已移入回收站的节点（自身 + 子节点），
+    // 软删节点按「不存在」返回 404，避免 tombstone 通过正常读取路径泄漏。
     const node = await prisma.storyNode.findUnique({
-      where: { id },
-      include: { children: { orderBy: { order: "asc" } } },
+      where: { id, deletedAt: null },
+      include: { children: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
     });
     if (!node) {
       return NextResponse.json({ error: "节点不存在" }, { status: 404 });

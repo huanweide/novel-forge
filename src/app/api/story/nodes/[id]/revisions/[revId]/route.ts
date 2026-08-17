@@ -9,6 +9,14 @@ export async function GET(
 ) {
   try {
     const { id, revId } = await params;
+    // #123 软删防泄漏：先确认父节点仍存活（未软删），软删节点的版本正文按「节点不存在」返回 404。
+    const parentNode = await prisma.storyNode.findUnique({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!parentNode) {
+      return NextResponse.json({ error: "节点不存在" }, { status: 404 });
+    }
     const revision = await prisma.storyNodeRevision.findUnique({
       where: { id: revId },
     });
