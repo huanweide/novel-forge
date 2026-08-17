@@ -9,9 +9,19 @@
 
 import { Writable } from "stream";
 
+// ---------- 控制字符清洗（round-29 FIX-1，潜在 P0） ----------
+/**
+ * 剥离 XML/HTML 中非法的 C0 控制字符，仅保留 tab(#x9) / LF(#xA) / CR(#xD)。
+ * 正文若混入 \x00-\x1F 等控制符，会被 XML 解析器判为非法文档，
+ * 导致 docx/epub 在 Word/WPS/阅读器里打不开。先清洗再转义。
+ */
+export function stripControlChars(s: string): string {
+  return (s || "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+}
+
 // ---------- HTML 转义 ----------
 export function escapeHtml(s: string): string {
-  return s
+  return stripControlChars(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -337,7 +347,7 @@ function epubChapterXhtml(title: string, item: ChapterItem): string {
 }
 
 function escapeXml(s: string): string {
-  return s
+  return stripControlChars(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

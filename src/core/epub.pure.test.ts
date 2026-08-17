@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { escapeHtml, buildChapterList } from "./epub";
+import { escapeHtml, stripControlChars, buildChapterList } from "./epub";
 
 describe("escapeHtml（HTML 实体转义，被 proseToHtml/导出文档复用）", () => {
   it("转义 & 符号", () => {
@@ -22,6 +22,29 @@ describe("escapeHtml（HTML 实体转义，被 proseToHtml/导出文档复用）
   });
   it("中文与正常字符原样保留，仅危险字符被转义", () => {
     expect(escapeHtml("你好<世界>&'\"")).toBe("你好&lt;世界&gt;&amp;&#39;&quot;");
+  });
+});
+
+describe("stripControlChars（round-29 FIX-1：导出前清洗 XML 非法控制字符）", () => {
+  it("剥离 C0 控制字符 \\x00-\\x08，避免生成非法 XML 文档", () => {
+    expect(stripControlChars("a\x00b\x01c\x08d")).toBe("abcd");
+  });
+  it("剥离 \\x0B \\x0C \\x0E-\\x1F（垂直制表/换页/传输控制符）", () => {
+    expect(stripControlChars("a\x0Bb\x0Cc\x1Ed")).toBe("abcd");
+  });
+  it("保留 XML 合法的空白控制字符 tab(#x9)/LF(#xA)/CR(#xD)", () => {
+    expect(stripControlChars("a\tb\nc\rd")).toBe("a\tb\nc\rd");
+  });
+  it("空串与 undefined 安全返回空串（不抛错）", () => {
+    expect(stripControlChars("")).toBe("");
+    expect(stripControlChars(undefined as unknown as string)).toBe("");
+  });
+  it("正常中文与标点原样保留", () => {
+    expect(stripControlChars("你好，世界！<>&'\"")).toBe("你好，世界！<>&'\"");
+  });
+  it("escapeHtml 先清洗再转义：含控制字符的正文不再生成非法 XML", () => {
+    // 控制字符被剥离，危险字符被转义，最终是合法 XML 片段
+    expect(escapeHtml("a\x00<b>&c")).toBe("a&lt;b&gt;&amp;c");
   });
 });
 

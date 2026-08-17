@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.29";
+export const LATEST_VERSION = "v3.1.30";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.30 导出控制字符清洗·根治 Word/WPS/阅读器打不开（maxloop 魔王系统 Round-29 深度体检·潜在 P0 修复）：①真问题——正文若混入 \\x00-\\x1F 等 C0 控制字符（复制粘贴或 AI 偶发生成），docx.ts 的 escapeXml 与 epub.ts 的 escapeHtml/escapeXml 此前只做实体转义、不剥控制字符，会生成非法 XML，导致导出的 .docx/.epub 在 Word/WPS/阅读器里静默打不开、且无任何报错；②修复——在 epub.ts 新增 stripControlChars 统一清洗函数（仅保留 tab/LF/CR、剥离其余 C0 控制符），escapeHtml/escapeXml 先清洗再转义，docx.ts 的 escapeXml 复用同一 sanitizer，导出链路单一真相源；③配套 epub.pure.test.ts 新增 6 例单测锁死清洗契约（控制符被剥、tab/LF/CR 保留、转义仍正确）；纯加法、零逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1199 全绿；六处版本文件对齐 v3.1.30；个人 IP 仍归瑞宝宝。",
   "v3.1.29 上下文预览接口与生产写作口径对齐（高级开发·上下文架构自查·小修复）：①真问题——POST /api/generate/preview-context 调试接口此前没加载 storyBeat/pendingCommitment、也没跑 classifyEvents，导致「上下文预览」拼出的 systemPrompt 比真实生成少一块 S/A/B 三级分层记忆，排查「AI 为什么忘了某条线」时会被误导；②修复——补加载 storyBeat+pendingCommitment、用 classifyEvents 算出与生产完全一致的 tieredMemory 注入 buildPromptContext，预览现在如实反映真实生成所用的上下文；③纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1193 全绿；个人 IP 仍归瑞宝宝。",
   "v3.1.28 探讨模式不再弹「数据库未连接」吓人（体验修复·系统自检横幅·场景感知）：①根因——SystemStatusBanner 挂在根布局全局显示 DB+AI 两项未配置警告；但探讨模式（/explore）是纯对话式前期构思阶段，用户本地没跑 Postgres 很正常、根本不需要数据库，顶部横幅大张旗鼓报「数据库未连接」看着像报错、像坏了；②修复——横幅组件用 usePathname() 检测 /explore 路径，自动跳过 DB 项（探讨模式不需要数据库），AI 项保留（探讨确实需要 AI 对话）；③零回归——其他页面（写作台/设置/首页等）仍正常显示 DB+AI 双项警告；④质量门禁——tsc 0 错误；vitest 116 文件 1194 全绿；六处版本文件对齐 v3.1.28；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.27 探讨模式 AI 未配置时诚实提示而非假装在线（UI 设计师·探讨模式·体验修复·亲自浏览器走查）：①真问题——点选文体进探讨模式后，ChatPanel 顶部永远显示「AI 创作顾问正在协助你构建小说世界」+ 脉冲绿点（暗示在线就绪），但本地首次部署根本没配 LLM Key，用户打字点发送只会拿到「出错了」报错，绿点纯属误导；②修复——新增 useHealth 缓存钩子读 /api/health 的 llm.ok，把 AI 配置状态透传进 ChatPanel 与 StepGuide；llm.ok=false 时：状态条换成琥珀色「AI 未配置 —— 无法与 AI 探讨」+「去设置页填 Key →」直达链接、对话区插入「AI 尚未配置」引导卡、输入框与发送禁用并提示「去设置页填 Key 后开始对话…」、StepGuide 示例提问替换为「AI 未配置：先去设置页填 Key，才能与 AI 探讨并采纳设定」；llm.ok=true 时维持原「在线」状态条与示例提问不变；③零生产逻辑删除、纯 UI 状态透传与文案增强、零接口/LLM 变化；tsc 0 错误（2 个需真实 Postgres 的 DB 集成测试在沙箱无库环境下连接失败，与本次改动无关）；vitest 全量 1183/1193 全绿（10 跳过）；六处版本文件对齐 v3.1.27；个人 IP 仍归瑞宝宝。",
@@ -185,6 +186,21 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.30",
+    date: "2026-08-17",
+    title: "导出控制字符清洗·根治 Word/WPS/阅读器打不开（maxloop 魔王系统 Round-29 深度体检·潜在 P0 修复）",
+    sections: [
+      {
+        label: "导出不再生成非法 XML",
+        items: [
+          "正文若混入 \\x00-\\x1F 等 C0 控制字符，docx/epub 的转义函数此前只做实体转义不剥控制字符，会生成非法 XML，导致导出文件在 Word/WPS/阅读器静默打不开且无报错",
+          "epub.ts 新增 stripControlChars 统一清洗（仅保留 tab/LF/CR），escapeHtml/escapeXml 先清洗再转义；docx.ts 的 escapeXml 复用同一 sanitizer，导出链路单一真相源",
+          "epub.pure.test.ts 新增 6 例单测锁死清洗契约（控制符被剥、tab/LF/CR 保留、转义仍正确）；tsc 0 错误；vitest 115 文件 1199 全绿；六处版本文件对齐 v3.1.30；个人 IP 仍归瑞宝宝",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.29",
     date: "2026-08-17",

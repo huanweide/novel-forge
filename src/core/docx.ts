@@ -5,11 +5,11 @@
  * 中文靠 word/styles.xml 的 docDefaults 声明 eastAsia="宋体"，Word/WPS 打开不乱码。
  */
 
-import { ChapterItem, makeZip, streamZip } from "./epub";
+import { ChapterItem, makeZip, streamZip, stripControlChars } from "./epub";
 import type { Writable } from "stream";
 
 function escapeXml(s: string): string {
-  return (s || "")
+  return stripControlChars(s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.30 — 2026-08-17
+
+### 导出控制字符清洗·根治 Word/WPS/阅读器打不开（maxloop 魔王系统 Round-29 深度体检·潜在 P0 修复）
+
+- **真问题**：正文若混入 `\x00`–`\x1F` 等 C0 控制字符（复制粘贴或 AI 偶发生成），`docx.ts` 的 `escapeXml` 与 `epub.ts` 的 `escapeHtml` / `escapeXml` 此前只做实体转义、不剥控制字符，会生成非法 XML，导致导出的 `.docx` / `.epub` 在 Word / WPS / 阅读器里静默打不开、且无任何运行时报错。
+- **修复**：在 `epub.ts` 新增 `stripControlChars` 统一清洗函数（仅保留 tab / LF / CR，剥离其余 C0 控制符），`escapeHtml` / `escapeXml` 都先清洗再转义；`docx.ts` 的 `escapeXml` 复用同一 sanitizer，导出链路单一真相源、不再各写各的。
+- **质量门禁**：`epub.pure.test.ts` 新增 6 例单测锁死清洗契约（控制符被剥、tab / LF / CR 保留、转义仍正确）；tsc 0 错误；vitest 115 文件 1199 全绿；六处版本文件对齐 v3.1.30；个人 IP 仍归瑞宝宝。
+
 ## v3.1.29 — 2026-08-17
 
 ### 上下文预览接口与生产写作口径对齐（高级开发·上下文架构自查·小修复）
