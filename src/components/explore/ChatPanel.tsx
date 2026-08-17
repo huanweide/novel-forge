@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import Link from "next/link";
 import type { ExploreMessage, ExploreStep, AdoptCard } from "@/core/explore/types";
 import { EXPLORE_STEPS, STEP_LABELS, STEP_ICONS } from "@/core/explore/types";
 import { Icon } from "@/components/ui/icons";
@@ -11,6 +12,7 @@ interface Props {
   mode: "chat" | "cards" | "outline";
   currentStep: ExploreStep;
   adoptStatus: Record<string, string>;
+  aiConfigured: boolean | null;
   onSend: (text: string) => void;
   onStepChange: (step: ExploreStep) => void;
   onModeChange: (mode: "chat" | "cards" | "outline") => void;
@@ -23,6 +25,7 @@ export function ChatPanel({
   mode,
   currentStep,
   adoptStatus,
+  aiConfigured,
   onSend,
   onStepChange,
   onModeChange,
@@ -65,21 +68,48 @@ export function ChatPanel({
       </nav>
 
       {/* ── 探讨服务状态条 ── */}
-      <div className="px-4 py-2.5 flex items-center gap-2.5 border-b border-[var(--nv-border-2)] bg-gradient-to-r from-[var(--nv-creative-soft)]/40 via-transparent to-transparent">
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--nv-creative)] opacity-60 animate-ping" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--nv-creative)]" />
-        </span>
-        <span className="text-xs text-[var(--nv-text-secondary)] font-medium">
-          AI 创作顾问正在协助你构建小说世界
-        </span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--nv-creative)]/15 text-[var(--nv-creative)] border border-[var(--nv-creative)]/25">
-          当前 · {STEP_LABELS[currentStep]}
-        </span>
-      </div>
+      {aiConfigured === false ? (
+        <div className="px-4 py-2.5 flex items-center gap-2.5 border-b border-warning/30 bg-warning/[0.08]">
+          <Icon name="alert" size={14} className="text-warning shrink-0" />
+          <span className="text-xs text-warning font-medium">AI 未配置 —— 无法与 AI 探讨</span>
+          <Link
+            href="/settings"
+            className="text-[10px] px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/25 hover:bg-warning/25 transition-colors duration-150 ml-auto"
+          >
+            去设置页填 Key →
+          </Link>
+        </div>
+      ) : (
+        <div className="px-4 py-2.5 flex items-center gap-2.5 border-b border-[var(--nv-border-2)] bg-gradient-to-r from-[var(--nv-creative-soft)]/40 via-transparent to-transparent">
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--nv-creative)] opacity-60 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--nv-creative)]" />
+          </span>
+          <span className="text-xs text-[var(--nv-text-secondary)] font-medium">
+            AI 创作顾问正在协助你构建小说世界
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--nv-creative)]/15 text-[var(--nv-creative)] border border-[var(--nv-creative)]/25">
+            当前 · {STEP_LABELS[currentStep]}
+          </span>
+        </div>
+      )}
 
       {/* ── 对话列表 ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {aiConfigured === false && (
+          <div className="my-1 p-4 rounded-2xl border border-warning/30 bg-warning/[0.08] text-center">
+            <p className="text-sm text-warning font-medium">AI 尚未配置</p>
+            <p className="text-xs text-warning/80 mt-1.5 leading-relaxed max-w-[320px] mx-auto">
+              探讨模式需要 AI 才能与你对话、生成并采纳设定。请先在设置页填入 LLM API Key，再回来开始构思。
+            </p>
+            <Link
+              href="/settings"
+              className="inline-flex mt-3 items-center gap-1 text-xs px-3.5 py-1.5 rounded-full bg-warning/15 text-warning border border-warning/30 hover:bg-warning/25 transition-colors duration-150"
+            >
+              去设置页填 Key →
+            </Link>
+          </div>
+        )}
         {messages.map((msg, i) => {
           const isUser = msg.role === "user";
           return (
@@ -231,16 +261,18 @@ export function ChatPanel({
               }
             }}
             placeholder={
-              mode === "cards"
-                ? "输入需求，AI给出候选方案..."
-                : `说说你的想法（当前：${STEP_LABELS[currentStep]}）...`
+              aiConfigured === false
+                ? "AI 未配置，去设置页填 Key 后开始对话..."
+                : mode === "cards"
+                  ? "输入需求，AI给出候选方案..."
+                  : `说说你的想法（当前：${STEP_LABELS[currentStep]}）...`
             }
-            disabled={loading}
+            disabled={loading || aiConfigured === false}
             className="flex-1 bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-4 py-2.5 text-sm text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-primary)]/40 focus:ring-2 focus:ring-[var(--nv-primary)]/10 disabled:opacity-40 transition-all duration-200"
           />
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || aiConfigured === false}
             className="btn-primary px-5 py-2.5 text-sm font-medium disabled:opacity-40 flex items-center gap-1.5"
           >
             <Icon name="arrowRight" size={13} /> 发送

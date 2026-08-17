@@ -19,6 +19,7 @@ import type {
 import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS, STEP_ICONS, STEP_PROMPTS } from "@/core/explore/types";
 import { toastError, toastCreated, toastWarning } from "@/components/ui/toast";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useHealth } from "@/hooks/use-health";
 
 export default function ExplorePage() {
   const [config, setConfig] = useState<BuildConfig>(DEFAULT_BUILD_CONFIG);
@@ -44,6 +45,10 @@ export default function ExplorePage() {
   const rightDrawerTitleId = useId();
   useFocusTrap(leftDrawerRef, leftDrawerOpen, () => setLeftDrawerOpen(false));
   useFocusTrap(rightDrawerRef, rightDrawerOpen, () => setRightDrawerOpen(false));
+
+  // ── 系统健康：AI 是否配置（决定探讨模式是否真的能对话） ──
+  const health = useHealth();
+  const aiConfigured = health?.llm.ok ?? null;
   const [adoptStatus, setAdoptStatus] = useState<Record<string, string>>({});
   const [allCards, setAllCards] = useState<Record<string, AdoptCard[]>>({});
   const [generatingAll, setGeneratingAll] = useState(false);
@@ -655,7 +660,7 @@ export default function ExplorePage() {
 
       {/* ── 构思步骤引导：让新手清楚每一步该聊什么 ── */}
       {mode !== "outline" && (
-        <StepGuide step={currentStep} onSend={handleGuideSend} />
+        <StepGuide step={currentStep} aiConfigured={aiConfigured} onSend={handleGuideSend} />
       )}
 
       {/* ── 三栏布局 ── */}
@@ -698,6 +703,7 @@ export default function ExplorePage() {
                 mode={mode}
                 currentStep={currentStep}
                 adoptStatus={adoptStatus}
+                aiConfigured={aiConfigured}
                 onSend={handleSend}
                 onStepChange={handleStepChange}
                 onModeChange={setMode}
@@ -746,8 +752,9 @@ export default function ExplorePage() {
 }
 
 // ─── 子组件：构思步骤引导（让新手清楚每一步该聊什么） ──
-function StepGuide({ step, onSend }: { step: ExploreStep; onSend: (text: string) => void }) {
+function StepGuide({ step, aiConfigured, onSend }: { step: ExploreStep; aiConfigured: boolean | null; onSend: (text: string) => void }) {
   const prompts = STEP_PROMPTS[step];
+  const blocked = aiConfigured === false;
   return (
     <section className="border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/60 px-5 py-3 shrink-0">
       <div className="max-w-full mx-auto flex flex-col gap-2.5">
@@ -763,17 +770,32 @@ function StepGuide({ step, onSend }: { step: ExploreStep; onSend: (text: string)
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5 pl-7">
-          {prompts.map((p, i) => (
-            <button
-              key={i}
-              onClick={() => onSend(p)}
-              className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:border-[var(--nv-primary)]/40 hover:text-[var(--nv-primary)] transition-all duration-150 active:scale-95"
+        {blocked ? (
+          <div className="flex flex-wrap items-center gap-1.5 pl-7">
+            <span className="text-[11px] px-2.5 py-1 rounded-full border border-warning/30 bg-warning/[0.08] text-warning">
+              AI 未配置：先去设置页填 Key，才能与 AI 探讨并采纳设定
+            </span>
+            <Link
+              href="/settings"
+              className="text-[11px] px-2.5 py-1 rounded-full border border-warning/30 bg-warning/15 text-warning hover:bg-warning/25 transition-colors duration-150"
             >
-              {p}
-            </button>
-          ))}
-        </div>
+              去设置页 →
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5 pl-7">
+            {prompts.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => onSend(p)}
+                disabled={aiConfigured === null}
+                className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:border-[var(--nv-primary)]/40 hover:text-[var(--nv-primary)] transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
