@@ -187,7 +187,7 @@ export function ProjectConfigPanel({
   return (
     <>
       <Modal open onClose={onClose} bare panelClassName="w-full max-w-2xl max-h-[88vh] overflow-y-auto" labelledBy="project-config-title">
-      <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] shadow-2xl">
+      <div>
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-[var(--nv-border-2)] px-5 py-4">
           <h3 id="project-config-title" className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
@@ -406,7 +406,7 @@ export function ProjectConfigPanel({
       {/* I-2：新增正则规则——与「规则」面板新建规则风格统一的模态弹窗（同级渲染，避免嵌套在 animate-spring 面板内被 transform 影响 fixed 定位） */}
       {showNewRule && (
         <Modal open onClose={() => setShowNewRule(false)} bare panelClassName="max-h-[85vh] w-full max-w-lg overflow-y-auto" labelledBy="new-rule-title">
-          <div className="rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] shadow-2xl p-5 space-y-3">
+          <div className="p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h4 id="new-rule-title" className="flex items-center gap-2 text-base font-semibold text-[var(--nv-text-primary)]">
                 <Icon name="settings" size={16} /> 新增正则后处理规则
