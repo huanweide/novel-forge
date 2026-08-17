@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.20";
+export const LATEST_VERSION = "v3.1.21";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.21 故事线因果链节点卡片微交互统一（UI 设计师·虚空玻璃体系·组件级精修·故事 Tab）：①因果链节点卡片 hover 统一——StorylineWorkbench.tsx 因果链视图节点卡片（line 1324）原本仅 transition-colors hover 变背景、缺浮起与光晕，与同组件族 StorylineList 主线卡片（hover 浮起 + 香槟金光晕）视觉语言不一致；本轮升级为 transition-all duration-150 + hover:-translate-y-0.5 + hover:shadow-[0_0_14px_color-mix(in_oklch,var(--nv-accent)_30%,transparent)]，与该节点原有的角色语义左边框（推进/卡点/分支三色）共存不冲突（光晕为通用悬停反馈、左边框承载叙事角色语义），故事线组件族视觉语言统一；②品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色走 --nv-* 令牌、本轮零新增色；③质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.21；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.20 角色列表行项微交互柔化 + 选中态视觉反馈（UI 设计师·虚空玻璃体系·组件级精修·角色 Tab）：①微交互柔化——CharacterRow 行项原 hover 背景/文字色/删除按钮浮现都是瞬间跳变（transition-shadow 只过渡阴影、背景与文字色无过渡）；本轮把外层 transition-shadow 升级为 transition-all duration-150（背景+阴影+文字色平滑过渡）、名字 hover 变色加 transition-colors、删除按钮（group-hover 浮现 + hover 变红）加 transition-colors duration-150，悬停与浮现从生硬跳变变为丝滑过渡，贴合「巧妙的悬停/点击交互」；②选中态视觉反馈补全——selected prop 此前被接收却完全未渲染视觉（勾选角色时行项零反馈、仅靠 checkbox 自身），本轮补上品牌香槟金淡背景 + inset 金环（bg-[var(--nv-accent)]/10 ring-1 ring-inset ring-[var(--nv-accent)]/30），与 hover 态清晰区分、符合单品牌色纪律；③品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色早已走 --nv-* 令牌、本轮零新增色；④质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.20；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.19 项目配置中心弹窗视觉层次升级（UI 设计师·虚空玻璃体系·弹窗级精修·持续扫冗余）：①项目配置中心弹窗去冗余自绘卡片——ProjectConfigPanel 主配置弹窗与「新增正则规则」子弹窗内部，套在 Modal 玻璃面板外的 rounded-2xl border bg-surface-2 shadow-2xl 实心卡片去除（主卡片仅留纯容器、次卡片保留 p-5 space-y-3），内容直接落进 Modal 的 surface-floating 玻璃体系，消除「玻璃套实心卡片+双阴影」的冗余层次、更通透统一，与 MemoryDecayDialog(v3.1.18) 同范式、全站弹窗视觉一致；②品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色早已走 --nv-* 令牌、本轮零新增色；③质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.19；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.18 记忆衰减弹窗视觉层次升级（UI 设计师·虚空玻璃体系·弹窗级精修）：①记忆衰减弹窗去冗余自绘卡片——MemoryDecayDialog 内部套在 Modal 玻璃面板外的 rounded-2xl border bg-surface-2 shadow-2xl 实心卡片去除（仅留 padding），内容直接落进 Modal 的 surface-floating 玻璃体系，消除「玻璃套实心卡片+双阴影」的冗余层次、更通透统一，与全站其他标准弹窗视觉一致；②品牌一致性——grep 全文件零裸 hex/离谱色命中，所有颜色早已走 --nv-* 令牌、本轮零新增色；③质量门禁——零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.18；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -140,6 +141,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.21 故事线（工作台里看剧情因果链那块）的节点卡片更好看了：①因果链视图里，每一个事件节点卡片鼠标移上去现在会轻轻浮起来、边缘亮起一圈香槟金光晕，跟故事主线卡片一个手感；之前只有背景变色、没有浮起和光晕，显得比主线卡片「平」了一截；②这次只动了悬停效果，节点左边那条代表「剧情推进/卡点/分支」的彩色边条原样保留（它负责告诉你这个事件是什么角色），金光晕只是悬停反馈、不抢戏，两种信息各司其职。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.20 角色列表（工作台里勾选角色那块）更好看了：①鼠标悬停在某个人物行上时，背景和文字颜色现在是丝滑过渡、不再是啪一下跳变；右侧的删除小按钮也是轻轻浮现、不再是突然蹦出来；②之前勾选一个角色，那一行除了勾选框本身，没有任何高亮提示；现在勾选的行会有淡淡的香槟金底色 + 内金边，一眼看出选了哪些，跟悬停态不打架。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.19 项目配置中心弹窗（设置里「项目配置」那个大弹窗、含新增正则规则的小弹窗）更好看了：①这两个弹窗之前跟记忆衰减弹窗一样，也是「玻璃面板里又套了一个实心卡片、还叠了两层阴影」，显得又重又不通透；现在去掉那层多余的实心卡片，内容直接落在玻璃面板上，更清爽统一，跟其他弹窗一个样；②顺手确认了这两个弹窗所有颜色都已走品牌色令牌、没有任何离谱色。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.18 记忆衰减弹窗（设置里「记忆衰减」那块、看遗忘曲线清理结果的弹窗）更好看了：①之前这个弹窗是「玻璃面板里又套了一个实心卡片、还叠了两层阴影」，显得又重又不通透；现在去掉那层多余的实心卡片，内容直接落在玻璃面板上，更清爽统一，跟其他弹窗一个样；②顺手确认了这弹窗所有颜色都已走品牌色令牌、没有任何离谱色。纯换皮、没动任何功能逻辑，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
@@ -168,6 +170,20 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.21",
+    date: "2026-08-17",
+    title: "故事线因果链节点卡片微交互统一（UI 设计师·虚空玻璃体系·组件级精修·故事 Tab）",
+    sections: [
+      {
+        label: "因果链节点卡片 hover 统一",
+        items: [
+          "StorylineWorkbench.tsx 因果链视图节点卡片（line 1324）transition-colors hover 背景变色升级为 transition-all duration-150 + hover:-translate-y-0.5 + hover:shadow-[0_0_14px_color-mix(in_oklch,var(--nv-accent)_30%,transparent)]，与该节点原有角色语义左边框（推进/卡点/分支三色）共存不冲突，与 StorylineList 主线卡片视觉语言统一",
+          "grep 全文件零裸 hex/离谱色命中、所有颜色走 --nv-* 令牌、本轮零新增色；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.21；个人 IP 仍归瑞宝宝",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.20",
     date: "2026-08-17",

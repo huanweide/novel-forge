@@ -1321,7 +1321,7 @@ export function StorylineWorkbench({
                                     : "bg-[var(--nv-accent)]"
                               }`}
                             />
-                            <div className={`rounded-xl border bg-[var(--nv-surface-1)] p-2.5 transition-colors hover:bg-[var(--nv-surface-2)] ${
+                            <div className={`rounded-xl border bg-[var(--nv-surface-1)] p-2.5 transition-all duration-150 hover:-translate-y-0.5 hover:bg-[var(--nv-surface-2)] hover:shadow-[0_0_14px_color-mix(in_oklch,var(--nv-accent)_30%,transparent)] ${
                               node.role === "advance"
                                 ? "border border-[var(--nv-border-2)] border-l-2 border-l-[var(--nv-success)]"
                                 : node.role === "probe"

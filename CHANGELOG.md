@@ -1,5 +1,12 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.21 — 2026-08-17
+
+### 故事线因果链节点卡片微交互统一（UI 设计师·虚空玻璃体系·组件级精修·故事 Tab）
+
+- **因果链节点卡片 hover 统一**：`StorylineWorkbench.tsx` 因果链视图节点卡片（line 1324）原本仅 `transition-colors hover` 背景变色、缺浮起与光晕，与同组件族 `StorylineList` 主线卡片（hover 浮起 + 香槟金光晕）视觉语言不一致；本轮升级为 `transition-all duration-150` + `hover:-translate-y-0.5` + `hover:shadow-[0_0_14px_color-mix(in_oklch,var(--nv-accent)_30%,transparent)]`，与该节点原有的角色语义左边框（推进/卡点/分支三色）共存不冲突（光晕为通用悬停反馈、左边框承载叙事角色语义），故事线组件族视觉语言统一。
+- **品牌一致性 + 质量门禁**：grep 全文件零裸 hex/离谱色命中、所有颜色走 `--nv-*` 令牌、本轮零新增色；零生产逻辑删除、纯视觉/CSS 增强、零接口/LLM 变化；tsc 0 错误；vitest 全量 115 文件 1190/1190 全绿；六处版本文件对齐 v3.1.21；个人 IP 仍归瑞宝宝。
+
 ## v3.1.20 — 2026-08-17
 
 ### 角色列表行项微交互柔化 + 选中态视觉反馈（UI 设计师·虚空玻璃体系·组件级精修·角色 Tab）
