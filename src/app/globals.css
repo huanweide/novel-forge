@@ -192,7 +192,7 @@
   --destructive: oklch(0.62 0.22 18);
   --border: rgba(255, 255, 255, 0.11);
   --input: rgba(255, 255, 255, 0.08);
-  --ring: oklch(0.66 0.19 270 / 0.5);
+  --ring: oklch(0.66 0.19 270);
   --chart-1: oklch(0.66 0.19 270);
   --chart-2: oklch(0.68 0.18 160);
   --chart-3: oklch(0.74 0.16 85);
@@ -205,7 +205,7 @@
   --sidebar-accent: rgba(255, 255, 255, 0.045);
   --sidebar-accent-foreground: #F8F7F2;
   --sidebar-border: rgba(255, 255, 255, 0.09);
-  --sidebar-ring: oklch(0.66 0.19 270 / 0.5);
+  --sidebar-ring: oklch(0.66 0.19 270);
 }
 
 /* ═══════════════════════════════════════════
@@ -330,7 +330,7 @@
   --destructive: oklch(0.55 0.22 18);
   --border: rgba(15, 18, 30, 0.12);
   --input: rgba(15, 18, 30, 0.14);
-  --ring: oklch(0.55 0.17 270 / 0.5);
+  --ring: oklch(0.52 0.17 270);
   --chart-1: oklch(0.55 0.17 270);
   --chart-2: oklch(0.55 0.16 160);
   --chart-3: oklch(0.72 0.16 85);
@@ -343,7 +343,7 @@
   --sidebar-accent: rgba(15, 18, 30, 0.05);
   --sidebar-accent-foreground: #1A1C22;
   --sidebar-border: rgba(15, 18, 30, 0.09);
-  --sidebar-ring: oklch(0.55 0.17 270 / 0.5);
+  --sidebar-ring: oklch(0.52 0.17 270);
 }
 
 /* F01：金色小文字浅色对比度变体类。基础色沿用 --nv-accent（深色/苍青主题外观不变，均已达 AA），仅 .light 下切换为暗金令牌 --nv-accent-text-on-light */
@@ -443,7 +443,14 @@
   }
   button:focus-visible {
     /* 焦点环 + 4px 透明间隙（间隙色随主题切换 --background），确保键盘焦点可见且不贴边 */
-    @apply ring-2 ring-ring/50 ring-offset-2 ring-offset-[var(--background)];
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-[var(--background)];
+  }
+  /* WCAG 2.4.7 / 1.4.11：原生 <button> 之外的可键盘聚焦控件（role=button 自绘节点、链接、tabindex 元素等）
+     此前完全没有可见焦点环——键盘用户 Tab 进去"看不见焦点在哪"。用 :where() 保持 0 优先级，
+     不覆盖组件级显式 focus 样式，仅补位"零焦点环"的自定义控件；ring 用实心 --ring 令牌，
+     深底靛蓝 / 浅底深靛蓝 / 苍青青 / 暗金 均 ≥3:1，达非文本对比。仅键盘聚焦触发，鼠标点击不显示。 */
+  :where(a, [role="button"], [role="tab"], [role="option"], [role="radio"], [role="menuitem"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-[var(--background)];
   }
 
   body {
