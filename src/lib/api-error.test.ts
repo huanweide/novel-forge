@@ -78,6 +78,28 @@ describe("classifyError - 网络 / 外部服务", () => {
   });
 });
 
+describe("classifyError - 配置类友好错误透传（自检 banner 黑话收敛）", () => {
+  it("LLM API Key 未配置（llm.ts 环境变量兜底）→ CONFIG 400 且原样透传中文", () => {
+    const msg = "LLM API Key 未配置——请在设置页面填入 Key，或在 .env 中设置 LLM_API_KEY";
+    const r = classifyError(new Error(msg));
+    expect(r).toMatchObject({ status: 400, code: "CONFIG", error: msg });
+    expect(r.error).not.toBe("服务器内部错误，请查看日志");
+    expect(r.hint).toContain("设置");
+  });
+
+  it("LLM 提供商未配置（llm.ts）→ CONFIG 400 透传", () => {
+    const msg = "LLM 提供商未配置——请在设置页面选择提供商";
+    const r = classifyError(new Error(msg));
+    expect(r).toMatchObject({ status: 400, code: "CONFIG", error: msg });
+  });
+
+  it("本地推理需填写 Base URL（llm.ts local 分支）→ CONFIG 400 透传", () => {
+    const msg = "本地推理需填写 Base URL（如 http://localhost:11434/v1）";
+    const r = classifyError(new Error(msg));
+    expect(r).toMatchObject({ status: 400, code: "CONFIG", error: msg });
+  });
+});
+
 describe("classifyError - 默认分支不泄露内部错误 (L2-003 修复)", () => {
   it("普通 Error → 500 INTERNAL 且不明文透传 err.message", () => {
     const secret = "SECRET_SQL_FRAGMENT_leak_test_12345";
