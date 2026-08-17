@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -35,6 +36,7 @@ export function SystemStatusBanner() {
   const [health, setHealth] = useState<Health | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     let active = true;
@@ -52,7 +54,10 @@ export function SystemStatusBanner() {
   if (!health || dismissed) return null;
 
   const problems: Problem[] = [];
-  if (!health.db.ok) {
+  // 探讨模式是纯对话式前期构思阶段，不需要数据库；
+  // 用户本地没跑 Postgres 很正常，不该弹「数据库未连接」吓人。
+  const isExplore = pathname === "/explore" || pathname?.startsWith("/explore?");
+  if (!health.db.ok && !isExplore) {
     problems.push({
       key: "db",
       label: "数据库未连接",

@@ -218,3 +218,11 @@
 - 坑（已修）：上轮 Python 升版脚本 VERSIONS 替换锚点漏含原 VERSIONS[0] 开括号，插入后形成 `  {\n  {` 双重开括号、v3.1.1 条目丢开括号致 tsc 级联报错；本轮两处精准 Edit 修复（删 dangling 开括号 + 给 v3.1.1 补回开括号），tsc 复验 0 错。
 - 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问）：文风模板纯函数零测=未来重构可静默改坏用户文风/禁用句式约束，第一性原理直接锁契约；低风险高杠杆收口 v3.1.2。IP 仍归瑞宝宝，无新 IP/品牌/引流。
 - 下一轮候选：① 其他 src/core/src/lib 残余零测纯函数（templates/genres、outlines、rehype-entity-highlight、node-type、quality-thresholds 多为常量/重型编排，补测价值低，优先找真·纯函数）；② 类型逃逸红区仅在有 tsc 实证低成本可去确定项时收；③ 用户新明确诉求优先。
+
+## 2026-08-17 第三轮（v3.1.5 → v3.1.6 残缺发布收口 · 措施辞统一，马斯克 CEO 循环运营）
+- 检测：工作树被并发实例（同自动化每小时触发）抢先写入 v3.1.6 主体并已 commit eef5963（离谱色收口 + 实体高亮 13 例测试 + README 设计体系章节）且 push 到 ghssh main；但四版本文件措辞写「六版本文件对齐」（与历史 v3.1.5 及以前「四处」不一致），CHANGELOG.md/更新报告.md 与 changelog-data.ts 措辞需统一。
+- 验证（收口前核实数字属实）：SAFE_DELETE_DISABLE=1 npx tsc --noEmit --incremental false = 0 错；npx vitest run = 115 文件 1190/1190 全绿（实测，非虚写）；dev server /changelog HTTP 200 含 v3.1.6。
+- 修复：三版本文件「六版本文件对齐 v3.1.6」→「四处版本文件对齐 v3.1.6」（CHANGELOG.md/更新报告.md 各 1 处 + changelog-data.ts 2 处），与历史版本措辞一致；版本铁律四文件（package.json/CHANGELOG.md/changelog-data.ts/更新报告.md）措辞统一。
+- 交付：fetch 发现远程已 eef5963（并发实例已 push），本地初用 reset --soft 想把三 commit 压成单一 v3.1.6 但远程已领先，遂 reset --hard ghssh/main 对齐远程、仅补措辞差异 commit b362044（3 文件 +4/-4），GIT_SSH_COMMAND 指定 key 推送 ghssh main 成功（eef5963..b362044，fast-forward 无冲突）；不丢并发实例已发布工作。
+- 马斯克 CEO 拍板（子代理通道 review-worker/HY3 本环境仍故障，主代理代行如实标注，不回头问）：并发实例已发布主体=可复用资产，不 force push 覆盖、不假收敛重复；仅补措辞偏差 fast-forward 收口。IP 仍归瑞宝宝，无新 IP/品牌/引流。
+- 关键教训（铁律补）：同一自动化每小时触发可能产生并发实例竞态，本地工作树会被另一实例改写并 push；收口前必 `git fetch` 确认远程真实状态，再选 fast-forward（优先，不丢并发工作）/ rebase / 拒绝 force push，避免分叉或覆盖。
