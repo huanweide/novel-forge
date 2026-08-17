@@ -1,6 +1,7 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
+import { classifyEvents } from "@/lib/memory-classifier";
 import { NextResponse } from "next/server";
 import { buildPromptContext } from "@/core/agents";
 import { getConsistencyBaselineText } from "@/core/consistency/extractFacts";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const [project, currentNode, allNodes, characters, loreEntries, summaries, loreTables] =
+    const [project, currentNode, allNodes, characters, loreEntries, summaries, loreTables, storyBeats, pendingCommitments] =
       await Promise.all([
         prisma.project.findUnique({ where: { id: projectId } }),
         prisma.storyNode.findUnique({ where: { id: nodeId, deletedAt: null } }),
@@ -44,6 +45,19 @@ export async function POST(request: Request) {
         }),
         prisma.loreTable.findMany({
           where: { projectId },
+        }),
+        // v3.1.29：与生产写作路径（context-loader + pre-processor）口径对齐——
+        // 补加载故事线节拍 + 伏笔，才能用 classifyEvents 算出与生产完全一致的 S/A/B 三级分层记忆，
+        // 否则「上下文预览」显示的记忆比真实生成少一块，排查「AI 为什么忘了某条线」时会被误导。
+        prisma.storyBeat.findMany({
+          where: { projectId },
+          orderBy: { chapterNumber: "desc" },
+          take: 30,
+        }),
+        prisma.pendingCommitment.findMany({
+          where: { projectId },
+          orderBy: { createdAt: "desc" },
+          take: 50,
         }),
       ]);
 
@@ -67,6 +81,18 @@ export async function POST(request: Request) {
 
     // 构建上下文（v1.6.51.1：同步注入一致性事实基线，预览与真实生成口径一致）
     const consistencyBaseline = await getConsistencyBaselineText(project.id).catch(() => "");
+
+    // v3.1.29：与生产写作路径口径对齐——用 classifyEvents 算出 S/A/B 三级分层记忆并注入，
+    // 否则预览的 systemPrompt 会比真实生成少一块记忆，误导上下文排查。
+    const currentChapter = (currentNode?.order ?? 0) + 1;
+    const tieredMemory = classifyEvents(
+      summaries as any,
+      storyBeats as any,
+      pendingCommitments as any,
+      characters as any,
+      currentChapter,
+    );
+
     const promptContext = buildPromptContext({
       project: project as any,
       currentNode: toAppStoryNode(currentNode),
@@ -75,6 +101,7 @@ export async function POST(request: Request) {
       loreEntries: loreEntries as any,
       chapterSummaries: summaries as any,
       authorNote: effectiveAuthorNote,
+      tieredMemory,
       loreTables: loreTables as any,
       consistencyBaseline,
     });

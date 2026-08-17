@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.29 — 2026-08-17
+
+### 上下文预览接口与生产写作口径对齐（高级开发·上下文架构自查·小修复）
+
+- **真问题**：`POST /api/generate/preview-context` 调试接口此前没加载故事线节拍（storyBeat）与伏笔（pendingCommitment）、也没跑 `classifyEvents`，导致「上下文预览」拼出的 systemPrompt 比真实生成少一块 S/A/B 三级分层记忆，排查「AI 为什么忘了某条线」时会被误导。
+- **修复**：补加载 storyBeat + pendingCommitment，用 `classifyEvents` 算出与生产完全一致的 `tieredMemory` 注入 `buildPromptContext`；预览现在如实反映真实生成所用的上下文。
+- **质量门禁**：纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1193 全绿；六处版本文件对齐 v3.1.29；个人 IP 仍归瑞宝宝。
+
 ## v3.1.28 — 2026-08-17
 
 ### 探讨模式不再弹「数据库未连接」警告（体验修复·系统自检横幅·场景感知）

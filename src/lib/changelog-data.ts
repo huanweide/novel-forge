@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.28";
+export const LATEST_VERSION = "v3.1.29";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.29 上下文预览接口与生产写作口径对齐（高级开发·上下文架构自查·小修复）：①真问题——POST /api/generate/preview-context 调试接口此前没加载 storyBeat/pendingCommitment、也没跑 classifyEvents，导致「上下文预览」拼出的 systemPrompt 比真实生成少一块 S/A/B 三级分层记忆，排查「AI 为什么忘了某条线」时会被误导；②修复——补加载 storyBeat+pendingCommitment、用 classifyEvents 算出与生产完全一致的 tieredMemory 注入 buildPromptContext，预览现在如实反映真实生成所用的上下文；③纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1193 全绿；个人 IP 仍归瑞宝宝。",
   "v3.1.28 探讨模式不再弹「数据库未连接」吓人（体验修复·系统自检横幅·场景感知）：①根因——SystemStatusBanner 挂在根布局全局显示 DB+AI 两项未配置警告；但探讨模式（/explore）是纯对话式前期构思阶段，用户本地没跑 Postgres 很正常、根本不需要数据库，顶部横幅大张旗鼓报「数据库未连接」看着像报错、像坏了；②修复——横幅组件用 usePathname() 检测 /explore 路径，自动跳过 DB 项（探讨模式不需要数据库），AI 项保留（探讨确实需要 AI 对话）；③零回归——其他页面（写作台/设置/首页等）仍正常显示 DB+AI 双项警告；④质量门禁——tsc 0 错误；vitest 116 文件 1194 全绿；六处版本文件对齐 v3.1.28；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.27 探讨模式 AI 未配置时诚实提示而非假装在线（UI 设计师·探讨模式·体验修复·亲自浏览器走查）：①真问题——点选文体进探讨模式后，ChatPanel 顶部永远显示「AI 创作顾问正在协助你构建小说世界」+ 脉冲绿点（暗示在线就绪），但本地首次部署根本没配 LLM Key，用户打字点发送只会拿到「出错了」报错，绿点纯属误导；②修复——新增 useHealth 缓存钩子读 /api/health 的 llm.ok，把 AI 配置状态透传进 ChatPanel 与 StepGuide；llm.ok=false 时：状态条换成琥珀色「AI 未配置 —— 无法与 AI 探讨」+「去设置页填 Key →」直达链接、对话区插入「AI 尚未配置」引导卡、输入框与发送禁用并提示「去设置页填 Key 后开始对话…」、StepGuide 示例提问替换为「AI 未配置：先去设置页填 Key，才能与 AI 探讨并采纳设定」；llm.ok=true 时维持原「在线」状态条与示例提问不变；③零生产逻辑删除、纯 UI 状态透传与文案增强、零接口/LLM 变化；tsc 0 错误（2 个需真实 Postgres 的 DB 集成测试在沙箱无库环境下连接失败，与本次改动无关）；vitest 全量 1183/1193 全绿（10 跳过）；六处版本文件对齐 v3.1.27；个人 IP 仍归瑞宝宝。",
   "v3.1.26 灵感创作墙改为进探讨模式 + 探讨模式「聊得明白」重点优化（UI 设计师·首页/探讨模式·体验修复·重要方针）：①灵感创作墙不再「点一下就建空项目扔进写作台」——之前那种做法让你啥设定都没有就面对一张白纸、文案还谎称「AI 带着对应的世界观」；现在点选文体直接带着该文体进 /explore 探讨模式（URL 带 genre 预填构建配置），先把世界观/角色/故事聊清楚再动笔；②探讨模式重点优化「聊得明白」——新增构思步骤引导条：每一步（开篇/世界观/主角/金手指…）实时显示「这一步该聊什么」说明 + 3 条可一键发送的示例提问，新手不再对着空输入框发懵；③首页两个突兀点修复——删掉背景里漂浮的「文」「星」装饰大字（看着像乱码），更新公告不再一进首页就弹窗、改为右上角更新面板图标的「新」徽标非侵入提示（看过即消失）；④进入写作台文案明确「构思→写作」转折——已采纳内容面板按钮改为「进入写作台 · 开始写小说」、空状态提示改为「先和 AI 聊出设定并采纳，再进入写作台」；⑤质量门禁——零生产逻辑删除、纯 UI/文案/路由修正、零接口/LLM 变化；tsc 0 错误（2 个需真实 Postgres 的 DB 集成测试在沙箱无库环境下连接失败，与本次改动无关）；vitest 全量 1183/1193 全绿（10 跳过）；六处版本文件对齐 v3.1.26；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -184,6 +185,21 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.29",
+    date: "2026-08-17",
+    title: "上下文预览接口与生产写作口径对齐（高级开发·上下文架构自查·小修复）",
+    sections: [
+      {
+        label: "上下文预览不再比真实生成少一块记忆",
+        items: [
+          "POST /api/generate/preview-context 此前没加载 storyBeat/pendingCommitment、也没跑 classifyEvents，导致「上下文预览」拼出的 systemPrompt 比真实生成少一块 S/A/B 三级分层记忆，排查「AI 为什么忘了某条线」时会被误导",
+          "补加载 storyBeat + pendingCommitment，用 classifyEvents 算出与生产完全一致的 tieredMemory 注入 buildPromptContext；预览现在如实反映真实生成所用的上下文",
+          "纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1193 全绿；六处版本文件对齐 v3.1.29；个人 IP 仍归瑞宝宝",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.28",
     date: "2026-08-17",
