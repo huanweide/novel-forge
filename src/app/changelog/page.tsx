@@ -6,9 +6,9 @@ import { Icon } from "@/components/ui/icons";
 
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)]">
+    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)] animate-in fade-in">
       {/* 顶栏 */}
-      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/90 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Icon name="clipboard" size={20} className="text-[var(--nv-text-secondary)]" />
