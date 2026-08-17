@@ -1058,7 +1058,7 @@ export default function WorkspacePage() {
 
   return (
     <ErrorBoundary name="工作台">
-    <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
+    <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden animate-in fade-in">
       <OnboardingModal />
       <div inert={leftDrawerOpen || rightDrawerOpen} className={`${zenMode ? "hidden" : ""}`}>
       <Toolbar
