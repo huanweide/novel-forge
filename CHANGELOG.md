@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.32 — 2026-08-17
+
+### Round-29 打磨收官：DOCX 排版 + 大书性能 + 大纲树 a11y + 仿写面板卸载兜底（maxloop 魔王系统深度体检·锦上添花四项收口）
+
+- **DOCX 导出不再「顶格贴边」（FIX-6）**：`src/core/docx.ts` 段落加首行缩进 `<w:ind w:firstLine="480"/>`（中文书稿两字缩进），新增轻量 Markdown 解析（`**加粗**`/`*斜体*`/标题/列表/分隔线落进 OOXML 结构而非裸文本）+ 目录 TOC 域，导出的 `.docx` 在 Word/WPS 有正常段落层次与缩进、不再是密密麻麻一整块；配套 `docx.feature.test.ts` 8 例锁死缩进/Markdown/TOC 契约。
+- **大书不再卡成 PPT（FIX-7）**：`CenterPanel` 把高频流式正文抽成 `React.memo` 的 `StreamingBody` 子组件、新增 `useRafThrottledValue` 按帧节流（AI 逐 token 时只正文区局部更新、整棵工作区不再每 token 重渲染），`MarkdownViewer` 包 `React.memo`，`RelationshipGraph` 拖动用 `requestAnimationFrame` 节流 + 出场扫描结果缓存（拖动不再触发整图重算）。
+- **大纲树性能与键盘可达（FIX-8）**：`OutlineTree` 的 `buildIndex` 从 O(N²) 全量 children 查找改为建 `childrenMap` 一次 O(N) 索引，节点行加 `role="button"`/`tabIndex={0}`/`onKeyDown` 支持键盘展开折叠与跳转、`CharacterRow` 补键盘入口，键盘用户终于能纯键盘操作大纲与角色；配套 `OutlineTree.test.tsx` 4 例。
+- **仿写面板卸载后不再炸 setState（FIX-9）**：`ImitationPanel` 的 `useEffect` 加 `AbortController` + cleanup，组件卸载后异步结果不再回写已卸载组件（根治 React「不能在卸载组件上更新状态」告警与潜在崩溃）；配套 `ImitationPanel.test.tsx` 4 例。
+- **质量门禁**：纯加法、零生产逻辑删除、零接口/LLM 变化、零导出行为回归；tsc 0 错误；vitest 122 文件 1232 全绿（较 v3.1.31 基线 119 文件 1216 +3 文件 +16 测：docx.feature 8 + OutlineTree 4 + ImitationPanel 4）；六处版本文件对齐 v3.1.32；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.31 — 2026-08-17
 
 ### Round-29 称帝阻断项收口：API 输入校验统一 + 游戏并发锁/乐观锁 + 软删 GET 过滤（maxloop 魔王系统深度体检·三连修）
