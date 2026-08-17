@@ -1563,7 +1563,8 @@ html.azure .btn-danger { color: oklch(0.76 0.18 20); border-color: oklch(0.62 0.
   --nv-text-primary:  #16181D;
   --nv-text-secondary:#3A3E49;
   --nv-text-tertiary: #565B68;
-  --nv-text-muted:    #6A6F7C;
+  --nv-text-muted:    #5C606B;   /* 游戏白天主题对比度收口（WCAG 1.4.3）：原 #6A6F7C 在浅色页面底 void(#EEF2F7)仅 4.47:1、在浮起面 surface-3 仅 3.65:1(<4.5 AA)；改 #5C606B 后 void 5.59 / 白底 6.29 / surface-3(叠页面底)4.56 均 ≥4.5 达 AA，且仍浅于 tertiary #565B68 保层级。游戏白天是四主题中唯一未被前几轮对比度体检覆盖的 */
+  --nv-text-muted-on-surface-3: #5C606B;  /* 四主题一致性补齐：避免组件在游戏白天作用域引用本令牌时回退到深色主题浅灰值(#96948B)导致浅底对比崩坏；base 已全员达标故与 base 同值 */
   --nv-creative:      oklch(0.55 0.13 95);   /* 深金，浅底对比达标 */
   --nv-accent:        oklch(0.52 0.14 95);
   --nv-creative-fill: #B9892F;               /* 更深的金填充，浅字 #F0EEE8 清晰 */
