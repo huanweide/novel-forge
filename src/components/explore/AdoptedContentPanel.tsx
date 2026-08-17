@@ -48,9 +48,9 @@ export function AdoptedContentPanel({
             <div className="w-12 h-12 rounded-2xl bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] flex items-center justify-center mb-3">
               <Icon name="inbox" size={28} className="text-[var(--nv-text-primary)]" />
             </div>
-            <p className="text-xs text-[var(--nv-text-muted)]">还未采纳任何内容</p>
+            <p className="text-xs text-[var(--nv-text-muted)]">还没聊出任何设定</p>
             <p className="text-[10px] text-[var(--nv-text-primary)] mt-1.5 leading-relaxed max-w-[180px]">
-              与AI对话并点击卡片即可采纳，内容会汇聚在这里
+              在左侧和 AI 把世界观、角色聊清楚，采纳的内容会汇聚到这里，再进入写作台写正文
             </p>
           </div>
         ) : (
@@ -105,12 +105,12 @@ export function AdoptedContentPanel({
                 项目运行中
               </span>
             </div>
-            <Link
-              href={`/workspace/${createdProjectId}`}
-              className="btn-success w-full py-3 text-xs font-semibold text-center block rounded-xl active:scale-[0.98]"
-            >
-              进入工作区 →
-            </Link>
+              <Link
+                href={`/workspace/${createdProjectId}`}
+                className="btn-success w-full py-3 text-xs font-semibold text-center block rounded-xl active:scale-[0.98]"
+              >
+                进入写作台 →
+              </Link>
             <button
               onClick={() => onCreateProject("ai_refine")}
               disabled={creating || adopted.length === 0}
@@ -126,7 +126,7 @@ export function AdoptedContentPanel({
         ) : (
           <>
             <p className="text-[9px] text-[var(--nv-text-muted)] text-center">
-              采纳第一条设定后自动创建项目
+              先和 AI 聊出设定并采纳，再进入写作台
             </p>
             <button
               onClick={() => onCreateProject("direct")}
@@ -137,7 +137,7 @@ export function AdoptedContentPanel({
                   : "btn-primary"
               }`}
             >
-              {creating ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 创建中...</span> : <span className="flex items-center gap-1"><Icon name="package" size={13} /> 手动创建项目</span>}
+              {creating ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 创建中...</span> : <span className="flex items-center gap-1"><Icon name="pencil" size={13} /> 进入写作台 · 开始写小说</span>}
             </button>
           </>
         )}

@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LATEST_VERSION, CHANGELOG_USER_BRIEF } from "@/lib/changelog-data";
+import { LATEST_VERSION } from "@/lib/changelog-data";
 import { useQuery } from "@/hooks/useApi";
 import { GENRE_TEMPLATES } from "@/core/templates/genres";
 import { Icon } from "@/components/ui/icons";
-import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { toastError, toastSuccess } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
-import { Modal } from "@/components/ui/Modal";
 import { ImportDialog } from "@/components/workspace/ImportDialog";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
@@ -54,7 +53,7 @@ function useStaggerOnView(ready: boolean) {
 }
 
 export default function Dashboard() {
-  const [showChangelog, setShowChangelog] = useState(false);
+  const [hasUpdate, setHasUpdate] = useState(false);
 
   // FE-9：项目列表走轻量服务端状态层（进程内缓存 + 失效），删除/重试即 refetch
   const { data: projectsData, loading, error, refetch: loadProjects } = useQuery<ProjectSummary[]>(
@@ -92,33 +91,10 @@ export default function Dashboard() {
     }
   };
 
-  const [loadingGenre, setLoadingGenre] = useState<string | null>(null);
-  const loadGenre = async (genreId: string) => {
-    setLoadingGenre(genreId);
-    try {
-      const res = await fetch("/api/seed/genre-project", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ genreId }),
-      });
-      const d = await res.json();
-      if (res.ok && d.id) {
-        toastSuccess("题材骨架已创建");
-        router.push(`/workspace/${d.id}`);
-      } else {
-        toastError(d.error || "创建题材骨架失败");
-      }
-    } catch {
-      toastError("创建题材骨架失败");
-    } finally {
-      setLoadingGenre(null);
-    }
-  };
-
   useEffect(() => {
     try {
       const seen = localStorage.getItem("novel-forge-last-version");
-      if (seen !== LATEST_VERSION) setShowChangelog(true);
+      if (seen !== LATEST_VERSION) setHasUpdate(true);
     } catch { /* */ }
   }, []);
 
@@ -185,8 +161,11 @@ export default function Dashboard() {
               <Icon name="trash" size={13} /> <span className="hidden sm:inline">回收站</span>
             </Link>
             <span className="w-px h-5 bg-[var(--nv-border-2)] mx-0.5" aria-hidden="true" />
-            <a href="/changelog" className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger" data-tooltip="更新面板" aria-label="更新面板">
+            <a href="/changelog" className="btn-ghost text-xs h-8 w-8 rounded-xl inline-flex items-center justify-center tooltip-trigger relative" data-tooltip="更新面板" aria-label="更新面板">
               <Icon name="book" size={13} />
+              {hasUpdate && (
+                <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--nv-accent)] text-[var(--nv-abyss)] text-[9px] font-bold leading-[15px] flex items-center justify-center shadow-sm">新</span>
+              )}
             </a>
             <ThemeToggle className="h-8" />
             <span className="w-px h-5 bg-[var(--nv-border-2)] mx-0.5" aria-hidden="true" />
@@ -236,7 +215,7 @@ export default function Dashboard() {
       </section>
 
       {/* 灵感文体墙：精选文体悬浮卡，点击即以该文体开局（取代旧版「纸舟星海」） */}
-      <GenreWall onPick={loadGenre} loadingId={loadingGenre} />
+      <GenreWall onPick={(genre) => router.push('/explore?genre=' + encodeURIComponent(genre))} loadingId={null} />
 
       {/* 主区 */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
@@ -304,48 +283,13 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* 更新公告弹窗 */}
+      {/* 导入 .nfproject 备份包弹窗 */}
       {importFile && (
         <ImportDialog
           file={importFile}
           onDone={handleImportDone}
           onClose={() => setImportFile(null)}
         />
-      )}
-      {showChangelog && (
-        <Modal open onClose={() => setShowChangelog(false)} bare closeOnOverlay={false} panelClassName="max-w-md" labelledBy="changelog-modal-title">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-1.5 h-5 rounded-full bg-primary/60" />
-              <h2 id="changelog-modal-title" className="text-lg font-semibold text-foreground">更新公告 · {LATEST_VERSION}</h2>
-            </div>
-            <ul className="space-y-2.5 mb-5">
-              {CHANGELOG_USER_BRIEF.map((item, i) => (
-                <li key={i} className="text-sm text-[var(--nv-text-secondary)] flex items-start gap-2.5">
-                  <span className="w-1 h-1 rounded-full bg-primary/60 mt-2 shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="flex gap-3">
-              <a
-                href="/changelog"
-                className="flex-1 text-center text-sm btn-ghost rounded-xl py-2.5 active:scale-[0.98] flex items-center justify-center gap-1"
-              >
-                查看完整公告 <Icon name="arrowRight" size={13} />
-              </a>
-              <button
-                onClick={() => {
-                  try { localStorage.setItem("novel-forge-last-version", LATEST_VERSION); } catch {}
-                  setShowChangelog(false);
-                }}
-                className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium"
-              >
-                知道了
-              </button>
-            </div>
-          </div>
-        </Modal>
       )}
 
       {/* 右下角署名：GitHub + 作者 */}
@@ -367,14 +311,11 @@ export default function Dashboard() {
 
 // ─── 子组件：灵感文体墙（取代旧版纸舟星海 · v2.57.0） ────────
 
-function GenreWall({ onPick, loadingId }: { onPick: (id: string) => void; loadingId: string | null }) {
+function GenreWall({ onPick, loadingId }: { onPick: (genre: string) => void; loadingId: string | null }) {
   const featured = GENRE_TEMPLATES;
   return (
     <section className="relative z-10 max-w-7xl mx-auto px-6 py-14">
       <div className="mb-7 max-w-2xl relative">
-        {/* 漂浮文体大字装饰（呼应参考图：整体舒适悬浮态） */}
-        <span className="nf-section-float nf-float select-none" style={{ right: "1%", top: "-34px" }} aria-hidden="true">文</span>
-        <span className="nf-section-float nf-float-2 select-none" style={{ right: "15%", top: "8px" }} aria-hidden="true">星</span>
         <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-primary)] glow-dot" /> 灵感文体墙 · Genre Wall
         </div>
@@ -382,7 +323,7 @@ function GenreWall({ onPick, loadingId }: { onPick: (id: string) => void; loadin
           选一种<span className="text-gradient">文体</span>，开启你的世界
         </h2>
         <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
-          每一种文体都是一种讲故事的呼吸——仙侠剑歌、悬疑迷雾、科幻星海。悬浮可窥其气质，点击即以此文体一键开局，AI 带着对应的世界观与节奏陪你写到完稿。
+          每一种文体都是一种讲故事的呼吸——仙侠剑歌、悬疑迷雾、科幻星海。先点选你心仪的文体，进入探讨模式，和 AI 一起把世界观、角色与故事聊清楚，再动笔写正文。
         </p>
       </div>
       <div className="nf-genrewall">
@@ -392,11 +333,11 @@ function GenreWall({ onPick, loadingId }: { onPick: (id: string) => void; loadin
           return (
             <button
               key={g.id}
-              onClick={() => onPick(g.id)}
+              onClick={() => onPick(g.name)}
               disabled={loadingId !== null}
               className="nf-gtile group"
               style={{ "--spine": spine } as React.CSSProperties}
-              aria-label={`以${g.name}开局`}
+              aria-label={`以${g.name}进入探讨模式`}
             >
               <span className="nf-float-word" aria-hidden="true">{g.name.charAt(0)}</span>
               <div className="gtile-icon mb-3">{g.icon}</div>

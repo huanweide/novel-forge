@@ -16,7 +16,7 @@ import type {
   AdoptedItem,
   AdoptCard,
 } from "@/core/explore/types";
-import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS } from "@/core/explore/types";
+import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS, STEP_ICONS, STEP_PROMPTS } from "@/core/explore/types";
 import { toastError, toastCreated, toastWarning } from "@/components/ui/toast";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
@@ -79,6 +79,31 @@ export default function ExplorePage() {
       }
     } catch {
       /* localStorage 损坏，忽略 */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── 从首页文体墙带入的文体：预填 genre 并给出针对性欢迎语 ──
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const g = params.get("genre");
+      if (g) {
+        setConfig((prev) => (prev.genre === g ? prev : { ...prev, genre: g }));
+        setMessages((prev) => {
+          if (prev.length === 1 && prev[0].role === "agent") {
+            return [
+              {
+                role: "agent",
+                content: `你选择了「${g}」文体，我们从这个方向开始构思！\n\n我们从「${STEP_LABELS.opening}」聊起——它决定整本书的方向。\n\n说说你想写什么类型的小说？有什么初步想法？或者试试"抽卡模式"让AI给你灵感。`,
+              },
+            ];
+          }
+          return prev;
+        });
+      }
+    } catch {
+      /* URL 解析失败，忽略 */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -519,8 +544,14 @@ export default function ExplorePage() {
     ]);
   }, []);
 
+  // 点击引导条的示例提问：先切回对话模式，确保用户看得到这次发送（否则在抽卡/大纲模式下消息会发到后台却看不见）
+  const handleGuideSend = useCallback((text: string) => {
+    if (mode !== "chat") setMode("chat");
+    handleSend(text);
+  }, [mode, handleSend]);
+
   return (
-    <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-secondary)] animate-in fade-in">
+    <div className="min-h-screen flex flex-col bg-[var(--nv-void)] text-[var(--nv-text-secondary)] animate-in fade-in">
       {/* ── 顶栏 ── */}
       <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-sm" inert={leftDrawerOpen || rightDrawerOpen}>
         <div className="max-w-full mx-auto flex items-center justify-between">
@@ -622,8 +653,13 @@ export default function ExplorePage() {
         <StepProgress currentStep={currentStep} onStepChange={handleStepChange} />
       </div>
 
+      {/* ── 构思步骤引导：让新手清楚每一步该聊什么 ── */}
+      {mode !== "outline" && (
+        <StepGuide step={currentStep} onSend={handleGuideSend} />
+      )}
+
       {/* ── 三栏布局 ── */}
-      <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
+      <div className="flex-1 flex min-h-0">
         {/* 左栏：构建配置 */}
         {(showConfig || leftDrawerOpen) && (
           <aside
@@ -640,7 +676,7 @@ export default function ExplorePage() {
         )}
 
         {/* 中栏 */}
-        <main className="flex-1 flex flex-col min-w-0" inert={leftDrawerOpen || rightDrawerOpen}>
+        <main className="flex-1 flex flex-col min-w-0 min-h-0" inert={leftDrawerOpen || rightDrawerOpen}>
           {mode === "outline" ? (
             <OutlinePanel
               outlineText={outlineText}
@@ -706,5 +742,39 @@ export default function ExplorePage() {
         )}
       </div>
     </div>
+  );
+}
+
+// ─── 子组件：构思步骤引导（让新手清楚每一步该聊什么） ──
+function StepGuide({ step, onSend }: { step: ExploreStep; onSend: (text: string) => void }) {
+  const prompts = STEP_PROMPTS[step];
+  return (
+    <section className="border-b border-[var(--nv-border-2)] bg-[var(--nv-surface-1)]/60 px-5 py-3 shrink-0">
+      <div className="max-w-full mx-auto flex flex-col gap-2.5">
+        <div className="flex items-start gap-2.5">
+          <span className="text-lg leading-none mt-0.5 shrink-0" aria-hidden="true">{STEP_ICONS[step]}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-[var(--nv-primary)] tracking-wider uppercase">当前构思步骤</span>
+              <span className="text-sm font-bold text-[var(--nv-text-primary)]">{STEP_LABELS[step]}</span>
+            </div>
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed mt-1">
+              {STEP_DESCRIPTIONS[step]}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 pl-7">
+          {prompts.map((p, i) => (
+            <button
+              key={i}
+              onClick={() => onSend(p)}
+              className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] hover:border-[var(--nv-primary)]/40 hover:text-[var(--nv-primary)] transition-all duration-150 active:scale-95"
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
