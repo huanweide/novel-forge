@@ -141,7 +141,7 @@ const MARKDOWN_COMPONENTS: Components = {
 // 组件主体
 // ═══════════════════════════════════════════
 
-export function MarkdownViewer({ content, projectId, isStreaming = false, onEntityClick }: MarkdownViewerProps) {
+export const MarkdownViewer = React.memo(function MarkdownViewer({ content, projectId, isStreaming = false, onEntityClick }: MarkdownViewerProps) {
 
   // 正文点击代理：在容器层捕获高亮 span 的点击，交给 onEntityClick 跳转设定界面
   const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -204,6 +204,6 @@ export function MarkdownViewer({ content, projectId, isStreaming = false, onEnti
       )}
     </div>
   );
-}
+});
 
 export default MarkdownViewer;

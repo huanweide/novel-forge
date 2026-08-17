@@ -1,17 +1,36 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { memo, useMemo, useState, type ReactNode, type KeyboardEvent } from "react";
 import { Icon } from "@/components/ui/icons";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { StoryNodeData } from "./types";
 
-export function NodeTreeItem({
-  node, allNodes, selectedNode, onSelectNode, onAddSection, depth,
+// Round-29 FIX-8：预建父 id -> 子节点数组 的 Map，O(n) 一次性构建，
+// 消除每个节点递归时 allNodes.filter(parentId===id) 造成的 O(n²) 全量重算。
+type ChildrenMap = Map<string, StoryNodeData[]>;
+
+const EMPTY_NODES: StoryNodeData[] = [];
+
+function buildIndex(nodes: StoryNodeData[]): { childrenMap: ChildrenMap; volumeIds: Set<string> } {
+  const childrenMap: ChildrenMap = new Map();
+  const volumeIds = new Set<string>();
+  for (const n of nodes) {
+    if (n.type === "volume") volumeIds.add(n.id);
+    if (n.parentId) {
+      const arr = childrenMap.get(n.parentId);
+      if (arr) arr.push(n);
+      else childrenMap.set(n.parentId, [n]);
+    }
+  }
+  return { childrenMap, volumeIds };
+}
+
+export const NodeTreeItem = memo(function NodeTreeItem({
+  node, childrenMap, selectedId, onSelectNode, onAddSection, depth,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
   projectId, badgeSlot,
 }: {
-  node: StoryNodeData; allNodes: StoryNodeData[]; selectedNode: StoryNodeData | null;
+  node: StoryNodeData; childrenMap: ChildrenMap; selectedId: string | null;
   onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
   depth: number; batchMode?: boolean; selectedChapterIds?: Set<string>;
   onToggleChapterSelect?: (id: string) => void; onDeleteNode?: (id: string) => void;
@@ -19,17 +38,31 @@ export function NodeTreeItem({
   projectId: string;
   badgeSlot?: ReactNode;
 }) {
-  const router = useRouter();
-  const children = allNodes.filter((n) => n.parentId === node.id);
-  const isSelected = selectedNode?.id === node.id;
+  // 直接从预建的 childrenMap 取子节点，O(1)；不再对全量 allNodes 做 filter。
+  const children = childrenMap.get(node.id) ?? EMPTY_NODES;
+  const isSelected = selectedId === node.id;
   const isImported = node.content?.includes("📥") || false;
   const isChapter = node.type === "chapter" || node.type === "section";
   const isChecked = selectedChapterIds?.has(node.id) || false;
   const typeIcon = node.type === "volume" ? "bookmarked" : node.type === "chapter" ? "book" : node.type === "section" ? "file" : "circle";
 
+  // 键盘入口：Enter / Space 触发与 onClick 相同的选中逻辑（role="button" 语义）。
+  const handleActivate = () => onSelectNode(node);
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleActivate();
+    }
+  };
+
   return (
     <div>
-      <div onClick={() => onSelectNode(node)}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={isSelected}
+        onClick={handleActivate}
+        onKeyDown={handleKeyDown}
         className={`flex items-center gap-1.5 py-1 px-1.5 rounded cursor-pointer text-xs group transition-all duration-150 ${
           isSelected ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-[inset_2px_0_0_0_var(--nv-primary)]" : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] hover:shadow-[inset_2px_0_0_0_var(--nv-border-3)]"
         }`}
@@ -70,7 +103,7 @@ export function NodeTreeItem({
         <span className="text-[var(--nv-text-tertiary)] text-[10px]">{node.wordCount > 0 ? `${node.wordCount}字` : ""}</span>
       </div>
       {children.map((child) => (
-        <NodeTreeItem key={child.id} node={child} allNodes={allNodes} selectedNode={selectedNode}
+        <NodeTreeItem key={child.id} node={child} childrenMap={childrenMap} selectedId={selectedId}
           onSelectNode={onSelectNode} onAddSection={onAddSection} depth={depth + 1}
           batchMode={batchMode} selectedChapterIds={selectedChapterIds}
           onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
@@ -78,17 +111,16 @@ export function NodeTreeItem({
       ))}
     </div>
   );
-}
+});
 
-export function VolumeGroup({
-  volume, children, allNodes, selectedNode, onSelectNode, onAddSection,
+export const VolumeGroup = memo(function VolumeGroup({
+  volume, children, childrenMap, selectedId, onSelectNode, onAddSection,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
   projectId,
 }: {
-  volume: StoryNodeData; children: StoryNodeData[]; allNodes: StoryNodeData[];
-  selectedNode: StoryNodeData | null; onSelectNode: (n: StoryNodeData) => void;
-  onAddSection: (parentId: string | null) => void; batchMode?: boolean;
-  selectedChapterIds?: Set<string>;     onToggleChapterSelect?: (id: string) => void;
+  volume: StoryNodeData; children: StoryNodeData[]; childrenMap: ChildrenMap; selectedId: string | null;
+  onSelectNode: (n: StoryNodeData) => void; onAddSection: (parentId: string | null) => void;
+  batchMode?: boolean; selectedChapterIds?: Set<string>;     onToggleChapterSelect?: (id: string) => void;
     onDeleteNode?: (id: string) => void;
     deletingId?: string | null;
     projectId: string;
@@ -96,10 +128,23 @@ export function VolumeGroup({
   const [collapsed, setCollapsed] = useState(false);
   const totalWords = children.reduce((sum, c) => sum + (c.wordCount || 0), 0);
 
+  const handleToggle = () => setCollapsed(!collapsed);
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleToggle();
+    }
+  };
+
   return (
     <div>
-      <div className="flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer text-xs bg-[var(--nv-accent-soft)] border border-[var(--nv-accent)]/20 hover:border-[var(--nv-accent)]/40 transition-colors"
-        onClick={() => setCollapsed(!collapsed)}>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        onClick={handleToggle}
+        onKeyDown={handleKeyDown}
+        className="flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer text-xs bg-[var(--nv-accent-soft)] border border-[var(--nv-accent)]/20 hover:border-[var(--nv-accent)]/40 transition-colors">
         <Icon name={collapsed ? "arrowRight" : "arrowDown"} size={11} className="text-[var(--nv-accent)]" />
         <Icon name="bookmarked" size={12} className="text-[var(--nv-accent)]" />
         <span className="text-[var(--nv-accent)] font-medium flex-1">{volume.title}</span>
@@ -108,7 +153,7 @@ export function VolumeGroup({
       {!collapsed && (
         <div className="ml-2 border-l border-[var(--nv-accent)]/20 pl-2">
           {children.map((ch) => (
-            <NodeTreeItem key={ch.id} node={ch} allNodes={allNodes} selectedNode={selectedNode}
+            <NodeTreeItem key={ch.id} node={ch} childrenMap={childrenMap} selectedId={selectedId}
               onSelectNode={onSelectNode} onAddSection={onAddSection} depth={1}
               batchMode={batchMode} selectedChapterIds={selectedChapterIds}
               onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
@@ -122,7 +167,7 @@ export function VolumeGroup({
       )}
     </div>
   );
-}
+});
 
 export function OutlineTree({
   nodes, selectedNode, onSelectNode, onAddSection, viewMode,
@@ -137,6 +182,11 @@ export function OutlineTree({
   projectId: string;
   onLoadSample?: () => void;
 }) {
+  // 性能：`childrenMap`（取子节点 O(1)）+ `volumeIds`（平铺视图去 O(n²) 嵌套 find）。
+  // 仅依赖于 nodes，nodes 引用不变则不重建，配合 memo 避免整树无谓重渲。
+  const { childrenMap, volumeIds } = useMemo(() => buildIndex(nodes), [nodes]);
+  const selectedId = selectedNode?.id ?? null;
+
   if (nodes.length === 0) {
     return (
       <div className="px-2 py-10 text-center">
@@ -160,15 +210,15 @@ export function OutlineTree({
     return (
       <div className="space-y-0.5">
         {volumeNodes.map((vol) => {
-          const volChildren = nodes.filter((n) => n.parentId === vol.id);
-          return <VolumeGroup key={vol.id} volume={vol} children={volChildren} allNodes={nodes}
-            selectedNode={selectedNode} onSelectNode={onSelectNode} onAddSection={onAddSection}
+          const volChildren = childrenMap.get(vol.id) ?? EMPTY_NODES;
+          return <VolumeGroup key={vol.id} volume={vol} children={volChildren} childrenMap={childrenMap}
+            selectedId={selectedId} onSelectNode={onSelectNode} onAddSection={onAddSection}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
             onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
             projectId={projectId} />;
         })}
         {nonVolumeRoots.map((root) => (
-          <NodeTreeItem key={root.id} node={root} allNodes={nodes} selectedNode={selectedNode}
+          <NodeTreeItem key={root.id} node={root} childrenMap={childrenMap} selectedId={selectedId}
             onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
             onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
@@ -180,8 +230,9 @@ export function OutlineTree({
     );
   }
 
-  // v1.6.0：时间线视图删除（世界时间已删除，三视图冗余），直接走平铺
-  const flatNodes = nodes.filter((n) => n.type !== "volume" && !(n.parentId && nodes.find((p) => p.id === n.parentId)?.type === "volume"));
+  // v1.6.0：时间线视图删除（世界时间已删除，三视图冗余），直接走平铺。
+  // 用预建的 volumeIds 判断父是否为卷，消除原 nodes.find(...) 嵌套造成的 O(n²)。
+  const flatNodes = nodes.filter((n) => n.type !== "volume" && !(n.parentId && volumeIds.has(n.parentId)));
   const roots = flatNodes.filter((n) => !n.parentId);
 
   if (roots.length === 0) {
@@ -196,7 +247,7 @@ export function OutlineTree({
   return (
     <div className="space-y-0.5">
       {roots.map((root) => (
-        <NodeTreeItem key={root.id} node={root} allNodes={nodes} selectedNode={selectedNode}
+        <NodeTreeItem key={root.id} node={root} childrenMap={childrenMap} selectedId={selectedId}
           onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
           batchMode={batchMode} selectedChapterIds={selectedChapterIds}
           onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}

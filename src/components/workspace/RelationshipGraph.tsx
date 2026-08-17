@@ -339,6 +339,14 @@ export function RelationshipGraph({
     originY: number;
   } | null>(null);
 
+  // 拖动节流：用 rAF 把每帧多次 pointermove 合并成一次 setPositions，避免每 mousemove 都重渲整 SVG
+  const rafRef = useRef<number | null>(null);
+  const pendingPosRef = useRef<{ id: string; x: number; y: number } | null>(null);
+
+  // 出场章节扫描结果缓存：按角色名缓存，避免重复聚焦同一角色时反复扫描全书正文（大书阻塞主线程）
+  const appearancesCacheRef = useRef<Map<string, Array<{ id: string; title: string; count: number }>>>(new Map());
+  const prevStoryNodesRef = useRef<StoryNodeRef[] | undefined>(undefined);
+
   // 角色卡关系（真源）
   const cardRels = useMemo(() => buildCardRelations(characters), [characters]);
 
@@ -426,10 +434,19 @@ export function RelationshipGraph({
     ? edges.filter((e) => e.from.id === focusId || e.to.id === focusId)
     : edges;
 
-  // 出场章节（聚焦角色时计算）
+  // 出场章节（聚焦角色时计算）：结果按角色名缓存，storyNodes 内容变化才清空，避免全书正文重复扫描
   const appearances = useMemo(() => {
     if (!focusNode || !storyNodes?.length) return [];
-    return findAppearances(focusNode.name, storyNodes);
+    if (prevStoryNodesRef.current !== storyNodes) {
+      appearancesCacheRef.current.clear();
+      prevStoryNodesRef.current = storyNodes;
+    }
+    const cache = appearancesCacheRef.current;
+    const cached = cache.get(focusNode.name);
+    if (cached) return cached;
+    const result = findAppearances(focusNode.name, storyNodes);
+    cache.set(focusNode.name, result);
+    return result;
   }, [focusNode, storyNodes]);
 
   // ── 拖动 ──
@@ -452,17 +469,50 @@ export function RelationshipGraph({
     const dx = ((e.clientX - d.startX) / rect.width) * SVG_W;
     const dy = ((e.clientY - d.startY) / rect.height) * SVG_H;
     if (Math.abs(e.clientX - d.startX) + Math.abs(e.clientY - d.startY) > 4) d.moved = true;
-    setPositions((prev) => ({ ...prev, [d.id]: { x: d.originX + dx, y: d.originY + dy } }));
+    // 把最新位置存入 ref，rAF 每帧最多提交一次 setPositions，避免每 mousemove 重渲整 SVG
+    pendingPosRef.current = { id: d.id, x: d.originX + dx, y: d.originY + dy };
+    if (rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const p = pendingPosRef.current;
+        if (p) setPositions((prev) => ({ ...prev, [p.id]: { x: p.x, y: p.y } }));
+      });
+    }
+  };
+  // 立即把 pending 的拖动位置提交并清空（用于松手时拿到最新坐标后持久化）
+  const flushPendingDrag = () => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    const p = pendingPosRef.current;
+    if (p) {
+      setPositions((prev) => ({ ...prev, [p.id]: { x: p.x, y: p.y } }));
+      pendingPosRef.current = null;
+      return p;
+    }
+    return null;
   };
   const endDrag = (e: React.PointerEvent, node: GraphNode) => {
     const d = dragRef.current;
     (e.currentTarget as SVGGElement).releasePointerCapture?.(e.pointerId);
     if (d && d.id === node.id) {
       if (!d.moved) setFocusId(focusId === node.id ? null : node.id);
-      else persistPositions({ ...positions, [d.id]: posOf(node) });
+      else {
+        const flushed = flushPendingDrag();
+        const finalPos = flushed ?? posOf(node);
+        persistPositions({ ...positions, [d.id]: { x: finalPos.x, y: finalPos.y } });
+      }
     }
     dragRef.current = null;
   };
+
+  // 卸载时取消未执行的 rAF，避免对卸载后的组件 setState
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const knownIds = useMemo(() => new Set(characters.map((c) => c.id)), [characters]);
 

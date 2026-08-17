@@ -46,6 +46,94 @@ function para(text: string, opts: ParaOpts = {}): string {
   return `<w:p>${pprXml}${rprXml}<w:r>${textRuns(text)}</w:r></w:p>`;
 }
 
+/**
+ * 行内 Markdown 解析（仅作用于正文）：把 `**加粗**` / `*斜体*` 拆成带 rPr 的独立 run。
+ * 文本一律先 escapeXml 再落 XML，绝不破坏结构；不含标记的纯文本保持原样。
+ * 每个片段都自带 <w:r> 包裹（OOXML 要求 <w:t> 必须在 <w:r> 内）。
+ */
+function parseInline(text: string): string {
+  let out = "";
+  let plain = "";
+  const flush = () => {
+    if (plain) {
+      out += `<w:r><w:t xml:space="preserve">${escapeXml(plain)}</w:t></w:r>`;
+      plain = "";
+    }
+  };
+  const n = text.length;
+  let i = 0;
+  while (i < n) {
+    // 加粗 **...**（优先于单 *，避免误判）
+    if (text.startsWith("**", i)) {
+      const end = text.indexOf("**", i + 2);
+      if (end !== -1) {
+        flush();
+        const inner = text.slice(i + 2, end);
+        out += `<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escapeXml(inner)}</w:t></w:r>`;
+        i = end + 2;
+        continue;
+      }
+    }
+    // 斜体 *...*
+    if (text[i] === "*") {
+      const end = text.indexOf("*", i + 1);
+      if (end !== -1 && end > i + 1) {
+        flush();
+        const inner = text.slice(i + 1, end);
+        out += `<w:r><w:rPr><w:i/></w:rPr><w:t xml:space="preserve">${escapeXml(inner)}</w:t></w:r>`;
+        i = end + 1;
+        continue;
+      }
+    }
+    plain += text[i];
+    i++;
+  }
+  flush();
+  return out;
+}
+
+/**
+ * 把一段正文（可能含内部 \n）转成 w:r 运行序列：
+ * - 逐行处理，行间用 <w:r><w:br/></w:r> 衔接（保持 textRuns 的多行行为）
+ * - 块级：`# 标题` → 加粗+大字号 run；`- ` 开头 → 前缀 `• ` 符号
+ * - 其余行走 parseInline（行内粗体/斜体）
+ */
+function bodyRuns(block: string): string {
+  const lines = (block || "").split("\n");
+  const parts: string[] = [];
+  lines.forEach((line, idx) => {
+    if (idx > 0) parts.push("<w:r><w:br/></w:r>");
+    const heading = /^#+\s+(.*)$/.exec(line);
+    const list = /^-\s+(.*)$/.exec(line);
+    if (heading) {
+      const t = heading[1];
+      parts.push(
+        `<w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">${escapeXml(t)}</w:t></w:r>`
+      );
+    } else if (list) {
+      const t = list[1];
+      parts.push(`<w:r><w:t xml:space="preserve">• </w:t></w:r>`);
+      parts.push(parseInline(t));
+    } else {
+      parts.push(parseInline(line));
+    }
+  });
+  return parts.join("");
+}
+
+/**
+ * 正文段落：在 <w:pPr> 内加首行缩进 480 twips（≈2 中文字，中文段首缩进 2 字），
+ * 正文内容走 Markdown 解析（bodyRuns）。字号沿用 styles.xml 的 docDefault(21=10.5pt)，
+ * 故不再逐 run 显式设 sz。仅作用于正文，不影响标题/目录/页脚（那些走 para）。
+ */
+function bodyPara(text: string, opts: ParaOpts = {}): string {
+  const ppr: string[] = [];
+  if (opts.spacingBefore) ppr.push(`<w:spacing w:before="${opts.spacingBefore}"/>`);
+  ppr.push(`<w:ind w:firstLine="480"/>`);
+  const pprXml = `<w:pPr>${ppr.join("")}</w:pPr>`;
+  return `<w:p>${pprXml}${bodyRuns(text)}</w:p>`;
+}
+
 /** 组装最小可用 DOCX，返回 ZIP Buffer。 */
 export function buildDocx(
   projectName: string,
@@ -58,6 +146,11 @@ export function buildDocx(
 
   body.push(para(projectName, { bold: true, sizeHalf: 36 }));
   if (author) body.push(para(`作者：${author}`, { sizeHalf: 24 }));
+
+  // 目录域：标题段之后、正文之前插入 TOC 域，Word 打开提示更新即可。
+  body.push(
+    `<w:p><w:pPr><w:spacing w:before="240"/></w:pPr><w:fldSimple w:instr="TOC"><w:r><w:t xml:space="preserve">（右键「更新域」以生成目录）</w:t></w:r></w:fldSimple></w:p>`
+  );
 
   for (const ch of chapters) {
     const titleSize = ch.depth <= 0 ? 30 : ch.depth === 1 ? 26 : 24;
@@ -72,7 +165,7 @@ export function buildDocx(
       for (const b of blocks) {
         const trimmed = b.trim();
         if (!trimmed) continue;
-        body.push(para(trimmed, { sizeHalf: 21 }));
+        body.push(bodyPara(trimmed));
       }
     } else if (!ch.outline) {
       body.push(para("（此节暂无内容）", { sizeHalf: 21 }));
@@ -162,6 +255,11 @@ export async function buildDocxStream(
   body.push(para(projectName, { bold: true, sizeHalf: 36 }));
   if (author) body.push(para(`作者：${author}`, { sizeHalf: 24 }));
 
+  // 目录域：标题段之后、正文之前插入 TOC 域，Word 打开提示更新即可。
+  body.push(
+    `<w:p><w:pPr><w:spacing w:before="240"/></w:pPr><w:fldSimple w:instr="TOC"><w:r><w:t xml:space="preserve">（右键「更新域」以生成目录）</w:t></w:r></w:fldSimple></w:p>`
+  );
+
   for (const ch of chapters) {
     const titleSize = ch.depth <= 0 ? 30 : ch.depth === 1 ? 26 : 24;
     body.push(para(ch.title, { bold: true, sizeHalf: titleSize, spacingBefore: 240 }));
@@ -175,7 +273,7 @@ export async function buildDocxStream(
       for (const b of blocks) {
         const trimmed = b.trim();
         if (!trimmed) continue;
-        body.push(para(trimmed, { sizeHalf: 21 }));
+        body.push(bodyPara(trimmed));
       }
     } else if (!ch.outline) {
       body.push(para("（此节暂无内容）", { sizeHalf: 21 }));

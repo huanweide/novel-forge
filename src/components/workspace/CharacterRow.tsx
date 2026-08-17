@@ -42,7 +42,18 @@ function CharacterRowImpl({
         onClick={e => e.stopPropagation()}
         className="rounded accent-[var(--nv-accent)] shrink-0 h-3.5 w-3.5"
       />
-      <div onClick={() => onEdit(character)} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onEdit(character)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onEdit(character);
+          }
+        }}
+        className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+      >
         <span className="w-5 h-5 rounded-full bg-[var(--nv-surface-2)] flex items-center justify-center text-[10px] shrink-0">
           {character.name[0]}
         </span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { Icon } from "@/components/ui/icons";
@@ -11,6 +11,142 @@ import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
 import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
 import { useWriterStore } from "@/store";
+
+// 项目实体（名→颜色→id），用于章节实体彩色徽章与点击跳转
+type ProjectEntity = {
+  id: string; name: string; type: "character" | "lorebook"; color: string; category?: string;
+};
+
+/**
+ * 流式正文节流：AI 逐 token 生成时，把高频变化的 value 合并到下一帧只提交一次，
+ * 避免每个 token 都触发下游（ReactMarkdown 全量重解析）重渲染——大书越写越卡的根因。
+ * - active=false（非流式）：直接透传最新值，保证最终状态精确无残留。
+ * - active=true（流式）：多次更新合并到下一帧一次提交。
+ */
+function useRafThrottledValue(value: string, active: boolean): string {
+  const [display, setDisplay] = useState(value);
+  const latest = useRef(value);
+  const raf = useRef<number | null>(null);
+  latest.current = value;
+
+  useEffect(() => {
+    if (!active) {
+      if (raf.current != null) {
+        cancelAnimationFrame(raf.current);
+        raf.current = null;
+      }
+      setDisplay(value);
+      return;
+    }
+    if (raf.current == null) {
+      raf.current = requestAnimationFrame(() => {
+        raf.current = null;
+        setDisplay(latest.current);
+      });
+    }
+    return () => {
+      if (raf.current != null) {
+        cancelAnimationFrame(raf.current);
+        raf.current = null;
+      }
+    };
+  }, [value, active]);
+
+  return display;
+}
+
+/**
+ * 流式正文显示区（标题 / 朗读 / 图例 / 实体徽章 / Markdown）。
+ * 抽成 React.memo 子组件，props 均为稳定引用（content 仅随流式节流值变化），
+ * 逐 token 更新时只有本子树重渲，外层面板（工具栏 / 侧栏 / 状态栏）不跟着每 token 重渲。
+ */
+const StreamingBody = memo(function StreamingBody({
+  content,
+  selectedNode,
+  projectId,
+  isStreaming,
+  onEntityClick,
+  showTTS,
+  onShowTTSChange,
+  projectEntities,
+}: {
+  content: string;
+  selectedNode: StoryNodeData;
+  projectId: string;
+  isStreaming: boolean;
+  onEntityClick: (id: string, type: "character" | "lorebook") => void;
+  showTTS: boolean;
+  onShowTTSChange: (v: boolean) => void;
+  projectEntities: ProjectEntity[];
+}) {
+  // 章节实体彩色徽章：扫描本章正文匹配项目实体（随节流后的 content 变化）
+  const chapterEntities = useMemo(() => {
+    if (!content || projectEntities.length === 0) return [];
+    const found = new Map<string, ProjectEntity>();
+    for (const e of projectEntities) {
+      if (e.name && content.includes(e.name) && !found.has(e.id)) found.set(e.id, e);
+    }
+    return Array.from(found.values());
+  }, [content, projectEntities]);
+
+  return (
+    <>
+      {/* 章节标题 */}
+      {selectedNode?.title && (
+        <h1 className="text-xl font-bold text-[var(--nv-text-primary)] text-center mb-6 mt-2 tracking-wide">
+          {selectedNode.title}
+        </h1>
+      )}
+      {/* AI 念书（语音朗读）：标题下方一键朗读本章正文 */}
+      {content && (
+        <div className="flex justify-center mb-5">
+          {showTTS ? (
+            <TTSPlayer text={content} title={selectedNode?.title ?? undefined} onClose={() => onShowTTSChange(false)} />
+          ) : (
+            <button
+              onClick={() => onShowTTSChange(true)}
+              className="flex items-center gap-1.5 h-8 px-3 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
+              title="用浏览器语音朗读本章正文"
+            >
+              <Icon name="radio" size={13} /> 朗读本章
+            </button>
+          )}
+        </div>
+      )}
+      {/* 固定色图例：角色 / 世界书各分类的标注色说明 */}
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-4 text-[10px] text-[var(--nv-text-tertiary)]">
+        {ENTITY_LEGEND.map((it) => (
+          <span key={it.key} className="inline-flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: it.color }} aria-hidden="true" />
+            {it.label}
+          </span>
+        ))}
+      </div>
+      {/* 章节实体彩色徽章：一眼看到本章涉及哪些角色 / 世界书 */}
+      {chapterEntities.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
+          {chapterEntities.map((e) => (
+            <button
+              key={e.id + "|" + e.name}
+              onClick={() => onEntityClick(e.id, e.type)}
+              className="text-[11px] px-2 py-0.5 rounded-full border transition-colors hover:brightness-125"
+              style={{ color: e.color, borderColor: e.color + "59", backgroundColor: e.color + "1a" }}
+              title={e.type === "character" ? "角色 · 点击查看 / 编辑" : "世界书 · 点击查看 / 编辑"}
+            >
+              {e.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <MarkdownViewer
+        content={content}
+        projectId={projectId}
+        isStreaming={isStreaming}
+        onEntityClick={onEntityClick}
+      />
+    </>
+  );
+});
 
 export function CenterPanel({
   selectedNode, isGenerating, reviewResult,
@@ -143,6 +279,18 @@ export function CenterPanel({
 
   const displayContent = streamContent || selectedNode?.content || "";
 
+  // 流式正文节流值：AI 逐 token 生成时合并到下一帧提交一次，喂给 StreamingBody / MarkdownViewer
+  const throttledContent = useRafThrottledValue(displayContent, isGenerating);
+
+  // 实体点击回调：稳定引用，避免 inline 箭头函数导致 StreamingBody memo 失效
+  const handleEntityClick = useCallback(
+    (id: string, type: "character" | "lorebook") => {
+      if (type === "character") onEditCharacter?.(id);
+      else onEditLore?.(id);
+    },
+    [onEditCharacter, onEditLore],
+  );
+
   // 底部状态栏数据（字数沿用项目约定 = 字符数 content.length，随生成实时更新）
   const currentWords = displayContent.length;
   const lineCount = displayContent ? displayContent.split("\n").length : 0;
@@ -265,14 +413,7 @@ export function CenterPanel({
     return () => { cancelled = true; };
   }, [projectId]);
 
-  const chapterEntities = useMemo(() => {
-    if (!displayContent || projectEntities.length === 0) return [];
-    const found = new Map<string, { id: string; name: string; type: "character" | "lorebook"; color: string; category?: string }>();
-    for (const e of projectEntities) {
-      if (e.name && displayContent.includes(e.name) && !found.has(e.id)) found.set(e.id, e);
-    }
-    return Array.from(found.values());
-  }, [displayContent, projectEntities]);
+  // 章节实体彩色徽章（chapterEntities）已下沉到 StreamingBody，随节流后的 content 计算。
 
   return (
     <>
@@ -474,53 +615,6 @@ export function CenterPanel({
           <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-4">
             {displayContent ? (
               <div className="max-w-[700px] mx-auto">
-                {/* 章节标题 */}
-                {selectedNode?.title && (
-                  <h1 className="text-xl font-bold text-[var(--nv-text-primary)] text-center mb-6 mt-2 tracking-wide">
-                    {selectedNode.title}
-                  </h1>
-                )}
-                {/* AI 念书（语音朗读）：标题下方一键朗读本章正文 */}
-                {displayContent && (
-                  <div className="flex justify-center mb-5">
-                    {showTTS ? (
-                      <TTSPlayer text={displayContent} title={selectedNode?.title ?? undefined} onClose={() => setShowTTS(false)} />
-                    ) : (
-                      <button
-                        onClick={() => setShowTTS(true)}
-                        className="flex items-center gap-1.5 h-8 px-3 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
-                        title="用浏览器语音朗读本章正文"
-                      >
-                        <Icon name="radio" size={13} /> 朗读本章
-                      </button>
-                    )}
-                  </div>
-                )}
-                {/* 固定色图例：角色 / 世界书各分类的标注色说明（v0.46.81） */}
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-4 text-[10px] text-[var(--nv-text-tertiary)]">
-                  {ENTITY_LEGEND.map((it) => (
-                    <span key={it.key} className="inline-flex items-center gap-1">
-                      <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: it.color }} aria-hidden="true" />
-                      {it.label}
-                    </span>
-                  ))}
-                </div>
-                {/* 章节实体彩色徽章：一眼看到本章涉及哪些角色 / 世界书 */}
-                {chapterEntities.length > 0 && (
-                  <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
-                    {chapterEntities.map((e) => (
-                      <button
-                        key={e.id + "|" + e.name}
-                        onClick={() => (e.type === "character" ? onEditCharacter?.(e.id) : onEditLore?.(e.id))}
-                        className="text-[11px] px-2 py-0.5 rounded-full border transition-colors hover:brightness-125"
-                        style={{ color: e.color, borderColor: e.color + "59", backgroundColor: e.color + "1a" }}
-                        title={e.type === "character" ? "角色 · 点击查看 / 编辑" : "世界书 · 点击查看 / 编辑"}
-                      >
-                        {e.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 {inlineEditing ? (
                   // 内联编辑态：无外框，页面其余完全不变，仅正文变为可直接修改的可编辑区
                   <div
@@ -531,14 +625,15 @@ export function CenterPanel({
                     className="max-w-[700px] mx-auto text-[15px] leading-relaxed text-[var(--nv-text-secondary)] whitespace-pre-wrap break-words outline-none rounded-lg px-2 -mx-2 min-h-[70vh] focus:bg-[var(--nv-surface-1)]/40"
                   />
                 ) : (
-                  <MarkdownViewer
-                    content={displayContent}
+                  <StreamingBody
+                    content={throttledContent}
+                    selectedNode={selectedNode}
                     projectId={projectId}
                     isStreaming={isGenerating}
-                    onEntityClick={(id, type) => {
-                      if (type === "character") onEditCharacter?.(id);
-                      else onEditLore?.(id);
-                    }}
+                    onEntityClick={handleEntityClick}
+                    showTTS={showTTS}
+                    onShowTTSChange={setShowTTS}
+                    projectEntities={projectEntities}
                   />
                 )}
               </div>
