@@ -637,7 +637,7 @@ export default function GamePage() {
   return (
     <div
       data-game-theme={gameTheme}
-      className="game-root flex h-screen flex-col overflow-hidden font-sans text-[var(--nv-text-secondary)]"
+      className="game-root flex h-screen flex-col overflow-hidden font-sans text-[var(--nv-text-secondary)] animate-in fade-in"
     >
       <GameParticles ref={particlesRef} theme={gameTheme} denoise={denoise} paused={paused} />
 
