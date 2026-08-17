@@ -10,6 +10,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { withNodeLockGen } from "@/lib/game-lock";
+import { assertNodeUnchanged, OptimisticLockError } from "@/lib/optimistic-lock";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { evaluateConfirmEligibility, applyConfirm } from "@/core/confirm-guard";
@@ -314,6 +316,30 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
     return;
   }
 
+  // FIX-3：按 nodeId 串行化同 node 的并发回合，避免两个并发请求都读到旧状态、
+  // 后写覆盖先写导致游戏状态（轮次/背包/实体）丢失。不同 node 之间仍并行。
+  yield* withNodeLockGen(session.nodeId, () => runLockedTurn(input, signal, session));
+}
+
+/**
+ * processGameTurn 的实际回合逻辑。已在 withNodeLockGen 持锁期间执行，
+ * 因此同一 node 的并发回合严格排队、互不打断（不同 node 仍并行）。
+ */
+async function* runLockedTurn(
+  input: GameActionInput,
+  signal: AbortSignal | undefined,
+  session: any,
+): AsyncGenerator<{
+  type: string;
+  content?: string;
+  narrative?: string;
+  options?: GameOption[];
+  newEntities?: GameEntity[];
+  itemChanges?: { operation: string; name: string; quantity: number }[];
+  plotProgress?: number;
+  wordCount?: number;
+  error?: string;
+}> {
   const ctx = await loadGameContext(session.projectId, session.nodeId, session);
 
   // 2. 组装提示词
@@ -414,10 +440,12 @@ export async function* processGameTurn(input: GameActionInput, signal?: AbortSig
   }
 
   // 6.5 世界卡物品联动：游戏新获得的物品，若无对应 item 类世界书词条则自动补充（保留已有物品词条）
-  for (const change of parsed.itemChanges) {
-    if (change.operation === "gain") {
-      await ensureItemLorebook(session.projectId, change.name, (change as any).owner || "主角");
-    }
+  // 批量查询去重（FIX-10 低风险项）：把循环内 N 次 findMany 合并为 1 次。
+  const gainItems = parsed.itemChanges
+    .filter((c) => c.operation === "gain")
+    .map((c) => ({ name: c.name, owner: (c as any).owner || "主角" }));
+  if (gainItems.length > 0) {
+    await ensureItemLorebooks(session.projectId, gainItems);
   }
 
   // 7. 持久化本轮状态
@@ -512,6 +540,43 @@ export async function ensureItemLorebook(projectId: string, itemName: string, ow
       reviewStatus: "pending",
     },
   });
+}
+
+/**
+ * 批量世界卡物品联动（FIX-10 低风险项）：把循环内 N 次 findMany 合并为 1 次。
+ * 与 ensureItemLorebook 语义一致——按 (name, owner) 去重，仅缺「同归属」词条时新建。
+ */
+export async function ensureItemLorebooks(
+  projectId: string,
+  items: { name: string; owner: string }[],
+) {
+  if (items.length === 0) return;
+  const distinctNames = Array.from(new Set(items.map((i) => i.name)));
+  const existing = await prisma.lorebookEntry.findMany({
+    where: { projectId, category: "item", title: { in: distinctNames } },
+    select: { title: true, content: true },
+  });
+  for (const it of items) {
+    if (!it.name || it.name.length < 2) continue;
+    const ownerTag = `归属：${it.owner}`;
+    const owned = existing.find(
+      (e) => e.title === it.name && (e.content || "").includes(ownerTag),
+    );
+    if (owned) continue;
+    await prisma.lorebookEntry.create({
+      data: {
+        projectId,
+        title: it.name,
+        category: "item",
+        keys: [it.name],
+        content: `[游戏获得] 物品「${it.name}」，归属：${it.owner}。`,
+        insertionOrder: 60,
+        enabled: true,
+        relatedEntryIds: [],
+        reviewStatus: "pending",
+      },
+    });
+  }
 }
 
 // 类型标签（避免跨文件导入问题）
@@ -845,6 +910,22 @@ export async function endGameAndExport(sessionId: string): Promise<{
     select: { autoConfirmEnabled: true },
   });
   const autoConfirmOn = proj?.autoConfirmEnabled ?? true;
+
+  // FIX-4 乐观并发校验：导出写回前确认本节点自会话开始以来没被并发修改，
+  // 变了就中止导出（抛错由 /api/game/end 路由收敛为错误响应），避免覆盖并发编辑。
+  try {
+    await assertNodeUnchanged(prisma as any, session.nodeId, {
+      revisionCount: session.node?.revisionCount,
+      updatedAt: session.node?.updatedAt,
+    });
+  } catch (oe) {
+    if (oe instanceof OptimisticLockError) {
+      throw new OptimisticLockError(
+        `游戏导出中止：章节在游戏进行期间被并发修改（${oe.message}），为避免覆盖你的编辑，已取消本次导出。`
+      );
+    }
+    throw oe;
+  }
 
   await prisma.storyNode.update({
     where: { id: session.nodeId },

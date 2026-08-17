@@ -10,6 +10,7 @@
  * v2.0.8：#313 重构。
  */
 import { prisma } from "@/lib/prisma";
+import { assertNodeUnchanged, OptimisticLockError } from "@/lib/optimistic-lock";
 import { AgentOrchestrator } from "@/core/agents";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { collectForbiddenPatterns, scanForbiddenWordsEnhanced } from "@/lib/forbidden-checker";
@@ -234,6 +235,9 @@ export async function runWriteGeneration(
 
     // Phase 1: 流式生成
     let saveCounter = 0;
+    // FIX-4：草稿保存期间若检测到本节点被并发改过（revisionCount 变化），立即停止用部分草稿覆盖，
+    // 避免污染用户当前编辑；最终写回处还会再做一次完整乐观校验。
+    let draftConflicted = false;
     let scanBuffer = ""; // 累积待扫描的新字符
     let lastScanLength = 0; // 上次扫描时的总字符数
     const rtPatterns = collectForbiddenPatterns(template?.forbiddenPatterns || [], customForbidden);
@@ -292,13 +296,27 @@ export async function runWriteGeneration(
           saveCounter = 0;
           const combined = partialDraft + newContent;
           try {
-            await prisma.storyNode.update({
-              where: { id: nodeId },
-              data: {
-                content: combined + "\n\n[PARTIAL_DRAFT]",
-                status: STATUS_DRAFTING,
-              },
-            });
+            if (draftConflicted) {
+              // 已检测到并发编辑，停止用部分草稿覆盖，交由最终写回做乐观校验
+            } else {
+              // FIX-4 乐观校验（轻量）：本节点 revisionCount 自生成开始变化即视为被并发改过，
+              // 立即停止草稿覆盖（最终写回处还会再做一次完整校验）。
+              const fresh = await prisma.storyNode.findUnique({
+                where: { id: nodeId },
+                select: { revisionCount: true },
+              });
+              if (fresh && typeof data.currentNode.revisionCount === "number" && fresh.revisionCount !== data.currentNode.revisionCount) {
+                draftConflicted = true;
+              } else {
+                await prisma.storyNode.update({
+                  where: { id: nodeId },
+                  data: {
+                    content: combined + "\n\n[PARTIAL_DRAFT]",
+                    status: STATUS_DRAFTING,
+                  },
+                });
+              }
+            }
           } catch (e) {
             console.error("草稿保存失败:", e instanceof Error ? e.message : String(e));
           }
@@ -392,6 +410,23 @@ export async function runWriteGeneration(
     // 容错：后处理（含 LLM 审校/摘要）若因限流/超时失败，不阻断正文交付——
     // 直接降级为"仅生成"，仍发送 done。
     let result: any = { nodeId, status: STATUS_COMPLETED };
+    // FIX-4 乐观并发校验：生成完成、即将写回前确认本节点没被并发修改，
+    // 变了就中止落库（发错误事件并结束），避免覆盖并发编辑。
+    try {
+      await assertNodeUnchanged(prisma as any, nodeId, {
+        revisionCount: data.currentNode.revisionCount,
+        updatedAt: data.currentNode.updatedAt,
+      });
+    } catch (oe) {
+      if (oe instanceof OptimisticLockError) {
+        send({
+          type: "error",
+          content: `正文已生成，但章节在生成期间被并发修改（${oe.message}），已中止落库以避免覆盖你的编辑。请手动合并或稍后重新生成。`,
+        });
+        return;
+      }
+      throw oe;
+    }
     try {
       result = await runPostGenerationPipeline({
         send,

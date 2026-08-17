@@ -354,7 +354,7 @@ export default function GamePage() {
               } else if (event.type === "start_done") {
                 doneData = event;
               } else if (event.type === "error") {
-                throw new Error(event.error || "未知错误");
+                throw new Error(event.content || event.error || "未知错误");
               }
             } catch (e: any) {
               if (e.message && !e.message.includes("JSON")) throw e;
@@ -483,7 +483,7 @@ export default function GamePage() {
               } else if (event.type === "game_done") {
                 doneData = event;
               } else if (event.type === "error") {
-                throw new Error(event.error || "未知错误");
+                throw new Error(event.content || event.error || "未知错误");
               }
             } catch (e: any) {
               if (e.message && !e.message.includes("JSON")) throw e;

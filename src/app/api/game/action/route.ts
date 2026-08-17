@@ -48,9 +48,10 @@ export async function POST(req: Request) {
           if (event.type === "error") break;
         }
       } catch (err: unknown) {
-        // 收敛为可读错误，避免泄露原始 err.message（与 write/continue/refine 三路由一致）
-        const info = sseError(err);
-        write({ type: "error", error: info.content });
+        // 收敛为可读错误，避免泄露原始 err.message（与 write/continue/refine 三路由一致）；
+        // 直接发送 sseError 返回的 { type:"error", content, code, hint } 事件，
+        // 不再用裸 error 字段（FIX-10：统一 SSE 契约）。
+        write(sseError(err));
       } finally {
         controller.close();
       }

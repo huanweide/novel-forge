@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { assertNodeUnchanged, OptimisticLockError } from "@/lib/optimistic-lock";
 import { enrichForeshadow } from "@/core/foreshadowing";
 import { writeStorylineProgress } from "@/core/pipeline/storyline-writer";
 import { isGarbageSummary } from "@/core/pipeline/digest-aggregate";
@@ -103,6 +104,24 @@ export async function runPostGenerationPipeline(
     skipSummarize = false,
     skipConsistencyExtract = false,
   } = params;
+
+  // FIX-4 乐观并发校验（防御层）：写回 node 前确认版本未变；变了即中止写回、
+  // 发错误事件并返回，避免覆盖并发编辑（主校验在 write-generation 落库前，此处兜底）。
+  try {
+    await assertNodeUnchanged(prisma as any, nodeId, {
+      revisionCount: currentNode?.revisionCount,
+      updatedAt: currentNode?.updatedAt,
+    });
+  } catch (oe) {
+    if (oe instanceof OptimisticLockError) {
+      send({
+        type: "error",
+        content: `生成后处理检测到章节被并发修改，已中止写回以避免覆盖（${oe.message}）。`,
+      });
+      return { nodeId, status: (currentNode?.status as any) ?? STATUS_DRAFTING } as PostPipelineResult;
+    }
+    throw oe;
+  }
 
   // ── 1. 废词扫描（v3.0 五类检测，始终运行——内置50+规则）──
   let scanMatches: ForbiddenMatch[] = [];
