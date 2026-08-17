@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.33 — 2026-08-17
+
+### 世界级打磨·首页门面：文体墙 emoji→Lucide 图标 + 删除按钮 a11y（FIX-HOME-1）
+
+- **首页文体墙图标统一（emoji→Lucide）**：`page.tsx` 新增 `GENRE_LUCIDE` 映射常量（`Record<string, IconName>`），8 种文体图标从 emoji（☯️🌆🗡️📜💞🚀🔍🥋）全部替换为 Lucide 线性图标组件（mountain / building / swords / history / heart / rocket / search / sword），颜色走 `--nv-text-secondary` 语义令牌，与全站「虚空玻璃」设计体系图标语言彻底统一；纯数据模块 `genres.ts` 的 `icon` 字段保留 emoji 不动（前后端共用/后端落库依赖），仅前端渲染层局部替换。
+- **删除按钮 a11y**：项目卡片删除按钮（hover 显现的 X 图标）补 `aria-label="删除项目"`，屏幕阅读器用户可识别按钮用途。
+- **质量门禁**：零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.33；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.32 — 2026-08-17
 
 ### Round-29 打磨收官：DOCX 排版 + 大书性能 + 大纲树 a11y + 仿写面板卸载兜底（maxloop 魔王系统深度体检·锦上添花四项收口）

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.32";
+export const LATEST_VERSION = "v3.1.33";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.33 世界级打磨·首页门面（FIX-HOME-1）：①首页灵感文体墙 8 种文体图标从 emoji（☯️🌆🗡️📜💞🚀🔍🥋）全部替换为 Lucide 统一线性图标组件（mountain/building/swords/history/heart/rocket/search/sword），与全站「虚空玻璃」设计体系图标语言彻底统一、不再靠 emoji 凑数；②项目卡片删除按钮补 aria-label=\"删除项目\"（屏幕阅读器可识别）；③纯数据模块 genres.ts 的 icon 字段保留 emoji 不动（前后端共用/后端落库依赖），仅前端渲染层 page.tsx 局部建 GENRE_LUCIDE 映射替换；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.33；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.32 Round-29 打磨收官：DOCX 排版 + 大书性能 + 大纲树 a11y + 仿写面板卸载兜底（maxloop 魔王系统深度体检·锦上添花四项收口）：①DOCX 导出不再「顶格贴边」——src/core/docx.ts 段落加首行缩进 <w:ind w:firstLine=\"480\"/>（中文书稿两字缩进），新增轻量 Markdown 解析（**加粗**/*斜体*/标题/列表/分隔线落进 OOXML 结构而非裸文本）+ 目录 TOC 域，导出的 .docx 在 Word/WPS 有正常段落层次与缩进、不再是密密麻麻一整块；配套 docx.feature.test.ts 8 例锁死缩进/Markdown/TOC 契约；②大书不再卡成 PPT——CenterPanel 把高频流式正文抽成 React.memo 的 StreamingBody 子组件、新增 useRafThrottledValue 按帧节流（AI 逐 token 时只正文区局部更新、整棵工作区不再每 token 重渲染），MarkdownViewer 包 React.memo，RelationshipGraph 拖动用 requestAnimationFrame 节流 + 出场扫描结果缓存（拖动不再触发整图重算）；③大纲树性能与键盘可达——OutlineTree 的 buildIndex 从 O(N²) 全量 children 查找改为建 childrenMap 一次 O(N) 索引，节点行加 role=\"button\"/tabIndex={0}/onKeyDown 支持键盘展开折叠与跳转、CharacterRow 补键盘入口，键盘用户终于能纯键盘操作大纲与角色；配套 OutlineTree.test.tsx 4 例；④仿写面板卸载后不再炸 setState——ImitationPanel 的 useEffect 加 AbortController + cleanup，组件卸载后异步结果不再回写已卸载组件（根治 React「不能在卸载组件上更新状态」告警与潜在崩溃）；配套 ImitationPanel.test.tsx 4 例；⑤纯加法、零生产逻辑删除、零接口/LLM 变化、零导出行为回归；tsc 0 错误；vitest 122 文件 1232 全绿（较 v3.1.31 基线 119 文件 1216 +3 文件 +16 测：docx.feature 8 + OutlineTree 4 + ImitationPanel 4）；六处版本文件对齐 v3.1.32；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.31 Round-29 称帝阻断项收口（maxloop 魔王系统深度体检·三连修）：①畸形输入不再炸 500——api-body.ts 新增 safeJson 统一返回 400，覆盖 explore/dissect/game/babylore/imitate/settings/projects 共 13 个裸 req.json() 路由；②游戏回合不再并发覆盖——game-lock.ts 按 nodeId 互斥锁让同节点回合串行、optimistic-lock.ts 写回前比对 revisionCount 防覆盖（write-generation/post-processor/game-engine 三处布防）、game/action 错误走 sseError 统一 content 字段；③软删节点不再泄漏——story/nodes GET 与子节点/revisions 全加 deletedAt:null 过滤、软删按 404、回收站保留；④纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 119 文件 1216 全绿；六处版本文件对齐 v3.1.31；个人 IP 仍归瑞宝宝。",
   "v3.1.30 导出控制字符清洗·根治 Word/WPS/阅读器打不开（maxloop 魔王系统 Round-29 深度体检·潜在 P0 修复）：①真问题——正文若混入 \\x00-\\x1F 等 C0 控制字符（复制粘贴或 AI 偶发生成），docx.ts 的 escapeXml 与 epub.ts 的 escapeHtml/escapeXml 此前只做实体转义、不剥控制字符，会生成非法 XML，导致导出的 .docx/.epub 在 Word/WPS/阅读器里静默打不开、且无任何报错；②修复——在 epub.ts 新增 stripControlChars 统一清洗函数（仅保留 tab/LF/CR、剥离其余 C0 控制符），escapeHtml/escapeXml 先清洗再转义，docx.ts 的 escapeXml 复用同一 sanitizer，导出链路单一真相源；③配套 epub.pure.test.ts 新增 6 例单测锁死清洗契约（控制符被剥、tab/LF/CR 保留、转义仍正确）；纯加法、零逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1199 全绿；六处版本文件对齐 v3.1.30；个人 IP 仍归瑞宝宝。",
@@ -188,6 +189,27 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.33",
+    date: "2026-08-17",
+    title: "世界级打磨·首页门面：文体墙 emoji→Lucide 图标 + 删除按钮 a11y（FIX-HOME-1）",
+    sections: [
+      {
+        label: "首页文体墙图标统一（emoji→Lucide）",
+        items: [
+          "page.tsx 新增 GENRE_LUCIDE 映射常量（Record<string, IconName>），8 种文体 id→Lucide 图标名：仙侠→mountain / 都市→building / 西幻→swords / 历史→history / 言情→heart / 科幻→rocket / 悬疑→search / 武侠→sword",
+          "GenreWall 组件 g.icon emoji 渲染替换为 <Icon name={GENRE_LUCIDE[g.id]} size={22}>，颜色走 --nv-text-secondary 语义令牌",
+          "纯数据模块 genres.ts 的 icon 字段保留 emoji 不动（前后端共用、后端建骨架项目时落库依赖），仅前端渲染层局部替换、不污染数据层",
+        ],
+      },
+      {
+        label: "删除按钮无障碍标签",
+        items: [
+          "ProjectCard 删除按钮（hover 显现的 X 图标）补 aria-label=\"删除项目\"，屏幕阅读器用户可识别按钮用途",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.32",
     date: "2026-08-17",

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { LATEST_VERSION } from "@/lib/changelog-data";
 import { useQuery } from "@/hooks/useApi";
 import { GENRE_TEMPLATES } from "@/core/templates/genres";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { toastError, toastSuccess } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { ImportDialog } from "@/components/workspace/ImportDialog";
@@ -309,6 +309,20 @@ export default function Dashboard() {
   );
 }
 
+// ─── 灵感文体墙：Lucide 图标映射（替代 emoji · 世界级打磨 FIX-HOME-1） ────────
+// 纯数据模块 genres.ts 的 icon 字段仍保留 emoji（前后端共用，后端建骨架项目时落库依赖），
+// 故仅在前端渲染层替换为统一 Lucide 图标，不污染数据层。
+const GENRE_LUCIDE: Record<string, IconName> = {
+  xianxia: "mountain", // 仙侠 → 山岳
+  dushi: "building",   // 都市 → 楼宇
+  xihuan: "swords",    // 西幻 → 双剑
+  lishi: "history",    // 历史 → 史册
+  yanqing: "heart",    // 言情 → 心
+  kehuan: "rocket",    // 科幻 → 火箭
+  xuanyi: "search",    // 悬疑 → 搜索
+  wuxia: "sword",      // 武侠 → 剑
+};
+
 // ─── 子组件：灵感文体墙（取代旧版纸舟星海 · v2.57.0） ────────
 
 function GenreWall({ onPick, loadingId }: { onPick: (genre: string) => void; loadingId: string | null }) {
@@ -340,7 +354,7 @@ function GenreWall({ onPick, loadingId }: { onPick: (genre: string) => void; loa
               aria-label={`以${g.name}进入探讨模式`}
             >
               <span className="nf-float-word" aria-hidden="true">{g.name.charAt(0)}</span>
-              <div className="gtile-icon mb-3">{g.icon}</div>
+              <div className="gtile-icon mb-3"><Icon name={GENRE_LUCIDE[g.id]} size={22} className="text-[var(--nv-text-secondary)]" /></div>
               <div className="text-sm font-semibold text-[var(--nv-text-primary)]">{g.name}</div>
               <div className="text-[11px] text-[var(--nv-text-tertiary)] mt-0.5 leading-snug line-clamp-2">{g.desc}</div>
               <div className="mt-3 text-[11px] text-accent-label opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
@@ -379,6 +393,7 @@ function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: Pr
           disabled={deletingId === project.id}
           className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 text-[var(--nv-text-muted)] hover:text-destructive transition-all shrink-0 disabled:opacity-40"
           title="删除项目"
+          aria-label="删除项目"
         >
           <Icon name="x" size={14} />
         </button>
