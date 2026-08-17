@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.31 — 2026-08-17
+
+### Round-29 称帝阻断项收口：API 输入校验统一 + 游戏并发锁/乐观锁 + 软删 GET 过滤（maxloop 魔王系统深度体检·三连修）
+
+- **畸形输入不再炸 500（FIX-2）**：`src/lib/api-body.ts` 新增 `safeJson(request)`，解析失败统一返回 `400 {error, code:BAD_REQUEST}`，覆盖 `explore` / `dissect` / `game(concept/start/end/outline*)` / `babylore` / `imitate` / `settings` / `projects` build-config 共 13 个此前裸 `req.json()` 的路由；合法输入行为不变。配套 `api-body.test.ts` 2 例。
+- **游戏回合不再并发覆盖（FIX-3/4/10）**：新增 `src/lib/game-lock.ts` 按 `nodeId` 内存互斥锁，同一 node 的并发 `/api/game/action` 严格串行、不同 node 并行；新增 `src/lib/optimistic-lock.ts` 的 `assertNodeUnchanged`，写回前重读 node 比对 `revisionCount`（无则 `updatedAt`）防覆盖，`write-generation` / `post-processor` / `game-engine` 三处写回点布防；`game/action` 错误改走 `sseError()` 统一 `content` 字段，前端弹性读取。配套 `game-lock.test.ts`(6) + `optimistic-lock.test.ts`(5)。
+- **软删节点不再泄漏（FIX-5）**：`story/nodes/[id]` 主 GET 与子节点 include、`revisions`、`revisions/[revId]` 均加 `deletedAt: null` 过滤，软删节点按「不存在」返回 404；回收站路由刻意保留（需定位已删）。配套 `route.test.ts`(2) + `revisions/route.test.ts`(2)。
+- **质量门禁**：纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 119 文件 1216 全绿；六处版本文件对齐 v3.1.31；个人 IP 仍归瑞宝宝。
+
 ## v3.1.30 — 2026-08-17
 
 ### 导出控制字符清洗·根治 Word/WPS/阅读器打不开（maxloop 魔王系统 Round-29 深度体检·潜在 P0 修复）

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.30";
+export const LATEST_VERSION = "v3.1.31";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.31 Round-29 称帝阻断项收口（maxloop 魔王系统深度体检·三连修）：①畸形输入不再炸 500——api-body.ts 新增 safeJson 统一返回 400，覆盖 explore/dissect/game/babylore/imitate/settings/projects 共 13 个裸 req.json() 路由；②游戏回合不再并发覆盖——game-lock.ts 按 nodeId 互斥锁让同节点回合串行、optimistic-lock.ts 写回前比对 revisionCount 防覆盖（write-generation/post-processor/game-engine 三处布防）、game/action 错误走 sseError 统一 content 字段；③软删节点不再泄漏——story/nodes GET 与子节点/revisions 全加 deletedAt:null 过滤、软删按 404、回收站保留；④纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 119 文件 1216 全绿；六处版本文件对齐 v3.1.31；个人 IP 仍归瑞宝宝。",
   "v3.1.30 导出控制字符清洗·根治 Word/WPS/阅读器打不开（maxloop 魔王系统 Round-29 深度体检·潜在 P0 修复）：①真问题——正文若混入 \\x00-\\x1F 等 C0 控制字符（复制粘贴或 AI 偶发生成），docx.ts 的 escapeXml 与 epub.ts 的 escapeHtml/escapeXml 此前只做实体转义、不剥控制字符，会生成非法 XML，导致导出的 .docx/.epub 在 Word/WPS/阅读器里静默打不开、且无任何报错；②修复——在 epub.ts 新增 stripControlChars 统一清洗函数（仅保留 tab/LF/CR、剥离其余 C0 控制符），escapeHtml/escapeXml 先清洗再转义，docx.ts 的 escapeXml 复用同一 sanitizer，导出链路单一真相源；③配套 epub.pure.test.ts 新增 6 例单测锁死清洗契约（控制符被剥、tab/LF/CR 保留、转义仍正确）；纯加法、零逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1199 全绿；六处版本文件对齐 v3.1.30；个人 IP 仍归瑞宝宝。",
   "v3.1.29 上下文预览接口与生产写作口径对齐（高级开发·上下文架构自查·小修复）：①真问题——POST /api/generate/preview-context 调试接口此前没加载 storyBeat/pendingCommitment、也没跑 classifyEvents，导致「上下文预览」拼出的 systemPrompt 比真实生成少一块 S/A/B 三级分层记忆，排查「AI 为什么忘了某条线」时会被误导；②修复——补加载 storyBeat+pendingCommitment、用 classifyEvents 算出与生产完全一致的 tieredMemory 注入 buildPromptContext，预览现在如实反映真实生成所用的上下文；③纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 115 文件 1193 全绿；个人 IP 仍归瑞宝宝。",
   "v3.1.28 探讨模式不再弹「数据库未连接」吓人（体验修复·系统自检横幅·场景感知）：①根因——SystemStatusBanner 挂在根布局全局显示 DB+AI 两项未配置警告；但探讨模式（/explore）是纯对话式前期构思阶段，用户本地没跑 Postgres 很正常、根本不需要数据库，顶部横幅大张旗鼓报「数据库未连接」看着像报错、像坏了；②修复——横幅组件用 usePathname() 检测 /explore 路径，自动跳过 DB 项（探讨模式不需要数据库），AI 项保留（探讨确实需要 AI 对话）；③零回归——其他页面（写作台/设置/首页等）仍正常显示 DB+AI 双项警告；④质量门禁——tsc 0 错误；vitest 116 文件 1194 全绿；六处版本文件对齐 v3.1.28；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -186,6 +187,37 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.31",
+    date: "2026-08-17",
+    title: "Round-29 称帝阻断项收口：API 输入校验统一 + 游戏并发锁/乐观锁 + 软删 GET 过滤",
+    sections: [
+      {
+        label: "畸形输入不再炸 500（FIX-2）",
+        items: [
+          "src/lib/api-body.ts 新增 safeJson(request)：解析失败统一返回 400 {error, code:BAD_REQUEST}，覆盖 explore/dissect/game(concept/start/end/outline*)/babylore/imitate/settings/projects build-config 共 13 个此前裸 req.json() 的路由，合法输入行为不变",
+          "新增 api-body.test.ts 2 例锁死 safeJson 契约（合法→body / 畸形→400）",
+        ],
+      },
+      {
+        label: "游戏回合不再并发覆盖（FIX-3/4/10）",
+        items: [
+          "FIX-3（P1→P0）：新增 src/lib/game-lock.ts 按 nodeId 内存互斥锁 withNodeLock/withNodeLockGen，同一 node 的并发 /api/game/action 严格串行、不同 node 并行，杜绝后写覆盖先写",
+          "FIX-4（P1）：新增 src/lib/optimistic-lock.ts 的 assertNodeUnchanged，写回前重读 node 比对 revisionCount（无则 updatedAt），变了即中止写回而非覆盖；write-generation/post-processor/game-engine 三处写回点均布防",
+          "FIX-10（P2）：game/action 错误改走 sseError() 统一 content 字段，前端 game/[nodeId]/page.tsx 弹性读 event.content||event.error；顺手把循环内 N 次 findMany 合并为 1 次批量",
+          "新增 game-lock.test.ts(6) + optimistic-lock.test.ts(5) 锁死并发串行与乐观校验",
+        ],
+      },
+      {
+        label: "软删节点不再泄漏（FIX-5）",
+        items: [
+          "FIX-5（P1）：story/nodes/[id] 主 GET 与子节点 include、revisions、revisions/[revId] 均加 deletedAt:null 过滤，软删节点按「不存在」返回 404，回收站路由刻意保留（需定位已删）",
+          "新增 story/nodes/[id]/route.test.ts(2) + revisions/route.test.ts(2) 锁死软删排除",
+          "tsc 0 错误；vitest 119 文件 1216 全绿；六处版本文件对齐 v3.1.31；个人 IP 仍归瑞宝宝",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.30",
     date: "2026-08-17",

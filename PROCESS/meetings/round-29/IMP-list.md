@@ -8,11 +8,13 @@
 - 方案：在 `src/lib/api-body.ts` 新增 `safeJson(request)` → `{ok:true, body} | {ok:false, response(400)}`；全路由替换裸 `req.json()`。
 - 覆盖（grep 实证）：explore/{adopt,chat,create}、dissect/{start,chat,to-project}、game/{concept,start,end,outline/generate,outline/chat,action}、babylore/clear-filled、imitate/start、settings/models、projects/[id]/build-config。
 - 验证：新增 `api-body.test.ts` 的 `safeJson` 单测（畸形 JSON→400、合法→body）；tsc 0 + 全绿。
+- **状态（2026-08-17·v3.1.31）**：已收口——api-body.ts 新增 safeJson 覆盖 13 个裸 req.json() 路由；api-body.test.ts +2；tsc 0 + vitest 119 文件 1216 全绿已推送。
 
 ## IMP-2 ｜ game/action SSE 错误契约统一（P2）
 - 现状：`game/action/route.ts:53` 发 `error` 字段，其余生成路由发 `content`，前端各自对应无 live bug，但契约分裂。
 - 方案：改 `game/action` 用 `sseError()` 统一 `content` 字段；前端 `game/[nodeId]/page.tsx:357,486` 弹性读取 `event.content || event.error`。
 - 验证：tsc 0 + 游戏相关测试全绿 + 无头点验错误流。
+- **状态（2026-08-17·v3.1.31）**：已收口——game/action 错误改走 sseError() 统一 content 字段，前端 game/[nodeId]/page.tsx 弹性读 event.content||event.error；随游戏集群一并交付。
 
 ## IMP-3 ｜ useEffect 无 AbortController 清理（P1 → 已精确化）
 - 现状（general-purpose 子代理审计实证）：src/ 共 100 个 useEffect，绝大多数已用 alive/cancelled 标志 + cleanup 或 AbortController 防护。真实命中极少：
@@ -40,7 +42,13 @@
 - 方案：流式正文拆 memo 子组件、Markdown 增量/缓存、大纲树 memo + 预建 childrenMap、关系图拖动 rAF 节流 + 出场扫描按需。
 - 验证：tsc 0 + 大书（千节点/长章）无头截图对比帧率、无卡顿。
 
-## 阶段二投票（降级下由 Chair 自审收敛；待另外 3 份报告到齐后定稿）
-- 已收 2/5 并行报告（导出、性能）；待 a11y / 游戏模式 / 数据层。
-- 当前倾向：IMP-1（P1 必做）、IMP-3（P1 精确化）、IMP-5（P1+潜在P0）、IMP-6（P1）过半通过；IMP-2（P2）、IMP-4（P2 暂缓）通过/暂缓。
-- 下一轮：3 份到齐→整合评审→阶段三方案细化→阶段四代码执行（IMP-1 与 IMP-5 控制字符项优先，因潜在 P0）→阶段五复检。
+## IMP-7 ｜ 游戏回合并发锁 + AI 写乐观锁（P1→P0 / P1，已收口 v3.1.31）
+- 来源：general-purpose 子代理（游戏集群 commit 2c66a66）。
+- FIX-3（P1→P0）：src/lib/game-lock.ts 新增按 nodeId 内存互斥锁 withNodeLock/withNodeLockGen，同一 node 的并发 /api/game/action 严格串行、不同 node 并行，杜绝后写覆盖先写。
+- FIX-4（P1）：src/lib/optimistic-lock.ts 的 assertNodeUnchanged，写回前重读 node 比对 revisionCount（无则 updatedAt），变了即中止写回而非覆盖；write-generation.ts/post-processor.ts/game-engine.ts 三处写回点均布防。
+- 验证：game-lock.test.ts(6) + optimistic-lock.test.ts(5)；tsc 0 + vitest 全绿已推送。
+
+## 阶段二投票（已收口）
+- 5 项「称帝」阻断全部解决：① 导出控制字符清洗（v3.1.30，潜在 P0）② 游戏回合并发锁（v3.1.31，P1→P0）③ AI 写乐观锁（v3.1.31，P1）④ API 输入校验统一（v3.1.31，P1）⑤ 软删 GET 过滤（v3.1.31，P1）。
+- 判词更新：原「尚不够格称帝」的 5 个阻断项已清零，按既定门槛 novel-forge 现已**够格称帝**（高质量可上线 + 五阻断清零）；剩余 FIX-6（DOCX 排版）/FIX-7（大书性能）/FIX-8（a11y 键盘入口）/FIX-9（ImitationPanel useEffect）为锦上添花项，不阻断称帝，进行中。
+- 下一轮：派发 FIX-6/7/8/9 并行收口 → 阶段五复检 → 最终判词 + 收官升版。
