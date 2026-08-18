@@ -84,6 +84,7 @@ export function PostGenPanel({
   const [tab, setTab] = useState<TabKey>("extraction");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(null);
 
   // ── 提取结果的采纳状态 ──
   const [adoptedChars, setAdoptedChars] = useState<Set<string>>(new Set());
@@ -127,7 +128,7 @@ export function PostGenPanel({
   // ── 保存（调用 apply-extraction API） ──
   const handleSave = async () => {
     if (!extractionData) return;
-    setSaving(true); setSaveMessage("");
+    setSaving(true); setSaveMessage(""); setSaveStatus(null);
     try {
       const selected = {
         characters: extractionData.characters.filter((_: any, i: number) => adoptedChars.has(String(i))),
@@ -152,13 +153,16 @@ export function PostGenPanel({
       });
       const data = await res.json();
       if (res.ok) {
+        setSaveStatus("success");
         setSaveMessage(`保存完成：${data.summary || "无变更"}`);
         onRefresh();
         setTimeout(() => onClose(), 1500);
       } else {
+        setSaveStatus("error");
         setSaveMessage(`保存失败：${data.error || "未知错误"}`);
       }
     } catch (err) {
+      setSaveStatus("error");
       setSaveMessage(`网络错误：${err instanceof Error ? err.message : "未知"}`);
     } finally { setSaving(false); }
   };
@@ -195,6 +199,7 @@ export function PostGenPanel({
         extractionData={extractionData}
         extractionLoading={extractionLoading}
         saveMessage={saveMessage}
+        saveStatus={saveStatus}
         saving={saving}
         onSave={handleSave}
         onContinueWriting={onContinueWriting}

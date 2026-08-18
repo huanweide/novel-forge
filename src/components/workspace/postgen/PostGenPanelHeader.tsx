@@ -6,6 +6,7 @@ interface PostGenPanelHeaderProps {
   extractionData: ExtractionData | null;
   extractionLoading: boolean;
   saveMessage: string;
+  saveStatus: "success" | "error" | null;
   saving: boolean;
   onSave: () => void;
   onContinueWriting: () => void;
@@ -16,6 +17,7 @@ export function PostGenPanelHeader({
   extractionData,
   extractionLoading,
   saveMessage,
+  saveStatus,
   saving,
   onSave,
   onContinueWriting,
@@ -41,7 +43,7 @@ export function PostGenPanelHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
-        {saveMessage && <span className={`text-[10px] ${saveMessage.startsWith("✅") ? "text-success" : "text-danger"}`}>{saveMessage}</span>}
+        {saveMessage && <span className={`text-[10px] ${saveStatus === "success" ? "text-success" : "text-danger"}`}>{saveMessage}</span>}
         <Button onClick={onSave} disabled={saving || !extractionData} size="sm" className="btn-success h-7 text-xs">
           {saving ? "保存中…" : "全部采纳"}
         </Button>

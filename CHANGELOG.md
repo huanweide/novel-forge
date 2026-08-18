@@ -1,5 +1,20 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.36 — 2026-08-18
+
+### 世界级打磨·写作工作台：图标纪律收口 + 保存状态死分支修复（FIX-WORKSPACE-1）
+
+- **工作台 UI emoji 与裸符号收口**：
+  - `CenterPanel.tsx` 删除「今日目标达成」toast 文案中的装饰性 emoji `✨`，toast 文案回归纯文字。
+  - `ProjectConfigPanel.tsx` 正则预设选择弹窗的关闭按钮从裸符号 `✕` 替换为 Lucide `<Icon name="x" size={12} />`，UI 操作图标走统一 Icon 组件。
+  - `MonitorPanel.tsx` 近 7 天字数达标格子的状态标记从裸符号 `✓` 替换为 Lucide `<Icon name="check" size={9} />`。
+  - `QualityScoreBar.tsx` 质量评分徽章的状态标记从裸符号 `✓`/`✕` 统一替换为 Lucide `check`/`x`，保持全站状态图标语言一致。
+- **PostGenPanel 保存状态死分支修复**：
+  - `PostGenPanelHeader.tsx` 原用 `saveMessage.startsWith("✅")` 判断成功/失败并染色，但父组件 `PostGenPanel.tsx` 实际传入的 `saveMessage` 为纯中文文案（如「保存完成：...」）不含 `✅`，导致该条件永远为假、成功消息也被误染成红色 `text-danger`。
+  - 改为显式 `saveStatus: "success" | "error" | null` 状态字段：保存成功时 `setSaveStatus("success")`、失败/网络错误时 `setSaveStatus("error")`；Header 根据 `saveStatus` 决定 `text-success` 或 `text-danger`，彻底移除以 emoji 作为状态信号的嗅探逻辑。
+- **数据层语义标记保留**：`CharacterFilters.tsx`/`CharacterRow.tsx`/`OutlineTree.tsx` 中的 `📥📝🗂` 是角色/大纲过滤与解析依赖的业务语义前缀，按既有「数据层 emoji 不动、仅替换渲染层 UI 图标」范式保留。
+- **截图脚本与质量门禁**：`tmp_shot_workspace.cjs` 补 localStorage 预置关闭 onboarding（`nf_onboarded_v1`）、更新公告（`novel-forge-last-version`）、快捷键速查（`nf-shortcuts-seen`）后再刷新截图，避免首屏被「欢迎来到小说工坊」弹窗遮挡；无头截图 DOM 断言 `emojiPresent:1, svgCount:56`，剩余 1 个 emoji 为保留的数据层语义标记；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.36；个人 IP 仍归瑞宝宝。
+
 ## v3.1.35 — 2026-08-17
 
 ### 世界级打磨·拆解页：死 class 清理 + 卡片图标放大（FIX-DISSECT-1）

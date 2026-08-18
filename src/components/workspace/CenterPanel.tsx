@@ -395,7 +395,7 @@ export function CenterPanel({
     const ck = `nf-daily-celebrated-${projectId}-${new Date().toISOString().slice(0, 10)}`;
     if (!localStorage.getItem(ck)) {
       localStorage.setItem(ck, "1");
-      toastSuccess("今日目标达成 ✨ 继续保持节奏");
+      toastSuccess("今日目标达成，继续保持节奏");
     }
   }, [dailyReached, projectId, todayWords]);
 

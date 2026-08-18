@@ -274,7 +274,7 @@ export function ProjectConfigPanel({
               <div className="mb-3 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs font-medium text-[var(--nv-text-secondary)]">选择正则预设（点击即添加其全部规则）</span>
-                  <button onClick={() => setShowPresetPicker(false)} className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-primary)]">✕</button>
+                  <button onClick={() => setShowPresetPicker(false)} className="text-xs text-[var(--nv-text-muted)] hover:text-[var(--nv-text-primary)]"><Icon name="x" size={12} /></button>
                 </div>
                 {regexPresets.length === 0 ? (
                   <p className="text-xs text-[var(--nv-text-muted)]">暂无正则类预设。可先去「创意工坊」创建/导入正则预设。</p>

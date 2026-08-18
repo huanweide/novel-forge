@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.35";
+export const LATEST_VERSION = "v3.1.36";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.36 世界级打磨·写作工作台（FIX-WORKSPACE-1）：①工作台 UI emoji/裸符号收口——CenterPanel toast 去 ✨、ProjectConfigPanel 关闭按钮 ✕ 换 Icon x、MonitorPanel 达标 ✓ 与 QualityScoreBar ✓✕ 换 Lucide check/x；②PostGenPanel 保存状态死分支修复——Header 原用 saveMessage.startsWith(\"✅\") 判断成功，但父组件 saveMessage 纯中文不含 ✅，致成功消息恒染红色，改为显式 saveStatus 字段；③保留 CharacterFilters/CharacterRow/OutlineTree 的 📥📝🗂 数据层语义标记；④截图脚本补 localStorage 预置关 onboarding/更新公告/快捷键弹窗；tsc 0 错误；vitest 122/1232 全绿；版本对齐 v3.1.36。",
   "v3.1.35 世界级打磨·拆解页（FIX-DISSECT-1）：①拆解页三页（列表/新建/详情）+ 仿写面板 + 5 个 UI 组件（DissectUpload/DissectDimensions/DissectProgress/DissectAdaptPanel/ImitationPanel）全站走查，图标已全部采用 Lucide <Icon> 组件、无 emoji 违例，数据层 DIMENSION_ICONS 也全是 Lucide 名，与「虚空玻璃」设计体系图标语言一致；②详情页「原样转为项目 / 改编后转项目」两张卡片顶部图标区存在死 class——<div className=\"text-2xl mb-2\"> 包裹固定 size={18} 的 Icon，text-2xl 对 svg 像素尺寸无效、既没把图标放大又属误导死代码，作者本意「大图标」却因 size 固定未实现；③移除 text-2xl 死 class、把 Icon 真正放大到 size={22} 匹配卡片标题区视觉权重，代码更干净、图标更醒目；④纯减法（删死 class）+ 视觉微调、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；无头截图 DOM 断言 emojiPresent=0（list 页 svgCount=5 / new 页 svgCount=2，全站无 emoji）；六处版本文件对齐 v3.1.35；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.34 世界级打磨·探讨页（FIX-EXPLORE-1）：①探讨模式 11 步构建引导（开篇/世界观/主角身份/金手指/核心冲突/势力阵营/力量体系/货币体系/地图/情节脉络/自由讨论）的步骤导航、ChatPanel 顶部步骤标签、CardBrowser 设定卡片分组标题、AdoptedContentPanel 已采纳分组标题，原本直接渲染 emoji（📖🌍🦸✨⚔️🏛️⚡💰🗺️🧵💬），与全站 Lucide 图标纪律冲突、是「分毫不差、世界第一」要消灭的装饰性 emoji；②types.ts 新增 STEP_LUCIDE 渲染层映射常量（Record<ExploreStep, IconName>），11 步 emoji 全部替换为 Lucide 线性图标（开篇→book / 世界观→globe / 主角身份→user / 金手指→sparkles / 核心冲突→swords / 势力阵营→landmark / 力量体系→zap / 货币体系→coins / 地图→map / 情节脉络→gitBranch / 自由讨论→message）；③4 个渲染点统一换 <Icon>（StepGuide size=20 / ChatPanel size=12 / CardBrowser size=12 / AdoptedContentPanel size=12），颜色走 --nv-text-secondary 语义令牌；④数据层 STEP_ICONS 定义保留不动（探讨历史/后端落库可能依赖），仅前端渲染层局部替换、不污染数据层，与首页 GENRE_LUCIDE 同一范式；⑤无头截图 DOM 断言 emojiStepRemaining=0（11 个步骤 emoji 彻底消失）+ svgCount=28（Lucide 图标正常渲染）；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.34；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.33 世界级打磨·首页门面（FIX-HOME-1）：①首页灵感文体墙 8 种文体图标从 emoji（☯️🌆🗡️📜💞🚀🔍🥋）全部替换为 Lucide 统一线性图标组件（mountain/building/swords/history/heart/rocket/search/sword），与全站「虚空玻璃」设计体系图标语言彻底统一、不再靠 emoji 凑数；②项目卡片删除按钮补 aria-label=\"删除项目\"（屏幕阅读器可识别）；③纯数据模块 genres.ts 的 icon 字段保留 emoji 不动（前后端共用/后端落库依赖），仅前端渲染层 page.tsx 局部建 GENRE_LUCIDE 映射替换；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.33；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -191,6 +192,42 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.36",
+    date: "2026-08-18",
+    title: "世界级打磨·写作工作台：图标纪律收口 + 保存状态死分支修复（FIX-WORKSPACE-1）",
+    sections: [
+      {
+        label: "工作台 UI emoji 与裸符号收口",
+        items: [
+          "CenterPanel.tsx 删除「今日目标达成」toast 文案中的装饰性 emoji ✨，toast 文案回归纯文字。",
+          "ProjectConfigPanel.tsx 正则预设选择弹窗的关闭按钮从裸符号 ✕ 替换为 Lucide <Icon name=\"x\" size={12} />，UI 操作图标走统一 Icon 组件。",
+          "MonitorPanel.tsx 近 7 天字数达标格子的状态标记从裸符号 ✓ 替换为 Lucide <Icon name=\"check\" size={9} />。",
+          "QualityScoreBar.tsx 质量评分徽章的状态标记从裸符号 ✓/✕ 统一替换为 Lucide check/x，保持全站状态图标语言一致。",
+        ],
+      },
+      {
+        label: "PostGenPanel 保存状态死分支修复",
+        items: [
+          "PostGenPanelHeader.tsx 原用 saveMessage.startsWith(\"✅\") 判断成功/失败并染色，但父组件 PostGenPanel.tsx 实际传入的 saveMessage 为纯中文文案（如「保存完成：...」）不含 ✅，导致该条件永远为假、成功消息也被误染成红色 text-danger。",
+          "改为显式 saveStatus: \"success\" | \"error\" | null 状态字段：保存成功时 setSaveStatus(\"success\")、失败/网络错误时 setSaveStatus(\"error\")；Header 根据 saveStatus 决定 text-success 或 text-danger，彻底移除以 emoji 作为状态信号的嗅探逻辑。",
+        ],
+      },
+      {
+        label: "数据层语义标记保留",
+        items: [
+          "CharacterFilters.tsx / CharacterRow.tsx / OutlineTree.tsx 中的 📥📝🗂 是角色/大纲过滤与解析依赖的业务语义前缀，按既有「数据层 emoji 不动、仅替换渲染层 UI 图标」范式保留。",
+        ],
+      },
+      {
+        label: "截图脚本与质量门禁",
+        items: [
+          "tmp_shot_workspace.cjs 补 localStorage 预置关闭 onboarding（nf_onboarded_v1）、更新公告（novel-forge-last-version）、快捷键速查（nf-shortcuts-seen）后再刷新截图，避免首屏被「欢迎来到小说工坊」弹窗遮挡。",
+          "无头截图 DOM 断言 emojiPresent=1, svgCount=56，剩余 1 个 emoji 为保留的数据层语义标记；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.36。",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.35",
     date: "2026-08-17",

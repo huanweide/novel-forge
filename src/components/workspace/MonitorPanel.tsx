@@ -279,8 +279,8 @@ export function MonitorPanel({ projectId, nodeId }: { projectId: string; nodeId?
               const wd = ["日", "一", "二", "三", "四", "五", "六"][new Date(d.date + "T00:00:00").getDay()];
               return (
                 <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={`${d.date}：${fmt(d.words)}字`}>
-                  <div className={`w-full h-7 rounded flex items-center justify-center text-[9px] ${reached ? "bg-[var(--nv-success)]/20 text-[var(--nv-success)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted-on-surface-3)]"} ${isToday ? "ring-1 ring-[var(--nv-primary)]" : ""}`}>
-                    {reached ? "✓" : (d.words >= 1000 ? `${(d.words / 1000).toFixed(1)}k` : d.words)}
+                  <div className={`w-full h-7 rounded flex items-center justify-center ${reached ? "" : "text-[9px]"} ${reached ? "bg-[var(--nv-success)]/20 text-[var(--nv-success)]" : "bg-[var(--nv-surface-3)] text-[var(--nv-text-muted-on-surface-3)]"} ${isToday ? "ring-1 ring-[var(--nv-primary)]" : ""}`}>
+                    {reached ? <Icon name="check" size={9} /> : (d.words >= 1000 ? `${(d.words / 1000).toFixed(1)}k` : d.words)}
                   </div>
                   <span className="text-[8px] text-[var(--nv-text-muted-on-surface-3)]">{wd}</span>
                 </div>

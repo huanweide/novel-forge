@@ -7,6 +7,7 @@
  * 任一项 fail 即整体 fail。不含任何新 LLM 调用，纯展示。
  */
 
+import { Icon } from "@/components/ui/icons";
 import { aggregateQuality } from "./quality-aggregate";
 import type { ForbiddenScanResult, LogicScanResult } from "./types";
 
@@ -60,7 +61,7 @@ export function QualityScoreBar({
                     : "border-[var(--nv-border-2)] text-[var(--nv-text-tertiary)]"
               }`}
             >
-              {g.status === "pass" ? "✓" : g.status === "fail" ? "✕" : "·"} {g.label}
+              {g.status === "pass" ? <Icon name="check" size={10} className="shrink-0" /> : g.status === "fail" ? <Icon name="x" size={10} className="shrink-0" /> : <span className="text-[10px]">·</span>} {g.label}
             </span>
           ))}
         </div>
