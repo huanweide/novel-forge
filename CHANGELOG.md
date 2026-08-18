@@ -1,5 +1,14 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.41 — 2026-08-18
+
+### 开发者体验·一键起库脚本 + 快速开始零歧义（DEV-ONEBUTTON-START）
+
+- **真问题（GitHub 分发门槛）**：clone 后需手动敲 `cp .env` → `docker compose up -d` → `npm install` → `npx prisma db push` → `npm run dev` 多条命令，且 `docker compose up -d` 后 PostgreSQL 未就绪就 `prisma db push` 会连接失败；新手易卡在「数据库访问出错」。
+- **修复：新增 `npm run dev:db` 一键启动**：`scripts/dev-with-db.mjs` 自动复制 `.env`、启动含 pgvector 的 PostgreSQL、轮询等待就绪后再 `prisma db push` 建表、最后拉起 `npm run dev`（localhost:3001）；跨平台用 `shell:true` 调 docker/npx/npm，规避 Windows `.cmd` 解析差异。
+- **README 同步**：快速开始把「一行命令全自动」提到最前，补一句为何必须 Postgres（pgvector 向量检索，非随意选型）；顶部版本号 v3.1.28 → v3.1.40 对齐真实代码。
+- **质量门禁**：新增 `.mjs` 不被 tsconfig 编译（不污染 tsc 零错误门禁）；仅改开发工具与文档、零生产逻辑改动；个人 IP 仍归瑞宝宝。
+
 ## v3.1.40 — 2026-08-18
 
 ### 系统自检横幅箭头统一为图标（UI 设计师·图标纪律·无头走查收口·体验修复）

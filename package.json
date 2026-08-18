@@ -1,9 +1,10 @@
 {
   "name": "novel-forge",
-  "version": "3.1.40",
+  "version": "3.1.41",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
+    "dev:db": "node scripts/dev-with-db.mjs",
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint",
