@@ -47,6 +47,7 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [statusMsg, setStatusMsg] = useState("");
+  const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -81,9 +82,11 @@ export default function SettingsPage() {
         if (s.hasKey) fetchModels({ provider: s.llmProvider, baseUrl: s.llmBaseUrl });
       } else {
         setStatusMsg("加载设置失败（HTTP " + res.status + "）");
+        setStatusType("error");
       }
     } catch (err) {
       setStatusMsg("加载设置失败：" + (err instanceof Error ? err.message : "请重试"));
+      setStatusType("error");
     }
   }
 
@@ -160,10 +163,12 @@ export default function SettingsPage() {
     const key = apiKey.trim();
     if (provider !== "local" && !key) {
       setStatusMsg("请填入 API Key");
+    setStatusType("error");
       return;
     }
     setSaving(true);
     setStatusMsg("");
+    setStatusType(null);
     try {
       const res = await fetch("/api/settings", {
         method: "PUT",
@@ -176,7 +181,8 @@ export default function SettingsPage() {
         }),
       });
       if (res.ok) {
-        setStatusMsg("✅ 设置已保存");
+        setStatusMsg("设置已保存");
+        setStatusType("success");
         setHasExistingKey(!!key);
         setApiKey("");
         // 保存后自动连接验证
@@ -185,10 +191,12 @@ export default function SettingsPage() {
         if (provider !== "local") fetchModels({ provider, apiKey: key });
       } else {
         const d = await res.json().catch(() => ({}));
-        setStatusMsg(`❌ 保存失败：${d.error || "未知错误"}`);
+        setStatusMsg(`保存失败：${d.error || "未知错误"}`);
+        setStatusType("error");
       }
     } catch {
-      setStatusMsg("❌ 网络错误，保存失败");
+      setStatusMsg("网络错误，保存失败");
+      setStatusType("error");
     } finally {
       setSaving(false);
     }
@@ -558,7 +566,7 @@ export default function SettingsPage() {
           {statusMsg && (
             <span
               className={`text-sm transition-all duration-300 ${
-                statusMsg.startsWith("✅") ? "text-success" : "text-danger"
+                statusType === "success" ? "text-success" : "text-danger"
               }`}
             >
               {statusMsg}

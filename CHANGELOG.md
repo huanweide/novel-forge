@@ -1,5 +1,18 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.38 — 2026-08-18
+
+### 世界级打磨·设置页：保存状态去 emoji 嗅探（FIX-SETTINGS-ICON-3）
+
+- **保存状态结构化，移除 emoji 嗅探**：
+  - `settings/page.tsx` 原用 `statusMsg.startsWith("✅")` 判断成功并染色，但成功/失败文案本身带有 `✅` / `❌` emoji，是以 emoji 作为状态信号的脆弱反模式。
+  - 新增 `statusType: "success" | "error" | null` 状态字段：保存成功时设 `"success"`，保存失败 / 网络错误 / 加载失败 / "请填入 API Key" 校验时设 `"error"`，清空提示时设 `null`；渲染处按 `statusType` 决定 `text-success` / `text-danger`。
+  - 状态文案全部回归纯中文：`"设置已保存"`、`"保存失败：…"`、`"网络错误，保存失败"` 等，不再带 ✅ / ❌。
+- **截图脚本与质量门禁**：
+  - 新增 `tmp_shot_settings.cjs`（端口 9364），拍 `/settings` 首屏，预置 localStorage 关闭 onboarding / 更新公告 / 快捷键弹窗。
+  - DOM 断言 `settings-full emojiPresent=0 svgCount=13`。
+  - tsc 0 错误；vitest 122 文件 1232 全绿；版本对齐 v3.1.38。
+
 ## v3.1.37 — 2026-08-18
 
 ### 世界级打磨·探索页：采纳状态结构化 + 图标纪律收口（FIX-EXPLORE-ICON-2）
