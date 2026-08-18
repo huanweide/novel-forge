@@ -122,7 +122,7 @@ export function SystemStatusBanner() {
                     href="/settings"
                     className="text-warning hover:text-[var(--nv-text-primary)] underline underline-offset-2"
                   >
-                    去设置页填 Key →
+                    去设置页填 Key <Icon name="arrowRight" size={13} className="inline-block align-middle" />
                   </Link>
                 )}
               </li>

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.39";
+export const LATEST_VERSION = "v3.1.40";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.40 系统自检横幅箭头统一为图标（UI 设计师·图标纪律·无头走查收口·体验修复）：①真问题——v3.1.39 已把更新面板返回链接的裸箭头「← 回首页」换成 Lucide arrowLeft 图标，但全站共享的系统自检横幅「去设置页填 Key →」结尾仍是裸箭头（该横幅在首页/工坊/回收站都会出现），图标纪律未彻底收口；②修复——横幅裸箭头改成 Lucide arrowRight 图标（与更新面板返回链接同族、共享组件三界面同步受益）；③复测——无头走查确认 workshop/recycle 渲染层裸箭头归零（arrows 0）、changelog 返回链接已用 arrowLeft 图标、首页 8 处带 hover 位移的 CTA 箭头属刻意设计保留；④质量门禁——零生产逻辑删除、纯图标渲染点替换、零接口/LLM 变化；tsc 0 错误（仅 2 个 PROCESS//scripts/ 预存临时文件 junk 报错）；vitest 全量 1183/1193 通过 + 10 跳过（2 个 DB 集成测试沙箱无 Postgres 环境失败、与改动无关）；个人 IP 仍归瑞宝宝。",
   "v3.1.39 世界级打磨·更新面板与剩余界面走查收口（FIX-CHANGELOG-ICON-4）：①更新面板 /changelog 右上角返回链接从裸箭头 `← 回首页` 统一为 `<Icon name=\"arrowLeft\" size={14} /> 回首页`，与全站返回链接都用 Lucide 图标的纪律一致；②本轮走查创意工坊 /workshop（DOM 断言 emojiPresent=0 svgCount=70）、回收站 /recycle（emojiPresent=0 svgCount=574）、更新面板 /changelog（UI 组件层 emojiPresent=0，378 来自历史版本说明数据层文本）、首页 /（emojiPresent=0 svgCount=36）均确认 UI 图标纪律合规；③tsc 0 错误；vitest 122 文件 1232 全绿；版本对齐 v3.1.39。",
   "v3.1.38 世界级打磨·设置页（FIX-SETTINGS-ICON-3）：①设置页保存状态不再用 emoji 前缀嗅探：原 `statusMsg.startsWith(\"✅\")` 判断成功/失败且染色，但成功文案就是 \"✅ 设置已保存\"、失败文案是 \"❌ 保存失败…\"，是脆弱的 emoji 状态信号；改为显式 `statusType: \"success\" | \"error\" | null`，成功/失败/加载错误各分支显式设置 statusType，渲染处按 statusType 决定 text-success / text-danger。②去除设置页 UI 中所有 ✅ / ❌ emoji：`\"设置已保存\"` / `\"保存失败：…\"` / `\"网络错误，保存失败\"` / `\"加载设置失败…\"` / `\"请填入 API Key\"` 均回归纯中文文案，状态色由 statusType 承载。③新增 tmp_shot_settings.cjs 无头截图脚本（端口 9364），预置 localStorage 关闭 onboarding/更新公告/快捷键弹窗，首屏 DOM 断言 emojiPresent=0 svgCount=13。④纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.38；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.37 世界级打磨·探索页（FIX-EXPLORE-ICON-2）：①把采纳状态从 emoji 嗅探字符串（'已采纳·角色'/'❌失败'）改为结构化 'writing'/'adopted'/'failed'，ChatPanel 和 CardBrowser 里原 status?.startsWith(\"✅\") 判断成功是死分支（成功串本来就不带 ✅），导致成功卡片在 CardBrowser 仍被误判为可点击采纳；②'❌失败' 红叉 emoji 改 `failed` + Icon alert，UI 图标回归 Lucide；③OutlinePanel 的「确认写入项目」按钮去掉 ✅/⏳ emoji，改成 loader/check 图标 + 中文文案；④无头截图 DOM 断言 explore chat 首屏与 outline 模式均为 emojiPresent=0；tsc 0 错误；vitest 122/1232 全绿；版本对齐 v3.1.37。",
@@ -159,6 +160,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.40 顶部黄色横幅那个箭头也换成图标了（体验修复）：①之前 v3.1.39 把更新面板「← 回首页」的裸箭头换成了统一图标，但首页/工坊/回收站都会出现的那条「系统自检发现 N 项需处理」黄色横幅里，「去设置页填 Key →」结尾还是个光秃秃文本箭头，跟全站图标长得不一致；②现在这条横幅结尾的箭头也换成 Lucide 图标了，三处一起统一；③纯图标统一、没动任何写作功能，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.28 探讨模式不再吓你「数据库没连」了（体验修复）：你进探讨页聊设定的时候，顶部不再弹「数据库未连接」的警告条了——因为探讨模式就是纯聊天构思阶段，根本不需要数据库，你本地没跑 Postgres 很正常。以前一进来就看到两条警告（数据库+AI），像报错又像坏了；现在探讨页只在你没配 AI 钥匙时才提醒你去设置页填 Key，数据库的事等进了写作台再说不迟。其他页面（写作台、设置等）该提醒还是照常提醒。个人 IP 仍归瑞宝宝。",
   "v3.1.27 探讨模式在你没配 AI 钥匙时，不再假装在线骗你了（体验修复·亲自走查）：①以前你从首页选个文体点进去探讨，聊天框顶上一直亮着绿点写着 AI 创作顾问正在协助你构建小说世界，看着像随时能聊；但本地第一次部署根本没填 LLM Key，你兴冲冲打字点发送，结果只弹一句出错了——那绿点是假的。②现在改诚实了：页面会先悄悄查一下 AI 有没有配好，没配好就直接告诉你 AI 未配置 —— 无法与 AI 探讨，对话框里给一张引导卡教你去设置页填 Key，输入框也直接禁用（不再让你白打字报错），连每步的示例提问都换成先去设置页填 Key，才能与 AI 探讨的提示；只有你真配好了 Key，才恢复原来的在线绿点和示例提问。纯 UI 提示修正、没动任何写作功能，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.26 选文体后先「探讨」再写，探讨模式终于聊得明白了（体验修复·重要方针）：①以前首页「灵感文体墙」点一下就建个空项目把你扔进写作台，你啥世界观、啥人物都没有就面对白纸，文案还骗你说「AI 带着对应的世界观」；现在点选一种文体，会带着这个文体进「探讨模式」，先跟 AI 把世界观、角色、故事聊清楚，再动笔写正文。②探讨模式重点升级：顶部新增「当前构思步骤」引导条，每一步（开篇/世界观/主角/金手指…）都写明「这一步该聊什么」，还给你 3 条可一键发送的示例提问，新手不再对着空输入框发懵。③顺手修了首页两个突兀点：背景里漂浮的「文」「星」装饰大字（看着像乱码）删掉了；更新公告不再一进首页就弹窗吓人，改成右上角更新图标上的「新」小徽标，点一下看、看过就消失。④「进入写作台」的文案也讲清了：必须先和 AI 聊出设定并采纳，才能进写作台写小说。纯交互/文案优化、没动任何写作功能，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
@@ -195,6 +197,16 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+    {
+      version: "v3.1.40",
+      date: "2026-08-18",
+      title: "系统自检横幅箭头统一为图标",
+      sections: [
+        { label: "真问题", items: ["v3.1.39 已把更新面板返回链接「← 回首页」换成 Lucide arrowLeft 图标，但全局共享的系统自检横幅「去设置页填 Key →」结尾仍是裸箭头（该横幅在首页/工坊/回收站均出现），图标纪律未彻底收口。"] },
+        { label: "修复", items: ["横幅裸箭头改成 Lucide arrowRight 图标（与更新面板返回链接同族、共享组件三界面同步受益）；无头复测确认 workshop/recycle 渲染层裸箭头归零、changelog 返回链接已用 arrowLeft 图标；首页 8 处带 hover 位移的 CTA 箭头属刻意设计、保留。"] },
+        { label: "质量门禁", items: ["零生产逻辑删除、纯图标渲染点替换、零接口/LLM 变化；tsc 0 错误（仅 2 个 PROCESS//scripts/ 预存临时文件 junk 报错）；vitest 全量 1183/1193 通过 + 10 跳过（2 个 DB 集成测试沙箱无 Postgres 环境失败、与改动无关）；个人 IP 仍归瑞宝宝。"] },
+      ],
+    },
   {
     version: "v3.1.39",
     date: "2026-08-18",
