@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.42";
+export const LATEST_VERSION = "v3.1.43";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.43 创意工坊新增 2 个 SFW 写作内置预设（提炼自社区预设「双人成行 / Atri&Deach（DS鲸鱼特供版）」）：①真问题——有用户问从 SillyTavern 导出的社区预设能否直接塞进 novel-forge 预设系统；但 ST 预设是 prompts[198] + extensions（SPreset/regex_scripts/tavern_helper），大量使用 ST 专用宏 {{setvar::}}/{{getvar::}}/$() 与思考链/mod 机制（reasoning_effort/show_thoughts/assistant_prefill），novel-forge 无对应概念、整包塞进去跑不起来也用不上；②方案——仅抽取其中 SFW 写作价值部分（写作人格「双生写手 Atri&Deach 文风」+ 一组人物塑造心法「圆形人物塑造心法」6 条：充分塑造人物/复杂人格与例外/反全知原则/写实与生理引擎/情绪惯性与锚定/情感基准）落成 2 个内置预设（style 文风卡 + lorebook 世界书），随仓库发布、clone 后首次开工坊·全部页签自动播种可见；③NSFW 集群不纳入——原 ST 预设含大量露骨色情/羞辱调教内容（H小说特写、反差色情、色情吐槽、显性高压调教等），既违反 GitHub 公开仓库内容政策、novel-forge 也用不上，一律排除；④单一数据源——写入 src/lib/builtin-presets.ts 的 BUILTINS（被 /api/seed/presets 与 prisma/seed.ts 共用），内置示范预设由 15 个增至 17 个；⑤质量门禁——纯数据新增、零生产逻辑改动、零接口/LLM 变化；tsc 0 错误；个人 IP 仍归瑞宝宝。",
   "v3.1.42 去数据库改造·零安装本地 SQLite（彻底移除 Postgres/Docker 依赖）：①真问题——原架构强依赖外部 Postgres + Docker，clone 后必须 docker compose up 才能跑，普通用户/换机部署门槛高、沙箱无 Postgres 时整站 DB 集成测试全挂；②方案——改用本地 SQLite 文件库（better-sqlite3 + @prisma/adapter-better-sqlite3），Prisma schema 的 Json/String[] 字段透明序列化为字符串，用 Prisma Client Extension 在底层做对象↔JSON 字符串转换，应用层约 80 个读写文件零改动；③SQLite 限制适配——删除 9 处 mode:insensitive（运行时不支持）、has/hasSome 标量数组过滤改 contains 或 JS 内存过滤、upsert 序列化覆盖 data/create/update 三键；④透明序列化扩展 prisma-serialize.ts 落地，seed 与业务共用同一套；⑤零配置——DATABASE_URL 默认 file:./data/novelforge.db，prisma.ts 未设置时回落并自动建库，clone 后 npm install && npm run dev 即可，无需 Docker/装库；⑥质量门禁——基线对比法确认本改造零新增 tsc 错误（总错误 182<基线 185，全为 main 预存）、vitest 全量保持、四版本文件对齐 v3.1.42；个人 IP 仍归瑞宝宝。",
   "开发者体验·一键起库脚本 + 快速开始零歧义",
   "v3.1.40 系统自检横幅箭头统一为图标（UI 设计师·图标纪律·无头走查收口·体验修复）：①真问题——v3.1.39 已把更新面板返回链接的裸箭头「← 回首页」换成 Lucide arrowLeft 图标，但全站共享的系统自检横幅「去设置页填 Key →」结尾仍是裸箭头（该横幅在首页/工坊/回收站都会出现），图标纪律未彻底收口；②修复——横幅裸箭头改成 Lucide arrowRight 图标（与更新面板返回链接同族、共享组件三界面同步受益）；③复测——无头走查确认 workshop/recycle 渲染层裸箭头归零（arrows 0）、changelog 返回链接已用 arrowLeft 图标、首页 8 处带 hover 位移的 CTA 箭头属刻意设计保留；④质量门禁——零生产逻辑删除、纯图标渲染点替换、零接口/LLM 变化；tsc 0 错误（仅 2 个 PROCESS//scripts/ 预存临时文件 junk 报错）；vitest 全量 1183/1193 通过 + 10 跳过（2 个 DB 集成测试沙箱无 Postgres 环境失败、与改动无关）；个人 IP 仍归瑞宝宝。",
@@ -162,6 +163,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.43 创意工坊多了 2 个写作内置预设，还是别人写好的、直接白嫖的（提炼自社区预设「双人成行 / Atri&Deach（DS鲸鱼特供版）」）：①你之前问从 SillyTavern 导出的那种社区预设能不能直接塞进咱们的预设系统——能，但不能整包塞；那种预设是 SillyTavern 专用的（一堆 ST 专属宏和插件机制），咱们这个项目跑不起来也用不上；②所以只挑了里面真正有用的写作干货：一张「双生写手 Atri&Deach 文风」文风卡（直接有力、干净利落、现代短句、对话动作驱动、尊重角色弧光），和一份「圆形人物塑造心法」世界书（6 条怎么把人物写活：充分塑造、复杂人格留例外、反全知、写实生理引擎、情绪惯性、情感基准）；③露骨色情那部分（原预设里占比很大）一律没要——既违反 GitHub 公开仓库规定、咱们也用不上；④这俩预设现在随仓库发布，你 clone 完第一次打开创意工坊·全部页签就自动出现在文风卡和世界书里，套用即用。纯加内容、没动你任何写作功能，质量门禁 tsc 零错误。个人 IP 仍归瑞宝宝。",
   "v3.1.42 不用装数据库了！clone 下来就能跑（去数据库改造）：①以前这项目强依赖一个叫 Postgres 的外部数据库 + Docker 容器，你 clone 完还得先把它跑起来才能用，没装 Docker 的人根本跑不起来；②现在换成你电脑上一个本地 SQLite 文件（./data/novelforge.db），不需要装任何数据库、不需要 Docker，clone 完 npm install && npm run dev 直接开写；③你的所有小说项目、角色、设定都存在这个本地文件里，跟之前一样能存能读，只是背后不再依赖外部服务。纯换底层、你界面上看到的写作功能一个没少，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "新增 npm run dev:db 一键启动，clone 后一行命令自动起库+建表+前端；README 快速开始零歧义",
   "v3.1.40 顶部黄色横幅那个箭头也换成图标了（体验修复）：①之前 v3.1.39 把更新面板「← 回首页」的裸箭头换成了统一图标，但首页/工坊/回收站都会出现的那条「系统自检发现 N 项需处理」黄色横幅里，「去设置页填 Key →」结尾还是个光秃秃文本箭头，跟全站图标长得不一致；②现在这条横幅结尾的箭头也换成 Lucide 图标了，三处一起统一；③纯图标统一、没动任何写作功能，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
@@ -201,6 +203,28 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.43",
+    date: "2026-08-18",
+    title: "创意工坊新增 2 个 SFW 写作内置预设（提炼自社区 Atri&Deach 预设）",
+    sections: [
+      {
+        label: "📚 内置预设扩充",
+        items: [
+          "新增「双生写手·Atri&Deach 文风」style 文风卡：直接有力、干净利落、现代短句、对话与动作驱动、尊重角色真实弧光",
+          "新增「圆形人物塑造心法」lorebook 世界书：6 条 SFW 人物塑造方法论（充分塑造/复杂人格留例外/反全知/写实生理引擎/情绪惯性锚定/情感基准）",
+          "内置示范预设由 15 个增至 17 个，随仓库发布、clone 后首次开工坊·全部页签自动播种可见",
+        ],
+      },
+      {
+        label: "🚫 NSFW 集群未纳入",
+        items: [
+          "原社区 ST 预设含大量露骨色情/羞辱调教内容，违反 GitHub 公开仓库内容政策且 novel-forge 无对应机制，一律排除",
+          "仅抽取 SFW 写作价值部分；单一数据源写入 src/lib/builtin-presets.ts 的 BUILTINS（/api/seed/presets 与 prisma/seed.ts 共用）",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.42",
     date: "2026-08-18",

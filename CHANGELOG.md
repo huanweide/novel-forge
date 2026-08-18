@@ -1,5 +1,17 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.43 — 2026-08-18
+
+### 创意工坊新增 2 个 SFW 写作内置预设（提炼自社区 Atri&Deach 预设）
+
+- **用户场景（为什么做）**：有用户问从 SillyTavern 导出的社区预设（双人成行 / Atri&Deach，DS鲸鱼特供版）能否直接塞进 novel-forge 预设系统；经解析，ST 预设是 `prompts[198]` + `extensions`（SPreset / regex_scripts / tavern_helper），大量使用 ST 专用宏 `{{setvar::}}` / `{{getvar::}}` / `$()` 与思考链/mod 机制（`reasoning_effort` / `show_thoughts` / `assistant_prefill`），novel-forge 无对应概念、整包塞进去跑不起来也用不上。
+- **修复：仅抽取 SFW 写作价值部分进内置预设**：
+  - 新增「双生写手·Atri&Deach 文风」`style` 文风卡：直接有力、干净利落、现代短句、对话与动作驱动、尊重角色真实弧光（偏现代、短句为主、节奏明快）。
+  - 新增「圆形人物塑造心法」`lorebook` 世界书：6 条 SFW 人物塑造方法论——充分塑造人物 / 复杂人格与例外 / 反全知原则 / 写实与生理引擎 / 情绪惯性与锚定 / 情感基准，可作写作参考笔记套用。
+  - 内置示范预设由 15 个增至 17 个；写入 `src/lib/builtin-presets.ts` 的 `BUILTINS`（被 `/api/seed/presets` 路由与 `prisma/seed.ts` 共用，单一数据源），`/api/seed/presets` 按 `{type,title,isBuiltin}` 幂等去重。
+- **NSFW 集群未纳入**：原 ST 预设含大量露骨色情 / 羞辱调教内容（H小说特写、反差色情、色情吐槽、显性高压调教等），既违反 GitHub 公开仓库内容政策（ToS 禁止露骨色情 / 羞辱内容），novel-forge 也用不上，一律排除；仅保留 SFW 写作人格与人物塑造心法。
+- **质量门禁**：纯数据新增、零生产逻辑改动、零接口 / LLM 变化；tsc 0 错误；个人 IP 仍归瑞宝宝。
+
 ## v3.1.42 — 2026-08-18
 
 ### 去数据库改造·彻底移除 Postgres/Docker 依赖（零配置本地 SQLite）

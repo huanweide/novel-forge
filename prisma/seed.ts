@@ -1,4 +1,4 @@
-// 幂等 seed 脚本：播种 16 个内置示范预设（与 /api/seed/presets 同源，单一数据源）
+// 幂等 seed 脚本：播种 17 个内置示范预设（与 /api/seed/presets 同源，单一数据源）
 // 运行：npm run db:seed  →  prisma db seed  →  tsx prisma/seed.ts
 //
 // 说明：
