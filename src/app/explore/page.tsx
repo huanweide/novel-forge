@@ -237,7 +237,7 @@ export default function ExplorePage() {
           );
           setAdoptStatus((prev) => ({
             ...prev,
-            [card.id]: data.entityType === "character" ? "已采纳·角色" : "已采纳·词条",
+            [card.id]: "adopted",
           }));
           if (data.projectId && !createdProjectId) {
             setCreatedProjectId(data.projectId);
@@ -247,11 +247,11 @@ export default function ExplorePage() {
             setCurrentStep(EXPLORE_STEPS[currentIdx + 1]);
           }
         } else {
-          // 失败：保留卡片可重试，状态串与 ChatPanel 检查一致（"❌失败"），绝不提前置 adopted
-          setAdoptStatus((prev) => ({ ...prev, [card.id]: "❌失败" }));
+          // 失败：保留卡片可重试，状态串结构化（"failed"），绝不提前置 adopted
+          setAdoptStatus((prev) => ({ ...prev, [card.id]: "failed" }));
         }
       } catch {
-        setAdoptStatus((prev) => ({ ...prev, [card.id]: "❌失败" }));
+        setAdoptStatus((prev) => ({ ...prev, [card.id]: "failed" }));
       }
     },
     [adopted, config, createdProjectId, currentStep],

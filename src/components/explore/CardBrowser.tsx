@@ -59,7 +59,7 @@ export function CardBrowser({
                 {cards.map((card, i) => {
                   const status = adoptStatus[card.id];
                   const active =
-                    !status || (status !== "writing" && !status.startsWith("✅"));
+                    !status || (status !== "writing" && status !== "adopted");
                   return (
                     <button
                       key={card.id}
@@ -67,9 +67,9 @@ export function CardBrowser({
                       disabled={!active}
                       style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
                       className={`text-left p-2.5 rounded-xl border transition-all duration-200 animate-[nf-card-in_0.4s_ease-out_both] ${
-                        status?.startsWith("✅")
+                        status === "adopted"
                           ? "bg-success/[0.04] border-success/15 animate-[nf-adopt-flash_0.6s_ease-out]"
-                          : status === "❌失败"
+                          : status === "failed"
                             ? "bg-danger/[0.04] border-danger/15"
                             : status === "writing"
                               ? "bg-warning/[0.04] border-warning/15 animate-pulse"
@@ -83,9 +83,9 @@ export function CardBrowser({
                         {status === "writing" && (
                           <Icon name="loader" size={11} className="animate-spin text-warning shrink-0" />
                         )}
-                        {status?.startsWith("✅") && (
-                          <span className="text-[9px] text-success shrink-0">
-                            {status}
+                        {status === "adopted" && (
+                          <span className="text-[9px] text-success shrink-0 flex items-center gap-0.5">
+                            <Icon name="check" size={10} /> 已采纳
                           </span>
                         )}
                       </div>

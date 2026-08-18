@@ -1,5 +1,20 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.37 — 2026-08-18
+
+### 世界级打磨·探索页：采纳状态结构化 + 图标纪律收口（FIX-EXPLORE-ICON-2）
+
+- **adoptStatus 从 emoji 字符串改为结构化状态**：
+  - `page.tsx` 成功时改为 `setAdoptStatus(..., "adopted")`，失败/网络错误时改为 `"failed"`，不再用 `"已采纳·角色"`/`"已采纳·词条"`/`"❌失败"` 这类带 emoji 或易漂移的字符串。
+  - `ChatPanel.tsx` 与 `CardBrowser.tsx` 中所有 `status?.startsWith("✅")` 与 `=== "❌失败"` 的嗅探全部改为 `status === "adopted"` / `status === "failed"`，彻底消除以 emoji 作为状态信号的脆弱反模式。
+  - 修复死分支 bug：原成功串本来就不带 `✅`，导致 `startsWith("✅")` 永远为假，`ChatPanel` 成功卡片未显示「已采纳」文字徽标；`CardBrowser` 中 `active` 判断同样因嗅探失效，成功采纳的卡片仍被误判为可点击。
+- **OutlinePanel 按钮 emoji 去除**：
+  - 「确认写入项目」按钮从 `⏳`/`✅` emoji 文案改为 `<Icon name="loader" size={13} />` +「写入中…」/ `<Icon name="check" size={13} />` +「确认写入项目」。
+- **截图脚本与质量门禁**：
+  - 新增 `tmp_shot_explore.cjs`（端口 9360），拍 `/explore` chat 首屏与 outline 模式两张，均预置 localStorage 关闭 onboarding/更新公告/快捷键弹窗。
+  - DOM 断言 `explore-full emojiPresent=0 svgCount=28`；`explore-outline emojiPresent=0 svgCount=12`。
+  - tsc 0 错误；vitest 122 文件 1232 全绿；版本对齐 v3.1.37。
+
 ## v3.1.36 — 2026-08-18
 
 ### 世界级打磨·写作工作台：图标纪律收口 + 保存状态死分支修复（FIX-WORKSPACE-1）

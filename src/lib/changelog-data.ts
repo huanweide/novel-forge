@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.36";
+export const LATEST_VERSION = "v3.1.37";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.37 世界级打磨·探索页（FIX-EXPLORE-ICON-2）：①把采纳状态从 emoji 嗅探字符串（'已采纳·角色'/'❌失败'）改为结构化 'writing'/'adopted'/'failed'，ChatPanel 和 CardBrowser 里原 status?.startsWith(\"✅\") 判断成功是死分支（成功串本来就不带 ✅），导致成功卡片在 CardBrowser 仍被误判为可点击采纳；②'❌失败' 红叉 emoji 改 `failed` + Icon alert，UI 图标回归 Lucide；③OutlinePanel 的「确认写入项目」按钮去掉 ✅/⏳ emoji，改成 loader/check 图标 + 中文文案；④无头截图 DOM 断言 explore chat 首屏与 outline 模式均为 emojiPresent=0；tsc 0 错误；vitest 122/1232 全绿；版本对齐 v3.1.37。",
   "v3.1.36 世界级打磨·写作工作台（FIX-WORKSPACE-1）：①工作台 UI emoji/裸符号收口——CenterPanel toast 去 ✨、ProjectConfigPanel 关闭按钮 ✕ 换 Icon x、MonitorPanel 达标 ✓ 与 QualityScoreBar ✓✕ 换 Lucide check/x；②PostGenPanel 保存状态死分支修复——Header 原用 saveMessage.startsWith(\"✅\") 判断成功，但父组件 saveMessage 纯中文不含 ✅，致成功消息恒染红色，改为显式 saveStatus 字段；③保留 CharacterFilters/CharacterRow/OutlineTree 的 📥📝🗂 数据层语义标记；④截图脚本补 localStorage 预置关 onboarding/更新公告/快捷键弹窗；tsc 0 错误；vitest 122/1232 全绿；版本对齐 v3.1.36。",
   "v3.1.35 世界级打磨·拆解页（FIX-DISSECT-1）：①拆解页三页（列表/新建/详情）+ 仿写面板 + 5 个 UI 组件（DissectUpload/DissectDimensions/DissectProgress/DissectAdaptPanel/ImitationPanel）全站走查，图标已全部采用 Lucide <Icon> 组件、无 emoji 违例，数据层 DIMENSION_ICONS 也全是 Lucide 名，与「虚空玻璃」设计体系图标语言一致；②详情页「原样转为项目 / 改编后转项目」两张卡片顶部图标区存在死 class——<div className=\"text-2xl mb-2\"> 包裹固定 size={18} 的 Icon，text-2xl 对 svg 像素尺寸无效、既没把图标放大又属误导死代码，作者本意「大图标」却因 size 固定未实现；③移除 text-2xl 死 class、把 Icon 真正放大到 size={22} 匹配卡片标题区视觉权重，代码更干净、图标更醒目；④纯减法（删死 class）+ 视觉微调、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；无头截图 DOM 断言 emojiPresent=0（list 页 svgCount=5 / new 页 svgCount=2，全站无 emoji）；六处版本文件对齐 v3.1.35；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.34 世界级打磨·探讨页（FIX-EXPLORE-1）：①探讨模式 11 步构建引导（开篇/世界观/主角身份/金手指/核心冲突/势力阵营/力量体系/货币体系/地图/情节脉络/自由讨论）的步骤导航、ChatPanel 顶部步骤标签、CardBrowser 设定卡片分组标题、AdoptedContentPanel 已采纳分组标题，原本直接渲染 emoji（📖🌍🦸✨⚔️🏛️⚡💰🗺️🧵💬），与全站 Lucide 图标纪律冲突、是「分毫不差、世界第一」要消灭的装饰性 emoji；②types.ts 新增 STEP_LUCIDE 渲染层映射常量（Record<ExploreStep, IconName>），11 步 emoji 全部替换为 Lucide 线性图标（开篇→book / 世界观→globe / 主角身份→user / 金手指→sparkles / 核心冲突→swords / 势力阵营→landmark / 力量体系→zap / 货币体系→coins / 地图→map / 情节脉络→gitBranch / 自由讨论→message）；③4 个渲染点统一换 <Icon>（StepGuide size=20 / ChatPanel size=12 / CardBrowser size=12 / AdoptedContentPanel size=12），颜色走 --nv-text-secondary 语义令牌；④数据层 STEP_ICONS 定义保留不动（探讨历史/后端落库可能依赖），仅前端渲染层局部替换、不污染数据层，与首页 GENRE_LUCIDE 同一范式；⑤无头截图 DOM 断言 emojiStepRemaining=0（11 个步骤 emoji 彻底消失）+ svgCount=28（Lucide 图标正常渲染）；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.34；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
@@ -192,6 +193,35 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.37",
+    date: "2026-08-18",
+    title: "世界级打磨·探索页：采纳状态结构化 + 图标纪律收口（FIX-EXPLORE-ICON-2）",
+    sections: [
+      {
+        label: "adoptStatus 从 emoji 字符串改为结构化状态",
+        items: [
+          "page.tsx 成功时改为 setAdoptStatus(..., 'adopted')，失败/网络错误时改为 'failed'，不再用 '已采纳·角色' / '已采纳·词条' / '❌失败' 这类带 emoji 或易漂移的字符串。",
+          "ChatPanel.tsx 与 CardBrowser.tsx 中所有 status?.startsWith('✅') 与 === '❌失败' 的嗅探全部改为 status === 'adopted' / status === 'failed'，彻底消除以 emoji 作为状态信号的脆弱反模式。",
+          "修复死分支 bug：原成功串本来就不带 ✅，导致 startsWith('✅') 永远为假，ChatPanel 成功卡片未显示「已采纳」文字徽标；CardBrowser 中 active 判断同样因嗅探失效，成功采纳的卡片仍被误判为可点击。",
+        ],
+      },
+      {
+        label: "OutlinePanel 按钮 emoji 去除",
+        items: [
+          "「确认写入项目」按钮从 ⏳/✅ emoji 文案改为 <Icon name=\"loader\" size={13} /> + 「写入中...」 / <Icon name=\"check\" size={13} /> + 「确认写入项目」。",
+        ],
+      },
+      {
+        label: "截图脚本与质量门禁",
+        items: [
+          "新增 tmp_shot_explore.cjs（端口 9360），拍 /explore chat 首屏与 outline 模式两张，均预置 localStorage 关闭 onboarding/更新公告/快捷键弹窗。",
+          "DOM 断言 explore-full emojiPresent=0 svgCount=28；explore-outline emojiPresent=0 svgCount=12。",
+          "tsc 0 错误；vitest 122 文件 1232 全绿；版本对齐 v3.1.37。",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.36",
     date: "2026-08-18",

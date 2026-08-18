@@ -161,7 +161,15 @@ export function OutlinePanel({
                   : "btn-success"
               }`}
             >
-              {creating ? "⏳ 写入中..." : "✅ 确认写入项目"}
+              {creating ? (
+                <span className="flex items-center gap-1.5">
+                  <Icon name="loader" size={13} className="animate-spin" /> 写入中...
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <Icon name="check" size={13} /> 确认写入项目
+                </span>
+              )}
             </button>
           </div>
 

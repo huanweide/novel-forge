@@ -146,7 +146,7 @@ export function ChatPanel({
                       </div>
                       {msg.cards.map((card) => {
                         const status = adoptStatus[card.id];
-                        const adopted = card.adopted || status?.startsWith("✅");
+                        const adopted = card.adopted || status === "adopted";
                         return (
                           <button
                             key={card.id}
@@ -167,17 +167,17 @@ export function ChatPanel({
                                   写入中
                                 </span>
                               )}
-                              {status?.startsWith("✅") && (
+                              {status === "adopted" && (
                                 <span className="text-[9px] bg-[var(--nv-success)]/20 text-[var(--nv-success)] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                                   <Icon name="check" size={9} /> 已采纳
                                 </span>
                               )}
-                              {status === "❌失败" && (
+                              {status === "failed" && (
                                 <span className="text-[9px] bg-[var(--nv-danger)]/20 text-[var(--nv-danger)] px-1.5 py-0.5 rounded-full">
                                   失败
                                 </span>
                               )}
-                              {status === "❌失败" && (
+                              {status === "failed" && (
                                 <span className="text-[9px] text-[var(--nv-danger)]/70 ml-1">
                                   点击卡片重试 ↻
                                 </span>
