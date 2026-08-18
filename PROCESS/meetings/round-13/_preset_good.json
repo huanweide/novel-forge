@@ -1,1 +1,0 @@
-{"type":"regex","title":"良性正则探针","content":{"rules":[{"name":"stripThink","pattern":"<think>([\\s\\S]*?)</think>","flags":"g","replace":""}]}}

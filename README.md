@@ -359,13 +359,28 @@ A: 检查三点：① API Key 是否正确（不要有空格）；② 网络能�
 ### Q: 数据库连接失败？
 A: 本项目用本地 SQLite 文件库（`./data/novelforge.db`），一般不需要手动配置。若首页报「数据库未连接」：① 确认已执行过 `npx prisma db push`（首次需建表）；② 确认 `.env` 的 `DATABASE_URL` 是 `file:./data/novelforge.db` 这类本地路径；③ 删掉 `./data/novelforge.db` 后重跑 `prisma db push` 可重建（会清空数据，先备份）。
 
-### Q: 端口 3001 被占用？
-A: 杀掉占用进程再重启：
+### Q: 访问地址到底是哪个端口？localhost:3001 还是 3002？
+A: 固定是 **http://localhost:3001**（由 `package.json` 的 `next dev -p 3001` 指定）。README 全文、以及终端里 `▲ Next.js ... Local: http://localhost:3001 ✓ Ready` 都以 3001 为准。
+
+如果你访问 `localhost:3002` 打不开，是因为**端口号输错**，或者 3001 被占用时 Next.js 自动顺延到了 3002/3003。**永远以终端打印的 `Local:` 地址为准**，不要凭记忆填端口。
+
+### Q: 端口 3001 被占用，启动失败 / 自动跳到 3002？
+A: 两种方式任选：
+1. 杀掉占用进程，固定用 3001（地址稳定好记，推荐）：
 ```bash
 netstat -ano | findstr ":3001"
-taskkill //PID <PID号> //F
+taskkill /PID <PID号> /F
 npm run dev
 ```
+2. 或允许 Next.js 自动顺延到下一个空闲端口（3002/3003…），启动后看终端 `Local:` 那行地址打开即可。
+
+### Q: localhost 打不开 / 白屏 / 一直转圈？
+A: 按优先级排查：
+1. **先确认服务器真在跑**：终端要看到 `✓ Ready`，并记下它打印的 `Local:` 地址（通常是 `http://localhost:3001`，别自己改端口号）。
+2. **地址用对**：浏览器输入终端 `Local:` 显示的完整地址。
+3. **localhost 与 127.0.0.1 都可**：本项目已配置 `allowedDevOrigins` 允许两者；只有用本机 IP（如 `192.168.x.x`）访问才需额外配置。
+4. **首屏黄条「数据库未连接」不算打不开**：那是还没建表，跑一次 `npx prisma db push` 即可（见上方「数据库连接失败」）。
+5. **代理/防火墙**：公司网络或代理软件（Clash、VPN 等）可能拦截 localhost。临时关闭代理，或把 `localhost`、`127.0.0.1` 加入代理的绕过列表（bypass list）。
 
 ### Q: 怎么更新到最新版？
 A:

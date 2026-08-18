@@ -109,3 +109,6 @@ pip.conf
 .dsh/
 .workbuddy/
 .loop-state.json
+
+# 过程记录目录（工作记录/会议笔记/截图，非源码，不入库）
+/PROCESS/
