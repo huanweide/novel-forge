@@ -225,7 +225,7 @@ export async function POST(request: Request) {
     ].join(" ");
     const activeCharacters = characters
       .filter((c) => {
-        const names = [c.name, ...((c.aliases as string[]) || [])];
+        const names = [c.name, ...((Array.isArray(c.aliases) ? c.aliases : []) as string[])];
         return names.some((name) =>
           recentText.toLowerCase().includes(name.toLowerCase())
         );

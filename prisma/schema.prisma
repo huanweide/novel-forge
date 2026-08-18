@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ─── 项目 (Project) ────────────────────────────────────────
@@ -13,26 +13,26 @@ model Project {
   id             String   @id @default(uuid())
   name           String
   description    String   @default("")
-  genre          String[]               // 类型标签
+  genre          String               // 类型标签
   targetWordCount Int     @default(100000)
   synopsis       String   @default("")  // 主线总纲
-  toneKeywords   String[] @default([])  // 基调关键词
+  toneKeywords   String @default("[]")  // 基调关键词
 
   globalPrompt String @default("")  // 世界书+风格卡缓存摘要——扩展角色时直接用
   // #316 prompt 版本化：当前生效的 globalPrompt 版本号（指向 GlobalPromptRevision.version）；0=尚未产生版本快照
   currentPromptVersion Int @default(0)
   authorNote   String @default("")  // 作者指令——持久化，所有生成端点统一读取
   // LLM配置 (JSON存储)
-  llmConfig Json @default("{}")
+  llmConfig String @default("{}")
 
   // 正则后处理规则（来自酒馆 regex 预设）
-  postProcessingRules Json @default("[]")
+  postProcessingRules String @default("[]")
   // 2.0 P2-1：用户可配置内容安全黑名单（增量，叠在默认基线上；默认基线不可删，零 token 规则匹配）
-  customSafetyRules Json @default("[]")
+  customSafetyRules String @default("[]")
   // 探讨模式布置配置（结构化保存，含 plotStructure/forceOriginalNames/autoGenerateStoryline 等勾选项）
-  buildConfig Json?
+  buildConfig String?
   // 已应用创意工坊预设记录（F5 项目配置中心追踪用）：[{presetId,type,title,appliedAt}]
-  appliedPresets Json @default("[]")
+  appliedPresets String @default("[]")
 
   // ─── 写作自动化配置（v0.33.0 新增）───
   autoFillEnabled     Boolean @default(false)  // 生成后自动填表总开关（v2.56.0 起默认关：避免每章自动填表产生脏卡/干扰；可在「自动填表」设置里开启）
@@ -88,26 +88,26 @@ model CharacterCard {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   name     String
-  aliases  String[] @default([])
+  aliases  String @default("[]")
   age      String   @default("未知")
   gender   String   @default("未知")
   role     String   @default("supporting") // CharacterRole枚举
 
   // 结构化数据 (JSON存储)
-  appearance      Json @default("{}")    // CharacterAppearance
-  personality     Json @default("[]")    // 结构化性格: {dominant, drive, contradiction, habits, socialMask} 或旧格式 string[]
-  dialogueStyle   Json @default("{}")    // DialogueStyle
+  appearance      String @default("{}")    // CharacterAppearance
+  personality     String @default("[]")    // 结构化性格: {dominant, drive, contradiction, habits, socialMask} 或旧格式 string[]
+  dialogueStyle   String @default("{}")    // DialogueStyle
   background      String @default("")
   storyLine       String @default("")    // 角色故事线：该角色在主线中的起落弧（v1.2.0 新增，AI 填满/扩展均覆盖）
   quickImportContent String @default("")  // 快速导入原文（不做AI分析，直接抄写）
-  abilities       String[] @default([])  // 能力/技能
-  hiddenMotives   String[] @default([])
-  relationships   Json @default("[]")    // CharacterRelationship[]
+  abilities       String @default("[]")  // 能力/技能
+  hiddenMotives   String @default("[]")
+  relationships   String @default("[]")    // CharacterRelationship[]
 
-  timeline        Json @default("[]")     // TimelineEvent[] 经历时间线
+  timeline        String @default("[]")     // TimelineEvent[] 经历时间线
   currentStatus   String @default("alive") // CharacterStatus
   arcProgress     String @default("")
-  tags            String[] @default([])
+  tags            String @default("[]")
   reviewStatus    String   @default("approved") // 自动填表待审：pending=待确认 approved=已确认
 
   createdAt DateTime @default(now())
@@ -127,11 +127,11 @@ model CharacterCardRevision {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   mainCardId  String               // 合并后保留的主卡 id
-  mergedIds   String[] @default([]) // 被并卡 id 列表
+  mergedIds   String @default("[]") // 被并卡 id 列表
 
-  mainBefore   Json               // 主卡合并前字段快照 { aliases, background, storyLine, relationships, tags }
-  mergedBefore Json               // 被并卡合并前列表 [{ id, name, aliases, background, storyLine, relationships, tags }]
-  mainAfter    Json?              // 合并后实际写入（审计）
+  mainBefore   String               // 主卡合并前字段快照 { aliases, background, storyLine, relationships, tags }
+  mergedBefore String               // 被并卡合并前列表 [{ id, name, aliases, background, storyLine, relationships, tags }]
+  mainAfter    String?              // 合并后实际写入（审计）
 
   confidence   String  @default("low")  // high | low
   source       String  @default("llm")  // llm | rule
@@ -149,7 +149,7 @@ model CharacterCardRevision {
 // #316 prompt 版本化（round-2 决议 P2 #10「prompt 当代码」）：把每次 sync 写入的
 // globalPrompt 全文存为不可变快照，版本号递增，供「prompt 当代码」的回滚/评测/审计。
 // 与 CharacterCardRevision / StoryNodeRevision 同构：projectId + Cascade 关系 + 版本/来源标记。
-// content 用 @db.Text 存全文（可能数千字），hash 用于去重与跨项目比对，source 区分 sync/manual/rollback。
+// content 用 存全文（可能数千字），hash 用于去重与跨项目比对，source 区分 sync/manual/rollback。
 
 model GlobalPromptRevision {
   id        String   @id @default(uuid())
@@ -157,7 +157,7 @@ model GlobalPromptRevision {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   version   Int      @default(1)            // 该项目内递增版本号（同 project 唯一有序）
-  content   String   @db.Text               // 该版本的 globalPrompt 全文快照
+  content   String               // 该版本的 globalPrompt 全文快照
   source    String   @default("sync")       // sync | manual | rollback
   hash      String   @default("")           // content 指纹（djb2），去重/比对用
   wordCount Int      @default(0)            // 字数（中文按字符计）
@@ -178,7 +178,7 @@ model LorebookEntry {
 
   title           String
   category        String @default("custom") // LoreCategory
-  keys            String[]                  // 触发关键词
+  keys            String                  // 触发关键词
   content         String                    // 设定内容 ≤200 Token
   insertionOrder  Int @default(50)          // 0-100
   // 注入深度（酒馆 worldbook depth 0-4 迁移）：
@@ -187,7 +187,7 @@ model LorebookEntry {
   depth           Int @default(3)
   enabled         Boolean @default(true)
   parentId        String?                   // 父词条
-  relatedEntryIds String[] @default([])
+  relatedEntryIds String @default("[]")
   reviewStatus    String   @default("approved") // 自动填表待审：pending=待确认 approved=已确认
 
   createdAt DateTime @default(now())
@@ -223,8 +223,8 @@ model StoryNode {
   isMainBranch       Boolean @default(true)
 
   // 元数据
-  activeCharacters  String[] @default([])
-  activeLoreIds     String[] @default([])
+  activeCharacters  String @default("[]")
+  activeLoreIds     String @default("[]")
   coreConflict      String?
   settingDescription String?
   notes             String?
@@ -236,7 +236,7 @@ model StoryNode {
   worldTime        String?   @map("world_time")
 
   // 审校 + 质量
-  reviewLogs    Json @default("[]")       // ReviewLog[]
+  reviewLogs    String @default("[]")       // ReviewLog[]
   revisionCount Int @default(0)
   qualityScore  Float?                    // 六维质量自动评分(0-100)，null=未评估
 
@@ -314,9 +314,9 @@ model ChapterSummary {
   chapterId    String
   chapterTitle String
   summary      String                    // AI压缩摘要 ≤200 Token
-  keyEvents    String[] @default([])
-  characterStates Json @default("[]")    // CharacterStateSnapshot[]
-  eventImportances Json @default("{\"sTier\":[],\"aTier\":[],\"bTier\":[],\"cTier\":[]}") // S/A/B/C四级事件分层
+  keyEvents    String @default("[]")
+  characterStates String @default("[]")    // CharacterStateSnapshot[]
+  eventImportances String @default("{\"sTier\":[],\"aTier\":[],\"bTier\":[],\"cTier\":[]}") // S/A/B/C四级事件分层
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -379,8 +379,8 @@ model PendingCommitment {
   priority      String   @default("medium")       // high | medium | low
 
   description   String                            // 承诺描述
-  entityIds     Json     @default("[]")           // 涉及实体ID列表
-  closureConditions Json @default("[]")           // 闭环条件JSON数组
+  entityIds     String     @default("[]")           // 涉及实体ID列表
+  closureConditions String @default("[]")           // 闭环条件JSON数组
 
   // 五状态机
   status             String   @default("pending")  // pending | detected | partially_fulfilled | fulfilled | voided
@@ -390,7 +390,7 @@ model PendingCommitment {
   // 兑现记录
   fulfilledChapterId       String?
   fulfilledContentSnippet  String?
-  partiallyFulfilledIds    Json     @default("[]")
+  partiallyFulfilledIds    String     @default("[]")
 
   // 时间追踪
   detectedAt  DateTime?
@@ -398,7 +398,7 @@ model PendingCommitment {
   voidedAt    DateTime?
 
   // 完整审计链
-  statusHistory Json     @default("[]")
+  statusHistory String     @default("[]")
 
   // 伏笔后续发展思路（作者可手填；默认由 LLM 依缝合怪多线原则生成，作为写作参考指示）
   developmentHint String?
@@ -444,7 +444,7 @@ model Storyline {
 
   // 七要素框架（仅 MAIN 用作封面/总纲；结局 ending 默认 null —— 不预填，交给 LLM/作者收束）
   // 结构: { desire, obstacle, action, result, twist, turn, ending }
-  sevenElements Json?
+  sevenElements String?
 
   events StorylineEvent[]            // 时间轴大事件 + 线索集
 
@@ -467,7 +467,7 @@ model StorylineEvent {
   content     String   @default("")        // 事件/线索正文
   position    Float    @default(0)         // 时间轴排序位（可总结性，不绑章节号）
   role        String?                      // 叙事角色：advance（剧情推进点）| probe（卡点/阻碍）| vote（分支选择点）
-  sourceRefs  Json     @default("[]")      // 来源引用：[{type:"chapter"|"note"|"llm", ref:""}]
+  sourceRefs  String     @default("[]")      // 来源引用：[{type:"chapter"|"note"|"llm", ref:""}]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -484,7 +484,7 @@ model GenerationTask {
   prompt     String   @default("")
   status     String   @default("pending")   // "pending" | "running" | "done" | "failed"
   progress   Int      @default(0)
-  result     Json?
+  result     String?
   error      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -527,9 +527,9 @@ model GameState {
   round        Int
   playerAction String                    // 用户选择的行动文本
   narrative    String   @default("")     // AI 生成的叙事正文
-  options      Json     @default("[]")   // 下一轮选项: string[]
-  entities     Json     @default("[]")   // 追踪实体: {name, type, desc}[]
-  items        Json     @default("[]")   // 背包物品: {name, qty, source}[]
+  options      String     @default("[]")   // 下一轮选项: string[]
+  entities     String     @default("[]")   // 追踪实体: {name, type, desc}[]
+  items        String     @default("[]")   // 背包物品: {name, qty, source}[]
   plotProgress Int      @default(0)
   wordCount    Int      @default(0)
   createdAt    DateTime @default(now())
@@ -556,7 +556,7 @@ model Rule {
   // ── 冲突裁决系统 ──
   scopeType       String   @default("global") // global | volume | chapter_range | event_type | character_scene | conditional
   specificityScore Int     @default(1)        // 特异性分（global=1 → conditional=6）
-  scopeConfig     Json     @default("{}")     // 作用域配置（chapter range/条件等）
+  scopeConfig     String     @default("{}")     // 作用域配置（chapter range/条件等）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -600,8 +600,8 @@ model StyleCard {
   narrativeDistance    String @default("medium")               // 叙事距离
 
   // 语气与词汇特征 (JSON)
-  tonalMarkers         Json @default("{}")     // {coldness, satire, tragedy, humor, warmth...}
-  lexicalFeatures      Json @default("{}")     // {classicalRatio, modernRatio, termDensity, idiomsDensity}
+  tonalMarkers         String @default("{}")     // {coldness, satire, tragedy, humor, warmth...}
+  lexicalFeatures      String @default("{}")     // {classicalRatio, modernRatio, termDensity, idiomsDensity}
 
   // 概要说明
   styleDescription     String @default("")
@@ -625,15 +625,15 @@ model DissectionTask {
   taskName      String                     // 用户命名的任务名
   bookName      String                     // 原书名称
   bookAuthor    String   @default("")      // 原书作者
-  originalText  String   @db.Text          // 上传的原始文本（全文）
+  originalText  String          // 上传的原始文本（全文）
   depth         String   @default("standard") // quick | standard | deep
   extractChapterSummaries Boolean @default(false) // 是否逐章提取摘要
   status        String   @default("pending") // pending | chunking | extracting | completed | failed
   progress      Float    @default(0)       // 0-100
   totalChapters Int      @default(0)
   completedChapters Int   @default(0)
-  dimensions    Json     @default("{}")    // 15维度数据: { worldview: {...}, characters: [...], ... }
-  chapterList   Json     @default("[]")    // [{index, title, startPos, endPos}]
+  dimensions    String     @default("{}")    // 15维度数据: { worldview: {...}, characters: [...], ... }
+  chapterList   String     @default("[]")    // [{index, title, startPos, endPos}]
   error         String?                    // 错误信息
   convertedToProjectId String?             // 转为项目后的ID
   createdAt     DateTime @default(now())
@@ -648,7 +648,7 @@ model ImportTask {
   importMode  String   @default("settings") // settings | characters | quick
   status      String   @default("pending")  // pending | parsing | completed | failed
   progress    Float    @default(0)          // 0-100
-  result      Json?                        // 完成后写入: { characters, lore, style }
+  result      String?                        // 完成后写入: { characters, lore, style }
   error       String?                      // 错误信息
   rawTextLen  Int      @default(0)
   createdAt   DateTime @default(now())
@@ -670,7 +670,7 @@ model FillTask {
   total     Int      @default(0)
   done      Int      @default(0)
   failed    Int      @default(0)
-  result    Json?                         // 完成后写入: { applied, operations, createdChars, createdLore, skipped }
+  result    String?                         // 完成后写入: { applied, operations, createdChars, createdLore, skipped }
   error     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -701,7 +701,7 @@ model PendingItem {
   project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   itemType         String   // foreshadow_recovery / character_arc / plot_turn / user_note
-  content          String   @db.Text
+  content          String
   priority         String   @default("medium") // high / medium / low
   status           String   @default("pending") // pending / fulfilled / discarded
   source           String   @default("user")    // user / distillation / outline
@@ -732,8 +732,8 @@ model LoreTable {
   category String @default("custom") // person|place|item|attribute|timeline|custom
   marker   String @default("")       // 数据隔离标记，如 [ACU-{projectId}]
 
-  columns  Json @default("[]")       // [{key,label,type}]  例 [{key:"name",label:"妃嫔名称",type:"text"}]
-  rows     Json @default("[]")       // [{row_id, ...列值}]  例 [{row_id:1,name:"甄嬛",live:"碎玉轩",status:"已入住",note:"初入宫"}]
+  columns  String @default("[]")       // [{key,label,type}]  例 [{key:"name",label:"妃嫔名称",type:"text"}]
+  rows     String @default("[]")       // [{row_id, ...列值}]  例 [{row_id:1,name:"甄嬛",live:"碎玉轩",status:"已入住",note:"初入宫"}]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -752,8 +752,8 @@ model BabyloreFillBatch {
   projectId       String
   nodeId          String           // 来源章节节点 ID（撤销的精确锚点）
   loreTableId     String           // 受影响的结构化表格
-  insertedRowIds  Json    @default("[]") // 本次填表实际 insert 的 row_id 数组
-  updatedRowsBefore Json @default("{}") // 本次填表实际 update 的 row_id -> 更新前整行快照
+  insertedRowIds  String    @default("[]") // 本次填表实际 insert 的 row_id 数组
+  updatedRowsBefore String @default("{}") // 本次填表实际 update 的 row_id -> 更新前整行快照
   createdAt       DateTime @default(now())
 
   @@index([projectId])
@@ -770,9 +770,9 @@ model Preset {
   type          String                    // table_template | story_progression | style | worldview | character | regex | lorebook | api_config
   title         String
   description   String @default("")
-  content       Json @default("{}")       // 预设载荷（结构随 type 而定）
+  content       String @default("{}")       // 预设载荷（结构随 type 而定）
   author        String @default("系统")
-  tags          String[] @default([])     // 题材标签：玄幻/言情/科幻...
+  tags          String @default("[]")     // 题材标签：玄幻/言情/科幻...
   downloads     Int @default(0)
   isPublic      Boolean @default(true)
   isBuiltin     Boolean @default(false)   // 系统内置示范预设
@@ -820,7 +820,7 @@ model ChatSession {
   projectId   String                      // 隔离维度（复合 key 的项目前缀）
   characterId String?                     // 角色对话隔离；通用 Agent 对话为 null
   sessionKey  String   @unique            // 复合 key（${projectId} 或 ${projectId}__char__${characterId}）
-  messages    Json     @default("[]")     // SessionMessage[]: {role, content, toolsUsed?, ts}
+  messages    String     @default("[]")     // SessionMessage[]: {role, content, toolsUsed?, ts}
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

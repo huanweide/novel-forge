@@ -4,16 +4,15 @@
  *
  * 用途：在 `npm run dev` / `npm start` 之前，快速确认两项最关键、也最容易导致
  * “完全不能用”的前提是否满足：
- *   1) PostgreSQL 数据库可连接（DATABASE_URL 存在 ≠ 有效）
+ *   1) 数据库可连接（本地 SQLite 文件库；也兼容旧式 postgresql:// 自托管）
  *   2) LLM 配置就绪（环境变量，或应用内「设置」页填写的 AppSettings）
  *
  * 用法：node scripts/doctor.mjs
  */
 import { config } from "dotenv";
-import { Client } from "pg";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { dirname, join, isAbsolute, resolve } from "path";
 import net from "net";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,27 +32,49 @@ console.log("\n=== Novel Forge 启动自检 (doctor) ===\n");
 // ── 1. 数据库 ──────────────────────────────────────────────
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {
-  fail("DATABASE_URL 未设置。请创建 .env 并写入（Docker 默认示例）：");
-  console.error(
-    '    echo DATABASE_URL="postgresql://novelforge:novelforge123@localhost:5432/novelforge" > .env'
-  );
+  fail("DATABASE_URL 未设置。请创建 .env（cp .env.example .env），默认即用本地 SQLite：");
+  console.error('    DATABASE_URL="file:./data/novelforge.db"');
 } else {
   let url;
   try {
     url = new URL(dbUrl);
   } catch {
-    fail("DATABASE_URL 格式不合法，应为 postgresql://user:pass@host:port/db");
+    fail("DATABASE_URL 格式不合法，本地示例：file:./data/novelforge.db");
     url = null;
   }
   if (url) {
-    if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
-      fail(`DATABASE_URL 协议应为 postgresql:，当前为 ${url.protocol}`);
-    } else {
-      const client = new Client({
-        connectionString: dbUrl,
-        connectionTimeoutMillis: 4000,
-      });
+    if (url.protocol === "file:") {
+      // 本地 SQLite：用 better-sqlite3 打开并校验关键表
       try {
+        const Database = (await import("better-sqlite3")).default;
+        const dbPath = dbUrl.replace(/^file:/, "");
+        const abs = isAbsolute(dbPath)
+          ? dbPath
+          : resolve(process.cwd(), dbPath);
+        if (!existsSync(abs)) mkdirSync(dirname(abs), { recursive: true });
+        const db = new Database(abs);
+        db.prepare("SELECT 1").get();
+        try {
+          db.prepare("SELECT 1 FROM Project LIMIT 1").get();
+          db.close();
+          pass(`本地 SQLite 文件库可连接且表已初始化（${abs}）`);
+        } catch {
+          db.close();
+          warn(
+            "本地 SQLite 文件已建，但表尚未初始化——请先运行 npm run dev:db（含 prisma db push）或 npx prisma db push。"
+          );
+        }
+      } catch (e) {
+        fail(`本地 SQLite 打开失败：${e.message}`);
+      }
+    } else if (url.protocol === "postgresql:" || url.protocol === "postgres:") {
+      // 旧式自托管：仍支持 postgresql://（需自行安装 PostgreSQL）
+      try {
+        const { Client } = await import("pg");
+        const client = new Client({
+          connectionString: dbUrl,
+          connectionTimeoutMillis: 4000,
+        });
         await client.connect();
         const r = await client.query("select 1");
         await client.end();
@@ -67,6 +88,8 @@ if (!dbUrl) {
           `数据库无法连接：${e.message}。请确认 PostgreSQL 已启动且 DATABASE_URL 正确——注意：环境变量“存在”不等于“有效”。`
         );
       }
+    } else {
+      fail(`DATABASE_URL 协议未被支持：${url.protocol}（本地用 file:，自托管用 postgresql:）`);
     }
   }
 }

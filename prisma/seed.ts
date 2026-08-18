@@ -9,16 +9,24 @@
 import "dotenv/config";
 
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+import { applySerialization } from "../src/lib/prisma-serialize";
 import { BUILTINS } from "../src/lib/builtin-presets";
 
-const poolConfig = {
-  connectionString: process.env.DATABASE_URL!,
-  max: Number(process.env.PRISMA_POOL_MAX ?? 10),
-  idleTimeoutMillis: 30_000,
-  allowExitOnIdle: true,
-};
-const prisma = new PrismaClient({ adapter: new PrismaPg(poolConfig) });
+function createSeedClient() {
+  const url = process.env.DATABASE_URL || "file:./data/novelforge.db";
+  const dbPath = url.replace(/^file:/, "");
+  const absPath = path.isAbsolute(dbPath)
+    ? dbPath
+    : path.resolve(process.cwd(), dbPath);
+  fs.mkdirSync(path.dirname(absPath), { recursive: true });
+  // 适配器内部按 url 打开本地 SQLite 文件（自动剥离 file: 前缀）
+  const adapter = new PrismaBetterSqlite3({ url });
+  return applySerialization(new PrismaClient({ adapter }));
+}
+const prisma = createSeedClient();
 
 async function main() {
   let created = 0;
@@ -32,6 +40,7 @@ async function main() {
       continue;
     }
     const tags = Array.from(new Set([...(b.tags || []), "trirui推荐"]));
+    // tags/content 是序列化字段（扩展在底层做 数组/对象 ↔ JSON 字符串 转换），此处直接传原始值
     await prisma.preset.create({
       data: {
         type: b.type,
@@ -42,7 +51,7 @@ async function main() {
         tags,
         isBuiltin: true,
         isPublic: true,
-      },
+      } as Record<string, unknown>,
     });
     created++;
   }

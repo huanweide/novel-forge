@@ -29,13 +29,15 @@ export async function POST(request: Request) {
 
   try {
     // 查找所有包含该标签的角色
-    const characters = await prisma.characterCard.findMany({
-      where: {
-        projectId,
-        tags: { has: tag },
-      },
+    // 注：SQLite 不支持标量数组的 has 过滤，改为取出本项目全部角色后在 JS 端按 tags 数组过滤
+    const allChars = await prisma.characterCard.findMany({
+      where: { projectId },
       select: { id: true, tags: true },
     });
+    const characters = allChars.filter(
+      (c: { id: string; tags: unknown }) =>
+        Array.isArray(c.tags) && (c.tags as string[]).includes(tag),
+    );
 
     if (characters.length === 0) {
       return NextResponse.json({ ok: true, removed: 0, total: 0 });

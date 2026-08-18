@@ -268,7 +268,7 @@ toolRegistry.register({
 
     // 检查重名
     const existing = await ctx.prisma.characterCard.findFirst({
-      where: { projectId: ctx.projectId, name: { equals: name, mode: "insensitive" } },
+      where: { projectId: ctx.projectId, name: { equals: name } },
     });
     if (existing) return fail("character_create", `角色"${name}"已存在（ID: ${existing.id}），请用 character_update 修改`);
 
@@ -450,7 +450,7 @@ toolRegistry.register({
     const title = String(args.title || "").trim();
     if (!title) return fail("lore_create", "标题不能为空");
     const existing = await ctx.prisma.lorebookEntry.findFirst({
-      where: { projectId: ctx.projectId, title: { equals: title, mode: "insensitive" } },
+      where: { projectId: ctx.projectId, title: { equals: title } },
     });
     if (existing) return fail("lore_create", `词条"${title}"已存在（ID: ${existing.id}）`);
     const keysArr = args.keys ? String(args.keys).split(/[,，]/).map((s: string) => s.trim()).filter(Boolean) : [];

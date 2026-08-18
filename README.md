@@ -12,7 +12,7 @@
 Novel Forge 是一个**本地优先**的 AI 长篇网文创作工具。它不止帮你「写」，更帮你「管」：每写一章，它自动把人物、地点、物品、势力抽进结构化表格，自动创建角色卡与世界书词条，自动检测角色关系，自动把剧情进展写回故事线——你只管写，设定库自己长。
 
 > **本地优先**：每个作者在自己电脑上运行，数据库与 API Key 全部留在本地，不上传任何第三方。
-> **当前版本 v3.1.40（探讨模式不再弹数据库警告·体验修复·场景感知）** · 开箱即带 15 个示范预设（套用即开写，免手填表）· 一键示例小说 · 8 题材开局 · 5 格式一键导出（Markdown / TXT / HTML / EPUB / DOCX，PDF 用浏览器打印另存）· 长篇小说不降智（分层记忆 + AI 远楼层压缩）· 批量写作 · 故事线缝合怪 · 世界卡 15 分类体系 · 故事线进度量化。
+> **当前版本 v3.1.42（彻底移除数据库依赖·本地 SQLite 零配置·无需 Docker）** · 开箱即带 15 个示范预设（套用即开写，免手填表）· 一键示例小说 · 8 题材开局 · 5 格式一键导出（Markdown / TXT / HTML / EPUB / DOCX，PDF 用浏览器打印另存）· 长篇小说不降智（分层记忆 + AI 远楼层压缩）· 批量写作 · 故事线缝合怪 · 世界卡 15 分类体系 · 故事线进度量化。
 
 ---
 
@@ -26,7 +26,7 @@ Novel Forge 是一个**本地优先**的 AI 长篇网文创作工具。它不止
 | 🧵 **缝合怪推进** | 主线完结后自动构造承接的新主线，剧情永不干涸；三档节奏（快/均衡/慢热）可调 |
 | 🎴 **角色卡体系** | AI 填满（全字段+性格三层+故事线+关系）、AI 扩展、全选联动、自动分类、**自动去重合并**（去龙套/并小名） |
 | 🕸️ **可拖动关系图** | 角色卡内置「人际关系」列表 + 关系图双视图，节点可拖、位置记忆、双击开卡 |
-| 🏠 **数据自有** | 本地 PostgreSQL（带 pgvector 向量检索，AI 语义记忆必需，故不能换 SQLite），无云服务、无订阅、无账号；MIT 开源可自托管 |
+| 🏠 **数据自有** | 本地 SQLite 文件库（`./data/novelforge.db`），零配置开箱即用、无需 Docker / 装数据库；无云服务、无订阅、无账号；MIT 开源可自托管 |
 | 📚 **拆书学习** | 15 维拆解他人作品 + 仿写引擎，越拆越会写 |
 | 🎁 **零门槛开局** | 15 个示范预设、一键示例小说《山海拾遗》、8 题材开局，clone 即用 |
 | 🌍 **世界卡 15 分类体系** | 命运体系/物理/公开体系等 15 类设定模块，确定性分类器自动路由填表，设定库不再混乱 |
@@ -92,156 +92,67 @@ Novel Forge
 
 ## 快速开始
 
-> 🚀 **最省事（推荐新手）**：clone 后只需一行命令，自动完成「复制配置 → 起数据库 → 建表 → 启动」全流程：
+> 🚀 **最省事（推荐）**：clone 后只需一行命令，自动完成「生成 .env → 建本地数据库表 → 启动」全流程，无需装任何数据库、无需 Docker：
 > ```bash
 > npm run dev:db
 > ```
-> 它会自动从 `.env.example` 生成 `.env`、用 Docker 起带 pgvector 的 PostgreSQL、等数据库就绪后建表，最后打开 `http://localhost:3001`。前提是已装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)。
+> 它会从 `.env.example` 生成 `.env`（默认 `DATABASE_URL="file:./data/novelforge.db"`，本地 SQLite 文件库），执行 `prisma db push` 建表，最后打开 `http://localhost:3001`。
 
-### 🐳 方式一：Docker（推荐，无需单独装数据库）
-
-```bash
-# 0. 装 Docker Desktop → https://www.docker.com/products/docker-desktop/
-git clone https://github.com/huanweide/novel-forge.git
-cd novel-forge
-cp .env.example .env                      # 复制配置模板（默认值即可用）
-docker compose up -d                      # 数据库一条命令启动
-npm install
-npx prisma db push                        # 初始化表结构
-npm run dev
-# 浏览器打开 http://localhost:3001
-```
-
-### 🛠️ 方式二：手动安装 PostgreSQL
+### 手动分步（等价流程）
 
 ```bash
 git clone https://github.com/huanweide/novel-forge.git
 cd novel-forge
-# 先手动创建数据库 novelforge，再写入连接串（改成你的账号/密码/库名）
-echo 'DATABASE_URL="postgresql://postgres:你的密码@localhost:5432/novelforge"' > .env
-npm install
-npx prisma db push
-npm run dev
+cp .env.example .env          # 默认即用本地 SQLite，无需手改
+npm install                  # 安装依赖（含 better-sqlite3 原生模块，自动拉预编译）
+npm run dev:db               # 建表 + 启动；或：npx prisma db push && npm run dev
 # 浏览器打开 http://localhost:3001
 ```
 
+> 💡 数据全部存在项目根目录 `./data/novelforge.db`（一个本地文件），不依赖任何外部数据库服务。备份就是复制这个文件。
 > ⚠️ `.env` 已被 `.gitignore` 忽略，不会上传 GitHub；API Key 安全。
 
 ---
 
 ## 详细安装教程
 
-### 方式一：Docker（推荐，零基础友好）
-
-用 Docker 启动数据库，**不用手动装 PostgreSQL**。适合不想折腾数据库的同学。
-
-#### 1. 安装 Docker Desktop
-
-去 [docker.com](https://www.docker.com/products/docker-desktop/) 下载 Docker Desktop，安装后启动。任务栏出现鲸鱼图标就说明在运行了。
-
-> 💡 Docker Desktop 免费，装一次以后所有需要数据库的项目都能复用。
-
-#### 2. 克隆项目并启动数据库
-
-```bash
-git clone https://github.com/huanweide/novel-forge.git
-cd novel-forge
-docker compose up -d
-```
-
-`docker compose up -d` 在后台启动 PostgreSQL 数据库。输出 `✔ Container novel-forge-db Started` 即成功。
-
-> 💡 默认用户名 `novelforge`，密码 `novelforge123`，数据库名 `novelforge`。这些定义在 `docker-compose.yml` 里，可以自己改。
-
-#### 3. 配置环境变量
-
-```bash
-cp .env.example .env
-```
-
-默认配置直接可用；如需自定义数据库账号，改 `.env` 里的 `DATABASE_URL` 即可。
-
-#### 4. 安装依赖并启动
-
-```bash
-npm install
-npx prisma db push
-npm run dev
-# 浏览器打开 http://localhost:3001
-```
-
-看到 `▲ Next.js 16.x.x (Turbopack) - Local: http://localhost:3001 ✓ Ready` 就成功了。
-
-> 💡 以后再次使用：先 `docker compose up -d` 启动数据库，再 `npm run dev`。数据存在 Docker volume 里，不会丢。
-
----
-
-### 方式二：手动安装 PostgreSQL
-
-适合已经装了 PostgreSQL 或想完全手动控制的同学。
+Novel Forge 现在是**零配置本地 SQLite**架构——不需要 Docker、不需要安装 PostgreSQL，clone 下来 `npm install` 后直接跑。
 
 ### 1. 环境准备
-
-Novel Forge 需要以下软件：
 
 | 软件 | 最低版本 | 检查方式 | 说明 |
 |------|---------|---------|------|
 | **Git** | 任意 | `git --version` | 克隆项目用 |
 | **Node.js** | 20.x（≥20，Next 16 要求） | `node -v` | JavaScript 运行时 |
 | **npm** | 9.x | `npm -v` | 随 Node.js 一起安装 |
-| **PostgreSQL** | 14+ | `psql --version` | 数据库，存储所有小说数据 |
 
-**安装 Git**：去 [git-scm.com](https://git-scm.com/download/win) 下载安装包，一路下一步。
+> 不需要 Python、不需要 C++ 编译环境、不需要 Docker——`better-sqlite3` 的原生模块在 `npm install` 时自动下载预编译二进制。
 
-**安装 Node.js**：去 [nodejs.org](https://nodejs.org) 下载 **LTS 20.x 或更高**版本并安装——Next 16 要求 Node ≥ 20。
-
-**安装 PostgreSQL**：去 [postgresql.org](https://www.postgresql.org/download/windows/) 下载安装包。安装时记住你设置的 `postgres` 用户密码。
-
-### 2. 克隆项目
+### 2. 克隆并安装
 
 ```bash
 git clone https://github.com/huanweide/novel-forge.git
 cd novel-forge
-```
-
-### 3. 安装依赖
-
-```bash
 npm install
 ```
 
-如果卡住不动，可以试试：`npm install --registry=https://registry.npmmirror.com`
-
-### 4. 配置数据库
-
-**创建数据库**：
-
+如果依赖安装卡住，可换国内镜像：
 ```bash
-# Windows PowerShell
-createdb -U postgres novelforge
-# 输入你安装时设置的 postgres 密码
+npm install --registry=https://registry.npmmirror.com
 ```
 
-> 如果提示 `createdb` 命令找不到，用完整路径运行（把 `17` 换成你的版本号）：
-> ```bash
-> & "C:\Program Files\PostgreSQL\17\bin\createdb.exe" -U postgres novelforge
-> ```
-
-或者用 pgAdmin：右键 Databases → Create → Database → 名称填 `novelforge`。
-
-**配置连接**：
+### 3. 一键启动（建库 + 启动）
 
 ```bash
-echo 'DATABASE_URL="postgresql://postgres:你的密码@localhost:5432/novelforge"' > .env
+npm run dev:db
+# 浏览器打开 http://localhost:3001
 ```
 
-### 5. 初始化表结构
+`npm run dev:db` 会：① 若 `.env` 不存在则从 `.env.example` 复制（默认本地 SQLite）；② 执行 `prisma db push` 在 `./data/novelforge.db` 建表；③ 启动开发服务器。
 
-```bash
-npx prisma db push
-```
+> 想完全手动也行：`cp .env.example .env` → `npx prisma db push` → `npm run dev`。
 
-输出 `Your database is now in sync with your schema.` 即成功。以后从 GitHub 拉更新后再跑一次即可同步新表，不丢数据。
+看到 `▲ Next.js 16.x.x (Turbopack) - Local: http://localhost:3001 ✓ Ready` 即成功。
 
 ### 6. 启动开发服务器
 
@@ -430,7 +341,7 @@ API Key: gsk_xxxxxxxx（在 console.groq.com 获取）
 
 Novel Forge 的设计原则是**数据自有、密钥不落第三方**：
 
-- 🔒 **API Key 只存本地**：Key 写入本地 PostgreSQL（AppSettings 表），由设置页加密管理；从未上传到任何服务器
+- 🔒 **API Key 只存本地**：Key 写入本地 SQLite（AppSettings 表），由设置页加密管理；从未上传到任何服务器
 - 🏠 **本地优先**：数据库、正文、设定、导出文件全部在你自己的电脑上；应用本身没有云服务、没有遥测、没有账号体系
 - 🚫 **仓库零密钥**：`.env`、运行时状态、数据库文件、`*.pem` 全部被 `.gitignore` 忽略；代码中无任何硬编码密钥（CI 含安全检查）
 - ⚠️ **注意**：Novel Forge 是**单用户、无鉴权**应用（类比 SillyTavern）。它默认只应运行在本机（`localhost`）。如需部署到公网（如 Vercel/服务器），**必须自行加一层鉴权**（反向代理 Basic Auth / VPN / 防火墙白名单），否则任何能访问该地址的人都能看到你的小说数据。README 不推荐无防护公网部署。
@@ -446,7 +357,7 @@ A: 去 ⚙️ 设置检查模型名称。不同提供商格式不同——硅基
 A: 检查三点：① API Key 是否正确（不要有空格）；② 网络能否访问对应域名；③ Key 是否还有余额。
 
 ### Q: 数据库连接失败？
-A: 检查三步：① PostgreSQL 服务是否运行：`pg_isready`；② `.env` 的 `DATABASE_URL` 密码是否正确；③ 数据库 `novelforge` 是否已创建。
+A: 本项目用本地 SQLite 文件库（`./data/novelforge.db`），一般不需要手动配置。若首页报「数据库未连接」：① 确认已执行过 `npx prisma db push`（首次需建表）；② 确认 `.env` 的 `DATABASE_URL` 是 `file:./data/novelforge.db` 这类本地路径；③ 删掉 `./data/novelforge.db` 后重跑 `prisma db push` 可重建（会清空数据，先备份）。
 
 ### Q: 端口 3001 被占用？
 A: 杀掉占用进程再重启：
@@ -467,18 +378,19 @@ npx prisma db push   # 同步数据库结构（不丢数据）
 ### Q: 怎么备份数据？
 A:
 ```bash
-pg_dump -U postgres novelforge > novelforge_backup.sql
-psql -U postgres novelforge < novelforge_backup.sql   # 恢复
+# 数据就是项目根目录下的 ./data/novelforge.db 这一个文件
+cp ./data/novelforge.db ./novelforge_backup.db     # 备份
+# 恢复：用备份文件覆盖 ./data/novelforge.db（恢复前先停掉 dev server）
 ```
 
 ### Q: 能多人协作吗？
-A: 目前是本地优先架构——每个作者在自己电脑上跑、有自己的数据库。多人协作需自己搭 PostgreSQL 服务器并共享 `DATABASE_URL`（注意补鉴权）。
+A: 目前是本地优先架构——每个作者在自己电脑上跑、有自己的本地数据库文件。多人协作可把 `./data/novelforge.db` 文件共享，或自行搭建共享服务并配置 `DATABASE_URL`（注意补鉴权）。
 
 ### Q: 支持什么格式导入？
 A: 拆书系统支持 `.txt`（建议 UTF-8）；创意工坊支持导入 `.preset.json` 预设。
 
-### Q: 不想装 PostgreSQL？
-A: 用 Docker，一条命令搞定：见 [快速开始 → 方式一](#方式一docker推荐无需单独装数据库)。
+### Q: 不想装数据库 / Docker？
+A: 完全不用装——Novel Forge 现在用本地 SQLite 文件库，clone 后 `npm install && npm run dev:db` 即可，详见 [快速开始](#快速开始)。
 
 ### Q: 生成太慢/填表卡住怎么办？
 A: 填表与实体抽取会自动把推理模型映射为基础对话模型（fast），若仍慢请检查网络与 Key 余额；章节填表重跑幂等，不会重复建卡。
@@ -489,7 +401,7 @@ A: 填表与实体抽取会自动把推理模型映射为基础对话模型（fa
 
 - **前端框架**：Next.js 16 (App Router) + React 19
 - **样式**：Tailwind CSS v4（虚空玻璃设计系统，CSS 变量令牌）
-- **数据库**：PostgreSQL 17 + Prisma 7
+- **数据库**：本地 SQLite（better-sqlite3 原生模块）+ Prisma 7 适配器，零外部依赖
 - **API**：Next.js API Routes + SSE 流式响应 + 后台任务表（Fire-and-forget + 轮询）
 - **AI**：多提供商 LLM（OpenAI 兼容协议；推理模型自动映射基础模型做抽取类任务）
 - **构建**：Turbopack (开发) / Webpack (生产)
@@ -517,12 +429,7 @@ npm run build          # 构建生产版本
 npm start              # 启动生产服务器 (localhost:3001)
 ```
 
-配合 Docker 数据库：
-
-```bash
-docker compose up -d   # 启动数据库
-npm start              # 启动应用
-```
+数据库：本地 SQLite 已随应用自动建库，生产部署无需额外数据库服务；如需自定义路径，在 `.env` 改 `DATABASE_URL` 即可。
 
 > ⚠️ **公网部署前必读**：应用无内置鉴权。请务必在应用前加一层反向代理鉴权（Basic Auth / Tailscale / 防火墙白名单），并限制只能你本人访问。详见 [安全与隐私](#安全与隐私)。
 

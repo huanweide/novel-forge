@@ -27,20 +27,20 @@ function buildToolContext(projectId: string): ToolContext {
     projectId, prisma,
     findCharacters: async (query: string) => {
       return await getApprovedCharacters(prisma, projectId, {
-        where: { OR: [{ name: { contains: query, mode: "insensitive" } }, { aliases: { has: query } }] },
+        where: { OR: [{ name: { contains: query } }, { aliases: { contains: query } }] },
       }) as any;
     },
     findLore: async (keywords: string[]) => {
       return await getApprovedLore(prisma, projectId, {
         where: { OR: keywords.map((kw) => ({
-          OR: [{ title: { contains: kw, mode: "insensitive" } }, { content: { contains: kw, mode: "insensitive" } }, { keys: { has: kw } }],
+          OR: [{ title: { contains: kw } }, { content: { contains: kw } }, { keys: { contains: kw } }],
         })) },
         take: 10,
       }) as any;
     },
     findForeshadowing: async (description: string) => {
       return await prisma.pendingCommitment.findMany({
-        where: { projectId, description: { contains: description, mode: "insensitive" } }, take: 10,
+        where: { projectId, description: { contains: description } }, take: 10,
       }) as any;
     },
     detectEntities: async (text: string) => {

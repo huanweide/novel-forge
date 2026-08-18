@@ -107,12 +107,12 @@ export async function POST(request: Request) {
       try {
         // 1) 主名精确查重（P0 已落地，保留）
         const char = await prisma.characterCard.findFirst({
-          where: { projectId, name: { equals: name, mode: "insensitive" } },
+          where: { projectId, name: { equals: name } },
           select: { id: true },
         });
         if (char) return { kind: "character", id: char.id };
         const lore = await prisma.lorebookEntry.findFirst({
-          where: { projectId, title: { equals: name, mode: "insensitive" } },
+          where: { projectId, title: { equals: name } },
           select: { id: true },
         });
         if (lore) return { kind: "lore", id: lore.id };
@@ -420,14 +420,13 @@ export async function POST(request: Request) {
       const keys = [r.charA, r.charB, r.relation];
       const content = `关系类型：${r.relation}\n变化原因：${r.reason}\n正文证据：${r.evidence}\n来源章节：${chapterTitle}`;
 
-      // 查找已有关系条目
-      const existing = await prisma.lorebookEntry.findFirst({
-        where: {
-          projectId,
-          category: "character_relationship",
-          keys: { hasSome: [r.charA, r.charB] },
-        },
+      // 查找已有关系条目（SQLite 不支持标量数组的 hasSome，改为读取后 JS 过滤）
+      const candidates = await prisma.lorebookEntry.findMany({
+        where: { projectId, category: "character_relationship" },
       });
+      const existing = candidates.find(
+        (e) => Array.isArray(e.keys) && (e.keys.includes(r.charA) || e.keys.includes(r.charB)),
+      );
 
       if (existing) {
         const merged = `${existing.content || ""}\n\n---\n更新于 ${chapterTitle}：\n${content}`;

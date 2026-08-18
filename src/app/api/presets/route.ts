@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   const where: any = { isPublic: true };
   if (type) where.type = type;
-  if (tag) where.tags = { has: tag };
+  if (tag) where.tags = { contains: tag };
   if (q) where.OR = [{ title: { contains: q } }, { description: { contains: q } }];
 
   const presets = await prisma.preset.findMany({

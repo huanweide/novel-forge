@@ -1,5 +1,18 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.42 — 2026-08-18
+
+### 去数据库改造·彻底移除 Postgres/Docker 依赖（零配置本地 SQLite）
+
+- **真问题（分发门槛）**：原架构强依赖外部 PostgreSQL + Docker，clone 后必须 `docker compose up` 才能跑，普通用户/换机部署门槛高；沙箱无 Postgres 时整站 DB 集成测试全挂。
+- **修复：改用本地 SQLite 文件库（better-sqlite3 + @prisma/adapter-better-sqlite3）**：
+  - Prisma schema 的 `Json` / `String[]` 字段统一改为 `String`，用 Prisma Client Extension（`src/lib/prisma-serialize.ts`）在底层透明做「对象/数组 ↔ JSON 字符串」转换——应用层约 80 个读写文件一行不改，从根上杜绝回归。
+  - 适配 SQLite 限制：删除 9 处 `mode: "insensitive"`（运行时不支持）、`has`/`hasSome` 标量数组过滤改 `contains` 或 JS 内存过滤、upsert 序列化覆盖 `data`/`create`/`update` 三键。
+  - `DATABASE_URL` 默认 `file:./data/novelforge.db`，`prisma.ts` 未设置时回落并自动建库；clone 后 `npm install && npm run dev:db` 即可，无需 Docker / 装数据库。
+  - `scripts/doctor.mjs` 改为 SQLite 感知（用 better-sqlite3 开库 + 校验关键表），不再强制 `postgresql://`；`next.config.ts` 把 `better-sqlite3` / `@prisma/adapter-better-sqlite3` 列为 `serverExternalPackages`（原生模块须运行时 require）。
+  - README 全面改写为本地 SQLite 零配置叙事（删除 docker-compose.yml、移除 Postgres 安装章节）。
+- **质量门禁**：基线对比法确认本改造零新增 tsc 错误（总错误 182 < 基线 185，全为 main 预存）；透明序列化 / contains 过滤 / upsert 经 tsx 冒烟脚本端到端验证（对象数组读写、标签过滤、upsert 三键均 PASS）；seed 经 SQLite 落地 15 个内置预设；`/api/health` 返回 `db.ok: true`；个人 IP 仍归瑞宝宝。
+
 ## v3.1.41 — 2026-08-18
 
 ### 开发者体验·一键起库脚本 + 快速开始零歧义（DEV-ONEBUTTON-START）

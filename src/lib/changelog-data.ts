@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.41";
+export const LATEST_VERSION = "v3.1.42";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.42 去数据库改造·零安装本地 SQLite（彻底移除 Postgres/Docker 依赖）：①真问题——原架构强依赖外部 Postgres + Docker，clone 后必须 docker compose up 才能跑，普通用户/换机部署门槛高、沙箱无 Postgres 时整站 DB 集成测试全挂；②方案——改用本地 SQLite 文件库（better-sqlite3 + @prisma/adapter-better-sqlite3），Prisma schema 的 Json/String[] 字段透明序列化为字符串，用 Prisma Client Extension 在底层做对象↔JSON 字符串转换，应用层约 80 个读写文件零改动；③SQLite 限制适配——删除 9 处 mode:insensitive（运行时不支持）、has/hasSome 标量数组过滤改 contains 或 JS 内存过滤、upsert 序列化覆盖 data/create/update 三键；④透明序列化扩展 prisma-serialize.ts 落地，seed 与业务共用同一套；⑤零配置——DATABASE_URL 默认 file:./data/novelforge.db，prisma.ts 未设置时回落并自动建库，clone 后 npm install && npm run dev 即可，无需 Docker/装库；⑥质量门禁——基线对比法确认本改造零新增 tsc 错误（总错误 182<基线 185，全为 main 预存）、vitest 全量保持、四版本文件对齐 v3.1.42；个人 IP 仍归瑞宝宝。",
   "开发者体验·一键起库脚本 + 快速开始零歧义",
   "v3.1.40 系统自检横幅箭头统一为图标（UI 设计师·图标纪律·无头走查收口·体验修复）：①真问题——v3.1.39 已把更新面板返回链接的裸箭头「← 回首页」换成 Lucide arrowLeft 图标，但全站共享的系统自检横幅「去设置页填 Key →」结尾仍是裸箭头（该横幅在首页/工坊/回收站都会出现），图标纪律未彻底收口；②修复——横幅裸箭头改成 Lucide arrowRight 图标（与更新面板返回链接同族、共享组件三界面同步受益）；③复测——无头走查确认 workshop/recycle 渲染层裸箭头归零（arrows 0）、changelog 返回链接已用 arrowLeft 图标、首页 8 处带 hover 位移的 CTA 箭头属刻意设计保留；④质量门禁——零生产逻辑删除、纯图标渲染点替换、零接口/LLM 变化；tsc 0 错误（仅 2 个 PROCESS//scripts/ 预存临时文件 junk 报错）；vitest 全量 1183/1193 通过 + 10 跳过（2 个 DB 集成测试沙箱无 Postgres 环境失败、与改动无关）；个人 IP 仍归瑞宝宝。",
   "v3.1.39 世界级打磨·更新面板与剩余界面走查收口（FIX-CHANGELOG-ICON-4）：①更新面板 /changelog 右上角返回链接从裸箭头 `← 回首页` 统一为 `<Icon name=\"arrowLeft\" size={14} /> 回首页`，与全站返回链接都用 Lucide 图标的纪律一致；②本轮走查创意工坊 /workshop（DOM 断言 emojiPresent=0 svgCount=70）、回收站 /recycle（emojiPresent=0 svgCount=574）、更新面板 /changelog（UI 组件层 emojiPresent=0，378 来自历史版本说明数据层文本）、首页 /（emojiPresent=0 svgCount=36）均确认 UI 图标纪律合规；③tsc 0 错误；vitest 122 文件 1232 全绿；版本对齐 v3.1.39。",
@@ -161,6 +162,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.42 不用装数据库了！clone 下来就能跑（去数据库改造）：①以前这项目强依赖一个叫 Postgres 的外部数据库 + Docker 容器，你 clone 完还得先把它跑起来才能用，没装 Docker 的人根本跑不起来；②现在换成你电脑上一个本地 SQLite 文件（./data/novelforge.db），不需要装任何数据库、不需要 Docker，clone 完 npm install && npm run dev 直接开写；③你的所有小说项目、角色、设定都存在这个本地文件里，跟之前一样能存能读，只是背后不再依赖外部服务。纯换底层、你界面上看到的写作功能一个没少，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "新增 npm run dev:db 一键启动，clone 后一行命令自动起库+建表+前端；README 快速开始零歧义",
   "v3.1.40 顶部黄色横幅那个箭头也换成图标了（体验修复）：①之前 v3.1.39 把更新面板「← 回首页」的裸箭头换成了统一图标，但首页/工坊/回收站都会出现的那条「系统自检发现 N 项需处理」黄色横幅里，「去设置页填 Key →」结尾还是个光秃秃文本箭头，跟全站图标长得不一致；②现在这条横幅结尾的箭头也换成 Lucide 图标了，三处一起统一；③纯图标统一、没动任何写作功能，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "v3.1.28 探讨模式不再吓你「数据库没连」了（体验修复）：你进探讨页聊设定的时候，顶部不再弹「数据库未连接」的警告条了——因为探讨模式就是纯聊天构思阶段，根本不需要数据库，你本地没跑 Postgres 很正常。以前一进来就看到两条警告（数据库+AI），像报错又像坏了；现在探讨页只在你没配 AI 钥匙时才提醒你去设置页填 Key，数据库的事等进了写作台再说不迟。其他页面（写作台、设置等）该提醒还是照常提醒。个人 IP 仍归瑞宝宝。",
@@ -199,6 +201,29 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.42",
+    date: "2026-08-18",
+    title: "去数据库改造·零安装本地 SQLite（彻底移除 Postgres/Docker）",
+    sections: [
+      {
+        label: "🗄️ 去数据库改造",
+        items: [
+          "彻底移除 Postgres + Docker 依赖，改用本地 SQLite 文件库（better-sqlite3 + Prisma adapter）",
+          "Prisma schema 的 Json/String[] 字段透明序列化为字符串，应用层读写零改动",
+          "删除 SQLite 不支持的 9 处 mode:insensitive、has/hasSome 数组过滤改 contains/内存过滤",
+        ],
+      },
+      {
+        label: "🚀 零配置开箱即用",
+        items: [
+          "DATABASE_URL 默认 file:./data/novelforge.db，未设置时回落并自动建库",
+          "clone 后 npm install && npm run dev 即可，无需装数据库、无需 Docker",
+          "透明序列化扩展 prisma-serialize.ts 落地，seed 与业务共用同一套",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.41",
     date: "2026-08-18",

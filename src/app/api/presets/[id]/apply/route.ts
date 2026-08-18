@@ -143,7 +143,7 @@ export async function POST(
       const c = content;
       const charName = c.name || "未命名角色";
       const existingChar = await prisma.characterCard.findFirst({
-        where: { projectId, name: { equals: charName, mode: "insensitive" } },
+        where: { projectId, name: { equals: charName } },
       });
       if (existingChar) {
         created.push({ kind: "character", id: existingChar.id, name: existingChar.name, skipped: true });
