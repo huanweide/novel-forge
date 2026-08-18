@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="0.55" stop-color="#11161f"/>
+      <stop offset="1" stop-color="#161d29"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.18" r="0.5">
+      <stop offset="0" stop-color="#d4af6a" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#d4af6a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8cf94"/>
+      <stop offset="1" stop-color="#c79a4e"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="360" fill="url(#bg)"/>
+  <rect width="1280" height="360" fill="url(#glow)"/>
+
+  <!-- 顶部细金线 -->
+  <rect x="0" y="0" width="1280" height="3" fill="url(#gold)" opacity="0.8"/>
+
+  <!-- 左侧主标题区 -->
+  <text x="72" y="138" font-size="74" font-weight="700" fill="url(#gold)" letter-spacing="1">Novel Forge</text>
+  <text x="76" y="182" font-size="26" font-weight="500" fill="#cdd6e4">AI 小说工坊 · 本地优先 · 数据自有</text>
+  <text x="76" y="222" font-size="20" fill="#8b97a8">把「写长篇」从体力活变成创意活——章节生成、设定自动建档、故事线自动推进，一条龙。</text>
+
+  <!-- 底部特性胶囊 -->
+  <g font-size="18" font-weight="600">
+    <rect x="76"  y="268" width="196" height="46" rx="23" fill="url(#glass)" stroke="#d4af6a" stroke-opacity="0.45"/>
+    <text x="108" y="296" fill="#e8cf94">🧠 长篇不降智</text>
+
+    <rect x="288" y="268" width="160" height="46" rx="23" fill="url(#glass)" stroke="#d4af6a" stroke-opacity="0.45"/>
+    <text x="316" y="296" fill="#e8cf94">🏠 本地优先</text>
+
+    <rect x="464" y="268" width="232" height="46" rx="23" fill="url(#glass)" stroke="#d4af6a" stroke-opacity="0.45"/>
+    <text x="492" y="296" fill="#e8cf94">🎁 17 预设开箱</text>
+  </g>
+
+  <!-- 右侧装饰：叠层卡片隐喻 -->
+  <g transform="translate(940,70)" opacity="0.9">
+    <rect x="60" y="20" width="240" height="150" rx="14" fill="#0b0f16" stroke="#2a3342"/>
+    <rect x="30" y="55" width="240" height="150" rx="14" fill="#0e141d" stroke="#36415a"/>
+    <rect x="0"  y="90" width="240" height="150" rx="14" fill="url(#glass)" stroke="#d4af6a" stroke-opacity="0.6"/>
+    <text x="22" y="170" font-size="17" fill="#cdd6e4">世界观 · 角色 · 故事线</text>
+    <text x="22" y="196" font-size="14" fill="#8b97a8">自动建档 · 自动回写</text>
+  </g>
+
+  <text x="72" y="344" font-size="14" fill="#5b6678">MIT 开源 · 零配置 · 无需 Docker · 你的小说只属于你</text>
+</svg>
