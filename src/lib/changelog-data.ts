@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.38";
+export const LATEST_VERSION = "v3.1.39";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.39 世界级打磨·更新面板与剩余界面走查收口（FIX-CHANGELOG-ICON-4）：①更新面板 /changelog 右上角返回链接从裸箭头 `← 回首页` 统一为 `<Icon name=\"arrowLeft\" size={14} /> 回首页`，与全站返回链接都用 Lucide 图标的纪律一致；②本轮走查创意工坊 /workshop（DOM 断言 emojiPresent=0 svgCount=70）、回收站 /recycle（emojiPresent=0 svgCount=574）、更新面板 /changelog（UI 组件层 emojiPresent=0，378 来自历史版本说明数据层文本）、首页 /（emojiPresent=0 svgCount=36）均确认 UI 图标纪律合规；③tsc 0 错误；vitest 122 文件 1232 全绿；版本对齐 v3.1.39。",
   "v3.1.38 世界级打磨·设置页（FIX-SETTINGS-ICON-3）：①设置页保存状态不再用 emoji 前缀嗅探：原 `statusMsg.startsWith(\"✅\")` 判断成功/失败且染色，但成功文案就是 \"✅ 设置已保存\"、失败文案是 \"❌ 保存失败…\"，是脆弱的 emoji 状态信号；改为显式 `statusType: \"success\" | \"error\" | null`，成功/失败/加载错误各分支显式设置 statusType，渲染处按 statusType 决定 text-success / text-danger。②去除设置页 UI 中所有 ✅ / ❌ emoji：`\"设置已保存\"` / `\"保存失败：…\"` / `\"网络错误，保存失败\"` / `\"加载设置失败…\"` / `\"请填入 API Key\"` 均回归纯中文文案，状态色由 statusType 承载。③新增 tmp_shot_settings.cjs 无头截图脚本（端口 9364），预置 localStorage 关闭 onboarding/更新公告/快捷键弹窗，首屏 DOM 断言 emojiPresent=0 svgCount=13。④纯加法、零生产逻辑删除、零接口/LLM 变化；tsc 0 错误；vitest 122 文件 1232 全绿；六处版本文件对齐 v3.1.38；个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。",
   "v3.1.37 世界级打磨·探索页（FIX-EXPLORE-ICON-2）：①把采纳状态从 emoji 嗅探字符串（'已采纳·角色'/'❌失败'）改为结构化 'writing'/'adopted'/'failed'，ChatPanel 和 CardBrowser 里原 status?.startsWith(\"✅\") 判断成功是死分支（成功串本来就不带 ✅），导致成功卡片在 CardBrowser 仍被误判为可点击采纳；②'❌失败' 红叉 emoji 改 `failed` + Icon alert，UI 图标回归 Lucide；③OutlinePanel 的「确认写入项目」按钮去掉 ✅/⏳ emoji，改成 loader/check 图标 + 中文文案；④无头截图 DOM 断言 explore chat 首屏与 outline 模式均为 emojiPresent=0；tsc 0 错误；vitest 122/1232 全绿；版本对齐 v3.1.37。",
   "v3.1.36 世界级打磨·写作工作台（FIX-WORKSPACE-1）：①工作台 UI emoji/裸符号收口——CenterPanel toast 去 ✨、ProjectConfigPanel 关闭按钮 ✕ 换 Icon x、MonitorPanel 达标 ✓ 与 QualityScoreBar ✓✕ 换 Lucide check/x；②PostGenPanel 保存状态死分支修复——Header 原用 saveMessage.startsWith(\"✅\") 判断成功，但父组件 saveMessage 纯中文不含 ✅，致成功消息恒染红色，改为显式 saveStatus 字段；③保留 CharacterFilters/CharacterRow/OutlineTree 的 📥📝🗂 数据层语义标记；④截图脚本补 localStorage 预置关 onboarding/更新公告/快捷键弹窗；tsc 0 错误；vitest 122/1232 全绿；版本对齐 v3.1.36。",
@@ -194,6 +195,34 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.39",
+    date: "2026-08-18",
+    title: "世界级打磨·更新面板返回图标统一 + 剩余界面走查收口（FIX-CHANGELOG-ICON-4）",
+    sections: [
+      {
+        label: "更新面板返回链接图标统一",
+        items: [
+          "src/app/changelog/page.tsx 右上角返回链接从裸箭头 `← 回首页` 改为 `<Icon name=\"arrowLeft\" size={14} /> 回首页`，与全站返回链接统一使用 Lucide 图标组件，消除裸符号 UI 不一致。",
+        ],
+      },
+      {
+        label: "本轮四界面无头走查结论",
+        items: [
+          "创意工坊 /workshop：page.tsx 全程 <Icon>，新增 tmp_shot_workshop.cjs（端口 9366），DOM 断言 emojiPresent=0 svgCount=70，图标纪律合规。",
+          "回收站 /recycle：page.tsx 全程 <Icon>，新增 tmp_shot_recycle.cjs（端口 9368），DOM 断言 emojiPresent=0 svgCount=574，图标纪律合规。",
+          "更新面板 /changelog：page.tsx 组件层零 emoji、全用 <Icon>；新增 tmp_shot_changelog.cjs（端口 9370），DOM 断言 emojiPresent=378 全部来自 VERSIONS 数据层历史版本说明文本，按「数据层 emoji 保留、仅替换渲染层 UI 图标」范式保留。",
+          "首页 /：GENRE_LUCIDE 渲染层映射已在（FIX-HOME-1），全程 <Icon>；新增 tmp_shot_home.cjs（端口 9372），DOM 断言 emojiPresent=0 svgCount=36，图标纪律合规。",
+        ],
+      },
+      {
+        label: "质量门禁",
+        items: [
+          "tsc 0 错误；vitest 122 文件 1232 全绿；版本文件对齐 v3.1.39。",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.38",
     date: "2026-08-18",

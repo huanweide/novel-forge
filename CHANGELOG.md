@@ -1,5 +1,18 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.39 — 2026-08-18
+
+### 世界级打磨·更新面板返回图标统一 + 剩余界面走查收口（FIX-CHANGELOG-ICON-4）
+
+- **更新面板返回链接图标统一**：
+  - `src/app/changelog/page.tsx` 右上角返回链接从裸箭头 `← 回首页` 改为 `<Icon name="arrowLeft" size={14} /> 回首页`，与全站返回链接统一使用 Lucide 图标组件。
+- **本轮四界面走查结论**：
+  - `/workshop` 创意工坊：DOM 断言 `emojiPresent=0 svgCount=70`，新增 `tmp_shot_workshop.cjs`（端口 9366）。
+  - `/recycle` 回收站：DOM 断言 `emojiPresent=0 svgCount=574`，新增 `tmp_shot_recycle.cjs`（端口 9368）。
+  - `/changelog` 更新面板：UI 组件层零 emoji；DOM 断言 `emojiPresent=378` 全部来自 `VERSIONS` 数据层历史版本说明文本，按「数据层 emoji 保留、仅替换渲染层 UI 图标」范式保留。
+  - `/` 首页：DOM 断言 `emojiPresent=0 svgCount=36`，新增 `tmp_shot_home.cjs`（端口 9372）。
+- **质量门禁**：tsc 0 错误；vitest 122 文件 1232 全绿。
+
 ## v3.1.38 — 2026-08-18
 
 ### 世界级打磨·设置页：保存状态去 emoji 嗅探（FIX-SETTINGS-ICON-3）

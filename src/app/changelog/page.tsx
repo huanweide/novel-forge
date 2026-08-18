@@ -15,8 +15,8 @@ export default function ChangelogPage() {
             <h1 className="text-base font-bold text-[var(--nv-text-primary)]">更新面板</h1>
             <span className="text-xs text-[var(--nv-text-muted)]">Novel Forge 版本与更新记录</span>
           </div>
-          <Link href="/" className="text-sm text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] transition-colors">
-            ← 回首页
+          <Link href="/" className="text-sm text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] transition-colors inline-flex items-center gap-1.5">
+            <Icon name="arrowLeft" size={14} /> 回首页
           </Link>
         </div>
       </header>
