@@ -40,6 +40,11 @@ export async function PUT(request: Request) {
     if (typeof llmApiKey === "string") data.llmApiKey = llmApiKey;
     if (typeof llmModel === "string") data.llmModel = llmModel;
     if (typeof llmBaseUrl === "string") data.llmBaseUrl = llmBaseUrl;
+    // 预设 provider（非 custom/local）的 Base URL 由代码固定（PROVIDER_BASE_URLS），
+    // 忽略前端可能误传的残留 baseUrl，避免污染后续生成请求（根因：残留 URL 致生成打到错误地址）。
+    if (typeof data.llmProvider === "string" && ["siliconflow", "deepseek", "openai", "groq"].includes(data.llmProvider)) {
+      data.llmBaseUrl = ""; // 显式清空，确保库与生成请求都干净（预设 provider 的 URL 由代码固定）
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "没有可更新的字段" }, { status: 400 });

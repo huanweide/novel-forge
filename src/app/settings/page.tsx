@@ -126,7 +126,13 @@ export default function SettingsPage() {
     setProvider(key);
     const def = PROVIDERS.find((p) => p.key === key);
     if (def?.defaultModel && !model) setModel(def.defaultModel);
-    if (def?.defaultBaseUrl && !baseUrl) setBaseUrl(def.defaultBaseUrl);
+    // 预设 provider（非 custom/local）不显示 Base URL 框，强制使用代码默认值：
+    // 切换时清空残留 baseUrl，避免从 custom 模式残留的错误 URL 被保存进库污染预设 provider。
+    if (key === "custom" || key === "local") {
+      if (def?.defaultBaseUrl && !baseUrl) setBaseUrl(def.defaultBaseUrl);
+    } else {
+      setBaseUrl("");
+    }
     setTestResult(null);
     if (key !== "local" && (apiKey.trim() || hasExistingKey)) fetchModels({ provider: key });
   }

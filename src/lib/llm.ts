@@ -88,7 +88,14 @@ export async function getSettings(): Promise<LLMSettings> {
     if (db?.llmApiKey) {
       const provider = db.llmProvider;
       if (!provider) throw new Error("LLM 提供商未配置——请在设置页面选择提供商");
-      const baseUrl = db.llmBaseUrl || PROVIDER_BASE_URLS[provider];
+      // 预设 provider（siliconflow/deepseek/openai/groq）的 Base URL 固定且代码已知，
+      // 强制使用 PROVIDER_BASE_URLS，忽略数据库残留的错误 baseUrl（典型场景：曾切到 custom 填过其他 URL 后切回，
+      // 残留值被持久化，导致生成请求打到错误/不可达地址而「配置看似保存成功、实际用不了」）。
+      // 仅 custom/local 使用数据库中用户填写的 baseUrl。
+      const PRESET_PROVIDERS = ["siliconflow", "deepseek", "openai", "groq"];
+      const baseUrl = PRESET_PROVIDERS.includes(provider)
+        ? (PROVIDER_BASE_URLS[provider] || "")
+        : (db.llmBaseUrl || PROVIDER_BASE_URLS[provider] || "");
       if (!baseUrl) throw new Error(`无法解析提供商 "${provider}" 的 API 地址——请在设置页面手动填写 Base URL`);
       const model = db.llmModel || DEFAULT_MODELS[provider];
       if (!model) throw new Error("LLM 模型未配置——请在设置页面选择模型");

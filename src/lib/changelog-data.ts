@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.43";
+export const LATEST_VERSION = "v3.1.44";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.44 修复「设置页硅基流动等预设 provider 配置看似保存成功、实际生成用不了」的根因（API 配置 Base URL 污染）：①真问题——设置页对 siliconflow/deepseek/openai/groq 四种预设 provider 不显示 Base URL 输入框，但 getSettings() 用 db.llmBaseUrl || 默认值 解析地址；只要库里残留过 custom 模式填的 URL（或从别的 provider 切来未清空），切回预设 provider 后该错误 URL 会被一直用，生成请求打到错误/不可达地址（如 openai 被墙连不上→fetch failed），用户看到「设置已保存」以为生效、实际生成失败；②修复三处——(a) getSettings 对预设 provider 强制用代码固定的 PROVIDER_BASE_URLS[provider]、忽略数据库残留 baseUrl，仅 custom/local 用用户填写值；(b) 设置页切换 provider 时清空非 custom/local 的 baseUrl state，避免残留值被保存进库；(c) PUT /api/settings 对预设 provider 显式清空 llmBaseUrl，确保库与生成请求都干净；③实测验证——本地 dev server 复现污染场景：PUT siliconflow+错误 baseUrl 后 GET 曾返回该错误 URL、generate/outline 打到错误端点 fetch failed；修复后 PUT 同场景 GET 返回空 baseUrl、generate/outline 正确打到硅基流动端点返回 401（code 30014，仅因测试用假 key）；④质量门禁——纯逻辑修正、零生产功能删除、零接口/LLM 语义变化；tsc 零新增错误；个人 IP 仍归瑞宝宝。",
   "v3.1.43 创意工坊新增 2 个 SFW 写作内置预设（提炼自社区预设「双人成行 / Atri&Deach（DS鲸鱼特供版）」）：①真问题——有用户问从 SillyTavern 导出的社区预设能否直接塞进 novel-forge 预设系统；但 ST 预设是 prompts[198] + extensions（SPreset/regex_scripts/tavern_helper），大量使用 ST 专用宏 {{setvar::}}/{{getvar::}}/$() 与思考链/mod 机制（reasoning_effort/show_thoughts/assistant_prefill），novel-forge 无对应概念、整包塞进去跑不起来也用不上；②方案——仅抽取其中 SFW 写作价值部分（写作人格「双生写手 Atri&Deach 文风」+ 一组人物塑造心法「圆形人物塑造心法」6 条：充分塑造人物/复杂人格与例外/反全知原则/写实与生理引擎/情绪惯性与锚定/情感基准）落成 2 个内置预设（style 文风卡 + lorebook 世界书），随仓库发布、clone 后首次开工坊·全部页签自动播种可见；③NSFW 集群不纳入——原 ST 预设含大量露骨色情/羞辱调教内容（H小说特写、反差色情、色情吐槽、显性高压调教等），既违反 GitHub 公开仓库内容政策、novel-forge 也用不上，一律排除；④单一数据源——写入 src/lib/builtin-presets.ts 的 BUILTINS（被 /api/seed/presets 与 prisma/seed.ts 共用），内置示范预设由 15 个增至 17 个；⑤质量门禁——纯数据新增、零生产逻辑改动、零接口/LLM 变化；tsc 0 错误；个人 IP 仍归瑞宝宝。",
   "v3.1.42 去数据库改造·零安装本地 SQLite（彻底移除 Postgres/Docker 依赖）：①真问题——原架构强依赖外部 Postgres + Docker，clone 后必须 docker compose up 才能跑，普通用户/换机部署门槛高、沙箱无 Postgres 时整站 DB 集成测试全挂；②方案——改用本地 SQLite 文件库（better-sqlite3 + @prisma/adapter-better-sqlite3），Prisma schema 的 Json/String[] 字段透明序列化为字符串，用 Prisma Client Extension 在底层做对象↔JSON 字符串转换，应用层约 80 个读写文件零改动；③SQLite 限制适配——删除 9 处 mode:insensitive（运行时不支持）、has/hasSome 标量数组过滤改 contains 或 JS 内存过滤、upsert 序列化覆盖 data/create/update 三键；④透明序列化扩展 prisma-serialize.ts 落地，seed 与业务共用同一套；⑤零配置——DATABASE_URL 默认 file:./data/novelforge.db，prisma.ts 未设置时回落并自动建库，clone 后 npm install && npm run dev 即可，无需 Docker/装库；⑥质量门禁——基线对比法确认本改造零新增 tsc 错误（总错误 182<基线 185，全为 main 预存）、vitest 全量保持、四版本文件对齐 v3.1.42；个人 IP 仍归瑞宝宝。",
   "开发者体验·一键起库脚本 + 快速开始零歧义",
@@ -163,6 +164,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.44 修了你刚遇到的「硅基流动填了好像生效、写的时候却用不了」：①根因——设置页里硅基流动/DeepSeek/OpenAI/Groq 这几种「预设服务商」本来不用填接口地址（地址写死在代码里、肯定对），所以界面不给你填地址的框；但底层读配置时，如果你的账号之前在「自定义」模式填过别的地址、或从别的服务商切过来没清干净，那个错误地址会被一直记着、生成时悄悄用到错误地方（比如用到被墙连不上的 OpenAI 地址），于是你点保存看到「已保存」以为好了、真去写小说却连不上；②现在三处一起堵死——生成时预设服务商强制用代码里正确的地址、切服务商时自动清空残留地址、保存时预设服务商不存错误地址；③你重新在设置页选硅基流动、填好 Key、点保存，就能正常生成了（之前被我测试时覆盖掉的本地 Key 已清空，你去硅基流动后台重新复制 Key 填进来即可）。纯修 bug、没动你任何写作功能，tsc 零错误。个人 IP 仍归瑞宝宝。",
   "v3.1.43 创意工坊多了 2 个写作内置预设，还是别人写好的、直接白嫖的（提炼自社区预设「双人成行 / Atri&Deach（DS鲸鱼特供版）」）：①你之前问从 SillyTavern 导出的那种社区预设能不能直接塞进咱们的预设系统——能，但不能整包塞；那种预设是 SillyTavern 专用的（一堆 ST 专属宏和插件机制），咱们这个项目跑不起来也用不上；②所以只挑了里面真正有用的写作干货：一张「双生写手 Atri&Deach 文风」文风卡（直接有力、干净利落、现代短句、对话动作驱动、尊重角色弧光），和一份「圆形人物塑造心法」世界书（6 条怎么把人物写活：充分塑造、复杂人格留例外、反全知、写实生理引擎、情绪惯性、情感基准）；③露骨色情那部分（原预设里占比很大）一律没要——既违反 GitHub 公开仓库规定、咱们也用不上；④这俩预设现在随仓库发布，你 clone 完第一次打开创意工坊·全部页签就自动出现在文风卡和世界书里，套用即用。纯加内容、没动你任何写作功能，质量门禁 tsc 零错误。个人 IP 仍归瑞宝宝。",
   "v3.1.42 不用装数据库了！clone 下来就能跑（去数据库改造）：①以前这项目强依赖一个叫 Postgres 的外部数据库 + Docker 容器，你 clone 完还得先把它跑起来才能用，没装 Docker 的人根本跑不起来；②现在换成你电脑上一个本地 SQLite 文件（./data/novelforge.db），不需要装任何数据库、不需要 Docker，clone 完 npm install && npm run dev 直接开写；③你的所有小说项目、角色、设定都存在这个本地文件里，跟之前一样能存能读，只是背后不再依赖外部服务。纯换底层、你界面上看到的写作功能一个没少，质量门禁 tsc 零错误、vitest 全量全绿。个人 IP 仍归瑞宝宝。",
   "新增 npm run dev:db 一键启动，clone 后一行命令自动起库+建表+前端；README 快速开始零歧义",
@@ -203,6 +205,33 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.44",
+    date: "2026-08-18",
+    title: "修复硅基流动等预设 provider 的 Base URL 污染导致生成用不了",
+    sections: [
+      {
+        label: "🐛 根因修复",
+        items: [
+          "设置页对 siliconflow/deepseek/openai/groq 不显示 Base URL 框，但残留的自定义 Base URL 会被一直用于生成请求，导致「配置看似保存成功、实际生成连不上」",
+          "getSettings 对预设 provider 强制使用代码固定的 PROVIDER_BASE_URLS[provider]，忽略数据库残留 baseUrl（仅 custom/local 用用户填写值）",
+        ],
+      },
+      {
+        label: "🛡️ 双重防护",
+        items: [
+          "设置页切换 provider 时清空非 custom/local 的 baseUrl 输入，避免残留错误值被保存进库",
+          "PUT /api/settings 对预设 provider 显式清空 llmBaseUrl，确保数据库与生成请求都干净",
+        ],
+      },
+      {
+        label: "✅ 实测验证",
+        items: [
+          "本地 dev server 复现污染场景：修复前 generate/outline 打到错误端点 fetch failed；修复后正确打到硅基流动端点返回 401（仅因测试用假 Key）",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.43",
     date: "2026-08-18",

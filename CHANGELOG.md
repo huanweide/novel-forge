@@ -1,5 +1,17 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.44 — 2026-08-18
+
+**修复：硅基流动等预设 provider 的 Base URL 污染导致「配置看似保存成功、实际生成用不了」**
+
+- **根因**：设置页对 siliconflow / deepseek / openai / groq 四种预设 provider 不显示 Base URL 输入框，但 `getSettings()` 用 `db.llmBaseUrl || 默认值` 解析地址。只要库里残留过 custom 模式填的 URL（或从别的 provider 切来未清空），切回预设 provider 后该错误 URL 会被一直用于生成请求，打到错误/不可达地址（如 OpenAI 被墙连不上 → `fetch failed`），用户看到「设置已保存」以为生效、实际写小说时连不上。
+- **修复（三处）**：
+  1. `getSettings()` 对预设 provider 强制使用代码固定的 `PROVIDER_BASE_URLS[provider]`，忽略数据库残留 baseUrl；仅 `custom` / `local` 使用用户填写值。
+  2. 设置页切换 provider 时清空非 `custom` / `local` 的 baseUrl 输入，避免残留错误值被保存进库。
+  3. `PUT /api/settings` 对预设 provider 显式清空 `llmBaseUrl`，确保数据库与生成请求都干净。
+- **实测验证**：本地 dev server 复现污染场景——修复前 `generate/outline` 打到错误端点 `fetch failed`；修复后正确打到硅基流动端点、返回 `401 code:30014`（仅因测试用假 Key）。
+- 纯逻辑修正、零生产功能删除、零接口/LLM 语义变化；tsc 零新增错误；个人 IP 仍归瑞宝宝。
+
 ## v3.1.43 — 2026-08-18
 
 ### 创意工坊新增 2 个 SFW 写作内置预设（提炼自社区 Atri&Deach 预设）
