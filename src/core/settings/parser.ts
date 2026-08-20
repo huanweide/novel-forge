@@ -160,6 +160,10 @@ export async function parseSettings(
   rawText: string,
   client?: LLMClient
 ): Promise<ParsedSettings> {
+  // 无 LLM 配置（未填 Key / 占位符 Key / 本地推理未配好）→ 本地规则解析降级
+  if (!client && !(await hasLLMConfig())) {
+    return localFallback(rawText, "all");
+  }
   let llm: LLMClient;
   let effectiveModel: string;
   if (client) {
@@ -436,6 +440,10 @@ export async function parseLorebookOnly(
   rawText: string,
   client?: LLMClient
 ): Promise<ParsedLoreEntry[]> {
+  // 无 LLM 配置 → 本地规则解析降级（只取世界卡）
+  if (!client && !(await hasLLMConfig())) {
+    return localFallback(rawText, "lorebook").loreEntries;
+  }
   let llm: LLMClient;
   let effectiveModel: string;
   if (client) {
@@ -549,6 +557,11 @@ export async function parseStyleOnly(
   rawText: string,
   client?: LLMClient
 ): Promise<StyleProfile & { writingRules: string[] }> {
+  // 无 LLM 配置 → 本地规则解析降级（只取风格卡；本地解析器不产写作规则，置空数组）
+  if (!client && !(await hasLLMConfig())) {
+    const sp = localFallback(rawText, "style").styleProfile;
+    return { ...(sp as StyleProfile), writingRules: [] };
+  }
   let llm: LLMClient;
   let effectiveModel: string;
   if (client) {
@@ -746,7 +759,13 @@ export function mergeParsedSettings(results: ParsedSettings[]): ParsedSettings {
 /** 探测当前是否有可用的 LLM 配置（含本地推理）；未填 Key / 未选模型 / 本地推理未配好时返回 false */
 async function hasLLMConfig(): Promise<boolean> {
   try {
-    await getEffectiveConfig();
+    const config = await getEffectiveConfig();
+    // 占位符防御：apiKey 非空但过短（<16 位）视为「未真正配置」→ 触发本地降级。
+    // 真实 key 通常 ≥20 位；8 位左右的 "sk-xxx" 是 .env 占位符/测试假 key，
+    // 若放行会让请求打到真实 API 用假 key 卡死（比直接报错更糟）。
+    if (config.apiKey && config.apiKey.trim().length > 0 && config.apiKey.trim().length < 16) {
+      return false;
+    }
     return true;
   } catch {
     return false;
@@ -892,16 +911,24 @@ export async function upsertParsedSettingsToProject(
   let charCount = 0;
   let loreCount = 0;
 
-  // ── 角色卡：求同存异（同名合并 background）──
+  // ── 角色卡：求同存异（同名合并 background + 空字段补齐，不同名新建）──
   // 注：本项目 prisma 查询返回宽松类型，故显式断言结构体并手写 Map，
   // 避免 .map 隐式 any 与 new Map(array.map) 把值塌成 {} 的编译错误。
-  interface ExistingCharRow { id: string; name: string; background: string | null }
+  interface ExistingCharRow {
+    id: string;
+    name: string;
+    background: string | null;
+    personality: unknown;
+    age: string | null;
+    gender: string | null;
+    role: string | null;
+  }
   interface ExistingLoreRow { id: string; title: string; content: string | null; keys: string[] | null }
 
   if (parsed.characters.length > 0) {
     const existingChars = (await prisma.characterCard.findMany({
       where: { projectId },
-      select: { id: true, name: true, background: true },
+      select: { id: true, name: true, background: true, personality: true, age: true, gender: true, role: true },
     })) as unknown as ExistingCharRow[];
     const existingMap = new Map<string, ExistingCharRow>();
     for (const c of existingChars) {
@@ -916,10 +943,20 @@ export async function upsertParsedSettingsToProject(
         const mergedBg = [existing.background, c.background]
           .filter((b): b is string => !!b && b.trim().length > 0)
           .join("\n\n---\n---\n\n");
+        // 求同存异·空字段补齐：解析出的新字段在库中为空时补全，不覆盖用户手改的非空值。
+        // （典型场景：探讨模式 create 先建了主角卡（只有 background），随后 outline 落库
+        //   同名存在 → 若只并 background，personality/appearance 等解析结果会永久丢失。）
+        const personalityArr = Array.isArray(c.personality) ? c.personality : [];
+        const data: Record<string, unknown> = { background: mergedBg };
+        const curPers = Array.isArray(existing.personality) ? existing.personality : [];
+        if (curPers.length === 0 && personalityArr.length > 0) data.personality = personalityArr;
+        if ((!existing.age || existing.age === "未知") && c.age && c.age !== "未知") data.age = c.age;
+        if ((!existing.gender || existing.gender === "未知") && c.gender && c.gender !== "未知") data.gender = c.gender;
+        if ((!existing.role || existing.role === "supporting") && c.role && c.role !== "supporting") data.role = c.role;
         writeOps.push(
           prisma.characterCard.update({
             where: { id: existing.id },
-            data: { background: mergedBg },
+            data,
           }),
         );
       } else {

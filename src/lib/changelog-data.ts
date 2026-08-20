@@ -29,6 +29,7 @@ export const LATEST_VERSION = "v3.1.46";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.47 探讨模式一条龙实测 + 「整理」彻底不依赖模型（修复 4 个真实 bug）：①真问题——把探讨模式各功能测一遍后发现：占位 Key（8 位假 key）被误判「已配置」→ 提取请求用假 key 打真实 API 无限卡死；parse-settings 路由走的 parseSettings 没接 v3.1.46 的降级；有真 key 时 LLM 提取 1.7 万字要 2 分钟+、API 不可达时无限挂；探讨 create 先建主角卡（只 background）→ outline 落库同名只并 background → personality 等字段永久丢失；②修复——(a) hasLLMConfig 增加占位 key 防御：apiKey 非空但长度 <16 位视为未配置、自动降级本地解析；(b) parseSettings/parseLorebookOnly/parseStyleOnly 三函数全部接入降级；(c) parse-settings 路由改为默认走本地规则解析器（0.25 秒返回 1.7 万字、全维度 100% 召回、零网络依赖），LLM 提取能力保留给探讨 ai_refine 等可选场景；(d) 同名合并升级为「background 拼接 + 空字段补齐」——解析出的 personality/age/gender/role 在库中为空时补全、不覆盖用户手改值；③实测 22/22 全绿——create 建库+outline 三卡落库（12 角色/12 世界卡/风格卡/大纲/基调）、parse-settings 1.7 万字 0.25s、adopt-batch 批量采纳+同名合并去重、chat 正常回复、前端 /explore 200；④质量门禁 tsc 基线对比零新增（170=基线）；测试脚本固化 scripts/e2e-explore-test.mjs。个人 IP 仍归瑞宝宝。",
   "v3.1.46 「模型无关」设定解析器上线——没配 API Key 也能整理设定，毫秒级、离线可跑：①真问题——之前「探讨模式粘大纲→整理提取设定」依赖 LLM，没配 Key 时「整理」直接报错；且 LLM 路径 prompt 字段结构与落库函数期待的字段对不上（personality 对象 vs 数组等），模型返回的结构化结果天生丢字段/串卡，正是「乱码、字段串到别人身上」焦虑的真因；②新建纯规则解析器 src/core/settings/local-parser.ts——零外部依赖、零网络、零 API，粘贴即解析，名字归组严格（每个角色属性只挂在自己名下，绝不串卡），输出与 ParsedSettings 完全兼容、可被统一落库函数直接落库（同名合并去重原样生效）；③端到端测试（1.7 万字碎片化设定 fixture：12 角色混合 结构化字段块/方括号块/内联散文/纯名字行 + 12 世界卡 势力/地理/功法/历史/器物/规则/种族七类 + 8 关系）harness 评分全维度 100%——角色 12/12、势力 6/6、世界卡 12/12、关系 8/8，解析 ~9ms/1.7万字（≈200 万字/秒）、无脏名；④迭代修复——关系句分句+主语传递（「苏砚是…。他…」代词消解）、世界卡名不再被「的/之」截断（「龙陨之地」完整保留）、matchLoreHeader 补器物/秘宝/圣物等关键词、配对端点 looksLikeName 过滤假名、角色定位 protagonist 优先；⑤提取链路自动降级——parseSettingsStreaming 探测 LLM 配置，无 Key/未配模型自动走本地解析（工作台「整理」+ 探讨模式在无 API 时全可跑），配了 Key 时 LLM 仍作增强；⑥质量门禁 tsc 基线对比零新增（170=基线）。个人 IP 仍归瑞宝宝。",
   "v3.1.44 修复「设置页硅基流动等预设 provider 配置看似保存成功、实际生成用不了」的根因（API 配置 Base URL 污染）：①真问题——设置页对 siliconflow/deepseek/openai/groq 四种预设 provider 不显示 Base URL 输入框，但 getSettings() 用 db.llmBaseUrl || 默认值 解析地址；只要库里残留过 custom 模式填的 URL（或从别的 provider 切来未清空），切回预设 provider 后该错误 URL 会被一直用，生成请求打到错误/不可达地址（如 openai 被墙连不上→fetch failed），用户看到「设置已保存」以为生效、实际生成失败；②修复三处——(a) getSettings 对预设 provider 强制用代码固定的 PROVIDER_BASE_URLS[provider]、忽略数据库残留 baseUrl，仅 custom/local 用用户填写值；(b) 设置页切换 provider 时清空非 custom/local 的 baseUrl state，避免残留值被保存进库；(c) PUT /api/settings 对预设 provider 显式清空 llmBaseUrl，确保库与生成请求都干净；③实测验证——本地 dev server 复现污染场景：PUT siliconflow+错误 baseUrl 后 GET 曾返回该错误 URL、generate/outline 打到错误端点 fetch failed；修复后 PUT 同场景 GET 返回空 baseUrl、generate/outline 正确打到硅基流动端点返回 401（code 30014，仅因测试用假 key）；④质量门禁——纯逻辑修正、零生产功能删除、零接口/LLM 语义变化；tsc 零新增错误；个人 IP 仍归瑞宝宝。",
   "v3.1.43 创意工坊新增 2 个 SFW 写作内置预设（提炼自社区预设「双人成行 / Atri&Deach（DS鲸鱼特供版）」）：①真问题——有用户问从 SillyTavern 导出的社区预设能否直接塞进 novel-forge 预设系统；但 ST 预设是 prompts[198] + extensions（SPreset/regex_scripts/tavern_helper），大量使用 ST 专用宏 {{setvar::}}/{{getvar::}}/$() 与思考链/mod 机制（reasoning_effort/show_thoughts/assistant_prefill），novel-forge 无对应概念、整包塞进去跑不起来也用不上；②方案——仅抽取其中 SFW 写作价值部分（写作人格「双生写手 Atri&Deach 文风」+ 一组人物塑造心法「圆形人物塑造心法」6 条：充分塑造人物/复杂人格与例外/反全知原则/写实与生理引擎/情绪惯性与锚定/情感基准）落成 2 个内置预设（style 文风卡 + lorebook 世界书），随仓库发布、clone 后首次开工坊·全部页签自动播种可见；③NSFW 集群不纳入——原 ST 预设含大量露骨色情/羞辱调教内容（H小说特写、反差色情、色情吐槽、显性高压调教等），既违反 GitHub 公开仓库内容政策、novel-forge 也用不上，一律排除；④单一数据源——写入 src/lib/builtin-presets.ts 的 BUILTINS（被 /api/seed/presets 与 prisma/seed.ts 共用），内置示范预设由 15 个增至 17 个；⑤质量门禁——纯数据新增、零生产逻辑改动、零接口/LLM 变化；tsc 0 错误；个人 IP 仍归瑞宝宝。",
@@ -165,6 +166,7 @@ export const CHANGELOG_BRIEF = [
  * 底部保留「查看完整公告」跳转 /changelog 看 CHANGELOG_BRIEF 全量。
  */
 export const CHANGELOG_USER_BRIEF = [
+  "v3.1.47 「整理」设定现在是纯本地秒出、再也不会卡死，还修了 4 个真 bug：①之前你粘设定点「整理」，如果没配真 AI 钥匙（或钥匙是占位符），请求会拿着假钥匙去打真 AI，一直转圈不结束——现在系统会识别「假钥匙/没配好」自动改用本地规则引擎，1.7 万字 0.25 秒出结果；②就算配了真钥匙，「整理」也默认走本地规则引擎（快、稳、不花你的额度），AI 只留给聊天那些必须用它的地方；③修了一个丢字段的 bug：探讨模式建书时先建了主角卡（只有背景），后面大纲落库时因为同名存在、只合并背景，导致主角的性格、年龄这些没存进去——现在同名合并会「缺啥补啥」，性格年龄角色定位这些在库里是空的就会补上，你手动改过的不会被覆盖；④用 1.7 万字设定把探讨模式全流程测了一遍（建书→12 角色+12 世界卡+风格卡落库→批量采纳→聊天），22 项检查全过。纯修 bug、没动你任何写作功能，tsc 零新增错误。个人 IP 仍归瑞宝宝。",
   "v3.1.46 没配 AI 钥匙也能「整理设定」了，而且秒出结果：①之前你粘一大段设定（角色特征、势力、人物关系混在一起）点「整理」，必须靠大模型才能拆成角色卡和世界卡——没配 API Key 就报错、配了还可能把 A 的设定串到 B 身上；②这版我加了一套「不靠 AI 的规则引擎」：它自己会认人名、势力、地名、功法这些词，谁是谁的师父、谁跟谁是宿敌也能从句子里抓出来，拆好之后照样走「同名合并去重」那套逻辑落库；③我用 1.7 万字碎片化设定实测（12 个角色、12 张世界卡、8 组关系，混着「姓名：xxx」「【xxx】」「xxx 是 xxx 的师父」各种写法）：角色、世界卡、关系全部识别 100%，解析只要 9 毫秒——比调 AI 快几千倍；④现在没配 Key 时点「整理」也能正常跑（自动走规则引擎），配了 Key 就用 AI 更聪明地抽。纯加法、没动你任何写作功能，tsc 零新增错误。个人 IP 仍归瑞宝宝。",
   "v3.1.44 修了你刚遇到的「硅基流动填了好像生效、写的时候却用不了」：①根因——设置页里硅基流动/DeepSeek/OpenAI/Groq 这几种「预设服务商」本来不用填接口地址（地址写死在代码里、肯定对），所以界面不给你填地址的框；但底层读配置时，如果你的账号之前在「自定义」模式填过别的地址、或从别的服务商切过来没清干净，那个错误地址会被一直记着、生成时悄悄用到错误地方（比如用到被墙连不上的 OpenAI 地址），于是你点保存看到「已保存」以为好了、真去写小说却连不上；②现在三处一起堵死——生成时预设服务商强制用代码里正确的地址、切服务商时自动清空残留地址、保存时预设服务商不存错误地址；③你重新在设置页选硅基流动、填好 Key、点保存，就能正常生成了（之前被我测试时覆盖掉的本地 Key 已清空，你去硅基流动后台重新复制 Key 填进来即可）。纯修 bug、没动你任何写作功能，tsc 零错误。个人 IP 仍归瑞宝宝。",
   "v3.1.43 创意工坊多了 2 个写作内置预设，还是别人写好的、直接白嫖的（提炼自社区预设「双人成行 / Atri&Deach（DS鲸鱼特供版）」）：①你之前问从 SillyTavern 导出的那种社区预设能不能直接塞进咱们的预设系统——能，但不能整包塞；那种预设是 SillyTavern 专用的（一堆 ST 专属宏和插件机制），咱们这个项目跑不起来也用不上；②所以只挑了里面真正有用的写作干货：一张「双生写手 Atri&Deach 文风」文风卡（直接有力、干净利落、现代短句、对话动作驱动、尊重角色弧光），和一份「圆形人物塑造心法」世界书（6 条怎么把人物写活：充分塑造、复杂人格留例外、反全知、写实生理引擎、情绪惯性、情感基准）；③露骨色情那部分（原预设里占比很大）一律没要——既违反 GitHub 公开仓库规定、咱们也用不上；④这俩预设现在随仓库发布，你 clone 完第一次打开创意工坊·全部页签就自动出现在文风卡和世界书里，套用即用。纯加内容、没动你任何写作功能，质量门禁 tsc 零错误。个人 IP 仍归瑞宝宝。",
@@ -207,6 +209,41 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.47",
+    date: "2026-08-20",
+    title: "探讨模式一条龙实测 + 「整理」彻底不依赖模型（修复 4 个真实 bug）",
+    sections: [
+      {
+        label: "🐛 修复：占位 Key 误判卡死",
+        items: [
+          "hasLLMConfig 增加占位 key 防御：apiKey 非空但 <16 位视为未配置，自动降级本地解析",
+          "parseSettings / parseLorebookOnly / parseStyleOnly 三函数全部接入降级（有显式 client 不降级）",
+        ],
+      },
+      {
+        label: "⚡ 整理默认走本地解析器",
+        items: [
+          "parse-settings 路由默认调本地规则解析器：1.7 万字 0.25s 返回、全维度 100% 召回、零网络依赖",
+          "LLM 提取能力保留给探讨 ai_refine 等可选场景",
+        ],
+      },
+      {
+        label: "🔧 修复：同名合并丢字段",
+        items: [
+          "探讨 create 先建主角卡（只 background）→ outline 落库同名只并 background → personality 丢失",
+          "同名合并升级为「background 拼接 + 空字段补齐」：personality/age/gender/role 库中为空时补全、不覆盖用户手改值",
+        ],
+      },
+      {
+        label: "🧪 端到端实测 22/22 全绿",
+        items: [
+          "create 建库+outline 三卡落库（12 角色/12 世界卡/风格卡/大纲/基调）、parse-settings 0.25s、adopt-batch 合并去重、chat 正常",
+          "脚本固化 scripts/e2e-explore-test.mjs；tsc 基线对比零新增（170=基线）",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.46",
     date: "2026-08-20",

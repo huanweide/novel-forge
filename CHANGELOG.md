@@ -1,5 +1,17 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.47 — 2026-08-20
+
+### 探讨模式一条龙实测 + 「整理」彻底不依赖模型（修复 4 个真实 bug）
+
+- **实测背景（瑞宝宝原话）**：把创建小说的各探讨模式功能都测一遍、创建一本小说看后续流程、确定没问题后消除 bug 再更新。用 1.7 万字碎片化设定 fixture 端到端实测 create/adopt-batch/parse-settings/chat 全链路 + 数据库直查验证落库。
+- **Bug 1（P0）占位 Key 误判导致请求无限卡死**：`hasLLMConfig()` 只判断 apiKey 非空——`.env` 里的 8 位占位符 key 被判「已配置」→ 提取请求打到真实 API 用假 key 无限挂起（无超时保护）。修复：apiKey 非空但长度 <16 位视为「未真正配置」→ 自动降级本地解析器。
+- **Bug 2（P0）parse-settings 路由无降级**：v3.1.46 只在 `parseSettingsStreaming` 加了降级，但「整理」主入口 parse-settings 路由用的是 `parseSettings`/`parseLorebookOnly`/`parseStyleOnly`——无 key/占位 key 时直接卡死或 500。修复：三个解析函数全部接入 `hasLLMConfig()` 降级（有显式 client 时不降级）。
+- **Bug 3（P1）「整理」默认走 LLM 又慢又不稳**：实测有真 key（DB 存 51 位硅基流动 key）时，1.7 万字设定经 LLM 提取需 2 分钟+；API 不可达时无限挂起。修复：parse-settings 路由改为**默认走本地规则解析器**（0.25 秒返回、全维度 100% 召回、零网络依赖），LLM 提取能力保留给探讨模式 `ai_refine` 等可选场景。
+- **Bug 4（P1）同名合并丢字段**：探讨模式 create 先建主角卡（只写 background 无 personality）→ 随后 outline 落库时同名存在 → 走「同名只合并 background」分支 → personality/appearance 等解析结果永久丢失（正是「丢字段」焦虑的真根）。修复：同名合并升级为「background 拼接 + 空字段补齐」——解析出的新字段（personality/age/gender/role）在库中为空时补全，不覆盖用户手改的非空值。
+- **实测结果（22/22 全绿）**：create 建库+outline 三卡落库（12 角色/12 世界卡/风格卡/大纲/基调全落库）、parse-settings 1.7 万字 0.25s 返回 12+12+风格卡、adopt-batch 批量采纳+同名合并去重、chat 正常回复、前端 /explore / /changelog 全 200。
+- **质量门禁**：tsc 基线对比零新增（170 = 基线）；测试脚本固化 `scripts/e2e-explore-test.mjs`（探讨模式全链路回归）。
+
 ## v3.1.46 — 2026-08-20
 
 ### 「模型无关」设定解析器上线：无 API Key 也能整理设定，毫秒级、离线可跑

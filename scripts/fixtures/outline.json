@@ -1,0 +1,503 @@
+{
+  "characters": [
+    {
+      "name": "林惊蛰",
+      "aliases": [],
+      "age": "19岁",
+      "gender": "男",
+      "role": "protagonist",
+      "appearance": {
+        "hair": "",
+        "eyes": "角有一道朱砂痣",
+        "height": "",
+        "build": "清瘦",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [
+        "隐忍",
+        "执拗",
+        "外冷内热",
+        "表面淡漠实则极重情义"
+      ],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "林惊蛰是青冥宗百年难遇的废脉之体，幼时被弃于山门之外，靠偷学功法入门。十六岁那年宗门内乱，恩师苏砚为护他重伤濒死，他立誓要查清真凶。后于龙陨之地得一截远古龙骨，从此踏上逆天改命之路。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "苏砚",
+          "relation": "徒弟"
+        },
+        {
+          "target": "沈厌离",
+          "relation": "师徒"
+        },
+        {
+          "target": "沈厌离",
+          "relation": "宿敌"
+        },
+        {
+          "target": "阿萝",
+          "relation": "师父"
+        },
+        {
+          "target": "沈厌离",
+          "relation": "同门"
+        }
+      ]
+    },
+    {
+      "name": "沈厌离",
+      "aliases": [],
+      "age": "未知",
+      "gender": "女",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [
+        "冷傲孤僻",
+        "剑出则不见血不归鞘",
+        "背景：沈厌离出身没落世家",
+        "族人尽殁于焚天殿之手",
+        "被林惊蛰的师父苏砚救回宗门",
+        "她与林惊蛰同为苏砚弟子",
+        "却因一道祖训成为宿命之敌"
+      ],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "沈厌离出身没落世家，族人尽殁于焚天殿之手，被林惊蛰的师父苏砚救回宗门。她与林惊蛰同为苏砚弟子，却因一道祖训成为宿命之敌。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "苏砚",
+          "relation": "徒弟"
+        },
+        {
+          "target": "林惊蛰",
+          "relation": "师徒"
+        },
+        {
+          "target": "林惊蛰",
+          "relation": "宿敌"
+        },
+        {
+          "target": "林惊蛰",
+          "relation": "同门"
+        }
+      ]
+    },
+    {
+      "name": "墨九卿",
+      "aliases": [],
+      "age": "未知",
+      "gender": "男",
+      "role": "supporting",
+      "appearance": {
+        "hair": "束金冠",
+        "eyes": "含笑却无温度",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [
+        "腹黑",
+        "慵懒",
+        "算无遗策"
+      ],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "墨九卿来历成谜，自称游走诸界的说书人，实则掌控着一张横跨人妖两族的情报网。他与谢长安青梅竹马，两人在赤羽族的祭坛下定情，却因人族与妖族的世仇被迫隐忍。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "谢长安",
+          "relation": "恋人"
+        }
+      ]
+    },
+    {
+      "name": "阿萝",
+      "aliases": [],
+      "age": "未知",
+      "gender": "女",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "却能见灵气流动",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "林惊蛰在山下捡来的孤女，十五岁，天真烂漫，拜林惊蛰为师。她天生 blind 眼却能见灵气流动，是罕见的「灵视」之体，被万宝商会视为奇货可居。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "林惊蛰",
+          "relation": "徒弟"
+        }
+      ]
+    },
+    {
+      "name": "玄武",
+      "aliases": [],
+      "age": "未知",
+      "gender": "未知",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "玄武原为北海镇渊神兽，与白帝立下千年契约。白帝沉眠后，它化作老者守在龙陨之地入口，等候应劫之人。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "白帝",
+          "relation": "挚友"
+        }
+      ]
+    },
+    {
+      "name": "白帝",
+      "aliases": [],
+      "age": "未知",
+      "gender": "未知",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "上古神皇，曾以一剑划开幽都与人间之界。他与玄武亦主亦友，传说白帝陨落前将半缕神魂封入龙骨，而今林惊蛰所得那截龙骨，正是白帝遗骸。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "玄武",
+          "relation": "挚友"
+        }
+      ]
+    },
+    {
+      "name": "青冥老祖",
+      "aliases": [],
+      "age": "未知",
+      "gender": "男",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "青冥老祖是青冥宗开派祖师，三百年前兵解坐化，留法身镇守宗门气运。南柯是其隔代弟子，承其衣钵守着宗门最深的秘密——龙陨之地的真正入口。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "南柯",
+          "relation": "师父"
+        }
+      ]
+    },
+    {
+      "name": "顾衍",
+      "aliases": [],
+      "age": "未知",
+      "gender": "未知",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "玄霜阁的少阁主，外表温雅，实则城府极深。他与叶红妆宿命相争，背后却牵扯两派对龙陨之地宝藏的觊觎。顾衍曾暗中救过林惊蛰一命，动机成谜。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "叶红妆",
+          "relation": "宿敌"
+        }
+      ]
+    },
+    {
+      "name": "南柯",
+      "aliases": [],
+      "age": "二十二岁",
+      "gender": "女",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [
+        "沉静",
+        "通透",
+        "看似与世无争"
+      ],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "南柯是青冥老祖的隔代传人，守着宗门禁地的典籍。她与林惊蛰亦师亦友，是最早察觉龙陨之地将启之人，暗中为林惊蛰铺路良多。",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "青冥老祖",
+          "relation": "弟子"
+        }
+      ]
+    },
+    {
+      "name": "谢长安",
+      "aliases": [],
+      "age": "未知",
+      "gender": "未知",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "墨九卿",
+          "relation": "恋人"
+        }
+      ]
+    },
+    {
+      "name": "叶红妆",
+      "aliases": [],
+      "age": "未知",
+      "gender": "未知",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "顾衍",
+          "relation": "宿敌"
+        }
+      ]
+    },
+    {
+      "name": "苏砚",
+      "aliases": [],
+      "age": "未知",
+      "gender": "未知",
+      "role": "supporting",
+      "appearance": {
+        "hair": "",
+        "eyes": "",
+        "height": "",
+        "build": "",
+        "features": "",
+        "attire": ""
+      },
+      "personality": [],
+      "dialogueDescription": "",
+      "dialogueExamples": [],
+      "background": "",
+      "hiddenMotives": [],
+      "relations": [
+        {
+          "target": "林惊蛰",
+          "relation": "师父"
+        },
+        {
+          "target": "沈厌离",
+          "relation": "师父"
+        }
+      ]
+    }
+  ],
+  "loreEntries": [
+    {
+      "title": "青冥宗",
+      "category": "faction",
+      "keys": [
+        "青冥宗"
+      ],
+      "content": "青冥宗——天下第一剑宗，立于云巅九千阶之上。宗内以剑入道，分内门七峰。镇派绝学「青冥剑诀」需废脉之体方可练至大成。与玄霜阁、焚天殿鼎足而立，却因龙陨之地暗生嫌隙。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "玄霜阁",
+      "category": "faction",
+      "keys": [
+        "玄霜阁"
+      ],
+      "content": "玄霜阁：北境冰原上的术法宗门，擅冰封与咒术。阁中以「霜魂」为凭，弟子需剜心献祭方得传承。少阁主顾衍执掌实务，表面与青冥宗交好，暗中图谋龙陨。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "焚天殿",
+      "category": "faction",
+      "keys": [
+        "焚天殿"
+      ],
+      "content": "焚天殿——南荒火修云集之地，崇奉焚天古神。殿中圣女叶红妆权倾一时，焚天殿与青冥宗有血海深仇（沈厌离满门即灭于其手）。焚天殿手握「焚天令」，可号令南荒百部。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "幽都",
+      "category": "faction",
+      "keys": [
+        "幽都"
+      ],
+      "content": "幽都：死者之国，位于人间与冥界夹缝。由「幽都之主」统辖，常年笼于灰雾。白帝当年一剑封其门，如今封印渐松，幽都厉鬼时有逸出。谢长安曾独闯幽都夺回赤羽族圣物。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "万宝商会",
+      "category": "faction",
+      "keys": [
+        "万宝商会"
+      ],
+      "content": "万宝商会——横跨人妖两族的巨贾联盟，明面做生意，暗面贩卖情报与异宝。商会垂涎阿萝的灵视之体，多次派人潜入青冥宗。墨九卿的情报网正与万宝商会相互渗透。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "赤羽族",
+      "category": "faction",
+      "keys": [
+        "赤羽族"
+      ],
+      "content": "·赤羽族：生于南境火山带的异族，化为人形则额生赤羽。全族信奉火神，圣物「赤羽心」被幽都所掳，少主谢长安立志夺回。赤羽族与青冥宗偶有往来，却因人妖世仇难获信任。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "龙陨之地",
+      "category": "geography",
+      "keys": [
+        "龙陨之地"
+      ],
+      "content": "龙陨之地——位于两界山腹地，每三百年开启一次，开启时天现血月、灵气倒灌。深处藏有白帝遗骸所化龙骨，是全书因果的枢纽。",
+      "insertionOrder": 60
+    },
+    {
+      "title": "青冥剑诀",
+      "category": "magic_system",
+      "keys": [
+        "青冥剑诀"
+      ],
+      "content": "青冥剑诀——青冥宗镇派绝学，共九重。第九重「斩因果」需以自身一段记忆为薪，唯废脉之体可练至大成。",
+      "insertionOrder": 85
+    },
+    {
+      "title": "三百年前的内乱",
+      "category": "history",
+      "keys": [
+        "三百年前的内乱"
+      ],
+      "content": "三百年前的内乱——青冥宗一夜血流成河，宗主失踪、老祖坐化，死的不只是弟子，还有一段被刻意抹去的真相。玄霜冰原之下埋着当年的证物。",
+      "insertionOrder": 60
+    },
+    {
+      "title": "焚天令",
+      "category": "item",
+      "keys": [
+        "焚天令"
+      ],
+      "content": "焚天令——焚天殿镇殿之宝，可号令南荒百部。叶红妆与顾衍为争夺此物结下宿怨。",
+      "insertionOrder": 60
+    },
+    {
+      "title": "龙陨封印",
+      "category": "law",
+      "keys": [
+        "龙陨封印"
+      ],
+      "content": "龙陨封印——以白帝神魂为锁，林惊蛰所得龙骨正是那把钥匙。封印渐松，幽都厉鬼时有逸出。",
+      "insertionOrder": 60
+    },
+    {
+      "title": "妖族",
+      "category": "creature",
+      "keys": [
+        "妖族"
+      ],
+      "content": "妖族——与人族并立于世，化形者须渡天劫。人妖两族世仇绵延千年，赤羽族便是妖族一支。",
+      "insertionOrder": 60
+    }
+  ],
+  "plotOutline": "讲述废脉少年林惊蛰于龙陨之地得白帝遗骸，在师父苏砚含恨而终后，联合沈厌离、南柯、阿萝等人揭开三百年前青冥宗内乱真相，周旋于青冥宗、玄霜阁、焚天殿、幽都、万宝商会与赤羽族六方势力之间，最终重启龙陨封印、了断因果的故事。基调偏热血与虐恋交织，暗线权谋。",
+  "toneKeywords": [
+    "热血",
+    "虐恋",
+    "权谋",
+    "群像",
+    "慢热",
+    "致郁"
+  ],
+  "styleProfile": {
+    "povType": "third_person_limited",
+    "narrativeDistance": "medium",
+    "avgSentenceLength": 21,
+    "shortSentenceRatio": 0.19,
+    "longSentenceRatio": 0.01,
+    "dialogueRatio": 0,
+    "descriptionRatio": 0.25,
+    "actionRatio": 0.25,
+    "innerThoughtRatio": 0.1,
+    "tonalMarkers": {},
+    "lexicalFeatures": {},
+    "styleDescription": "系统自动推断：平均句长约21字，叙事视角为第三人称限制，对话占比约0%。",
+    "sampleText": "角色：林惊蛰。定位：男主角"
+  }
+}
