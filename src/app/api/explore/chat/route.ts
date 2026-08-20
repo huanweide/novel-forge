@@ -17,13 +17,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { parseSettingsStreaming } from "@/core/settings/parser";
 import type { BuildConfig, AdoptedItem, ExploreStep, AdoptCard } from "@/core/explore/types";
 import { EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS } from "@/core/explore/types";
 import { extractJson } from "@/core/explore/utils";
 import { jsonError } from "@/lib/api-error";
 import { safeJson } from "@/lib/api-body";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
@@ -218,7 +219,7 @@ function buildConfigSummary(config: BuildConfig): string {
   return lines.join("\n");
 }
 
-/** 一键生成所有步骤的候选卡片 */
+/** 一键生成所有步骤的候选卡片（结构化输出，与大纲提取同构） */
 async function handleGenerateAll(
   config?: BuildConfig,
   adopted?: AdoptedItem[],
@@ -228,26 +229,46 @@ async function handleGenerateAll(
     ? adopted.map(a => `[${STEP_LABELS[a.step]}] ${a.title}: ${a.content.slice(0, 100)}`).join("\n")
     : "";
 
-  const prompt = `你是一位专业小说作家。请基于以下配置，为所有11个构建步骤各生成1张最合适的设定卡片。
+  const prompt = `你是一位专业小说作家。请基于以下配置，直接生成结构化的角色卡和世界书设定（不要再生成纯文本卡片）。
 
 【用户配置】
 ${configSummary || "默认：玄幻小说，男频青年向，长篇"}
 
 ${adoptedSummary ? `【已采纳设定】\n${adoptedSummary}\n` : ""}
 
-【11个步骤——每个步骤生成1张卡片】
-${EXPLORE_STEPS.map(s => `- ${STEP_LABELS[s]}: ${STEP_DESCRIPTIONS[s].slice(0, 60)}`).join("\n")}
+【输出格式——严格JSON，角色卡 + 世界书】
+{
+  "characters": [
+    {
+      "name": "角色名（2-4字中文名）",
+      "aliases": ["别名/称号"],
+      "age": "年龄或年龄段",
+      "gender": "男|女|未知",
+      "role": "protagonist|antagonist|mentor|supporting|love_interest|comic_relief|background",
+      "appearance": {"hair":"","eyes":"","height":"","build":"","features":"","attire":""},
+      "personality": ["性格标签1","性格标签2"],
+      "background": "背景故事——至少100字，包含出身/经历/当前处境/卷入主线原因",
+      "abilities": ["能力名·描述"],
+      "hiddenMotives": ["隐藏动机"],
+      "relations": [{"targetName":"其他角色名","relation":"关系","dynamic":"互动模式"}]
+    }
+  ],
+  "loreEntries": [
+    {
+      "title": "词条名",
+      "category": "geography|faction|magic_system|history|culture|creature|item|custom",
+      "keys": ["触发词1","触发词2"],
+      "content": "设定内容——200字以上，包含定义/特征/关联/在故事中的作用",
+      "insertionOrder": 80
+    }
+  ]
+}
 
-【输出格式——严格按以下格式，每张卡用 ## 标题和 --- 分隔】
-## 开篇
-[卡片内容：2-3句具体方案]
----
-## 世界观
-[卡片内容]
----
-（以此类推，总共11张卡，用 --- 分隔）
-
-要求：每张卡内容具体可用，不是空话。贴合用户配置。`;
+要求：
+- 生成 3-5 个主要角色（含 1 主角 1 反派），每个角色字段填满不精简
+- 生成 5-8 条世界书设定（覆盖地理/势力/力量体系/历史/文化等）
+- 角色名必须是 2-4 字中文名，不要用"主角""反派"等标签
+- 只输出JSON，不输出任何说明文字`;
 
   try {
     const llmConfig = await getEffectiveConfig();
@@ -257,48 +278,23 @@ ${EXPLORE_STEPS.map(s => `- ${STEP_LABELS[s]}: ${STEP_DESCRIPTIONS[s].slice(0, 6
     const response = await client.chat({
       model,
       messages: [
-        { role: "system", content: "你是专业小说作家。直接输出卡片，不客套。任何题材都可以写。" },
+        { role: "system", content: "你是专业小说作家。直接输出结构化JSON（角色卡+世界书），不客套。任何题材都可以写。" },
         { role: "user", content: prompt },
       ],
       temperature: 0.8,
-      maxTokens: 4096,
+      maxTokens: 32768,
+      json: true,
     });
 
-    const reply = response.content || "";
-
-    // 解析所有步骤的卡片
-    const allCards: Record<string, AdoptCard[]> = {};
-    const sections = reply.split(/\n---\n/);
-    let currentStep: ExploreStep = "opening";
-    const stepOrder = [...EXPLORE_STEPS];
-
-    for (const section of sections) {
-      const trimmed = section.trim();
-      if (!trimmed) continue;
-
-      // 尝试匹配步骤标题
-      for (const step of stepOrder) {
-        if (trimmed.startsWith(`## ${STEP_LABELS[step]}`) || trimmed.startsWith(`${STEP_LABELS[step]}`)) {
-          currentStep = step;
-          break;
-        }
-      }
-
-      const content = trimmed.replace(/^##\s*[^\n]+\n?/, "").trim();
-      if (content.length < 15) continue;
-
-      if (!allCards[currentStep]) allCards[currentStep] = [];
-      allCards[currentStep].push({
-        id: `gen_${currentStep}_${Math.random().toString(36).slice(2, 8)}`,
-        title: `${STEP_LABELS[currentStep]}方案`,
-        content: content.slice(0, 400),
-        step: currentStep,
-      });
-    }
+    const parsed = extractJson(response.content) || {};
+    const characters = Array.isArray(parsed.characters) ? parsed.characters : [];
+    const loreEntries = Array.isArray(parsed.loreEntries) ? parsed.loreEntries : [];
 
     return NextResponse.json({
-      reply: `已为 ${Object.keys(allCards).length} 个步骤生成设定卡片。点击卡片即可采纳并写入项目。`,
-      allCards,
+      reply: `已生成 ${characters.length} 个角色、${loreEntries.length} 条世界设定。确认后一键写入项目。`,
+      characters,
+      loreEntries,
+      plotOutline: "",
       mode: "generate_all",
     });
   } catch (err) {
@@ -307,72 +303,9 @@ ${EXPLORE_STEPS.map(s => `- ${STEP_LABELS[s]}: ${STEP_DESCRIPTIONS[s].slice(0, 6
   }
 }
 
-// ─── 大纲模式：两步解析+丰满 ──────────────────────────
-
-/** 智能分块——在段落/标题边界切分，保持上下文连贯 */
-function chunkText(text: string, maxChunkSize = 7000): string[] {
-  const clean = text.trim();
-  if (clean.length <= maxChunkSize) return [clean];
-
-  const chunks: string[] = [];
-  // 按双换行（段落边界）切分
-  const paragraphs = clean.split(/\n\n+/);
-  let current = "";
-
-  for (const para of paragraphs) {
-    if (current.length + para.length > maxChunkSize && current.length > 500) {
-      chunks.push(current.trim());
-      current = para;
-    } else {
-      current += (current ? "\n\n" : "") + para;
-    }
-  }
-  if (current.trim()) chunks.push(current.trim());
-
-  // 每个 chunk 前 500 字作为 context 传给下一个 chunk
-  const withOverlap: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    let chunk = chunks[i];
-    if (i > 0) {
-      const prevTail = chunks[i - 1].slice(-500);
-      chunk = `【前文提要】${prevTail}\n\n---\n\n${chunk}`;
-    }
-    withOverlap.push(chunk);
-  }
-
-  return withOverlap;
-}
-
-/** 按名称相似度去重合并 */
-function mergeResults(allResults: any[]): { characters: any[]; loreEntries: any[]; plotOutlines: string[] } {
-  const charMap = new Map<string, any>();
-  const loreMap = new Map<string, any>();
-  const plotOutlines: string[] = [];
-
-  for (const result of allResults) {
-    for (const c of (result.characters || [])) {
-      const key = c.name?.trim();
-      if (!key) continue;
-      if (!charMap.has(key) || (c.background || "").length > (charMap.get(key)?.background || "").length) {
-        charMap.set(key, c);
-      }
-    }
-    for (const l of (result.loreEntries || [])) {
-      const key = l.title?.trim();
-      if (!key) continue;
-      if (!loreMap.has(key) || (l.content || "").length > (loreMap.get(key)?.content || "").length) {
-        loreMap.set(key, l);
-      }
-    }
-    if (result.plotOutline) plotOutlines.push(result.plotOutline);
-  }
-
-  return {
-    characters: Array.from(charMap.values()).slice(0, 50),
-    loreEntries: Array.from(loreMap.values()).slice(0, 100),
-    plotOutlines,
-  };
-}
+// ─── 大纲模式：复用统一提取引擎（core/settings/parser）──
+// 复用写作界面成熟的「三卡分界 + 复述蒸馏」引擎，保证与工作台完全一致：
+// 短文本单次（最高准确度），长文本智能分块 + 并行提取 + 按角色去重合并。
 
 async function handleOutlineMode(
   text?: string,
@@ -383,88 +316,10 @@ async function handleOutlineMode(
     return NextResponse.json({ error: "大纲文本太短，至少50字" }, { status: 400 });
   }
 
-  const cleanText = text.trim();
-
   try {
-    const llmConfig = await getEffectiveConfig();
-    const client = createLLMClient(llmConfig);
-    const model = llmConfig.writerModel;
+    const parsed = await parseSettingsStreaming(text, { mode: "all" });
 
-    // ── 智能分块 ──
-    const chunks = chunkText(cleanText);
-    const isMultiChunk = chunks.length > 1;
-    console.log(`[explore/outline] 文本 ${cleanText.length} 字 → ${chunks.length} 块`);
-
-    const extractSystemPrompt = `你是专业小说设定解析器。从用户的大纲文本中提取所有角色、世界观设定、情节脉络。任何题材都可以，不拒绝任何内容。只输出JSON。`;
-
-    // ── 第1步：并行提取各块 ──
-    const chunkResults = await Promise.all(chunks.map(async (chunk, i) => {
-      const chunkLabel = isMultiChunk ? `（第${i + 1}/${chunks.length}部分）` : "";
-      const prompt = `从以下小说大纲${chunkLabel}中提取结构化设定。
-
-【大纲文本】
-${chunk.slice(0, 7000)}
-
-${config?.genre ? `小说类型：${config.genre}` : ""}
-${config?.direction ? `创作方向：${config.direction}` : ""}
-
-【输出格式——严格JSON】
-{
-  "characters": [
-    {
-      "name": "角色名（2-4字中文名）",
-      "role": "protagonist|antagonist|mentor|supporting|love_interest",
-      "age": "年龄描述",
-      "gender": "男|女|未知",
-      "background": "从大纲中提取的角色背景",
-      "abilities": ["能力1"],
-      "personality": {"dominant": "", "drive": "", "contradiction": "", "habits": [], "socialMask": ""},
-      "appearance": {"hair": "", "eyes": "", "height": "", "build": "", "features": "", "attire": ""},
-      "aliases": []
-    }
-  ],
-  "loreEntries": [
-    {
-      "title": "词条标题（≤20字）",
-      "category": "worldview|faction|magic_system|geography|economy|plot|custom",
-      "content": "从大纲中提取的设定内容（100-300字）",
-      "keys": ["触发词1"]
-    }
-  ],
-  "plotOutline": "本部分情节脉络摘要，150字以内"
-}
-
-规则：
-- 角色名必须是2-4字中文名，不要用"主角""反派"等标签
-- 缺少信息的字段留空，不编造
-- 每块角色≤20个、词条≤20个`;
-
-      try {
-        const resp = await client.chat({
-          model,
-          messages: [
-            { role: "system", content: extractSystemPrompt },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.2,
-          maxTokens: 4096,
-        });
-        const raw = resp.content || "";
-        return extractJson(raw) || { characters: [], loreEntries: [], plotOutline: "" };
-      } catch {
-        return { characters: [], loreEntries: [], plotOutline: "" };
-      }
-    }));
-
-    // ── 合并去重 ──
-    const merged = mergeResults(chunkResults);
-    const chars = merged.characters;
-    const lores = merged.loreEntries;
-    const combinedPlot = merged.plotOutlines.filter(Boolean).join("\n").slice(0, 800);
-
-    console.log(`[explore/outline] 合并后：${chars.length}角色 · ${lores.length}词条`);
-
-    if (chars.length === 0 && lores.length === 0) {
+    if (parsed.characters.length === 0 && parsed.loreEntries.length === 0) {
       return NextResponse.json({
         reply: "未能从大纲中提取到角色或设定。请确认大纲包含具体的人名和设定描述。",
         characters: [],
@@ -474,123 +329,13 @@ ${config?.direction ? `创作方向：${config.direction}` : ""}
       });
     }
 
-    // ── 第2步：AI丰满细节（一次处理合并结果）──
-    const enrichmentGuide = enrichPrompt || `
-丰满规则（默认，适用于百万字长篇小说）：
-- 角色背景：扩展为4-6句话，包含：位置与境遇、短期目标、长期欲望、资源与限制、卷入核心事件的方式、角色弧线方向
-- 角色性格：扩展为五维结构（dominant/drive/contradiction/habits/socialMask），每个维度1-2句话
-- 角色外貌：补全头发、眼睛、身高、体型、特征、着装
-- 角色能力：每个能力带简短描述
-- 世界设定：扩展为200-500字，包含定义、特征、关联要素、在故事中的作用
-- 情节脉络：合并各块脉络为完整的故事线概述
-- 所有扩展基于大纲信息，合理推敲不凭空编造
-`;
-
-    // 太多条目时分批丰满
-    const MAX_PER_ENRICH = 15;
-    let enrichedChars: any[] = [];
-    let enrichedLores: any[] = [];
-    let enrichedPlot = combinedPlot;
-
-    if (chars.length <= MAX_PER_ENRICH && lores.length <= MAX_PER_ENRICH) {
-      // 一次搞定
-      const prompt2 = `基于以下已提取的设定骨架，按照丰满规则扩展细节。
-
-【已提取的角色（${chars.length}个）】
-${JSON.stringify(chars, null, 1)}
-
-【已提取的世界设定（${lores.length}条）】
-${JSON.stringify(lores, null, 1)}
-
-【情节脉络片段】
-${combinedPlot}
-
-【丰满规则】
-${enrichmentGuide}
-
-${config?.genre ? `小说类型：${config.genre}` : ""}
-
-【输出格式——严格JSON】
-{"characters": [...], "loreEntries": [...], "plotOutline": "..."}
-只输出JSON。`;
-
-      const resp2 = await client.chat({
-        model,
-        messages: [
-          { role: "system", content: "你是专业小说作家。扩展设定细节，丰满但不编造。只输出JSON。" },
-          { role: "user", content: prompt2 },
-        ],
-        temperature: 0.5,
-        maxTokens: 4096,
-      });
-      const raw2 = resp2.content || "";
-      const enriched = extractJson(raw2) || { characters: chars, loreEntries: lores, plotOutline: combinedPlot };
-      enrichedChars = enriched.characters || chars;
-      enrichedLores = enriched.loreEntries || lores;
-      enrichedPlot = enriched.plotOutline || combinedPlot;
-    } else {
-      // 分批丰满角色
-      for (let i = 0; i < chars.length; i += MAX_PER_ENRICH) {
-        const batch = chars.slice(i, i + MAX_PER_ENRICH);
-        try {
-          const resp = await client.chat({
-            model,
-            messages: [
-              { role: "system", content: "扩展角色细节。只输出JSON数组。" },
-              { role: "user", content: `丰满以下角色（保留原结构，扩展背景/性格/外貌/能力）：\n${JSON.stringify(batch, null, 1)}\n\n只输出: {"characters": [...]}` },
-            ],
-            temperature: 0.5,
-            maxTokens: 4096,
-          });
-          const enriched = extractJson(resp.content || "");
-          enrichedChars.push(...(enriched?.characters || batch));
-        } catch {
-          enrichedChars.push(...batch);
-        }
-      }
-      // 分批丰满词条
-      for (let i = 0; i < lores.length; i += MAX_PER_ENRICH) {
-        const batch = lores.slice(i, i + MAX_PER_ENRICH);
-        try {
-          const resp = await client.chat({
-            model,
-            messages: [
-              { role: "system", content: "扩展世界设定细节。只输出JSON数组。" },
-              { role: "user", content: `丰满以下世界设定（扩展content为200-500字）：\n${JSON.stringify(batch, null, 1)}\n\n只输出: {"loreEntries": [...]}` },
-            ],
-            temperature: 0.5,
-            maxTokens: 4096,
-          });
-          const enriched = extractJson(resp.content || "");
-          enrichedLores.push(...(enriched?.loreEntries || batch));
-        } catch {
-          enrichedLores.push(...batch);
-        }
-      }
-      // 丰满情节脉络
-      try {
-        const resp = await client.chat({
-          model,
-          messages: [
-            { role: "system", content: "整理情节脉络。" },
-            { role: "user", content: `将以下情节片段整理为完整故事线（400-800字）：\n${combinedPlot}` },
-          ],
-          temperature: 0.5,
-          maxTokens: 2048,
-        });
-        enrichedPlot = resp.content || combinedPlot;
-      } catch {
-        enrichedPlot = combinedPlot;
-      }
-    }
-
     return NextResponse.json({
-      reply: `整理完成：${enrichedChars.length}个角色、${enrichedLores.length}条世界设定${isMultiChunk ? `（${chunks.length}块文本合并）` : ""}`,
-      characters: enrichedChars,
-      loreEntries: enrichedLores,
-      plotOutline: enrichedPlot,
+      reply: `整理完成：${parsed.characters.length}个角色、${parsed.loreEntries.length}条世界设定`,
+      characters: parsed.characters,
+      loreEntries: parsed.loreEntries,
+      plotOutline: parsed.synopsis,
       mode: "outline",
-      stats: { chunks: chunks.length, textLen: cleanText.length },
+      stats: { textLen: text.trim().length },
     });
   } catch (err) {
     console.error("[explore/chat:outline] 处理失败:", err);
@@ -598,7 +343,7 @@ ${config?.genre ? `小说类型：${config.genre}` : ""}
   }
 }
 
-// ─── 大纲模式 SSE 流式版 ─────────────────────────────
+// ─── 大纲模式 SSE 流式版（复用统一引擎 + 进度回调）──────
 
 async function handleOutlineStream(
   text?: string,
@@ -621,125 +366,32 @@ async function handleOutlineStream(
           return;
         }
 
-        const cleanText = text.trim();
-        const llmConfig = await getEffectiveConfig();
-        const client = createLLMClient(llmConfig);
-        const model = llmConfig.writerModel;
-
-        // Phase 1: 分块
-        const chunks = chunkText(cleanText);
-        send("progress", { phase: "chunking", chunks: chunks.length, textLen: cleanText.length });
-
-        // Phase 2: 逐块提取
-        const allResults: any[] = [];
-        for (let i = 0; i < chunks.length; i++) {
-          send("progress", { phase: "extracting", current: i + 1, total: chunks.length });
-
-          const chunkLabel = chunks.length > 1 ? `（第${i + 1}/${chunks.length}部分）` : "";
-          const prompt = `从以下小说大纲${chunkLabel}中提取结构化设定。
-
-【大纲文本】
-${chunks[i].slice(0, 7000)}
-
-${config?.genre ? `小说类型：${config.genre}` : ""}
-${config?.direction ? `创作方向：${config.direction}` : ""}
-
-【输出格式——严格JSON，角色≤20个，词条≤20个】
-{"characters": [{"name": "角色名", "role": "...", "age": "", "gender": "", "background": "", "abilities": [], "personality": {}, "appearance": {}, "aliases": []}], "loreEntries": [{"title": "", "category": "", "content": "", "keys": []}], "plotOutline": ""}
-只输出JSON。`;
-
-          try {
-            const resp = await client.chat({
-              model,
-              messages: [
-                { role: "system", content: "你是专业小说设定解析器。提取角色/世界观/情节。只输出JSON。" },
-                { role: "user", content: prompt },
-              ],
-              temperature: 0.2,
-              maxTokens: 4096,
-            });
-            const result = extractJson(resp.content || "") || { characters: [], loreEntries: [], plotOutline: "" };
-            allResults.push(result);
+        // 复用统一提取引擎，进度实时回调为 SSE
+        const parsed = await parseSettingsStreaming(text, {
+          mode: "all",
+          onProgress: (p) => {
+            if (p.phase === "error") {
+              send("error", { error: p.error || "提取失败" });
+              return;
+            }
             send("progress", {
-              phase: "extracting",
-              current: i + 1,
-              total: chunks.length,
-              done: true,
-              newChars: result.characters?.length || 0,
-              newLores: result.loreEntries?.length || 0,
+              phase: p.phase,
+              current: p.current,
+              total: p.total ?? p.chunks,
+              chunks: p.chunks,
+              characters: p.characters,
+              loreEntries: p.loreEntries,
             });
-          } catch {
-            allResults.push({ characters: [], loreEntries: [], plotOutline: "" });
-            send("progress", { phase: "extracting", current: i + 1, total: chunks.length, error: true });
-          }
-        }
-
-        // Phase 3: 合并去重
-        send("progress", { phase: "merging" });
-        const merged = mergeResults(allResults);
-        send("progress", {
-          phase: "merging",
-          done: true,
-          totalChars: merged.characters.length,
-          totalLores: merged.loreEntries.length,
+          },
         });
 
-        if (merged.characters.length === 0 && merged.loreEntries.length === 0) {
-          send("done", {
-            reply: "未能提取到角色或设定。请确认大纲包含具体人名和设定描述。",
-            characters: [],
-            loreEntries: [],
-            plotOutline: "",
-          });
-          controller.close();
-          return;
-        }
-
-        // Phase 4: 丰满（单次或分批）
-        send("progress", { phase: "enriching" });
-        const MAX_PER = 15;
-        let enrichedChars: any[] = [];
-        let enrichedLores: any[] = [];
-        let enrichedPlot = merged.plotOutlines.filter(Boolean).join("\n").slice(0, 800);
-        const enrichmentGuide = enrichPrompt || "扩展角色背景为4-6句、性格五维、外貌细节。世界设定200-500字。基于原文合理推敲。";
-
-        if (merged.characters.length <= MAX_PER && merged.loreEntries.length <= MAX_PER) {
-          const prompt2 = `基于以下设定骨架扩展细节。丰满规则：${enrichmentGuide}\n\n角色：${JSON.stringify(merged.characters, null, 1)}\n\n世界设定：${JSON.stringify(merged.loreEntries, null, 1)}\n\n情节：${enrichedPlot}\n\n输出JSON: {"characters": [...], "loreEntries": [...], "plotOutline": "..."}`;
-          try {
-            const resp = await client.chat({
-              model,
-              messages: [
-                { role: "system", content: "扩展小说设定。只输出JSON。" },
-                { role: "user", content: prompt2 },
-              ],
-              temperature: 0.5,
-              maxTokens: 4096,
-            });
-            const enriched = extractJson(resp.content || "") || {};
-            enrichedChars = enriched.characters || merged.characters;
-            enrichedLores = enriched.loreEntries || merged.loreEntries;
-            enrichedPlot = enriched.plotOutline || enrichedPlot;
-          } catch {
-            enrichedChars = merged.characters;
-            enrichedLores = merged.loreEntries;
-          }
-        } else {
-          // 分批处理，只取前 30 个最重要的
-          enrichedChars = merged.characters.slice(0, 30);
-          enrichedLores = merged.loreEntries.slice(0, 50);
-          send("progress", { phase: "enriching", note: `条目较多（${merged.characters.length}角色·${merged.loreEntries.length}词条），直接使用提取结果` });
-        }
-
-        send("progress", { phase: "enriching", done: true });
-
-        // Done!
         send("done", {
-          reply: `整理完成：${enrichedChars.length}个角色、${enrichedLores.length}条世界设定${chunks.length > 1 ? `（${chunks.length}块文本合并）` : ""}`,
-          characters: enrichedChars,
-          loreEntries: enrichedLores,
-          plotOutline: enrichedPlot,
+          reply: `整理完成：${parsed.characters.length}个角色、${parsed.loreEntries.length}条世界设定`,
+          characters: parsed.characters,
+          loreEntries: parsed.loreEntries,
+          plotOutline: parsed.synopsis,
           mode: "outline",
-          stats: { chunks: chunks.length, textLen: cleanText.length },
+          stats: { textLen: text.trim().length },
         });
       } catch (err: any) {
         send("error", { error: err?.message || "处理失败" });

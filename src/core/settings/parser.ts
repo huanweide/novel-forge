@@ -24,6 +24,8 @@
 import type { CharacterCard, LorebookEntry } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { prisma } from "@/lib/prisma";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 
 // ─── 三卡分界标准（Prompt 片段）───────────────────────────────
 
@@ -247,7 +249,8 @@ ${rawText}
       },
     ],
     temperature: 0.3,
-    maxTokens: 32768, // 无上限提取——给足输出空间
+    maxTokens: 32768,
+    json: true, // 无上限提取——给足输出空间
   });
 
   return parseResponse(response.content);
@@ -461,6 +464,7 @@ ${rawText}
     ],
     temperature: 0.2,
     maxTokens: 32768,
+    json: true,
   });
 
   return parseLorebookResponse(response.content);
@@ -588,6 +592,7 @@ ${rawText}
     ],
     temperature: 0.2,
     maxTokens: 32768,
+    json: true,
   });
 
   return parseStyleOnlyResponse(response.content);
@@ -632,5 +637,325 @@ export function toStyleCardCreateParams(profile: StyleProfile, projectId: string
     styleDescription: profile.styleDescription,
     sampleText: profile.sampleText || null,
     sourceChapterCount,
+  };
+}
+
+// ─── 统一流式提取引擎（探讨模式 + 工作台共用）──────────────
+// 设计：短文本单次调用（保留 parser 的复述蒸馏准确度）；
+//       长文本智能分块 → Promise.all 并行提取 → 按 name+role 去重合并；
+//       全程进度回调，避免串行 for 循环导致的超时与慢进度。
+
+/** 提取进度（供 SSE / 前端可视化） */
+export interface ExtractProgress {
+  phase: "chunking" | "extracting" | "merging" | "done" | "error";
+  chunks?: number;
+  textLen?: number;
+  current?: number;
+  total?: number;
+  characters?: number;
+  loreEntries?: number;
+  styleCard?: boolean;
+  error?: string;
+}
+
+/**
+ * 智能分块：按行边界切分，保持章节内上下文完整。
+ * 优先在段落边界（空行）切，避免把一个句子拦腰截断导致乱码；
+ * 每块带前文提要（前 400 字），保证跨块角色/设定不丢失。
+ */
+export function splitIntoChunks(text: string, maxChunk = 9000): string[] {
+  const clean = text.trim();
+  if (clean.length <= maxChunk) return [clean];
+
+  const lines = clean.split(/\n/);
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const line of lines) {
+    if (current.length + line.length > maxChunk && current.length > 300) {
+      chunks.push(current.trim());
+      current = "";
+    }
+    current += line + "\n";
+  }
+  if (current.trim()) chunks.push(current.trim());
+
+  const withOverlap: string[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    let chunk = chunks[i];
+    if (i > 0) {
+      const prevTail = chunks[i - 1].slice(-400);
+      chunk = `【前文提要】${prevTail}\n\n---\n\n${chunk}`;
+    }
+    withOverlap.push(chunk);
+  }
+  return withOverlap;
+}
+
+/**
+ * 合并多块提取结果——按 name+role 去重，避免同名不同人串卡。
+ * 取字段更完整的版本（background/content 更长者优先）。
+ */
+export function mergeParsedSettings(results: ParsedSettings[]): ParsedSettings {
+  const charMap = new Map<string, ParsedCharacter>();
+  const loreMap = new Map<string, ParsedLoreEntry>();
+  let synopsis = "";
+  const toneSet = new Set<string>();
+  let styleProfile: StyleProfile | null = null;
+
+  for (const r of results) {
+    for (const c of r.characters) {
+      // 同名 + 同 role 才算同一人（解决父子同名/师徒同名串卡）
+      const key = `${c.name?.trim()}|${c.role}`;
+      const existing = charMap.get(key);
+      if (!existing || (c.background || "").length > (existing.background || "").length) {
+        charMap.set(key, c);
+      }
+    }
+    for (const l of r.loreEntries) {
+      const key = l.title?.trim().toLowerCase();
+      const existing = loreMap.get(key);
+      if (!existing || (l.content || "").length > (existing.content || "").length) {
+        loreMap.set(key, l);
+      }
+    }
+    if (r.synopsis && r.synopsis.length > synopsis.length) synopsis = r.synopsis;
+    for (const t of r.toneKeywords) toneSet.add(t);
+    if (r.styleProfile && !styleProfile) styleProfile = r.styleProfile;
+  }
+
+  return {
+    characters: Array.from(charMap.values()),
+    loreEntries: Array.from(loreMap.values()),
+    synopsis,
+    toneKeywords: Array.from(toneSet),
+    styleProfile,
+  };
+}
+
+/**
+ * 统一结构化提取——探讨模式与工作台的共用入口。
+ *
+ * - 短文本（≤12000字）：单次调用，保持 parser 复述蒸馏的最高准确度。
+ * - 长文本：智能分块 → Promise.all 并行提取 → 合并去重，全程进度回调。
+ * - mode 对应三卡模式：all / lorebook / style。
+ *
+ * 复用现有 parseSettings/parseLorebookOnly/parseStyleOnly（已带 json:true 严格输出 + 重试）。
+ */
+export async function parseSettingsStreaming(
+  rawText: string,
+  opts?: {
+    onProgress?: (p: ExtractProgress) => void;
+    client?: LLMClient;
+    mode?: "all" | "lorebook" | "style";
+  },
+): Promise<ParsedSettings> {
+  const text = rawText.trim();
+  const onProgress = opts?.onProgress;
+  const mode = opts?.mode ?? "all";
+
+  // 阈值以下直接单次（最快最准）
+  const CHUNK_THRESHOLD = 12000;
+  if (text.length <= CHUNK_THRESHOLD) {
+    onProgress?.({ phase: "extracting", total: 1, current: 1 });
+    try {
+      const result = await extractByMode(text, mode, opts?.client);
+      onProgress?.({
+        phase: "done",
+        characters: result.characters.length,
+        loreEntries: result.loreEntries.length,
+        styleCard: !!result.styleProfile,
+      });
+      return result;
+    } catch (err) {
+      onProgress?.({ phase: "error", error: err instanceof Error ? err.message : "提取失败" });
+      throw err;
+    }
+  }
+
+  // 长文本：分块并行
+  const chunks = splitIntoChunks(text);
+  onProgress?.({ phase: "chunking", chunks: chunks.length, textLen: text.length });
+
+  const results = await Promise.all(
+    chunks.map(async (chunk, i) => {
+      onProgress?.({ phase: "extracting", current: i + 1, total: chunks.length });
+      try {
+        return await extractByMode(chunk, mode, opts?.client);
+      } catch {
+        return { characters: [], loreEntries: [], synopsis: "", toneKeywords: [], styleProfile: null } as ParsedSettings;
+      }
+    }),
+  );
+
+  onProgress?.({ phase: "merging" });
+  const merged = mergeParsedSettings(results);
+  onProgress?.({
+    phase: "done",
+    characters: merged.characters.length,
+    loreEntries: merged.loreEntries.length,
+    styleCard: !!merged.styleProfile,
+  });
+  return merged;
+}
+
+/** 按 mode 分派到现有提取函数（保持单一实现源，避免漂移） */
+async function extractByMode(
+  text: string,
+  mode: "all" | "lorebook" | "style",
+  client?: LLMClient,
+): Promise<ParsedSettings> {
+  if (mode === "lorebook") {
+    const entries = await parseLorebookOnly(text, client);
+    return { characters: [], loreEntries: entries, synopsis: "", toneKeywords: [], styleProfile: null };
+  }
+  if (mode === "style") {
+    const sp = await parseStyleOnly(text, client);
+    return {
+      characters: [],
+      loreEntries: [],
+      synopsis: "",
+      toneKeywords: [],
+      styleProfile: sp,
+    };
+  }
+  return parseSettings(text, client);
+}
+
+// ─── 统一落库：解析结果 → 项目实体（探讨模式 + 工作台共用）──
+// 单一实现源：parse-settings / explore create / explore adopt-batch 全部调用本函数，
+// 保证「求同存异」合并逻辑在任何入口都一致，永不漂移。
+//
+// 设计要点（对应"准确落库、不串卡、不丢字段"）：
+// - 角色卡：同名（小写）合并 background（保留用户手改的其他字段），不同名则新建；
+// - 世界卡：同名词条合并 content（拼接）+ 去重 keys；
+// - 风格卡：有则重建（删除旧卡再建，确保与提取画像一致）；
+// - synopsis / toneKeywords：写项目总纲与基调；
+// - 全程 Promise.all 并行写入，避免逐条 HTTP 的慢与局部失败；
+// - 末尾 syncGlobalPrompt 把新种子注入生成上下文。
+
+export interface UpsertResult {
+  characters: number;
+  loreEntries: number;
+  styleCard: boolean;
+  plotOutline: boolean;
+}
+
+export async function upsertParsedSettingsToProject(
+  projectId: string,
+  parsed: ParsedSettings,
+  opts?: { skipStyleCard?: boolean },
+): Promise<UpsertResult> {
+  const writeOps: Promise<unknown>[] = [];
+  let charCount = 0;
+  let loreCount = 0;
+
+  // ── 角色卡：求同存异（同名合并 background）──
+  // 注：本项目 prisma 查询返回宽松类型，故显式断言结构体并手写 Map，
+  // 避免 .map 隐式 any 与 new Map(array.map) 把值塌成 {} 的编译错误。
+  interface ExistingCharRow { id: string; name: string; background: string | null }
+  interface ExistingLoreRow { id: string; title: string; content: string | null; keys: string[] | null }
+
+  if (parsed.characters.length > 0) {
+    const existingChars = (await prisma.characterCard.findMany({
+      where: { projectId },
+      select: { id: true, name: true, background: true },
+    })) as unknown as ExistingCharRow[];
+    const existingMap = new Map<string, ExistingCharRow>();
+    for (const c of existingChars) {
+      existingMap.set(c.name.toLowerCase().trim(), c);
+    }
+
+    for (const c of parsed.characters) {
+      const key = (c.name || "").toLowerCase().trim();
+      const existing = existingMap.get(key);
+      if (existing) {
+        // 合并：旧 background + 新 background，保留用户已手改的字段
+        const mergedBg = [existing.background, c.background]
+          .filter((b): b is string => !!b && b.trim().length > 0)
+          .join("\n\n---\n---\n\n");
+        writeOps.push(
+          prisma.characterCard.update({
+            where: { id: existing.id },
+            data: { background: mergedBg },
+          }),
+        );
+      } else {
+        writeOps.push(
+          prisma.characterCard.create({ data: toCharacterCreateParams(c, projectId) }),
+        );
+      }
+      charCount++;
+    }
+  }
+
+  // ── 世界卡：求同存异（同名词条合并 content + 去重 keys）──
+  if (parsed.loreEntries.length > 0) {
+    const existingLore = (await prisma.lorebookEntry.findMany({
+      where: { projectId },
+      select: { id: true, title: true, content: true, keys: true },
+    })) as unknown as ExistingLoreRow[];
+    const existingMap = new Map<string, ExistingLoreRow>();
+    for (const e of existingLore) {
+      existingMap.set(e.title.toLowerCase().trim(), e);
+    }
+
+    for (const l of parsed.loreEntries) {
+      const key = (l.title || "").toLowerCase().trim();
+      const existing = existingMap.get(key);
+      if (existing) {
+        const mergedContent = [existing.content, l.content]
+          .filter((c): c is string => !!c && c.trim().length > 0)
+          .join("\n\n---\n");
+        const mergedKeys = [
+          ...new Set([...(existing.keys || []), ...(l.keys || [])]),
+        ];
+        writeOps.push(
+          prisma.lorebookEntry.update({
+            where: { id: existing.id },
+            data: { content: mergedContent, keys: mergedKeys },
+          }),
+        );
+      } else {
+        writeOps.push(
+          prisma.lorebookEntry.create({ data: toLorebookCreateParams(l, projectId) }),
+        );
+      }
+      loreCount++;
+    }
+  }
+
+  // ── 风格卡：有则重建 ──
+  if (parsed.styleProfile && !opts?.skipStyleCard) {
+    writeOps.push(
+      (async () => {
+        await prisma.styleCard.deleteMany({ where: { projectId } });
+        await prisma.styleCard.create({
+          data: toStyleCardCreateParams(parsed.styleProfile!, projectId, 0),
+        });
+      })(),
+    );
+  }
+
+  // ── 项目总纲 + 基调 ──
+  const projectUpdate: Record<string, unknown> = {};
+  if (parsed.synopsis) projectUpdate.synopsis = parsed.synopsis;
+  if (parsed.toneKeywords && parsed.toneKeywords.length > 0) {
+    projectUpdate.toneKeywords = parsed.toneKeywords;
+  }
+  if (Object.keys(projectUpdate).length > 0) {
+    writeOps.push(
+      prisma.project.update({ where: { id: projectId }, data: projectUpdate }),
+    );
+  }
+
+  await Promise.all(writeOps);
+  syncGlobalPrompt(projectId).catch(() => {});
+
+  return {
+    characters: charCount,
+    loreEntries: loreCount,
+    styleCard: !!parsed.styleProfile,
+    plotOutline: !!parsed.synopsis,
   };
 }

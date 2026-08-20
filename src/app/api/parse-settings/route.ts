@@ -1,14 +1,11 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import {
   parseSettings,
   parseLorebookOnly,
   parseStyleOnly,
-  toCharacterCreateParams,
-  toLorebookCreateParams,
-  toStyleCardCreateParams,
+  upsertParsedSettingsToProject,
 } from "@/core/settings";
 
 /**
@@ -27,6 +24,8 @@ import {
  *   mode: "all" | "lorebook" | "style";  // 默认 "all"
  *   autoCreate: boolean;                  // 默认 true
  * }
+ *
+ * 写入统一委托 upsertParsedSettingsToProject（与探讨模式 adopt-batch / create 共用同一实现）。
  */
 export async function POST(request: Request) {
   try {
@@ -44,46 +43,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "项目不存在" }, { status: 404 });
     }
 
-    const created = { characters: 0, loreEntries: 0, styleCard: false };
-
     if (mode === "lorebook") {
       // ─── 仅世界卡模式 ─────────────────────────
       const entries = await parseLorebookOnly(rawText);
 
       if (autoCreate && entries.length > 0) {
-        const existingLore = await prisma.lorebookEntry.findMany({
-          where: { projectId },
-          select: { id: true, title: true, content: true, keys: true },
+        const result = await upsertParsedSettingsToProject(projectId, {
+          characters: [],
+          loreEntries: entries,
+          synopsis: "",
+          toneKeywords: [],
+          styleProfile: null,
         });
-        const existingMap = new Map(existingLore.map(e => [e.title.toLowerCase().trim(), e]));
-
-        let newCount = 0, mergeCount = 0;
-        for (const l of entries) {
-          const key = l.title.toLowerCase().trim();
-          const existing = existingMap.get(key);
-          if (existing) {
-            // 求同存异：合并 content，去重 keys
-            const mergedContent = [existing.content, l.content]
-              .filter(c => c?.trim()).join("\n\n---\n");
-            const mergedKeys = [...new Set([...existing.keys, ...l.keys])];
-            await prisma.lorebookEntry.update({
-              where: { id: existing.id },
-              data: { content: mergedContent, keys: mergedKeys },
-            });
-            mergeCount++;
-          } else {
-            await prisma.lorebookEntry.create({
-              data: toLorebookCreateParams(l, projectId),
-            });
-            newCount++;
-          }
-        }
-        created.loreEntries = newCount + mergeCount;
+        return NextResponse.json({
+          parsed: { loreEntries: entries },
+          created: {
+            characters: 0,
+            loreEntries: result.loreEntries,
+            newEntries: result.loreEntries,
+          },
+          mode: "lorebook",
+        });
       }
 
       return NextResponse.json({
         parsed: { loreEntries: entries },
-        created: { ...created, newEntries: created.loreEntries },
+        created: { characters: 0, loreEntries: entries.length, newEntries: entries.length },
         mode: "lorebook",
       });
     }
@@ -92,12 +77,22 @@ export async function POST(request: Request) {
       // ─── 仅风格卡模式 ─────────────────────────
       const styleResult = await parseStyleOnly(rawText);
 
-      if (autoCreate && styleResult) {
-        await prisma.styleCard.deleteMany({ where: { projectId } });
-        await prisma.styleCard.create({
-          data: toStyleCardCreateParams(styleResult, projectId, 0),
+      if (autoCreate) {
+        const result = await upsertParsedSettingsToProject(projectId, {
+          characters: [],
+          loreEntries: [],
+          synopsis: "",
+          toneKeywords: [],
+          styleProfile: styleResult,
         });
-        created.styleCard = true;
+        return NextResponse.json({
+          parsed: {
+            styleProfile: styleResult,
+            writingRules: styleResult.writingRules || [],
+          },
+          created: { characters: 0, loreEntries: 0, styleCard: result.styleCard },
+          mode: "style",
+        });
       }
 
       return NextResponse.json({
@@ -105,7 +100,7 @@ export async function POST(request: Request) {
           styleProfile: styleResult,
           writingRules: styleResult.writingRules || [],
         },
-        created,
+        created: { characters: 0, loreEntries: 0, styleCard: false },
         mode: "style",
       });
     }
@@ -113,107 +108,22 @@ export async function POST(request: Request) {
     // ─── 默认：全部三卡模式 ───────────────────
     const parsed = await parseSettings(rawText);
 
-    const writeOps: Promise<unknown>[] = [];
-
-    // ── 角色卡：求同存异 —— 同名则合并，不同则新建 ──
-    if (autoCreate && parsed.characters.length > 0) {
-      const existingChars = await prisma.characterCard.findMany({
-        where: { projectId },
-        select: { id: true, name: true, background: true },
-      });
-      const existingCharMap = new Map(existingChars.map(c => [c.name.toLowerCase().trim(), c]));
-
-      let newCount = 0, mergeCount = 0;
-      for (const c of parsed.characters) {
-        const key = c.name.toLowerCase().trim();
-        const existing = existingCharMap.get(key);
-        if (existing) {
-          // 求同存异——合并 background
-          const mergedBg = [existing.background, c.background]
-            .filter(bg => bg?.trim()).join("\n\n---\n---\n\n");
-          writeOps.push(
-            prisma.characterCard.update({
-              where: { id: existing.id },
-              data: {
-                background: mergedBg,
-              },
-            })
-          );
-          mergeCount++;
-        } else {
-          writeOps.push(
-            prisma.characterCard.create({
-              data: toCharacterCreateParams(c, projectId),
-            })
-          );
-          newCount++;
-        }
-      }
-      created.characters = newCount + mergeCount;
-    }
-
-    // ── 世界书：求同存异 —— 同名合并 content + keys ──
-    if (autoCreate && parsed.loreEntries.length > 0) {
-      const existingLore = await prisma.lorebookEntry.findMany({
-        where: { projectId },
-        select: { id: true, title: true, content: true, keys: true },
-      });
-      const existingLoreMap = new Map(existingLore.map(e => [e.title.toLowerCase().trim(), e]));
-
-      for (const l of parsed.loreEntries) {
-        const key = l.title.toLowerCase().trim();
-        const existing = existingLoreMap.get(key);
-        if (existing) {
-          const mergedContent = [existing.content, l.content]
-            .filter(c => c?.trim()).join("\n\n---\n");
-          const mergedKeys = [...new Set([...existing.keys, ...l.keys])];
-          writeOps.push(
-            prisma.lorebookEntry.update({
-              where: { id: existing.id },
-              data: { content: mergedContent, keys: mergedKeys },
-            })
-          );
-          created.loreEntries++;
-        } else {
-          writeOps.push(
-            prisma.lorebookEntry.create({
-              data: toLorebookCreateParams(l, projectId),
-            })
-          );
-          created.loreEntries++;
-        }
-      }
-    }
-
-    if (autoCreate && parsed.styleProfile) {
-      writeOps.push(
-        (async () => {
-          await prisma.styleCard.deleteMany({ where: { projectId } });
-          await prisma.styleCard.create({
-            data: toStyleCardCreateParams(parsed.styleProfile!, projectId, 0),
-          });
-          created.styleCard = true;
-        })()
-      );
-    }
-
-    await Promise.all(writeOps);
-
-    if (parsed.synopsis || parsed.toneKeywords.length > 0) {
-      const updateData: Record<string, unknown> = {};
-      if (parsed.synopsis) updateData.synopsis = parsed.synopsis;
-      if (parsed.toneKeywords.length > 0) updateData.toneKeywords = parsed.toneKeywords;
-      await prisma.project.update({
-        where: { id: projectId },
-        data: updateData,
+    if (autoCreate) {
+      const result = await upsertParsedSettingsToProject(projectId, parsed);
+      return NextResponse.json({
+        parsed,
+        created: {
+          characters: result.characters,
+          loreEntries: result.loreEntries,
+          styleCard: result.styleCard,
+        },
+        mode: "all",
       });
     }
-
-    syncGlobalPrompt(projectId).catch(() => {});
 
     return NextResponse.json({
       parsed,
-      created,
+      created: { characters: 0, loreEntries: 0, styleCard: false },
       mode: "all",
     });
   } catch (err) {

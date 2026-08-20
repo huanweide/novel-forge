@@ -1,5 +1,22 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.45 — 2026-08-18
+
+### 探讨模式「粘贴大纲→整理提取设定」统一架构重构（与写小说界面后端彻底打通）
+
+- **真问题（瑞宝宝原话）**：探讨模式粘贴大纲后「直接粘就能分辨清楚吗」存疑——怕乱码、怕字段串到别人身上、怕长文断连/超时、怕不知道往哪落库；且探讨模式三套提取逻辑与写小说界面的 `parser.ts` 各写各的，合并/落库行为会漂移，两边对不上。
+- **重构（统一为单一实现源）**：
+  1. `src/core/settings/parser.ts` 新增统一落库函数 `upsertParsedSettingsToProject`——求同存异合并角色卡（同名合并 background、不同名新建）+ 世界卡（同名词条合并 content + 去重 keys）+ 风格卡（有则重建）+ 项目 synopsis/基调，末尾 `syncGlobalPrompt` 注入生成上下文；探讨模式与工作台共用，合并逻辑永不漂移。
+  2. 写小说界面 `parse-settings` 路由改为委托统一函数（「保留好的那一个」），HTTP 响应结构 `parsed/created/mode` 兼容前端。
+  3. 探讨模式新增 `POST /api/explore/adopt-batch` 批量采纳入口——接收结构化角色/世界卡/大纲，一次请求直写、不再二次 LLM 解析、不再逐条 HTTP。
+  4. 探讨模式 `POST /api/explore/create` 接受 `outline`，一次建库 + 落库三卡，`maxDuration` 提到 300（应对长大纲不超时）。
+- **修复的隐藏 bug**：
+  - 前端 `handleOutlineConfirm` 原「先建空项目 → 逐条 fetch /api/explore/adopt」N 次往返、慢且局部易失败 → 改为 1 次批量请求（adopt-batch 或 create+outline）；
+  - `adopt` 路由把结构化角色 `JSON.stringify` 存 content 再二次解析，字段（personality/appearance 等）对不上、存残缺 → 结构化结果现经 `upsertParsedSettingsToProject` 直写，零绕圈；
+  - `plotOutline` 此前从未落库（create 时 synopsis 恒为空）→ 现随 outline 写入；
+  - 前端 `handleGenerateAll` 原 `if (data.allCards)` 永远 false，结构化结果被丢弃无法落库 → 现塞入 `outlineResult` + 切 outline 模式，复用同一套预览+确认 UI。
+- **质量门禁**：tsc 基线对比零新增（实际净减 7 个本次引入的 parser 类型错误）；前端兼容——`OutlinePanel` 字段名与 parser 输出完全一致，后端换引擎前端零改；个人 IP 仍归瑞宝宝。
+
 ## v3.1.44 — 2026-08-18
 
 **修复：硅基流动等预设 provider 的 Base URL 污染导致「配置看似保存成功、实际生成用不了」**

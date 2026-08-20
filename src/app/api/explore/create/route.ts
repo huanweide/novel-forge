@@ -19,19 +19,27 @@ import { STEP_LABELS } from "@/core/explore/types";
 import { stepToCategory, extractKeysFromText } from "@/core/explore/utils";
 import { buildGlobalPromptFromExplore } from "@/core/explore/build-prompt";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import { upsertParsedSettingsToProject } from "@/core/settings";
 import { jsonError } from "@/lib/api-error";
 import { safeJson } from "@/lib/api-body";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
     const r = await safeJson(req);
     if (!r.ok) return r.response;
-    const { config, adopted = [], mode = "direct" } = r.body as {
+    const { config, adopted = [], mode = "direct", outline } = r.body as {
       config?: BuildConfig;
       adopted?: AdoptedItem[];
       mode?: "direct" | "ai_refine";
+      outline?: {
+        characters?: any[];
+        loreEntries?: any[];
+        plotOutline?: string;
+        toneKeywords?: string[];
+        styleProfile?: any;
+      };
     };
 
     if (!config) {
@@ -63,7 +71,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: projectName,
         description: config.direction?.slice(0, 500) || `${projectName}的设定`,
-        synopsis: extractSynopsis(adopted),
+        synopsis: outline?.plotOutline || extractSynopsis(adopted),
         genre,
         globalPrompt,
         buildConfig: config as any,
@@ -119,6 +127,21 @@ export async function POST(req: NextRequest) {
 
     // ── 自动生成默认写作规则 ──
     await generateDefaultRules(project.id, config);
+
+    // ── 若粘贴大纲直接带入结构化三卡，批量写入（与工作台 parse-settings 同一实现）──
+    if (outline && ((outline.characters?.length ?? 0) > 0 || (outline.loreEntries?.length ?? 0) > 0)) {
+      try {
+        await upsertParsedSettingsToProject(project.id, {
+          characters: outline.characters || [],
+          loreEntries: outline.loreEntries || [],
+          synopsis: outline.plotOutline || "",
+          toneKeywords: outline.toneKeywords || [],
+          styleProfile: outline.styleProfile || null,
+        });
+      } catch (e) {
+        console.error("[explore/create] 大纲三卡写入失败:", e);
+      }
+    }
 
     // ── 刷新全局提示词缓存（播种的世界书/角色卡/风格卡需进入生成上下文）──
     syncGlobalPrompt(project.id).catch(() => {});

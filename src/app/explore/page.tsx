@@ -17,7 +17,7 @@ import type {
   AdoptCard,
 } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS, STEP_LUCIDE, STEP_PROMPTS } from "@/core/explore/types";
-import { toastError, toastCreated, toastWarning } from "@/components/ui/toast";
+import { toastError, toastCreated } from "@/components/ui/toast";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useHealth } from "@/hooks/use-health";
 
@@ -343,140 +343,68 @@ export default function ExplorePage() {
     creatingRef.current = true;
     setCreating(true);
 
-    const errors: string[] = [];
-
     try {
-      const res = await fetch("/api/explore/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config, adopted: [], mode: "direct" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      let pid = createdProjectId;
 
-      const pid = data.projectId;
-      setCreatedProjectId(pid);
+      if (!pid) {
+        // 首次确认：建项目骨架 + 批量写入三卡（一次请求，不再逐条 HTTP）
+        const res = await fetch("/api/explore/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ config, adopted, mode: "direct", outline: outlineResult }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "创建失败");
+        pid = data.projectId;
+        setCreatedProjectId(pid);
+      } else {
+        // 已有项目：批量追加（求同存异 upsert，结构化直写，不再二次解析）
+        const res = await fetch("/api/explore/adopt-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: pid, ...outlineResult }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "写入失败");
+      }
 
-      const chars = outlineResult.characters || [];
-      const lores = outlineResult.loreEntries || [];
-
-      const charResults = await Promise.allSettled(
-        chars.map((c: any) => {
-          const step = c.role === "protagonist" ? "protagonist" : "free_talk";
-          return fetch("/api/explore/adopt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId: pid,
-              config,
-              card: {
-                title: c.name,
-                content: JSON.stringify(c),
-                step,
-              },
-            }),
-          }).then((r) => r.json());
-        }),
-      );
-
-      const loreResults = await Promise.allSettled(
-        lores.map((l: any) =>
-          fetch("/api/explore/adopt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId: pid,
-              config,
-              card: {
-                title: l.title,
-                content: JSON.stringify(l),
-                step: "worldview" as ExploreStep,
-              },
-            }),
-          }).then((r) => r.json()),
-        ),
-      );
-
-      const charOk = charResults.filter(
-        (r) => r.status === "fulfilled" && !r.value?.error,
-      ).length;
-      const loreOk = loreResults.filter(
-        (r) => r.status === "fulfilled" && !r.value?.error,
-      ).length;
-      const charFail =
-        charResults.length - charOk +
-        charResults.filter((r) => r.status === "rejected").length;
-      const loreFail =
-        loreResults.length - loreOk +
-        loreResults.filter((r) => r.status === "rejected").length;
-
+      // 追加到已采纳列表（右侧面板展示，便于核对写入了什么）
       const newItems: AdoptedItem[] = [];
       const ts = Date.now();
-      chars.forEach((c: any, i: number) => {
-        if (
-          charResults[i]?.status === "fulfilled" &&
-          !(charResults[i] as any)?.value?.error
-        ) {
-          newItems.push({
-            id: `ol_char_${ts}_${i}`,
-            step: c.role === "protagonist"
-              ? ("protagonist" as ExploreStep)
-              : ("free_talk" as ExploreStep),
-            title: c.name,
-            content: c.background || "",
-            timestamp: ts,
-          });
-        }
+      (outlineResult.characters || []).forEach((c: any, i: number) => {
+        newItems.push({
+          id: `ol_char_${ts}_${i}`,
+          step: c.role === "protagonist" ? ("protagonist" as ExploreStep) : ("free_talk" as ExploreStep),
+          title: c.name,
+          content: c.background || "",
+          timestamp: ts,
+        });
       });
-      lores.forEach((l: any, i: number) => {
-        if (
-          loreResults[i]?.status === "fulfilled" &&
-          !(loreResults[i] as any)?.value?.error
-        ) {
-          newItems.push({
-            id: `ol_lore_${ts}_${i}`,
-            step: "worldview" as ExploreStep,
-            title: l.title,
-            content: l.content || "",
-            timestamp: ts,
-          });
-        }
+      (outlineResult.loreEntries || []).forEach((l: any, i: number) => {
+        newItems.push({
+          id: `ol_lore_${ts}_${i}`,
+          step: "worldview" as ExploreStep,
+          title: l.title,
+          content: l.content || "",
+          timestamp: ts,
+        });
       });
       setAdopted((prev) => [...prev, ...newItems]);
 
-      charResults.forEach((r, i) => {
-        if (r.status === "rejected")
-          errors.push(`角色[${chars[i].name}]: ${r.reason}`);
-        else if ((r as any)?.value?.error)
-          errors.push(`角色[${chars[i].name}]: ${(r as any).value.error}`);
-      });
-      loreResults.forEach((r, i) => {
-        if (r.status === "rejected")
-          errors.push(`词条[${lores[i].title}]: ${r.reason}`);
-        else if ((r as any)?.value?.error)
-          errors.push(`词条[${lores[i].title}]: ${(r as any).value.error}`);
-      });
-
       toastCreated(config.novelName || "小说项目", "项目");
-      if (charFail + loreFail > 0) {
-        toastWarning(
-          `${charFail + loreFail} 条内容写入失败${errors.length ? `：${errors.slice(0, 3).join("；")}` : ""}`,
-        );
-      }
     } catch (err: any) {
-      toastError(err?.message || "创建失败");
+      toastError(err?.message || "写入失败");
     } finally {
       creatingRef.current = false;
       setCreating(false);
     }
-  }, [outlineResult, config]);
+  }, [outlineResult, config, createdProjectId, adopted]);
 
   // ─── 一键AI构建 ────────────────────────────────────
 
   const handleGenerateAll = useCallback(async () => {
     if (generatingAll) return;
     setGeneratingAll(true);
-    setAllCards({});
     try {
       const res = await fetch("/api/explore/chat", {
         method: "POST",
@@ -484,15 +412,20 @@ export default function ExplorePage() {
         body: JSON.stringify({ mode: "generate_all", config, adopted }),
       });
       const data = await res.json();
-      if (res.ok && data.allCards) {
-        setAllCards(data.allCards);
+      if (res.ok && (data.characters?.length || data.loreEntries?.length)) {
+        // 复用大纲确认 UI：把结构化结果塞入 outlineResult，切到 outline 模式预览 + 确认写入
+        setOutlineResult({
+          characters: data.characters || [],
+          loreEntries: data.loreEntries || [],
+          plotOutline: data.plotOutline || "",
+        });
+        setOutlineProgress(null);
+        setMode("outline");
         setMessages((prev) => [
           ...prev,
           {
             role: "agent",
-            content:
-              data.reply ||
-              `已为 ${Object.keys(data.allCards).length} 个步骤生成设定卡片。`,
+            content: data.reply || "已生成设定，预览后点「确认写入项目」。",
           },
         ]);
       } else {
