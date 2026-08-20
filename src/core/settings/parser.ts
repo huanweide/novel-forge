@@ -26,6 +26,7 @@ import type { LLMClient } from "@/core/llm/client";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { prisma } from "@/lib/prisma";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import { parseSettingsLocal } from "./local-parser";
 
 // ─── 三卡分界标准（Prompt 片段）───────────────────────────────
 
@@ -742,6 +743,33 @@ export function mergeParsedSettings(results: ParsedSettings[]): ParsedSettings {
  *
  * 复用现有 parseSettings/parseLorebookOnly/parseStyleOnly（已带 json:true 严格输出 + 重试）。
  */
+/** 探测当前是否有可用的 LLM 配置（含本地推理）；未填 Key / 未选模型 / 本地推理未配好时返回 false */
+async function hasLLMConfig(): Promise<boolean> {
+  try {
+    await getEffectiveConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 无 LLM 时的本地规则解析降级。
+ * parseSettingsLocal 输出与 ParsedSettings 结构完全一致（同名同型字段），
+ * 按 mode 裁剪后直接作为提取结果返回，供 upsertParsedSettingsToProject 落库。
+ */
+function localFallback(rawText: string, mode: "all" | "lorebook" | "style"): ParsedSettings {
+  const local = parseSettingsLocal(rawText);
+  const base = local as unknown as ParsedSettings;
+  if (mode === "lorebook") {
+    return { characters: [], loreEntries: base.loreEntries, synopsis: "", toneKeywords: [], styleProfile: null };
+  }
+  if (mode === "style") {
+    return { characters: [], loreEntries: [], synopsis: "", toneKeywords: [], styleProfile: base.styleProfile };
+  }
+  return base;
+}
+
 export async function parseSettingsStreaming(
   rawText: string,
   opts?: {
@@ -753,6 +781,20 @@ export async function parseSettingsStreaming(
   const text = rawText.trim();
   const onProgress = opts?.onProgress;
   const mode = opts?.mode ?? "all";
+
+  // 无 LLM 配置（未填 Key / 模型 / 本地推理）时降级为本地规则解析：
+  // 毫秒级、零网络，保证「整理」「探讨模式」在任何情况下都能跑通。
+  if (!(await hasLLMConfig())) {
+    onProgress?.({ phase: "extracting", total: 1, current: 1 });
+    const result = localFallback(text, mode);
+    onProgress?.({
+      phase: "done",
+      characters: result.characters.length,
+      loreEntries: result.loreEntries.length,
+      styleCard: !!result.styleProfile,
+    });
+    return result;
+  }
 
   // 阈值以下直接单次（最快最准）
   const CHUNK_THRESHOLD = 12000;
