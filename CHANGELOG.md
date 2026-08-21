@@ -1,5 +1,17 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.52 — 2026-08-21
+
+### 热修：首页 ProjectCard project.genre.map 崩溃（v3.1.50 .join 替换漏修尾巴）
+
+- **🐛 根因（v3.1.51 验证时发现）**：v3.1.50 修 genre 数组→String 时只批量替换了 12 个文件里的 `project.genre.join` / `project.toneKeywords.join` / `memory.toneKeywords.join` 调用，漏了首页 `src/app/page.tsx:406-411` ProjectCard 组件里的 `project.genre.length` + `project.genre.map((g) => <span>{g}</span>)` 渲染。v3.1.51 修 Build Error 后首页能访问但 dev log 报 `TypeError: project.genre.map is not a function`（ProjectCard 组件渲染失败 → `error.tsx` 兜底）——项目卡片区看不到、但 API 仍 200。
+- **🔧 修复**：
+  - `src/lib/utils.ts` 新增 `safeSplit(val, sep)` helper：与 `safeJoin` 配对——`null/undefined → []`、`string[] → 原样`、`object → 取 string 值`、`string → 按 sep 拆分 + 过滤空白`、JSON 串自动递归。
+  - `src/app/page.tsx` ProjectCard 改用 `safeSplit(project.genre).length` / `.map(...)`，String/Array 都吃得下、永远返回 `string[]`。
+  - grep 剩余：整个 `src/` 仅此 1 处 `.map` 调用、未发现 `.filter` 链式假定数组、其它 `.length` 调用都在 prisma 宽松类型后已用 `Array.isArray` 兜底。
+- **🧪 自测**：tsc `page.tsx` + `utils.ts` 0 错（其余全是预存基线）；HMR 重编后 `/` 200、dev log 0 `project.genre.map` 错误。
+- **📝 铁律（v3.1.50 修订）**：字段类型变更时（数组↔String、Json↔String）必须 grep 整个 codebase **三件套**：`.join` / `.map` / `.filter` 三种假定数组的方法都得查、不能只查 `.join`。`utils.ts` 已有 `safeJoin`，新增 `safeSplit` 配对，覆盖 String↔Array 双向转换场景；下次类似字段改动可走同样模式（先 grep 三件套，再批量改 callsite + 补 import）。
+
 ## v3.1.51 — 2026-08-21
 
 ### 热修：CHANGELOG_BRIEF 字符串引号修复（v3.1.50 跟随）

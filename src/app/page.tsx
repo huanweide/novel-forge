@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LATEST_VERSION } from "@/lib/changelog-data";
+import { safeSplit } from "@/lib/utils";
 import { useQuery } from "@/hooks/useApi";
 import { GENRE_TEMPLATES } from "@/core/templates/genres";
 import { Icon, type IconName } from "@/components/ui/icons";
@@ -403,9 +404,9 @@ function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: Pr
         {project.description || "暂无描述"}
       </p>
 
-      {project.genre.length > 0 && (
+      {safeSplit(project.genre).length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3 relative z-[1]">
-          {project.genre.map((g) => (
+          {safeSplit(project.genre).map((g) => (
             <span key={g} className="text-[10px] px-2 py-0.5 rounded-lg bg-[var(--nv-surface-2)] text-[var(--nv-text-secondary)] border border-[var(--nv-border-2)]">
               {g}
             </span>

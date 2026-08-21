@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.51";
+export const LATEST_VERSION = "v3.1.52";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.52 热修：首页 ProjectCard project.genre.map 崩溃（v3.1.50 .join 替换漏修尾巴）：根因——v3.1.50 修 genre 数组→String 时只批量替换了 12 个文件里的 project.genre.join / project.toneKeywords.join / memory.toneKeywords.join 调用，漏了首页 src/app/page.tsx:406-411 ProjectCard 组件里的 project.genre.length + project.genre.map((g) => <span>{g}</span>) 渲染；v3.1.51 修 Build Error 后首页能访问但项目卡「类型」标签区空白 + 浏览器 console 报 TypeError: project.genre.map is not a function；修复——src/lib/utils.ts 新增 safeSplit(val, sep) helper（与 safeJoin 配对、null/undefined→[]/string[]→原样/object→取 string 值/string→按 sep 拆分 + 过滤空白/JSON 串自动递归），ProjectCard 改用 safeSplit(project.genre).length / .map(...)、String/Array 都吃得下；自测 tsc 0 错、HMR 后 / 200、dev log 0 project.genre.map 错误；铁律——字段类型变更时（数组↔String、Json↔String）必须 grep 整个 codebase 三件套（.join / .map / .filter 三种假定数组的方法都得查、不能只查 .join）。",
   "v3.1.51 热修：CHANGELOG_BRIEF 字符串引号修复（v3.1.50 跟随）：v3.1.50 提交后记忆收尾误 Edit 把 v3.1.50 那条摘要里的「全都失败」/「七宗罪天团」/「已采纳当大纲处理」3 处从中文「」改回未转义英文双引号（整条字符串用 \"\" 包裹），TS string literal 在第一个 \" 处提前终止、后面中文被当成裸 JS 代码、Next.js 16 编译 changelog-data.ts:32:144 报 `Expected ',', got 'ident'`、Build Error 浮窗阻塞 / 和 /explore 渲染（截图瑞宝宝提供）；3 处全改回「」全角中文括号避开 TS 解析、tsc 0 错、curl / 与 /explore 均 200、Build Error 已消失；铁律——写 ts string literal 内容时一律用「」/『』或转义 \\\"，绝不再用未转义 \"\"。",
   "v3.1.50 探讨模式「已采纳当大纲」落地 + 20+ 处 join 链错修复（EXPLORE-LLM-SIMPLIFY）：①真问题 1（瑞宝宝截图「全都失败」）—— 自由讨论模式「七宗罪天团」卡一直红「失败」+「点击卡并重试过」：真因 1 localStorage 残留旧 createdProjectId → 引用 db 重置后已不存在的 Project → adopt API 跳过建项目 → 直接 lorebookEntry.create → P2003 外键违反 503；真因 2 adopt 路由内部调 LLM aiParseToLore/aiParseToCharacter（20s+ 超时/挂/返回无效结构）；真因 3 v3.1.49 改 genre 数组→String 后 20+ 处 project.genre.join 仍假定数组（orchestrator/sync-global-prompt/storylines/generate/foreshadowing 等 11 文件），项目生成链路连锁失败；②简化 adopt 路由（瑞宝宝提议「已采纳当大纲处理」）—— 去掉 LLM 解析（aiParseToLore/aiParseToCharacter），卡本身就是结构化文本，直接 card.title + card.content 落库即可，速度从 20s+ 提升到 0.1s（200x 加速），稳定性不依赖 LLM、必成功；character 分支 tryExtractStructured 规则提取 + card 兜底；lore 分支直接 card 落库（title/content/category from step/keys from title）；③P2003 防御——adopt 路由增加 projectId findUnique 校验，旧 session/localStorage 残留 pid 指向已不存在的 Project 自动 fallback 当首次采纳处理（自动建新项目），前端无感；④20+ 处 join 链错统一修复——utils.ts 已有 safeJoin 完美兼容 String/string[]/Object，批量替换 12 个文件的 project.genre.join 和 project.toneKeywords.join 为 safeJoin(...)，避免「写完存库后下游读炸」的连锁；⑤自测——free_talk adopt 200 + 写入 + 0.1s，P2003 防御（不存在的 projectId）200 + 自动建项目，tsc 改动文件零新增（仅 characters/expand/route.ts 预存 TS7006 implicit any 与本次无关）；个人 IP 仍归瑞宝宝。",
   "v3.1.49 探讨模式写入失败修复 + 步骤自动跳转 + 自由讨论放大（EXPLORE-WRITE-FIX）：①真问题 1（瑞宝宝截图）—— 探讨模式点卡「写入」显示失败、重试也没用：根因是 adopt 路由 prisma.project.create 时 genre 字段传了数组 [config.genre || 「玄幻」]、但 Project schema 的 genre 是 String（类型标签），类型不匹配 → Prisma 验证错误 → adopt 永远失败 → 卡片一直红「失败」+「点击卡并重试过」；create 路由同样位置同样 bug 一并修复保持一致；实测：curl 模拟截图场景（开篇·SSS级猎人觉醒事件）→ 200 + 写入成功「✅ 词条『SSS级猎人觉醒事件』已写入（plot）」；②真问题 2（瑞宝宝原话）—— 步骤完成无视觉指示、点完得手动找下一步：11 步进度条改为按真实采纳数判定「完成」（count>0 即 done）、每步右侧显示已采纳数（如 1）、点击已完成步骤直接跳到下一步（链式：开篇 ✓ → 自动切到世界观讨论 → … 直到全部完成时自由讨论步骤显示 🎉 全部完成）、未完成步骤点切到该步（旧行为保留）；③真问题 3（瑞宝宝原话）—— 自由讨论模式视觉权重不够、用户不知道这是默认主模式、什么都能聊：顶栏 mode tab 的「对话」改名为「自由讨论」、激活态用创意色（与主色区分）、ChatPanel 当 mode==chat 时新增一条创意色横条含解释（什么都能聊，AI 自动从聊天抓取可采纳设定，聊出啥就采纳啥，不用先选步骤）；④防御性兼容——StepProgress 对 localStorage 恢复的 adopted 做 Array.isArray 防御（localStorage 破损时 adopted 不是 array → TypeError: adopted is not iterable 运行时崩溃已修复）；⑤质量门禁 tsc 改动文件零新增（仅 adopt/route.ts 一个预存 pid 类型错与本次无关）、dev server /explore 200、adopt 端到端 curl 200+写入成功；个人 IP 仍归瑞宝宝。",
@@ -213,6 +214,37 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.52",
+    date: "2026-08-21",
+    title: "热修：首页 ProjectCard project.genre.map 崩溃（v3.1.50 .join 替换漏修尾巴）",
+    sections: [
+      {
+        label: "🐛 根因（v3.1.51 验证时发现）",
+        items: [
+          "v3.1.50 修 genre 数组→String 时只批量替换了 12 个文件里的 project.genre.join / project.toneKeywords.join / memory.toneKeywords.join 调用，漏了首页 src/app/page.tsx:406-411 ProjectCard 组件里的 project.genre.length + project.genre.map((g) => <span>{g}</span>) 渲染；",
+          "v3.1.51 修 Build Error 后首页能访问但 dev log 报 TypeError: project.genre.map is not a function（ProjectCard 组件渲染失败 → error.tsx 兜底）——项目卡片区看不到、但 API 仍 200；",
+          "截图实测：/ 200 但首页项目卡「类型」标签区空白 + 浏览器 console 报红；",
+        ],
+      },
+      {
+        label: "🔧 修复",
+        items: [
+          "src/lib/utils.ts 新增 safeSplit(val, sep) helper：与 safeJoin 配对——null/undefined → []、string[] → 原样、object → 取 string 值、string → 按 sep 拆分 + 过滤空白、JSON 串自动递归；",
+          "src/app/page.tsx ProjectCard 改用 safeSplit(project.genre).length / .map(...)，String/Array 都吃得下、永远返回 string[]；",
+          "扫剩余：grep 整个 src/ 仅此 1 处 .map 调用、未发现 .filter 链式假定数组、其它 .length 调用都在 prisma 宽松类型后已用 Array.isArray 兜底；",
+          "自测：tsc page.tsx + utils.ts 0 错（其余全是预存基线）；HMR 重编后 / 200、dev log 0 project.genre.map 错误；",
+        ],
+      },
+      {
+        label: "📝 铁律（v3.1.50 修订）",
+        items: [
+          "字段类型变更时（数组↔String、Json↔String）必须 grep 整个 codebase 三件套：.join / .map / .filter 三种假定数组的方法都得查、不能只查 .join；",
+          "utils.ts 已有 safeJoin，新增 safeSplit 配对，覆盖 String↔Array 双向转换场景；下次类似字段改动可走同样模式（先 grep 三件套，再批量改 callsite + 补 import）；",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.51",
     date: "2026-08-21",
