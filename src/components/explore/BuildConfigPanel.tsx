@@ -263,16 +263,22 @@ export function BuildConfigPanel({ config, onChange }: Props) {
               />
             </Field>
             <div className="flex items-center justify-between gap-3 py-1">
-              <span>
-                <span className="text-sm text-[var(--nv-text-primary)]">强制原创人名</span>
-                <span className="block text-xs text-[var(--nv-text-muted)]">AI 将严禁使用已有小说中的知名名称</span>
+              <span className="flex items-start gap-2">
+                <Icon name="key" size={15} className="text-[var(--nv-primary)] mt-0.5 shrink-0" />
+                <span>
+                  <span className="text-sm text-[var(--nv-text-primary)]">强制原创人名</span>
+                  <span className="block text-xs text-[var(--nv-text-muted)]">AI 将严禁使用已有小说中的知名名称</span>
+                </span>
               </span>
               <Switch checked={config.forceOriginalNames} onCheckedChange={(next) => update({ forceOriginalNames: next })} size="sm" />
             </div>
             <div className="flex items-center justify-between gap-3 py-1">
-              <span>
-                <span className="text-sm text-[var(--nv-text-primary)]">自动生成故事线</span>
-                <span className="block text-xs text-[var(--nv-text-muted)]">关闭后需手动生成故事线事件</span>
+              <span className="flex items-start gap-2">
+                <Icon name="sparkles" size={15} className="text-[var(--nv-creative)] mt-0.5 shrink-0" />
+                <span>
+                  <span className="text-sm text-[var(--nv-text-primary)]">自动生成故事线</span>
+                  <span className="block text-xs text-[var(--nv-text-muted)]">关闭后需手动生成故事线事件</span>
+                </span>
               </span>
               <Switch checked={config.autoGenerateStoryline} onCheckedChange={(next) => update({ autoGenerateStoryline: next })} size="sm" />
             </div>

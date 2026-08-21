@@ -482,6 +482,56 @@ export default function ExplorePage() {
     ]);
   }, []);
 
+  // ─── 深入探讨已采纳内容 ──────────────────────────────
+  const handleDeepDive = useCallback(
+    async (item: AdoptedItem) => {
+      const prompt = `我想深入探讨这个已经采纳的设定：\n【${STEP_LABELS[item.step]}】${item.title}\n${item.content}\n\n请从以下角度帮我展开、打磨它，让它更扎实、更有戏剧张力：\n1. 这个设定的内在逻辑与潜在矛盾\n2. 它和当前世界观/其他已采纳设定的咬合点\n3. 能衍生出的具体情节钩子或冲突\n4. 如果打磨出值得采纳的新子设定，请在末尾用 <ADOPT title="...">...</ADOPT> 块输出。`;
+
+      // 切回对话模式并定位到该步骤，让用户直接看到这次深挖
+      setMode("chat");
+      setCurrentStep(item.step);
+
+      if (loadingRef.current) return;
+      const userMsg: ExploreMessage = { role: "user", content: `深入探讨：${item.title}` };
+      setMessages((prev) => [...prev, userMsg]);
+      loadingRef.current = true;
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/explore/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: prompt,
+            history: messagesRef.current.map((m) => ({ role: m.role, content: m.content })),
+            config,
+            adopted,
+            currentStep: item.step,
+            mode: "chat",
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `响应失败 (${res.status})`);
+        }
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          { role: "agent", content: data.reply || "收到。继续？", cards: data.cards },
+        ]);
+      } catch (err: any) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "agent", content: `出错了：${err.message}。重试一下？` },
+        ]);
+      } finally {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    },
+    [adopted, config],
+  );
+
   // 点击引导条的示例提问：先切回对话模式，确保用户看得到这次发送（否则在抽卡/大纲模式下消息会发到后台却看不见）
   const handleGuideSend = useCallback((text: string) => {
     if (mode !== "chat") setMode("chat");
@@ -670,6 +720,7 @@ export default function ExplorePage() {
             onRemove={(id) =>
               setAdopted((prev) => prev.filter((a) => a.id !== id))
             }
+            onDeepDive={handleDeepDive}
             creating={creating}
             createdProjectId={createdProjectId}
             onCreateProject={handleCreateProject}

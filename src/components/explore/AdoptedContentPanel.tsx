@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icons";
 interface Props {
   adopted: AdoptedItem[];
   onRemove: (id: string) => void;
+  onDeepDive?: (item: AdoptedItem) => void;
   creating: boolean;
   createdProjectId: string | null;
   onCreateProject: (mode: "direct" | "ai_refine") => void;
@@ -16,6 +17,7 @@ interface Props {
 export function AdoptedContentPanel({
   adopted,
   onRemove,
+  onDeepDive,
   creating,
   createdProjectId,
   onCreateProject,
@@ -64,22 +66,44 @@ export function AdoptedContentPanel({
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="mb-1.5 p-3 rounded-xl bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] hover:border-[var(--nv-border-2)] transition-all duration-200 group relative"
+                  className="mb-1.5 p-3 rounded-xl bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] hover:border-[var(--nv-primary)]/30 transition-all duration-200 group relative"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-[11px] font-medium text-[var(--nv-text-secondary)] leading-tight">
                       {item.title}
                     </span>
-                    <button
-                      onClick={() => onRemove(item.id)}
-                      className="text-[var(--nv-text-muted)] hover:text-danger opacity-0 group-hover:opacity-100 transition-all duration-200 text-xs shrink-0 hover:scale-110"
-                    >
-                      <Icon name="x" size={15} className="inline-block align-text-bottom shrink-0" />
-                                                  </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {onDeepDive && (
+                        <button
+                          onClick={() => onDeepDive(item)}
+                          title="深入探讨这个设定"
+                          aria-label="深入探讨"
+                          className="text-[var(--nv-text-muted)] hover:text-[var(--nv-primary)] opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                        >
+                          <Icon name="message" size={13} className="inline-block align-text-bottom" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onRemove(item.id)}
+                        title="移除"
+                        aria-label="移除"
+                        className="text-[var(--nv-text-muted)] hover:text-danger opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                      >
+                        <Icon name="x" size={15} className="inline-block align-text-bottom" />
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-[var(--nv-text-muted)] mt-1 line-clamp-2 leading-relaxed">
-                    {item.content.slice(0, 80)}
+                  <p className="text-[10px] text-[var(--nv-text-muted)] mt-1 line-clamp-3 leading-relaxed">
+                    {item.content.slice(0, 140)}
                   </p>
+                  {onDeepDive && (
+                    <button
+                      onClick={() => onDeepDive(item)}
+                      className="mt-2 w-full text-[10px] text-[var(--nv-primary)]/80 hover:text-[var(--nv-primary)] border border-[var(--nv-primary)]/20 hover:border-[var(--nv-primary)]/40 rounded-lg py-1.5 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-1"
+                    >
+                      <Icon name="message" size={11} /> 深入探讨
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
