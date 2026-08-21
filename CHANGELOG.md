@@ -1,5 +1,13 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.51 — 2026-08-21
+
+### 热修：CHANGELOG_BRIEF 字符串引号修复（v3.1.50 跟随）
+
+- **🐛 热修（瑞宝宝截图 /changelog 页面 build error）**：v3.1.50 `CHANGELOG_BRIEF` 第一项字符串内有 3 处未转义双引号（"全都失败"/"七宗罪天团"/"已采纳当大纲处理"），TS string literal 提前终止 → `/changelog` 页面 build error `Expected ',', got 'ident'` at line 32:144。3 处内嵌双引号改用「」全角引号避开 TS string literal 终止。
+- **🧪 自测**：tsc changelog-data 0 错；`/changelog` http=200 渲染正常。
+- **📝 铁律**：写 ts string literal 内容时，避免未转义 `"`；用 `「」`/`『』`/转义 `\"` 避开 TS 解析提前终止。
+
 ## v3.1.50 — 2026-08-21
 
 ### 探讨模式「已采纳当大纲」落地 + 20+ 处 join 链错修复（EXPLORE-LLM-SIMPLIFY）
