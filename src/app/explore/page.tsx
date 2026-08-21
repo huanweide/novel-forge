@@ -27,7 +27,7 @@ export default function ExplorePage() {
   const [messages, setMessages] = useState<ExploreMessage[]>([
     {
       role: "agent",
-      content: `欢迎来到探讨模式！我是你的AI创作顾问。\n\n我们从「${STEP_LABELS.opening}」开始——它决定整本书的方向。\n\n说说你想写什么类型的小说？有什么初步想法？或者试试"抽卡模式"让AI给你灵感。`,
+      content: `嗨，我是你的 AI 创作搭子！🖊️\n\n我们从一个轻松的问题开始：你想写一本什么样的书？\n\n可以直接说想法，也可以点上方「抽卡」让 AI 给你灵感——怎么聊都行，聊出什么都能采纳。`,
     },
   ]);
   const [adopted, setAdopted] = useState<AdoptedItem[]>([]);
@@ -52,6 +52,10 @@ export default function ExplorePage() {
   const [adoptStatus, setAdoptStatus] = useState<Record<string, string>>({});
   const [allCards, setAllCards] = useState<Record<string, AdoptCard[]>>({});
   const [generatingAll, setGeneratingAll] = useState(false);
+  // AI 一键构筑：方向提示词弹窗 + 构筑结果预览（右侧待确认区）
+  const [buildModalOpen, setBuildModalOpen] = useState(false);
+  const [buildPrompt, setBuildPrompt] = useState("");
+  const [generatePreview, setGeneratePreview] = useState<AdoptedItem[]>([]);
   const [outlineText, setOutlineText] = useState("");
   const [enrichPrompt, setEnrichPrompt] = useState("");
   const [outlineResult, setOutlineResult] = useState<{
@@ -391,6 +395,9 @@ export default function ExplorePage() {
       });
       setAdopted((prev) => [...prev, ...newItems]);
 
+      // AI 构筑的「待确认」项已随 outlineResult 落库，清空待确认区
+      setGeneratePreview([]);
+
       toastCreated(config.novelName || "小说项目", "项目");
     } catch (err: any) {
       toastError(err?.message || "写入失败");
@@ -402,18 +409,50 @@ export default function ExplorePage() {
 
   // ─── 一键AI构建 ────────────────────────────────────
 
-  const handleGenerateAll = useCallback(async () => {
+  const handleGenerateAll = useCallback(async (direction?: string) => {
     if (generatingAll) return;
     setGeneratingAll(true);
     try {
       const res = await fetch("/api/explore/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "generate_all", config, adopted }),
+        body: JSON.stringify({
+          mode: "generate_all",
+          config,
+          adopted,
+          buildPrompt: direction?.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (res.ok && (data.characters?.length || data.loreEntries?.length)) {
-        // 复用大纲确认 UI：把结构化结果塞入 outlineResult，切到 outline 模式预览 + 确认写入
+        // ① 回填 AI 补齐的配置字段（novelName/protagonistName/direction/powerSystem/goldenFinger/coreConflict）
+        if (data.configPatch && typeof data.configPatch === "object") {
+          const patch = data.configPatch as Record<string, unknown>;
+          setConfig((prev) => ({ ...prev, ...patch } as BuildConfig));
+        }
+        // ② 把生成结果转为「待确认」项——右侧「已导入设定（待确认）」区可视化展示，确认后才真正落库
+        const ts = Date.now();
+        const preview: AdoptedItem[] = [];
+        (data.characters || []).forEach((c: any, i: number) => {
+          preview.push({
+            id: `gen_char_${ts}_${i}`,
+            step: c.role === "protagonist" ? ("protagonist" as ExploreStep) : ("free_talk" as ExploreStep),
+            title: c.name || `角色${i + 1}`,
+            content: c.background || JSON.stringify(c.personality || "") || "",
+            timestamp: ts,
+          });
+        });
+        (data.loreEntries || []).forEach((l: any, i: number) => {
+          preview.push({
+            id: `gen_lore_${ts}_${i}`,
+            step: "worldview" as ExploreStep,
+            title: l.title || `设定${i + 1}`,
+            content: l.content || "",
+            timestamp: ts,
+          });
+        });
+        setGeneratePreview(preview);
+        // ③ 切到 outline 模式完整预览 + 确认写入
         setOutlineResult({
           characters: data.characters || [],
           loreEntries: data.loreEntries || [],
@@ -425,7 +464,7 @@ export default function ExplorePage() {
           ...prev,
           {
             role: "agent",
-            content: data.reply || "已生成设定，预览后点「确认写入项目」。",
+            content: data.reply || `已按${direction?.trim() ? `「${direction.trim().slice(0, 30)}」方向` : "你的配置"}生成 ${preview.length} 项设定，请在右侧「待确认」核对，满意后点「确认写入项目」。`,
           },
         ]);
       } else {
@@ -539,9 +578,9 @@ export default function ExplorePage() {
   }, [mode, handleSend]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--nv-void)] text-[var(--nv-text-secondary)] animate-in fade-in">
+    <div className="h-screen flex flex-col bg-[var(--nv-void)] text-[var(--nv-text-secondary)] animate-in fade-in overflow-hidden">
       {/* ── 顶栏 ── */}
-      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-sm" inert={leftDrawerOpen || rightDrawerOpen}>
+      <header className="sticky top-0 z-10 border-b border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/80 px-5 py-3 backdrop-blur-sm shrink-0" inert={leftDrawerOpen || rightDrawerOpen}>
         <div className="max-w-full mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -556,7 +595,7 @@ export default function ExplorePage() {
               <h1 className="text-base font-bold text-[var(--nv-text-primary)]">探讨模式</h1>
             </div>
             <span className="hidden text-[10px] text-[var(--nv-text-tertiary)] sm:inline">
-              对话式构建小说世界
+              跟 AI 聊着就把小说世界建好了
             </span>
           </div>
           {/* 全局模式切换 */}
@@ -585,11 +624,15 @@ export default function ExplorePage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleGenerateAll}
-              disabled={generatingAll}
+              onClick={() => {
+                setBuildPrompt("");
+                setBuildModalOpen(true);
+              }}
+              disabled={generatingAll || aiConfigured === false}
               className="btn-creative px-3.5 py-1.5 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+              title={aiConfigured === false ? "AI 未配置，先去设置页填 Key" : "让 AI 按你的方向一键补齐全部设定（角色/世界观/势力/力量体系/货币/地图/情节）"}
             >
-              {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 生成中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> 一键AI构建所有设定</span>}
+              {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 生成中...</span> : <span className="flex items-center gap-1"><Icon name="bot" size={13} /> 一键构筑所有设定</span>}
             </button>
             {/* 窄屏：抽屉切换 */}
             <button
@@ -660,7 +703,7 @@ export default function ExplorePage() {
             role={leftDrawerOpen ? "dialog" : undefined}
             aria-modal={leftDrawerOpen ? "true" : undefined}
             aria-labelledby={leftDrawerOpen ? leftDrawerTitleId : undefined}
-            className={`w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}
+            className={`w-80 shrink-0 overflow-y-auto border-r border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 left-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${leftDrawerOpen ? "translate-x-0" : "-translate-x-full"} lg:static lg:z-auto lg:h-full lg:shrink-0 lg:w-80 lg:translate-x-0 lg:transition-none`}
           >
             <h2 id={leftDrawerTitleId} className="sr-only">构建配置</h2>
             <BuildConfigPanel config={config} onChange={setConfig} />
@@ -716,13 +759,23 @@ export default function ExplorePage() {
           role={rightDrawerOpen ? "dialog" : undefined}
           aria-modal={rightDrawerOpen ? "true" : undefined}
           aria-labelledby={rightDrawerOpen ? rightDrawerTitleId : undefined}
-          className={`w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-auto lg:shrink-0 lg:w-72 lg:translate-x-0 lg:transition-none`}
+          className={`w-72 shrink-0 overflow-y-auto border-l border-[var(--nv-border-2)] bg-[var(--nv-abyss)]/60 backdrop-blur-sm fixed inset-y-0 right-0 z-40 max-w-[85vw] h-full transition-transform duration-200 ${rightDrawerOpen ? "translate-x-0" : "translate-x-full"} lg:static lg:z-auto lg:h-full lg:shrink-0 lg:w-72 lg:translate-x-0 lg:transition-none`}
         >
           <h2 id={rightDrawerTitleId} className="sr-only">已采纳</h2>
           <AdoptedContentPanel
             adopted={adopted}
+            pendingItems={generatePreview}
             onRemove={(id) =>
               setAdopted((prev) => prev.filter((a) => a.id !== id))
+            }
+            onRemovePending={(id) =>
+              setGeneratePreview((prev) => prev.filter((a) => a.id !== id))
+            }
+            onEditItem={(id, patch) =>
+              setAdopted((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
+            }
+            onEditPending={(id, patch) =>
+              setGeneratePreview((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
             }
             onDeepDive={handleDeepDive}
             creating={creating}
@@ -735,6 +788,52 @@ export default function ExplorePage() {
           <div aria-hidden="true" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => { setLeftDrawerOpen(false); setRightDrawerOpen(false); }} />
         )}
       </div>
+
+      {/* ── AI 一键构筑：方向提示词弹窗 ── */}
+      {buildModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="一键构筑所有设定">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setBuildModalOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--nv-creative)]/15 border border-[var(--nv-creative)]/30">
+                <Icon name="bot" size={15} className="text-[var(--nv-creative)]" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--nv-text-primary)]">一键构筑所有设定</h3>
+                <p className="text-[10px] text-[var(--nv-text-muted)] mt-0.5">
+                  AI 会补齐你没填的配置 + 生成完整角色/世界观/势力/力量/货币/地图/情节
+                </p>
+              </div>
+            </div>
+            <textarea
+              autoFocus
+              value={buildPrompt}
+              onChange={(e) => setBuildPrompt(e.target.value)}
+              placeholder={'想朝什么方向构筑？例如：\n「主角是被封印千年的剑灵转世，主线是找回记忆并阻止天渊重开」\n\n留空则按你已填的配置自由发挥'}
+              rows={5}
+              className="w-full bg-[var(--nv-surface-2)] border border-[var(--nv-border-2)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--nv-text-secondary)] placeholder:text-[var(--nv-text-muted)] focus:outline-none focus:border-[var(--nv-creative)]/40 focus:ring-2 focus:ring-[var(--nv-creative)]/10 resize-none transition-all duration-200"
+            />
+            <div className="flex items-center gap-2 mt-4">
+              <button
+                onClick={() => setBuildModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-medium btn-ghost"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  setBuildModalOpen(false);
+                  handleGenerateAll(buildPrompt);
+                }}
+                disabled={generatingAll || aiConfigured === false}
+                className="flex-[2] py-2.5 rounded-xl text-xs font-semibold btn-creative disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {generatingAll ? <span className="flex items-center gap-1"><Icon name="loader" size={12} className="animate-spin" /> 构筑中...</span> : <span className="flex items-center gap-1"><Icon name="sparkles" size={12} /> 开始构筑</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -750,7 +849,7 @@ function StepGuide({ step, aiConfigured, onSend }: { step: ExploreStep; aiConfig
           <Icon name={STEP_LUCIDE[step]} size={20} className="text-[var(--nv-text-secondary)] leading-none mt-0.5 shrink-0" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold text-[var(--nv-primary)] tracking-wider uppercase">当前构思步骤</span>
+              <span className="text-[10px] font-semibold text-[var(--nv-primary)] tracking-wider uppercase">我们在聊</span>
               <span className="text-sm font-bold text-[var(--nv-text-primary)]">{STEP_LABELS[step]}</span>
             </div>
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed mt-1">

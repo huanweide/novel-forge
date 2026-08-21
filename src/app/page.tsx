@@ -276,7 +276,7 @@ export default function Dashboard() {
               </div>
               {projects.map((p, i) => (
                 <div key={p.id} data-stagger-item data-stagger-index={i + 1} className="home-stagger-item">
-                  <ProjectCard project={p} index={i} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} />
+                  <ProjectCard project={p} index={i} onDelete={() => deleteProject(p.id, p.name)} deletingId={deletingId} onRenamed={() => loadProjects()} />
                 </div>
               ))}
             </div>
@@ -371,12 +371,45 @@ function GenreWall({ onPick, loadingId }: { onPick: (genre: string) => void; loa
 
 // ─── 子组件：项目卡片 ───────────────────────────────────────
 
-function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; index?: number; }) {
+function ProjectCard({ project, onDelete, deletingId, onRenamed, index = 0 }: { project: ProjectSummary; onDelete: () => void; deletingId: string | null; onRenamed?: () => void; index?: number; }) {
   const timeAgo = getTimeAgo(new Date(project.updatedAt));
   const spine = genreColor(project.genre);
   // 虚空特效位置随作品变化（每本书的悬浮"虚空"不同）
   const vx = 18 + (index * 37) % 64;
   const vy = 14 + (index * 53) % 70;
+  // 行内改名状态
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState(project.name);
+  const [renamingBusy, setRenamingBusy] = useState(false);
+
+  const startRename = () => {
+    setNameDraft(project.name);
+    setRenaming(true);
+  };
+  const cancelRename = () => setRenaming(false);
+  const commitRename = async () => {
+    const next = nameDraft.trim();
+    if (!next || next === project.name || renamingBusy) return;
+    setRenamingBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: next }),
+      });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(d.error || "改名失败");
+      }
+      toastSuccess(`已改名为「${next}」`);
+      setRenaming(false);
+      onRenamed?.();
+    } catch (err: any) {
+      toastError(err?.message || "改名失败");
+    } finally {
+      setRenamingBusy(false);
+    }
+  };
 
   return (
     <div
@@ -386,9 +419,54 @@ function ProjectCard({ project, onDelete, deletingId, index = 0 }: { project: Pr
       <span className="nf-void" aria-hidden="true" />
       <span className="nf-bookmark" aria-hidden="true">{project.name.charAt(0)}</span>
       <div className="flex items-start justify-between mb-3 relative z-[1]">
-        <h3 className="font-bold text-lg md:text-xl truncate flex-1 mr-2 text-foreground">
-          {project.name}
-        </h3>
+        {renaming ? (
+          <div className="flex-1 mr-2 flex items-center gap-1.5">
+            <input
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                if (e.key === "Escape") cancelRename();
+              }}
+              maxLength={60}
+              className="flex-1 min-w-0 text-sm font-bold bg-[var(--nv-surface-2)] border border-[var(--nv-primary)]/40 rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--nv-primary)]/15"
+              aria-label="新的小说名称"
+            />
+            <button
+              onClick={commitRename}
+              disabled={renamingBusy || !nameDraft.trim()}
+              className="text-[var(--nv-text-muted)] hover:text-success transition-all disabled:opacity-40 shrink-0"
+              title="确认改名"
+              aria-label="确认改名"
+            >
+              <Icon name="check" size={15} />
+            </button>
+            <button
+              onClick={cancelRename}
+              disabled={renamingBusy}
+              className="text-[var(--nv-text-muted)] hover:text-destructive transition-all shrink-0"
+              title="取消"
+              aria-label="取消改名"
+            >
+              <Icon name="x" size={15} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <h3 className="font-bold text-lg md:text-xl truncate flex-1 mr-2 text-foreground">
+              {project.name}
+            </h3>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); startRename(); }}
+              className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] transition-all shrink-0"
+              title="改名"
+              aria-label="改名"
+            >
+              <Icon name="pencil" size={13} />
+            </button>
+          </>
+        )}
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
           disabled={deletingId === project.id}

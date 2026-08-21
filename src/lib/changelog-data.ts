@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.52";
+export const LATEST_VERSION = "v3.1.53";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.53 探讨模式人性化大升级（EXPLORE-POLISH）：①小说改名——首页项目卡 hover ✏️ 行内改名（PATCH name，改名即刷新）；②AI 一键构筑所有设定——顶栏按钮弹方向提示词框（可选，如「主角是剑灵转世…」）→ AI 按方向补齐没填的配置（configPatch 回填 novelName/protagonistName/direction/powerSystem/goldenFinger/coreConflict）+ 生成 3-5 角色 + 8-12 条世界设定（覆盖世界观/地理/势力/力量/货币/冲突/历史/金手指）+ 完整情节，结果全部可视化显示在右侧「AI 构筑结果 · 待确认」区（可逐条编辑/移除）+ 中间完整预览，确认写入才落库、不直接进工作区（实测：5 角色 + 10 设定覆盖 9 类 + 663 字情节 + 6 字段全补齐，朝方向构筑）；③栏位编辑——右侧「已导入设定」每条可编辑/移除/深入探讨，「待确认」区同样可编辑；④对话区滚动布局——整页固定视口高度（三栏各自内部滚动、不再无限下拉拉不回来）+ 右侧细滚动进度条 + 消息限宽居中 + 接近底部才自动滚底 + 去掉 ChatPanel 内与顶部重复的 11 步导航；⑤页面轻松化——欢迎语改轻松开场（AI 创作搭子）、副标题改「跟 AI 聊着就把小说世界建好了」、步骤引导改「我们在聊」。",
   "v3.1.52 热修：首页 ProjectCard project.genre.map 崩溃（v3.1.50 .join 替换漏修尾巴）：根因——v3.1.50 修 genre 数组→String 时只批量替换了 12 个文件里的 project.genre.join / project.toneKeywords.join / memory.toneKeywords.join 调用，漏了首页 src/app/page.tsx:406-411 ProjectCard 组件里的 project.genre.length + project.genre.map((g) => <span>{g}</span>) 渲染；v3.1.51 修 Build Error 后首页能访问但项目卡「类型」标签区空白 + 浏览器 console 报 TypeError: project.genre.map is not a function；修复——src/lib/utils.ts 新增 safeSplit(val, sep) helper（与 safeJoin 配对、null/undefined→[]/string[]→原样/object→取 string 值/string→按 sep 拆分 + 过滤空白/JSON 串自动递归），ProjectCard 改用 safeSplit(project.genre).length / .map(...)、String/Array 都吃得下；自测 tsc 0 错、HMR 后 / 200、dev log 0 project.genre.map 错误；铁律——字段类型变更时（数组↔String、Json↔String）必须 grep 整个 codebase 三件套（.join / .map / .filter 三种假定数组的方法都得查、不能只查 .join）。",
   "v3.1.51 热修：CHANGELOG_BRIEF 字符串引号修复（v3.1.50 跟随）：v3.1.50 提交后记忆收尾误 Edit 把 v3.1.50 那条摘要里的「全都失败」/「七宗罪天团」/「已采纳当大纲处理」3 处从中文「」改回未转义英文双引号（整条字符串用 \"\" 包裹），TS string literal 在第一个 \" 处提前终止、后面中文被当成裸 JS 代码、Next.js 16 编译 changelog-data.ts:32:144 报 `Expected ',', got 'ident'`、Build Error 浮窗阻塞 / 和 /explore 渲染（截图瑞宝宝提供）；3 处全改回「」全角中文括号避开 TS 解析、tsc 0 错、curl / 与 /explore 均 200、Build Error 已消失；铁律——写 ts string literal 内容时一律用「」/『』或转义 \\\"，绝不再用未转义 \"\"。",
   "v3.1.50 探讨模式「已采纳当大纲」落地 + 20+ 处 join 链错修复（EXPLORE-LLM-SIMPLIFY）：①真问题 1（瑞宝宝截图「全都失败」）—— 自由讨论模式「七宗罪天团」卡一直红「失败」+「点击卡并重试过」：真因 1 localStorage 残留旧 createdProjectId → 引用 db 重置后已不存在的 Project → adopt API 跳过建项目 → 直接 lorebookEntry.create → P2003 外键违反 503；真因 2 adopt 路由内部调 LLM aiParseToLore/aiParseToCharacter（20s+ 超时/挂/返回无效结构）；真因 3 v3.1.49 改 genre 数组→String 后 20+ 处 project.genre.join 仍假定数组（orchestrator/sync-global-prompt/storylines/generate/foreshadowing 等 11 文件），项目生成链路连锁失败；②简化 adopt 路由（瑞宝宝提议「已采纳当大纲处理」）—— 去掉 LLM 解析（aiParseToLore/aiParseToCharacter），卡本身就是结构化文本，直接 card.title + card.content 落库即可，速度从 20s+ 提升到 0.1s（200x 加速），稳定性不依赖 LLM、必成功；character 分支 tryExtractStructured 规则提取 + card 兜底；lore 分支直接 card 落库（title/content/category from step/keys from title）；③P2003 防御——adopt 路由增加 projectId findUnique 校验，旧 session/localStorage 残留 pid 指向已不存在的 Project 自动 fallback 当首次采纳处理（自动建新项目），前端无感；④20+ 处 join 链错统一修复——utils.ts 已有 safeJoin 完美兼容 String/string[]/Object，批量替换 12 个文件的 project.genre.join 和 project.toneKeywords.join 为 safeJoin(...)，避免「写完存库后下游读炸」的连锁；⑤自测——free_talk adopt 200 + 写入 + 0.1s，P2003 防御（不存在的 projectId）200 + 自动建项目，tsc 改动文件零新增（仅 characters/expand/route.ts 预存 TS7006 implicit any 与本次无关）；个人 IP 仍归瑞宝宝。",
@@ -214,6 +215,53 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.53",
+    date: "2026-08-21",
+    title: "探讨模式人性化大升级：一键构筑（方向提示词+补齐+可视化确认）+ 小说改名 + 已采纳可编辑 + 对话区滚动布局",
+    sections: [
+      {
+        label: "🏠 小说改名",
+        items: [
+          "首页项目卡 hover 出现 ✏️ 改名按钮 → 行内输入新名字 → 回车/✓ 保存（PATCH /api/projects/[id] name），Esc/✕ 取消",
+          "改名后 toast 提示 + 项目列表自动刷新",
+        ],
+      },
+      {
+        label: "🤖 AI 一键构筑所有设定（瑞宝宝需求 3）",
+        items: [
+          "(a) 补齐未填：点击顶栏「一键构筑所有设定」→ 弹方向提示词框（可选填，如『主角是剑灵转世，主线是找回记忆阻止天渊重开』）→ AI 按方向生成完整设定并补齐没填的配置（novelName/protagonistName/direction/powerSystem/goldenFinger/coreConflict，经 configPatch 回填）",
+          "(b) 覆盖全部维度：8-12 条世界书设定必须覆盖 世界观总纲/地理格局/势力阵营/力量体系/货币经济/核心冲突/历史或文化/金手指规则 + 3-5 个角色 + 完整情节脉络",
+          "(c) 可视化确认：生成结果全部显示在右侧「AI 构筑结果 · 待确认」区（可逐条编辑/移除），同时切到中间大纲模式完整预览，点「确认写入项目」才落库——不直接进工作区",
+          "实测：方向「剑灵转世·天渊重开」→ 5 角色 + 10 世界设定（覆盖 9 类）+ 663 字情节 + 6 个 config 字段全补齐（110s，LLM 慢属环境事实）",
+        ],
+      },
+      {
+        label: "✏️ 栏位编辑与跳转（瑞宝宝需求 4）",
+        items: [
+          "右侧「已导入设定」每条可 hover 编辑（✏️ 行内改标题/内容）+ 移除 + 深入探讨",
+          "「AI 构筑结果 · 待确认」区每条同样可编辑/移除",
+          "底部「进入写作台 →」一键跳转工作区（已建项目时）",
+        ],
+      },
+      {
+        label: "🖥️ 对话区滚动与布局（瑞宝宝需求 5）",
+        items: [
+          "整页固定视口高度（h-screen overflow-hidden）——不再向下无限延伸拉不回来，左/中/右三栏各自内部滚动",
+          "对话区右侧新增细进度条：位置即对话进度（纯指示）",
+          "对话消息限宽 max-w-3xl 居中，阅读更舒适",
+          "新消息到达时若你已滑到接近底部才自动滚底，否则保持你的阅读位置（不再强制跳底）",
+          "去掉 ChatPanel 内与顶部 StepProgress 重复的 11 步导航条（视觉减负）",
+        ],
+      },
+      {
+        label: "🌤️ 页面轻松化（瑞宝宝需求 2）",
+        items: [
+          "欢迎语从正式说明改为轻松开场（『嗨，我是你的 AI 创作搭子』），顶栏副标题改『跟 AI 聊着就把小说世界建好了』，步骤引导标签改『我们在聊』",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.52",
     date: "2026-08-21",

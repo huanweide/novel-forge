@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { ExploreMessage, ExploreStep, AdoptCard } from "@/core/explore/types";
-import { EXPLORE_STEPS, STEP_LABELS, STEP_LUCIDE } from "@/core/explore/types";
+import { STEP_LABELS } from "@/core/explore/types";
 import { Icon } from "@/components/ui/icons";
 
 interface Props {
@@ -32,10 +32,34 @@ export function ChatPanel({
   onAdoptCard,
 }: Props) {
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // 对话区滚动进度（右侧细进度条）：0-1
+  const [scrollProgress, setScrollProgress] = useState(1);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    if (max <= 0) {
+      setScrollProgress(1);
+      return;
+    }
+    setScrollProgress(Math.min(1, Math.max(0, el.scrollTop / max)));
+  }, []);
+
+  // 新消息到达时若用户已接近底部（或从未上滑）则顺滑滚到底；否则保持用户阅读位置
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (nearBottom) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const handleSubmit = () => {
@@ -47,26 +71,6 @@ export function ChatPanel({
 
   return (
     <div className="flex flex-col min-h-0 flex-1">
-      {/* ── 步骤导航 ── */}
-      <nav className="border-b border-[var(--nv-border-2)] px-3 py-2 flex items-center gap-1 overflow-x-auto shrink-0 bg-[var(--nv-void)]/80 backdrop-blur-sm">
-        {EXPLORE_STEPS.map((step) => {
-          const active = currentStep === step;
-          return (
-            <button
-              key={step}
-              onClick={() => onStepChange(step)}
-              className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap font-medium transition-all duration-200 hover:-translate-y-0.5 ${
-                active
-                  ? "bg-[var(--nv-primary)]/20 text-[var(--nv-primary)] shadow-[0_0_14px_var(--nv-primary-soft)] border border-[var(--nv-primary)]/30"
-                  : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] border border-transparent"
-              } active:scale-95`}
-            >
-              <Icon name={STEP_LUCIDE[step]} size={12} className="shrink-0" /> {STEP_LABELS[step]}
-            </button>
-          );
-        })}
-      </nav>
-
       {/* ── 探讨服务状态条 ── */}
       {aiConfigured === false ? (
         <div className="px-4 py-2.5 flex items-center gap-2.5 border-b border-warning/30 bg-warning/[0.08]">
@@ -113,22 +117,28 @@ export function ChatPanel({
       )}
 
       {/* ── 对话列表 ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {aiConfigured === false && (
-          <div className="my-1 p-4 rounded-2xl border border-warning/30 bg-warning/[0.08] text-center">
-            <p className="text-sm text-warning font-medium">AI 尚未配置</p>
-            <p className="text-xs text-warning/80 mt-1.5 leading-relaxed max-w-[320px] mx-auto">
-              探讨模式需要 AI 才能与你对话、生成并采纳设定。请先在设置页填入 LLM API Key，再回来开始构思。
-            </p>
-            <Link
-              href="/settings"
-              className="inline-flex mt-3 items-center gap-1 text-xs px-3.5 py-1.5 rounded-full bg-warning/15 text-warning border border-warning/30 hover:bg-warning/25 transition-colors duration-150"
-            >
-              去设置页填 Key →
-            </Link>
-          </div>
-        )}
-        {messages.map((msg, i) => {
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="h-full overflow-y-auto px-4 py-4"
+        >
+          <div className="max-w-3xl mx-auto space-y-4">
+            {aiConfigured === false && (
+              <div className="my-1 p-4 rounded-2xl border border-warning/30 bg-warning/[0.08] text-center">
+                <p className="text-sm text-warning font-medium">AI 尚未配置</p>
+                <p className="text-xs text-warning/80 mt-1.5 leading-relaxed max-w-[320px] mx-auto">
+                  探讨模式需要 AI 才能与你对话、生成并采纳设定。请先在设置页填入 LLM API Key，再回来开始构思。
+                </p>
+                <Link
+                  href="/settings"
+                  className="inline-flex mt-3 items-center gap-1 text-xs px-3.5 py-1.5 rounded-full bg-warning/15 text-warning border border-warning/30 hover:bg-warning/25 transition-colors duration-150"
+                >
+                  去设置页填 Key →
+                </Link>
+              </div>
+            )}
+            {messages.map((msg, i) => {
           const isUser = msg.role === "user";
           return (
             <div
@@ -242,6 +252,18 @@ export function ChatPanel({
           </div>
         )}
         <div ref={chatEndRef} />
+          </div>
+        </div>
+        {/* 右侧滚动进度条：位置即对话进度；拖不动、纯指示 */}
+        <div
+          aria-hidden="true"
+          className="absolute right-1.5 top-2 bottom-2 w-[3px] rounded-full bg-[var(--nv-border-2)]/60 pointer-events-none"
+        >
+          <div
+            className="w-full rounded-full bg-[var(--nv-primary)]/50 transition-all duration-150"
+            style={{ height: `${Math.max(8, Math.round(scrollProgress * 100))}%` }}
+          />
+        </div>
       </div>
 
       {/* ── 输入区 ── */}

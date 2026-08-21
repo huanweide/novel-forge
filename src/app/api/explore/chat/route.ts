@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       mode = "chat",
       enrichPrompt,
       stream,
+      buildPrompt,
     } = r.body as {
       message?: string;
       history?: Array<{ role: string; content: string }>;
@@ -48,11 +49,12 @@ export async function POST(req: NextRequest) {
       mode?: "chat" | "cards" | "generate_all" | "outline";
       enrichPrompt?: string;
       stream?: boolean;
+      buildPrompt?: string;
     };
 
     // ── 一键生成所有步骤 ──
     if (mode === "generate_all") {
-      return handleGenerateAll(config, adopted);
+      return handleGenerateAll(config, adopted, buildPrompt);
     }
 
     // ── 大纲模式：解析+丰满（默认流式）──
@@ -235,21 +237,43 @@ function buildConfigSummary(config: BuildConfig): string {
 async function handleGenerateAll(
   config?: BuildConfig,
   adopted?: AdoptedItem[],
+  buildPrompt?: string,
 ): Promise<NextResponse> {
   const configSummary = config ? buildConfigSummary(config) : "";
   const adoptedSummary = adopted && adopted.length > 0
     ? adopted.map(a => `[${STEP_LABELS[a.step]}] ${a.title}: ${a.content.slice(0, 100)}`).join("\n")
     : "";
 
-  const prompt = `你是一位专业小说作家。请基于以下配置，直接生成结构化的角色卡和世界书设定（不要再生成纯文本卡片）。
+  // 识别用户还没填的配置字段——这些必须由 AI 补齐
+  const missing: string[] = [];
+  if (config) {
+    if (!config.novelName) missing.push("小说名称 novelName（2-8字，贴合题材、有网文卖点）");
+    if (!config.protagonistName) missing.push("主角名称 protagonistName（2-4字中文名，贴合题材，避开俗套）");
+    if (!config.direction) missing.push("创作方向 direction（2-3句，含核心卖点/爽点/目标读者）");
+    if (!config.powerSystem) missing.push("力量体系 powerSystem（如：修仙体系/异能体系/斗气体系）");
+    if (!config.goldenFinger) missing.push("金手指类型 goldenFinger（如：系统金手指/血脉觉醒/重生记忆）");
+    if (!config.coreConflict) missing.push("核心冲突 coreConflict（2-3句，主角vs谁、冲突层次、紧迫性）");
+  }
 
+  const prompt = `你是一位专业小说作家。请基于以下配置与用户方向，直接生成一套完整的小说世界设定（结构化JSON，角色卡 + 世界书）。
+${buildPrompt ? `\n【用户构筑方向——必须朝这个方向构筑】\n${buildPrompt}\n` : ""}
 【用户配置】
 ${configSummary || "默认：玄幻小说，男频青年向，长篇"}
 
-${adoptedSummary ? `【已采纳设定】\n${adoptedSummary}\n` : ""}
+${missing.length > 0 ? `【必须补齐的配置】\n以下字段用户未填写，你必须设计并填入：\n${missing.join("\n")}\n` : ""}
 
-【输出格式——严格JSON，角色卡 + 世界书】
+${adoptedSummary ? `【已采纳设定——不可冲突，只可衔接】\n${adoptedSummary}\n` : ""}
+
+【输出格式——严格JSON，一次输出全部步骤的设定】
 {
+  "configPatch": {
+    "novelName": "（若未填才给，已填则省略该键）",
+    "protagonistName": "（若未填才给）",
+    "direction": "（若未填才给）",
+    "powerSystem": "（若未填才给）",
+    "goldenFinger": "（若未填才给）",
+    "coreConflict": "（若未填才给）"
+  },
   "characters": [
     {
       "name": "角色名（2-4字中文名）",
@@ -268,18 +292,28 @@ ${adoptedSummary ? `【已采纳设定】\n${adoptedSummary}\n` : ""}
   "loreEntries": [
     {
       "title": "词条名",
-      "category": "geography|faction|magic_system|history|culture|creature|item|custom",
+      "category": "worldview|geography|faction|magic_system|history|culture|creature|item|economy|plot|custom",
       "keys": ["触发词1","触发词2"],
       "content": "设定内容——200字以上，包含定义/特征/关联/在故事中的作用",
       "insertionOrder": 80
     }
-  ]
+  ],
+  "plotOutline": "主线情节脉络——300字以上，起点→发展→高潮→结局，含关键转折"
 }
 
 要求：
 - 生成 3-5 个主要角色（含 1 主角 1 反派），每个角色字段填满不精简
-- 生成 5-8 条世界书设定（覆盖地理/势力/力量体系/历史/文化等）
+- 生成 8-12 条世界书设定，必须覆盖以下全部维度（每条 200 字以上）：
+  ① 世界观总纲（worldview）：世界基本规则、灵气/科技/法则水平、危险与机遇
+  ② 地理格局（geography）：2-3 个核心地点及关系
+  ③ 势力阵营（faction）：2-3 个势力，立场、目标、关系
+  ④ 力量体系（magic_system）：等级划分、提升方式、规则限制
+  ⑤ 货币经济（economy）：货币种类、兑换、稀缺资源
+  ⑥ 核心冲突（plot）：主角vs什么、冲突层次、紧迫性
+  ⑦ 历史背景（history）或文化风俗（culture）：至少 1 条
+  ⑧ 金手指规则（item 或 magic_system）：主角金手指的规则与限制
 - 角色名必须是 2-4 字中文名，不要用"主角""反派"等标签
+- 所有设定必须与用户已填配置、已采纳设定自洽，不得冲突
 - 只输出JSON，不输出任何说明文字`;
 
   try {
@@ -301,12 +335,15 @@ ${adoptedSummary ? `【已采纳设定】\n${adoptedSummary}\n` : ""}
     const parsed = extractJson(response.content) || {};
     const characters = Array.isArray(parsed.characters) ? parsed.characters : [];
     const loreEntries = Array.isArray(parsed.loreEntries) ? parsed.loreEntries : [];
+    const plotOutline = typeof parsed.plotOutline === "string" ? parsed.plotOutline : "";
+    const configPatch = parsed.configPatch && typeof parsed.configPatch === "object" ? parsed.configPatch : {};
 
     return NextResponse.json({
-      reply: `已生成 ${characters.length} 个角色、${loreEntries.length} 条世界设定。确认后一键写入项目。`,
+      reply: `已按你的方向生成：${characters.length} 个角色、${loreEntries.length} 条世界设定${plotOutline ? "、完整情节脉络" : ""}。在右侧「已导入设定」核对，满意后点「确认写入项目」。`,
       characters,
       loreEntries,
-      plotOutline: "",
+      plotOutline,
+      configPatch,
       mode: "generate_all",
     });
   } catch (err) {
