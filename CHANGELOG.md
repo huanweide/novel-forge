@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.49 — 2026-08-21
+
+### 探讨模式写入失败修复 + 步骤自动跳转 + 自由讨论放大（EXPLORE-WRITE-FIX）
+
+- **🐛 根因修复（瑞宝宝截图）**：探讨模式点卡「写入」永远失败、重试也没用。根因是 `adopt` 路由 `prisma.project.create` 时 `genre` 字段传了数组 `[config.genre || "玄幻"]`，但 Project schema 的 `genre` 是 String（类型标签），类型不匹配 → Prisma 验证错误 → adopt 永远失败 → 卡片一直红「失败」+「点击卡并重试过」。`create` 路由同样 bug 一并修复。**实测**：curl 模拟截图场景（开篇·SSS级猎人觉醒事件）→ 200 + 写入成功「✅ 词条『SSS级猎人觉醒事件』已写入（plot）」。
+- **🔁 11 步进度条·步骤状态 + 自动跳下一步（瑞宝宝原话）**：按真实采纳数判定「完成」（count>0 即 done），不再仅靠 currentIdx；每步右侧显示该 step 的已采纳数（「1」/「2」…），0 不显示；**点击已完成步骤 = 跳到下一步**（链式：开篇 ✓ → 自动切到世界观讨论 → … 直到全部完成时自由讨论步骤显示 🎉 全部完成）；点击未完成步骤 = 切到该步（保留旧行为）。
+- **💬 自由讨论模式放大·特别色 + 解释（瑞宝宝原话）**：顶栏 mode tab 的「对话」改名为「自由讨论」，激活态用创意色（与主色区分）；ChatPanel 当 `mode==="chat"` 时新增一条创意色横条含解释（什么都能聊，AI 自动从聊天抓取可采纳设定，聊出啥就采纳啥，不用先选步骤）——让用户知道这是默认主模式，开放、包容、不用先选步骤。
+- **🛡️ 防御性兼容**：StepProgress 对 localStorage 恢复的 adopted 做 Array.isArray 防御（localStorage 破损时 adopted 不是 array → `TypeError: adopted is not iterable` 运行时崩溃已修复）。
+- **质量门禁**：tsc 改动文件零新增（仅 adopt/route.ts 一个预存 pid 类型错与本次无关）；dev server `/explore` 200；adopt 端到端 curl 200 + 写入成功。
+
 ## v3.1.48 — 2026-08-20
 
 ### 探讨模式大修：对话也能采纳 + 深入探讨闭环 + 提示词/UI 人性化（EXPLORE-ADOPT-FIX）

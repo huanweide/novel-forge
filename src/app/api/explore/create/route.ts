@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     const projectName = config.novelName || "未命名小说项目";
-    const genre = [config.genre || "玄幻"];
+    const genre = config.genre || "玄幻";
 
     // 构建全局提示词
     let globalPrompt = buildGlobalPromptFromExplore(config, adopted);

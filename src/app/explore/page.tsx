@@ -563,16 +563,20 @@ export default function ExplorePage() {
           <div className="mr-2 flex items-center gap-0.5 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-0.5">
             {(["chat", "cards", "outline"] as const).map((m) => {
               const active = mode === m;
-              const labels: Record<string, React.ReactNode> = { chat: <span className="flex items-center gap-1"><Icon name="message" size={12} /> 对话</span>, cards: <span className="flex items-center gap-1"><Icon name="grid" size={12} /> 抽卡</span>, outline: <span className="flex items-center gap-1"><Icon name="clipboard" size={12} /> 大纲</span> };
+              const labels: Record<string, React.ReactNode> = { chat: <span className="flex items-center gap-1"><Icon name="message" size={12} /> 自由讨论</span>, cards: <span className="flex items-center gap-1"><Icon name="grid" size={12} /> 抽卡</span>, outline: <span className="flex items-center gap-1"><Icon name="clipboard" size={12} /> 大纲</span> };
               return (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
                   className={`rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-200 active:scale-95 ${
-                    active
-                      ? "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-sm"
+                  active
+                    ? m === "chat"
+                      ? "bg-[var(--nv-creative)]/20 text-[var(--nv-creative)] shadow-[0_0_12px_var(--nv-creative-soft)]"
+                      : "bg-[var(--nv-primary-soft)] text-[var(--nv-primary)] shadow-sm"
+                    : m === "chat"
+                      ? "text-[var(--nv-creative)]/70 hover:text-[var(--nv-creative)]"
                       : "text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)]"
-                  }`}
+                }`}
                 >
                   {labels[m]}
                 </button>
@@ -638,7 +642,7 @@ export default function ExplorePage() {
 
       {/* ── 11 步探讨进度条 ── */}
       <div inert={leftDrawerOpen || rightDrawerOpen}>
-        <StepProgress currentStep={currentStep} onStepChange={handleStepChange} />
+        <StepProgress currentStep={currentStep} adopted={adopted} onStepChange={handleStepChange} />
       </div>
 
       {/* ── 构思步骤引导：让新手清楚每一步该聊什么 ── */}

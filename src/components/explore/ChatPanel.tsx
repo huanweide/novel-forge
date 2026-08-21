@@ -94,6 +94,24 @@ export function ChatPanel({
         </div>
       )}
 
+      {/* ── 自由讨论模式专属横幅（特别色 + 解释，放大自由讨论视觉权重）── */}
+      {mode === "chat" && (
+        <div className="px-4 py-2.5 flex items-center gap-2.5 border-b border-[var(--nv-creative)]/30 bg-gradient-to-r from-[var(--nv-creative)]/15 via-[var(--nv-creative)]/8 to-transparent">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--nv-creative)]/20 border border-[var(--nv-creative)]/40 shrink-0">
+            <Icon name="sparkles" size={13} className="text-[var(--nv-creative)]" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[var(--nv-creative)]">自由讨论模式</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--nv-creative)]/20 text-[var(--nv-creative)] border border-[var(--nv-creative)]/30">什么都能聊</span>
+            </div>
+            <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed mt-0.5">
+              跟 AI 聊任何东西，AI 会从你聊的内容里自动抓取可采纳的设定（&lt;ADOPT&gt; 块）。聊出啥就采纳啥，不用先选步骤。
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── 对话列表 ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {aiConfigured === false && (

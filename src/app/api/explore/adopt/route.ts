@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         data: {
           name: config.novelName || "探讨中的小说",
           description: config.direction?.slice(0, 500) || "",
-          genre: [config.genre || "玄幻"],
+          genre: config.genre || "玄幻",
           globalPrompt: "",
           synopsis: "",
         },

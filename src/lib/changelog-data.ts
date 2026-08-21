@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.48";
+export const LATEST_VERSION = "v3.1.49";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.49 探讨模式写入失败修复 + 步骤自动跳转 + 自由讨论放大（EXPLORE-WRITE-FIX）：①真问题 1（瑞宝宝截图）—— 探讨模式点卡「写入」显示失败、重试也没用：根因是 adopt 路由 prisma.project.create 时 genre 字段传了数组 [config.genre || 「玄幻」]、但 Project schema 的 genre 是 String（类型标签），类型不匹配 → Prisma 验证错误 → adopt 永远失败 → 卡片一直红「失败」+「点击卡并重试过」；create 路由同样位置同样 bug 一并修复保持一致；实测：curl 模拟截图场景（开篇·SSS级猎人觉醒事件）→ 200 + 写入成功「✅ 词条『SSS级猎人觉醒事件』已写入（plot）」；②真问题 2（瑞宝宝原话）—— 步骤完成无视觉指示、点完得手动找下一步：11 步进度条改为按真实采纳数判定「完成」（count>0 即 done）、每步右侧显示已采纳数（如 1）、点击已完成步骤直接跳到下一步（链式：开篇 ✓ → 自动切到世界观讨论 → … 直到全部完成时自由讨论步骤显示 🎉 全部完成）、未完成步骤点切到该步（旧行为保留）；③真问题 3（瑞宝宝原话）—— 自由讨论模式视觉权重不够、用户不知道这是默认主模式、什么都能聊：顶栏 mode tab 的「对话」改名为「自由讨论」、激活态用创意色（与主色区分）、ChatPanel 当 mode==chat 时新增一条创意色横条含解释（什么都能聊，AI 自动从聊天抓取可采纳设定，聊出啥就采纳啥，不用先选步骤）；④防御性兼容——StepProgress 对 localStorage 恢复的 adopted 做 Array.isArray 防御（localStorage 破损时 adopted 不是 array → TypeError: adopted is not iterable 运行时崩溃已修复）；⑤质量门禁 tsc 改动文件零新增（仅 adopt/route.ts 一个预存 pid 类型错与本次无关）、dev server /explore 200、adopt 端到端 curl 200+写入成功；个人 IP 仍归瑞宝宝。",
   "v3.1.48 探讨模式大修：对话也能采纳 + 深入探讨闭环 + 提示词/UI 人性化（EXPLORE-ADOPT-FIX）：①真问题——瑞宝宝原话痛点「对话模式聊不出采纳的东西」；后端 /api/explore/chat 只在 mode===\"cards\"（抽卡）时解析卡片，对话模式 mode===\"chat\" 返回的 cards 恒为空，前端 ChatPanel 永远不渲染采纳按钮，你跟 AI 聊完啥都点不了；②修复——对话模式系统提示词新增 ADOPT 块输出规范：AI 一旦敲定一个具体设定（角色/势力/能力/世界规则/冲突）就在回复末尾用 <ADOPT title=\"...\">具体描述</ADOPT> 包裹，后端 extractAdoptBlocks 正则提取为卡片、stripAdoptBlocks 剥离展示文本（气泡保持干净纯对话），extractFallbackCard 兜底按设定信号词整段抽卡；抽卡模式保持 parseCardsFromReply 不变；③深入探讨闭环——右侧 AdoptedContentPanel 每条新增「深入探讨」按钮（onDeepDive），点击自动切回对话模式 + 定位到该步骤 + 注入深挖提示词，复用同一条聊天链路把设定展开打磨、产出新可采纳子设定；④提示词质量——抽卡模式强制 3 张卡方向明显不同（经典稳妥/创意反转/高风险高回报）、拒绝空话；对话模式提示词强化条理与创意；⑤UI 人性化——强制原创人名/自动生成故事线两个开关加 key/sparkles 图标提升识别度，已采纳内容预览从 80 字放宽到 140 字（line-clamp-3）解决看不全采纳内容；⑥质量门禁——tsc 基线对比零新增（170=基线）、纯前端 + 后端既有卡片机制、没动任何写作功能；个人 IP 仍归瑞宝宝。",
   "v3.1.47 探讨模式一条龙实测 + 「整理」彻底不依赖模型（修复 4 个真实 bug）：①真问题——把探讨模式各功能测一遍后发现：占位 Key（8 位假 key）被误判「已配置」→ 提取请求用假 key 打真实 API 无限卡死；parse-settings 路由走的 parseSettings 没接 v3.1.46 的降级；有真 key 时 LLM 提取 1.7 万字要 2 分钟+、API 不可达时无限挂；探讨 create 先建主角卡（只 background）→ outline 落库同名只并 background → personality 等字段永久丢失；②修复——(a) hasLLMConfig 增加占位 key 防御：apiKey 非空但长度 <16 位视为未配置、自动降级本地解析；(b) parseSettings/parseLorebookOnly/parseStyleOnly 三函数全部接入降级；(c) parse-settings 路由改为默认走本地规则解析器（0.25 秒返回 1.7 万字、全维度 100% 召回、零网络依赖），LLM 提取能力保留给探讨 ai_refine 等可选场景；(d) 同名合并升级为「background 拼接 + 空字段补齐」——解析出的 personality/age/gender/role 在库中为空时补全、不覆盖用户手改值；③实测 22/22 全绿——create 建库+outline 三卡落库（12 角色/12 世界卡/风格卡/大纲/基调）、parse-settings 1.7 万字 0.25s、adopt-batch 批量采纳+同名合并去重、chat 正常回复、前端 /explore 200；④质量门禁 tsc 基线对比零新增（170=基线）；测试脚本固化 scripts/e2e-explore-test.mjs。个人 IP 仍归瑞宝宝。",
   "v3.1.46 「模型无关」设定解析器上线——没配 API Key 也能整理设定，毫秒级、离线可跑：①真问题——之前「探讨模式粘大纲→整理提取设定」依赖 LLM，没配 Key 时「整理」直接报错；且 LLM 路径 prompt 字段结构与落库函数期待的字段对不上（personality 对象 vs 数组等），模型返回的结构化结果天生丢字段/串卡，正是「乱码、字段串到别人身上」焦虑的真因；②新建纯规则解析器 src/core/settings/local-parser.ts——零外部依赖、零网络、零 API，粘贴即解析，名字归组严格（每个角色属性只挂在自己名下，绝不串卡），输出与 ParsedSettings 完全兼容、可被统一落库函数直接落库（同名合并去重原样生效）；③端到端测试（1.7 万字碎片化设定 fixture：12 角色混合 结构化字段块/方括号块/内联散文/纯名字行 + 12 世界卡 势力/地理/功法/历史/器物/规则/种族七类 + 8 关系）harness 评分全维度 100%——角色 12/12、势力 6/6、世界卡 12/12、关系 8/8，解析 ~9ms/1.7万字（≈200 万字/秒）、无脏名；④迭代修复——关系句分句+主语传递（「苏砚是…。他…」代词消解）、世界卡名不再被「的/之」截断（「龙陨之地」完整保留）、matchLoreHeader 补器物/秘宝/圣物等关键词、配对端点 looksLikeName 过滤假名、角色定位 protagonist 优先；⑤提取链路自动降级——parseSettingsStreaming 探测 LLM 配置，无 Key/未配模型自动走本地解析（工作台「整理」+ 探讨模式在无 API 时全可跑），配了 Key 时 LLM 仍作增强；⑥质量门禁 tsc 基线对比零新增（170=基线）。个人 IP 仍归瑞宝宝。",
@@ -210,6 +211,45 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.49",
+    date: "2026-08-21",
+    title: "探讨模式写入失败修复 + 步骤自动跳转 + 自由讨论放大（EXPLORE-WRITE-FIX）",
+    sections: [
+      {
+        label: "🐛 根因修复：点卡「写入」永远失败",
+        items: [
+          "adopt 路由 prisma.project.create 时 genre 字段传了数组 [config.genre || 「玄幻」]，但 Project schema 的 genre 是 String（类型标签），类型不匹配 → Prisma 验证错误 → adopt 永远失败 → 卡片一直红「失败」+「点击卡并重试过」",
+          "修复：改为字符串 config.genre || 「玄幻」；create 路由同一处也一并修复保持一致",
+          "实测：curl 模拟用户截图场景（开篇·SSS级猎人觉醒事件）→ 200 + 写入成功 ✅ 词条「SSS级猎人觉醒事件」已写入（plot）",
+        ],
+      },
+      {
+        label: "🔁 11 步进度条：步骤状态 + 自动跳下一步",
+        items: [
+          "按真实采纳数判定「完成」（count>0 即 done），不再仅靠 currentIdx",
+          "每步右侧显示该 step 的已采纳数（「1」/「2」…），0 不显示",
+          "点击已完成步骤 = 跳到下一步（链式：开篇 ✓ → 自动进世界观讨论 → …）",
+          "点击未完成步骤 = 切到该步（保留旧行为）",
+          "10 步全完成时自由讨论步骤显示 🎉 全部完成",
+        ],
+      },
+      {
+        label: "💬 自由讨论模式放大：特别色 + 解释",
+        items: [
+          "顶栏 mode tab 的「对话」改名为「自由讨论」，激活态用创意色（与主色区分）",
+          "ChatPanel 当 mode==chat 时新增一条创意色横条：解释「什么都能聊，AI 会从你聊的内容里自动抓取可采纳设定（<ADOPT> 块），聊出啥就采纳啥」",
+          "让用户知道这是默认主模式：开放、包容、不用先选步骤",
+        ],
+      },
+      {
+        label: "🛡️ 防御性兼容",
+        items: [
+          "StepProgress 对 localStorage 恢复的 adopted 做 Array.isArray 防御（localStorage 破损时 adopted 不是 array → TypeError: adopted is not iterable 运行时崩溃已修复）",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.48",
     date: "2026-08-20",
