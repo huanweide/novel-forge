@@ -161,7 +161,7 @@ CHAT
 - 缺角色ID时先查列表拿到ID
 - TOOL行JSON必须有效，一行
 
-作品：《${project.name}》| ${project.genre.join("、")}
+作品：《${project.name}》| ${safeJoin(project.genre)}
 
 ## 当前项目实时状态（每轮刷新）
 ${projectSnapshot}

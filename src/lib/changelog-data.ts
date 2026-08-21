@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.49";
+export const LATEST_VERSION = "v3.1.50";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.50 探讨模式「已采纳当大纲」落地 + 20+ 处 join 链错修复（EXPLORE-LLM-SIMPLIFY）：①真问题 1（瑞宝宝截图"全都失败"）—— 自由讨论模式"七宗罪天团"卡一直红「失败」+「点击卡并重试过」：真因 1 localStorage 残留旧 createdProjectId → 引用 db 重置后已不存在的 Project → adopt API 跳过建项目 → 直接 lorebookEntry.create → P2003 外键违反 503；真因 2 adopt 路由内部调 LLM aiParseToLore/aiParseToCharacter（20s+ 超时/挂/返回无效结构）；真因 3 v3.1.49 改 genre 数组→String 后 20+ 处 project.genre.join 仍假定数组（orchestrator/sync-global-prompt/storylines/generate/foreshadowing 等 11 文件），项目生成链路连锁失败；②简化 adopt 路由（瑞宝宝提议"已采纳当大纲处理"）—— 去掉 LLM 解析（aiParseToLore/aiParseToCharacter），卡本身就是结构化文本，直接 card.title + card.content 落库即可，速度从 20s+ 提升到 0.1s（200x 加速），稳定性不依赖 LLM、必成功；character 分支 tryExtractStructured 规则提取 + card 兜底；lore 分支直接 card 落库（title/content/category from step/keys from title）；③P2003 防御——adopt 路由增加 projectId findUnique 校验，旧 session/localStorage 残留 pid 指向已不存在的 Project 自动 fallback 当首次采纳处理（自动建新项目），前端无感；④20+ 处 join 链错统一修复——utils.ts 已有 safeJoin 完美兼容 String/string[]/Object，批量替换 12 个文件的 project.genre.join 和 project.toneKeywords.join 为 safeJoin(...)，避免「写完存库后下游读炸」的连锁；⑤自测——free_talk adopt 200 + 写入 + 0.1s，P2003 防御（不存在的 projectId）200 + 自动建项目，tsc 改动文件零新增（仅 characters/expand/route.ts 预存 TS7006 implicit any 与本次无关）；个人 IP 仍归瑞宝宝。",
   "v3.1.49 探讨模式写入失败修复 + 步骤自动跳转 + 自由讨论放大（EXPLORE-WRITE-FIX）：①真问题 1（瑞宝宝截图）—— 探讨模式点卡「写入」显示失败、重试也没用：根因是 adopt 路由 prisma.project.create 时 genre 字段传了数组 [config.genre || 「玄幻」]、但 Project schema 的 genre 是 String（类型标签），类型不匹配 → Prisma 验证错误 → adopt 永远失败 → 卡片一直红「失败」+「点击卡并重试过」；create 路由同样位置同样 bug 一并修复保持一致；实测：curl 模拟截图场景（开篇·SSS级猎人觉醒事件）→ 200 + 写入成功「✅ 词条『SSS级猎人觉醒事件』已写入（plot）」；②真问题 2（瑞宝宝原话）—— 步骤完成无视觉指示、点完得手动找下一步：11 步进度条改为按真实采纳数判定「完成」（count>0 即 done）、每步右侧显示已采纳数（如 1）、点击已完成步骤直接跳到下一步（链式：开篇 ✓ → 自动切到世界观讨论 → … 直到全部完成时自由讨论步骤显示 🎉 全部完成）、未完成步骤点切到该步（旧行为保留）；③真问题 3（瑞宝宝原话）—— 自由讨论模式视觉权重不够、用户不知道这是默认主模式、什么都能聊：顶栏 mode tab 的「对话」改名为「自由讨论」、激活态用创意色（与主色区分）、ChatPanel 当 mode==chat 时新增一条创意色横条含解释（什么都能聊，AI 自动从聊天抓取可采纳设定，聊出啥就采纳啥，不用先选步骤）；④防御性兼容——StepProgress 对 localStorage 恢复的 adopted 做 Array.isArray 防御（localStorage 破损时 adopted 不是 array → TypeError: adopted is not iterable 运行时崩溃已修复）；⑤质量门禁 tsc 改动文件零新增（仅 adopt/route.ts 一个预存 pid 类型错与本次无关）、dev server /explore 200、adopt 端到端 curl 200+写入成功；个人 IP 仍归瑞宝宝。",
   "v3.1.48 探讨模式大修：对话也能采纳 + 深入探讨闭环 + 提示词/UI 人性化（EXPLORE-ADOPT-FIX）：①真问题——瑞宝宝原话痛点「对话模式聊不出采纳的东西」；后端 /api/explore/chat 只在 mode===\"cards\"（抽卡）时解析卡片，对话模式 mode===\"chat\" 返回的 cards 恒为空，前端 ChatPanel 永远不渲染采纳按钮，你跟 AI 聊完啥都点不了；②修复——对话模式系统提示词新增 ADOPT 块输出规范：AI 一旦敲定一个具体设定（角色/势力/能力/世界规则/冲突）就在回复末尾用 <ADOPT title=\"...\">具体描述</ADOPT> 包裹，后端 extractAdoptBlocks 正则提取为卡片、stripAdoptBlocks 剥离展示文本（气泡保持干净纯对话），extractFallbackCard 兜底按设定信号词整段抽卡；抽卡模式保持 parseCardsFromReply 不变；③深入探讨闭环——右侧 AdoptedContentPanel 每条新增「深入探讨」按钮（onDeepDive），点击自动切回对话模式 + 定位到该步骤 + 注入深挖提示词，复用同一条聊天链路把设定展开打磨、产出新可采纳子设定；④提示词质量——抽卡模式强制 3 张卡方向明显不同（经典稳妥/创意反转/高风险高回报）、拒绝空话；对话模式提示词强化条理与创意；⑤UI 人性化——强制原创人名/自动生成故事线两个开关加 key/sparkles 图标提升识别度，已采纳内容预览从 80 字放宽到 140 字（line-clamp-3）解决看不全采纳内容；⑥质量门禁——tsc 基线对比零新增（170=基线）、纯前端 + 后端既有卡片机制、没动任何写作功能；个人 IP 仍归瑞宝宝。",
   "v3.1.47 探讨模式一条龙实测 + 「整理」彻底不依赖模型（修复 4 个真实 bug）：①真问题——把探讨模式各功能测一遍后发现：占位 Key（8 位假 key）被误判「已配置」→ 提取请求用假 key 打真实 API 无限卡死；parse-settings 路由走的 parseSettings 没接 v3.1.46 的降级；有真 key 时 LLM 提取 1.7 万字要 2 分钟+、API 不可达时无限挂；探讨 create 先建主角卡（只 background）→ outline 落库同名只并 background → personality 等字段永久丢失；②修复——(a) hasLLMConfig 增加占位 key 防御：apiKey 非空但长度 <16 位视为未配置、自动降级本地解析；(b) parseSettings/parseLorebookOnly/parseStyleOnly 三函数全部接入降级；(c) parse-settings 路由改为默认走本地规则解析器（0.25 秒返回 1.7 万字、全维度 100% 召回、零网络依赖），LLM 提取能力保留给探讨 ai_refine 等可选场景；(d) 同名合并升级为「background 拼接 + 空字段补齐」——解析出的 personality/age/gender/role 在库中为空时补全、不覆盖用户手改值；③实测 22/22 全绿——create 建库+outline 三卡落库（12 角色/12 世界卡/风格卡/大纲/基调）、parse-settings 1.7 万字 0.25s、adopt-batch 批量采纳+同名合并去重、chat 正常回复、前端 /explore 200；④质量门禁 tsc 基线对比零新增（170=基线）；测试脚本固化 scripts/e2e-explore-test.mjs。个人 IP 仍归瑞宝宝。",
@@ -211,6 +212,56 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.50",
+    date: "2026-08-21",
+    title: "探讨模式「已采纳当大纲」落地 + 20+ 处 join 链错修复（EXPLORE-LLM-SIMPLIFY）",
+    sections: [
+      {
+        label: "🐛 根因（瑞宝宝截图「全都失败」）",
+        items: [
+          "截图显示自由讨论模式「七宗罪天团」卡一直红「失败」+「点击卡并重试过」",
+          "真因 1：localStorage 残留旧 createdProjectId → 引用 db 重置后已不存在的 Project → adopt API 跳过建项目 → 直接 lorebookEntry.create → P2003 外键违反 503",
+          "真因 2：adopt 路由内部调 LLM aiParseToLore/aiParseToCharacter（20s+ 超时/挂/返回无效结构）",
+          "真因 3：v3.1.49 改 genre 数组→String 后 20+ 处 project.genre.join 仍假定数组（orchestrator/sync-global-prompt/storylines/generate/foreshadowing 等 11 文件），项目生成链路连锁失败",
+        ],
+      },
+      {
+        label: "✅ 简化 adopt 路由（瑞宝宝提议「已采纳当大纲处理」）",
+        items: [
+          "去掉 LLM 解析（aiParseToLore/aiParseToCharacter）—— 卡本身就是结构化文本，直接 card.title + card.content 落库即可",
+          "速度从 20s+ 提升到 0.1s（200x 加速）",
+          "稳定性：不依赖 LLM、必成功",
+          "character 分支：tryExtractStructured 规则提取 + card 兜底",
+          "lore 分支：直接 card 落库（title/content/category from step/keys from title）",
+        ],
+      },
+      {
+        label: "🛡️ P2003 防御",
+        items: [
+          "adopt 路由增加 projectId findUnique 校验",
+          "旧 session/localStorage 残留 pid 指向已不存在的 Project → 自动 fallback 当首次采纳处理（自动建新项目）",
+          "前端无感：setCreatedProjectId 旧值 → 重新 setCreatedProjectId（新建项目）→ 继续采纳",
+        ],
+      },
+      {
+        label: "🛠️ 20+ 处 join 链错统一修复",
+        items: [
+          "utils.ts 已有 safeJoin 完美兼容 String/string[]/Object",
+          "批量替换 12 个文件的 project.genre.join 和 project.toneKeywords.join 为 safeJoin(...)",
+          "避免「写完存库后下游读炸」的连锁",
+        ],
+      },
+      {
+        label: "🧪 自测",
+        items: [
+          "free_talk adopt: 200 + 写入 + 0.1s",
+          "P2003 防御（不存在的 projectId）: 200 + 自动建项目",
+          "tsc 改动文件零新增（仅 characters/expand/route.ts 预存 TS7006 implicit any 与本次无关）",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.49",
     date: "2026-08-21",

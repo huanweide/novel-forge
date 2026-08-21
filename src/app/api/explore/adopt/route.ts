@@ -1,23 +1,27 @@
 /**
  * POST /api/explore/adopt
  *
- * 采纳一条探讨设定——AI自动判断类型并写入项目实体。
+ * 采纳一条探讨设定——写入项目（角色/世界书）。
  *
- * Body: {
- *   projectId?: string,
- *   config: BuildConfig,
- *   card: { title, content, step }
- * }
+ * v3.1.50 简化原则（用户反馈"已采纳当大纲处理"+ P2003 防御）：
+ * 1. 去掉 LLM 二次解析（aiParseToLore / aiParseToCharacter）——卡本身就是结构化文本（来自
+ *    chat ADOPT 块或抽卡模式 parseCardsFromReply），直接 card.title + card.content 落库即可。
+ *    避免 LLM 慢/超时/返回无效结构导致的卡死与 500；也满足用户"已采纳内容直接当成大纲写入"的诉求。
+ * 2. projectId 校验：旧 session / localStorage 残留的 createdProjectId 可能指向 db 重置后已不存在的
+ *    Project（实测多次 P2003 503 真因），加 findUnique 校验，不存在则自动 fallback 建新项目，前端无感。
+ * 3. character 分支：tryExtractStructured 规则提取 + card 兜底；lore 分支：直接 card → lorebookEntry。
+ * 4. worldview 类设定自动常驻注入（depth=2），其余世界书条目走关键词触发（depth=3）。
+ *
+ * Body: { projectId?, config, card: { title, content, step } }
+ * Response: { projectId, entityType, entityId, message }
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { jsonError } from "@/lib/api-error";
-import type { BuildConfig, ExploreStep } from "@/core/explore/types";
-import { STEP_LABELS } from "@/core/explore/types";
-import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import { safeJson } from "@/lib/api-body";
+import type { BuildConfig, ExploreStep } from "@/core/explore/types";
+import { syncGlobalPrompt } from "@/core/sync-global-prompt";
 import {
   stepToCategory,
   tryExtractStructured,
@@ -40,8 +44,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "缺少卡片数据" }, { status: 400 });
     }
 
-    // ── 获取或创建项目 ──
+    // ── 获取或创建项目（projectId 校验：旧 session 残留 pid 可能指向 db 重置后已不存在的 Project）──
     let pid = projectId;
+    if (pid) {
+      const exists = await prisma.project.findUnique({
+        where: { id: pid },
+        select: { id: true },
+      });
+      if (!exists) pid = undefined; // 防御 P2003：旧项目不在了 → 当作首次采纳，自动建新项目
+    }
     if (!pid) {
       if (!config) {
         return NextResponse.json(
@@ -53,6 +64,7 @@ export async function POST(req: NextRequest) {
         data: {
           name: config.novelName || "探讨中的小说",
           description: config.direction?.slice(0, 500) || "",
+          // v3.1.49 修复：Project.genre 是 String（不是数组）
           genre: config.genre || "玄幻",
           globalPrompt: "",
           synopsis: "",
@@ -61,53 +73,38 @@ export async function POST(req: NextRequest) {
       pid = project.id;
     }
 
-    // ── 判断卡片的实体类型 ──
+    // ── 判断实体类型（character vs lore）──
     const preStructured = tryExtractStructured(card);
-    let entityType: "character" | "lore" = classifyCardStep(card.step);
-    if (preStructured && preStructured.name && preStructured.role) {
-      entityType = "character";
-    }
+    const entityType: "character" | "lore" =
+      preStructured && preStructured.name && preStructured.role
+        ? "character"
+        : classifyCardStep(card.step);
 
     let entityId: string | undefined;
     let message = "";
 
     if (entityType === "character") {
-      let structured: Record<string, any>;
-      if (preStructured) {
-        structured = preStructured;
-      } else {
-        const llmConfig = await getEffectiveConfig();
-        const client = createLLMClient(llmConfig);
-        const model = llmConfig.extractorModel || llmConfig.writerModel;
-        structured = await aiParseToCharacter(client, model, card);
-      }
-
+      // 规则提取 + card 兜底（v3.1.50 简化：不再调 LLM aiParseToCharacter）
+      const name =
+        (preStructured?.name || card.title.split(/[·\s\-—:：]/)[0] || "未命名角色").slice(0, 30);
       const char = await prisma.characterCard.create({
         data: {
           projectId: pid,
-          name: structured.name || card.title.slice(0, 30),
-          role: structured.role || "supporting",
-          background: structured.background || card.content.slice(0, 500),
-          abilities: Array.isArray(structured.abilities)
-            ? structured.abilities
-            : [],
-          personality: structured.personality || {},
-          age: structured.age || "未知",
-          gender: structured.gender || "未知",
-          appearance: structured.appearance || {},
-          aliases: Array.isArray(structured.aliases)
-            ? structured.aliases
-            : [],
+          name,
+          role: preStructured?.role || "supporting",
+          background: preStructured?.background || card.content.slice(0, 500),
+          abilities: Array.isArray(preStructured?.abilities) ? preStructured!.abilities : [],
+          personality: preStructured?.personality || {},
+          age: preStructured?.age || "未知",
+          gender: preStructured?.gender || "未知",
+          appearance: preStructured?.appearance || {},
+          aliases: Array.isArray(preStructured?.aliases) ? preStructured!.aliases : [],
           dialogueStyle:
-            structured.dialogueStyle && typeof structured.dialogueStyle === "object"
-              ? structured.dialogueStyle
+            preStructured?.dialogueStyle && typeof preStructured.dialogueStyle === "object"
+              ? preStructured.dialogueStyle
               : {},
-          hiddenMotives: Array.isArray(structured.hiddenMotives)
-            ? structured.hiddenMotives
-            : [],
-          relationships: Array.isArray(structured.relationships)
-            ? structured.relationships
-            : [],
+          hiddenMotives: Array.isArray(preStructured?.hiddenMotives) ? preStructured!.hiddenMotives : [],
+          relationships: Array.isArray(preStructured?.relationships) ? preStructured!.relationships : [],
           tags: ["📥探讨采纳"],
           currentStatus: "alive",
         },
@@ -115,31 +112,28 @@ export async function POST(req: NextRequest) {
       entityId = char.id;
       message = `✅ 角色「${char.name}」已写入`;
     } else {
-      let structured: Record<string, any>;
-      if (preStructured) {
-        structured = {
-          title: preStructured.name || card.title,
-          content: preStructured.background || card.content.slice(0, 2500),
-          category: stepToCategory(card.step),
-          keys: extractCharacterKeys(card.title, preStructured),
-        };
-      } else {
-        const llmConfig = await getEffectiveConfig();
-        const client = createLLMClient(llmConfig);
-        const model = llmConfig.extractorModel || llmConfig.writerModel;
-        structured = await aiParseToLore(client, model, card, config);
-      }
-
-      const isWorldviewCat =
-        structured.category === "worldview" || stepToCategory(card.step) === "worldview";
+      // lore 分支：直接 card 落库（v3.1.50 简化：不再调 LLM aiParseToLore）
+      // 用户反馈"已采纳内容当大纲处理"—— 本分支就是把卡当 lorebookEntry 写：
+      // title 用 card.title，content 保留 card.content 原文，category 按 step 简单映射
+      // （worldview/faction/plot 等），触发词从标题/结构化提取
+      const title = (card.title || "未命名词条").slice(0, 60);
+      const content = (card.content || "").slice(0, 2500);
+      const category = stepToCategory(card.step) || "custom";
+      const keys = (() => {
+        try {
+          return extractCharacterKeys(title, preStructured) || [];
+        } catch {
+          return [];
+        }
+      })();
+      const isWorldviewCat = category === "worldview";
       const entry = await prisma.lorebookEntry.create({
         data: {
           projectId: pid,
-          title: structured.title || card.title.slice(0, 60),
-          category: structured.category || stepToCategory(card.step),
-          keys: Array.isArray(structured.keys) ? structured.keys : [],
-          content: structured.content || card.content.slice(0, 2500),
-          // worldview 类设定自动常驻注入（depth=2），其余世界书条目走关键词触发（depth=3）
+          title,
+          category,
+          keys,
+          content,
           depth: isWorldviewCat ? 2 : 3,
           insertionOrder: 50,
           enabled: true,
@@ -170,89 +164,4 @@ export async function POST(req: NextRequest) {
 function classifyCardStep(step: ExploreStep): "character" | "lore" {
   if (step === "protagonist") return "character";
   return "lore";
-}
-
-async function aiParseToCharacter(
-  client: ReturnType<typeof createLLMClient>,
-  model: string,
-  card: { title: string; content: string },
-): Promise<Record<string, any>> {
-  const prompt = `将以下小说设定解析为角色卡JSON。
-
-【原始设定】
-标题：${card.title}
-内容：${card.content}
-
-【输出JSON格式】
-{
-  "name": "角色名（2-4字）",
-  "role": "protagonist|antagonist|mentor|supporting",
-  "age": "年龄描述",
-  "gender": "男|女|未知",
-  "background": "2-4句话角色背景",
-  "abilities": ["能力1", "能力2"],
-  "personality": {"dominant": "主导性格", "drive": "驱动力"},
-  "appearance": {"hair": "", "eyes": "", "height": "", "build": ""},
-  "dialogueStyle": "角色独有说话方式与口头禅",
-  "hiddenMotives": ["隐藏动机1", "隐藏动机2"],
-  "relationships": [{"name": "关联角色名", "type": "师徒/敌对/恋人", "desc": "关系描述"}]
-}
-只输出JSON。`;
-
-  try {
-    const resp = await client.chat({
-      model,
-      messages: [
-        { role: "system", content: "你是小说设定解析器。只输出JSON，不客套。" },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.2,
-      maxTokens: 1024,
-    });
-    const raw = resp.content || "";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    return jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-  } catch {
-    return {};
-  }
-}
-
-async function aiParseToLore(
-  client: ReturnType<typeof createLLMClient>,
-  model: string,
-  card: { title: string; content: string },
-  config?: BuildConfig,
-): Promise<Record<string, any>> {
-  const prompt = `将以下小说设定整理为世界书词条JSON。
-
-【原始设定】
-标题：${card.title}
-内容：${card.content}
-${config?.genre ? `小说类型：${config.genre}` : ""}
-
-【输出JSON格式】
-{
-  "title": "优化后的词条标题（≤20字）",
-  "category": "worldview|lorebook|faction|magic_system|geography|economy|plot|custom",
-  "content": "整理后的设定内容（200-500字，保留所有关键信息）",
-  "keys": ["触发词1", "触发词2", "触发词3", "触发词4", "触发词5"]
-}
-只输出JSON。`;
-
-  try {
-    const resp = await client.chat({
-      model,
-      messages: [
-        { role: "system", content: "你是小说设定整理器。只输出JSON，不客套。" },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.2,
-      maxTokens: 1024,
-    });
-    const raw = resp.content || "";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    return jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-  } catch {
-    return {};
-  }
 }

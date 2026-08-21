@@ -157,10 +157,10 @@ export class AgentOrchestrator {
 
 【作品信息】
 名称：${project.name}
-类型：${project.genre.join("、")}
+类型：${safeJoin(project.genre)}
 目标字数：${project.targetWordCount.toLocaleString()}字
 主线总纲：${project.synopsis}
-基调：${project.toneKeywords.join("、")}
+基调：${safeJoin(project.toneKeywords)}
 ${styleDescription}
 
 【角色设定】
@@ -1293,7 +1293,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
 9. 悲喜→括号掩埋悲剧+吐槽化解倒霉（轻松文风的悲凉底色）
 10. 选项→性格罗盘+隐形标签+动作台词双轨（U.A.R.E.互动叙事）
 
-正在撰写《${project.name}》——一部${project.genre.join("、")}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`
+正在撰写《${project.name}》——一部${safeJoin(project.genre)}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`
     : `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}${storylineBlock}# Role: 资深小说作家
 
 你正在创作一部《${project.name}》——体裁为${(project.genre || []).join("、") || "通用"}。

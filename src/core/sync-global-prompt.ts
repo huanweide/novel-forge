@@ -5,12 +5,10 @@
  * 卡有变动 → 调 syncGlobalPrompt(projectId) → 刷新缓存。
  * 生成路由直接读 project.globalPrompt，不需要再逐个查卡。
  *
- * v2.52.0：引入「聚合摘要 + 预算裁剪」。此前 buildGlobalPrompt 把角色卡/世界书/风格卡
- * 全量拼进 globalPrompt，多次套用创意工坊预设会累积大量同名世界卡 + 超长背景，
- * 实测某项目 globalPrompt 膨胀到 18 万字符（远超 13 万上下文窗口），直接拖慢单章速率、
- * 烧 token、且可能让模型忽略真正相关的设定。现改为：世界卡按 title 去重、单条内容/
- * 角色背景按预算截断、总长度按「优先级 tier」循环收紧至 GLOBAL_PROMPT_BUDGET 以内。
+ * v3.1.50：project.genre/toneKeywords 已是 String（v3.1.49 修了数组 vs String 类型），
+ * safeJoin 统一兼容 String / string[] / 逗号顿号分隔文本。
  */
+import { safeJoin } from "@/lib/utils";
 
 import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
@@ -126,8 +124,8 @@ function assembleGlobalPrompt(
   // 第一部分：作品信息
   // ═══════════════════════════════════════════
   parts.push(`# 作品：《${project.name}》
-类型：${project.genre.join("、")}
-基调：${project.toneKeywords.join("、")}
+类型：${safeJoin(project.genre)}
+基调：${safeJoin(project.toneKeywords)}
 总纲：${project.synopsis || "（未设置）"}`);
 
   if (project.authorNote?.trim()) {

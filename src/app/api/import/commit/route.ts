@@ -299,7 +299,7 @@ function buildGlobalContext(
   return `【作品全局上下文——角色/词条名索引（仅列名称，供合并时排查重名与区分度，不含正文细节）】
 
 作品：${project.name}
-类型：${project.genre.join("、")}
+类型：${safeJoin(project.genre)}
 总纲：${project.synopsis?.slice(0, 200) || "（无）"}
 风格：${styleText}
 

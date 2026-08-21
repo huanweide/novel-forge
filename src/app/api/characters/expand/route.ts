@@ -8,6 +8,7 @@
  */
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { safeJoin } from "@/lib/utils";
 import { NextResponse } from "next/server";
 import { parseAIJson } from "@/lib/json-parser";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -43,7 +44,7 @@ function slimContext(
     ? `${(style.styleDescription as string)?.slice(0, 80) || ""} | POV:${style.povType || "第三人称"}`
     : "";
 
-  return `${project.name}（${project.genre.join("、")}）${project.synopsis ? " | 总纲:" + project.synopsis.slice(0, 200) : ""}
+  return `${project.name}（${safeJoin(project.genre)}）${project.synopsis ? " | 总纲:" + project.synopsis.slice(0, 200) : ""}
 世界观(${lore.length}条): ${loreText || "无"}
 ${styleText ? "文风: " + styleText : ""}`;
 }

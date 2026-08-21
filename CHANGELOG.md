@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.50 — 2026-08-21
+
+### 探讨模式「已采纳当大纲」落地 + 20+ 处 join 链错修复（EXPLORE-LLM-SIMPLIFY）
+
+- **🐛 根因（瑞宝宝截图"全都失败"）**：自由讨论模式"七宗罪天团"卡一直红「失败」+「点击卡并重试过」。真因 1：localStorage 残留旧 `createdProjectId` → 引用 db 重置后已不存在的 Project → adopt API 跳过建项目 → 直接 `lorebookEntry.create` → P2003 外键违反 503；真因 2：adopt 路由内部调 LLM `aiParseToLore`/`aiParseToCharacter`（20s+ 超时/挂/返回无效结构）；真因 3：v3.1.49 改 genre 数组→String 后 20+ 处 `project.genre.join` 仍假定数组（orchestrator/sync-global-prompt/storylines/generate/foreshadowing 等 11 文件），项目生成链路连锁失败。
+- **✅ 简化 adopt 路由（瑞宝宝提议"已采纳当大纲处理"）**：去掉 LLM 解析（`aiParseToLore`/`aiParseToCharacter`）——卡本身就是结构化文本，直接 `card.title + card.content` 落库即可；速度从 20s+ 提升到 0.1s（200x 加速）；character 分支 `tryExtractStructured` 规则提取 + card 兜底；lore 分支直接 card 落库（title/content/category from step/keys from title）。
+- **🛡️ P2003 防御**：adopt 路由增加 `projectId findUnique` 校验，旧 session/localStorage 残留 pid 指向已不存在的 Project → 自动 fallback 当首次采纳处理（自动建新项目），前端无感。
+- **🛠️ 20+ 处 join 链错统一修复**：utils.ts 已有 `safeJoin` 完美兼容 String/string[]/Object；批量替换 12 个文件的 `project.genre.join` 和 `project.toneKeywords.join` 为 `safeJoin(...)`，避免"写完存库后下游读炸"的连锁。
+- **🧪 自测**：free_talk adopt 200 + 写入 + 0.1s；P2003 防御（不存在的 projectId）200 + 自动建项目；tsc 改动文件零新增。
+
 ## v3.1.49 — 2026-08-21
 
 ### 探讨模式写入失败修复 + 步骤自动跳转 + 自由讨论放大（EXPLORE-WRITE-FIX）

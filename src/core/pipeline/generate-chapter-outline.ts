@@ -117,7 +117,7 @@ ${hasCustomPrompt ? `用户提示词：${customPrompt}\n` : ""}本章标题：${
 ${node.outline ? `现有大纲（如有）：${node.outline.slice(0, 300)}\n` : ""}（大纲为空则根据前后文 + 作者指令推断本章方向）
 ${authorNoteInjection}
 【作品信息】
-名称：${project.name} · 类型：${project.genre.join("、")}
+名称：${project.name} · 类型：${safeJoin(project.genre)}
 总纲：${project.synopsis}
 
 【前文上下文——你读了才知道谁在场上】
@@ -239,7 +239,7 @@ ${hasCustomPrompt ? `用户提示词：${customPrompt}\n` : ""}本章标题：${
 ${node.outline ? `现有大纲（如有）：${node.outline.slice(0, 300)}\n` : ""}
 ${authorDirective}
 【作品信息】
-名称：${project.name} · 类型：${project.genre.join("、")}
+名称：${project.name} · 类型：${safeJoin(project.genre)}
 总纲：${project.synopsis}
 
 【前文上下文——你读了才知道从哪里接】

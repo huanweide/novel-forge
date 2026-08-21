@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     try {
       const { recallContext } = await import("@/core/babylore/recall");
       const recallItems = recallContext(
-        `${project.synopsis}\n${project.toneKeywords.join("、")}\n${customPrompt || ""}`,
+        `${project.synopsis}\n${safeJoin(project.toneKeywords)}\n${customPrompt || ""}`,
         loreEntries as any,
         [],
       );
@@ -170,9 +170,9 @@ export async function POST(request: Request) {
 ${customPrompt}
 
 【作品背景】
-${project.name} · ${project.genre.join("、")}
+${project.name} · ${safeJoin(project.genre)}
 总纲：${project.synopsis}
-基调：${project.toneKeywords.join("、")}
+基调：${safeJoin(project.toneKeywords)}
 ${styleText}
 
 【全量角色（${activeChars.length}人）】
@@ -184,9 +184,9 @@ ${finalDirective}${charCountNote}
 
 按用户提示词生成${chapterCount}章大纲。只输出JSON。`
       : `【作品设定】
-${project.name} · ${project.genre.join("、")} · 目标${project.targetWordCount.toLocaleString()}字
+${project.name} · ${safeJoin(project.genre)} · 目标${project.targetWordCount.toLocaleString()}字
 总纲：${project.synopsis}
-基调：${project.toneKeywords.join("、")}
+基调：${safeJoin(project.toneKeywords)}
 ${styleText}
 
 【全量角色（${activeChars.length}人）】

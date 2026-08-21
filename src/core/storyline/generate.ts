@@ -6,6 +6,7 @@
  */
 
 import { completeText } from "@/core/llm/client";
+import { safeJoin } from "@/lib/utils";
 
 export type GenProject = {
   name: string;
@@ -115,7 +116,7 @@ export async function generateStorylineSuggestions(input: {
 
   const prompt = `【作品信息】
 名称：${project.name}
-类型：${project.genre.join("、")}
+类型：${safeJoin(project.genre)}
 总纲：${project.synopsis || "（未设定总纲）"}
 
 【角色卡——${characters.length}人】

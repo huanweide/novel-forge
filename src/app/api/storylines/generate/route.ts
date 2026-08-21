@@ -112,7 +112,7 @@ export async function runStorylineGeneration(bodyJson: any) {
 
       const prompt = `【作品信息】
 名称：${project.name}
-类型：${project.genre.join("、")}
+类型：${safeJoin(project.genre)}
 总纲：${project.synopsis || "（未设定总纲）"}
 
 【角色卡——${characters.length}人】

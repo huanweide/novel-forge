@@ -45,9 +45,9 @@ export async function enrichForeshadow(
     const projectCtx = [
       project?.name ? `作品：${project.name}` : null,
       project?.synopsis ? `主线总纲：${project.synopsis}` : null,
-      project?.genre && project.genre.length ? `题材：${project.genre.join("、")}` : null,
+      project?.genre && project.genre.length ? `题材：${safeJoin(project.genre)}` : null,
       project?.toneKeywords && project.toneKeywords.length
-        ? `基调：${project.toneKeywords.join("、")}`
+        ? `基调：${safeJoin(project.toneKeywords)}`
         : null,
     ]
       .filter(Boolean)

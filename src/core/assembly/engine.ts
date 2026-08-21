@@ -196,7 +196,7 @@ function buildGlobalMemorySection(memory: GlobalMemory, maxTokens: number): stri
   }
 
   if (memory.toneKeywords.length > 0) {
-    parts.push(`【小说基调】${memory.toneKeywords.join("、")}`);
+    parts.push(`【小说基调】${safeJoin(memory.toneKeywords)}`);
   }
 
   // Tier 2: 调度卡全量展开——AI 应该深度使用的角色（~15人完整卡面）
