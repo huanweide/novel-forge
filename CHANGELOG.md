@@ -1,5 +1,29 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.56 — 2026-08-30
+
+### 安全升级（Next 16.3.3 修 9 个高危）+ 老库 Json 数据迁移脚本（SEC-BUMP / JSON-MIGRATE）
+
+- **🐛 阻断级：老库升级后首页打不开**
+  - 根因：字段改 Json 后读取会执行 JSON 解析，而旧库 `Project.genre` 存的是**裸字符串**（如「玄幻」「都市」），非合法 JSON → 抛 `SyntaxError: Unexpected token '玄'` → 项目列表接口整站 500、首页空白。
+  - 影响面实测：88 个 Json 字段值中 **6 个非法，全部集中在 `Project.genre`**；其余 82 个原本就是序列化层写入的对象/数组（本身即合法 JSON），不受影响。
+  - 修法：新增 `scripts/migrate-json-fields.mjs`，凡解析失败的值按裸字符串补引号 —— 「都市」→ 读回仍是「都市」，下游 `asArray` / `safeJoin` 照常处理。
+  - 特性：**幂等**可重复执行、运行前自动备份；**新 clone 建库无此问题，仅旧版升级需跑一次**：`node scripts/migrate-json-fields.mjs`
+- **🔒 安全：依赖漏洞收敛**
+  - **Next.js 16.2.7 → 16.3.3**：修复 **9 个 high 级漏洞** —— Middleware / Proxy bypass、SSRF in Server Actions、SSRF in rewrites、Cache confusion（含非法 UTF-8）、Unbounded Server Action payload in Edge runtime、DoS in Server Actions、DoS in Image Optimization via SVGs、**Unauthenticated disclosure of internal Server Function endpoints**。
+  - 其中 **Middleware bypass 尤其关键**：未来若加鉴权（middleware），该漏洞会让中间件形同虚设。
+  - `npm audit fix` 再修 4 个：**high 漏洞 12 → 3**。
+  - 余 3 个 high 均为传递依赖（prisma 链），需 `--force` 破坏性升级，风险大于收益，**记录不修**。
+- **✅ 升级后回归验证（全过）**
+  - 类型检查：**0 错误**
+  - vitest：**122 文件 / 1232 测试全过**
+  - 13 个页面逐个访问：**全部 200**（首页 / 探讨 / 工坊 / 拆解 / 拆解新建 / 回收站 / 设置 / 更新日志 / 工作区 / 表格等）
+  - 边界输入：畸形 JSON、空 body、不存在的资源 —— 均返回**正确的 4xx 而非 5xx**
+  - 数据往返：数组字段、对象字段、5000 字超长文本、含尖括号/引号/表情的特殊字符 —— **均原样往返**
+  - 生产构建：**25.6 秒完成，140 条路由全过**
+- **📌 仍待办**：GitHub Actions 转绿（本次提交后应可达成）；公开部署前必须补鉴权（128 条路由零鉴权，本地自用无需）。
+- 个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.55 — 2026-08-30
 
 ### data/ 目录级 gitignore（防凭据与稿件外泄）+ 架构落地：SQLite 原生 Json 化走通（DATA-GITIGNORE / JSON-NATIVE）
