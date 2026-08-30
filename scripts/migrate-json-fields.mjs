@@ -20,7 +20,6 @@
  */
 import Database from "better-sqlite3";
 import fs from "node:fs";
-import path from "node:path";
 
 const DB_PATH = process.env.DATABASE_URL
   ? process.env.DATABASE_URL.replace(/^file:/, "")
