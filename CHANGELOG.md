@@ -2,21 +2,28 @@
 
 ## v3.1.55 — 2026-08-30
 
-### data/ 目录级 gitignore（防凭据与稿件外泄）+ 一次已回滚的架构尝试（DATA-GITIGNORE）
+### data/ 目录级 gitignore（防凭据与稿件外泄）+ 架构落地：SQLite 原生 Json 化走通（DATA-GITIGNORE / JSON-NATIVE）
 
 - **🔒 安全：数据库目录不再可能被误传上网**
   - 原 `.gitignore` 只写 `*.db`，仅挡数据库本体；同目录其它文件不受约束（例如给数据库做备份生成的 `novelforge.db.bak-<时间戳>`）。
   - `data/` 内存有用户在设置页填写的 **LLM API Key** 与**全部小说正文/设定**。一旦 commit 即造成凭据泄露 + 稿件外泄，且 Git 历史难以彻底清除。
   - 改为**目录级规则 `/data/`** 整体忽略，并补 `*.db-wal` / `*.db-shm` / `*.sqlite` / `*.sqlite3` 等后缀。
   - 防护思路升级：从「记住别传某种后缀」变为「该目录根本进不了仓库」，堵死整类手滑。
-- **🧪 架构尝试：SQLite 原生 Json 化（已回滚，结论留档）**
+- **✅ 架构落地：SQLite 原生 Json 化（走通了 —— `dbgenerated` 绕过默认值 bug）**
   - 动机：让 schema 直接用原生 Json 存结构化字段，`prisma-serialize` 扩展即可整体退役，从根上消灭 162 个「类型与运行时契约割裂」的错误。
-  - 实测类型支持边界：**Json ✔ 已支持**（`prisma validate` 通过）；**`String[]` 标量数组 ❌ 仍不支持**（P1012: connector does not support lists of primitive types）。
-  - 阻断项：Prisma 对 Json 字段的 `@default` 会生成**非法 SQL** —— `DEFAULT []`（裸方括号，SQLite 不识别），`db push` 报 `unrecognized token: "{" in CREATE TABLE ... DEFAULT []`。
-  - 规避需去掉全部 Json 字段默认值，牵动大量 `create` 调用点，风险不可控，故**完整回滚**。
-  - 回滚验证：schema / `prisma.ts` / 数据库三方恢复一致；`integrity_check` = ok；**31 张表 48 行数据与改动前逐条一致**；`VACUUM` 后体积由 1.1 MB 复原至 800 KB。
-  - 功能验证：dev 模式首页 HTTP 200、`/api/projects` 正常返回（`toneKeywords` 数组反序列化正确）、`/api/health` 的 `db.ok` 与 `llm.ok` 均为 true。
-- **📌 结论与后续**：162 个类型错误改走保守路线（业务侧逐步接入 `safeJoin` / `safeSplit`），不再动数据层架构。该错误**不影响日常使用** —— dev 模式不阻断类型错误，仅 `npm run build` 与 CI 的 Type check 受影响。
+  - 实测类型支持边界：**Json ✔ 已支持**（`prisma validate` 通过）；**`String[]` 标量数组 ❌ 仍不支持**（P1012: connector does not support lists of primitive types）—— 但 Json 本身能装数组，够用。
+  - 首轮阻断：Prisma 对 Json 字段的 `@default` 会生成**非法 SQL** —— `DEFAULT []`（裸方括号，SQLite 不识别），`db push` 报 `unrecognized token: "{" in CREATE TABLE ... DEFAULT []`。
+  - **破解**：默认值改 `@default(dbgenerated("'[]'"))` —— 由 `dbgenerated` 直接传入 SQL 字面量 `'[]'`，Prisma 不再生成非法语法；复杂默认值（`eventImportances` 的 S/A/B/C 四层结构）同样适用，已在临时库实测通过后铺开。
+  - 落地范围：**52 个结构化字段** `String` → `Json`；**7 个纯文本 `content` 字段**（正文与快照）保持 `String` 不动。
+  - 顺带消除隐患：序列化层原先会把以 `{` 或 `[` 开头的**正文误当 JSON 解析**（比如正文本身是个列表），现在纯文本字段不再经过任何序列化逻辑。
+  - 数据完整性：`db push` 后 31 张表逐条比对，6 类有数据的表条数与改动前完全一致；Json 字段往返验证正确（`Preset.tags` 读回为数组、`content` 读回为对象）。
+- **✅ 结论：架构路线走通，CI 第一道门禁打通**
+  - **162 个类型错误收敛至 0**：`tsc --noEmit` 全绿（写入侧 TS2322 由 115 降到 0）。
+  - 新增 **`asArray<T>()`** 工具（与 `safeJoin` / `safeSplit` 同族）：保留元素原始类型，用于 Json 字段的 `length` / `includes` / `map` / 展开运算 —— `safeSplit` 会把对象数组压成字符串数组，不适合 `LoreTable.rows` 这类。
+  - SQLite 的 Json 字段不支持 `contains` 过滤，改 **`string_contains`**（语义等价：都是对底层 TEXT 做子串匹配）。
+  - `prisma/seed.ts` 同步停用已退役的序列化层，否则 seed 会**双重编码**。
+  - vitest **122 文件全过**（含 `fill.selfcheck` 夹具缺陷修复：前置数据缺失时整组跳过而非抛错）。
+- **📌 仍待办**：生产构建全量验证、CI 转绿、**公开部署前必须补鉴权**（128 条路由零鉴权）。
 - 个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
 
 ## v3.1.54 — 2026-08-30
