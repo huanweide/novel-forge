@@ -10,6 +10,7 @@
  *
  * 不用 function calling 协议——兼容所有模型（DeepSeek/硅基/OpenAI）。
  */
+import { safeJoin } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";

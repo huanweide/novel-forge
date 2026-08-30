@@ -6,6 +6,7 @@
  * AI 失败 → 回退规则合并
  */
 
+import { safeJoin } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { NextResponse } from "next/server";

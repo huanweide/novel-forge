@@ -167,9 +167,14 @@ export default function SettingsPage() {
 
   async function handleSave() {
     const key = apiKey.trim();
-    if (provider !== "local" && !key) {
+    // v3.1.54 P0 修复：原判断漏了 `&& !hasExistingKey`，与 UI「已保存 · 留空则不修改」
+    // 的承诺（见 L309 / L321 占位符）直接矛盾——已配置过 Key 的用户出于安全不回显，
+    // 输入框天然为空，于是想单独改「模型 / Base URL」都会被这里拦下，
+    // 必须把整串 Key 重新粘一遍才能保存。本文件其余 4 处（L97/142/337/396）
+    // 均已正确带上 hasExistingKey 兜底，此处属疏漏。
+    if (provider !== "local" && !key && !hasExistingKey) {
       setStatusMsg("请填入 API Key");
-    setStatusType("error");
+      setStatusType("error");
       return;
     }
     setSaving(true);
@@ -181,7 +186,8 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           llmProvider: provider,
-          llmApiKey: provider === "local" ? (key || undefined) : key,
+          // 留空一律传 undefined（而非空串），否则会把库里已存的 Key 覆盖成空 —— 违背「留空则不修改」
+          llmApiKey: key || undefined,
           llmModel: model || undefined,
           llmBaseUrl: baseUrl || undefined,
         }),
@@ -189,7 +195,9 @@ export default function SettingsPage() {
       if (res.ok) {
         setStatusMsg("设置已保存");
         setStatusType("success");
-        setHasExistingKey(!!key);
+        // 留空保存（只改模型/BaseURL）时 key 为空，不能因此把「已保存」标记清掉，
+        // 否则界面会倒退成「未配置 Key」，测试连接/模型检索按钮随之被禁用。
+        setHasExistingKey((prev) => !!key || prev);
         setApiKey("");
         // 保存后自动连接验证
         await handleTest(key);

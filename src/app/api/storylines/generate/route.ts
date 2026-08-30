@@ -11,6 +11,7 @@
  */
 
 export const maxDuration = 120;
+import { safeJoin } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";

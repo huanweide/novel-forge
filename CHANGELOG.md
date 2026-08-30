@@ -1,5 +1,38 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.54 — 2026-08-30
+
+### 上线体检 + 4 个 P0 修复：CI 连红 7 天的真凶（类型擦除 + Date 被抹平）（BUILD-UNBLOCK）
+
+- **🔴 P0-1 序列化层类型擦除（CI 连红根因）**：
+  - `applySerialization` 原签名 `(client: any): any`，把整个数据层类型推导全部擦除 → 126 处回调参数退化为隐式 any（TS7006）。
+  - CI 的 Type check 是硬门禁，从 v3.1.49 起 main 分支一路 failure 到 v3.1.53，卡点均为 `analyze-chapter/route.ts` 的 TS7006；`npm run build` 步骤排在其后，7 天内从未真正执行过。
+  - 改为泛型签名 `<T>(client: T): T` 后 TS7006 归零 —— 该扩展只改运行时行为（对象 ↔ JSON 字符串）不改数据形状，返回原类型是准确的。
+  - 副作用：掀出 162 个原被 any 掩盖的真实类型不匹配（115 TS2322 / 18 TS2352 / 13 TS2339 / 11 TS2345 / 5 TS2353），属序列化层「运行时改了形状、类型没跟上」的契约缺口，非运行时 bug。
+- **🔴 P0-2 Date 被序列化层摧毁为空对象**：
+  - `serialize`/`deserialize` 对任何 object 都用 `Object.keys` 递归重建，而 Date/Buffer/Decimal 的自有可枚举键为空 → 重建结果恒为 `{}`。
+  - 写入侧：时间字段变空对象 → Prisma 报 `Expected DateTime, provided Object`，chat-sessions 测试长期挂红。
+  - 读取侧：createdAt/updatedAt 被抹平 → `/api/projects` 实测返回空对象 → 前端 `new Date({})` 得 Invalid Date → 首页卡片时间显示坏。
+  - 修法：新增 `isOpaque` 精确黑名单（Date/RegExp/Map/Set/TypedArray/ArrayBuffer/带 `toFixed` 的 Decimal）原样透传；采用黑名单而非 plain-object 白名单，因 Prisma 返回对象的原型在不同适配器下未必是 `Object.prototype`。
+  - 验证：chat-sessions 测试 4/4 转绿；dev 与 production 两模式 `/api/projects` 时间字段均恢复 ISO 字符串。
+- **🔴 P0-3 safeJoin 漏 import（运行时 ReferenceError）**：v3.1.50 的 20+ 处 join 链修复只改了调用点，6 个文件 8 处调用 `safeJoin` 却没补 `import`（TS2304），涉及章纲抽卡、对话生成、导入提交、故事线生成、伏笔核心、章纲流水线；已幂等补齐。
+- **🔴 P0-4 设置页保存自相矛盾（已配置用户改不了任何设置）**：
+  - `handleSave` 拦截条件漏了 `!hasExistingKey` 兜底，与 UI 承诺的「已保存 · 留空则不修改」直接冲突；同文件另外 4 处均已正确带上，此处属疏漏。
+  - 已配置用户出于安全不回显 Key、输入框天然为空 → 只想改模型或 Base URL 都被拦下，必须重粘整串 Key。
+  - 连带修两个隐患：PUT body 原 `provider === "local" ? (key || undefined) : key` 在非 local 留空时传空串会覆盖库中 Key（对照实验已证实）；`setHasExistingKey(!!key)` 会在留空保存后把「已保存」标记清掉、界面倒退成未配置。
+  - 端到端三段验证：写入 Key → 留空保存并改模型 → 模型已改（deepseek-reasoner）且 Key 保留（掩码 ...3154）；原始设置已还原。
+- **🧪 门禁与部署实测**：
+  - 单测：1226 通过 / 0 失败 / 6 跳过（`fill.selfcheck.test.ts` 的 beforeAll 夹具缺前置项目、外键冲突，属测试夹具缺陷）。
+  - 生产构建：临时注入 `ignoreBuildErrors` 跑通 `next build`，EXIT=0、编译 26.7s、91 个静态页、140 条路由全过（.next 1.7G）→ 证明除类型错误外无其它构建阻断；实验后 `next.config.ts` 已完整还原、无 `ignoreBuildErrors` 残留。
+  - 生产产物冒烟：`next start` 后 10/10 路由 HTTP 200，生产模式时间字段同样正常。
+  - 结论：**可自托管内网使用；不可公开部署** —— 接口层 128 条路由零鉴权（无 `middleware.ts`、无 next-auth）、限流仅覆盖 8 条、烧钱类生成路由（game/*、batch-write、generate/chat、agent/*、explore/chat、storylines/generate）全裸。
+- **🔍 13 页面逐页体检（均分 8.2/10）**：
+  - 最高：更新日志页与根布局 9.5、拆解列表页 9.0（三态齐全、二次确认、轮询有清理）。
+  - 最低：创意工坊页与表格页 7.0 —— 加载失败静默落入空状态、或缺 try-catch 导致网络异常时永久转圈。
+  - 共性问题：接口返回值缺数组防御（多处直接对可能为字符串的字段调 `join`/`map`）、错误态不统一、两个超长页面（1357 行与 1566 行）待拆组件、`prefers-reduced-motion` 全局缺失。
+  - 性能发现：`changelog-data.ts` 单文件 1MB / VERSIONS 1810 条目全量打进客户端，导致 `/changelog` 产出 2.1MB HTML。
+- 个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.53 — 2026-08-21
 
 ### 探讨模式人性化大升级：一键构筑 + 小说改名 + 已采纳可编辑 + 对话区滚动布局（EXPLORE-POLISH）

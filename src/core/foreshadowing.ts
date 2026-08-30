@@ -1,3 +1,4 @@
+import { safeJoin } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { createLLMClient, getEffectiveConfig } from "@/core/llm/client";
 
