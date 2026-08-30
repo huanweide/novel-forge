@@ -21,6 +21,7 @@
  *   排除：具体人物信息（→角色卡）、具体世界观设定（→世界卡）
  */
 
+import { asArray } from "@/lib/utils";
 import type { CharacterCard, LorebookEntry } from "@/core/types";
 import type { LLMClient } from "@/core/llm/client";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
@@ -987,7 +988,7 @@ export async function upsertParsedSettingsToProject(
           .filter((c): c is string => !!c && c.trim().length > 0)
           .join("\n\n---\n");
         const mergedKeys = [
-          ...new Set([...(existing.keys || []), ...(l.keys || [])]),
+          ...new Set([...asArray<string>(existing.keys), ...asArray<string>(l.keys)]),
         ];
         writeOps.push(
           prisma.lorebookEntry.update({

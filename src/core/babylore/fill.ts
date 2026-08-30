@@ -17,6 +17,7 @@
 //  ④ 返回「疑似错误地名」警告 + 新增 selfCheckFill（全正文检索校验名称真实性 + 空值完整性）；
 //  ⑤ 新增 babyloreFillAll（一键从首章填到最新 + 防重复跳过已填章节）。
 
+import { asArray } from "@/lib/utils";
 import fs from "fs";
 import path from "path";
 import { prisma } from "@/lib/prisma";
@@ -470,7 +471,7 @@ async function applyOps(
       }
     } else if (op.op === "update") {
       const { col, val } = (op as any).match || {};
-      const cols = (t.columns || []) as Array<{ key: string }>;
+      const cols = asArray<any>(t.columns) as Array<{ key: string }>;
       // 守卫：LLM 发 update 却漏给 match 或 col 非有效列时，原逻辑会推入带脏键「undefined」的伪行且不报警，
       // 破坏防重复/零错名。此处无效则跳过该 op，不落库、不插伪行（P1-①）。
       if (!col || !cols.some((c) => c.key === col)) {
@@ -501,7 +502,7 @@ async function applyOps(
       }
     } else if (op.op === "delete") {
       const { col, val } = (op as any).match || {};
-      const cols = (t.columns || []) as Array<{ key: string }>;
+      const cols = asArray<any>(t.columns) as Array<{ key: string }>;
       // 守卫：delete 缺有效 match 列时，原逻辑会按 undefined 列过滤→误删整表或静默不删，
       // 此处无效则整体跳过该 op，不删除任何行（P1-①）。
       if (!col || !cols.some((c) => c.key === col)) {
@@ -591,7 +592,7 @@ export async function babyloreFill(
   // 填表后 diff 出本次实际新增的 row_id，记录到 BabyloreFillBatch（锚定 nodeId），
   // 供撤销章节时精确清理该章自动填入的结构化表格行。
   const beforeRowsById = new Map<string, any[]>(
-    dbTables.map((t: any) => [t.id, JSON.parse(JSON.stringify(t.rows || []))]),
+    dbTables.map((t: any) => [t.id, JSON.parse(JSON.stringify(asArray<any>(t.rows)))]),
   );
 
   const llm: LlmCreds = { baseURL, apiKey, model };

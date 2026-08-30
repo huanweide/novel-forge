@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { jsonError } from "@/lib/api-error";
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 
 export const maxDuration = 90;
 
@@ -356,7 +356,7 @@ ${chapterContent.slice(0, 6000)}
           characters: (parsed.characters || []).length,
           locations: (parsed.locations || []).length,
           factions: (parsed.factions || []).length,
-          items: (parsed.items || []).length,
+          items: asArray<any>(parsed.items).length,
           foreshadowings: (parsed.foreshadowings || []).length,
           experiences: (parsed.characterExperiences || []).length,
           relationshipChanges: (parsed.relationshipChanges || []).length,
@@ -366,7 +366,7 @@ ${chapterContent.slice(0, 6000)}
       // 匹配已有角色ID
       const nameToId = new Map(characters.map((c) => [c.name, c.id]));
       for (const alias of characters) {
-        for (const a of alias.aliases || []) {
+        for (const a of asArray<string>(alias.aliases)) {
           if (!nameToId.has(a)) nameToId.set(a, alias.id);
         }
       }

@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/utils";
 /**
  * 纯规则版设定解析器 —— 不依赖任何大模型，确定性、毫秒级、可离线运行。
  *
@@ -369,7 +370,7 @@ export function parseSettingsLocal(
     if (!existing) loreMap.set(key, entry);
     else {
       if (entry.content.length > existing.content.length) existing.content = entry.content;
-      existing.keys = Array.from(new Set([...existing.keys, ...entry.keys]));
+      existing.keys = Array.from(new Set([...asArray<string>(existing.keys), ...asArray<string>(entry.keys)]));
     }
   }
 

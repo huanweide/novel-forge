@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/utils";
 import type { CharacterData } from "@/components/workspace/types";
 
 export interface CharacterFilterCriteria {
@@ -30,9 +31,9 @@ export function filterCharacters(
 ): CharacterData[] {
   return characters.filter((ch) => {
     // v2.17：被合并（软删）的角色卡默认从列表隐藏
-    if ((ch.tags || []).includes("🗂 已合并")) return false;
+    if (asArray<string>(ch.tags).includes("🗂 已合并")) return false;
     if (c.roleFilter !== "all" && ch.role !== c.roleFilter) return false;
-    const userTags = (ch.tags || []).filter(isUserTag);
+    const userTags = asArray<string>(ch.tags).filter(isUserTag);
     if (c.tagFilter !== "all" && !userTags.includes(c.tagFilter)) return false;
     if (c.statusFilter === "alive" && ch.currentStatus !== "alive") return false;
     if (
@@ -43,7 +44,7 @@ export function filterCharacters(
     if (
       c.search &&
       !ch.name.includes(c.search) &&
-      !(ch.aliases || []).some((a) => a.includes(c.search))
+      !asArray<string>(ch.aliases).some((a) => a.includes(c.search))
     )
       return false;
     return true;

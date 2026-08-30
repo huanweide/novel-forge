@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
@@ -23,7 +24,7 @@ export async function POST() {
         where: { type: b.type, title: b.title, isBuiltin: true },
       });
       if (!exists) {
-        const tags = Array.from(new Set([...(b.tags || []), "trirui推荐"]));
+        const tags = Array.from(new Set([...asArray<string>(b.tags), "trirui推荐"]));
         await prisma.preset.create({
           data: { ...b, author: "trirui", tags, isBuiltin: true, isPublic: true } as any,
         });

@@ -3,6 +3,7 @@
 // 消除 adopt/chat/create 三个路由间的重复代码
 // ============================================================
 
+import { asArray } from "@/lib/utils";
 import type { ExploreStep } from "@/core/explore/types";
 
 /** 步骤 → 世界书分类映射 */
@@ -92,8 +93,8 @@ export function extractCharacterKeys(
   char: Record<string, unknown>,
 ): string[] {
   const keys: string[] = [name];
-  if (Array.isArray(char.aliases)) keys.push(...char.aliases);
+  if (Array.isArray(char.aliases)) keys.push(...asArray<string>(char.aliases));
   if (Array.isArray(char.abilities))
-    keys.push(...char.abilities.filter((a: any) => typeof a === "string"));
+    keys.push(...asArray<string>(char.abilities).filter((a: any) => typeof a === "string"));
   return keys.slice(0, 8);
 }

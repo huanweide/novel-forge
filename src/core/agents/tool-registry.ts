@@ -7,6 +7,7 @@
  * 总共 21 个工具，覆盖全部 CRUD 操作。
  */
 
+import { asArray } from "@/lib/utils";
 import type { CharacterCard, LorebookEntry, PendingCommitment } from "@/core/types";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 
@@ -215,7 +216,7 @@ toolRegistry.register({
     // 精确匹配优先，然后模糊
     let found = chars.find((c: any) => c.name.toLowerCase() === query);
     if (!found) found = chars.find((c: any) => c.name.toLowerCase().includes(query));
-    if (!found) found = chars.find((c: any) => (c.aliases || []).some((a: string) => a.toLowerCase().includes(query)));
+    if (!found) found = chars.find((c: any) => asArray<string>(c.aliases).some((a: string) => a.toLowerCase().includes(query)));
     if (!found) return ok("character_get", { found: false, message: `未找到匹配"${query}"的角色` });
     const c = found as any;
     return ok("character_get", {
@@ -234,7 +235,7 @@ toolRegistry.register({
         relationships: (c.relationships || []).map((r: any) => ({
           target: r.targetCharacterId || r.targetName, relation: r.relation, dynamic: r.dynamic,
         })),
-        timeline: (c.timeline || []).slice(-10),
+        timeline: asArray<any>(c.timeline).slice(-10),
         tags: c.tags,
       },
     });

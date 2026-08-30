@@ -7,6 +7,7 @@
  *
  * 输出可直接喂给 RelationshipGraph 组件渲染。
  */
+import { asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
 
     // ── 构建角色名册 ──
     const charRoster = characters.map((c) => {
-      const names = [c.name, ...(c.aliases || [])];
+      const names = [c.name, ...asArray<string>(c.aliases)];
       return `${c.name}(${c.role}，别名：${names.slice(1).join("、") || "无"})`;
     }).join("\n");
 

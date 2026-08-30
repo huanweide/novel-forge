@@ -8,7 +8,7 @@
  */
 
 export const maxDuration = 120;
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
@@ -206,7 +206,7 @@ ${characterList}
     const charDetails = characters
       .filter((c: any) => allSelectedNames.some(n =>
         n.toLowerCase() === c.name.toLowerCase() ||
-        (c.aliases || []).some((a: string) => a.toLowerCase() === n.toLowerCase())
+        asArray<string>(c.aliases).some((a: string) => a.toLowerCase() === n.toLowerCase())
       ))
       .map((c: any) => ({ id: c.id, name: c.name, role: c.role }));
 

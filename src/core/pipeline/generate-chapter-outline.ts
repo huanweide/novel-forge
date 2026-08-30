@@ -7,7 +7,7 @@
  *
  * v2.0.8：#313 重构。
  */
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import {
   loadOutlineData,
@@ -167,7 +167,7 @@ ${characterList}
     selectedNames.some(
       (n) =>
         n.toLowerCase() === c.name.toLowerCase() ||
-        (c.aliases || []).some((a: string) => a.toLowerCase() === n.toLowerCase()),
+        asArray<string>(c.aliases).some((a: string) => a.toLowerCase() === n.toLowerCase()),
     ),
   );
 

@@ -34,7 +34,7 @@ import { getDefaultClient, getDefaultLLMConfig, getEffectiveConfig, createLLMCli
 import { assemblePrompt, getDistantFloors } from "@/core/assembly/engine";
 import { summarizeDistantFloor } from "@/core/assembly/distant-summary";
 import { matchLoreEntries } from "@/core/assembly/trigger";
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { countTokens } from "@/core/assembly/tokenizer";
 import { scoreAndClassifyEvents, classifyEventCategory } from "@/core/distillation";
 import { injectOptimizedMemory, DEFAULT_BUDGET } from "@/lib/memory-injector";
@@ -1552,7 +1552,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
   });
   if (relationshipEntries.length > 0) {
     const relLines = relationshipEntries.map((l) => {
-      const relatedChars = (l.keys || []).filter((k: string) => scheduledNamesArr.includes(k));
+      const relatedChars = asArray<string>(l.keys).filter((k: string) => scheduledNamesArr.includes(k));
       return `【${relatedChars.join(" ↔ ")}】${l.title}：${(l.content || "").slice(0, 200)}`;
     });
     systemPrompt += `\n\n【🕸️ 角色关系网——本章涉及角色之间的关系，生成对话/互动时必须参考】\n${relLines.join("\n")}`;

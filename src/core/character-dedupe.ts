@@ -20,7 +20,7 @@
 import { prisma } from "@/lib/prisma";
 import { completeText } from "@/core/llm/client";
 import { isHonorificVariant, resolveVariantTarget, isSurnameAbbrevOrDescriptor, coreSurname } from "@/lib/entity-auto-creator";
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 
 export interface DedupeMergeItem {
   mainId: string;
@@ -343,8 +343,8 @@ export function toCharLite(row: {
 
 /** 执行合并：别名并入主卡、内容取更长、关系合并；被并卡软删标记「🗂 已合并」。返回主卡实际写入字段（审计）。 */
 export async function applyMerge(main: CharLite, merged: CharLite[]): Promise<Record<string, unknown>> {
-  const extraAliases = merged.flatMap((x) => [x.name, ...x.aliases]);
-  const newAliases = Array.from(new Set([...main.aliases, ...extraAliases])).slice(0, 50);
+  const extraAliases = merged.flatMap((x) => [x.name, ...asArray<string>(x.aliases)]);
+  const newAliases = Array.from(new Set([...asArray<string>(main.aliases), ...extraAliases])).slice(0, 50);
   const bestBg = merged.reduce((m, x) => ((x.background || "").length > (m || "").length ? x.background : m), main.background);
   const bestSl = merged.reduce((m, x) => ((x.storyLine || "").length > (m || "").length ? x.storyLine : m), main.storyLine);
   const newRels = mergeRelationships(main.relationships, merged.map((x) => x.relationships));
@@ -356,13 +356,13 @@ export async function applyMerge(main: CharLite, merged: CharLite[]): Promise<Re
       storyLine: bestSl || main.storyLine,
       relationships: newRels,
       // 合并时顺手清掉主卡残留的「🆕 自动发现」脏标记（旧版本自动发现遗留），保持主卡标签干净
-      tags: Array.from(new Set((main.tags || []).filter((t: string) => t !== "🆕 自动发现"))),
+      tags: Array.from(new Set(asArray<string>(main.tags).filter((t: string) => t !== "🆕 自动发现"))),
     } as any,
   });
   for (const x of merged) {
     await prisma.characterCard.update({
       where: { id: x.id },
-      data: { tags: Array.from(new Set([...x.tags, "🗂 已合并"])) },
+      data: { tags: Array.from(new Set([...asArray<string>(x.tags), "🗂 已合并"])) },
     });
   }
   return { aliases: newAliases, background: bestBg || main.background, storyLine: bestSl || main.storyLine, relationships: newRels };

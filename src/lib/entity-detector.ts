@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/utils";
 /**
  * 实体检测器 —— 命名模式库 + 归属推断
  *
@@ -394,7 +395,7 @@ export function detectEntities(text: string, options: DetectEntitiesOptions = {}
   const knownAliasMap = new Map<string, string[]>();
   for (const ke of knownEntities) {
     knownTypeMap.set(ke.name, ke.type);
-    for (const alias of ke.aliases || []) {
+    for (const alias of asArray<string>(ke.aliases)) {
       knownTypeMap.set(alias, ke.type);
     }
     if (ke.aliases && ke.aliases.length) knownAliasMap.set(ke.name, ke.aliases);

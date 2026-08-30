@@ -1,5 +1,6 @@
 "use client";
 
+import { asArray } from "@/lib/utils";
 import { type ReactNode } from "react";
 import { Icon, StatusDot } from "@/components/ui/icons";
 import { TagChip } from "./TagChip";
@@ -34,7 +35,7 @@ export function CharacterFilters({
   const allTags = Array.from(
     new Set(
       characters.flatMap((c) =>
-        (c.tags || []).filter((t) => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并"),
+        asArray<string>(c.tags).filter((t) => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并"),
       ),
     ),
   ).sort();

@@ -14,6 +14,7 @@
 //   - 智能文本采样：按维度定向截取相关段落
 // ============================================================
 
+import { asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import type { LLMClient } from "@/core/llm/client";
@@ -791,7 +792,7 @@ export async function convertToProject(
 
     // 智能提取触发关键词：从内容中找出现频率最高的专有名词
     const extraKeys = extractKeyTerms(dimContent);
-    const allKeys = [...new Set([...ld.keys, ...extraKeys])].slice(0, 10);
+    const allKeys = [...new Set([...asArray<string>(ld.keys), ...extraKeys])].slice(0, 10);
 
     await prisma.lorebookEntry.create({
       data: {

@@ -1,5 +1,6 @@
 "use client";
 
+import { asArray } from "@/lib/utils";
 import { memo } from "react";
 import { Icon } from "@/components/ui/icons";
 import { TagChip } from "./TagChip";
@@ -59,9 +60,9 @@ function CharacterRowImpl({
         </span>
         <div className="flex-1 min-w-0">
           <span className="truncate block hover:text-[var(--nv-text-primary)] transition-colors">{character.name}</span>
-          {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 0 && (
+          {asArray<string>(character.tags).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 0 && (
             <div className="flex gap-0.5 mt-0.5 flex-wrap">
-              {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").slice(0, 5).map((t: string) => (
+              {asArray<string>(character.tags).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").slice(0, 5).map((t: string) => (
                 <TagChip
                   key={t}
                   label={t}
@@ -70,8 +71,8 @@ function CharacterRowImpl({
                   onClick={() => onTagClick(t)}
                 />
               ))}
-              {(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 5 && (
-                <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{(character.tags || []).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length - 5}</span>
+              {asArray<string>(character.tags).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 5 && (
+                <span className="text-[9px] text-[var(--nv-text-tertiary)]">+{asArray<string>(character.tags).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length - 5}</span>
               )}
             </div>
           )}

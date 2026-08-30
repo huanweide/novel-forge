@@ -5,6 +5,7 @@
  * MarkdownViewer 客户端通过此 API 获取实体数据。
  */
 
+import { asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error";
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     // 角色（含别名，指向同一 id，便于章节内实体徽章跳转详情）
     for (const c of characters) {
       entities.push({ id: c.id, name: c.name, type: "character", color: CHARACTER_COLOR });
-      for (const alias of c.aliases || []) {
+      for (const alias of asArray<string>(c.aliases)) {
         if (alias) entities.push({ id: c.id, name: alias, type: "character", color: CHARACTER_COLOR });
       }
     }
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
         seenLore.add(e.title);
         entities.push({ id: e.id, name: e.title, type: "lorebook", color, category: e.category });
       }
-      for (const key of e.keys || []) {
+      for (const key of asArray<string>(e.keys)) {
         if (key && !seenLore.has(key)) {
           seenLore.add(key);
           entities.push({ id: e.id, name: key, type: "lorebook", color, category: e.category });

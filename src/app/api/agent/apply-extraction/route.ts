@@ -4,6 +4,7 @@
  * 接收用户在提取面板中的选择，批量写入各数据表：
  *   角色卡（新建/更新timeline）· 世界书（新建/更新条目）· 伏笔表 · 章节摘要 · 下章大纲
  */
+import { asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
       existingLore = el;
       // 主名 + 别名 一并摊平进变体比对集（P1-1：别名维度）
       variantNames = [
-        ...existingChars.flatMap((c) => [c.name, ...c.aliases]),
+        ...existingChars.flatMap((c) => [c.name, ...asArray<string>(c.aliases)]),
         ...existingLore.map((l) => l.title),
       ];
       // 建立 别名(小写) → 角色卡 id 索引
@@ -192,8 +193,8 @@ export async function POST(request: Request) {
           },
         });
         // 批次内去重：主名 + 别名 摊平进比对集与别名索引
-        variantNames.push(c.name, ...(c.aliases || []));
-        for (const al of c.aliases || []) {
+        variantNames.push(c.name, ...asArray<string>(c.aliases));
+        for (const al of asArray<string>(c.aliases)) {
           const low = al.trim().toLowerCase();
           if (low) aliasToCharId.set(low, newCard.id);
         }
@@ -206,13 +207,13 @@ export async function POST(request: Request) {
           select: { timeline: true, abilities: true },
         });
         if (existing) {
-          const timeline = (existing.timeline || []) as any[];
-          const abilities = (existing.abilities || []) as string[];
+          const timeline = asArray<any>(existing.timeline) as any[];
+          const abilities = asArray<string>(existing.abilities) as string[];
 
           if (c.experience) {
             timeline.push({ chapter: chapterTitle, type: "出场", event: c.experience });
           }
-          const newAbilities = (c.abilities || []).filter((a: string) => !abilities.includes(a));
+          const newAbilities = asArray<string>(c.abilities).filter((a: string) => !abilities.includes(a));
 
           await prisma.characterCard.update({
             where: { id: c.existingCardId! },
@@ -432,7 +433,7 @@ export async function POST(request: Request) {
         const merged = `${existing.content || ""}\n\n---\n更新于 ${chapterTitle}：\n${content}`;
         await prisma.lorebookEntry.update({
           where: { id: existing.id },
-          data: { content: merged.slice(0, 5000), keys: [...new Set([...existing.keys, ...keys])] },
+          data: { content: merged.slice(0, 5000), keys: [...new Set([...asArray<string>(existing.keys), ...keys])] },
         });
         relationshipsSaved++;
       } else {
@@ -471,7 +472,7 @@ export async function POST(request: Request) {
       });
       if (!card) continue;
 
-      const timeline = (card.timeline || []) as any[];
+      const timeline = asArray<any>(card.timeline) as any[];
       timeline.push({
         chapter: chapterTitle,
         type: "出场",

@@ -12,7 +12,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 
 export const maxDuration = 60;
 
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     // 只分析在正文中出现的角色（用名字/别名做快速初筛，减少 LLM 负担）
     const chapterLower = chapterContent.toLowerCase();
     const relevantChars = characters.filter((c) => {
-      const names = [c.name, ...(c.aliases || [])];
+      const names = [c.name, ...asArray<string>(c.aliases)];
       return names.some((n) => chapterLower.includes(n.toLowerCase()));
     });
 
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     // 如果出场角色超过 15 个，只取前 15 个（按出场次数排序）
     const ranked = relevantChars
       .map((c) => {
-        const allNames = [c.name, ...(c.aliases || [])];
+        const allNames = [c.name, ...asArray<string>(c.aliases)];
         let mentions = 0;
         for (const n of allNames) {
           const regex = new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");

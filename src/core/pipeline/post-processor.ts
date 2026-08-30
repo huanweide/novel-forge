@@ -5,6 +5,7 @@
  * refine 路由通过 skipReview + skipSummarize 复用扫描和存储部分。
  */
 
+import { asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { assertNodeUnchanged, OptimisticLockError } from "@/lib/optimistic-lock";
 import { enrichForeshadow } from "@/core/foreshadowing";
@@ -792,9 +793,9 @@ export async function runPostGenerationPipeline(
         // 合并：LLM 的 eventImportances 做底，规则分类的 S/A 级事件补充进去
         const llmImportances = (eventImportances || { sTier: [], aTier: [], bTier: [], cTier: [] }) as any;
         const merged = {
-          sTier: [...(llmImportances.sTier || []), ...classified.sTier].slice(0, 10),
-          aTier: [...(llmImportances.aTier || []), ...classified.aTier].slice(0, 20),
-          bTier: [...(llmImportances.bTier || []), ...classified.bTier].slice(0, 30),
+          sTier: [...asArray<string>(llmImportances.sTier), ...classified.sTier].slice(0, 10),
+          aTier: [...asArray<string>(llmImportances.aTier), ...classified.aTier].slice(0, 20),
+          bTier: [...asArray<string>(llmImportances.bTier), ...classified.bTier].slice(0, 30),
           cTier: (llmImportances.cTier || []).slice(0, 50),
         };
 
@@ -853,7 +854,7 @@ export async function runPostGenerationPipeline(
       select: { name: true, aliases: true },
     });
     for (const c of deadChars) {
-      const names = [c.name, ...(c.aliases || [])];
+      const names = [c.name, ...asArray<string>(c.aliases)];
       for (const name of names) {
         if (content.includes(name)) {
           const revivalPatterns = ["复活", "重生", "苏醒", "活了过来", "竟然活着", "没死", "还活着"];

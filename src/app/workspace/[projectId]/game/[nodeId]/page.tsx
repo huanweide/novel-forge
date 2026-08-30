@@ -10,6 +10,7 @@
  * 禁止 emoji、统一用 <Icon> 组件。
  */
 
+import { asArray } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useParams, useRouter } from "next/navigation";
 import GameCanvas from "@/components/game/GameCanvas";
@@ -499,7 +500,7 @@ export default function GamePage() {
       const fullNarrative = state.narrative + "\n\n" + doneData.narrative;
 
       // 合并实体（去重）
-      const mergedEntities = [...state.entities];
+      const mergedEntities = [...asArray<any>(state.entities)];
       for (const ne of doneData.newEntities || []) {
         if (!mergedEntities.find((e) => e.name === ne.name)) {
           mergedEntities.push(ne);

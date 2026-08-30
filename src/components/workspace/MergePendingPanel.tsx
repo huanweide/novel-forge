@@ -1,5 +1,6 @@
 "use client";
 
+import { asArray } from "@/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import { Icon } from "@/components/ui/icons";
 import { toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
@@ -35,7 +36,7 @@ export function MergePendingPanel({
     try {
       const res = await fetch(`/api/characters/merge-pending?projectId=${encodeURIComponent(projectId)}`, { signal });
       const d = await res.json().catch(() => ({ ok: false, items: [] }));
-      if (res.ok && d.ok) setItems(d.items || []);
+      if (res.ok && d.ok) setItems(asArray<any>(d.items));
       else setItems([]);
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return; // 卸载中止，静默

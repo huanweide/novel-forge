@@ -1,5 +1,6 @@
 "use client";
 
+import { asArray } from "@/lib/utils";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -94,8 +95,8 @@ interface LoreTableT {
   const addRow = (t: LoreTableT) => {
     const maxId = t.rows.reduce((m, r) => Math.max(m, Number(r.row_id) || 0), 0);
     const newRow: any = { row_id: maxId + 1 };
-    (t.columns || []).forEach((c) => { newRow[c.key] = ""; });
-    setTables((ts) => ts.map((x) => (x.id === t.id ? { ...x, rows: [...x.rows, newRow] } : x)));
+    asArray<any>(t.columns).forEach((c) => { newRow[c.key] = ""; });
+    setTables((ts) => ts.map((x) => (x.id === t.id ? { ...x, rows: [...asArray<any>(x.rows), newRow] } : x)));
   };
 
   const deleteTable = async (t: LoreTableT) => {
@@ -165,7 +166,7 @@ interface LoreTableT {
         body: JSON.stringify({ projectId, context: recallCtx }),
       });
       const d = await res.json();
-      setRecallItems(d.items || []);
+      setRecallItems(asArray<any>(d.items));
       if (!res.ok) toastError(d.error || "召回失败");
     } finally { setBusy(false); }
   };

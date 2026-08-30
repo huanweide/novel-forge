@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/utils";
 import { WORLD_CATEGORY_SECTIONS, ALL_WORLD_CATEGORIES, type WorldCategory } from "@/lib/world-category-classifier";
 /**
  * 实体颜色高亮引擎（客户端安全——不导入 prisma）
@@ -81,7 +82,7 @@ export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHig
   for (const e of data) {
     if (e.type === "character") {
       map.set(e.name, { name: e.name, color: e.color, type: "character", id: e.id });
-      for (const al of e.aliases || []) {
+      for (const al of asArray<string>(e.aliases)) {
         if (al && !map.has(al)) {
           map.set(al, { name: al, color: e.color, type: "character", id: e.id });
         }
@@ -93,7 +94,7 @@ export function buildEntityMapFromData(data: EntityRaw[]): Map<string, EntityHig
   for (const e of data) {
     if (e.type === "lorebook") {
       map.set(e.name, { name: e.name, color: e.color, type: "lorebook", category: e.category, id: e.id });
-      for (const al of e.aliases || []) {
+      for (const al of asArray<string>(e.aliases)) {
         if (al && !map.has(al)) {
           map.set(al, { name: al, color: e.color, type: "lorebook", category: e.category, id: e.id });
         }
@@ -147,7 +148,7 @@ export async function getEntityMap(projectId: string): Promise<Map<string, Entit
         return null;
       }
       const json = await res.json();
-      return buildEntityMapFromData(json.entities || []);
+      return buildEntityMapFromData(asArray<any>(json.entities));
     } catch (err) {
       console.warn("实体高亮 API 异常:", err instanceof Error ? err.message : String(err));
       return null;
