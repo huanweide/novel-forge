@@ -1,7 +1,7 @@
 [![License](https://img.shields.io/github/license/huanweide/novel-forge)](LICENSE)
 [![CI](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml)
 [![Stars](https://img.shields.io/github/stars/huanweide/novel-forge)](https://github.com/huanweide/novel-forge/stargazers)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-novel--forge--nu.vercel.app-6366f1)](https://novel-forge-nu.vercel.app)
+[![UI Preview](https://img.shields.io/badge/UI%20Preview-novel--forge--nu.vercel.app-6366f1)](https://novel-forge-nu.vercel.app)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/huanweide/novel-forge/pulls)
 
 ![Novel Forge](docs/banner.svg)
@@ -10,9 +10,11 @@
 
 > A **local-first** AI writing workshop for long-form web novels — characters, lore, outlines, and chapters, all in one place.
 
-[🚀 Live Demo](https://novel-forge-nu.vercel.app) · [📦 Quick Start](#quick-start) · [中文 README](README.md) · [⭐ Star on GitHub](https://github.com/huanweide/novel-forge/stargazers)
+[🖼 UI Preview](https://novel-forge-nu.vercel.app) · [📦 Quick Start](#quick-start) · [中文 README](README.md) · [⭐ Star on GitHub](https://github.com/huanweide/novel-forge/stargazers)
 
-**Current Version: v3.1.53** · Local SQLite, zero-config · 17 built-in presets · MIT License
+**Current Version: v3.1.56** · Local SQLite, zero-config · 17 built-in presets · MIT License
+
+> **About the UI Preview**: the link above only shows **what the interface looks like** — it cannot actually be used. It runs in a read-only cloud environment, while Novel Forge needs to write into a local SQLite file. **Run it on your own machine via "Quick Start" below** — it takes about two minutes.
 
 ---
 

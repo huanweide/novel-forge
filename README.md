@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/github/license/huanweide/novel-forge)](LICENSE)
 [![CI](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml)
 [![Stars](https://img.shields.io/github/stars/huanweide/novel-forge)](https://github.com/huanweide/novel-forge/stargazers)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-novel--forge--nu.vercel.app-6366f1)](https://novel-forge-nu.vercel.app)
+[![界面预览](https://img.shields.io/badge/界面预览-novel--forge--nu.vercel.app-6366f1)](https://novel-forge-nu.vercel.app)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/huanweide/novel-forge/pulls)
 <!-- /badges -->
 
@@ -13,9 +13,11 @@
 > **中文**：把「写长篇」从体力活变成创意活。  
 > **English**: A local-first AI writing workshop for long-form web novels — characters, lore, outlines, and chapters, all in one place.
 
-[🚀 在线体验](https://novel-forge-nu.vercel.app) · [📦 快速开始](#快速开始) · [📖 English README](README_EN.md) · [⭐ 点 Star 支持](https://github.com/huanweide/novel-forge/stargazers)
+[🖼 界面预览](https://novel-forge-nu.vercel.app) · [📦 快速开始](#快速开始) · [📖 English README](README_EN.md) · [⭐ 点 Star 支持](https://github.com/huanweide/novel-forge/stargazers)
 
-**当前版本：v3.1.53** · 本地 SQLite 零配置 · 开箱 17 个示范预设 · 一键导出 5 种格式 · MIT 开源
+**当前版本：v3.1.56** · 本地 SQLite 零配置 · 开箱 17 个示范预设 · 一键导出 5 种格式 · MIT 开源
+
+> **关于在线预览**：上面那个链接只能**看界面长什么样**，点进去做不了实际操作 —— 因为它跑在只读的云环境里，而 Novel Forge 的数据全部要写进本地 SQLite 文件。**完整功能请按下面的「快速开始」在你自己电脑上跑**，两分钟就能起来。
 
 ---
 
