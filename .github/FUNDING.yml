@@ -1,0 +1,6 @@
+# Novel Forge 赞助入口
+# 在 GitHub 仓库主页显示 "Sponsor" 按钮，点击跳转到下方链接。
+# 把你的微信收款码命名为 wechat-qr.png 放进 public/sponsor/ 即可生效（图片需推送到仓库）。
+github: huanweide
+custom:
+  - "https://raw.githubusercontent.com/huanweide/novel-forge/main/public/sponsor/wechat-qr.png"

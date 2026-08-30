@@ -48,6 +48,8 @@ export default function SettingsPage() {
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [statusMsg, setStatusMsg] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
+  // v3.1.57 赞助码加载失败时的占位开关
+  const [qrError, setQrError] = useState(false);
   const [models, setModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -557,6 +559,44 @@ export default function SettingsPage() {
                 <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-[var(--nv-text-primary)] transition-all ${agentOperate ? "left-[18px]" : "left-0.5"}`} />
               </span>
             </button>
+          </div>
+        </section>
+
+        {/* 赞助支持（v3.1.57） */}
+        <section>
+          <SectionHeader icon="heart">
+            8. 赞助支持
+          </SectionHeader>
+          <div className="p-4 rounded-2xl surface-elevated space-y-3">
+            <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
+              如果 Novel Forge 帮你把故事写了出来，请作者喝杯奶茶。你的支持是继续打磨这个本地写作工坊的动力。
+            </p>
+            <div className="flex flex-col items-center gap-3 pt-1">
+              {qrError ? (
+                <div className="w-44 h-44 rounded-xl border border-dashed border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] flex flex-col items-center justify-center text-center px-3">
+                  <Icon name="coffee" size={22} className="text-[var(--nv-text-muted)] mb-2" />
+                  <span className="text-[11px] text-[var(--nv-text-muted)] leading-relaxed">
+                    作者待配置收款码
+                    <br />
+                    （把 wechat-qr.png 放到 public/sponsor/ 即可）
+                  </span>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/sponsor/wechat-qr.png"
+                  alt="微信收款码"
+                  width={176}
+                  height={176}
+                  className="rounded-xl bg-white p-2"
+                  onError={() => setQrError(true)}
+                />
+              )}
+              <p className="text-[11px] text-[var(--nv-text-muted)]">微信扫一扫 · 自愿赞助</p>
+            </div>
+            <p className="text-[11px] text-[var(--nv-text-tertiary)] leading-relaxed">
+              也可在 GitHub 仓库点击 Sponsor 按钮赞助。赞助纯属自愿，不影响任何功能。
+            </p>
           </div>
         </section>
 

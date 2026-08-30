@@ -1,5 +1,15 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.57 — 2026-08-30
+
+### 赞助支持（SPONSOR）
+
+- **设置页新增「8. 赞助支持」区块**：展示微信收款码（/sponsor/wechat-qr.png），图片加载失败时用 onError 容错显示「作者待配置收款码」占位说明（把 wechat-qr.png 丢进 public/sponsor/ 即点亮）；纯前端展示，不碰后端、不收集任何赞助记录。
+- **GitHub FUNDING 入口**：.github/FUNDING.yml 配 custom 指向微信收款码 raw 链接，仓库主页显示 Sponsor 按钮（GitHub 原生涨好感位、零成本）。
+- **两条腿复用同一张图**：APP 内设置页与 GitHub 仓库主页都能扫，用户想赞助随时能扫。
+- **安全**：收款码只是转账入口二维码，不含任何密钥/凭据，纯静态图片放心入库；不做后端金额/留言收集，避免隐私与成本，符合本地优先定位。
+- 详细放置说明见 public/sponsor/README.md。
+
 ## v3.1.56 — 2026-08-30
 
 ### 安全升级（Next 16.3.3 修 9 个高危）+ 老库 Json 数据迁移脚本（SEC-BUMP / JSON-MIGRATE）
