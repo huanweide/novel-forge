@@ -46,8 +46,16 @@ next-env.d.ts
 /src/generated/prisma
 
 # database (local only)
+# v3.1.54：整个 data/ 目录一律不入库 —— 里面存着用户填的 LLM API Key、
+# 全部小说正文与设定，且 *.db 规则漏掉了备份文件（如 novelforge.db.bak-20260830），
+# 一旦 commit 就是凭据泄露 + 数据外泄。用目录级规则一次堵死。
+/data/
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 
 # runtime state (auto-generated, local only)
 /.runtime/

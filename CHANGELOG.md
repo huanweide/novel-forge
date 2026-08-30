@@ -1,5 +1,24 @@
 ﻿# Novel Forge 更新公告
 
+## v3.1.55 — 2026-08-30
+
+### data/ 目录级 gitignore（防凭据与稿件外泄）+ 一次已回滚的架构尝试（DATA-GITIGNORE）
+
+- **🔒 安全：数据库目录不再可能被误传上网**
+  - 原 `.gitignore` 只写 `*.db`，仅挡数据库本体；同目录其它文件不受约束（例如给数据库做备份生成的 `novelforge.db.bak-<时间戳>`）。
+  - `data/` 内存有用户在设置页填写的 **LLM API Key** 与**全部小说正文/设定**。一旦 commit 即造成凭据泄露 + 稿件外泄，且 Git 历史难以彻底清除。
+  - 改为**目录级规则 `/data/`** 整体忽略，并补 `*.db-wal` / `*.db-shm` / `*.sqlite` / `*.sqlite3` 等后缀。
+  - 防护思路升级：从「记住别传某种后缀」变为「该目录根本进不了仓库」，堵死整类手滑。
+- **🧪 架构尝试：SQLite 原生 Json 化（已回滚，结论留档）**
+  - 动机：让 schema 直接用原生 Json 存结构化字段，`prisma-serialize` 扩展即可整体退役，从根上消灭 162 个「类型与运行时契约割裂」的错误。
+  - 实测类型支持边界：**Json ✔ 已支持**（`prisma validate` 通过）；**`String[]` 标量数组 ❌ 仍不支持**（P1012: connector does not support lists of primitive types）。
+  - 阻断项：Prisma 对 Json 字段的 `@default` 会生成**非法 SQL** —— `DEFAULT []`（裸方括号，SQLite 不识别），`db push` 报 `unrecognized token: "{" in CREATE TABLE ... DEFAULT []`。
+  - 规避需去掉全部 Json 字段默认值，牵动大量 `create` 调用点，风险不可控，故**完整回滚**。
+  - 回滚验证：schema / `prisma.ts` / 数据库三方恢复一致；`integrity_check` = ok；**31 张表 48 行数据与改动前逐条一致**；`VACUUM` 后体积由 1.1 MB 复原至 800 KB。
+  - 功能验证：dev 模式首页 HTTP 200、`/api/projects` 正常返回（`toneKeywords` 数组反序列化正确）、`/api/health` 的 `db.ok` 与 `llm.ok` 均为 true。
+- **📌 结论与后续**：162 个类型错误改走保守路线（业务侧逐步接入 `safeJoin` / `safeSplit`），不再动数据层架构。该错误**不影响日常使用** —— dev 模式不阻断类型错误，仅 `npm run build` 与 CI 的 Type check 受影响。
+- 个人 IP 仍归瑞宝宝，无新 IP/品牌/引流。
+
 ## v3.1.54 — 2026-08-30
 
 ### 上线体检 + 4 个 P0 修复：CI 连红 7 天的真凶（类型擦除 + Date 被抹平）（BUILD-UNBLOCK）
