@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     }
     const main = await prisma.characterCard.findUnique({ where: { id: rev.mainCardId } });
     if (!main) return NextResponse.json({ error: "主卡已不存在" }, { status: 404 });
-    const mergedRows = await prisma.characterCard.findMany({ where: { id: { in: rev.mergedIds } } });
+    const mergedRows = await prisma.characterCard.findMany({ where: { id: { in: asArray<string>(rev.mergedIds) } } });
     if (mergedRows.length === 0) return NextResponse.json({ error: "被并卡已不存在" }, { status: 404 });
 
     // pending 时主卡/被并卡未被改动，DB 当前值即合并前快照，直接执行合并

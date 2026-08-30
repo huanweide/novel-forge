@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import type { CharacterData } from "./types";
 import { toastError, toastCreated } from "@/components/ui/toast";
 import { RelationshipGraph } from "@/components/workspace/RelationshipGraph";
+import { safeJoin } from "@/lib/utils";
 import {
   CHARACTER_ROLE_OPTIONS,
   fromText,
@@ -50,7 +51,7 @@ export function CharacterDialog({
 
   const [form, setForm] = useState({
     name: character?.name || "",
-    aliases: (character?.aliases || []).join("、"),
+    aliases: safeJoin(character?.aliases, "、"),
     role: character?.role || "supporting",
     age: character?.age || "",
     gender: character?.gender || "",
@@ -66,8 +67,8 @@ export function CharacterDialog({
     core: String((character?.personality as Record<string, unknown> | undefined)?.core || ""),
     background: character?.background || "",
     storyLine: character?.storyLine || "",
-    abilities: (character?.abilities || []).join("、"),
-    hiddenMotives: (character?.hiddenMotives || []).join("、"),
+    abilities: safeJoin(character?.abilities, "、"),
+    hiddenMotives: safeJoin(character?.hiddenMotives, "、"),
     relationships: rels,
     dialogueDesc: String(ds.description || ""),
     dialogueExamples: (Array.isArray(ds.examples) ? ds.examples : []).join("\n"),
@@ -100,7 +101,7 @@ export function CharacterDialog({
             : {};
         setForm({
           name: updated.name || form.name,
-          aliases: (updated.aliases || []).join("、"),
+          aliases: safeJoin(updated.aliases, "、"),
           role: updated.role || form.role,
           age: updated.age || form.age,
           gender: updated.gender || form.gender,

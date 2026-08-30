@@ -11,6 +11,8 @@
  * Response: { ok: true, projectId }
  */
 
+import { Prisma } from "@/generated/prisma/client";
+import { asArray } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { BuildConfig } from "@/core/explore/types";
@@ -43,8 +45,8 @@ export async function PATCH(
       where: { id },
       data: {
         buildConfig: merged as any,
-        genre: merged.genre ? [merged.genre] : project.genre,
-        toneKeywords: merged.stylePreference ? [merged.stylePreference] : project.toneKeywords,
+        genre: (merged.genre ? [merged.genre] : asArray(project.genre)) as Prisma.InputJsonValue,
+        toneKeywords: (merged.stylePreference ? [merged.stylePreference] : asArray(project.toneKeywords)) as Prisma.InputJsonValue,
       },
     });
 

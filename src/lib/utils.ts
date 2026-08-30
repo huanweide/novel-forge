@@ -6,6 +6,38 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * asArray：把 Json 字段的读取结果统一规范为数组，**保留元素原始类型**。
+ *
+ * 与 safeSplit 的区别：safeSplit 会把元素过滤成 string[]（适合渲染标签），
+ * 而 Json 字段存的对象数组（如 LoreTable.rows、GameState.entities）若走 safeSplit
+ * 会被压成字符串值、丢掉对象结构。凡需要 `.length` / `.includes` / `.map`
+ * 且元素非纯字符串的场合一律用本函数。
+ *
+ *   null/undefined → []
+ *   数组          → 原样
+ *   JSON 数组字符串 → parse 后返回（parse 失败则包成单元素数组）
+ *   其余（字符串/数字/对象）→ 包成单元素数组（对象不拆，保持一个整体）
+ */
+export function asArray<T = unknown>(val: unknown): T[] {
+  if (val == null) return [];
+  if (Array.isArray(val)) return val as T[];
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return (Array.isArray(parsed) ? parsed : [parsed]) as T[];
+      } catch {
+        return [val as unknown as T];
+      }
+    }
+    return [val as unknown as T];
+  }
+  return [val as T];
+}
+
+/**
  * 安全地将任意值转为分隔符连接的字符串。
  * personality / hiddenMotives 等 Prisma Json 字段：
  *   数组 → join

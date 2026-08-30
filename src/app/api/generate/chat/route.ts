@@ -10,7 +10,7 @@
  *
  * 不用 function calling 协议——兼容所有模型（DeepSeek/硅基/OpenAI）。
  */
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 
 import { prisma } from "@/lib/prisma";
@@ -28,13 +28,13 @@ function buildToolContext(projectId: string): ToolContext {
     projectId, prisma,
     findCharacters: async (query: string) => {
       return await getApprovedCharacters(prisma, projectId, {
-        where: { OR: [{ name: { contains: query } }, { aliases: { contains: query } }] },
+        where: { OR: [{ name: { contains: query } }, { aliases: { string_contains: query } }] },
       }) as any;
     },
     findLore: async (keywords: string[]) => {
       return await getApprovedLore(prisma, projectId, {
         where: { OR: keywords.map((kw) => ({
-          OR: [{ title: { contains: kw } }, { content: { contains: kw } }, { keys: { contains: kw } }],
+          OR: [{ title: { contains: kw } }, { content: { contains: kw } }, { keys: { string_contains: kw } }],
         })) },
         take: 10,
       }) as any;
@@ -53,13 +53,13 @@ function buildToolContext(projectId: string): ToolContext {
       const lower = text.toLowerCase();
       for (const c of chars) {
         if (lower.includes(c.name.toLowerCase())) results.push({ name: c.name, type: "character", confidence: 1.0 });
-        for (const alias of (c.aliases || [])) {
+        for (const alias of asArray<string>(c.aliases)) {
           if (lower.includes(alias.toLowerCase())) results.push({ name: alias, type: "character", confidence: 0.8 });
         }
       }
       for (const l of lore) {
         if (lower.includes(l.title.toLowerCase())) results.push({ name: l.title, type: l.category || "custom", confidence: 0.9 });
-        for (const key of (l.keys || [])) {
+        for (const key of asArray<string>(l.keys)) {
           if (lower.includes(key.toLowerCase())) results.push({ name: key, type: l.category || "custom", confidence: 0.7 });
         }
       }

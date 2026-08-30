@@ -10,7 +10,7 @@ import { safeJoin } from "@/lib/utils";
 
 export type GenProject = {
   name: string;
-  genre: string[];
+  genre: unknown;
   synopsis?: string | null;
   toneKeywords: string[];
   buildConfig?: Record<string, unknown>;

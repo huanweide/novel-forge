@@ -12,6 +12,7 @@ import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import { NextResponse } from "next/server";
 import { ALL_WORLD_CATEGORIES } from "@/lib/world-category-classifier";
 import { WORLD_MODULES } from "@/components/workspace/worldPanelData";
+import { safeJoin } from "@/lib/utils";
 
 export async function GET(request: Request) {
   try {
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
       totalChapters = allNodes.length + 1;
       chapterOrder = totalChapters; // 视为"故事全局"
       chapterTitle = project.name;
-      outlineText = (project.synopsis || "") + " " + (project.genre || []).join(" ") + " " + (project.toneKeywords || []).join(" ");
+      outlineText = (project.synopsis || "") + " " + safeJoin(project.genre, " ") + " " + safeJoin(project.toneKeywords, " ");
       // 大纲生成没有单个节点——用项目概要覆盖
     }
 

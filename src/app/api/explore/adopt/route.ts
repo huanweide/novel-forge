@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       const category = stepToCategory(card.step) || "custom";
       const keys = (() => {
         try {
-          return extractCharacterKeys(title, preStructured) || [];
+          return extractCharacterKeys(title, preStructured ?? {}) || [];
         } catch {
           return [];
         }

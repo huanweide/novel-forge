@@ -95,7 +95,7 @@ export async function syncGlobalPrompt(projectId: string): Promise<string | null
 }
 
 export function buildGlobalPrompt(
-  project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string; llmConfig?: unknown; buildConfig?: unknown },
+  project: { name: string; genre: unknown; synopsis: string; toneKeywords: unknown; authorNote?: string; llmConfig?: unknown; buildConfig?: unknown },
   characters: any[],
   loreEntries: any[],
   styleCard: Record<string, unknown> | null,
@@ -112,7 +112,7 @@ export function buildGlobalPrompt(
 
 /** 按给定预算档位拼装完整 globalPrompt（纯函数，无副作用）。 */
 function assembleGlobalPrompt(
-  project: { name: string; genre: string[]; synopsis: string; toneKeywords: string[]; authorNote?: string; llmConfig?: unknown; buildConfig?: unknown },
+  project: { name: string; genre: unknown; synopsis: string; toneKeywords: unknown; authorNote?: string; llmConfig?: unknown; buildConfig?: unknown },
   characters: any[],
   loreEntries: any[],
   styleCard: Record<string, unknown> | null,

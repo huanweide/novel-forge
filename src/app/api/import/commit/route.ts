@@ -6,7 +6,7 @@
  * AI 失败 → 回退规则合并
  */
 
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { NextResponse } from "next/server";
@@ -276,8 +276,8 @@ function buildLoreContent(entry: Record<string, unknown>): string {
 // ═══════════════════════════════════════════════════════════════
 
 function buildGlobalContext(
-  project: { name: string; genre: string[]; synopsis?: string },
-  allChars: { name: string; role: string; personality: unknown; appearance: unknown; background?: string; abilities: string[] }[],
+  project: { name: string; genre: unknown; synopsis?: string },
+  allChars: { name: string; role: string; personality: unknown; appearance: unknown; background?: string; abilities: unknown }[],
   allLore: { title: string; category: string; content: string }[],
   style: { styleDescription?: string; povType?: string; narrativeDistance?: string } | null,
 ): string {
@@ -436,8 +436,8 @@ export async function POST(request: Request) {
         const charByAlias: { char: typeof allExistingChars[0]; aliasesLower: string[] }[] = [];
         for (const ec of allExistingChars) {
           charByName.set(ec.name.toLowerCase(), ec);
-          if (ec.aliases.length > 0) {
-            charByAlias.push({ char: ec, aliasesLower: ec.aliases.map((a: string) => a.toLowerCase()) });
+          if (asArray<string>(ec.aliases).length > 0) {
+            charByAlias.push({ char: ec, aliasesLower: asArray<string>(ec.aliases).map((a) => a.toLowerCase()) });
           }
         }
 

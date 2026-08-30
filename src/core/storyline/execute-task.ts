@@ -9,6 +9,7 @@
  * 不保证跑完。这是当前架构下的务实落地，后续可换持久队列。
  */
 
+import { asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { getApprovedCharacters, getApprovedLore } from "@/lib/approved-cards";
 import {
@@ -37,9 +38,9 @@ async function loadProjectContext(projectId: string) {
   } = {
     project: {
       name: project.name,
-      genre: project.genre,
+      genre: asArray<string>(project.genre),
       synopsis: project.synopsis,
-      toneKeywords: project.toneKeywords,
+      toneKeywords: asArray<string>(project.toneKeywords),
       buildConfig: project.buildConfig as Record<string, unknown> | undefined,
     },
     characters: characters.map((c) => ({ name: c.name, role: c.role, background: c.background })),

@@ -1296,7 +1296,7 @@ AI高频特征词：与……保持一致、至关重要、深入探讨、强调
 正在撰写《${project.name}》——一部${safeJoin(project.genre)}作品。修仙日常 + 纯爱后宫 + 步步惊心 + 逻辑严谨。`
     : `${styleBlock}${cardContext}${memoryBlock}${pendingBlock}${storylineBlock}# Role: 资深小说作家
 
-你正在创作一部《${project.name}》——体裁为${(project.genre || []).join("、") || "通用"}。
+你正在创作一部《${project.name}》——体裁为${safeJoin(project.genre, "、") || "通用"}。
 
 ## 文风权威声明（最高优先级）
 上方「系统设定」中的风格卡 / 文风预设（叙事视角、句长、对话/描写/动作比例、语气与词汇特征）是本章文风的最高权威，必须严格执行。

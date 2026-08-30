@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import { safeJoin, asArray } from "@/lib/utils";
 
 export const maxDuration = 60;
 
@@ -30,8 +31,12 @@ export async function POST(
       return NextResponse.json({ error: "角色不存在" }, { status: 404 });
     }
 
+    // v3.1.55：genre / abilities 等字段已是数据库原生 Json，读出来是 JsonValue；
+    // 下游函数的入参契约仍是 string[]。统一规范化，不用 as any 掩盖形状问题。
+    const characterLike = toCharacterLike(character);
+
     // 检查哪些字段需要补全
-    const emptyFields = detectEmptyFields(character);
+    const emptyFields = detectEmptyFields(characterLike);
     if (emptyFields.length === 0) {
       return NextResponse.json({
         filled: [] as string[],
@@ -41,7 +46,7 @@ export async function POST(
     }
 
     // 构建补全 prompt
-    const prompt = buildAutofillPrompt(character, emptyFields);
+    const prompt = buildAutofillPrompt(characterLike, emptyFields);
 
     const config = await getEffectiveConfig();
     const client = createLLMClient(config);
@@ -65,7 +70,7 @@ export async function POST(
     const filledData = parseAutofillResponse(rawContent, emptyFields);
 
     // 合并到现有数据
-    const updateData = buildUpdateData(character, filledData, emptyFields);
+    const updateData = buildUpdateData(characterLike, filledData, emptyFields);
 
     // 更新数据库
     await prisma.characterCard.update({
@@ -97,6 +102,10 @@ interface CharacterLike {
   role: string;
   background: string;
   storyLine: string;
+  // v3.1.55：这三个字段在库里是原生 Json，读出来是 JsonValue。
+  // 这里保留精确的 string[] 契约（下游 detectEmptyFields 要读 .length），
+  // 由 toCharacterLike 在入口处用 asArray 规范化 —— 不放宽成 unknown，
+  // 否则等于放弃类型检查、真实形状问题会一路漏到运行时。
   abilities: string[];
   personality: any;
   appearance: any;
@@ -110,16 +119,36 @@ interface CharacterLike {
   project?: { globalPrompt?: string; synopsis?: string; genre?: string[] };
 }
 
+/**
+ * 把 Prisma 读出的记录适配成下游函数的入参契约。
+ *
+ * v3.1.55 起 aliases / abilities / hiddenMotives / project.genre 是数据库原生
+ * Json，读出来是 JsonValue（可能是数组、也可能是历史遗留的裸字符串或 null）。
+ * asArray 统一收敛为数组：null/undefined → []、数组 → 原样、JSON 字符串 → parse、
+ * 裸值 → 单元素数组。这样「旧数据存的是字符串、新数据存的是数组」都能吃下。
+ */
+function toCharacterLike(c: Record<string, any>): CharacterLike {
+  return {
+    ...c,
+    abilities: asArray<string>(c.abilities),
+    aliases: asArray<string>(c.aliases),
+    hiddenMotives: asArray<string>(c.hiddenMotives),
+    project: c.project
+      ? { ...c.project, genre: asArray<string>(c.project.genre) }
+      : undefined,
+  } as CharacterLike;
+}
+
 function detectEmptyFields(c: CharacterLike): string[] {
   const empty: string[] = [];
 
   if (!c.age || c.age === "未知") empty.push("age");
   if (!c.gender || c.gender === "未知") empty.push("gender");
   if (!c.background || c.background.length < 20) empty.push("background");
-  if (!c.abilities || c.abilities.length === 0) empty.push("abilities");
-  if (!c.hiddenMotives || c.hiddenMotives.length === 0) empty.push("hiddenMotives");
+  if (!c.abilities || asArray(c.abilities).length === 0) empty.push("abilities");
+  if (!c.hiddenMotives || asArray(c.hiddenMotives).length === 0) empty.push("hiddenMotives");
   if (!c.arcProgress || c.arcProgress.length < 10) empty.push("arcProgress");
-  if (!c.aliases || c.aliases.length === 0) empty.push("aliases");
+  if (!c.aliases || asArray(c.aliases).length === 0) empty.push("aliases");
   if (!c.storyLine || c.storyLine.length < 10) empty.push("storyLine");
 
   // 经历时间线（空数组视为未填）
@@ -184,8 +213,8 @@ function buildAutofillPrompt(c: CharacterLike, emptyFields: string[]): string {
 - 已有年龄：${c.age || "未知"}
 - 已有性别：${c.gender || "未知"}
 - 已有背景：${(c.background || "").slice(0, 300) || "无"}
-- 已有能力：${(c.abilities || []).join("、") || "无"}
-- 已有别名：${(c.aliases || []).join("、") || "无"}
+- 已有能力：${safeJoin(c.abilities, "、") || "无"}
+- 已有别名：${safeJoin(c.aliases, "、") || "无"}
 
 【项目上下文】
 ${(c.project?.synopsis || "").slice(0, 500)}

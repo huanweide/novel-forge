@@ -8,7 +8,7 @@
  */
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { NextResponse } from "next/server";
 import { parseAIJson } from "@/lib/json-parser";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
@@ -32,7 +32,7 @@ function safeMerge<T>(result: T | undefined | null, fallback: T): T {
 // ─── 精简上下文 ──────────────────────────────────────
 
 function slimContext(
-  project: { name: string; genre: string[]; synopsis: string },
+  project: { name: string; genre: unknown; synopsis: string },
   lore: { title: string; category: string; content: string }[],
   style: Record<string, unknown> | null,
 ): string {
@@ -352,7 +352,7 @@ export async function POST(request: Request) {
 
           const charListForAudit = survivingChars.map(c => {
             const bg = ((c.background || "") as string).slice(0, 500);
-            const abs = (c.abilities || []).join("、").slice(0, 100);
+            const abs = safeJoin(c.abilities, "、").slice(0, 100);
             const role = c.role || "supporting";
             return `${c.id}|${c.name}|${role}|${abs || "无"}|${bg || "无背景"}`;
           }).join("\n---\n");
@@ -617,8 +617,8 @@ ${charListForAudit}
             primary.quickImportContent = mergedQC || primaryQC;
             if (!primary.background && c.background) primary.background = c.background;
             if (!primary.personality && c.personality) primary.personality = c.personality;
-            primary.abilities = [...new Set([...primary.abilities, ...c.abilities])];
-            primary.hiddenMotives = [...new Set([...primary.hiddenMotives, ...c.hiddenMotives])];
+            primary.abilities = [...new Set([...asArray<string>(primary.abilities), ...asArray<string>(c.abilities)])];
+            primary.hiddenMotives = [...new Set([...asArray<string>(primary.hiddenMotives), ...asArray<string>(c.hiddenMotives)])];
 
             // 保留信息更丰富的那张卡
             if ((c.background || "").length > (primary.background || "").length) {

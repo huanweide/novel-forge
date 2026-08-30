@@ -12,6 +12,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import { safeJoin } from "@/lib/utils";
 
 export const maxDuration = 60;
 
@@ -110,8 +111,8 @@ export async function POST(request: Request) {
     const charsSummary = targetChars.map((c) => {
       const parts = [
         `【${c.name}】(${c.role})`,
-        `别名：${(c.aliases || []).join("、") || "无"}`,
-        `能力：${(c.abilities || []).join("、") || "未记录"}`,
+        `别名：${safeJoin(c.aliases, "、") || "无"}`,
+        `能力：${safeJoin(c.abilities, "、") || "未记录"}`,
         `性格：${JSON.stringify(c.personality || {})}`,
         `关系：${JSON.stringify(c.relationships || [])}`,
         `状态：${c.currentStatus || "alive"}`,

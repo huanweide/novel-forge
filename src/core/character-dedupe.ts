@@ -20,6 +20,7 @@
 import { prisma } from "@/lib/prisma";
 import { completeText } from "@/core/llm/client";
 import { isHonorificVariant, resolveVariantTarget, isSurnameAbbrevOrDescriptor, coreSurname } from "@/lib/entity-auto-creator";
+import { safeJoin } from "@/lib/utils";
 
 export interface DedupeMergeItem {
   mainId: string;
@@ -55,7 +56,7 @@ export interface CharLite {
  */
 function charFingerprint(c: CharLite): string {
   let h = 0;
-  const s = `${c.name}|${(c.aliases || []).join(",")}|${c.background}|${c.storyLine}|${(c.tags || []).join(",")}`;
+  const s = `${c.name}|${safeJoin(c.aliases, ",")}|${c.background}|${c.storyLine}|${safeJoin(c.tags, ",")}`;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
 }
@@ -112,7 +113,7 @@ async function llmDetectSamePersonGroups(chars: CharLite[], context: string): Pr
   if (chars.length < 2) return [];
   const listing = chars
     .map((c, i) => {
-      const al = (c.aliases || []).join("、");
+      const al = safeJoin(c.aliases, "、");
       const bg = (c.background || "").replace(/\s+/g, " ").slice(0, 60);
       return `${i + 1}. id=${c.id} 名称=${c.name}${al ? ` 别名=${al}` : ""}${bg ? ` 简介=${bg}` : ""}`;
     })

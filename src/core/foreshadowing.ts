@@ -1,4 +1,4 @@
-import { safeJoin } from "@/lib/utils";
+import {  safeJoin, asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { createLLMClient, getEffectiveConfig } from "@/core/llm/client";
 
@@ -46,8 +46,8 @@ export async function enrichForeshadow(
     const projectCtx = [
       project?.name ? `作品：${project.name}` : null,
       project?.synopsis ? `主线总纲：${project.synopsis}` : null,
-      project?.genre && project.genre.length ? `题材：${safeJoin(project.genre)}` : null,
-      project?.toneKeywords && project.toneKeywords.length
+      project?.genre && asArray(project.genre).length ? `题材：${safeJoin(project.genre)}` : null,
+      project?.toneKeywords && asArray(project.toneKeywords).length
         ? `基调：${safeJoin(project.toneKeywords)}`
         : null,
     ]

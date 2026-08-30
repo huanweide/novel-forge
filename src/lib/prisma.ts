@@ -2,7 +2,6 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { applySerialization } from "./prisma-serialize";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -19,8 +18,11 @@ function createPrismaClient() {
   // 确保数据目录存在（better-sqlite3 只建文件、不建目录）
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   const adapter = new PrismaBetterSqlite3({ url });
-  const base = new PrismaClient({ adapter });
-  return applySerialization(base);
+  // v3.1.55：schema 已把 52 个原 Json / 标量数组字段改回原生 Json 类型，
+  // 由 Prisma 自己负责 parse / stringify，不再需要 prisma-serialize 扩展 ——
+  // 若继续挂载该扩展，对象会先被扩展 stringify 一次、再被 Prisma stringify 一次，
+  // 造成双重编码（读出来是「字符串里的 JSON」，而非对象）。
+  return new PrismaClient({ adapter });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();

@@ -8,11 +8,10 @@
 // - 幂等：每个预设按 { type, title, isBuiltin:true } 查重，已存在则跳过，可重复执行。
 import "dotenv/config";
 
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient, Prisma } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { applySerialization } from "../src/lib/prisma-serialize";
 import { BUILTINS } from "../src/lib/builtin-presets";
 
 function createSeedClient() {
@@ -24,7 +23,7 @@ function createSeedClient() {
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   // 适配器内部按 url 打开本地 SQLite 文件（自动剥离 file: 前缀）
   const adapter = new PrismaBetterSqlite3({ url });
-  return applySerialization(new PrismaClient({ adapter }));
+  return new PrismaClient({ adapter });
 }
 const prisma = createSeedClient();
 
@@ -46,12 +45,12 @@ async function main() {
         type: b.type,
         title: b.title,
         description: b.description || "",
-        content: b.content || {},
+        content: (b.content || {}) as Prisma.InputJsonValue,
         author: "trirui",
         tags,
         isBuiltin: true,
         isPublic: true,
-      } as Record<string, unknown>,
+      },
     });
     created++;
   }

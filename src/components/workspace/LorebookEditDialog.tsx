@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import type { LorebookData } from "./types";
 import { toastError } from "@/components/ui/toast";
 import { WORLD_MODULES } from "./worldPanelData";
+import { safeJoin } from "@/lib/utils";
 
 const DEPTH_OPTIONS = [
   { value: 0, label: "0 · 常驻·强效", desc: "正文前，优先级最高" },
@@ -32,7 +33,7 @@ export function LorebookEditDialog({
   const [form, setForm] = useState({
     title: entry.title,
     category: entry.category,
-    keys: (entry.keys || []).join("、"),
+    keys: safeJoin(entry.keys, "、"),
     content: entry.content,
     enabled: entry.enabled,
     insertionOrder: 50,

@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { jsonError } from "@/lib/api-error";
+import { safeJoin } from "@/lib/utils";
 
 export const maxDuration = 90;
 
@@ -193,7 +194,7 @@ export async function POST(request: Request) {
 
     // 构建参考摘要
     const charRoster = characters.map((c) =>
-      `${c.name}(${c.role}，别名：${(c.aliases || []).join("、") || "无"}，已有能力：${(c.abilities || []).join("、") || "无"})`
+      `${c.name}(${c.role}，别名：${safeJoin(c.aliases, "、") || "无"}，已有能力：${safeJoin(c.abilities, "、") || "无"})`
     ).join("\n");
 
     // 全量世界书条目（15 类，仅 enabled）——供 LLM 识别"已有/别名/重复"，避免重复建卡（#222-B）

@@ -16,6 +16,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
+import {  safeJoin, asArray } from "@/lib/utils";
 
 export const maxDuration = 60;
 
@@ -55,12 +56,12 @@ export async function POST(request: Request) {
 
     // ── 构建分析 prompt ──
     const charRoster = characters.map((c) => {
-      const names = [c.name, ...(c.aliases || [])];
+      const names = [c.name, ...asArray<string>(c.aliases)];
       return `${c.name}(${c.role}，别名：${names.slice(1).join("、") || "无"})`;
     }).join("\n");
 
     const existingSummary = existingRels.length > 0
-      ? `\n已有关系条目：\n${existingRels.map((r) => `- ${r.title} [keys: ${(r.keys || []).join(", ")}] 内容：${(r.content || "").slice(0, 100)}`).join("\n")}`
+      ? `\n已有关系条目：\n${existingRels.map((r) => `- ${r.title} [keys: ${safeJoin(r.keys, ", ")}] 内容：${(r.content || "").slice(0, 100)}`).join("\n")}`
       : "\n（尚无关系条目）";
 
     const analysisPrompt = `你是小说关系分析师。从以下章节正文中提取角色间的实际互动关系。
@@ -157,7 +158,7 @@ ${existingSummary}
         if (rel.action === "create") {
           // 检查是否已有类似条目（keys 中有这两个角色名）
           const existing = existingRels.find((e) => {
-            const ek = e.keys || [];
+            const ek = asArray<string>(e.keys);
             return ek.includes(rel.characterA) && ek.includes(rel.characterB);
           });
 
@@ -168,7 +169,7 @@ ${existingSummary}
               where: { id: existing.id },
               data: {
                 content: mergedContent.slice(0, 5000),
-                keys: [...new Set([...existing.keys, ...keys])],
+                keys: [...new Set([...asArray<string>(existing.keys), ...keys])],
               },
             });
             updated++;
@@ -190,7 +191,7 @@ ${existingSummary}
         } else if (rel.action === "update") {
           // 找已有条目并更新
           const existing = existingRels.find((e) => {
-            const ek = e.keys || [];
+            const ek = asArray<string>(e.keys);
             return ek.includes(rel.characterA) && ek.includes(rel.characterB);
           });
 
@@ -200,7 +201,7 @@ ${existingSummary}
               where: { id: existing.id },
               data: {
                 content: mergedContent.slice(0, 5000),
-                keys: [...new Set([...existing.keys, ...keys])],
+                keys: [...new Set([...asArray<string>(existing.keys), ...keys])],
               },
             });
             updated++;

@@ -8,6 +8,7 @@
  * 请求体：
  * { projectId, characterId, message, mode: "dialogue" | "possess" }
  */
+import {  safeJoin, asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       tags: character.tags as any,
       storyLine: character.storyLine,
       projectName: project.name,
-      projectGenre: project.genre,
+      projectGenre: asArray<string>(project.genre),
       projectSynopsis: project.synopsis,
       mode: chatMode,
     });

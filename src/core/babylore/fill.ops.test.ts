@@ -50,6 +50,7 @@ vi.mock("fs", () => {
 
 import { prisma } from "@/lib/prisma";
 import { babyloreFill, babyloreFillAll, markChapterFilled, inferEntityType, tableGroupOf } from "@/core/babylore/fill";
+import { safeJoin } from "@/lib/utils";
 
 function makeTable() {
   return {
@@ -89,7 +90,7 @@ describe("P0-3 空 ops 章节不标已填（applied=0 视为失败可重试）",
     expect(r.ok).toBe(false);
     expect(r.applied).toBe(0);
     // 失败章必须带 error/warning 暴露，便于重试而非静默吞掉
-    const exposed = (r.error || "") + (r.warnings || []).join("");
+    const exposed = (r.error || "") + safeJoin(r.warnings, "");
     expect(exposed).toMatch(/未落地任何事实|模型未返回任何有效操作/);
   });
 
@@ -114,7 +115,7 @@ describe("P1-1 update 未命中且非身份列 → 不静默建伪行", () => {
     expect(r.ok).toBe(false);
     // 身份列（name）未被污染，未插伪行 → 不应有写库动作
     expect(updateCalls.length).toBe(0);
-    expect((r.warnings || []).join("")).toContain("非身份列");
+    expect(safeJoin(r.warnings, "")).toContain("非身份列");
   });
 
   it("按身份列 name update 未命中 → 仍可正常 upsert 建行", async () => {
@@ -274,7 +275,7 @@ describe("P1-C 汇总 skippedOps（丢失的写入与 warning 绑定）", () => 
     expect(s.table).toBe("地点");
     // skippedOps 与 warning 绑定一一对应：warning 文本包含同一 reason 关键字
     expect(s.reason).toContain("不存在列");
-    expect((r.warnings || []).join("")).toContain("不存在列");
+    expect(safeJoin(r.warnings, "")).toContain("不存在列");
   });
 });
 
@@ -322,7 +323,7 @@ describe("M2 人物落地点表 → 报错不写错", () => {
     const written = updateCalls[0]?.data?.rows as any[] | undefined;
     expect(written?.some((row: any) => row.name === "萧薰儿")).toBeFalsy();
     // 仍须在结果中暴露类型不匹配（报错不写错）
-    expect((r.warnings || []).join("")).toContain("类型不匹配");
+    expect(safeJoin(r.warnings, "")).toContain("类型不匹配");
     expect((r.selfCheckIssues || []).some((i) => i.value === "萧薰儿" && i.issue.includes("类型不匹配"))).toBe(true);
   });
 

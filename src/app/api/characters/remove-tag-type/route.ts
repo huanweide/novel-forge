@@ -4,6 +4,7 @@
  * 删除一个用户自建标签类型：从项目内所有角色上移除该标签。
  * v2.27.0：支持清理误建/废弃的自定义标签。
  */
+import { asArray } from "@/lib/utils";
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
     let removed = 0;
 
     for (const c of characters) {
-      const oldTags = Array.isArray(c.tags) ? c.tags : [];
-      const newTags = oldTags.filter((t: string) => t !== tag);
+      const oldTags = asArray<string>(c.tags);
+      const newTags = oldTags.filter((t) => t !== tag);
 
       // 只有确实变化时才 update（避免空写）
       if (newTags.length !== oldTags.length) {

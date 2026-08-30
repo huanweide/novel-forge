@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveConfig, createLLMClient } from "@/core/llm/client";
 import { syncGlobalPrompt } from "@/core/sync-global-prompt";
+import {  safeJoin, asArray } from "@/lib/utils";
 
 export const maxDuration = 60;
 
@@ -32,7 +33,7 @@ export async function POST(
 
     const emptyFields: string[] = [];
     if (!entry.content || entry.content.length < 30) emptyFields.push("content");
-    if (!entry.keys || entry.keys.length === 0) emptyFields.push("keys");
+    if (!entry.keys || asArray(entry.keys).length === 0) emptyFields.push("keys");
 
     if (emptyFields.length === 0) {
       return NextResponse.json({
@@ -51,7 +52,7 @@ export async function POST(
 【词条标题】${entry.title}
 【词条分类】${entry.category}
 【已有内容】${(entry.content || "").slice(0, 300) || "（无）"}
-【已有触发词】${(entry.keys || []).join("、") || "（无）"}
+【已有触发词】${safeJoin(entry.keys, "、") || "（无）"}
 
 【项目上下文】
 ${(entry.project?.synopsis || "").slice(0, 300)}

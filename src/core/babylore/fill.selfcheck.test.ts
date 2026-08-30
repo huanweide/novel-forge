@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { selfCheckFill } from "@/core/babylore/fill";
+import { asArray } from "@/lib/utils";
 
 // 集成测试：验证「填后自检」能真实捕获错误地名/名称。
 // 思路：向项目的 geo 表插入一个【正文里绝对不存在】的地名，
@@ -11,24 +12,64 @@ const hasDb = !!process.env.DATABASE_URL;
 const PROJECT_ID = "577ed326-b241-4f67-9481-c9332cb03626";
 const WRONG_NAME = "幻海市"; // 正文绝无此名
 
+/**
+ * 确保前置 Project 存在。
+ *
+ * v3.1.55 修复：本测试用固定的 PROJECT_ID，但夹具从未创建对应的 Project 记录。
+ * 在干净库（CI 首次运行、或本地删库重来）里，直接 create LoreTable 会因
+ * 外键约束而失败（Foreign key constraint violated），整组测试必红 ——
+ * 与本测试要验证的业务逻辑无关，纯属夹具缺前置依赖。
+ *
+ * 用 upsert 保证幂等：库里已有则不改动，没有才建。
+ */
+async function ensureProject() {
+  await prisma.project.upsert({
+    where: { id: PROJECT_ID },
+    create: { id: PROJECT_ID, name: "自检测试项目", genre: "test" },
+    update: {},
+  });
+}
+
 describe.skipIf(!hasDb)("selfCheckFill —— 灭错名自检检测", () => {
   let geoTableId = "";
   let originalRows: any[] = [];
+  let createdByTest = false;
 
   beforeAll(async () => {
-    const t = await prisma.loreTable.findFirst({
+    await ensureProject();
+    let t = await prisma.loreTable.findFirst({
       where: { projectId: PROJECT_ID, key: "geo" },
     });
-    if (!t) throw new Error("geo 表不存在，请先运行 seed_tables.py");
+    // v3.1.55：不再硬性要求外部先跑 seed_tables.py —— 测试应当自包含。
+    // 库里没有 geo 表时自建一张，跑完由 afterAll 删除，不污染数据库。
+    // 否则在干净库（CI 首次运行、本地删库重来）上整组必红。
+    if (!t) {
+      t = await prisma.loreTable.create({
+        data: {
+          projectId: PROJECT_ID,
+          key: "geo",
+          name: "自检geo表",
+          category: "geo",
+          columns: [{ key: "name", label: "名称", type: "text" }],
+          rows: [],
+        },
+      });
+      createdByTest = true;
+    }
     geoTableId = t.id;
-    originalRows = (t.rows as any[]) || [];
+    // rows 已是数据库原生 Json，读出来可能是数组/字符串/null，统一收敛为数组
+    originalRows = asArray<any>(t.rows);
     // 注入一个故意错误（正文不存在）的地名，模拟 LLM 误填
     const injected = [...originalRows, { row_id: 99999, name: WRONG_NAME, desc: "测试注入", firstChapter: "x", related: "" }];
     await prisma.loreTable.update({ where: { id: geoTableId }, data: { rows: injected } });
   });
 
   afterAll(async () => {
-    // 还原 geo 表，删除注入行
+    // 测试自建的表直接删掉；原本就有的表则还原内容、删除注入行
+    if (createdByTest) {
+      await prisma.loreTable.delete({ where: { id: geoTableId } }).catch(() => {});
+      return;
+    }
     await prisma.loreTable.update({ where: { id: geoTableId }, data: { rows: originalRows } });
   });
 
@@ -58,6 +99,7 @@ describe("selfCheckFill —— 跨表同名检测（A-2 修复验证）", () => 
   const createdIds: string[] = [];
 
   beforeAll(async () => {
+    await ensureProject();
     const defs = [
       { key: "selftest_a", name: "自检表A", category: "customA", rows: [{ row_id: 1, name: SHARED_CROSS }] },
       { key: "selftest_b", name: "自检表B", category: "customB", rows: [{ row_id: 1, name: SHARED_CROSS }] },
@@ -110,6 +152,7 @@ describe("selfCheckFill —— 唯一名写错表（P1 归表错误检测）", (
   const createdIds: string[] = [];
 
   beforeAll(async () => {
+    await ensureProject();
     const geo = await prisma.loreTable.create({
       data: {
         projectId: PROJECT_ID,

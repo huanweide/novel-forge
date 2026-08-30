@@ -14,6 +14,7 @@ import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getEffectiveConfig, createLLMClient, buildProjectOverrides } from "@/core/llm/client";
+import { safeJoin } from "@/lib/utils";
 
 export const maxDuration = 60;
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
 
     // ── 组装局势上下文 ──
     const ctxParts: string[] = [];
-    ctxParts.push(`【作品】《${project.name}》｜题材：${(project.genre || []).join("、") || "未设定"}`);
+    ctxParts.push(`【作品】《${project.name}》｜题材：${safeJoin(project.genre, "、") || "未设定"}`);
     if (project.synopsis) ctxParts.push(`【梗概】${project.synopsis.slice(0, 300)}`);
 
     const chars = (project.characters || []).map((c) => {

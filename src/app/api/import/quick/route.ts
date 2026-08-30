@@ -16,6 +16,7 @@
  *   SSE 三阶段：解析 → 去重合并 → 写入
  */
 
+import { asArray } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { rateLimit, clientIp, rateLimitResponse } from "@/lib/rate-limit";
@@ -223,7 +224,7 @@ async function dbMerge(
       }
 
       // 安全合并 tags
-      const existingTags: string[] = Array.isArray(match.tags) ? match.tags : [];
+      const existingTags = asArray<string>(match.tags);
       const mergedTags = [...new Set([...existingTags, "📥快速导入"])];
 
       await prisma.characterCard.update({

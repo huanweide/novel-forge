@@ -382,7 +382,7 @@ function buildMediumTermSection(
   let selected: typeof allSummaries;
   if (currentCharacters && currentCharacters.length > 0) {
     const scored = allSummaries.map(s => {
-      const eventsText = (s.keyEvents || []).join(" ") + " " + s.summary;
+      const eventsText = safeJoin(s.keyEvents, " ") + " " + s.summary;
       let overlap = 0;
       for (const char of currentCharacters) {
         if (eventsText.includes(char)) overlap++;

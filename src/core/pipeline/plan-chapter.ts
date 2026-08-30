@@ -10,6 +10,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings, recordLlmCall } from "@/lib/llm";
 import { STORYLINE_STATUS, withStorylineLock } from "@/core/story-status";
+import { safeJoin } from "@/lib/utils";
 
 export interface ChapterPlan {
   /** 本章核心焦点（一句话） */
@@ -138,7 +139,7 @@ ${slText}
 
     const planText = `【剧情预设·本章规划——生成前已用回忆召回机制推演】
 焦点：${plan.focus || "—"}
-推进：${(plan.advance || []).join("；") || "—"}
+推进：${safeJoin(plan.advance, "；") || "—"}
 障碍：${plan.obstacle || "—"}
 ${plan.twist ? `转折：${plan.twist}` : ""}
 执行提示：${plan.note || "—"}`;
@@ -168,7 +169,7 @@ export async function applyChapterPlanToStorylines(
         await withStorylineLock(s.id, async () => {
           // v1.8.x：本章规划回写为时间轴大事件（StorylineEvent），保留"写作自动记录大事件"语义。
           const summary = [
-            `推进：${(plan.advance || []).join("；") || "—"}`,
+            `推进：${safeJoin(plan.advance, "；") || "—"}`,
             `障碍：${plan.obstacle || "—"}`,
             plan.twist ? `转折：${plan.twist}` : "",
             `执行提示：${plan.note || "—"}`,

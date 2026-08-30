@@ -6,6 +6,7 @@
  * JSON 修复层——去尾逗号等 AI 常见语法错误。
  */
 
+import { safeJoin } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getSettings, recordLlmCall } from "@/lib/llm";
@@ -362,7 +363,7 @@ role = 从以下选：protagonist/antagonist/supporting/mentor/love_interest/bac
 - tags: 固定["📥导入"]
 
 【作品信息】
-名称：${pName} · 类型：${pGenre.join("、")}
+名称：${pName} · 类型：${safeJoin(pGenre, "、")}
 
 【文本】
 ${chunkText}
@@ -397,7 +398,7 @@ ${chunkText}
 ${THREE_CARD_BOUNDARIES}
 
 【作品信息】
-名称：${pName} · 类型：${pGenre.join("、")}
+名称：${pName} · 类型：${safeJoin(pGenre, "、")}
 
 【设定文本】
 ${loreText}
