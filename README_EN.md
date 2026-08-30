@@ -12,7 +12,7 @@
 
 [🖼 UI Preview](https://novel-forge-nu.vercel.app) · [📦 Quick Start](#quick-start) · [中文 README](README.md) · [⭐ Star on GitHub](https://github.com/huanweide/novel-forge/stargazers)
 
-**Current Version: v3.1.56** · Local SQLite, zero-config · 17 built-in presets · MIT License
+**Current Version: v3.1.57** · Local SQLite, zero-config · 17 built-in presets · MIT License
 
 > **About the UI Preview**: the link above only shows **what the interface looks like** — it cannot actually be used. It runs in a read-only cloud environment, while Novel Forge needs to write into a local SQLite file. **Run it on your own machine via "Quick Start" below** — it takes about two minutes.
 
@@ -127,6 +127,18 @@ Novel Forge has **no built-in authentication**. If you deploy to the public inte
 - 🐛 **Open an Issue** for bugs or ideas.
 - 🔧 **Send a PR** for fixes or features.
 - 💬 **Share** presets exported as `.preset.json` — the best ones may become built-in examples.
+
+---
+
+## Sponsor
+
+If Novel Forge helped you finish a story, you can buy the author a coffee — entirely optional, and it changes nothing about the features.
+
+- **WeChat QR**: Settings → scroll to the bottom "赞助支持" section, scan with WeChat
+- **GitHub Sponsor**: the Sponsor button on this repo — the same QR code
+- Want your own QR? Drop `wechat-qr.png` into `public/sponsor/` (see `public/sponsor/README.md`)
+
+> The QR image is just a payment entry point — no keys, no credentials, a plain static file that is safe to commit. The project collects no donation amounts or messages on any backend.
 
 ---
 
