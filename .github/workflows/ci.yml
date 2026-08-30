@@ -12,10 +12,19 @@ jobs:
           node-version: "20"
       - name: Install
         run: npm ci || npm install
+      # 直连 SQLite 的集成测试（chat-sessions / babylore 自检等）需要真实的表结构。
+      # 项目卖点是「clone 后零安装即用本地 SQLite」，CI 里跑一次 db push 正好验证这条路径。
+      # 缺这一步时这些套件会以 PrismaClientKnownRequestError 整组失败（表不存在）。
+      - name: Setup database
+        run: npx prisma db push
+        env:
+          DATABASE_URL: "file:./data/novelforge.db"
       - name: Type check
         run: npx tsc --noEmit
       - name: Test
         run: npm test
+        env:
+          DATABASE_URL: "file:./data/novelforge.db"
       - name: Color guard (ARCH-7)
         run: npm run lint:colors
       - name: Build
