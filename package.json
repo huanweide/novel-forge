@@ -13,7 +13,8 @@
     "postinstall": "prisma generate",
     "db:seed": "prisma db seed",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:migrate-json": "node scripts/migrate-json-fields.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -29,7 +30,7 @@
     "gpt-tokenizer": "^3.4.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.17.0",
-    "next": "16.2.7",
+    "next": "^16.3.3",
     "prisma": "^7.8.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
