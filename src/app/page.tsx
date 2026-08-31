@@ -143,8 +143,8 @@ export default function Dashboard() {
               <Icon name="sparkles" size={16} />
             </span>
             <div className="leading-tight">
-              <h1 className="text-lg font-bold tracking-tight text-foreground">Novel Forge</h1>
-              <p className="text-[10px] text-[var(--nv-text-tertiary)] tracking-[0.22em]">小说工坊 · 创作引擎</p>
+            <h1 className="text-lg font-bold tracking-tight text-foreground">Novel Smith</h1>
+            <p className="text-[10px] text-[var(--nv-text-tertiary)] tracking-[0.22em]">小说工匠 · 创作引擎</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -296,7 +296,7 @@ export default function Dashboard() {
       {/* 右下角署名：GitHub + 作者 */}
       <footer className="fixed bottom-3 right-4 z-20 text-[11px] text-[var(--nv-text-muted)]">
         <a
-          href="https://github.com/huanweide/novel-forge"
+          href="https://github.com/huanweide/novel-smith"
           target="_blank"
           rel="noreferrer"
           className="hover:text-[var(--nv-text-primary)] transition-colors"

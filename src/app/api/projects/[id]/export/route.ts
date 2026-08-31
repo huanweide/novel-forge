@@ -254,7 +254,7 @@ async function* buildExportStream(
   }
   yield `\n\n---\n\n`;
   yield `*共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字*\n`;
-  yield `*由 Novel Forge 生成*\n`;
+  yield `*由 Novel Smith 生成*\n`;
 }
 
 async function* markdownNodeGen(

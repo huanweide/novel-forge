@@ -1,5 +1,5 @@
 /**
- * Novel Forge 图标注册表 — 虚空玻璃设计体系
+ * Novel Smith 图标注册表 — 虚空玻璃设计体系
  *
  * 统一管理所有 Lucide 图标映射，替代 emoji 图标。
  * 用法：<Icon name="target" size={18} />
@@ -213,7 +213,7 @@ interface IconProps {
   strokeWidth?: number;
 }
 
-/** Novel Forge 统一图标组件 */
+/** Novel Smith 统一图标组件 */
 export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: IconProps) {
   const LucideIcon = iconMap[name];
   if (!LucideIcon) return null;

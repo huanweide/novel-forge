@@ -710,7 +710,7 @@ export function CenterPanel({
       ) : (
         <div className="flex-1 flex items-center justify-center text-[var(--nv-text-tertiary)]">
           <div className="text-center">
-            <p className="text-lg mb-2">欢迎使用 Novel Forge</p>
+            <p className="text-lg mb-2">欢迎使用 Novel Smith</p>
             <p className="text-sm">从左侧大纲树选择节点开始写作，或先生成大纲</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * npm run dev:db —— 一键启动 Novel Forge（零配置本地 SQLite）
+ * npm run dev:db —— 一键启动 Novel Smith（零配置本地 SQLite）
  *
  * 自动完成：
  *   1. 若 .env 不存在，从 .env.example 复制（默认即用本地 SQLite，无需手改）

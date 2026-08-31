@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Novel Forge 版本自动管理
+ * Novel Smith 版本自动管理
  *
  * 用法：
  *   node scripts/bump-version.js "修复了什么" "改了什么"

@@ -1,20 +1,22 @@
-[![License](https://img.shields.io/github/license/huanweide/novel-forge)](LICENSE)
-[![CI](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml)
-[![Stars](https://img.shields.io/github/stars/huanweide/novel-forge)](https://github.com/huanweide/novel-forge/stargazers)
+[![License](https://img.shields.io/github/license/huanweide/novel-smith)](LICENSE)
+[![CI](https://github.com/huanweide/novel-smith/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-smith/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/huanweide/novel-smith)](https://github.com/huanweide/novel-smith/stargazers)
 [![UI Preview](https://img.shields.io/badge/UI%20Preview-novel--forge--nu.vercel.app-6366f1)](https://novel-forge-nu.vercel.app)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/huanweide/novel-forge/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/huanweide/novel-smith/pulls)
 
-![Novel Forge](docs/banner.svg)
+![Novel Smith](docs/banner.svg)
 
-# Novel Forge — AI Novel Workshop
+# Novel Smith — AI Novel Workshop
 
 > A **local-first** AI writing workshop for long-form web novels — characters, lore, outlines, and chapters, all in one place.
 
-[🖼 UI Preview](https://novel-forge-nu.vercel.app) · [📦 Quick Start](#quick-start) · [中文 README](README.md) · [⭐ Star on GitHub](https://github.com/huanweide/novel-forge/stargazers)
+`TypeScript` · `Local-First` · `Tiered Memory Engine` · `Long-Form Web Novels` · `Data Stays on Your Machine`
+
+[🖼 UI Preview](https://novel-forge-nu.vercel.app) · [📦 Quick Start](#quick-start) · [中文 README](README.md) · [⭐ Star on GitHub](https://github.com/huanweide/novel-smith/stargazers)
 
 **Current Version: v3.1.57** · Local SQLite, zero-config · 17 built-in presets · MIT License
 
-> **About the UI Preview**: the link above only shows **what the interface looks like** — it cannot actually be used. It runs in a read-only cloud environment, while Novel Forge needs to write into a local SQLite file. **Run it on your own machine via "Quick Start" below** — it takes about two minutes.
+> **About the UI Preview**: the link above only shows **what the interface looks like** — it cannot actually be used. It runs in a read-only cloud environment, while Novel Smith needs to write into a local SQLite file. **Run it on your own machine via "Quick Start" below** — it takes about two minutes.
 
 ---
 
@@ -28,7 +30,7 @@ Writing a long web novel is easy at Chapter 1, painful at Chapter 50:
 - You stare at a blank page, unsure where the plot goes next.
 - Exporting to Word for your editor turns into a formatting nightmare.
 
-Novel Forge automates the grunt work — so you can focus on the creative work.
+Novel Smith automates the grunt work — so you can focus on the creative work.
 
 ---
 
@@ -40,9 +42,9 @@ Novel Forge automates the grunt work — so you can focus on the creative work.
 
 ---
 
-## Why Novel Forge
+## Why Novel Smith
 
-| Pain Point | Traditional Tools | Novel Forge |
+| Pain Point | Traditional Tools | Novel Smith |
 |---|---|---|
 | Forgetting lore after 50 chapters | Manual spreadsheets | **Auto-fill tables**: extracts people, places, factions per chapter and auto-creates character cards & lorebook entries |
 | Tangled character relationships | Draw graphs by hand | **Relationship graph**: draggable nodes, persisted layout, double-click to open cards |
@@ -69,8 +71,8 @@ Novel Forge automates the grunt work — so you can focus on the creative work.
 ## Quick Start
 
 ```bash
-git clone https://github.com/huanweide/novel-forge.git
-cd novel-forge
+git clone https://github.com/huanweide/novel-smith.git
+cd novel-smith
 cp .env.example .env
 npm install
 npm run dev:db   # creates DB, starts server at http://localhost:3001
@@ -117,7 +119,7 @@ npm run build
 npm start
 ```
 
-Novel Forge has **no built-in authentication**. If you deploy to the public internet, put it behind a reverse proxy with Basic Auth, Tailscale, or an IP whitelist.
+Novel Smith has **no built-in authentication**. If you deploy to the public internet, put it behind a reverse proxy with Basic Auth, Tailscale, or an IP whitelist.
 
 ---
 
@@ -132,7 +134,7 @@ Novel Forge has **no built-in authentication**. If you deploy to the public inte
 
 ## Sponsor
 
-If Novel Forge helped you finish a story, you can buy the author a coffee — entirely optional, and it changes nothing about the features.
+If Novel Smith helped you finish a story, you can buy the author a coffee — entirely optional, and it changes nothing about the features.
 
 - **WeChat QR**: Settings → scroll to the bottom "赞助支持" section, scan with WeChat
 - **GitHub Sponsor**: the Sponsor button on this repo — the same QR code
@@ -148,4 +150,4 @@ MIT License — see [LICENSE](LICENSE)
 
 ---
 
-> Novel Forge · AI Novel Workshop · Local-first · Your data stays yours
+> Novel Smith · AI Novel Workshop · Local-first · Your data stays yours

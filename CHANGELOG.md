@@ -1,4 +1,20 @@
-﻿# Novel Forge 更新公告
+﻿# Novel Smith 更新公告
+
+## v3.1.58 — 2026-08-31
+
+### 品牌改名（REBRAND）
+
+- **项目正式更名：Novel Forge → Novel Smith**（中文「AI 小说工匠」，副标题「本地优先 · 数据自有」）。
+- **为什么改**：调研发现赛道里已有一个同名且高度重合的开源项目 `RhythmicWave/NovelForge`（Python，1150 star，仍在活跃更新），搜 NovelForge 时别人先看到它、我们被淹没；而 Smith（工匠）全球无强同名项目，且「工匠」比「熔炉」更有辨识度。
+- **改名范围**：GitHub 仓库名 + git remote + package.json + README 中英 + PWA manifest + `docs/banner.svg` 横幅 + 界面文案（首页标题、设置页、changelog 页）+ 导出 DOCX/EPUB 水印与元信息 + 安全公告链接。
+- **首屏辨识标签**：README 中英标题下补一行 `TypeScript · Local-First · 分层记忆引擎 · 中文长篇 · 数据不出本机`，一眼区分于那个 Python 卡片式项目。
+- **兼容性**：GitHub 旧链接自动 301 跳转、不失效；本地目录名与内部存储键（localStorage 的 `novel-forge-*` 前缀、预设 schema）保持不变，已有数据不受影响。
+
+### 赞助收款码上线（SPONSOR-ON）
+
+- **微信收款码已放入** `public/sponsor/wechat-qr.png`，设置页「8. 赞助支持」区块显示真码，替换原「作者待配置收款码」占位。
+- **GitHub 仓库主页 Sponsor 按钮**（`.github/FUNDING.yml`）同步指向新地址，站内站外两条路都能扫。
+- 收款码为纯静态图片、不含任何密钥或凭据，不做后端金额/留言收集。
 
 ## v3.1.57 — 2026-08-30
 

@@ -20,7 +20,7 @@ export interface ApiErrorInfo {
 
 /**
  * Prisma 已知错误码 → 中文可读说明 + 修复指引。
- * 覆盖 Novel Forge 实际会遇到的几类数据库连接 / 初始化问题。
+ * 覆盖 Novel Smith 实际会遇到的几类数据库连接 / 初始化问题。
  */
 const PRISMA_HINTS: Record<string, { status: number; error: string; hint: string }> = {
   // 无法连接数据库服务器（服务没起 / 地址错 / 端口错）

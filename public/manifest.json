@@ -1,6 +1,6 @@
 {
-  "name": "Novel Forge — AI 小说工坊",
-  "short_name": "Novel Forge",
+  "name": "Novel Smith — AI 小说工匠",
+  "short_name": "Novel Smith",
   "description": "基于大语言模型的长篇小说智能写作系统",
   "start_url": "/",
   "display": "standalone",

@@ -172,7 +172,7 @@ ${author ? `<p class="author">作者：${escapeHtml(author)}</p>` : ""}
   }
 
   // 文档尾闭合
-  yield `<footer>${author ? `作者：${escapeHtml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字 · 由 Novel Forge 生成</footer>
+  yield `<footer>${author ? `作者：${escapeHtml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字 · 由 Novel Smith 生成</footer>
 </body>
 </html>`;
 }
@@ -302,7 +302,7 @@ function epubContentOpf(
     <dc:identifier id="bookid">urn:uuid:${uuid}</dc:identifier>
     <dc:title>${escapeXml(projectName)}</dc:title>
     <dc:language>zh-CN</dc:language>
-    <dc:creator>${escapeXml(author || "Novel Forge")}</dc:creator>
+    <dc:creator>${escapeXml(author || "Novel Smith")}</dc:creator>
     <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/, "Z")}</meta>
   </metadata>
   <manifest>
@@ -390,7 +390,7 @@ export function buildEpub(
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN">
 <head><title>版权信息</title></head>
-<body><p>${author ? `作者：${escapeXml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Forge 生成。</p></body>
+<body><p>${author ? `作者：${escapeXml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Smith 生成。</p></body>
 </html>`;
   entries.push({ name: "OEBPS/colophon.xhtml", data: Buffer.from(colophon, "utf8") });
 
@@ -568,7 +568,7 @@ export async function buildEpubStream(
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN">
 <head><title>版权信息</title></head>
-<body><p>${author ? `作者：${escapeXml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Forge 生成。</p></body>
+<body><p>${author ? `作者：${escapeXml(author)} · ` : ""}共 ${completedNodes} 个章节，${totalWords.toLocaleString()} 字。由 Novel Smith 生成。</p></body>
 </html>`;
   await writeEntry("OEBPS/colophon.xhtml", Buffer.from(colophon, "utf8"));
 

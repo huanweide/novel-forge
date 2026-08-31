@@ -26,8 +26,8 @@
   <rect x="0" y="0" width="1280" height="3" fill="url(#gold)" opacity="0.8"/>
 
   <!-- 左侧主标题区 -->
-  <text x="72" y="138" font-size="74" font-weight="700" fill="url(#gold)" letter-spacing="1">Novel Forge</text>
-  <text x="76" y="182" font-size="26" font-weight="500" fill="#cdd6e4">AI 小说工坊 · 本地优先 · 数据自有</text>
+  <text x="72" y="138" font-size="74" font-weight="700" fill="url(#gold)" letter-spacing="1">Novel Smith</text>
+  <text x="76" y="182" font-size="26" font-weight="500" fill="#cdd6e4">AI 小说工匠 · 本地优先 · 数据自有</text>
   <text x="76" y="222" font-size="20" fill="#8b97a8">把「写长篇」从体力活变成创意活——章节生成、设定自动建档、故事线自动推进，一条龙。</text>
 
   <!-- 底部特性胶囊 -->

@@ -1,5 +1,5 @@
 /**
- * Novel Forge · API 响应统一封装
+ * Novel Smith · API 响应统一封装
  * 全站 API 路由的错误/成功返回统一结构，避免前端 {error} 与 {ok} 混用导致的解析不一致。
  * 用法：
  *   return jsonError("预设不存在", 404);

@@ -1,5 +1,5 @@
 /**
- * Novel Forge 更新公告 —— 前端公告系统数据源
+ * Novel Smith 更新公告 —— 前端公告系统数据源
  *
  * ⚠️ 强制同步规则（每次代码变更 + commit 前必做）：
  *   本文件必须与项目根目录 CHANGELOG.md 保持同步。
@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.57";
+export const LATEST_VERSION = "v3.1.58";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.58 品牌改名 + 微信收款码上线（REBRAND-SPONSOR）：①改名——项目从 Novel Forge 正式更名为 Novel Smith（英文 Novel Smith / 中文「AI 小说工匠」，副标题「本地优先 · 数据自有」）。为什么改：调研发现赛道里已有一个同名且高度重合的开源项目 RhythmicWave/NovelForge（Python，1150 star，仍在活跃更新），搜 NovelForge 时别人先看到它、我们被淹没；同时「Forge/Smith」同属锻造意象，Smith 更像人（工匠），比 Forge（熔炉）更有辨识度且全球无强同名项目（实测同名仓库多为 0-3 star 的个人项目）。改名范围实测覆盖：GitHub 仓库名、git remote、package.json、README 中英、PWA 清单 manifest、docs/banner.svg 横幅、设置页/首页/changelog 页/导出 DOCX·EPUB 水印、安全公告链接。②收款码上线——瑞宝宝提供的微信收款码已放进 public/sponsor/wechat-qr.png（93KB），设置页「8. 赞助支持」区块与 GitHub 仓库主页 Sponsor 按钮同步点亮，之前显示「作者待配置收款码」的占位已由真码取代。③首屏辨识标签——README 中英标题下补一行标签（TypeScript · Local-First · 分层记忆引擎 · 中文长篇 · 数据不出本机），让人一眼分清「这个 Novel Smith 是 TypeScript 本地优先的中文长篇工具」，而不是那个 Python 卡片式项目。④说明——仓库改名后 GitHub 会自动把旧链接 301 跳到新地址，老的收藏/外链不会失效；本地目录名与内部存储键（localStorage 的 novel-forge-* 前缀、预设 schema）保持不变，避免你已有的数据读不出来。个人 IP 仍归瑞宝宝。",
   "v3.1.57 赞助支持（SPONSOR）：①设置页新增「8. 赞助支持」区块——展示微信收款码（/sponsor/wechat-qr.png），加载失败 onError 容错显示「作者待配置收款码」（把 wechat-qr.png 放到 public/sponsor/ 即点亮），纯前端 img、不碰后端、不收集任何赞助记录；②GitHub FUNDING 入口——.github/FUNDING.yml 配 custom 指向微信收款码 raw 链接，仓库主页显示 Sponsor 按钮（GitHub 原生涨好感位、零成本）；③两条腿复用同一张图——APP 内设置页与 GitHub 仓库主页都能扫；④安全——收款码仅转账入口二维码、不含任何密钥/凭据、纯静态图片放心入库，不做后端金额/留言收集（避隐私与成本、符合本地优先）；⑤public/sponsor/README.md 说明图怎么放。个人 IP 仍归瑞宝宝。",
   "v3.1.56 安全升级 + 修一个「老库升级后首页直接打不开」的真 bug（SEC-BUMP / JSON-MIGRATE）：①先说最要紧的 bug——上一轮把结构化字段改成 Json 之后，读这种字段时会做一次 JSON 解析，而旧数据库里「小说类型」这一栏存的是裸文字（比如「玄幻」「都市」），它不是合规的 JSON（少了引号），解析当场报错，结果是项目列表接口整站 500、首页一片空白；其余 82 个值因为原本就是打包成 JSON 存进去的（对象或数组，本身就是合规 JSON），不受影响。已配好迁移脚本 scripts/migrate-json-fields.mjs：凡解析不过的值一律当裸文字补上引号（「都市」补引号后读回来还是「都市」，下游照常处理），可重复执行、跑之前自动备份；新装的用户不会有这个问题，只有从旧版升上来的老库需要跑一次。②安全升级：Next.js 从 16.2.7 升到 16.3.3，一口气修掉 9 个高危漏洞（其中含「中间件可被绕过」——这直接关系到以后加登录保护还管不管用、「服务端请求伪造」「内部端点未授权泄露」等）；再跑一轮依赖自动修复，高危漏洞从 12 个降到 3 个（剩下 3 个要靠破坏性升级才能修，风险大于收益，先记录不动）。③升级后的回归验证全部通过：类型检查 0 错误、122 个测试文件 1232 个测试全过、13 个页面逐个访问全部正常、生产构建 25.6 秒产出 140 条路由。④仍待办：GitHub 自动体检转绿、公开部署前必须补鉴权（128 条路由零鉴权，本地自己用则不需要）。个人 IP 仍归瑞宝宝。",
   "v3.1.55 数据库目录不再可能被误传上网 + 记一次失败的架构尝试（DATA-GITIGNORE）：①真问题——.gitignore 只写了 `*.db`，这只挡住数据库本体，挡不住同目录下的其它文件（比如我给数据库做备份时生成的 novelforge.db.bak-20260830 这类带时间戳的备份文件）；而 data/ 目录里存着你在设置页填的 AI 钥匙、以及全部小说正文和设定，只要这类文件被 commit 一次，就是「钥匙泄露 + 全部稿件外泄」的既成事故，且 Git 历史里删不干净。现在改成整个 data/ 目录一律不入库（顺手补上 db-wal/db-shm/sqlite 等后缀），从「记住别传某个后缀」变成「这个目录根本进不来」，堵死这一类手滑。②本轮还攻下了一座架构山头——让数据库直接支持「结构化字段」，自写的打包解包层（prisma-serialize）正式退役：实测 Prisma 7.8 + SQLite 的 Json 类型已支持（String[] 标量数组仍不支持，但 Json 能装数组，够用）；中途撞上工具自身的 bug——Json 字段的默认值会被翻译成非法 SQL（DEFAULT [] 裸方括号，SQLite 不认，报 unrecognized token 语法错误），改用 @default(dbgenerated(...)) 把默认值原文直接交给数据库即绕过，复杂默认值（eventImportances 的 S/A/B/C 四层结构）同样适用；共改造 52 个结构化字段，7 个纯文本 content 字段（正文与快照）保持 String 不动。③收成：162 个类型错误收敛至 0（tsc --noEmit 全绿，写入侧 TS2322 由 115 降到 0）、vitest 122 文件全过、数据库 31 张表逐条比对与改动前完全一致、Json 字段往返验证正确（tags 读回为数组、content 读回为对象）。④配套改动：新增 asArray 工具（保留元素原始类型——safeSplit 会把对象数组压成字符串数组，不适合 LoreTable.rows 这类）；SQLite 的 Json 字段不支持 contains 过滤，改 string_contains（语义等价：都是对底层 TEXT 做子串匹配）；seed.ts 同步停用已退役的序列化层，否则 seed 会双重编码。⑤顺带堵掉隐患：序列化层原先会把以花括号或方括号开头的正文误当 JSON 解析（比如正文本身是个列表），现在纯文本字段不再经过任何转换。⑥上线验收揪出的真 bug（老库升级必读）：结构化字段改 Json 后，读 Json 列时会做一次 JSON 解析，而旧库里 Project.genre 存的是裸字符串（如「玄幻」「都市」），它不是合法 JSON（少了引号），解析直接抛错，导致项目列表接口整站 500、首页打不开。其余 82 个字段值因为原本就是打包解包员写进去的对象或数组（本身即合法 JSON），不受影响。已新增迁移脚本 scripts/migrate-json-fields.mjs：凡解析失败的值一律当作裸字符串补上引号（「都市」变成带引号的 JSON 字符串，读回来还是「都市」，下游照常处理），幂等可重复执行、运行前自动备份；新 clone 建的库不存在此问题，只有从旧版升级的老库需要跑一次。⑦验收实测：13 个页面逐个访问全部 200；畸形输入、空提交、不存在的资源均返回正确的 4xx 而非 5xx；数据往返验证通过（数组字段、对象字段、5000 字超长文本、含尖括号引号表情的特殊字符均原样往返）；生产构建实测通过（25.6 秒、140 条路由全过）。⑧仍待办：CI 转绿、公开部署前必须补鉴权（128 条路由零鉴权）。个人 IP 仍归瑞宝宝。",
@@ -222,6 +223,32 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.58",
+    date: "2026-08-31",
+    title: "品牌改名 Novel Smith + 微信收款码上线（REBRAND-SPONSOR）",
+    sections: [
+      {
+        label: "🏷️ 品牌改名（REBRAND）",
+        items: [
+          "项目正式更名：Novel Forge → Novel Smith（中文「AI 小说工匠」，副标题「本地优先 · 数据自有」）",
+          "改名理由：赛道已有同名高重合项目 RhythmicWave/NovelForge（Python，1150 star，仍在更新），搜 NovelForge 时我们被淹没；Smith（工匠）全球无强同名项目，比 Forge（熔炉）更有辨识度",
+          "改名范围：GitHub 仓库名 + git remote + package.json + README 中英 + PWA manifest + docs/banner.svg 横幅",
+          "界面同步：首页标题、设置页文案、changelog 页、导出 DOCX/EPUB 水印与元信息全部改为 Novel Smith",
+          "README 首屏补辨识标签（TypeScript · Local-First · 分层记忆引擎 · 中文长篇 · 数据不出本机），一眼区分于那个 Python 卡片式项目",
+          "兼容性：GitHub 旧链接自动 301 跳转不失效；本地目录名与内部存储键保持不变，已有数据不受影响",
+        ],
+      },
+      {
+        label: "🎁 赞助收款码上线（SPONSOR-ON）",
+        items: [
+          "微信收款码已放入 public/sponsor/wechat-qr.png，设置页「8. 赞助支持」区块显示真码，替换原「作者待配置收款码」占位",
+          "GitHub 仓库主页 Sponsor 按钮（.github/FUNDING.yml）同步指向新地址，站内站外两条路都能扫",
+          "收款码为纯静态图片、不含任何密钥或凭据，不做后端金额/留言收集，符合本地优先与隐私原则",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.57",
     date: "2026-08-30",

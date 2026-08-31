@@ -1,23 +1,25 @@
 <!-- badges -->
-[![License](https://img.shields.io/github/license/huanweide/novel-forge)](LICENSE)
-[![CI](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-forge/actions/workflows/ci.yml)
-[![Stars](https://img.shields.io/github/stars/huanweide/novel-forge)](https://github.com/huanweide/novel-forge/stargazers)
+[![License](https://img.shields.io/github/license/huanweide/novel-smith)](LICENSE)
+[![CI](https://github.com/huanweide/novel-smith/actions/workflows/ci.yml/badge.svg)](https://github.com/huanweide/novel-smith/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/huanweide/novel-smith)](https://github.com/huanweide/novel-smith/stargazers)
 [![界面预览](https://img.shields.io/badge/界面预览-novel--forge--nu.vercel.app-6366f1)](https://novel-forge-nu.vercel.app)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/huanweide/novel-forge/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/huanweide/novel-smith/pulls)
 <!-- /badges -->
 
-![Novel Forge](docs/banner.svg)
+![Novel Smith](docs/banner.svg)
 
-# Novel Forge — AI 小说工坊
+# Novel Smith — AI 小说工匠
 
 > **中文**：把「写长篇」从体力活变成创意活。  
 > **English**: A local-first AI writing workshop for long-form web novels — characters, lore, outlines, and chapters, all in one place.
 
-[🖼 界面预览](https://novel-forge-nu.vercel.app) · [📦 快速开始](#快速开始) · [📖 English README](README_EN.md) · [⭐ 点 Star 支持](https://github.com/huanweide/novel-forge/stargazers)
+`TypeScript` · `Local-First` · `分层记忆引擎` · `中文长篇` · `数据不出本机`
+
+[🖼 界面预览](https://novel-forge-nu.vercel.app) · [📦 快速开始](#快速开始) · [📖 English README](README_EN.md) · [⭐ 点 Star 支持](https://github.com/huanweide/novel-smith/stargazers)
 
 **当前版本：v3.1.57** · 本地 SQLite 零配置 · 开箱 17 个示范预设 · 一键导出 5 种格式 · MIT 开源
 
-> **关于在线预览**：上面那个链接只能**看界面长什么样**，点进去做不了实际操作 —— 因为它跑在只读的云环境里，而 Novel Forge 的数据全部要写进本地 SQLite 文件。**完整功能请按下面的「快速开始」在你自己电脑上跑**，两分钟就能起来。
+> **关于在线预览**：上面那个链接只能**看界面长什么样**，点进去做不了实际操作 —— 因为它跑在只读的云环境里，而 Novel Smith 的数据全部要写进本地 SQLite 文件。**完整功能请按下面的「快速开始」在你自己电脑上跑**，两分钟就能起来。
 
 ---
 
@@ -31,7 +33,7 @@
 - 想不出新剧情，坐在文档前发呆；
 - 导出给编辑的 Word 格式一团糟。
 
-Novel Forge 就是要把这些脏活、累活、记不住的活**交给 AI 自动管**，你只管创意和落笔。
+Novel Smith 就是要把这些脏活、累活、记不住的活**交给 AI 自动管**，你只管创意和落笔。
 
 ---
 
@@ -43,9 +45,9 @@ Novel Forge 就是要把这些脏活、累活、记不住的活**交给 AI 自�
 
 ---
 
-## 为什么选 Novel Forge
+## 为什么选 Novel Smith
 
-| 你现在的痛苦 | 传统做法 | Novel Forge |
+| 你现在的痛苦 | 传统做法 | Novel Smith |
 |---|---|---|
 | 写到 50 章忘了前面的设定 | 手动翻文档、做 Excel | **自动填表**：每章生成后抽人物/地点/势力 → 自动建角色卡与世界书词条 |
 | 角色多了关系理不清 | 自己画图或凭记忆 | **关系图**：节点可拖动、位置记忆、双击开卡 |
@@ -86,8 +88,8 @@ Novel Forge 就是要把这些脏活、累活、记不住的活**交给 AI 自�
 ### 手动分步
 
 ```bash
-git clone https://github.com/huanweide/novel-forge.git
-cd novel-forge
+git clone https://github.com/huanweide/novel-smith.git
+cd novel-smith
 cp .env.example .env          # 默认即用本地 SQLite，无需手改
 npm install                  # 安装依赖（含 better-sqlite3 预编译二进制）
 npm run dev:db               # 建表 + 启动
@@ -102,7 +104,7 @@ npm run dev:db               # 建表 + 启动
 ## 功能全景
 
 ```
-Novel Forge
+Novel Smith
 ├── 首页            → 项目管理（创建/删除/概览）
 ├── 探讨模式         → 对话式构建小说世界（11步骤+抽卡）
 ├── 工作台           → 核心写作界面
@@ -191,7 +193,7 @@ npm start              # 启动生产服务器
 
 ## 贡献与反馈
 
-Novel Forge 是个人开源项目，欢迎一切形式的参与：
+Novel Smith 是个人开源项目，欢迎一切形式的参与：
 
 - **点 Star**：最简单也最有用的支持，让项目被更多人看到。
 - **开 Issue**：遇到 Bug、想到好功能、文档有错，都欢迎提。
@@ -204,7 +206,7 @@ Novel Forge 是个人开源项目，欢迎一切形式的参与：
 
 ## 赞助支持
 
-如果 Novel Forge 帮你把故事写了出来，可以请作者喝杯奶茶 —— 纯自愿，不影响任何功能。
+如果 Novel Smith 帮你把故事写了出来，可以请作者喝杯奶茶 —— 纯自愿，不影响任何功能。
 
 - **微信扫码**：设置页 → 拉到底部「赞助支持」区块，直接用微信扫
 - **GitHub Sponsor**：本仓库主页的 Sponsor 按钮，指向同一张收款码
@@ -220,4 +222,4 @@ MIT License — 详见 [LICENSE](LICENSE)
 
 ---
 
-> Novel Forge · AI 小说工坊 · 本地优先 · 数据自有
+> Novel Smith · AI 小说工坊 · 本地优先 · 数据自有

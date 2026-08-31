@@ -33,7 +33,7 @@ export async function POST() {
       data: {
         name: SAMPLE_NAME,
         description:
-          "由 Novel Forge 内置的仙侠题材示例项目——直观展示「定义权·规则」「世界观」「剧情推进倾向」如何真正进入写作上下文（下达硬规则后 AI 生成会遵守），以及长文自动填表召回机制。可直接打开阅读、续写、导出。",
+          "由 Novel Smith 内置的仙侠题材示例项目——直观展示「定义权·规则」「世界观」「剧情推进倾向」如何真正进入写作上下文（下达硬规则后 AI 生成会遵守），以及长文自动填表召回机制。可直接打开阅读、续写、导出。",
         genre: ["仙侠", "玄幻"],
         targetWordCount: 300000,
         synopsis:

@@ -52,7 +52,7 @@ export async function GET(
       format: "nfproject",
       version: 1,
       exportedAt: new Date().toISOString(),
-      generator: "Novel Forge",
+      generator: "Novel Smith",
       include: Array.from(allowed),
       excluded: ["ChapterSummary","StoryBeat","PendingCommitment","PendingItem","StoryNodeRevision","GameSession"],
       project,

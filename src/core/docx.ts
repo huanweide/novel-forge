@@ -172,7 +172,7 @@ export function buildDocx(
     }
   }
 
-  body.push(para("由 Novel Forge 生成", { sizeHalf: 18 }));
+  body.push(para("由 Novel Smith 生成", { sizeHalf: 18 }));
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -212,15 +212,15 @@ ${body.join("\n")}
   const coreXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <dc:title>${escapeXml(projectName)}</dc:title>
-<dc:creator>${escapeXml(author || "Novel Forge")}</dc:creator>
-<cp:lastModifiedBy>Novel Forge</cp:lastModifiedBy>
+<dc:creator>${escapeXml(author || "Novel Smith")}</dc:creator>
+<cp:lastModifiedBy>Novel Smith</cp:lastModifiedBy>
 <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
 <dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
 </cp:coreProperties>`;
 
   const appXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
-<Application>Novel Forge</Application>
+<Application>Novel Smith</Application>
 </Properties>`;
 
   const entries = [
@@ -280,7 +280,7 @@ export async function buildDocxStream(
     }
   }
 
-  body.push(para("由 Novel Forge 生成", { sizeHalf: 18 }));
+  body.push(para("由 Novel Smith 生成", { sizeHalf: 18 }));
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -320,15 +320,15 @@ ${body.join("\n")}
   const coreXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <dc:title>${escapeXml(projectName)}</dc:title>
-<dc:creator>${escapeXml(author || "Novel Forge")}</dc:creator>
-<cp:lastModifiedBy>Novel Forge</cp:lastModifiedBy>
+<dc:creator>${escapeXml(author || "Novel Smith")}</dc:creator>
+<cp:lastModifiedBy>Novel Smith</cp:lastModifiedBy>
 <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
 <dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
 </cp:coreProperties>`;
 
   const appXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
-<Application>Novel Forge</Application>
+<Application>Novel Smith</Application>
 </Properties>`;
 
   const entries = [

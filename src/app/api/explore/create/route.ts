@@ -1,7 +1,7 @@
 /**
  * POST /api/explore/create
  *
- * 从探讨模式的构建配置+已采纳内容创建完整的Novel Forge项目。
+ * 从探讨模式的构建配置+已采纳内容创建完整的Novel Smith项目。
  *
  * Body: {
  *   config: BuildConfig,

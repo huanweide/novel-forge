@@ -6,12 +6,12 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { ShortcutProvider } from "@/components/ShortcutProvider";
 
 export const metadata: Metadata = {
-  title: "Novel Forge — AI 小说工坊",
+  title: "Novel Smith — AI 小说工匠",
   description: "基于大语言模型的长篇小说智能写作系统",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "Novel Forge",
+    title: "Novel Smith",
     statusBarStyle: "black-translucent",
   },
 };
@@ -53,7 +53,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-/* 清除所有 Service Worker——Novel Forge 不需要离线缓存 */
+/* 清除所有 Service Worker——Novel Smith 不需要离线缓存 */
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
     regs.forEach(function(r){ r.unregister(); });
@@ -65,7 +65,7 @@ if('serviceWorker' in navigator){
       <body className="min-h-full flex flex-col">
         <noscript>
           <div style={{ padding: "1.5rem", textAlign: "center", color: "#F8F7F2", background: "#0E1424", fontFamily: "system-ui, sans-serif" }}>
-            本应用需要启用 JavaScript 才能运行。请在现代浏览器中开启 JavaScript 后访问 Novel Forge。
+            本应用需要启用 JavaScript 才能运行。请在现代浏览器中开启 JavaScript 后访问 Novel Smith。
           </div>
         </noscript>
         <SystemStatusBanner />

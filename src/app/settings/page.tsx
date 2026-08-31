@@ -255,7 +255,7 @@ export default function SettingsPage() {
         {/* 说明 */}
         <div className="p-4 rounded-2xl surface-elevated">
           <p className="text-sm text-[var(--nv-text-tertiary)] leading-relaxed">
-            Novel Forge 不自带任何 API Key。填入你自己的 Key，选择模型，所有 AI 写作功能即可使用。
+            Novel Smith 不自带任何 API Key。填入你自己的 Key，选择模型，所有 AI 写作功能即可使用。
             <br />
             <span className="text-[var(--nv-text-muted)] text-xs">
               Key 保存在本地数据库，不会上传到任何第三方。切换提供商后会自动检索该服务商的可用模型。
@@ -569,7 +569,7 @@ export default function SettingsPage() {
           </SectionHeader>
           <div className="p-4 rounded-2xl surface-elevated space-y-3">
             <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed">
-              如果 Novel Forge 帮你把故事写了出来，请作者喝杯奶茶。你的支持是继续打磨这个本地写作工坊的动力。
+              如果 Novel Smith 帮你把故事写了出来，请作者喝杯奶茶。你的支持是继续打磨这个本地写作工匠的动力。
             </p>
             <div className="flex flex-col items-center gap-3 pt-1">
               {qrError ? (

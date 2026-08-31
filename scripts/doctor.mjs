@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Novel Forge 启动自检（doctor）
+ * Novel Smith 启动自检（doctor）
  *
  * 用途：在 `npm run dev` / `npm start` 之前，快速确认两项最关键、也最容易导致
  * “完全不能用”的前提是否满足：
@@ -27,7 +27,7 @@ const fail = (m) => {
 const pass = (m) => console.log("  ✓ " + m);
 const warn = (m) => console.warn("  ⚠ " + m);
 
-console.log("\n=== Novel Forge 启动自检 (doctor) ===\n");
+console.log("\n=== Novel Smith 启动自检 (doctor) ===\n");
 
 // ── 1. 数据库 ──────────────────────────────────────────────
 const dbUrl = process.env.DATABASE_URL;

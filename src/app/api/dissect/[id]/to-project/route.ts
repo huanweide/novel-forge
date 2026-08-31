@@ -5,7 +5,7 @@ import { safeJson } from "@/lib/api-body";
 /**
  * POST /api/dissect/[id]/to-project
  *
- * 将已完成的拆书任务转为 Novel Forge 项目。
+ * 将已完成的拆书任务转为 Novel Smith 项目。
  *
  * Body（可选）:
  *   { modifications?: string }  — 用户与Agent讨论后的修改要求

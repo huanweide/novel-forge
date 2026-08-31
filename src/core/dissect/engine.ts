@@ -669,7 +669,7 @@ function escapeRegex(s: string): string {
 // ─── 转为项目 ────────────────────────────────────────────
 
 /**
- * 将拆书结果转为 Novel Forge 项目。
+ * 将拆书结果转为 Novel Smith 项目。
  * 用提取的维度数据创建：项目基本信息 + 角色卡 + 世界观条目 + 风格卡 + 章节大纲。
  */
 export async function convertToProject(

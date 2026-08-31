@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const project = await prisma.project.create({
       data: {
         name: projectName,
-        description: `「${tpl.name}」题材开局骨架（由 Novel Forge 题材模板生成）——含世界观倾向、剧情推进倾向与主角原型，可直接续写或调整。`,
+        description: `「${tpl.name}」题材开局骨架（由 Novel Smith 题材模板生成）——含世界观倾向、剧情推进倾向与主角原型，可直接续写或调整。`,
         genre: [tpl.name],
         targetWordCount: 300000,
         synopsis: tpl.openingHook,
