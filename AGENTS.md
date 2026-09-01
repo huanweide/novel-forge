@@ -5,7 +5,27 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 <!-- BEGIN:novel-forge-rules -->
-# Novel Forge 项目规则 — 每次会话必定加载
+# Novel Smith 项目规则 — 每次会话必定加载
+
+## 🔴 第零条：动手前先建快照（最高优先级，改任何文件前必做）
+
+本仓库已配好快照工具，**改任何文件之前必须先跑一次**，否则改坏了没法回退：
+
+```bash
+./scripts/git-snapshot.sh create "一句话说明这次要改什么"
+# PowerShell 用：.\scripts\git-snapshot.ps1 create "一句话说明"
+```
+
+- 快照 = git 标签（管已入库文件）+ tar 包（管还没 add 的文件）+ bundle（连 .git 被删都能还原）。
+- 回滚：`./scripts/git-snapshot.sh restore <标签>`（安全模式开新分支，main 不动）。
+- 查历史：`./scripts/git-snapshot.sh list`
+- 完整台账、真身路径、GitHub 现状、版本历史全在 **`agent.md`**，动手前先读一遍。
+
+### ⚠️ 真身路径（改错目录等于白干）
+
+真身只有这一个：`C:\Users\Administrator\WorkBuddy\2026-07-25-14-19-44\novel-forge`
+（判断标准：`git remote get-url origin` 返回 `novel-smith`，`package.json` 的 name 是 `novel-smith`）
+`C:\c\Users\...\novel-forge` 是 v3.1.53 的旧镜像，**别在上面改**。详见 agent.md 第一节。
 
 ## 🔴 公告更新流程（强制 — 每次代码变更后必做）
 

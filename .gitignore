@@ -124,3 +124,6 @@ pip.conf
 # 本地运行时临时目录与异常残留
 /tmp/
 /nul
+
+# git 快照备份（bundle 每个几十 MB，入库会把仓库撑爆）
+/.snapshots/
