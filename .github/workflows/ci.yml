@@ -1,6 +1,12 @@
 name: CI
 
-on: [push, pull_request]
+# 快照标签（snap/*）只是本地回滚锚点，不跑 CI，省得每拍一次快照白烧 4 分钟
+on:
+  push:
+    branches: [main, master]
+    tags-ignore:
+      - 'snap/*'
+  pull_request:
 
 jobs:
   check:

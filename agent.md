@@ -64,6 +64,9 @@ PowerShell 环境用 `.\scripts\git-snapshot.ps1`，参数和上面完全一样�
 
 `.snapshots/` 已加进 `.gitignore`，不入库（bundle 每个几十 MB，塞进 git 会把仓库撑爆）。
 
+**异地备份**：快照标签会推到 GitHub（`git push origin snap/xxx`），只推标签、不推 bundle——标签几乎不占空间。这样即使本机硬盘挂了，也能从 GitHub 拉回任何一个快照点的代码；bundle 留在本机，专门防 `.git` 目录被误删。两条保险互相独立。
+CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则每拍一次快照白烧 4 分钟）。
+
 ---
 
 ## 三、三条铁律（改代码必守）
