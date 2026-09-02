@@ -46,6 +46,10 @@ export function ExportDialog({
     total: number;
     hits: { word: string; chapter: string; context: string }[];
   } | null>(null);
+  // v3.1.65：导出前排版预览（HTML 样张）
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const toggleChapter = (id: string) => {
     setSelected((prev) => {
@@ -117,8 +121,71 @@ export function ExportDialog({
     }
   };
 
+  // v3.1.65：导出前排版预览 —— 以 HTML 样张代表最终排版，避免「导完才发现格式不对」
+  // DOCX/EPUB 为同排版二进制文档，HTML 样张最直观反映最终观感
+  const previewExport = async () => {
+    if (range === "selected" && selected.size === 0) {
+      toastWarning("未选中任何章节");
+      return;
+    }
+    setPreviewLoading(true);
+    try {
+      const params = buildParams(false);
+      params.set("format", "html"); // 始终取 HTML 样张
+      const res = await fetch(`/api/projects/${projectId}/export?${params.toString()}`);
+      if (!res.ok) {
+        let msg = "预览生成失败";
+        try {
+          const d = (await res.json()) as { error?: string };
+          if (d?.error) msg = d.error;
+        } catch {
+          /* ignore */
+        }
+        toastWarning(msg);
+        return;
+      }
+      setPreviewHtml(await res.text());
+      setShowPreview(true);
+    } catch {
+      toastWarning("预览生成失败，可直接导出");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
-    <Modal open onClose={onClose} bare ariaLabel="导出小说" panelClassName="max-w-md max-h-[85vh] overflow-y-auto">
+    <Modal
+      open
+      onClose={onClose}
+      bare
+      ariaLabel="导出小说"
+      panelClassName={showPreview ? "max-w-3xl max-h-[92vh] overflow-hidden" : "max-w-md max-h-[85vh] overflow-y-auto"}
+    >
+      {showPreview ? (
+        <div className="flex h-[88vh] flex-col">
+          <div className="flex items-center justify-between border-b border-[var(--nv-border-2)] px-5 py-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--nv-text-primary)]">排版预览（HTML 样张）</h3>
+              <p className="mt-0.5 text-[11px] text-[var(--nv-text-tertiary)]">
+                所见即所得：DOCX / EPUB 导出为同排版电子文档，此 HTML 样张最直观反映最终排版
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowPreview(false)} className="btn-ghost h-8 text-sm">
+                返回设置
+              </Button>
+              <button
+                onClick={onClose}
+                className="shrink-0 text-[var(--nv-text-tertiary)] transition-colors hover:text-[var(--nv-text-primary)]"
+                aria-label="关闭"
+              >
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+          </div>
+          <iframe srcDoc={previewHtml ?? ""} sandbox="" className="min-h-0 w-full flex-1 border-0 bg-white" title="排版预览" />
+        </div>
+      ) : (
       <div className="p-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -273,11 +340,17 @@ export function ExportDialog({
             </div>
           </div>
         ) : (
-          <Button onClick={doExport} disabled={checking} className="btn-primary h-9 w-full text-sm">
-            <Icon name="upload" size={14} /> {checking ? "预检中…" : `导出 ${[...BASIC_FORMATS, ...ADVANCED_FORMATS].find((f) => f.key === format)?.label}`}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={previewExport} disabled={previewLoading} className="btn-ghost h-9 flex-1 text-sm">
+              <Icon name="eye" size={14} /> {previewLoading ? "生成预览…" : "预览排版"}
+            </Button>
+            <Button onClick={doExport} disabled={checking} className="btn-primary h-9 flex-[2] text-sm">
+              <Icon name="upload" size={14} /> {checking ? "预检中…" : `导出 ${[...BASIC_FORMATS, ...ADVANCED_FORMATS].find((f) => f.key === format)?.label}`}
+            </Button>
+          </div>
         )}
       </div>
+      )}
     </Modal>
   );
 }

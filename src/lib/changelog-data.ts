@@ -25,7 +25,7 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.63";
+export const LATEST_VERSION = "v3.1.65";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
