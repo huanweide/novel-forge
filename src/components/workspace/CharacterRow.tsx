@@ -5,6 +5,7 @@ import { memo } from "react";
 import { Icon } from "@/components/ui/icons";
 import { TagChip } from "./TagChip";
 import type { CharacterData } from "./types";
+import { type LastAppearance } from "@/lib/workspace-appearance";
 
 function CharacterRowImpl({
   character,
@@ -17,6 +18,8 @@ function CharacterRowImpl({
   tagFilter,
   onTagClick,
   onLocate,
+  lastAppearance,
+  onJumpToChapter,
 }: {
   character: CharacterData;
   selected: boolean;
@@ -28,6 +31,8 @@ function CharacterRowImpl({
   tagFilter: string;
   onTagClick: (tag: string) => void;
   onLocate?: (id: string) => void;
+  lastAppearance?: LastAppearance | null;
+  onJumpToChapter?: (nodeId: string) => void;
 }) {
   return (
     <div
@@ -62,6 +67,16 @@ function CharacterRowImpl({
         </span>
         <div className="flex-1 min-w-0">
           <span className="truncate block hover:text-[var(--nv-text-primary)] transition-colors">{character.name}</span>
+          {lastAppearance && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onJumpToChapter?.(lastAppearance.nodeId); }}
+              title={`上次出现在「${lastAppearance.nodeTitle}」，点击跳转该章`}
+              className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-primary)] transition-colors"
+            >
+              <Icon name="history" size={9} className="align-middle" />第{lastAppearance.order}章 · {lastAppearance.nodeTitle}
+            </button>
+          )}
           {asArray<string>(character.tags).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").length > 0 && (
             <div className="flex gap-0.5 mt-0.5 flex-wrap">
               {asArray<string>(character.tags).filter(t => !t.startsWith("📥") && !t.startsWith("📝") && t !== "🗂 已合并").slice(0, 5).map((t: string) => (

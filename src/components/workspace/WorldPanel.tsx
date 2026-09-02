@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { LorebookData } from "./types";
+import { type LastAppearance } from "@/lib/workspace-appearance";
 import { confirmDialog, toastError, toastSuccess, toastInfo, toastAdded } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { WorldModuleSidebar } from "./WorldModuleSidebar";
@@ -17,10 +18,13 @@ import {
 
 export function WorldPanel({
   projectId, entries = [], onRefresh, onEditEntry, onLocate,
+  lastAppearanceMap, onJumpToChapter,
 }: {
   projectId: string; entries?: LorebookData[]; onRefresh: () => void;
   onEditEntry?: (entry: LorebookData) => void;
   onLocate?: (id: string) => void;
+  lastAppearanceMap?: Record<string, LastAppearance | null>;
+  onJumpToChapter?: (nodeId: string) => void;
 }) {
   const [activeModule, setActiveModule] = useState<ModuleKey>("geography");
   const [showCreate, setShowCreate] = useState(false);
@@ -147,6 +151,8 @@ export function WorldPanel({
           onEdit={onEditEntry}
           onConfirm={confirmEntry}
           onLocate={onLocate}
+          lastAppearanceMap={lastAppearanceMap}
+          onJumpToChapter={onJumpToChapter}
         />
       </div>
     </div>

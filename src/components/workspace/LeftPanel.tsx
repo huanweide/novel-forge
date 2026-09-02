@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { CharacterList } from "@/components/workspace/CharacterList";
 import { WorldPanel } from "@/components/workspace/WorldPanel";
@@ -12,6 +12,8 @@ import { Icon } from "@/components/ui/icons";
 import type { CharacterData, LorebookData, StoryNodeData } from "./types";
 import { toastError } from "@/components/ui/toast";
 import { useProjectStore } from "@/store";
+import { computeLastAppearances, type LastAppearance } from "@/lib/workspace-appearance";
+import { asArray } from "@/lib/utils";
 
 export function LeftPanel({
   activeTab, onTabChange, selectedNode, onSelectNode,   onAddSection,
@@ -37,6 +39,26 @@ export function LeftPanel({
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
+  // v3.1.67：纯前端计算「实体上次出现在第几章」，与正文高亮同源（name/alias/title/key 做 includes 匹配）
+  const storyNodes = project.storyNodes ?? [];
+  const charAppearance = useMemo(() => {
+    const entities = (project.characters ?? []).map((c) => ({
+      id: c.id,
+      names: [c.name, ...asArray(c.aliases)].filter(Boolean) as string[],
+    }));
+    return computeLastAppearances(storyNodes, entities);
+  }, [project.characters, storyNodes]);
+  const loreAppearance = useMemo(() => {
+    const entities = (project.lorebookEntries ?? []).map((e) => ({
+      id: e.id,
+      names: [e.title, ...asArray(e.keys)].filter(Boolean) as string[],
+    }));
+    return computeLastAppearances(storyNodes, entities);
+  }, [project.lorebookEntries, storyNodes]);
+  const jumpToChapter = useCallback((nodeId: string) => {
+    const node = storyNodes.find((n) => n.id === nodeId);
+    if (node) onSelectNode(node);
+  }, [storyNodes, onSelectNode]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreBtnRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
@@ -147,12 +169,17 @@ export function LeftPanel({
         {activeTab === "characters" && (
           <CharacterList characters={project.characters ?? []} projectId={project.id} onEdit={onEditCharacter}
             onLocate={onLocateEntity}
+            lastAppearanceMap={charAppearance}
+            onJumpToChapter={jumpToChapter}
             onDelete={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onConfirm={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewStatus: "approved" }) }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />
         )}
         {activeTab === "world" && (
-          <WorldPanel projectId={project.id} entries={project.lorebookEntries ?? []} onRefresh={loadProject} onEditEntry={onEditLore} />
+          <WorldPanel projectId={project.id} entries={project.lorebookEntries ?? []} onRefresh={loadProject} onEditEntry={onEditLore}
+            onLocate={onLocateEntity}
+            lastAppearanceMap={loreAppearance}
+            onJumpToChapter={jumpToChapter} />
         )}
         {activeTab === "rules" && (
           <RulesPanel projectId={project.id} onRefresh={loadProject} />

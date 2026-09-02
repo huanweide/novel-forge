@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Icon } from "@/components/ui/icons";
 import type { LorebookData } from "./types";
+import { type LastAppearance } from "@/lib/workspace-appearance";
 
 interface WorldEntryCardProps {
   entry: LorebookData;
@@ -15,9 +16,12 @@ interface WorldEntryCardProps {
   onConfirm?: (id: string) => void;
   /** 反向联动：在正文定位该词条首次出现处 */
   onLocate?: (id: string) => void;
+  /** 上次出现章节提示（纯前端计算） */
+  lastAppearance?: LastAppearance | null;
+  onJumpToChapter?: (nodeId: string) => void;
 }
 
-function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm, onLocate }: WorldEntryCardProps) {
+function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm, onLocate, lastAppearance, onJumpToChapter }: WorldEntryCardProps) {
   return (
     <div
       className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-all hover:-translate-y-0.5 hover:border-[var(--nv-border-3)] hover:shadow-[var(--shadow-glass-rest)]" + (entry.enabled ? "" : " opacity-60")}
@@ -75,6 +79,16 @@ function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, on
           <Icon name="x" size={12} />
         </button>
       </div>
+      {lastAppearance && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onJumpToChapter?.(lastAppearance.nodeId); }}
+          title={`上次出现在「${lastAppearance.nodeTitle}」，点击跳转该章`}
+          className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] text-[var(--nv-text-tertiary)] hover:text-[var(--nv-primary)] transition-colors"
+        >
+          <Icon name="history" size={9} className="align-middle" />第{lastAppearance.order}章 · {lastAppearance.nodeTitle}
+        </button>
+      )}
       {entry.content && (
         <p className="mt-0.5 line-clamp-4 text-[10px] leading-relaxed text-[var(--nv-text-tertiary)]">
           {entry.content}

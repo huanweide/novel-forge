@@ -14,9 +14,11 @@ interface WorldEntryListProps {
   onEdit?: (entry: LorebookData) => void;
   onConfirm?: (id: string) => void;
   onLocate?: (id: string) => void;
+  lastAppearanceMap?: Record<string, { nodeId: string; nodeTitle: string; order: number } | null>;
+  onJumpToChapter?: (nodeId: string) => void;
 }
 
-export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, deletingId, onEdit, onConfirm, onLocate }: WorldEntryListProps) {
+export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, deletingId, onEdit, onConfirm, onLocate, lastAppearanceMap, onJumpToChapter }: WorldEntryListProps) {
   const [view, setView] = useState<"list" | "grid">("list");
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -52,6 +54,8 @@ export function WorldEntryList({ entries, moduleLabel, depthLabels, onDelete, de
             onEdit={onEdit}
             onConfirm={onConfirm}
             onLocate={onLocate}
+            lastAppearance={lastAppearanceMap?.[entry.id] ?? null}
+            onJumpToChapter={onJumpToChapter}
           />
         ))}
       </div>

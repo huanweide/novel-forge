@@ -17,6 +17,8 @@ export function CharacterGroupList({
   onConfirm,
   onTagClick,
   onLocate,
+  lastAppearanceMap,
+  onJumpToChapter,
 }: {
   grouped: Record<string, CharacterData[]>;
   roleOrder: string[];
@@ -30,6 +32,8 @@ export function CharacterGroupList({
   onConfirm?: (id: string) => void;
   onTagClick: (tag: string) => void;
   onLocate?: (id: string) => void;
+  lastAppearanceMap?: Record<string, { nodeId: string; nodeTitle: string; order: number } | null>;
+  onJumpToChapter?: (nodeId: string) => void;
 }) {
   return (
     <>
@@ -52,6 +56,8 @@ export function CharacterGroupList({
                 tagFilter={tagFilter}
                 onTagClick={onTagClick}
                 onLocate={onLocate}
+                lastAppearance={lastAppearanceMap?.[c.id] ?? null}
+                onJumpToChapter={onJumpToChapter}
               />
             ))}
           </Collapse>

@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.66";
+export const LATEST_VERSION = "v3.1.67";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.67 写作时提示「该角色上次出现在第 X 章」（LAST-SEEN · 让写作台真正「感知」角色）：①角色卡 / 世界书卡片新增一行小字提示（history 图标 +「上次出现：第 X 章 · 章节名」），直接告诉你这个角色 / 设定最近一次是在哪章登场的；点一下小字即跳到那一章，写新章时随手就能翻回上次出场处对照。②纯前端本地算、零新接口——直接拿你全部章节的正文，按角色名 / 别名 / 词条名 / 触发词去匹配（和正文里黄色高亮用的是同一套规则），按章节顺序取最后一次出现，秒出结果、不联网不花钱。③顺手修了 v3.1.66 的漏接——之前世界书的「定位」按钮点了没反应（WorldPanel 没把定位回调传下去），本轮补上，世界书也能点了。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；改动 8 个文件（新增纯函数 workspace-appearance.ts + LeftPanel/Character 三件套/World 三件套），零数据层改动。个人 IP 仍归瑞宝宝。",
   "v3.1.66 实体面板与写作区反向联动（LOCATE-LINK · 点角色卡 / 世界书卡片，正文定位并高亮）：①角色卡 / 世界书卡片新增「定位」按钮（target 图标，hover 显示），点一下正文自动滚动到该实体第一次出现处并黄光闪烁高亮——之前只能从正文点高亮实体跳卡片，现在反过来从卡片也能定位正文，正反双向打通。②定位复用现有 data-entity-id span（正向高亮已生成），纯前端 querySelector 定位 + scrollIntoView 居中 + Element.animate 黄光呼吸动画，零新数据通路、最低风险。③切章自动清空定位、不跨章误高亮；本章没提该实体时 toast 提示「本章正文未提及该角色 / 词条，无法定位」；定位按钮 stopPropagation 避免误触发编辑 / 删除。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；链路透传 11 个文件（page/LeftPanel/CenterPanel/MarkdownViewer/角色卡三件套/世界书三件套 + 本文件），零数据层改动。个人 IP 仍归瑞宝宝。",
   "v3.1.65 导出前排版预览（EXPORT-PREVIEW · 导完不再翻车）：①导出对话框新增「预览排版」按钮（眼睛图标），点一下在对话框内嵌 iframe 里渲染 HTML 排版样张（所见即所得），确认排版对味再点导出下载，避免「导完才发现格式不对、白等半天」。②预览与导出同源——预览调的是同一个导出接口（仅 format 固定 html、沿用所选范围/大纲/署名），样张与最终文件排版一致，不是另写一套假预览；DOCX/EPUB 同一套排版的二进制文档，HTML 样张最直观反映最终观感。③安全兜底——iframe 用 sandbox 隔离、HTML 样张纯静态自包含；选章模式没勾章节提示先选章；预览失败（空书/接口报错）走 toast 不卡死。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；只动 ExportDialog 一个组件，零数据层改动。个人 IP 仍归瑞宝宝。",
   "v3.1.64 写作台沉浸写作模式（IMMERSIVE · 把现有 Zen 专注升级为真全屏）：①把原先只隐藏工具栏+左栏的 Zen 专注，升级为「沉浸写作模式」——进入时同步隐藏全部侧栏（大纲/AI 助手/工具栏）+ 主动调用浏览器 Fullscreen API 进入物理全屏（隐藏地址栏/标签栏，正文真正占满整个屏幕），对标 Ulysses / Scrivener 的专注写作体验。②顶栏新增显眼的「沉浸写作」入口按钮（Lucide maximize 图标），点一下即进入；原有 Cmd/Ctrl+. 快捷键与正文内「退出专注」按钮继续生效；监听 fullscreenchange 事件，用户按 Esc/F11 退出原生全屏时自动同步退出沉浸（不残留「全屏已退但侧栏仍藏」的割裂状态）。③容错——Fullscreen API 在 iframe/部分沙箱环境会被浏览器拒绝，已 try/catch 兜底，失败也不影响布局沉浸（侧栏照常隐藏、正文照常全宽），环境允许时再自动全屏。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；新增 maximize 图标至虚空玻璃图标注册表；纯 UI 状态增强、无数据层改动。个人 IP 仍归瑞宝宝。",
@@ -231,6 +232,33 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.67",
+    date: "2026-09-02",
+    title: "写作时提示「该角色上次出现在第 X 章」（让写作台真正「感知」角色 · LAST-SEEN）",
+    sections: [
+      {
+        label: "实体上次出现提示",
+        items: [
+          "角色卡 / 世界书卡片新增一行小字提示（history 图标 +「上次出现：第 X 章 · 章节名」），点一下即跳到该章，写新章时随手翻回上次出场处对照",
+          "纯前端本地计算、零新接口：直接扫描项目全部章节正文（storyNodes.content），按角色名 / 别名 / 词条名 / 触发词做 includes 匹配（与正文高亮同源），按 order 取最后一次出现的章节",
+        ],
+      },
+      {
+        label: "顺带修复 v3.1.66 漏接",
+        items: [
+          "WorldPanel 此前未透传 onLocate，导致世界书「定位」按钮是死链；本轮补上 onLocate={onLocateEntity}，世界书也能点卡片定位正文",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误、1289 条测试全绿、生产构建通过",
+          "新增纯函数 src/lib/workspace-appearance.ts（computeLastAppearances），改动 8 个文件（纯函数 + LeftPanel/Character 三件套/World 三件套），零数据层改动",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.66",
     date: "2026-09-02",

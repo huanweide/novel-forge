@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { CharacterData } from "./types";
+import { type LastAppearance } from "@/lib/workspace-appearance";
 import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
@@ -24,6 +25,8 @@ export function CharacterList({
   onNew,
   onExpanded,
   onLocate,
+  lastAppearanceMap,
+  onJumpToChapter,
 }: {
   characters?: CharacterData[];
   projectId: string;
@@ -33,6 +36,8 @@ export function CharacterList({
   onNew: () => void;
   onExpanded: () => void;
   onLocate?: (id: string) => void;
+  lastAppearanceMap?: Record<string, LastAppearance | null>;
+  onJumpToChapter?: (nodeId: string) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expanding, setExpanding] = useState(false);
@@ -500,6 +505,8 @@ export function CharacterList({
         onConfirm={resolvedOnConfirm}
         onTagClick={handleTagClick}
         onLocate={onLocate}
+        lastAppearanceMap={lastAppearanceMap}
+        onJumpToChapter={onJumpToChapter}
       />
 
       {filtered.length === 0 && (
