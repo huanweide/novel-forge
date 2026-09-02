@@ -93,6 +93,24 @@ export default function WorkspacePage() {
   const [selectedNode, setSelectedNode] = useState<StoryNodeData | null>(null);
   // v2.50.2：专注写作模式（Zen）——隐藏侧栏/工具栏，只留正文 + 打字机滚动
   const [zenMode, setZenMode] = useState(false);
+  // v3.1.64：沉浸写作模式 —— 进入 zen 时请求浏览器物理全屏，退出时收起（环境不允许全屏时布局沉浸仍生效）
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (zenMode) {
+      const req = document.documentElement.requestFullscreen?.();
+      if (req) req.catch(() => {});
+    } else if (document.fullscreenElement) {
+      const exit = document.exitFullscreen?.();
+      if (exit) exit.catch(() => {});
+    }
+  }, [zenMode]);
+  // 监听浏览器原生全屏退出（Esc / F11），同步退出沉浸，避免「全屏已退但侧栏仍隐藏」的割裂
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onFs = () => { if (!document.fullscreenElement && zenMode) setZenMode(false); };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, [zenMode]);
   // P2-2：被动展示叙事阶段名——基于当前章在全书章节列表中的进度位置推导，复用 computeNarrativeStage。
   // 主线被标记 completed 时视为收尾；否则不靠章数硬判（用户可写数百章而不被提前结局）。
   const narrativeStage = narrativeStageOf(selectedNode?.id, chapterNodes, project?.storylines);
@@ -1108,6 +1126,9 @@ export default function WorkspacePage() {
         </button>
         <button onClick={() => setShowProjectSettings(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="项目设定：骨架 / 配置 / 记忆衰减 / 确认交付，统一入口">
           <Icon name="settings" size={13} /> 项目设定
+        </button>
+        <button onClick={() => setZenMode(true)} className="text-xs btn-ghost px-3 py-1.5 rounded-xl flex items-center gap-1.5" title="沉浸写作模式（⌘/Ctrl + . 进入 · 隐藏全部侧栏并全屏正文）">
+          <Icon name="maximize" size={13} /> 沉浸写作
         </button>
       </div>
 
