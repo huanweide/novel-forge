@@ -467,6 +467,25 @@ export function CenterPanel({
                 </button>
               </span>
             </div>
+            {/* 下一步建议：首写引导（v3.1.62，纯展示、只读 state，降低首写决策成本 · 痛点#3） */}
+            {(() => {
+              if (isGenerating) return null;
+              const w = currentWords;
+              const hint =
+                w === 0
+                  ? { icon: "pencil" as const, text: "这一章还是空白——先写个开头，或点下方「生成」让 AI 起草一版骨架。" }
+                  : w < 500
+                  ? { icon: "sparkles" as const, text: "刚起步——继续「续写」把场景和人物铺开，别急着雕花。" }
+                  : w < 1500
+                  ? { icon: "scale" as const, text: "骨架有了——用「润色」打磨文笔，或「检查冲突 / 伏笔」查前后矛盾。" }
+                  : { icon: "check" as const, text: "本章已成型——跑一次「过审自检」查机器味，满意就标记「已完成」收章。" };
+              return (
+                <div className="flex items-center gap-2 mt-2.5 px-3 py-2 rounded-xl border border-[var(--nv-primary)]/25 bg-[var(--nv-primary-soft)] text-[var(--nv-text-secondary)]">
+                  <Icon name={hint.icon} size={14} className="shrink-0 text-[var(--nv-primary)]" />
+                  <span className="text-xs leading-snug">{hint.text}</span>
+                </div>
+              );
+            })()}
             {/* 大纲编辑 */}
             <div className="mb-3 rounded-xl border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)]/40 p-2.5">
               {editingOutline ? (
