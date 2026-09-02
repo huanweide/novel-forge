@@ -239,6 +239,7 @@ model StoryNode {
   reviewLogs    Json @default(dbgenerated("'[]'"))       // ReviewLog[]
   revisionCount Int @default(0)
   qualityScore  Float?                    // 六维质量自动评分(0-100)，null=未评估
+  humanizeScore Float?                    // 本地过审自检分（AI痕迹指数 0-100，越高越像AI写的），null=未自检
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

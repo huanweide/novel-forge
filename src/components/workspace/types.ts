@@ -89,6 +89,8 @@ export interface StoryNodeData {
   worldTime: string | null;
   // v2.9.0：写作质量分（0–100）。经 /api/generate/audit/book POST persist 回写 StoryNode.qualityScore；null=未体检
   qualityScore?: number | null;
+  // v3.1.68：本地过审自检分（AI痕迹指数 0–100，越高越像 AI 写的）。经「过审自检」面板保存回写 StoryNode.humanizeScore；null=未自检
+  humanizeScore?: number | null;
 }
 
 export interface StorylineData {

@@ -97,6 +97,7 @@ export async function PUT(
         content: body.content,
         wordCount: body.wordCount,
         qualityScore: body.qualityScore,
+        humanizeScore: body.humanizeScore,
         branchId: body.branchId,
         isMainBranch: body.isMainBranch,
         activeCharacters: body.activeCharacters,

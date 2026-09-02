@@ -10,6 +10,8 @@
  */
 
 import { useMemo, useState } from "react";
+import { useProjectStore } from "@/store";
+import { toastSuccess, toastError } from "@/components/ui/toast";
 import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/icons";
 import { analyzeText } from "@/core/humanize";
@@ -164,16 +166,46 @@ export function HumanizePanel({
   onClose,
   text,
   chapterTitle,
+  nodeId,
 }: {
   open: boolean;
   onClose: () => void;
   /** 待检正文（本地分析，不上传） */
   text: string;
   chapterTitle?: string;
+  /** 当前章节节点 id；传入才显示「保存过审分到本章」按钮 */
+  nodeId?: string;
 }) {
   // 只在打开时算；text 不变就不重算。规则引擎是同步纯函数，几千字在毫秒级。
   const report = useMemo(() => (open ? analyzeText(text) : null), [open, text]);
   const [onlySerious, setOnlySerious] = useState(false);
+  const [savingHumanize, setSavingHumanize] = useState(false);
+
+  // v3.1.68：把本次过审分（humanizeScore）落到本章，大纲即显示绿/黄/红。全程纯本地算出的分，仅经专用接口写入本机数据库。
+  const handleSaveHumanize = async () => {
+    if (!nodeId || !report) return;
+    setSavingHumanize(true);
+    try {
+      const res = await fetch(`/api/story/nodes/${nodeId}/humanize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score: report.score }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.error || `HTTP ${res.status}`);
+      }
+      const d = await res.json();
+      useProjectStore.getState().updateNode(nodeId, {
+        humanizeScore: typeof d.humanizeScore === "number" ? d.humanizeScore : report.score,
+      });
+      toastSuccess(`已保存本章过审分 ${report.score}，绿/黄/红已更新到大纲`);
+    } catch (e) {
+      toastError("保存过审分失败：" + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSavingHumanize(false);
+    }
+  };
 
   const level = report?.level ?? "clean";
   const style = LEVEL_STYLE[level];
@@ -202,12 +234,24 @@ export function HumanizePanel({
             <Icon name="shield" size={11} />
             全程在本机内存完成，正文不会上传任何服务器
           </span>
-          <button
-            onClick={onClose}
-            className="h-8 px-4 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-1)] transition-colors"
-          >
-            知道了
-          </button>
+          <div className="flex items-center gap-2">
+            {nodeId && report && report.stats.chars >= 50 && (
+              <button
+                onClick={handleSaveHumanize}
+                disabled={savingHumanize}
+                className="h-8 px-3 text-xs rounded-lg border border-[var(--nv-primary)]/40 text-[var(--nv-primary)] bg-[var(--nv-primary-soft)] hover:bg-[var(--nv-primary)]/15 transition-colors disabled:opacity-40"
+                title="把本次过审分保存到本章，大纲里会显示绿/黄/红"
+              >
+                {savingHumanize ? "保存中…" : `保存过审分 ${report.score}`}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="h-8 px-4 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:bg-[var(--nv-surface-1)] transition-colors"
+            >
+              知道了
+            </button>
+          </div>
         </div>
       }
     >

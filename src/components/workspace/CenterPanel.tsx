@@ -844,6 +844,7 @@ export function CenterPanel({
       onClose={() => setShowHumanize(false)}
       text={displayContent}
       chapterTitle={selectedNode?.title}
+      nodeId={selectedNode?.id}
     />
     </>
   );

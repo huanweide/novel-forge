@@ -25,6 +25,20 @@ function buildIndex(nodes: StoryNodeData[]): { childrenMap: ChildrenMap; volumeI
   return { childrenMap, volumeIds };
 }
 
+// v3.1.68：本地过审分色标（与过审自检面板同源：分数越高越像 AI 写的）
+const HUMANIZE_BADGE: Record<string, string> = {
+  clean: "text-[var(--nv-success)] bg-[var(--nv-success)]/10",
+  info: "text-[var(--nv-info)] bg-[var(--nv-info-soft)]",
+  warn: "text-[var(--nv-warning)] bg-[var(--nv-warning-soft)]",
+  danger: "text-[var(--nv-danger)] bg-[var(--nv-danger-soft)]",
+};
+function humanizeBadgeClass(score: number): string {
+  if (score <= 30) return HUMANIZE_BADGE.clean; // 干净（绿）
+  if (score <= 60) return HUMANIZE_BADGE.info; // 轻微（蓝）
+  if (score <= 80) return HUMANIZE_BADGE.warn; // 明显（黄）
+  return HUMANIZE_BADGE.danger; // 严重（红）
+}
+
 export const NodeTreeItem = memo(function NodeTreeItem({
   node, childrenMap, selectedId, onSelectNode, onAddSection, depth,
   batchMode, selectedChapterIds, onToggleChapterSelect, onDeleteNode, deletingId,
@@ -89,6 +103,15 @@ export const NodeTreeItem = memo(function NodeTreeItem({
             title={`写作质量分（全书体检保存）：${node.qualityScore}`}
           >
             {node.qualityScore}
+          </span>
+        )}
+        {/* v3.1.68：本地过审自检分常驻色标（humanizeScore 经「过审自检」面板保存） */}
+        {node.humanizeScore != null && (
+          <span
+            className={`text-[10px] px-1 py-0.5 rounded-full font-mono ${humanizeBadgeClass(node.humanizeScore)}`}
+            title={`本地过审分（去AI味·纯本地）：${node.humanizeScore} / 100　分数越高越像 AI 写的`}
+          >
+            过{node.humanizeScore}
           </span>
         )}
         {badgeSlot}
