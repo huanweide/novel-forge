@@ -1031,12 +1031,37 @@ export default function WorkspacePage() {
   // ═══════════════════════════════════════════
 
   if (loading) return (
-    <div className="h-screen bg-[var(--nv-void)] flex items-center justify-center">
-      <span className="inline-flex items-center gap-2 text-[var(--nv-text-muted)]">
-        <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse" />
-        <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-150" />
-        <span className="w-1.5 h-1.5 bg-[var(--nv-primary)] rounded-full animate-pulse delay-300" />
-      </span>
+    <div className="h-screen bg-[var(--nv-void)] text-foreground flex flex-col overflow-hidden">
+      {/* 顶栏骨架 */}
+      <div className="shrink-0 border-b border-[var(--nv-border-2)] px-6 py-3 flex items-center justify-between gap-4">
+        <div className="relative h-5 w-40 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden"><span className="absolute inset-0 shimmer-line" /></div>
+        <div className="flex items-center gap-2">
+          <div className="relative h-7 w-20 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden"><span className="absolute inset-0 shimmer-line" /></div>
+          <div className="relative h-7 w-7 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden"><span className="absolute inset-0 shimmer-line" /></div>
+        </div>
+      </div>
+      {/* 三栏骨架：左大纲 / 中正文 / 右面板（贴合真实工作台风貌，告别黑屏） */}
+      <div className="flex-1 grid grid-cols-[260px_1fr_320px] gap-4 p-6 min-h-0">
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="relative h-4 rounded-md bg-[var(--nv-surface-2)] overflow-hidden"><span className="absolute inset-0 shimmer-line" /></div>
+          ))}
+        </div>
+        <div className="space-y-3">
+          <div className="relative h-6 w-1/2 rounded-lg bg-[var(--nv-surface-2)] overflow-hidden"><span className="absolute inset-0 shimmer-line" /></div>
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="relative h-3 rounded bg-[var(--nv-surface-2)] overflow-hidden" style={{ width: `${60 + ((i * 13) % 35)}%` }}><span className="absolute inset-0 shimmer-line" /></div>
+          ))}
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="relative h-16 rounded-xl bg-[var(--nv-surface-2)] overflow-hidden"><span className="absolute inset-0 shimmer-line" /></div>
+          ))}
+        </div>
+      </div>
+      <div className="shrink-0 border-t border-[var(--nv-border-2)] px-6 py-2 text-center text-[11px] text-[var(--nv-text-muted)]">
+        正在载入你的小说宇宙…
+      </div>
     </div>
   );
   if (loadError) return (
