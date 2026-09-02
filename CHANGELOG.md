@@ -1,5 +1,19 @@
 ﻿# Novel Smith 更新公告
 
+## v3.1.60 — 2026-09-02
+
+### 依赖升级与工程维护（chore，无行为变更）
+
+- **合并 5 个 dependabot 依赖升级**（本地统一升级 + 全门禁后合入，避免逐个 merge 冲突）：
+  - `prisma` / `@prisma/client` 7.8.0 → **7.10.0**
+  - `vitest` 4.1.10 → **4.1.11**
+  - `tailwindcss` 4 → **4.3.3**
+  - `@types/node` 20 → **26.4.0**
+  - CI 的 `actions/setup-node` v4 → **v7**
+- **`eslint` 9→10 暂留 v9（^9.39.5）**：`eslint-config-next@16.2.7` 内置的 `eslint-plugin-react@7.37.5` 仍调用 ESLint 10 已删除的 `context.getFilename()` API，强升会打挂 lint 门禁；等 Next.js 工具链官方支持 ESLint 10 后再升。对应 dependabot PR #14 关闭并注明原因。
+- 顺手把一次性构建实测残留的 `.next-detect/**` 加进 eslint 忽略项，避免误扫构建产物。
+- **门禁**：类型检查 0 错误、1289 条测试全绿、生产构建通过。lint 仍为非阻塞存量技术债（CI 注释已记录）。
+
 ## v3.1.59 — 2026-09-02
 
 ### 本地过审自检：一键找出「机器味」，全程不联网（HUMANIZE）

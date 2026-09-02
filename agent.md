@@ -90,7 +90,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
 | Issue | 0 |
-| 待处理 PR | 4 个 dependabot 依赖升级：prisma 7.10.0 / @types/node 26.4.0 / vitest 4.1.11 / eslint 10.9.1 |
+| 待处理 PR | 0 个。本次（2026-09-02）本地统一合并 6 个 dependabot 升级中的 5 个：prisma 7.8→7.10、vitest 4.1.10→4.1.11、tailwindcss 4→4.3.3、@types/node 20→26.4、CI 的 setup-node 4→7；**eslint 9→10 暂留 v9**（eslint-config-next@16.2.7 内置的 eslint-plugin-react@7.37.5 调用了 ESLint 10 已删除的 `context.getFilename()` API，强升会打挂 lint，等生态就绪再升）。 |
 | Topics | 20 个（已达 GitHub 上限，加新的要先删旧的） |
 | 预览站 | `https://novel-forge-nu.vercel.app`（Vercel 项目名还是旧名，改名需瑞宝宝授权） |
 
@@ -110,6 +110,14 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 - **质量门禁**：tsc `--incremental false` 0 错误；1289 条测试全绿（较 v3.1.58 的 1242 条新增 47 条）。
 - **版本五件套**：package.json → 3.1.59；changelog-data.ts（LATEST_VERSION + VERSIONS + CHANGELOG_BRIEF）；CHANGELOG.md 顶部段落。
 - 快照 `snap/20260902-173049-v3.1.59` 已建（改代码前拍的）。
+
+### v3.1.60 — 2026-09-02 — 依赖升级与工程维护（chore）
+
+- **合并 5 个 dependabot 升级**：prisma/@prisma/client 7.8→7.10、vitest 4.1.10→4.1.11、tailwindcss 4→4.3.3、@types/node 20→26.4、CI 的 setup-node 4→7。
+- **eslint 9→10 暂留 v9**：`eslint-config-next@16.2.7` 内置 `eslint-plugin-react@7.37.5` 调用了 ESLint 10 已删除的 `context.getFilename()`，强升会打挂 lint；PR #14 关闭并注明原因，等生态就绪再升。
+- eslint 忽略项补 `.next-detect/**`（一次性构建实测残留目录，防误扫）。
+- **门禁**：tsc 0 错、vitest 1289 全绿、生产构建通过。未 bump  behavīor；lint 仍为非阻塞存量债。
+- 快照 `snap/20260902-183824-v3.1.59`（合并 dependabot 前拍的，仍在 v3.1.59 标签）。
 
 ### 2026-09-02 — 全站灰度测试 + 精进分析报告（**不 bump 产品版本**）
 
@@ -160,7 +168,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 
 **待办：**
 
-1. 处理 4 个 dependabot PR（eslint 10 / @types/node 26 是大版本跳跃，需跑完整门禁再合）。
+1. ~~处理 dependabot PR~~ **【已完成 2026-09-02】** 实际有 6 个 OPEN PR：#7 setup-node 4→7、#12 tailwind 4.3.0→4.3.3、#14 eslint 9.39.4→10.9.1、#15 vitest 4.1.10→4.1.11、#16 @types/node 20→26.4.0、#17 @prisma/client 7.8.0→7.10.0。本地统一升级 + 全门禁（tsc 0错 / vitest 1289 全绿 / 生产构建通过）。其中 #14 eslint 10 因 `eslint-config-next` 不兼容暂留 v9（关闭 PR 并注明原因），其余 5 个合入后关 PR。
 2. ~~把 `src/core/humanize/` 去 AI 味模块接线到生成流程~~ **【已完成 v3.1.59】** 已作为「本地过审自检」入线（CenterPanel 一键过审，纯本地、不联网、不花一分钱）。
 3. Vercel 预览站改名 `novel-forge-nu.vercel.app` → 新名（需瑞宝宝授权 Vercel 项目操作）。
 4. 陈旧的 `master` 分支择机删除（确认无引用后）。
@@ -180,3 +188,4 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | `snap/20260902-152537-v3.1.58` | 2026-09-02 15:25 | v3.1.58 | main | P0：接线 humanize 去AI味过审，动手前 | 31M |
 | `snap/20260902-173049-v3.1.59` | 2026-09-02 17:30 | v3.1.59 | main | 手动快照 | 31M |
 | `snap/20260902-181738-v3.1.59` | 2026-09-02 18:17 | v3.1.59 | main | 首屏并行化生产构建实测，动手前 | 31M |
+| `snap/20260902-183824-v3.1.59` | 2026-09-02 18:38 | v3.1.59 | main | 合并 dependabot 依赖升级前 | 31M |

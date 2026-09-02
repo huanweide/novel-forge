@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.59";
+export const LATEST_VERSION = "v3.1.60";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.60 依赖升级与工程维护（chore，无行为变更）：①合并 5 个 dependabot 依赖升级——prisma/@prisma/client 7.8.0→7.10.0、vitest 4.1.10→4.1.11、tailwindcss 4→4.3.3、@types/node 20→26.4.0、CI 的 actions/setup-node v4→v7；全部在本地统一升级 + 跑通三道门禁（类型检查 0 错、1289 条测试全绿、生产构建通过）后合入，避免逐个 merge 的冲突。②eslint 9→10 暂留 v9——eslint-config-next@16.2.7 内置的 eslint-plugin-react@7.37.5 仍调用 ESLint 10 已删除的 context.getFilename() API，强升会打挂 lint 门禁；对应 dependabot PR #14 关闭并注明原因，等 Next.js 工具链官方支持 ESLint 10 后再升。③工程维护——eslint 忽略项补 .next-detect/**（一次性构建实测的残留目录，防误扫构建产物）；lint 仍为非阻塞的存量技术债（CI 注释已记录，待专项清理后移除豁免）。④对普通用户无感知——界面、功能、存储结构均无变化，clone 后依赖更新到更安全的小版本。个人 IP 仍归瑞宝宝。",
   "v3.1.59 本地过审自检上线（HUMANIZE）：①这是个什么功能——写作面板新增「过审自检」按钮，点一下就在你自己电脑上把当前章节扫一遍，找出读起来像机器写的痕迹：AI 高频词、破折号滥用、句长像尺子量过一样均匀、「不是A，不是B，而是C」的否定式排比、「不仅…而且…」的递进长句、三段式排比、肢体动作堆砌、情感词堆叠、括号补充过度、连续几句同开头。②为什么值得单独做一个按钮——它全程不联网、不调 AI、不花一分钱，正文一个字节都不出你的电脑；市面上同类检测都要你把未发表的稿子传到别人服务器上，这是本地优先项目才敢做的做法。③看得懂、改得动——不给一个黑箱百分比就完事：先给总分和四档等级（基本干净／轻微痕迹／痕迹明显／痕迹严重），再给六个可解释的原始数据（总字数、破折号每千字几个、平均句长、句长波动、短句占比、AI 词密度），然后逐段列出命中原文，痕迹处高亮标色，每条都写清「为什么这像 AI 写的」和「具体怎么改」，可以按严重度筛选只看要紧的。④说实话——规则引擎只能帮你降低机器味，不能保证通过任何平台的 AI 率审核（平台算法不公开且一直在变），这条免责声明在面板里永远显示、不许藏起来。⑤顺手补强了检测能力：新增「不仅…而且…」递进句规则，并修好否定式排比只认「…而是」收尾的漏判（「不是A，不是B，不是C」这种纯三重否定以前整条检不出来）。⑥质量门禁——类型检查 0 错误，测试从 1242 条增到 1289 条全绿（新增 47 条：规则引擎 45 条覆盖全部 12 条规则 + 误报防线 + 三万字性能，面板 12 条守住免责声明可见、命中必给证据、样本不足不给误导读数等底线）。个人 IP 仍归瑞宝宝。",
   "v3.1.58 品牌改名 + 微信收款码上线（REBRAND-SPONSOR）：①改名——项目从 Novel Forge 正式更名为 Novel Smith（英文 Novel Smith / 中文「AI 小说工匠」，副标题「本地优先 · 数据自有」）。为什么改：调研发现赛道里已有一个同名且高度重合的开源项目 RhythmicWave/NovelForge（Python，1150 star，仍在活跃更新），搜 NovelForge 时别人先看到它、我们被淹没；同时「Forge/Smith」同属锻造意象，Smith 更像人（工匠），比 Forge（熔炉）更有辨识度且全球无强同名项目（实测同名仓库多为 0-3 star 的个人项目）。改名范围实测覆盖：GitHub 仓库名、git remote、package.json、README 中英、PWA 清单 manifest、docs/banner.svg 横幅、设置页/首页/changelog 页/导出 DOCX·EPUB 水印、安全公告链接。②收款码上线——瑞宝宝提供的微信收款码已放进 public/sponsor/wechat-qr.png（93KB），设置页「8. 赞助支持」区块与 GitHub 仓库主页 Sponsor 按钮同步点亮，之前显示「作者待配置收款码」的占位已由真码取代。③首屏辨识标签——README 中英标题下补一行标签（TypeScript · Local-First · 分层记忆引擎 · 中文长篇 · 数据不出本机），让人一眼分清「这个 Novel Smith 是 TypeScript 本地优先的中文长篇工具」，而不是那个 Python 卡片式项目。④说明——仓库改名后 GitHub 会自动把旧链接 301 跳到新地址，老的收藏/外链不会失效；本地目录名与内部存储键（localStorage 的 novel-forge-* 前缀、预设 schema）保持不变，避免你已有的数据读不出来。个人 IP 仍归瑞宝宝。",
   "v3.1.57 赞助支持（SPONSOR）：①设置页新增「8. 赞助支持」区块——展示微信收款码（/sponsor/wechat-qr.png），加载失败 onError 容错显示「作者待配置收款码」（把 wechat-qr.png 放到 public/sponsor/ 即点亮），纯前端 img、不碰后端、不收集任何赞助记录；②GitHub FUNDING 入口——.github/FUNDING.yml 配 custom 指向微信收款码 raw 链接，仓库主页显示 Sponsor 按钮（GitHub 原生涨好感位、零成本）；③两条腿复用同一张图——APP 内设置页与 GitHub 仓库主页都能扫；④安全——收款码仅转账入口二维码、不含任何密钥/凭据、纯静态图片放心入库，不做后端金额/留言收集（避隐私与成本、符合本地优先）；⑤public/sponsor/README.md 说明图怎么放。个人 IP 仍归瑞宝宝。",
@@ -224,6 +225,38 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.60",
+    date: "2026-09-02",
+    title: "依赖升级与工程维护（chore，无行为变更）",
+    sections: [
+      {
+        label: "📦 合并 5 个 dependabot 依赖升级",
+        items: [
+          "prisma / @prisma/client 7.8.0 → 7.10.0",
+          "vitest 4.1.10 → 4.1.11",
+          "tailwindcss 4 → 4.3.3",
+          "@types/node 20 → 26.4.0",
+          "CI 的 actions/setup-node v4 → v7",
+          "全部在本地统一升级 + 跑通三道门禁（类型检查 0 错 / 1289 条测试全绿 / 生产构建通过）后合入，避免逐个 merge 的冲突",
+        ],
+      },
+      {
+        label: "⏸️ eslint 9→10 暂留 v9",
+        items: [
+          "eslint-config-next@16.2.7 内置的 eslint-plugin-react@7.37.5 仍调用 ESLint 10 已删除的 context.getFilename() API，强升会打挂 lint 门禁",
+          "对应 dependabot PR #14 关闭并注明原因，等 Next.js 工具链官方支持 ESLint 10 后再升",
+        ],
+      },
+      {
+        label: "🧹 工程维护",
+        items: [
+          "eslint 忽略项补 .next-detect/**（一次性构建实测的残留目录，防误扫构建产物）",
+          "lint 仍为非阻塞的存量技术债（CI 注释已记录，待专项清理后移除豁免）",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.59",
     date: "2026-09-02",

@@ -1,6 +1,6 @@
 {
   "name": "novel-smith",
-  "version": "3.1.59",
+  "version": "3.1.60",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@base-ui/react": "^1.5.0",
     "@prisma/adapter-better-sqlite3": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/client": "^7.10.0",
     "@types/three": "^0.185.3",
     "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.1",
@@ -31,7 +31,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.17.0",
     "next": "^16.3.3",
-    "prisma": "^7.8.0",
+    "prisma": "^7.10.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
@@ -48,17 +48,17 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^20",
+    "@types/node": "^26.4.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^9",
+    "eslint": "^9.39.5",
     "eslint-config-next": "16.2.7",
     "jsdom": "^25.0.1",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.3",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }

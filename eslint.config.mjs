@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Stray build-test artifacts (produced by one-off distDir checks):
+    ".next-detect/**",
   ]),
 ]);
 
