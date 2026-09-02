@@ -92,21 +92,27 @@ export default function ExplorePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── 从首页文体墙带入的文体：预填 genre 并给出针对性欢迎语 ──
+  // ── 从首页带入的上下文：文体（genre）+ 灵感火花（inspiration，v3.1.61 新增） ──
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const g = params.get("genre");
+      const insp = params.get("inspiration");
       if (g) {
         setConfig((prev) => (prev.genre === g ? prev : { ...prev, genre: g }));
+      }
+      if (g || insp) {
         setMessages((prev) => {
           if (prev.length === 1 && prev[0].role === "agent") {
-            return [
-              {
-                role: "agent",
-                content: `你选择了「${g}」文体，我们从这个方向开始构思！\n\n我们从「${STEP_LABELS.opening}」聊起——它决定整本书的方向。\n\n说说你想写什么类型的小说？有什么初步想法？或者试试"抽卡模式"让AI给你灵感。`,
-              },
-            ];
+            const lead = g ? `你选择了「${g}」文体` : "我们从一个轻松的方向开始构思";
+            const head = insp ? `${lead}，并带上了一枚「灵感火花」——我们顺着它往下聊！` : `${lead}，我们从这个方向开始构思！`;
+            let body = `${head}\n\n我们从「${STEP_LABELS.opening}」聊起——它决定整本书的方向。`;
+            if (insp) {
+              body += `\n\n你带来的灵感火花是：\n「${decodeURIComponent(insp)}」\n\n你可以直接补充设定，也可以让它自由生长。`;
+            } else {
+              body += `\n\n说说你想写什么类型的小说？有什么初步想法？或者试试"抽卡模式"让AI给你灵感。`;
+            }
+            return [{ role: "agent", content: body }];
           }
           return prev;
         });

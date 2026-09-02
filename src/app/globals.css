@@ -1367,6 +1367,76 @@
 .light .nf-gtile:hover .nf-float-word { opacity: 0.14; }
 .light .nf-section-float { opacity: 0.05; }
 
+/* ─── 灵感火花（创意启发 · v3.1.61） ─── */
+/* 玻璃卡 + 题材色光晕，复用 genrewall 的 elevation / 光晕语言，回应「不要滤纸、靠 elevation 出层次」 */
+.nf-spark {
+  position: relative;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(155deg, color-mix(in oklch, var(--spine, var(--nv-primary)) 24%, transparent), transparent 60%);
+}
+.nf-spark-card {
+  position: relative; z-index: 1;
+  border-radius: 23px;
+  padding: 28px;
+  background:
+    linear-gradient(155deg, color-mix(in oklch, var(--spine, var(--nv-primary)) 9%, transparent) 0%, transparent 55%),
+    var(--nv-surface-1);
+  border: 1px solid var(--nv-border-2);
+  box-shadow: var(--shadow-glass-rest);
+  overflow: hidden;
+  transition: box-shadow var(--dur-standard) var(--ease-out-expo),
+              border-color var(--dur-standard) var(--ease-out-expo);
+}
+.nf-spark:hover .nf-spark-card,
+.nf-spark:focus-within .nf-spark-card {
+  box-shadow: var(--shadow-glass-hover), 0 0 36px color-mix(in oklch, var(--spine, var(--nv-primary)) 26%, transparent);
+  border-color: color-mix(in oklch, var(--spine, var(--nv-primary)) 45%, transparent);
+}
+.nf-spark-aura {
+  position: absolute; z-index: 0; pointer-events: none;
+  top: -35%; right: -8%; width: 360px; height: 360px; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in oklch, var(--spine, var(--nv-primary)) 32%, transparent) 0%, transparent 65%);
+  filter: blur(20px); opacity: 0.5;
+}
+.nf-spark-genre {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  color: var(--spine, var(--nv-text-primary));
+  padding: 4px 11px; border-radius: 999px;
+  background: color-mix(in oklch, var(--spine, var(--nv-primary)) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--spine, var(--nv-primary)) 32%, transparent);
+}
+.nf-spark-badge {
+  font-size: 11px; color: var(--nv-text-muted);
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--nv-surface-2); border: 1px solid var(--nv-border-2);
+}
+.nf-spark-lead {
+  font-size: 17px; line-height: 1.7; font-weight: 500;
+  color: var(--nv-text-primary);
+  margin: 6px 0 16px;
+}
+.nf-spark-lead.is-shuffling { animation: nf-spark-swap 0.36s var(--ease-out-smooth); }
+@keyframes nf-spark-swap {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.nf-spark-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.nf-spark-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--nv-text-secondary);
+  padding: 5px 11px; border-radius: 999px;
+  background: var(--nv-surface-2); border: 1px solid var(--nv-border-2);
+}
+.nf-spin { animation: nf-spin 0.5s var(--ease-out-smooth); }
+@keyframes nf-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* 浅色主题提亮：光晕收敛，避免铺白过曝 */
+.light .nf-spark-aura { opacity: 0.32; }
+.light .nf-spark-card { background: linear-gradient(155deg, color-mix(in oklch, var(--spine, var(--nv-primary)) 11%, transparent) 0%, transparent 55%), var(--nv-surface-1); }
+
+
 /* 空状态引导：分隔光 */
 .nf-glow-line {
   height: 1px; border: none; margin: 26px auto; width: min(420px, 70%);

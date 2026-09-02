@@ -218,6 +218,13 @@ export default function Dashboard() {
       {/* 灵感文体墙：精选文体悬浮卡，点击即以该文体开局（取代旧版「纸舟星海」） */}
       <GenreWall onPick={(genre) => router.push('/explore?genre=' + encodeURIComponent(genre))} loadingId={null} />
 
+      {/* 灵感火花：创意启发随机组合，纯本地不联网，带参开局到探讨模式 */}
+      <InspirationSpark
+        onStart={(genreId, text) =>
+          router.push('/explore?genre=' + encodeURIComponent(genreId) + '&inspiration=' + encodeURIComponent(text))
+        }
+      />
+
       {/* 主区 */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         {loading ? (
@@ -364,6 +371,117 @@ function GenreWall({ onPick, loadingId }: { onPick: (genre: string) => void; loa
             </button>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+// ─── 子组件：灵感火花（创意启发 · v3.1.61 新增） ────────
+// 纯前端随机组合：题材 × 开局 × 张力 × 反转，不联网、契合本地优先定位。
+// 点击「用这个开局」带 genre + inspiration 参数跳 /explore，探讨模式会承接这枚火花（见 explore/page.tsx）。
+
+const SPARK_OPENERS = [
+  "一觉醒来，昨天的所有记录都被抹去，唯独你记得发生过什么",
+  "你收到一封寄给早已不在世的人的回信",
+  "世界最后一位会魔法的人，将在今夜陨落",
+  "你签下一份「永不后悔」的契约，代价未知",
+  "所有人都遗忘了一个人，唯独你脑海里他的脸越来越清晰",
+  "你救下的人，正是通缉令上悬赏最高的那个",
+  "时间开始倒流，但只有你能感知",
+  "你发现自己是某本书里的角色，而作者今天停更了",
+  "末日之后，唯一能种出粮食的土地在你脚下",
+  "你继承了一座没有人、却每天都有人离开痕迹的宅邸",
+];
+
+const SPARK_TENSIONS = [
+  "信任与背叛", "使命与自由", "记忆与遗忘", "权力与代价",
+  "爱意与责任", "真相与谎言", "个体与洪流", "救赎与沉沦",
+];
+
+const SPARK_TWISTS = [
+  "而真相是——这一切都是你亲手设计的",
+  "但那个你最信任的人，早已不是人类",
+  "直到你发现，最大的敌人是未来的自己",
+  "然而所谓世界，根本从未存在",
+  "可当你揭开谜底，才发现它是一份写给你的情书",
+  "但你终于明白，所谓奇迹，都是别人替你扛下的代价",
+  "而那扇门后，站着二十年前的自己",
+  "然而所谓结局，只是另一段故事的开头",
+];
+
+function makeSparkCombo() {
+  const r = (n: number) => Math.floor(Math.random() * n);
+  return { g: r(GENRE_TEMPLATES.length), o: r(SPARK_OPENERS.length), t: r(SPARK_TENSIONS.length), w: r(SPARK_TWISTS.length) };
+}
+
+function InspirationSpark({ onStart }: { onStart: (genreId: string, text: string) => void }) {
+  // 初始用确定性下标，避免 SSR/CSR 随机不一致导致 hydration 报错；挂载后 random 一次，之后「换一张」再随机。
+  const [combo, setCombo] = useState({ g: 0, o: 0, t: 0, w: 0 });
+  const [spinning, setSpinning] = useState(false);
+
+  useEffect(() => {
+    setCombo(makeSparkCombo());
+  }, []);
+
+  const genre = GENRE_TEMPLATES[combo.g];
+  const opener = SPARK_OPENERS[combo.o];
+  const tension = SPARK_TENSIONS[combo.t];
+  const twist = SPARK_TWISTS[combo.w];
+  const text = `${genre.name}｜${opener}。核心张力：${tension}；一句话反转：${twist}`;
+  const seedKey = `${combo.g}-${combo.o}-${combo.t}-${combo.w}`;
+
+  const shuffle = () => {
+    setSpinning(true);
+    setCombo(makeSparkCombo());
+    window.setTimeout(() => setSpinning(false), 360);
+  };
+
+  const spine = genreColor([genre.name]);
+
+  return (
+    <section className="relative z-10 max-w-7xl mx-auto px-6 py-14">
+      <div className="mb-7 max-w-2xl relative">
+        <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-[var(--nv-border-2)] bg-[var(--nv-surface-2)] text-[11px] text-[var(--nv-text-tertiary)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-accent)] glow-dot" /> 灵感火花 · Inspiration Spark
+        </div>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-tight">
+          不知道写什么？<span className="text-gradient">抽一张灵感牌</span>
+        </h2>
+        <p className="mt-4 text-[var(--nv-text-tertiary)] text-base leading-relaxed">
+          系统从题材、开局、张力、反转四个维度为你随机组合——不联网、纯本地生成，点一下就是新世界。
+        </p>
+      </div>
+
+      <div className="nf-spark" style={{ "--spine": spine } as React.CSSProperties}>
+        <div className="nf-spark-card">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <span className="nf-spark-genre">
+              <Icon name={GENRE_LUCIDE[genre.id] ?? "sparkles"} size={15} /> {genre.name}
+            </span>
+            <span className="nf-spark-badge">灵感牌 · 第 {(combo.g + combo.o + combo.t + combo.w) % 99 + 1} 抽</span>
+          </div>
+
+          <p key={seedKey} className={`nf-spark-lead ${spinning ? "is-shuffling" : ""}`}>{text}</p>
+
+          <div className="nf-spark-tags">
+            <span className="nf-spark-tag"><Icon name="book" size={12} /> 开局 · {opener}</span>
+            <span className="nf-spark-tag"><Icon name="scale" size={12} /> 张力 · {tension}</span>
+            <span className="nf-spark-tag"><Icon name="lightbulb" size={12} /> 反转 · {twist}</span>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button onClick={shuffle} className="btn-ghost text-sm h-10 px-4 rounded-xl inline-flex items-center gap-1.5">
+              <Icon name="refresh" size={15} className={spinning ? "nf-spin" : ""} /> 换一张
+            </button>
+            <button
+              onClick={() => onStart(genre.id, text)}
+              className="btn-primary nf-btn-flow text-sm h-10 px-6 rounded-xl inline-flex items-center gap-1.5 font-medium shadow-[0_0_24px_rgba(228,184,99,0.28)]"
+            >
+              <Icon name="sparkles" size={15} /> 用这个开局
+            </button>
+          </div>
+        </div>
+        <div className="nf-spark-aura" aria-hidden="true" />
       </div>
     </section>
   );
