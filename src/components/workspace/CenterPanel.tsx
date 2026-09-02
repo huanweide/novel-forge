@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icons";
 import { TTSPlayer } from "./TTSPlayer";
 import { ENTITY_LEGEND } from "@/core/entity-highlighter";
 import { Modal } from "@/components/ui/Modal";
+import { HumanizePanel } from "./HumanizePanel";
 import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
 import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
@@ -197,6 +198,8 @@ export function CenterPanel({
   const [outlineExpanded, setOutlineExpanded] = useState(false);
   // ── AI 念书（语音朗读）：标题下方「朗读本章」入口的展开态 ──
   const [showTTS, setShowTTS] = useState(false);
+  // ── 本地过审自检：检测「机器味」，纯本地规则引擎，不上传正文 ──
+  const [showHumanize, setShowHumanize] = useState(false);
 
   // ── 正文内联编辑：点击「编辑正文」后页面外观不变，仅正文变为可编辑状态（无外框界面）──
   const [inlineEditing, setInlineEditing] = useState(false);
@@ -575,6 +578,14 @@ export function CenterPanel({
                       </button>
                     )}
                     {!isGenerating && (
+                      <button onClick={() => setShowHumanize(true)}
+                        disabled={displayContent.length < 50}
+                        className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-accent)]/40 text-[var(--nv-accent)] bg-[var(--nv-accent-soft)] hover:bg-[var(--nv-accent)]/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="本地过审自检：在本机检测 AI 痕迹（高频词 / 三段式排比 / 破折号滥用 / 句长机械等），逐段给证据和改法。正文全程留在你电脑上，不上传任何服务器">
+                        <Icon name="shield" size={12} /> 过审自检
+                      </button>
+                    )}
+                    {!isGenerating && (
                       <button onClick={onEnterZen}
                         className="flex items-center gap-1 h-8 px-2.5 text-xs rounded-lg border border-[var(--nv-border-2)] text-[var(--nv-text-secondary)] hover:text-[var(--nv-text-primary)] hover:border-[var(--nv-border-3)] hover:bg-[var(--nv-surface-1)] transition-colors"
                         title="进入专注写作模式：隐藏侧栏工具栏，只留正文，支持打字机滚动（Ctrl/Cmd + .）">
@@ -800,6 +811,14 @@ export function CenterPanel({
         </div>
       </Modal>
     )}
+
+    {/* 本地过审自检：纯前端规则引擎，不联网、不上传 */}
+    <HumanizePanel
+      open={showHumanize}
+      onClose={() => setShowHumanize(false)}
+      text={displayContent}
+      chapterTitle={selectedNode?.title}
+    />
     </>
   );
 }
