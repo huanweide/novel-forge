@@ -23,6 +23,7 @@ export function CharacterList({
   onConfirm,
   onNew,
   onExpanded,
+  onLocate,
 }: {
   characters?: CharacterData[];
   projectId: string;
@@ -31,6 +32,7 @@ export function CharacterList({
   onConfirm?: (id: string) => Promise<void>;
   onNew: () => void;
   onExpanded: () => void;
+  onLocate?: (id: string) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expanding, setExpanding] = useState(false);
@@ -497,6 +499,7 @@ export function CharacterList({
         onDelete={handleDelete}
         onConfirm={resolvedOnConfirm}
         onTagClick={handleTagClick}
+        onLocate={onLocate}
       />
 
       {filtered.length === 0 && (

@@ -13,9 +13,11 @@ interface WorldEntryCardProps {
   onEdit?: (entry: LorebookData) => void;
   /** 待审确认：自动填表条目确认并入 */
   onConfirm?: (id: string) => void;
+  /** 反向联动：在正文定位该词条首次出现处 */
+  onLocate?: (id: string) => void;
 }
 
-function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm }: WorldEntryCardProps) {
+function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, onConfirm, onLocate }: WorldEntryCardProps) {
   return (
     <div
       className={"group min-w-0 overflow-hidden rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] p-2 transition-all hover:-translate-y-0.5 hover:border-[var(--nv-border-3)] hover:shadow-[var(--shadow-glass-rest)]" + (entry.enabled ? "" : " opacity-60")}
@@ -41,6 +43,17 @@ function WorldEntryCardImpl({ entry, depthLabels, onDelete, deleting, onEdit, on
             title="确认并入世界书"
           >
             <Icon name="check" size={12} />
+          </button>
+        )}
+        {onLocate && (
+          <button
+            onClick={() => onLocate(entry.id)}
+            disabled={deleting}
+            className="ml-1 shrink-0 text-[var(--nv-text-muted)] opacity-0 transition-all hover:text-[var(--nv-primary)] group-hover:opacity-100 disabled:opacity-40"
+            aria-label="在正文定位"
+            title="在正文定位该词条首次出现处"
+          >
+            <Icon name="target" size={12} />
           </button>
         )}
         <button

@@ -25,10 +25,12 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.65";
+export const LATEST_VERSION = "v3.1.66";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.66 实体面板与写作区反向联动（LOCATE-LINK · 点角色卡 / 世界书卡片，正文定位并高亮）：①角色卡 / 世界书卡片新增「定位」按钮（target 图标，hover 显示），点一下正文自动滚动到该实体第一次出现处并黄光闪烁高亮——之前只能从正文点高亮实体跳卡片，现在反过来从卡片也能定位正文，正反双向打通。②定位复用现有 data-entity-id span（正向高亮已生成），纯前端 querySelector 定位 + scrollIntoView 居中 + Element.animate 黄光呼吸动画，零新数据通路、最低风险。③切章自动清空定位、不跨章误高亮；本章没提该实体时 toast 提示「本章正文未提及该角色 / 词条，无法定位」；定位按钮 stopPropagation 避免误触发编辑 / 删除。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；链路透传 11 个文件（page/LeftPanel/CenterPanel/MarkdownViewer/角色卡三件套/世界书三件套 + 本文件），零数据层改动。个人 IP 仍归瑞宝宝。",
+  "v3.1.65 导出前排版预览（EXPORT-PREVIEW · 导完不再翻车）：①导出对话框新增「预览排版」按钮（眼睛图标），点一下在对话框内嵌 iframe 里渲染 HTML 排版样张（所见即所得），确认排版对味再点导出下载，避免「导完才发现格式不对、白等半天」。②预览与导出同源——预览调的是同一个导出接口（仅 format 固定 html、沿用所选范围/大纲/署名），样张与最终文件排版一致，不是另写一套假预览；DOCX/EPUB 同一套排版的二进制文档，HTML 样张最直观反映最终观感。③安全兜底——iframe 用 sandbox 隔离、HTML 样张纯静态自包含；选章模式没勾章节提示先选章；预览失败（空书/接口报错）走 toast 不卡死。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；只动 ExportDialog 一个组件，零数据层改动。个人 IP 仍归瑞宝宝。",
   "v3.1.64 写作台沉浸写作模式（IMMERSIVE · 把现有 Zen 专注升级为真全屏）：①把原先只隐藏工具栏+左栏的 Zen 专注，升级为「沉浸写作模式」——进入时同步隐藏全部侧栏（大纲/AI 助手/工具栏）+ 主动调用浏览器 Fullscreen API 进入物理全屏（隐藏地址栏/标签栏，正文真正占满整个屏幕），对标 Ulysses / Scrivener 的专注写作体验。②顶栏新增显眼的「沉浸写作」入口按钮（Lucide maximize 图标），点一下即进入；原有 Cmd/Ctrl+. 快捷键与正文内「退出专注」按钮继续生效；监听 fullscreenchange 事件，用户按 Esc/F11 退出原生全屏时自动同步退出沉浸（不残留「全屏已退但侧栏仍藏」的割裂状态）。③容错——Fullscreen API 在 iframe/部分沙箱环境会被浏览器拒绝，已 try/catch 兜底，失败也不影响布局沉浸（侧栏照常隐藏、正文照常全宽），环境允许时再自动全屏。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；新增 maximize 图标至虚空玻璃图标注册表；纯 UI 状态增强、无数据层改动。个人 IP 仍归瑞宝宝。",
   "v3.1.63 写作台加载骨架屏（告别首屏黑屏 · SKELETON）：①打开 /workspace 的 loading 分支从「三个跳动小圆点 + 黑底」换成贴合真实三栏布局的骨架屏——顶栏 + 左大纲 / 中正文 / 右面板三栏占位 + 底部「正在载入你的小说宇宙…」，纯展示、只改 loading 分支，不动任何数据获取逻辑。②把 10-12s 的「黑屏空窗」变成「App 快好了」的明确预期，直接回应此前实测记录的体验痛点#1（首屏黑屏是第一劝退点）；复用现有 shimmer-line 微光动画（与首页项目卡骨架屏同一套），深浅主题自适应。③质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；无新接口、无状态改动、无数据层变更。个人 IP 仍归瑞宝宝。",
   "v3.1.62 写作面板新增「下一步建议」首写引导（WRITEGUIDE）：①章节控制栏下方新增一行纯展示引导条，根据当前章节字数（实时）给出下一步动作建议——空白章提示「先写开头或点生成起草」、不足 500 字提示「继续续写铺场景」、500-1500 字提示「润色 / 检查冲突」、≥1500 字提示「过审自检 / 标记完成」。②只读取现有 state（currentWords / selectedNode.status / isGenerating），不绑定任何写操作处理函数——零副作用、不挡原有按钮，纯降低首写用户决策成本；直接回应此前实测记录的体验痛点#3（章节首写引导弱：8 个按钮首屏用户不知所措）。③视觉沿用现有设计令牌（题材主色描边 + 主色柔光底，与叙事阶段标签同族），生成中自动隐藏不打断流式输出；类型检查 0 错误、生产构建通过、纯前端展示无数据层改动。个人 IP 仍归瑞宝宝。",
@@ -229,6 +231,58 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.66",
+    date: "2026-09-02",
+    title: "实体面板与写作区反向联动（点角色卡 / 世界书卡片，正文定位并高亮 · LOCATE-LINK）",
+    sections: [
+      {
+        label: "🎯 实体面板↔写作区反向联动",
+        items: [
+          "角色卡 / 世界书卡片新增「定位」按钮（target 图标，hover 显示）：点一下，正文自动滚动到该实体第一次出现处，并黄光闪烁高亮提示——之前只能从正文点高亮实体跳卡片，现在反过来从卡片也能定位正文，正反双向打通",
+          "定位复用现有 data-entity-id span（正向高亮已生成）：querySelector 在 markdown-body 容器内找到该实体首次出现处 → scrollIntoView 居中 → Element.animate 黄光呼吸动画；纯前端、零新数据通路、最低风险",
+          "切章自动清空定位（handleSelectNode 里 setSelectedEntityId(null)），不会跨章误高亮；本章没提该实体时 toast 提示「本章正文未提及该角色 / 词条，无法定位」",
+          "定位按钮 stopPropagation，避免误触发卡片的编辑 / 删除；target 图标复用 icons.tsx 已有的 target 注册",
+        ],
+      },
+      {
+        label: "🔗 联动链路透传",
+        items: [
+          "WorkspacePage 持 selectedEntityId 下传 LeftPanel（角色卡 / 世界书）→ CenterPanel → StreamingBody → MarkdownViewer（locateEntityId prop）；MarkdownViewer 在 loaded 后按 locateEntityId 触发定位 effect",
+          "涉及 11 个文件纯透传（page / LeftPanel / CenterPanel / MarkdownViewer / CharacterList / CharacterGroupList / CharacterRow / WorldPanel / WorldEntryList / WorldEntryCard + 本文件版本 bump），无数据层改动",
+        ],
+      },
+      {
+        label: "🧱 工程与质量门禁",
+        items: [
+          "类型检查 0 错误、1289 条测试全绿、生产构建通过",
+          "同文件多 Edit 改为串行（等上一个工具调用返回再发下一个）、跨文件才并行——避免快照不一致导致声明残缺",
+        ],
+      },
+    ],
+  },
+  {
+    version: "v3.1.65",
+    date: "2026-09-02",
+    title: "导出前排版预览（导完不再翻车 · EXPORT-PREVIEW）",
+    sections: [
+      {
+        label: "📤 导出前排版预览",
+        items: [
+          "导出对话框新增「预览排版」按钮（眼睛图标），点一下在对话框内嵌 iframe 里渲染 HTML 排版样张（所见即所得），确认排版对味再点「导出」下载，避免「导完才发现格式不对、白等半天」",
+          "预览与导出同源：预览调用同一导出接口（仅 format 固定 html、沿用所选范围 / 大纲 / 署名），样张与最终文件排版一致，不是另写一套假预览；DOCX / EPUB 同套排版的二进制文档，HTML 样张最直观反映最终观感",
+          "安全兜底：iframe 用 sandbox 隔离、HTML 样张纯静态自包含；选章模式没勾章节提示先选章；预览失败（空书 / 接口报错）走 toast 不卡死",
+        ],
+      },
+      {
+        label: "🧱 工程与质量门禁",
+        items: [
+          "仅改 ExportDialog 一个组件（新增 previewExport：fetch html 格式导出接口 → 塞 previewHtml state → 切预览视图；Modal 按 showPreview 动态切换宽度 max-w-md ↔ max-w-3xl 与内容 表单 ↔ 内嵌 iframe，占位高 h-[88vh]）",
+          "类型检查 0 错误、1289 条测试全绿、生产构建通过；零数据层改动",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.64",
     date: "2026-09-02",

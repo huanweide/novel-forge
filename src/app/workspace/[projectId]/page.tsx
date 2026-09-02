@@ -120,6 +120,7 @@ export default function WorkspacePage() {
       useWriterStore.getState().resetStream();
       setReviewResult(null);
       setChapterOutlinePrompt("");
+      setSelectedEntityId(null);
       if (typeof window !== "undefined" && projectId) localStorage.removeItem(`novel-forge-flash-prompt-${projectId}`);
     }
     setSelectedNode(node);
@@ -192,6 +193,9 @@ export default function WorkspacePage() {
     server: { editVersion: number; title?: string | null; outline?: string | null; content?: string | null; notes?: string | null };
   } | null>(null);
   const [viewMode, setViewMode] = useState<"volume" | "flat">("volume");
+  // v3.1.66：实体面板↔写作区反向联动——点角色卡 / 世界书卡片，正文定位并高亮该实体第一次出现处
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const handleLocateEntity = (id: string) => setSelectedEntityId(id);
 
   // ── FE-N5 全局快捷键 ─────────────────────
   // 保存当前章节：PUT 回写 selectedNode.content（与编辑器落库同源端点）
@@ -1156,7 +1160,8 @@ export default function WorkspacePage() {
           viewMode={viewMode} onSetViewMode={setViewMode} loadProject={loadProject}
           onDeleteNode={deleteNode} deletingNodeId={deletingId}
           onLoadSample={loadSample} onWriteChapter={handleWriteFromStoryline}
-          onSummarizeCurrent={handleSummarize} summarizing={summarizing} />
+          onSummarizeCurrent={handleSummarize} summarizing={summarizing}
+          onLocateEntity={handleLocateEntity} />
         </ErrorBoundary>
         </div>
 

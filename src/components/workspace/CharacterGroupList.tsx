@@ -16,6 +16,7 @@ export function CharacterGroupList({
   onDelete,
   onConfirm,
   onTagClick,
+  onLocate,
 }: {
   grouped: Record<string, CharacterData[]>;
   roleOrder: string[];
@@ -28,6 +29,7 @@ export function CharacterGroupList({
   onDelete: (id: string, name: string) => void;
   onConfirm?: (id: string) => void;
   onTagClick: (tag: string) => void;
+  onLocate?: (id: string) => void;
 }) {
   return (
     <>
@@ -49,6 +51,7 @@ export function CharacterGroupList({
                 onConfirm={onConfirm}
                 tagFilter={tagFilter}
                 onTagClick={onTagClick}
+                onLocate={onLocate}
               />
             ))}
           </Collapse>

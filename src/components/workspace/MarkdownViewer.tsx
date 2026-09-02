@@ -7,7 +7,8 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { toastInfo } from "@/components/ui/toast";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { PluggableList } from "unified";
@@ -25,6 +26,8 @@ interface MarkdownViewerProps {
   isStreaming?: boolean;
   /** 点击正文内高亮实体时的回调（id, type）——用于跳转到设定界面 */
   onEntityClick?: (id: string, type: "character" | "lorebook") => void;
+  /** 反向联动：外部（角色卡 / 世界书卡片）点击传入的实体 id，正文自动定位并高亮第一次出现处 */
+  locateEntityId?: string | null;
 }
 
 // ═══════════════════════════════════════════
@@ -141,7 +144,7 @@ const MARKDOWN_COMPONENTS: Components = {
 // 组件主体
 // ═══════════════════════════════════════════
 
-export const MarkdownViewer = React.memo(function MarkdownViewer({ content, projectId, isStreaming = false, onEntityClick }: MarkdownViewerProps) {
+export const MarkdownViewer = React.memo(function MarkdownViewer({ content, projectId, isStreaming = false, onEntityClick, locateEntityId }: MarkdownViewerProps) {
 
   // 正文点击代理：在容器层捕获高亮 span 的点击，交给 onEntityClick 跳转设定界面
   const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -155,6 +158,28 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({ content, proj
   };
   const [entityMap, setEntityMap] = useState<Map<string, EntityHighlight>>(new Map());
   const [loaded, setLoaded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 反向联动：从角色卡 / 世界书卡片点「定位」，正文自动滚动到该实体第一次出现处并闪烁高亮
+  useEffect(() => {
+    if (!locateEntityId || !loaded) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const el = root.querySelector<HTMLElement>(`[data-entity-id="${CSS.escape(locateEntityId)}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.animate(
+        [
+          { backgroundColor: "rgba(255, 196, 0, 0)", boxShadow: "0 0 0 0 rgba(255, 196, 0, 0)" },
+          { backgroundColor: "rgba(255, 196, 0, 0.4)", boxShadow: "0 0 0 4px rgba(255, 196, 0, 0.55)" },
+          { backgroundColor: "rgba(255, 196, 0, 0)", boxShadow: "0 0 0 0 rgba(255, 196, 0, 0)" },
+        ],
+        { duration: 1600, easing: "ease-out" },
+      );
+    } else {
+      toastInfo("本章正文未提及该角色 / 词条，无法定位");
+    }
+  }, [locateEntityId, loaded, content]);
 
   // 加载实体映射
   useEffect(() => {
@@ -189,7 +214,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({ content, proj
   }
 
   return (
-    <div className="markdown-body" onClick={handleBodyClick}>
+    <div className="markdown-body" ref={containerRef} onClick={handleBodyClick}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}

@@ -70,6 +70,7 @@ const StreamingBody = memo(function StreamingBody({
   showTTS,
   onShowTTSChange,
   projectEntities,
+  locateEntityId,
 }: {
   content: string;
   selectedNode: StoryNodeData;
@@ -79,6 +80,7 @@ const StreamingBody = memo(function StreamingBody({
   showTTS: boolean;
   onShowTTSChange: (v: boolean) => void;
   projectEntities: ProjectEntity[];
+  locateEntityId?: string | null;
 }) {
   // 章节实体彩色徽章：扫描本章正文匹配项目实体（随节流后的 content 变化）
   const chapterEntities = useMemo(() => {
@@ -144,6 +146,7 @@ const StreamingBody = memo(function StreamingBody({
         projectId={projectId}
         isStreaming={isStreaming}
         onEntityClick={onEntityClick}
+        locateEntityId={locateEntityId}
       />
     </>
   );
@@ -163,6 +166,7 @@ export function CenterPanel({
   loadProject,
   zen = false, onExitZen, onEnterZen,
   narrativeStage,
+  locateEntityId,
 }: {
   selectedNode: StoryNodeData | null; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
@@ -189,6 +193,8 @@ export function CenterPanel({
   onExitZen?: () => void;
   onEnterZen?: () => void;
   narrativeStage?: NarrativeStage | null;
+  /** 反向联动：从角色卡 / 世界书卡片点「定位」，正文定位并高亮该实体 */
+  locateEntityId?: string | null;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   // v2.49：流式正文下沉到 useWriterStore，父组件（WorkspacePage）逐 token 不再重渲染，只这里局部更新
@@ -655,16 +661,17 @@ export function CenterPanel({
                     className="max-w-[700px] mx-auto text-[15px] leading-relaxed text-[var(--nv-text-secondary)] whitespace-pre-wrap break-words outline-none rounded-lg px-2 -mx-2 min-h-[70vh] focus:bg-[var(--nv-surface-1)]/40"
                   />
                 ) : (
-                  <StreamingBody
-                    content={throttledContent}
-                    selectedNode={selectedNode}
-                    projectId={projectId}
-                    isStreaming={isGenerating}
-                    onEntityClick={handleEntityClick}
-                    showTTS={showTTS}
-                    onShowTTSChange={setShowTTS}
-                    projectEntities={projectEntities}
-                  />
+                <StreamingBody
+                  content={throttledContent}
+                  selectedNode={selectedNode}
+                  projectId={projectId}
+                  isStreaming={isGenerating}
+                  onEntityClick={handleEntityClick}
+                  showTTS={showTTS}
+                  onShowTTSChange={setShowTTS}
+                  projectEntities={projectEntities}
+                  locateEntityId={locateEntityId}
+                />
                 )}
               </div>
             ) : (

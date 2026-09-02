@@ -17,7 +17,7 @@ export function LeftPanel({
   activeTab, onTabChange, selectedNode, onSelectNode,   onAddSection,
   onEditCharacter, onEditLore, onNewCharacter, loadProject,
   viewMode, onSetViewMode, onDeleteNode, deletingNodeId, onLoadSample,
-  onWriteChapter, onSummarizeCurrent, summarizing,
+  onWriteChapter, onSummarizeCurrent, summarizing, onLocateEntity,
 }: {
   activeTab: string;
   onTabChange: (tab: "characters" | "world" | "outline" | "storylines" | "rules" | "digest") => void;
@@ -31,6 +31,8 @@ export function LeftPanel({
   onWriteChapter?: (storylineId?: string) => void;
   onSummarizeCurrent?: () => void;
   summarizing?: boolean;
+  /** 反向联动：点角色卡 / 世界书卡片，正文定位该实体 */
+  onLocateEntity?: (id: string) => void;
 }) {
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
@@ -144,6 +146,7 @@ export function LeftPanel({
 
         {activeTab === "characters" && (
           <CharacterList characters={project.characters ?? []} projectId={project.id} onEdit={onEditCharacter}
+            onLocate={onLocateEntity}
             onDelete={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "DELETE" }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onConfirm={async (id) => { const res = await fetch(`/api/characters/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewStatus: "approved" }) }); if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); } loadProject(); }}
             onNew={onNewCharacter} onExpanded={loadProject} />

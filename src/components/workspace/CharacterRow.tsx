@@ -16,6 +16,7 @@ function CharacterRowImpl({
   onConfirm,
   tagFilter,
   onTagClick,
+  onLocate,
 }: {
   character: CharacterData;
   selected: boolean;
@@ -26,6 +27,7 @@ function CharacterRowImpl({
   onConfirm?: (id: string) => void;
   tagFilter: string;
   onTagClick: (tag: string) => void;
+  onLocate?: (id: string) => void;
 }) {
   return (
     <div
@@ -89,6 +91,15 @@ function CharacterRowImpl({
           aria-label="确认并入"
           title="确认并入角色卡（审批后才会注入生成）"
         ><Icon name="check" size={11} className="align-middle" />确认</button>
+      )}
+      {onLocate && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onLocate(character.id); }}
+          disabled={deleting}
+          aria-label="在正文定位"
+          title="在正文定位该角色首次出现处"
+          className="opacity-0 group-hover:opacity-100 text-[var(--nv-text-tertiary)] hover:text-[var(--nv-primary)] transition-colors duration-150 shrink-0 disabled:opacity-40"
+        ><Icon name="target" size={12} className="align-middle" /></button>
       )}
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
