@@ -1,11 +1,12 @@
 name: CI
 
-# 快照标签（snap/*）只是本地回滚锚点，不跑 CI，省得每拍一次快照白烧 4 分钟
+# 标签（snap/* 快照锚点、backup/* 备份锚点、v* 发版标签）都不跑 CI，
+# 省得打标签/发版时白烧 4 分钟；CI 只在 push 到 main/master 分支时跑
 on:
   push:
     branches: [main, master]
     tags-ignore:
-      - 'snap/*'
+      - '*'
   pull_request:
 
 jobs:
