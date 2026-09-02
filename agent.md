@@ -84,7 +84,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 |---|---|
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
-| 默认分支 | `main`（另有陈旧的 `master` 遗留，可择机删） |
+| 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
 | 最新 Release | `v3.1.58 品牌改名 Novel Smith + 微信收款码上线`（2026-08-31） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
@@ -171,7 +171,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 1. ~~处理 dependabot PR~~ **【已完成 2026-09-02】** 实际有 6 个 OPEN PR：#7 setup-node 4→7、#12 tailwind 4.3.0→4.3.3、#14 eslint 9.39.4→10.9.1、#15 vitest 4.1.10→4.1.11、#16 @types/node 20→26.4.0、#17 @prisma/client 7.8.0→7.10.0。本地统一升级 + 全门禁（tsc 0错 / vitest 1289 全绿 / 生产构建通过）。其中 #14 eslint 10 因 `eslint-config-next` 不兼容暂留 v9（关闭 PR 并注明原因），其余 5 个合入后关 PR。
 2. ~~把 `src/core/humanize/` 去 AI 味模块接线到生成流程~~ **【已完成 v3.1.59】** 已作为「本地过审自检」入线（CenterPanel 一键过审，纯本地、不联网、不花一分钱）。
 3. Vercel 预览站改名 `novel-forge-nu.vercel.app` → 新名（需瑞宝宝授权 Vercel 项目操作）。
-4. 陈旧的 `master` 分支择机删除（确认无引用后）。
+4. ~~陈旧的 `master` 分支~~ **【已删除 2026-09-02】** 删除前先诊断：master 领先 main 2 个独有提交（`14c00be`/`ae4ceb9`，均为 Postgres 直连旧方向，与现 SQLite 架构冲突、属被放弃方向），已先打 `backup/master-legacy-20260902` 标签异地保护，再删 origin/ghssh 两远程 + 本地 master 分支，并 `fetch -p` 清理过期追踪引用；远程默认分支确认是 `main`，无引用、零丢失。
 5. **首屏并行化实测结论（2026-09-02，不 bump）**：生产构建首屏 JS 体积仅为开发的 1/6（工作区 1.67MB vs 9.9MB），配合预渲染 HTML 首屏立即可见，生产首屏基本秒开；开发模式 10-12s 黑屏是 dev 模式固有成本（Turbopack 实时编译未压缩 chunk），**属假象，无需做首屏并行化优化**。
 
 ---
