@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.70";
+export const LATEST_VERSION = "v3.1.71";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.71 失败说人话全站铺开（GEN-FAIL-VISIBLE-FULL · 拆书/探讨/游戏/导入/仿写/角色扩展全部讲人话）：①v3.1.70 在「生成正文」一条链路上把失败翻译成人话；本轮把同款翻译层铺到全站所有交互页——拆书新建失败（API Key / 模型不可用 / 数据库异常）、探讨页失败（含「大模型 / API Key 不对 / 余额不足 / 服务没起 / 超时 / 限流 / 鉴权」全部对应人话）、游戏页两种对话失败、导入向导四种动作失败、仿写面板 / 角色批量扩展失败全部走 stream-error.ts 翻译，给用户讲清发生了什么 + 下一步做什么。②零新建翻译逻辑——全是已有 src/lib/stream-error.ts 的 describeHttpError / describeStreamError 复用，没有任何翻译规则重写；改动只在 7 个交互组件的 catch / 非 ok 分支加上调用。③消除「部分页面已说人话、部分还在闷声」的割裂感——之前只覆盖了「生成正文」，用户切到拆书/探讨/游戏/导入失败时还是黑屏或英文报错；现在任何失败都讲人话。④安全兜底——保留 AbortError 静默（用户主动停止不算失败）；失败原因有字符数限制避免 UI 溢出；HTTP 非 JSON 响应走 catch(()=>({})) 兜底；GameOutlineEditor 用 labeled break 跳出读循环避免状态污染。⑤质量门禁——类型检查 0 错误、测试全绿、生产构建通过；改动 7 个文件（dissect/new、explore、game/page、ImitationPanel、ImportWizard、GameOutlineEditor、CharacterList）。个人 IP 仍归瑞宝宝。",
   "v3.1.70 生成失败不再闷声（GEN-FAIL-VISIBLE · 失败时说人话、告诉你下一步）：①服务端报错时屏幕终于会告诉你发生了什么——以前生成接口出错（API Key 无效、模型不可用、数据库异常等），服务端返回的错误响应被当成数据流读掉、逐行跳过，界面什么都不显示（按钮恢复可点、正文没变，却不说为什么）；现在直接弹出服务端早已写好的中文说明和修复建议。②断网 / 服务没起 / 超时各有各的说法——连不上服务会提示确认本地服务是否还在运行，超时会告诉你稍等重试、正文不会丢，被限流会提示等一两分钟再来；不再只把错误打进控制台让你对着没变化的界面发呆。③杜绝「以为没点上、反复点、重复花钱」——这类失败以前零反馈，最容易让人反复点击，而每一次点击都是真实计费；现在失败一定有明确提示。④背后是可复用翻译层——新增 src/lib/stream-error.ts，把网络异常和各类 HTTP 状态码翻译成人话 + 下一步做什么（配套 17 条单元测试）；后端早就用 api-error.ts 把错误写成了中文，这一版是让前端真正说给用户听。⑤质量门禁——类型检查 0 错误、1306 条测试全绿（新增 17 条）、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.69 写作台顶部新增「多项目快捷切换」下拉（PROJECT-SWITCHER · 切项目不再回首页）：①写作台顶栏项目名后面加一个「▾」下拉按钮，点开列出你全部项目（按更新时间倒序），当前项目标「当前」且不可点，其他项目标「打开」，点一下直接跳到对应写作台，省掉「回首页→再选项目」的两步。②纯前端本地拉取——点开时才调一次 GET /api/projects 拿项目列表（含名称/题材/_count），最多取 50 个，之后缓存不再重复请求；选中即 router.push(/workspace/新id)，Next.js 客户端路由无刷新跳转，正文区立刻换成新项目。③零数据层改动——没动 schema、没动任何存储，只加了一个展示型下拉 + 已有项目列表接口的消费；下拉遮罩复用导出菜单同款透明全屏层，点外部自动收起。④质量门禁——类型检查 0 错误、1289 条测试全绿、生产构建通过；只改 Toolbar.tsx 单文件。个人 IP 仍归瑞宝宝。",
   "v3.1.68 大纲章节过审分绿/黄/红（HUMANIZE-MAP · 让大纲一眼看出哪章机器味重）：①大纲每章标题旁新增一个「过」色块（绿/黄/红），显示该章「过审自检」打出的本地过审分（AI 痕迹指数 0-100，越高越像 AI 写的）——绿色≤30 基本干净、蓝灰≤60 轻微、橙黄≤80 明显、红色>80 严重，一眼定位哪章需要返工。②过审面板新增「保存过审分」按钮——过完审点一下就把分数回写本章（POST /api/story/nodes/[id]/humanize 专用端点，只写列、不触发正文快照、不动 editVersion），下次打开大纲直接看到该章的色块，不用每次重测。③数据层零风险——StoryNode 新增 humanizeScore 列（与 qualityScore 同构），prisma db push 安全加列 + 补迁移文件夹；loadProject 直接塞原始节点、重载后分数自动回填，updateNode 就地更新大纲立即刷新。④纯本地、不联网不花钱——复用 v3.1.59 已落地的本地过审自检规则引擎，只是把单次检测结果沉淀成章节级可视化标记，竞品没有的「内嵌写作工具 + 纯本地」差异化。个人 IP 仍归瑞宝宝。",
@@ -235,6 +236,34 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.71",
+    date: "2026-09-03",
+    title: "失败说人话全站铺开（拆书/探讨/游戏/导入/仿写/角色扩展全部讲人话 · GEN-FAIL-VISIBLE-FULL）",
+    sections: [
+      {
+        label: "全站交互页都讲人话",
+        items: [
+          "v3.1.70 在「生成正文」一条链路上把失败翻译成人话；本轮把同款翻译层铺到全站所有交互页——拆书新建失败、探讨页失败、游戏页两种对话失败、导入向导四种动作失败、仿写面板失败、角色批量扩展失败全部走 stream-error.ts 翻译",
+          "涵盖「大模型 / API Key 不对 / 余额不足 / 服务没起 / 超时 / 限流 / 鉴权」全部对应人话 + 下一步做什么",
+        ],
+      },
+      {
+        label: "零新建翻译逻辑",
+        items: [
+          "全是已有 src/lib/stream-error.ts 的 describeHttpError / describeStreamError 复用，没有任何翻译规则重写",
+          "改动只在 7 个交互组件的 catch / 非 ok 分支加上调用：dissect/new、explore、game/page、ImitationPanel、ImportWizard、GameOutlineEditor、CharacterList",
+        ],
+      },
+      {
+        label: "安全与质量",
+        items: [
+          "保留 AbortError 静默（用户主动停止不算失败）；失败原因有字符数限制避免 UI 溢出；HTTP 非 JSON 响应走 catch(()=>({})) 兜底；GameOutlineEditor 用 labeled break 跳出读循环避免状态污染",
+          "类型检查 0 错误、测试全绿、生产构建通过；消除「部分页面已说人话、部分还在闷声」的割裂感",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.70",
     date: "2026-09-03",

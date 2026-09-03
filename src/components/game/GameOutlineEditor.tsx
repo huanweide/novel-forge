@@ -13,6 +13,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@/components/ui/icons";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 
 interface Props {
   projectId: string;
@@ -160,7 +161,9 @@ export default function GameOutlineEditor({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "未知错误" }));
-        throw new Error(errData.error);
+        const failure = describeHttpError(res.status, errData);
+        setStatusMsg(`对话失败：${failure.title}：${failure.description}`);
+        return;
       }
 
       const reader = res.body!.getReader();
@@ -168,7 +171,7 @@ export default function GameOutlineEditor({
       let buffer = "";
       let fullResponse = "";
 
-      while (true) {
+      readLoop: while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -194,7 +197,8 @@ export default function GameOutlineEditor({
                   setStatusMsg("章纲已定稿");
                 }
               } else if (event.type === "error") {
-                throw new Error(event.error);
+                setStatusMsg(`对话失败：${event.error}`);
+                break readLoop;
               }
             } catch (e: any) {
               if (e.message && !e.message.includes("JSON")) throw e;
@@ -203,7 +207,8 @@ export default function GameOutlineEditor({
         }
       }
     } catch (err: any) {
-      setStatusMsg(`对话失败：${err.message}`);
+      const failure = describeStreamError(err);
+      setStatusMsg(`对话失败：${failure ? `${failure.title}：${failure.description}` : (err?.message || "未知错误")}`);
     }
   };
 

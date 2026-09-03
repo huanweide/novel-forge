@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DissectUpload } from "@/components/dissect/DissectUpload";
 import { DissectProgress } from "@/components/dissect/DissectProgress";
 import { Icon } from "@/components/ui/icons";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 
 interface ProgressState {
   progress: number;
@@ -46,8 +47,9 @@ export default function NewDissectPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        setValidationError(err.error || "请求失败");
+        const err = await res.json().catch(() => ({}));
+        const failure = describeHttpError(res.status, err);
+        setValidationError(`${failure.title}：${failure.description}`);
         setPhase("idle");
         return;
       }
@@ -100,9 +102,11 @@ export default function NewDissectPage() {
         }
       }
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
-      setError(err?.message || "网络错误，请重试");
-      setPhase("error");
+      const failure = describeStreamError(err);
+      if (failure) {
+        setError(`${failure.title}：${failure.description}`);
+        setPhase("error");
+      }
     }
   }
 

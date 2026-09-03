@@ -6,6 +6,7 @@ import { type LastAppearance } from "@/lib/workspace-appearance";
 import { Icon } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/States";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { CharacterFilters } from "./CharacterFilters";
 import { CharacterToolbar } from "./CharacterToolbar";
@@ -153,7 +154,8 @@ export function CharacterList({
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        toastError(`扩展请求失败: ${errBody.error || res.status}`);
+        const failure = describeHttpError(res.status, errBody);
+        toastError(failure.description, failure.title);
         setExpanding(false);
         return;
       }
@@ -225,9 +227,10 @@ export function CharacterList({
         }
       }
     } catch (e) {
+      const failure = describeStreamError(e);
       setExpandResult({
         okList: [],
-        failList: [{ name: "连接中断", reason: (e instanceof Error ? e.message : "网络错误").slice(0, 200) }],
+        failList: failure ? [{ name: failure.title, reason: failure.description.slice(0, 200) }] : [],
         total: 0,
       });
     } finally {

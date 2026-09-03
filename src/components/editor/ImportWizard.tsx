@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/Modal";
 import { confirmDialog } from "@/components/ui/toast";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 import type { CharacterRole } from "@/core/types";
 import { CHARACTER_ROLE_LABEL } from "@/lib/character-parse";
 
@@ -237,7 +238,8 @@ export function ImportWizard({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        setError(err.error || "快速导入失败");
+        const failure = describeHttpError(res.status, err);
+        setError(`${failure.title}：${failure.description}`);
         setQuickLoading(false);
         return;
       }
@@ -296,7 +298,8 @@ export function ImportWizard({
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "网络中断");
+      const failure = describeStreamError(e);
+      if (failure) setError(`${failure.title}：${failure.description}`);
     } finally {
       setQuickLoading(false);
     }
@@ -330,7 +333,8 @@ export function ImportWizard({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        setError(errData.error || "请求失败");
+        const failure = describeHttpError(res.status, errData);
+        setError(`${failure.title}：${failure.description}`);
         setStep("input");
         return;
       }
@@ -422,8 +426,11 @@ export function ImportWizard({
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "网络中断");
-      setStep("input");
+      const failure = describeStreamError(err);
+      if (failure) {
+        setError(`${failure.title}：${failure.description}`);
+        setStep("input");
+      }
     }
   };
 
@@ -459,7 +466,8 @@ export function ImportWizard({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        setError(errData.error || "提交失败");
+        const failure = describeHttpError(res.status, errData);
+        setError(`${failure.title}：${failure.description}`);
         setStep("preview");
         return;
       }
@@ -519,8 +527,11 @@ export function ImportWizard({
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "提交失败");
-      setStep("preview");
+      const failure = describeStreamError(err);
+      if (failure) {
+        setError(`${failure.title}：${failure.description}`);
+        setStep("preview");
+      }
     }
   };
 

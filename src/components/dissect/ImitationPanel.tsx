@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { DimensionKey, ImitationMode } from "@/core/dissect/types";
 import { Icon, type IconName } from "@/components/ui/icons";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 import {
   DISSECT_DIMENSIONS,
   DIMENSION_LABELS,
@@ -134,8 +135,9 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        setError(err.error || "仿写启动失败");
+        const err = await res.json().catch(() => ({}));
+        const failure = describeHttpError(res.status, err);
+        setError(`${failure.title}：${failure.description}`);
         setGenerating(false);
         return;
       }
@@ -174,7 +176,8 @@ export function ImitationPanel({ preselectedDissectionId }: ImitationPanelProps)
         }
       }
     } catch (err: any) {
-      setError(err?.message || "网络错误");
+      const failure = describeStreamError(err);
+      if (failure) setError(`${failure.title}：${failure.description}`);
     } finally {
       setGenerating(false);
     }

@@ -18,6 +18,7 @@ import type {
 } from "@/core/explore/types";
 import { DEFAULT_BUILD_CONFIG, EXPLORE_STEPS, STEP_LABELS, STEP_DESCRIPTIONS, STEP_LUCIDE, STEP_PROMPTS } from "@/core/explore/types";
 import { toastError, toastCreated } from "@/components/ui/toast";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useHealth } from "@/hooks/use-health";
 
@@ -291,7 +292,10 @@ export default function ExplorePage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(errData.error || "请求失败");
+        const failure = describeHttpError(res.status, errData);
+        toastError(failure.description, failure.title);
+        setOutlineProgress(null);
+        return;
       }
 
       const reader = res.body?.getReader();
@@ -338,7 +342,8 @@ export default function ExplorePage() {
         }
       }
     } catch (err: any) {
-      toastError(err?.message || "网络错误");
+      const failure = describeStreamError(err);
+      if (failure) toastError(failure.description, failure.title);
       setOutlineProgress(null);
     } finally {
       outlineLoadingRef.current = false;
@@ -429,7 +434,7 @@ export default function ExplorePage() {
           buildPrompt: direction?.trim() || undefined,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && (data.characters?.length || data.loreEntries?.length)) {
         // ① 回填 AI 补齐的配置字段（novelName/protagonistName/direction/powerSystem/goldenFinger/coreConflict）
         if (data.configPatch && typeof data.configPatch === "object") {
@@ -474,10 +479,12 @@ export default function ExplorePage() {
           },
         ]);
       } else {
-        toastError(data.error || "生成失败");
+        const failure = describeHttpError(res.status, data);
+        toastError(failure.description, failure.title);
       }
     } catch (err: any) {
-      toastError(err?.message || "网络错误");
+      const failure = describeStreamError(err);
+      if (failure) toastError(failure.description, failure.title);
     } finally {
       setGeneratingAll(false);
     }
@@ -496,15 +503,17 @@ export default function ExplorePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ config, adopted, mode: createMode }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setCreatedProjectId(data.projectId);
           toastCreated(config.novelName || "小说项目", "项目");
         } else {
-          toastError(data.error || "创建失败");
+          const failure = describeHttpError(res.status, data);
+          toastError(failure.description, failure.title);
         }
       } catch (err: any) {
-        toastError(err?.message || "网络错误");
+        const failure = describeStreamError(err);
+        if (failure) toastError(failure.description, failure.title);
       } finally {
         creatingRef.current = false;
         setCreating(false);

@@ -21,6 +21,7 @@ import { Icon, type IconName } from "@/components/ui/icons";
 import { EmptyState, LoadingDots } from "@/components/ui/States";
 import { Modal } from "@/components/ui/Modal";
 import { toastInfo } from "@/components/ui/toast";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { GameOption, GameEntity, GameItem } from "@/core/game/types";
 import { reconcileFromSummary, applyFrontendItemChanges } from "@/core/game/reconcile";
@@ -329,7 +330,9 @@ export default function GamePage() {
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "未知错误" }));
-        throw new Error(errData.error || `HTTP ${res.status}`);
+        const failure = describeHttpError(res.status, errData);
+        setState((s) => ({ ...s, status: "ready", error: `${failure.title}：${failure.description}` }));
+        return;
       }
 
       // 读取 SSE 流，逐 token 增量渲染开场叙事（不再整段空等）
@@ -391,12 +394,9 @@ export default function GamePage() {
       flagTrades(doneData.narrative);
       setConcept(null);
     } catch (err: any) {
-      // 用户主动停止（abort）不算失败，回到 ready 等待重开
-      if (err?.name !== "AbortError") {
-        setState((s) => ({ ...s, status: "ready", error: err.message }));
-      } else {
-        setState((s) => ({ ...s, status: "ready", error: null }));
-      }
+      // 用户主动停止（abort）不算失败，回到 ready 等待重开；其余异常给出「人话 + 下一步」
+      const failure = describeStreamError(err);
+      setState((s) => ({ ...s, status: "ready", error: failure ? `${failure.title}：${failure.description}` : null }));
     }
   };
 
@@ -454,7 +454,9 @@ export default function GamePage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "未知错误" }));
-        throw new Error(errData.error || `HTTP ${res.status}`);
+        const failure = describeHttpError(res.status, errData);
+        setState((s) => ({ ...s, status: "playing", error: `${failure.title}：${failure.description}` }));
+        return;
       }
 
       const reader = res.body!.getReader();
@@ -557,12 +559,13 @@ export default function GamePage() {
     } catch (err: any) {
       // 用户停止/断网：后端可能已提交该轮，与后端权威态对账，避免前后端轮次/背包永久错位（阿游 P0-2）
       await reconcileWithBackend();
-      // 非主动停止（如真正异常）保留错误提示
-      if (err?.name !== "AbortError") {
+      // 用户主动停止（Abort）保持安静；其余异常给出「人话 + 下一步」
+      const failure = describeStreamError(err);
+      if (failure) {
         setState((s) => ({
           ...s,
           status: "playing",
-          error: err?.message || "行动失败",
+          error: `${failure.title}：${failure.description}`,
         }));
       }
     }
