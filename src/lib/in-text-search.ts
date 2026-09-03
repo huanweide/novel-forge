@@ -58,3 +58,56 @@ export function jumpToMatch(query: string, backward: boolean): boolean {
     return false;
   }
 }
+
+/**
+ * 章内替换：把某段正文里匹配的词替换为新词，返回新文本与替换次数。
+ *
+ * 设计要点（与 countMatches 同源、可单测、零 IO）：
+ * - 大小写不敏感、查询词首尾空白先 trim、空查询返回原文（count=0）。
+ * - 用 indexOf 收集所有命中起点，按字面子串匹配，**不解析正则**（与 countMatches 一致，查 "a.b" 按字面）。
+ * - 替换结果用 slice 拼接（非 String.replace），因此 replacement 里的 $& / $1 等一律按字面写入，绝不解释。
+ * - all=true 时从后往前替换，避免前半段替换导致后续索引偏移（"aaaa" 替 "aa"→"b" 得 "bb"）。
+ * - occurrenceIndex 指定只替换第几个（0-based）；越界或 all=false 且无有效 index 时返回原文（count=0）。
+ */
+export interface ReplaceResult {
+  newContent: string;
+  count: number;
+}
+
+export function replaceMatches(
+  content: string,
+  query: string,
+  replacement: string,
+  opts: { all?: boolean; occurrenceIndex?: number } = {},
+): ReplaceResult {
+  const q = (query ?? "").trim();
+  if (!q || !content) return { newContent: content, count: 0 };
+  const lowerContent = content.toLowerCase();
+  const lowerQuery = q.toLowerCase();
+  const indices: number[] = [];
+  let pos = 0;
+  while (pos <= lowerContent.length) {
+    const idx = lowerContent.indexOf(lowerQuery, pos);
+    if (idx === -1) break;
+    indices.push(idx);
+    pos = idx + lowerQuery.length;
+  }
+  if (indices.length === 0) return { newContent: content, count: 0 };
+
+  if (opts.all) {
+    let newContent = content;
+    for (let i = indices.length - 1; i >= 0; i--) {
+      const start = indices[i];
+      newContent =
+        newContent.slice(0, start) + replacement + newContent.slice(start + q.length);
+    }
+    return { newContent, count: indices.length };
+  }
+
+  const k = opts.occurrenceIndex ?? 0;
+  if (k < 0 || k >= indices.length) return { newContent: content, count: 0 };
+  const start = indices[k];
+  const newContent =
+    content.slice(0, start) + replacement + content.slice(start + q.length);
+  return { newContent, count: 1 };
+}

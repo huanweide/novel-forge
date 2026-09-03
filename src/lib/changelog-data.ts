@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.77";
+export const LATEST_VERSION = "v3.1.78";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.78 章内替换（INTEXT-REPLACE · 当前章节正文里找词并替换成新词）：①新增纯函数内核 replaceMatches（零 IO 可单测，复用 countMatches 同款子串匹配，slice 拼接不解释 $&/$1 等特殊字符，支持单处替换 occurrenceIndex 与全部替换 all，从后往前替换防索引偏移）。②正文查找条下方新增替换行——「替换为…」输入框 + 「替换当前处 / 替换全部」按钮（Enter 直接替换全部）；替换基于已框定的查找词，对源文本 displayContent 走纯函数生成新正文后直接 PUT 落库（复用已有 /api/story/nodes/[id] 接口），全程不碰 DOM、不依赖 contentEditable。③适用高频刚需——改角色名、统一术语、修正笔误时不用手动一段段找；与章内查找同源，大小写不敏感、输入即反馈。④零数据层改动：改动只在 CenterPanel.tsx 接入替换 UI 与落库逻辑 + 纯函数 src/lib/in-text-search.ts + 11 条单测。⑤质量门禁——类型检查 0 错误、测试全绿（新增 11 条，全量 1361）、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.77 章内查找高亮（INTEXT-SEARCH · 当前章节正文里找词并计数跳转）：①新增纯函数内核 src/lib/in-text-search.ts（countMatches/hasNativeFind/jumpToMatch，零 IO 可单测）。②正文显示区（非编辑态）顶部新增查找条——放大镜 + 输入框 + 实时命中计数「第 N/M 处 / 无匹配」+ ↑/↓ 文字箭头按钮（复用浏览器原生 window.find 高亮并跳到上一处/下一处）+ 清空 X。③大小写不敏感、输入即计数、零延迟反馈；浏览器原生 find 不可用时安全降级——计数照常、提示「本浏览器不支持自动高亮」，绝不崩。④零数据层改动：改动只在 CenterPanel.tsx 接入查找条与计数跳转逻辑。⑤质量门禁——类型检查 0 错误、测试全绿（新增 10 条）、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.76 三层自动保存（AUTOSAVE · 写一半崩了也不丢稿）：①正文编辑区新增三层防丢保护——敲字 500ms 内写入浏览器本地（LocalStorage），断电/崩溃/误关页面都不丢；3s 后再自动落库到服务端（复用已有 /api/story/nodes/[id] PUT 接口，不退出编辑态、光标不跳）；点完成是第三层手动兜底。②底部状态栏实时显示保存状态——「编辑中 / 未保存 / 保存中… / 已自动保存」四态，写作时一眼知道稿子安不安全。③崩溃恢复——重新打开章节时若本地有「没存进去的草稿」（编辑到一半崩了、或没点完成就切走），底部提示「发现自动保存的草稿（时分）· 恢复 / 忽略」，点恢复即把草稿装回正文。④纯函数内核 `src/lib/auto-save.ts`（saveDraftLocal/getDraftLocal/clearDraftLocal/isDraftNewer，可单测）+ 12 条单测；改动只在 CenterPanel.tsx 接入三层逻辑与指示器，零数据层改动、不动 schema。⑤质量门禁——类型检查 0 错误、测试全绿（新增 12 条）、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.75 全文检索（GLOBAL-SEARCH · 写了几十万字也能秒定位那段话在第几章）：①写作台「实体」Tab 新增「全文检索」子面板，跨**全部章节正文 + 大纲**扫描关键词，返回命中章节 + 上下文片段 + 命中数。与大纲/世界书/伏笔搜索互补：那三个找「条目」，这个找「某段话在哪出现」。②纯前端零依赖检索——`GET /api/story/search` 把全部章节 content/outline 一次性拉进内存做 indexOf 子串匹配，中文无需分词、零新依赖、几十万字毫秒级；命中来源标注「正文/大纲/标题」，大小写不敏感、中英文都行。③片段高亮：把命中词用 `<mark>` 高亮，点命中章节直接跳到那一章（复用已有的 handleSelectNode 选中逻辑）。④防抖 300ms 自动搜 + 回车立即搜，双重触发用 reqId 丢弃过期请求，避免快速输入时结果错乱；空态/无匹配/错误态都给了明确提示。⑤零数据层改动：新增纯函数核心 `src/core/story-search.ts`（searchStoryNodes/scanHits/buildSnippet，可单测）+ 新 API 路由 + 新面板组件 + 15 条单测；只改 RightPanel 接入口与 workspace 页传 onJumpToNode 回调。⑥质量门禁——类型检查 0 错误、测试全绿（**新增 15 条**）、生产构建通过。个人 IP 仍归瑞宝宝。",
@@ -242,6 +243,49 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.78",
+    date: "2026-09-03",
+    title: "章内替换（当前章节正文里找词并替换成新词 · INTEXT-REPLACE）",
+    sections: [
+      {
+        label: "真实缺陷：章内查找只能看不能改",
+        items: [
+          "v3.1.77 加了章内查找，但它是只读的——找到词之后没法就地把那个词改成别的",
+          "改角色名、统一术语、批量修正笔误这些高频动作，仍得手动一段段找、一段段改，或整章复制出去用外部编辑器替换再贴回",
+        ],
+      },
+      {
+        label: "新增纯函数内核 + 替换 UI",
+        items: [
+          "新增 src/lib/in-text-search.ts 的 replaceMatches：复用 countMatches 同款子串匹配，零 IO 可单测；slice 拼接不解释 $&/$1 等特殊字符；支持单处替换 occurrenceIndex 与全部替换 all；从后往前替换防索引偏移",
+          "正文查找条下方新增替换行：『替换为…』输入框 + 『替换当前处 / 替换全部』按钮（Enter 直接替换全部）",
+        ],
+      },
+      {
+        label: "不碰 DOM 的落库链路",
+        items: [
+          "替换基于已框定的查找词，对源文本 displayContent 走纯函数生成新正文后直接 PUT /api/story/nodes/[id] 落库，全程不读 contentEditable、不复用编辑态 DOM",
+          "替换后自动 loadProject 刷新当前章节，正文立刻更新；与章内查找同源——大小写不敏感、输入即反馈",
+        ],
+      },
+      {
+        label: "零数据层改动",
+        items: [
+          "不动 schema、不动 API 存储；新增纯函数 + 11 条单测",
+          "改动只在 CenterPanel.tsx 接入替换 UI 与落库逻辑",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误",
+          "vitest 1361 全绿（新增 11 条：空查询返回 0 / 中文多次全替换计数 / occurrenceIndex 单处 / 越界返回原文 / 大小写不敏感 / $& 按字面 / 替换为空=删除 / 从后往前防偏移 / 正则特殊字符按字面 / trim）",
+          "生产构建通过",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.77",
     date: "2026-09-03",

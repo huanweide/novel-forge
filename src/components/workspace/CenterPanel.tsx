@@ -13,7 +13,7 @@ import type { StoryNodeData, ReviewIssue } from "./types";
 import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
 import { useWriterStore } from "@/store";
 import { saveDraftLocal, getDraftLocal, clearDraftLocal, isDraftNewer } from "@/lib/auto-save";
-import { countMatches, hasNativeFind, jumpToMatch } from "@/lib/in-text-search";
+import { countMatches, hasNativeFind, jumpToMatch, replaceMatches } from "@/lib/in-text-search";
 
 // 项目实体（名→颜色→id），用于章节实体彩色徽章与点击跳转
 type ProjectEntity = {
@@ -222,6 +222,9 @@ export function CenterPanel({
   const [nodeQuery, setNodeQuery] = useState("");
   const [matchIdx, setMatchIdx] = useState(0);
   const nodeSearchRef = useRef<HTMLInputElement>(null);
+  // ── 章内替换（v3.1.78）：基于查找词把正文命中的词替换成新词（只读态用；不碰 DOM，对源文本走 slice 替换后落库）──
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const nodeReplaceRef = useRef<HTMLInputElement>(null);
 
   const startInlineEdit = () => {
     if (!selectedNode) return;
@@ -390,6 +393,50 @@ export function CenterPanel({
     jumpToMatch(nodeQuery, true);
     setMatchIdx((i) => (i <= 1 ? matchCount : i - 1));
   }, [nodeQuery, matchCount]);
+
+  // v3.1.78 章内替换：对源文本 displayContent 走纯函数 replaceMatches 生成新正文，再复用落库逻辑直接 PUT（不读 DOM，规避 contentEditable 依赖）
+  const commitContent = useCallback(async (newContent: string) => {
+    if (!selectedNode) return;
+    setSavingInline(true);
+    try {
+      const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: newContent,
+          wordCount: newContent.length,
+          editVersion: (selectedNode as any).editVersion,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      if (selectedNode) clearDraftLocal(selectedNode.id);
+      if (loadProject) await loadProject();
+      setMatchIdx(0);
+    } catch (err: any) {
+      toastError("替换失败：" + (err?.message || "请重试"));
+    } finally {
+      setSavingInline(false);
+    }
+  }, [selectedNode, loadProject]);
+
+  const replaceOne = useCallback(async () => {
+    if (!selectedNode || !nodeQuery) return;
+    const { newContent, count } = replaceMatches(displayContent, nodeQuery, replaceQuery, {
+      occurrenceIndex: Math.max(0, (matchIdx || 1) - 1),
+    });
+    if (count === 0) { toastError("未定位到可替换的位置"); return; }
+    await commitContent(newContent);
+    toastSuccess("已替换当前处");
+  }, [selectedNode, nodeQuery, replaceQuery, displayContent, matchIdx]);
+
+  const replaceAll = useCallback(async () => {
+    if (!selectedNode || !nodeQuery) return;
+    const { newContent, count } = replaceMatches(displayContent, nodeQuery, replaceQuery, { all: true });
+    if (count === 0) { toastError("未定位到可替换的位置"); return; }
+    await commitContent(newContent);
+    toastSuccess(`已替换 ${count} 处`);
+  }, [selectedNode, nodeQuery, replaceQuery, displayContent]);
 
   // 流式正文节流值：AI 逐 token 生成时合并到下一帧提交一次，喂给 StreamingBody / MarkdownViewer
   const throttledContent = useRafThrottledValue(displayContent, isGenerating);
@@ -785,6 +832,28 @@ export function CenterPanel({
                         </>
                       )}
                     </div>
+                    {nodeQuery && (
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <div className="flex items-center gap-1.5 flex-1 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-2 py-1">
+                          <Icon name="refresh" size={13} className="text-[var(--nv-text-tertiary)] shrink-0" />
+                          <input
+                            ref={nodeReplaceRef}
+                            value={replaceQuery}
+                            onChange={(e) => setReplaceQuery(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") replaceAll(); }}
+                            placeholder="替换为…"
+                            aria-label="替换为"
+                            className="flex-1 min-w-0 bg-transparent text-xs text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none"
+                          />
+                          <button type="button" onClick={replaceOne} disabled={savingInline} title="替换当前处" className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors disabled:opacity-50">
+                            替换当前处
+                          </button>
+                          <button type="button" onClick={replaceAll} disabled={savingInline} title="替换全部" className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors disabled:opacity-50">
+                            替换全部
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {nodeQuery && !hasNativeFind() && (
                       <span className="text-[10px] text-[var(--nv-text-tertiary)] shrink-0">本浏览器不支持自动高亮</span>
                     )}
