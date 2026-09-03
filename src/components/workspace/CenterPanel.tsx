@@ -332,6 +332,15 @@ export function CenterPanel({
     }
   }, [selectedNode?.id]);
 
+  // v3.1.81：章内查找/替换状态随章节切换重置，杜绝跨章串台误替换正文（不可逆改写）。
+  // selectedNode 是父组件传入的 prop，切章只换 prop、CenterPanel 不卸载；
+  // 若不主动清，旧章的查找词/替换词会带进新章，误触「替换全部」会跨章改写正文。
+  useEffect(() => {
+    setNodeQuery("");
+    setReplaceQuery("");
+    setMatchIdx(0);
+  }, [selectedNode?.id]);
+
   const restoreDraft = () => {
     if (!pendingDraft) return;
     setInlineDraft(pendingDraft.content);

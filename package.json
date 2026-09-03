@@ -1,6 +1,6 @@
 {
   "name": "novel-smith",
-  "version": "3.1.80",
+  "version": "3.1.81",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",

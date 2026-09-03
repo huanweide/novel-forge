@@ -25,10 +25,12 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.80";
+export const LATEST_VERSION = "v3.1.81";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.81 切章重置章内查找/替换状态（RESET-ON-NODE-SWITCH · 杜绝跨章误替换）：①修复真实 bug——selectedNode 是父组件传入的 prop，切章时 CenterPanel 不卸载只换 prop，而 nodeQuery/matchIdx/replaceQuery 三个查找/替换状态没有随切章重置，旧章的查找词/替换词会带进新章；用户切到 B 章后误点「替换全部」，会用旧替换词改写 B 章正文（不可逆）。②加一个依赖 [selectedNode?.id] 的 effect，切章时清空 nodeQuery/replaceQuery/matchIdx。③零数据层改动：只改 CenterPanel.tsx 一处新增 effect。④质量门禁——类型检查 0 错误、测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
+
   "v3.1.80 替换落库失败不再报假成功（REPLACE-FAIL-HONEST · 替换失败不再弹「已替换」）：①修复 v3.1.78/79 留下的真实 bug——commitContent 内部吞掉落库异常、不向上抛，而 replaceOne/replaceAll 在 await 后无条件 toastSuccess，导致服务器保存失败（断网/编辑版本冲突/500）时界面照样弹「已替换当前处/已替换 N 处」，用户以为改成了、刷新发现原封不动。②改 commitContent 返回 Promise<boolean>：成功 true、失败 false（catch 内 toastError 并 return false）。③replaceOne/replaceAll 改为依返回值决定——成功才 toastSuccess；replaceAll 还在成功分支才清空「替换为」框（失败保留旧词方便重试）。④零数据层改动：只改 CenterPanel.tsx 三处回调。⑤质量门禁——类型检查 0 错误、测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
 
   "v3.1.79 替换后位置同步（REPLACE-KEEP-POSITION · 替换当前处不再弹回第1处）：①修复 v3.1.78 留下的真实 bug——替换当前处后计数被暴力归零，连续替换多处时每次弹回第 1 处，且「替换为」框残留旧词。②改 commitContent 支持传入 nextMatchIdx——替换第 K 处后原第 K+1 处前移为第 K 处，保持 matchIdx 指向下一处，连点「替换当前处」即可一路替换下去；全部替换才回到起点（传 0）。③全部替换后清空「替换为」输入框、并把替换框显示条件收紧为「有匹配才显示」，无匹配时不再残留可操作的替换按钮。④零数据层改动：只改 CenterPanel.tsx 三处回调函数 + 一处 UI 条件。⑤质量门禁——类型检查 0 错误、测试全绿（现有 1361）、生产构建通过。个人 IP 仍归瑞宝宝。",
@@ -247,6 +249,37 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.81",
+    date: "2026-09-03",
+    title: "切章重置章内查找/替换状态（RESET-ON-NODE-SWITCH）",
+    sections: [
+      {
+        label: "真实缺陷：跨章串台误替换",
+        items: [
+          "selectedNode 是父组件传入的 prop，切章时 CenterPanel 不卸载只换 prop",
+          "nodeQuery/matchIdx/replaceQuery 三个查找/替换状态没有随切章重置，旧章的查找词/替换词会带进新章",
+          "危害：切到 B 章后误点「替换全部」，会用旧替换词改写 B 章正文（不可逆）",
+        ],
+      },
+      {
+        label: "修复：切章即清空",
+        items: [
+          "新增依赖 [selectedNode?.id] 的 useEffect，切章时清空 nodeQuery/replaceQuery/matchIdx",
+          "同章内 AI 生成只变 content 不变 id，effect 不触发，查找状态保留，符合预期",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误",
+          "vitest 1361 全绿",
+          "生产构建通过",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v3.1.80",
     date: "2026-09-03",
