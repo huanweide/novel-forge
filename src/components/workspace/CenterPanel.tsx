@@ -12,6 +12,7 @@ import { toastSuccess, toastError } from "@/components/ui/toast";
 import type { StoryNodeData, ReviewIssue } from "./types";
 import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
 import { useWriterStore } from "@/store";
+import { saveDraftLocal, getDraftLocal, clearDraftLocal, isDraftNewer } from "@/lib/auto-save";
 
 // 项目实体（名→颜色→id），用于章节实体彩色徽章与点击跳转
 type ProjectEntity = {
@@ -212,6 +213,9 @@ export function CenterPanel({
   const [inlineDraft, setInlineDraft] = useState("");
   const [savingInline, setSavingInline] = useState(false);
   const inlineRef = useRef<HTMLDivElement>(null);
+  // ── 三层自动保存（5.1）：手动编辑正文时实时防丢 + 状态指示 + 崩溃恢复 ──
+  const [saveState, setSaveState] = useState<"idle" | "unsaved" | "saving" | "saved">("idle");
+  const [pendingDraft, setPendingDraft] = useState<{ nodeId: string; content: string; savedAt: number } | null>(null);
 
   const startInlineEdit = () => {
     if (!selectedNode) return;
@@ -221,6 +225,7 @@ export function CenterPanel({
   const cancelInlineEdit = () => {
     setInlineEditing(false);
     setInlineDraft("");
+    setSaveState("idle");
   };
   const saveInlineEdit = async () => {
     if (!selectedNode || !inlineRef.current) return;
@@ -241,12 +246,92 @@ export function CenterPanel({
       toastSuccess("正文已保存");
       setInlineEditing(false);
       setInlineDraft("");
+      setSaveState("idle");
+      if (selectedNode) clearDraftLocal(selectedNode.id);
       if (loadProject) await loadProject();
     } catch (err: any) {
+      setSaveState("unsaved");
       toastError("保存失败：" + (err?.message || "请重试"));
     } finally {
       setSavingInline(false);
     }
+  };
+
+  // 三层自动保存 · 层2（Server 3s 防抖落库）：进入编辑态后监听正文输入，
+  // 500ms 写本地兜底、3s 自动 PUT 落库（不退出编辑态、光标不跳），成功后清本地草稿。
+  // 层1（LocalStorage 500ms）由本 effect 内的 lsTimer 触发；层3（手动点完成）见 saveInlineEdit。
+  useEffect(() => {
+    if (!inlineEditing || !inlineRef.current) return;
+    let lsTimer: ReturnType<typeof setTimeout> | null = null;
+    let srvTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const flush = async () => {
+      if (!selectedNode || !inlineRef.current) return;
+      const text = inlineRef.current.textContent ?? "";
+      setSaveState("saving");
+      try {
+        const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: text,
+            wordCount: text.length,
+            editVersion: (selectedNode as any).editVersion,
+          }),
+        });
+        if (!res.ok) throw new Error("save failed");
+        if (selectedNode) clearDraftLocal(selectedNode.id);
+        setSaveState("saved");
+      } catch {
+        // 落库失败仍有 localStorage 兜底，不阻塞写作
+        setSaveState("unsaved");
+      }
+    };
+
+    const onInput = () => {
+      if (!selectedNode || !inlineRef.current) return;
+      const text = inlineRef.current.textContent ?? "";
+      setSaveState("unsaved");
+      if (lsTimer) clearTimeout(lsTimer);
+      if (srvTimer) clearTimeout(srvTimer);
+      lsTimer = setTimeout(() => saveDraftLocal(selectedNode.id, text), 500);
+      srvTimer = setTimeout(flush, 3000);
+    };
+
+    const el = inlineRef.current;
+    el.addEventListener("input", onInput);
+    return () => {
+      el.removeEventListener("input", onInput);
+      if (lsTimer) clearTimeout(lsTimer);
+      if (srvTimer) clearTimeout(srvTimer);
+    };
+  }, [inlineEditing, selectedNode?.id]);
+
+  // 三层自动保存 · 崩溃恢复：打开章节时若本地有该节点的未落库草稿（编辑到一半崩了/
+  // 没点完成就切走），提示恢复。正常保存（点完成 / 3s 自动落库）都会清掉本地草稿，
+  // 所以残留的草稿必然是「还没存进去的内容」，提示恢复永远是对的，无需比对服务端时间。
+  useEffect(() => {
+    if (!selectedNode) {
+      setPendingDraft(null);
+      return;
+    }
+    const draft = getDraftLocal(selectedNode.id);
+    if (draft) {
+      setPendingDraft({ nodeId: selectedNode.id, content: draft.content, savedAt: draft.savedAt });
+    } else {
+      setPendingDraft(null);
+    }
+  }, [selectedNode?.id]);
+
+  const restoreDraft = () => {
+    if (!pendingDraft) return;
+    setInlineDraft(pendingDraft.content);
+    setInlineEditing(true);
+    setPendingDraft(null);
+  };
+  const dismissDraft = () => {
+    if (pendingDraft) clearDraftLocal(pendingDraft.nodeId);
+    setPendingDraft(null);
   };
 
   // 进入编辑态时把原文写入 contentEditable（非受控，避免光标跳动）
@@ -739,6 +824,31 @@ export function CenterPanel({
               )}
               {!zen && genStep === "done" && (
                 <span className="inline-flex items-center gap-1 text-[var(--nv-success)]"><Icon name="check" size={11} /> 已落库 <Icon name="check" size={15} className="inline-block align-text-bottom shrink-0" />{selectedNode?.wordCount ? ` · 本章 ${selectedNode.wordCount} 字` : ""}</span>
+              )}
+              {/* 三层自动保存 · 状态指示：手动编辑正文时实时告知是否已落地 */}
+              {inlineEditing && (
+                <span className="inline-flex items-center gap-1.5">
+                  {saveState === "saving" && (
+                    <span className="inline-flex items-center gap-1 text-[var(--nv-primary)]"><Icon name="loader" size={11} className="animate-spin" /> 保存中…</span>
+                  )}
+                  {saveState === "saved" && (
+                    <span className="inline-flex items-center gap-1 text-[var(--nv-success)]"><Icon name="check" size={11} /> 已自动保存</span>
+                  )}
+                  {saveState === "unsaved" && (
+                    <span className="inline-flex items-center gap-1 text-[var(--nv-danger)]"><span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-danger)]" /> 未保存</span>
+                  )}
+                  {saveState === "idle" && (
+                    <span className="inline-flex items-center gap-1 text-[var(--nv-text-muted)]"><span className="w-1.5 h-1.5 rounded-full bg-[var(--nv-text-muted)]" /> 编辑中</span>
+                  )}
+                </span>
+              )}
+              {/* 三层自动保存 · 崩溃恢复：本地有比服务端更新的草稿时提示 */}
+              {pendingDraft && (
+                <span className="inline-flex items-center gap-1.5 text-[var(--nv-danger)]">
+                  发现自动保存的草稿（{new Date(pendingDraft.savedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}）
+                  <button type="button" onClick={restoreDraft} className="underline hover:opacity-80">恢复</button>
+                  <button type="button" onClick={dismissDraft} className="underline hover:opacity-80">忽略</button>
+                </span>
               )}
               <span className="flex items-center gap-1"><Icon name="file" size={11} /> UTF-8</span>
             </span>
