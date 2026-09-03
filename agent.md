@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.73 |
+| 包名 / 版本 | `novel-smith` v3.1.74 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.73 世界书搜索（设定多了照样一秒定位）`（2026-09-03，Latest） |
+| 最新 Release | `v3.1.74 伏笔搜索（几十条线索里一秒捞出要看的那条）`（2026-09-03，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -99,6 +99,16 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ---
 
 ## 五、版本更新记录（最新在上）
+
+### v3.1.74 — 2026-09-03 — 伏笔搜索（几十条线索里一秒捞出要看的那条 · FS-SEARCH）
+
+- **问题（真实缺陷）**：写作台面板横扫显示——`OutlineTree`（v3.1.72 已补）、`CharacterList`（早有完整筛选）、`WorldPanel`（v3.1.73 已补）都有搜索，唯独 `ForeshadowingPanel.tsx`（459 行）**零搜索**，只能靠分组折叠 + 肉眼翻。长篇用户伏笔几十上百条，这是与大纲/世界书同源的高频刚需。
+- **改动**：`ForeshadowingPanel.tsx` 单文件——① 顶部统计条下方加紧凑搜索框（Icon search + input + 清空 X）；② `useMemo` 计算 `filteredGroups`，**命中保留原分组结构**（pending/partial/fulfilled/voided），空组自动隐藏；③ 实时计数「匹配 X / Y 条线索」；④ 无匹配独立分支，与「暂无未收尾线索」真空态分开。
+- **匹配逻辑抽成模块级纯函数 `matchForeshadowItem` 并导出**（本轮唯一有逻辑的新代码），配 7 条单测：空关键词不过滤 / 描述中文子串 / developmentHint / 来源中英文 / 优先级中文（高/中/低）/ 章节号（第12章）/ 字段缺失不炸。匹配池 = description + developmentHint + SOURCE_LABEL 中文 + source 英文原值 + PRIORITY_TEXT + priority 原值 + 章节号。
+- **测试揪出一处设计瑕疵**：原本 `SOURCE_LABEL[x] ?? x` 写法导致来源有中文映射时英文原值不参与匹配（搜 `outline` 不中）。改成中文标签与英文原值**双双进匹配池**，中英文都能搜。
+- **踩坑（JSX 三元括号）**：在 `{cond ? (<div/>) : ( groupOrder.map(...) )}` 结构里，结尾闭合是 `}))}`（关 map 回调体 → 关 map( → 关三元括号 → 关 JSX 表达式），比原 `})}` 多两层；连错三次才对（TS1005 / TS1381）。**教训：大块 JSX 包三元时，先想清楚括号层数再落笔，别边写边补。**
+- **零数据层改动**：纯前端 useState + useMemo（**useMemo 必须写在所有条件 return 之前**，否则违反 Hooks 规则），不动 schema / API / 存储；无障碍 input + 按钮均 aria-label。
+- **门禁**：tsc 0 错、vitest **1313 全绿（+7）**、build EXIT=0。
 
 ### v3.1.73 — 2026-09-03 — 世界书搜索（设定多了照样一秒定位 · WORLD-SEARCH）
 

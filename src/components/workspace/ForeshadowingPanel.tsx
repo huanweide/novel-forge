@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StatusDot, Icon, type IconName } from "@/components/ui/icons";
 import { useProjectStore } from "@/store";
 
@@ -76,6 +76,33 @@ const SOURCE_LABEL: Record<string, string> = {
   foreshadow: "未收尾线索",
 };
 
+// 纯文本优先级（PRIORITY_LABEL 是带色点的 ReactNode，搜索匹配只能吃纯文本）
+const PRIORITY_TEXT: Record<string, string> = { high: "高", medium: "中", low: "低" };
+
+/**
+ * v3.1.74：伏笔线索模糊匹配（模块级纯函数，便于单测 · FS-SEARCH）
+ * 匹配范围：描述 / 后续发展思路 / 来源中文标签 / 优先级中文（高/中/低）/ 埋设章节号 / 应回收章节号。
+ * 中文直接搜，不用记精确措辞；空关键词一律命中（不过滤）。
+ */
+export function matchForeshadowItem(item: ForeshadowItem, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    item.description ?? "",
+    item.developmentHint ?? "",
+    // 中文标签与英文原值都进匹配池：搜「推断」和搜「ai_inference」都能命中
+    SOURCE_LABEL[item.source] ?? "",
+    item.source ?? "",
+    PRIORITY_TEXT[item.priority] ?? "",
+    item.priority ?? "",
+    item.chapterNumber != null ? `第${item.chapterNumber}章` : "",
+    item.expiryChapter != null ? `第${item.expiryChapter}章` : "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 // ═══════════════════════════════════════════
 // 组件
 // ═══════════════════════════════════════════
@@ -86,6 +113,8 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
   const [error, setError] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(["voided"]));
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  // v3.1.74：伏笔线索搜索（FS-SEARCH）
+  const [searchTerm, setSearchTerm] = useState("");
   const [editHints, setEditHints] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string>("");
@@ -275,6 +304,27 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
     }
   };
 
+  // v3.1.74：伏笔线索搜索（FS-SEARCH）
+  // 命中保留原分组结构（待收尾 / 部分收 / 已收 / 已废弃），空组自动隐藏，不破坏用户对状态的既有认知。
+  // 注意：useMemo 必须写在所有条件 return 之前，否则违反 Hooks 规则。
+  const { filteredGroups, matchedCount } = useMemo(() => {
+    const groups = data?.groups ?? {};
+    const q = searchTerm.trim();
+    if (!q) return { filteredGroups: groups, matchedCount: data?.total ?? 0 };
+    const next: Record<string, GroupData> = {};
+    let matched = 0;
+    for (const key of Object.keys(groups)) {
+      const g = groups[key];
+      if (!g) continue;
+      const items = g.items.filter((it) => matchForeshadowItem(it, q));
+      if (items.length > 0) {
+        next[key] = { ...g, count: items.length, items };
+        matched += items.length;
+      }
+    }
+    return { filteredGroups: next, matchedCount: matched };
+  }, [data, searchTerm]);
+
   if (loading) {
     return <div className="p-4 text-xs text-[var(--nv-text-tertiary)]">加载未收尾线索...</div>;
   }
@@ -340,10 +390,48 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
         )}
       </div>
 
+      {/* v3.1.74：伏笔线索搜索框（FS-SEARCH · 与大纲/世界书搜索风格统一） */}
+      <div className="px-3 py-2 border-b border-[var(--nv-border-2)]">
+        <div className="relative">
+          <Icon name="search" size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--nv-text-tertiary)] pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="搜索线索 / 发展思路 / 章节…"
+            aria-label="搜索伏笔线索"
+            className="w-full pl-7 pr-7 h-7 text-xs rounded-md border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)]/60 focus:ring-1 focus:ring-[var(--nv-primary)]/30"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              aria-label="清空搜索"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 inline-flex items-center justify-center text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] rounded"
+            >
+              <Icon name="x" size={10} />
+            </button>
+          )}
+        </div>
+        {searchTerm && (
+          <div className="mt-1 px-0.5 text-[10px] text-[var(--nv-text-tertiary)]">
+            匹配 {matchedCount} / {data.total} 条线索
+          </div>
+        )}
+      </div>
+
       {/* 分组列表 */}
       <div className="flex-1 overflow-y-auto">
-        {groupOrder.map((key) => {
-          const group = data.groups[key];
+        {searchTerm.trim() && matchedCount === 0 ? (
+          // 无匹配独立分支：与「暂无未收尾线索」真空态分开，避免误以为线索丢了。
+          <div className="px-3 py-10 text-center">
+            <div className="mb-2 text-xs text-[var(--nv-text-secondary)]">
+              没有匹配「{searchTerm.trim()}」的线索
+            </div>
+            <button onClick={() => setSearchTerm("")} className="text-xs text-[var(--nv-primary)] hover:underline">清空搜索</button>
+          </div>
+        ) : (
+        groupOrder.map((key) => {
+          const group = filteredGroups[key];
           if (!group || group.items.length === 0) return null;
 
           const isCollapsed = collapsed.has(key);
@@ -452,7 +540,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
               )}
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );
