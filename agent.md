@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.72 |
+| 包名 / 版本 | `novel-smith` v3.1.73 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.72 大纲搜索（长篇高频刚需）`（2026-09-03，Latest） |
+| 最新 Release | `v3.1.73 世界书搜索（设定多了照样一秒定位）`（2026-09-03，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -100,7 +100,20 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 
 ## 五、版本更新记录（最新在上）
 
+### v3.1.73 — 2026-09-03 — 世界书搜索（设定多了照样一秒定位 · WORLD-SEARCH）
+
+- **问题（真实缺陷）**：角色面板（CharacterList）早就有完整搜索 + 状态 / 标签筛选系统，但**世界书（WorldPanel）完全没有板块内搜索**——只能在左侧选板块（地理 / 种族 / 势力 / 历史 / 设定 / 其他）做粗筛，板块内找特定词条仍要肉眼一条条扫。长篇用户世界书动辄上百条设定，这是和「大纲搜索」同源的高频刚需。
+- **改动**：`WorldPanel.tsx` 单文件——① 板块内加紧凑搜索框（放大镜 + 输入框 + 清空 X）；② `useMemo` 模糊匹配 title / keys（数组 join）/ content 前 200 字符；③ 实时计数「匹配 X / Y 个词条」；④ 无匹配走独立分支「没有匹配「{关键词}」的地理词条」+「清空搜索」，与「暂无地理设定」真空态分开（避免误以为设定丢了）。
+- **零数据层改动**：纯前端 useState + useMemo，不动 schema / API / 存储；无障碍 input + 按钮均有 aria-label。
+- **顺带修正 v3.1.72 的两处遗漏**：`changelog-data.ts` 的 `LATEST_VERSION` 没跟着升（停在 v3.1.71）、`CHANGELOG.md` 的 v3.1.72 条目只有标题无正文。本轮三处版本号（package.json / CHANGELOG.md / LATEST_VERSION）全对齐 v3.1.73。
+- **门禁**：tsc 0 错、vitest 1306 全绿、build EXIT=0。
+
 ### v3.1.72 — 2026-09-03 — 大纲搜索（长篇高频刚需 · OUTLINE-SEARCH）
+
+- **问题（真实缺陷）**：写作台左栏 `OutlineTree.tsx` grep 无任何 search / filter 关键词——**大纲完全没有搜索或过滤**。长篇用户写几百章后找某一章只能肉眼一个一个扫。先扫了 `catch {}` 空捕获（只有 layout.tsx:49 的 localStorage 兜底，合理非缺陷）、`AbortController` 缺失、`finally setLoading(false)` 缺失三个维度，工程纪律都已做到位，本轮从「用户体验」维度定位到这一真实痛点。
+- **改动**：`OutlineTree.tsx` 单文件——① 顶部紧凑搜索框（Icon search + input + 清空 X）；② `useMemo` 模糊匹配 title / content 前 200 字符 / 状态文字；③ 命中节点沿 parentId 上溯保留祖先链（卷 / 分卷不隐藏上下文）；④ 实时计数「匹配 X / Y 个节点（含 Z 个祖先卷 / 分卷）」；⑤ 无匹配独立分支与「没有章节」空状态分开。
+- **零数据层改动**：纯前端 useState + useMemo，不动 schema / API / 存储；无障碍 input + 按钮均有 aria-label。
+- **门禁**：tsc 0 错、vitest 1306 全绿、build EXIT=0。commit `5fd620d`。
 
 ### v3.1.71 — 2026-09-03 — 失败说人话全站铺开（拆书/探讨/游戏/导入/仿写/角色扩展全部讲人话 · GEN-FAIL-VISIBLE-FULL）
 
