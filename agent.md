@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.74 |
+| 包名 / 版本 | `novel-smith` v3.1.75 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.74 伏笔搜索（几十条线索里一秒捞出要看的那条）`（2026-09-03，Latest） |
+| 最新 Release | `v3.1.75 全文检索（写了几十万字也能秒定位那段话）`（2026-09-03，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -99,6 +99,15 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ---
 
 ## 五、版本更新记录（最新在上）
+
+### v3.1.75 — 2026-09-03 — 全文检索（写了几十万字也能秒定位那段话 · GLOBAL-SEARCH）
+
+- **问题（真实缺陷，换维度找痛点）**：四大面板搜索（大纲/角色/世界书/伏笔）已全补齐，再做搜索就是重复劳动。换维度——长篇用户写到几十万字后，想找「某个角色第一次出现的地方」「那把铜钥匙在哪章提过」，**没有任何跨章节全文检索**（横扫 `src/app/api/` 无 search/find 路由，RightPanel 也无入口）。这是比面板搜索更大的一块缺失。
+- **改动**：① 新增纯函数核心 `src/core/story-search.ts`（`searchStoryNodes`/`scanHits`/`buildSnippet`，零 IO 可单测）；② 新增 `GET /api/story/search` 路由（只 select content/outline 必需字段、按 order 升序、projectId 必填校验、搜索词≤100字）；③ 新建 `FullTextSearchPanel.tsx`（防抖 300ms 自动搜 + 回车立即搜、`reqId` 丢弃过期请求、命中词 `<mark>` 高亮、点结果跳章）；④ `RightPanel` 加 `search` 子 tab + `onJumpToNode` prop；⑤ workspace 页接 `onJumpToNode`（按 id 查 `project.storyNodes` 后 `handleSelectNode`）。
+- **为什么不用搜索引擎**：中文无空格分词，子串 indexOf 已符合直觉且零依赖；几十万字 = 几 MB 字符串，原生 indexOf 毫秒级，不需要引倒排索引库。
+- **防爆与体验**：单章最多 5 命中片段、最多 50 命中章节（超了提示「换更具体的词」）；空态/无匹配/错误态都给明确文案不黑屏；命中来源标注「正文/大纲/标题」；大小写不敏感、中英文都行。
+- **零数据层改动**：不动 schema / API 存储；只改 RightPanel 接入口与 workspace 页传回调。
+- **门禁**：tsc 0 错、vitest **1328 全绿（+15）**、build EXIT=0。
 
 ### v3.1.74 — 2026-09-03 — 伏笔搜索（几十条线索里一秒捞出要看的那条 · FS-SEARCH）
 

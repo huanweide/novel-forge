@@ -1323,6 +1323,10 @@ export default function WorkspacePage() {
               const l = project.lorebookEntries.find((x) => x.id === id);
               if (l) setEditingLore(l);
             }}
+            onJumpToNode={(id) => {
+              const n = (project as any)?.storyNodes?.find((x: any) => x.id === id);
+              if (n) handleSelectNode(n);
+            }}
           />
         </ErrorBoundary>
         </div>

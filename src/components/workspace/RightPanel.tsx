@@ -7,6 +7,7 @@ import { ChapterWordCountChart } from "./ChapterWordCountChart";
 import { ChapterEntitiesPanel } from "./ChapterEntitiesPanel";
 import { ForeshadowingPanel } from "./ForeshadowingPanel";
 import { ConsistencyPanel } from "./ConsistencyPanel";
+import { FullTextSearchPanel } from "./FullTextSearchPanel";
 import { AIChatBar } from "./AIChatBar";
 import { MonitorPanel } from "./MonitorPanel";
 import { NarrativeEnergyPanel } from "./NarrativeEnergyPanel";
@@ -17,7 +18,7 @@ import { useProjectStore } from "@/store";
 import type { ToolboxItem } from "./ToolboxDialog";
 
 type TopTab = "ai" | "entities" | "toolbox" | "stats";
-type EntitySubTab = "entities" | "foreshadowing" | "relationships" | "consistency";
+type EntitySubTab = "entities" | "foreshadowing" | "relationships" | "consistency" | "search";
 
 interface RightPanelProps {
   selectedNode: StoryNodeData | null;
@@ -31,6 +32,8 @@ interface RightPanelProps {
   onEditLore?: (id: string) => void;
   selectedText?: string;
   toolboxItems: ToolboxItem[];
+  /** v3.1.75：全文检索结果点击，由父组件跳转到该节点 */
+  onJumpToNode?: (nodeId: string) => void;
   /** P1-3：宝宝流记忆召回，透传给 ContextPreview 合并展示 */
   recallMemories?: any[];
   /** P1-3：生成进行中，自动展开统计区上下文监控 */
@@ -60,7 +63,7 @@ const MONITOR_SECTIONS = [
 ] as const;
 
 export function RightPanel(props: RightPanelProps) {
-  const { selectedNode, minimized, onMinimize, onExpand, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, recallMemories = [], isGenerating = false } = props;
+  const { selectedNode, minimized, onMinimize, onExpand, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, onJumpToNode, recallMemories = [], isGenerating = false } = props;
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
@@ -182,6 +185,12 @@ export function RightPanel(props: RightPanelProps) {
                   entitySubTab === "consistency" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
                 }`}
               ><Icon name="bookmarked" size={15} className="inline-block align-text-bottom shrink-0" /> 一致性基线</button>
+              <button
+                onClick={() => setEntitySubTab("search")}
+                className={`flex-1 py-1.5 text-[10px] transition-colors ${
+                  entitySubTab === "search" ? "text-[var(--nv-text-secondary)] bg-[var(--nv-surface-3)]/30" : "text-[var(--nv-text-muted)] hover:text-[var(--nv-text-tertiary)]"
+                }`}
+              ><Icon name="search" size={15} className="inline-block align-text-bottom shrink-0" /> 全文检索</button>
             </div>
 
             {/* 子内容 */}
@@ -197,6 +206,8 @@ export function RightPanel(props: RightPanelProps) {
                 />
               ) : entitySubTab === "foreshadowing" ? (
                 <ForeshadowingPanel projectId={project.id} />
+              ) : entitySubTab === "search" ? (
+                <FullTextSearchPanel projectId={project.id} onJump={(id) => onJumpToNode?.(id)} />
               ) : (
                 <ConsistencyPanel projectId={project.id} />
               )}
