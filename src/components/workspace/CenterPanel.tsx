@@ -13,6 +13,7 @@ import type { StoryNodeData, ReviewIssue } from "./types";
 import { computeNarrativeStage, type NarrativeStage } from "@/core/pipeline/narrative-stage";
 import { useWriterStore } from "@/store";
 import { saveDraftLocal, getDraftLocal, clearDraftLocal, isDraftNewer } from "@/lib/auto-save";
+import { countMatches, hasNativeFind, jumpToMatch } from "@/lib/in-text-search";
 
 // 项目实体（名→颜色→id），用于章节实体彩色徽章与点击跳转
 type ProjectEntity = {
@@ -217,6 +218,11 @@ export function CenterPanel({
   const [saveState, setSaveState] = useState<"idle" | "unsaved" | "saving" | "saved">("idle");
   const [pendingDraft, setPendingDraft] = useState<{ nodeId: string; content: string; savedAt: number } | null>(null);
 
+  // ── 章内查找（v3.1.77）：在当前章节正文里定位词并高亮跳转（只读态用，编辑态交给浏览器原生 Ctrl+F）──
+  const [nodeQuery, setNodeQuery] = useState("");
+  const [matchIdx, setMatchIdx] = useState(0);
+  const nodeSearchRef = useRef<HTMLInputElement>(null);
+
   const startInlineEdit = () => {
     if (!selectedNode) return;
     setInlineDraft(displayContent);
@@ -372,6 +378,18 @@ export function CenterPanel({
   }, [zen, inlineEditing]);
 
   const displayContent = streamContent || selectedNode?.content || "";
+  // v3.1.77 章内查找：实时统计当前章命中数 + 上一处/下一处跳转（复用浏览器原生高亮，零侵入正文渲染）
+  const matchCount = useMemo(() => countMatches(displayContent, nodeQuery), [displayContent, nodeQuery]);
+  const goNextMatch = useCallback(() => {
+    if (!nodeQuery || matchCount === 0) return;
+    jumpToMatch(nodeQuery, false);
+    setMatchIdx((i) => (i >= matchCount ? 1 : i + 1));
+  }, [nodeQuery, matchCount]);
+  const goPrevMatch = useCallback(() => {
+    if (!nodeQuery || matchCount === 0) return;
+    jumpToMatch(nodeQuery, true);
+    setMatchIdx((i) => (i <= 1 ? matchCount : i - 1));
+  }, [nodeQuery, matchCount]);
 
   // 流式正文节流值：AI 逐 token 生成时合并到下一帧提交一次，喂给 StreamingBody / MarkdownViewer
   const throttledContent = useRafThrottledValue(displayContent, isGenerating);
@@ -736,6 +754,42 @@ export function CenterPanel({
           <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-4">
             {displayContent ? (
               <div className="max-w-[700px] mx-auto">
+                {!inlineEditing && (
+                  <div className="flex items-center gap-1.5 mb-4">
+                    <div className="flex items-center gap-1.5 flex-1 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-2 py-1">
+                      <Icon name="search" size={13} className="text-[var(--nv-text-tertiary)] shrink-0" />
+                      <input
+                        ref={nodeSearchRef}
+                        value={nodeQuery}
+                        onChange={(e) => { setNodeQuery(e.target.value); setMatchIdx(0); }}
+                        placeholder="章内查找…"
+                        aria-label="章内查找"
+                        className="flex-1 min-w-0 bg-transparent text-xs text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none"
+                      />
+                      {nodeQuery && (
+                        <span className="text-[10px] text-[var(--nv-text-tertiary)] whitespace-nowrap shrink-0">
+                          {matchCount === 0 ? "无匹配" : `第 ${Math.min(matchIdx || 1, matchCount)}/${matchCount} 处`}
+                        </span>
+                      )}
+                      {nodeQuery && matchCount > 0 && (
+                        <>
+                          <button type="button" onClick={goPrevMatch} title="上一处" className="shrink-0 rounded p-0.5 text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors">
+                            <span className="text-xs leading-none">↑</span>
+                          </button>
+                          <button type="button" onClick={goNextMatch} title="下一处" className="shrink-0 rounded p-0.5 text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors">
+                            <span className="text-xs leading-none">↓</span>
+                          </button>
+                          <button type="button" onClick={() => { setNodeQuery(""); setMatchIdx(0); nodeSearchRef.current?.blur(); }} title="清空" className="shrink-0 rounded p-0.5 text-[var(--nv-text-tertiary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)] transition-colors">
+                            <Icon name="x" size={13} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {nodeQuery && !hasNativeFind() && (
+                      <span className="text-[10px] text-[var(--nv-text-tertiary)] shrink-0">本浏览器不支持自动高亮</span>
+                    )}
+                  </div>
+                )}
                 {inlineEditing ? (
                   // 内联编辑态：无外框，页面其余完全不变，仅正文变为可直接修改的可编辑区
                   <div
