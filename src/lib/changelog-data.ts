@@ -25,10 +25,12 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.79";
+export const LATEST_VERSION = "v3.1.80";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.80 替换落库失败不再报假成功（REPLACE-FAIL-HONEST · 替换失败不再弹「已替换」）：①修复 v3.1.78/79 留下的真实 bug——commitContent 内部吞掉落库异常、不向上抛，而 replaceOne/replaceAll 在 await 后无条件 toastSuccess，导致服务器保存失败（断网/编辑版本冲突/500）时界面照样弹「已替换当前处/已替换 N 处」，用户以为改成了、刷新发现原封不动。②改 commitContent 返回 Promise<boolean>：成功 true、失败 false（catch 内 toastError 并 return false）。③replaceOne/replaceAll 改为依返回值决定——成功才 toastSuccess；replaceAll 还在成功分支才清空「替换为」框（失败保留旧词方便重试）。④零数据层改动：只改 CenterPanel.tsx 三处回调。⑤质量门禁——类型检查 0 错误、测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
+
   "v3.1.79 替换后位置同步（REPLACE-KEEP-POSITION · 替换当前处不再弹回第1处）：①修复 v3.1.78 留下的真实 bug——替换当前处后计数被暴力归零，连续替换多处时每次弹回第 1 处，且「替换为」框残留旧词。②改 commitContent 支持传入 nextMatchIdx——替换第 K 处后原第 K+1 处前移为第 K 处，保持 matchIdx 指向下一处，连点「替换当前处」即可一路替换下去；全部替换才回到起点（传 0）。③全部替换后清空「替换为」输入框、并把替换框显示条件收紧为「有匹配才显示」，无匹配时不再残留可操作的替换按钮。④零数据层改动：只改 CenterPanel.tsx 三处回调函数 + 一处 UI 条件。⑤质量门禁——类型检查 0 错误、测试全绿（现有 1361）、生产构建通过。个人 IP 仍归瑞宝宝。",
 
   "v3.1.78 章内替换（INTEXT-REPLACE · 当前章节正文里找词并替换成新词）：①新增纯函数内核 replaceMatches（零 IO 可单测，复用 countMatches 同款子串匹配，slice 拼接不解释 $&/$1 等特殊字符，支持单处替换 occurrenceIndex 与全部替换 all，从后往前替换防索引偏移）。②正文查找条下方新增替换行——「替换为…」输入框 + 「替换当前处 / 替换全部」按钮（Enter 直接替换全部）；替换基于已框定的查找词，对源文本 displayContent 走纯函数生成新正文后直接 PUT 落库（复用已有 /api/story/nodes/[id] 接口），全程不碰 DOM、不依赖 contentEditable。③适用高频刚需——改角色名、统一术语、修正笔误时不用手动一段段找；与章内查找同源，大小写不敏感、输入即反馈。④零数据层改动：改动只在 CenterPanel.tsx 接入替换 UI 与落库逻辑 + 纯函数 src/lib/in-text-search.ts + 11 条单测。⑤质量门禁——类型检查 0 错误、测试全绿（新增 11 条，全量 1361）、生产构建通过。个人 IP 仍归瑞宝宝。",
@@ -245,6 +247,36 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.80",
+    date: "2026-09-03",
+    title: "替换落库失败不再报假成功（REPLACE-FAIL-HONEST）",
+    sections: [
+      {
+        label: "真实缺陷：假成功",
+        items: [
+          "v3.1.78/79 的 commitContent 内部 try/catch 吞掉落库异常且不向上抛，而 replaceOne/replaceAll 在 await commitContent 后无条件 toastSuccess",
+          "后果：服务器保存失败（断网/编辑版本冲突/500）时界面照样弹「已替换当前处/已替换 N 处」，用户以为改成了，刷新发现原封不动",
+        ],
+      },
+      {
+        label: "修复：诚实报告结果",
+        items: [
+          "commitContent 改为返回 Promise<boolean>：成功 return true、catch 内 toastError 并 return false",
+          "replaceOne/replaceAll 依返回值决定——成功才 toastSuccess；replaceAll 还在成功分支才清空「替换为」框（失败保留旧词方便重试）",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误",
+          "vitest 1361 全绿",
+          "生产构建通过",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v3.1.79",
     date: "2026-09-03",

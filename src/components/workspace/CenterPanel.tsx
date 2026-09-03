@@ -395,8 +395,8 @@ export function CenterPanel({
   }, [nodeQuery, matchCount]);
 
   // v3.1.78 章内替换：对源文本 displayContent 走纯函数 replaceMatches 生成新正文，再复用落库逻辑直接 PUT（不读 DOM，规避 contentEditable 依赖）
-  const commitContent = useCallback(async (newContent: string, nextMatchIdx = 0) => {
-    if (!selectedNode) return;
+  const commitContent = useCallback(async (newContent: string, nextMatchIdx = 0): Promise<boolean> => {
+    if (!selectedNode) return false;
     setSavingInline(true);
     try {
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
@@ -415,8 +415,10 @@ export function CenterPanel({
       // v3.1.79：替换当前处后保持光标位置（原第 K+1 处前移为第 K 处，自动指向下一处）；
       // 全部替换才传 0 回到起点，避免连续替换时被弹回第 1 处。
       setMatchIdx(nextMatchIdx);
+      return true;
     } catch (err: any) {
       toastError("替换失败：" + (err?.message || "请重试"));
+      return false;
     } finally {
       setSavingInline(false);
     }
@@ -429,8 +431,9 @@ export function CenterPanel({
     });
     if (count === 0) { toastError("未定位到可替换的位置"); return; }
     // v3.1.79：替换第 K 处后原第 K+1 处前移为第 K 处，保持 matchIdx 指向下一处，支持连点连续替换
-    await commitContent(newContent, matchIdx);
-    toastSuccess("已替换当前处");
+    // v3.1.80：落库失败不再报假成功——commitContent 返回布尔，成功才提示
+    const ok = await commitContent(newContent, matchIdx);
+    if (ok) toastSuccess("已替换当前处");
   }, [selectedNode, nodeQuery, replaceQuery, displayContent, matchIdx, commitContent]);
 
   const replaceAll = useCallback(async () => {
@@ -438,9 +441,12 @@ export function CenterPanel({
     const { newContent, count } = replaceMatches(displayContent, nodeQuery, replaceQuery, { all: true });
     if (count === 0) { toastError("未定位到可替换的位置"); return; }
     // v3.1.79：全部替换后清空「替换为」框并回到查找起点，避免 UI 残留旧替换词
-    setReplaceQuery("");
-    await commitContent(newContent, 0);
-    toastSuccess(`已替换 ${count} 处`);
+    // v3.1.80：落库失败不再报假成功——commitContent 返回布尔，成功才清空替换框并提示
+    const ok = await commitContent(newContent, 0);
+    if (ok) {
+      setReplaceQuery("");
+      toastSuccess(`已替换 ${count} 处`);
+    }
   }, [selectedNode, nodeQuery, replaceQuery, displayContent, commitContent]);
 
   // 流式正文节流值：AI 逐 token 生成时合并到下一帧提交一次，喂给 StreamingBody / MarkdownViewer

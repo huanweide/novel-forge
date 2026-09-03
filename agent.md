@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.79 |
+| 包名 / 版本 | `novel-smith` v3.1.80 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.79 替换后位置同步（替换当前处不再弹回第1处）`（2026-09-03，Latest） |
+| 最新 Release | `v3.1.80 替换落库失败不再报假成功（REPLACE-FAIL-HONEST）`（2026-09-03，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -99,6 +99,13 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ---
 
 ## 五、版本更新记录（最新在上）
+
+### v3.1.80 — 2026-09-03 — 替换落库失败不再报假成功（REPLACE-FAIL-HONEST）
+
+- **问题（真实缺陷）**：v3.1.78/79 的 commitContent 内部把落库异常吞掉、不向上抛，而 replaceOne/replaceAll 在 await 后无条件 toastSuccess，服务器保存失败时仍弹"已替换"成功。
+- **改动**：commitContent 改为返回 Promise<boolean>（成功 true / 失败 false）；replaceOne/replaceAll 依返回值决定提示，成功才弹成功；replaceAll 在成功分支才清空「替换为」框。
+- **达成效果**：替换没真的存上时会明确报错，不再"假成功"误导，用户数据一致性有兜底。
+- **质量门禁**：tsc 0 错、vitest 1361 全绿、build EXIT=0；零数据层改动，只改 CenterPanel.tsx。
 
 ### v3.1.79 — 2026-09-03 — 替换后位置同步（替换当前处不再弹回第1处 · REPLACE-KEEP-POSITION）
 
