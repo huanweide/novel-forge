@@ -25,10 +25,12 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.81";
+export const LATEST_VERSION = "v3.1.82";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.82 失败提示全站说人话——根治 HTTP 裸状态码甩脸（HTTP-STATUS-DEHUMANIZE · 不再把「（HTTP 500）」丢给用户）：①修复真实系统性缺陷——项目虽有 describeHttpError 翻译层，但客户端兜底常把 error：HTTP 500 当真实消息塞进去，helper 照单全收原样显示；且 helper 的 default 分支自己还在甩「服务返回了异常状态（HTTP 500）」。②根因修复：describeHttpError 新增 isRawHttpStatusText 识别 HTTP 500 这类裸码，一律不当「服务端说清了」处理、改交给状态码分支翻译成人话；default 分支改写为纯人话。③这一处修复连带中和所有走 helper 的漏点（CharacterList / ImportWizard / explore 等约 7 处），它们不再显示裸状态码。④高频页面直改 6 处——StyleEditor（加载 / 套用 / 保存文风 3 处）、dissect/[id]（轮询加载 1 处）、dissect（列表加载 + 删除 2 处）全部改为走 describeHttpError，用户看到的是「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」这类能懂的话。⑤新增 2 条单测覆盖裸状态码翻译；质量门禁——类型检查 0 错误、测试全绿（新增 2 条，全量 1363）、生产构建通过。⑥说明——散落其余约 15 个组件的同类裸状态码漏点体量较大，留作下一棒专项清扫，本棒先修根因 + 最高频页面。个人 IP 仍归瑞宝宝。",
+
   "v3.1.81 切章重置章内查找/替换状态（RESET-ON-NODE-SWITCH · 杜绝跨章误替换）：①修复真实 bug——selectedNode 是父组件传入的 prop，切章时 CenterPanel 不卸载只换 prop，而 nodeQuery/matchIdx/replaceQuery 三个查找/替换状态没有随切章重置，旧章的查找词/替换词会带进新章；用户切到 B 章后误点「替换全部」，会用旧替换词改写 B 章正文（不可逆）。②加一个依赖 [selectedNode?.id] 的 effect，切章时清空 nodeQuery/replaceQuery/matchIdx。③零数据层改动：只改 CenterPanel.tsx 一处新增 effect。④质量门禁——类型检查 0 错误、测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
 
   "v3.1.80 替换落库失败不再报假成功（REPLACE-FAIL-HONEST · 替换失败不再弹「已替换」）：①修复 v3.1.78/79 留下的真实 bug——commitContent 内部吞掉落库异常、不向上抛，而 replaceOne/replaceAll 在 await 后无条件 toastSuccess，导致服务器保存失败（断网/编辑版本冲突/500）时界面照样弹「已替换当前处/已替换 N 处」，用户以为改成了、刷新发现原封不动。②改 commitContent 返回 Promise<boolean>：成功 true、失败 false（catch 内 toastError 并 return false）。③replaceOne/replaceAll 改为依返回值决定——成功才 toastSuccess；replaceAll 还在成功分支才清空「替换为」框（失败保留旧词方便重试）。④零数据层改动：只改 CenterPanel.tsx 三处回调。⑤质量门禁——类型检查 0 错误、测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
@@ -249,6 +251,47 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.82",
+    date: "2026-09-03",
+    title: "失败提示全站说人话——根治 HTTP 裸状态码甩脸（HTTP-STATUS-DEHUMANIZE）",
+    sections: [
+      {
+        label: "真实缺陷：HTTP 裸状态码直甩用户",
+        items: [
+          "项目已有 describeHttpError 翻译层，但客户端兜底常把 error: HTTP 500 当真实消息塞入，helper 原样显示",
+          "helper 的 default 分支自己还在甩「服务返回了异常状态（HTTP 500）」",
+          "散落约 40 处、近 20 个组件直接把 HTTP 状态码裸串拼进 toast / 报错，非技术用户看不懂",
+        ],
+      },
+      {
+        label: "根因修复：识别裸状态码",
+        items: [
+          "describeHttpError 新增 isRawHttpStatusText，识别 HTTP 500 这类裸码，不当「服务端说清了」、改交状态码分支翻译",
+          "default 分支改写为纯人话，不再暴露原始状态码",
+          "这一处修复连带中和所有走 helper 的漏点（CharacterList / ImportWizard / explore 等约 7 处）",
+        ],
+      },
+      {
+        label: "高频页面直改 6 处",
+        items: [
+          "StyleEditor 加载 / 套用 / 保存文风 3 处、dissect/[id] 轮询加载 1 处、dissect 列表加载 + 删除 2 处，全部改走 describeHttpError",
+          "用户看到的是「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」这类能懂的话",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误",
+          "vitest 全绿（新增 2 条裸状态码翻译单测，全量 1363）",
+          "生产构建通过",
+          "散落其余约 15 个组件的同类漏点留作下一棒专项清扫",
+        ],
+      },
+    ],
+  },
+
+
   {
     version: "v3.1.81",
     date: "2026-09-03",

@@ -1,5 +1,13 @@
 ﻿# Novel Smith 更新公告
 
+## v3.1.82 — 2026-09-03
+
+### 失败提示全站说人话——根治 HTTP 裸状态码甩脸（HTTP-STATUS-DEHUMANIZE）
+
+- **问题（真实系统性缺陷）**：项目早有 `describeHttpError` 翻译层把 HTTP 错翻成人话，但客户端兜底常把 `error: HTTP 500` 这种裸状态码当「服务端真实消息」塞进去，helper 照单全收原样显示；而且 helper 自己的 `default` 分支还在甩「服务返回了异常状态（HTTP 500）」。散落约 40 处、近 20 个组件直接把 HTTP 状态码裸串拼进 toast / 报错，非技术用户（靠小说赚钱的创作者）看不懂。
+- **根因修复**：`describeHttpError` 新增 `isRawHttpStatusText`，识别「HTTP 500」这类裸码，一律不当「服务端说清了」、改交给状态码分支翻译成人话；`default` 分支改写为纯人话，不再暴露原始状态码。这一处修复连带中和所有走 helper 的漏点（CharacterList / ImportWizard / explore 等约 7 处）。
+- **高频页面直改 6 处**：`StyleEditor`（加载 / 套用 / 保存文风 3 处）、`dissect/[id]`（轮询加载 1 处）、`dissect`（列表加载 + 删除 2 处）全部改走 `describeHttpError`，用户看到的是「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」这类能懂的话。
+- **质量门禁**：类型检查 0 错误、vitest 1363 全绿（新增 2 条裸状态码翻译单测）、生产构建通过；零数据层改动：只改 `stream-error.ts` 一处新增识别函数 + 4 个组件接入。其余约 15 个组件的同类漏点体量较大，留作下一棒专项清扫。个人 IP 仍归瑞宝宝。
 ## v3.1.81 — 2026-09-03
 
 ### 切章重置章内查找/替换状态（RESET-ON-NODE-SWITCH · 杜绝跨章误替换）

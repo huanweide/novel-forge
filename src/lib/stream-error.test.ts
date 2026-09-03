@@ -84,10 +84,22 @@ describe("describeHttpError —— HTTP 非 2xx 转人话", () => {
     expect(describeHttpError(504, null).title).toBe("服务暂时不可用");
   });
 
-  it("未知状态码兜底并带上状态码", () => {
+  it("未知状态码兜底为可操作的人话（不暴露原始状态码）", () => {
     const r = describeHttpError(599, null);
     expect(r.title).toBe("生成失败");
-    expect(r.description).toContain("599");
+    expect(r.description).not.toContain("599");
+    expect(r.description).toContain("重试");
+  });
+
+  it("客户端兜底的裸状态码（HTTP 500）不算服务端消息，交给状态码分支翻译", () => {
+    const r = describeHttpError(500, { error: "HTTP 500" });
+    expect(r.description).not.toContain("HTTP 500");
+    expect(r.description).toContain("重试");
+  });
+
+  it("带说明的裸状态码（HTTP 401）也被翻译成人话而非原样展示", () => {
+    const r = describeHttpError(401, { error: "HTTP 401" });
+    expect(r.title).toBe("接口密钥无效");
   });
 
   it("payload 是非法类型时不崩", () => {

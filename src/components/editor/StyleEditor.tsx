@@ -15,6 +15,7 @@ import {
   type EnhancedScanOptions,
 } from "@/lib/forbidden-checker";
 import { toastError, toastSuccess } from "@/components/ui/toast";
+import { describeHttpError } from "@/lib/stream-error";
 import { Modal } from "@/components/ui/Modal";
 
 // ═══════════════════════════════════════════
@@ -137,7 +138,13 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
     const fetchData = async () => {
       try {
       const r = await fetch(`/api/projects/${projectId}/style`, { signal: controller.signal });
-      if (!r.ok) { setLoadError("加载文风配置失败（HTTP " + r.status + "）"); setLoading(false); return; }
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        const failure = describeHttpError(r.status, d);
+        setLoadError(`加载文风配置失败：${failure.description}`);
+        setLoading(false);
+        return;
+      }
       const data = await r.json();
       if (!data.error) {
           const savedDimensions = data.dimensions || {};
@@ -297,7 +304,12 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("保存文风失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: "未知错误" }));
+        const failure = describeHttpError(res.status, d);
+        toastError(`保存文风失败：${failure.description}`);
+        return;
+      }
       onSaved(config.styleTemplateId);
       onClose();
     } catch (err) { toastError("保存文风失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }

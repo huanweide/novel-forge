@@ -81,6 +81,11 @@ export function describeStreamError(err: unknown): StreamFailure | null {
   };
 }
 
+/** 客户端兜底常把 `error: "HTTP 500"` 当消息塞进来，这种裸状态码不算「服务端说清了」，要交给状态码分支兜底翻译。 */
+function isRawHttpStatusText(s: string): boolean {
+  return /^https?:\/\//i.test(s) || /^HTTP\s*\d{3}/i.test(s);
+}
+
 /**
  * HTTP 非 2xx → 人话。
  *
@@ -92,8 +97,8 @@ export function describeHttpError(status: number, payload: unknown): StreamFailu
   const serverError = asNonEmptyString(body.error);
   const serverHint = asNonEmptyString(body.hint);
 
-  // 服务端已经说清了，直接转述（这是最准确的情况）
-  if (serverError) {
+  // 服务端已经说清了（且不是客户端兜底塞进来的裸状态码），直接转述
+  if (serverError && !isRawHttpStatusText(serverError)) {
     return {
       title: "生成失败",
       description: serverHint ? `${serverError}　${serverHint}` : serverError,
@@ -143,7 +148,7 @@ export function describeHttpError(status: number, payload: unknown): StreamFailu
     default:
       return {
         title: "生成失败",
-        description: `服务返回了异常状态（HTTP ${status}）。请重试；若反复出现请查看服务日志。`,
+        description: "服务暂时没能完成这次请求，请稍后重试；若反复出现，请检查本地服务是否在运行，或查看服务日志。",
       };
   }
 }

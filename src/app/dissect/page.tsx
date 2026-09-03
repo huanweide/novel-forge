@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
 import { confirmDialog, toastError, toastSuccess, toastInfo } from "@/components/ui/toast";
+import { describeHttpError } from "@/lib/stream-error";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { EmptyState, Loading } from "@/components/ui/States";
 
@@ -62,7 +63,11 @@ export default function DissectPage() {
     description: "确定删除这个拆书任务？此操作不可恢复。",
     deleteFn: async (id) => {
       const res = await fetch(`/api/dissect/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        const failure = describeHttpError(res.status, d);
+        throw new Error(failure.description);
+      }
     },
     onSuccess: (id) => setTasks((prev) => prev.filter((t) => t.id !== id)),
     errorPrefix: "删除失败",

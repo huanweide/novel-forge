@@ -9,6 +9,7 @@ import { DissectDimensions } from "@/components/dissect/DissectDimensions";
 import { DissectAdaptPanel } from "@/components/dissect/DissectAdaptPanel";
 import type { DimensionResult, ChapterInfo } from "@/core/dissect/types";
 import { toastError } from "@/components/ui/toast";
+import { describeHttpError } from "@/lib/stream-error";
 
 interface TaskDetail {
   id: string;
@@ -48,7 +49,8 @@ export default function DissectDetailPage() {
       const res = await fetch(`/api/dissect/${id}`);
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        setPollError(d.error || `加载失败（${res.status}）`);
+        const failure = describeHttpError(res.status, d);
+        setPollError(d.error ? `加载失败：${d.error}` : `${failure.title}　${failure.description}`);
         return;
       }
       setPollError(null);
