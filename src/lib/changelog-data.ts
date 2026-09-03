@@ -25,10 +25,12 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.78";
+export const LATEST_VERSION = "v3.1.79";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.79 替换后位置同步（REPLACE-KEEP-POSITION · 替换当前处不再弹回第1处）：①修复 v3.1.78 留下的真实 bug——替换当前处后计数被暴力归零，连续替换多处时每次弹回第 1 处，且「替换为」框残留旧词。②改 commitContent 支持传入 nextMatchIdx——替换第 K 处后原第 K+1 处前移为第 K 处，保持 matchIdx 指向下一处，连点「替换当前处」即可一路替换下去；全部替换才回到起点（传 0）。③全部替换后清空「替换为」输入框、并把替换框显示条件收紧为「有匹配才显示」，无匹配时不再残留可操作的替换按钮。④零数据层改动：只改 CenterPanel.tsx 三处回调函数 + 一处 UI 条件。⑤质量门禁——类型检查 0 错误、测试全绿（现有 1361）、生产构建通过。个人 IP 仍归瑞宝宝。",
+
   "v3.1.78 章内替换（INTEXT-REPLACE · 当前章节正文里找词并替换成新词）：①新增纯函数内核 replaceMatches（零 IO 可单测，复用 countMatches 同款子串匹配，slice 拼接不解释 $&/$1 等特殊字符，支持单处替换 occurrenceIndex 与全部替换 all，从后往前替换防索引偏移）。②正文查找条下方新增替换行——「替换为…」输入框 + 「替换当前处 / 替换全部」按钮（Enter 直接替换全部）；替换基于已框定的查找词，对源文本 displayContent 走纯函数生成新正文后直接 PUT 落库（复用已有 /api/story/nodes/[id] 接口），全程不碰 DOM、不依赖 contentEditable。③适用高频刚需——改角色名、统一术语、修正笔误时不用手动一段段找；与章内查找同源，大小写不敏感、输入即反馈。④零数据层改动：改动只在 CenterPanel.tsx 接入替换 UI 与落库逻辑 + 纯函数 src/lib/in-text-search.ts + 11 条单测。⑤质量门禁——类型检查 0 错误、测试全绿（新增 11 条，全量 1361）、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.77 章内查找高亮（INTEXT-SEARCH · 当前章节正文里找词并计数跳转）：①新增纯函数内核 src/lib/in-text-search.ts（countMatches/hasNativeFind/jumpToMatch，零 IO 可单测）。②正文显示区（非编辑态）顶部新增查找条——放大镜 + 输入框 + 实时命中计数「第 N/M 处 / 无匹配」+ ↑/↓ 文字箭头按钮（复用浏览器原生 window.find 高亮并跳到上一处/下一处）+ 清空 X。③大小写不敏感、输入即计数、零延迟反馈；浏览器原生 find 不可用时安全降级——计数照常、提示「本浏览器不支持自动高亮」，绝不崩。④零数据层改动：改动只在 CenterPanel.tsx 接入查找条与计数跳转逻辑。⑤质量门禁——类型检查 0 错误、测试全绿（新增 10 条）、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.76 三层自动保存（AUTOSAVE · 写一半崩了也不丢稿）：①正文编辑区新增三层防丢保护——敲字 500ms 内写入浏览器本地（LocalStorage），断电/崩溃/误关页面都不丢；3s 后再自动落库到服务端（复用已有 /api/story/nodes/[id] PUT 接口，不退出编辑态、光标不跳）；点完成是第三层手动兜底。②底部状态栏实时显示保存状态——「编辑中 / 未保存 / 保存中… / 已自动保存」四态，写作时一眼知道稿子安不安全。③崩溃恢复——重新打开章节时若本地有「没存进去的草稿」（编辑到一半崩了、或没点完成就切走），底部提示「发现自动保存的草稿（时分）· 恢复 / 忽略」，点恢复即把草稿装回正文。④纯函数内核 `src/lib/auto-save.ts`（saveDraftLocal/getDraftLocal/clearDraftLocal/isDraftNewer，可单测）+ 12 条单测；改动只在 CenterPanel.tsx 接入三层逻辑与指示器，零数据层改动、不动 schema。⑤质量门禁——类型检查 0 错误、测试全绿（新增 12 条）、生产构建通过。个人 IP 仍归瑞宝宝。",
@@ -243,6 +245,43 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.79",
+    date: "2026-09-03",
+    title: "替换后位置同步（替换当前处不再弹回第1处 · REPLACE-KEEP-POSITION）",
+    sections: [
+      {
+        label: "真实缺陷：替换当前处被弹回第 1 处",
+        items: [
+          "v3.1.78 的 replaceOne 调 commitContent 时，commitContent 内部把 matchIdx 硬重置为 0",
+          "后果：连续替换多处时，每替换一处就被弹回第 1 处，必须重新点「下一处」才能继续，且「替换为」框残留旧词",
+        ],
+      },
+      {
+        label: "修复：保持光标位置",
+        items: [
+          "commitContent 新增 nextMatchIdx 参数：替换第 K 处后原第 K+1 处前移为第 K 处，保持 matchIdx 指向下一处，连点「替换当前处」即可一路替换",
+          "全部替换（replaceAll）传 0 回到起点；全部替换后再清空「替换为」框，避免旧词残留",
+        ],
+      },
+      {
+        label: "UI 收敛",
+        items: [
+          "「替换为」框的显示条件从「有查找词」收紧为「有匹配」（matchCount > 0），无匹配时不再显示可操作的替换按钮",
+          "修复前后 UI 行为一致、零数据层改动，只改 CenterPanel.tsx 三处回调 + 一处渲染条件",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误",
+          "vitest 1361 全绿（现有测试未变，纯 UI 状态修复）",
+          "生产构建通过",
+        ],
+      },
+    ],
+  },
+
   {
     version: "v3.1.78",
     date: "2026-09-03",

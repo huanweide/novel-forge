@@ -395,7 +395,7 @@ export function CenterPanel({
   }, [nodeQuery, matchCount]);
 
   // v3.1.78 章内替换：对源文本 displayContent 走纯函数 replaceMatches 生成新正文，再复用落库逻辑直接 PUT（不读 DOM，规避 contentEditable 依赖）
-  const commitContent = useCallback(async (newContent: string) => {
+  const commitContent = useCallback(async (newContent: string, nextMatchIdx = 0) => {
     if (!selectedNode) return;
     setSavingInline(true);
     try {
@@ -412,7 +412,9 @@ export function CenterPanel({
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
       if (selectedNode) clearDraftLocal(selectedNode.id);
       if (loadProject) await loadProject();
-      setMatchIdx(0);
+      // v3.1.79：替换当前处后保持光标位置（原第 K+1 处前移为第 K 处，自动指向下一处）；
+      // 全部替换才传 0 回到起点，避免连续替换时被弹回第 1 处。
+      setMatchIdx(nextMatchIdx);
     } catch (err: any) {
       toastError("替换失败：" + (err?.message || "请重试"));
     } finally {
@@ -426,17 +428,20 @@ export function CenterPanel({
       occurrenceIndex: Math.max(0, (matchIdx || 1) - 1),
     });
     if (count === 0) { toastError("未定位到可替换的位置"); return; }
-    await commitContent(newContent);
+    // v3.1.79：替换第 K 处后原第 K+1 处前移为第 K 处，保持 matchIdx 指向下一处，支持连点连续替换
+    await commitContent(newContent, matchIdx);
     toastSuccess("已替换当前处");
-  }, [selectedNode, nodeQuery, replaceQuery, displayContent, matchIdx]);
+  }, [selectedNode, nodeQuery, replaceQuery, displayContent, matchIdx, commitContent]);
 
   const replaceAll = useCallback(async () => {
     if (!selectedNode || !nodeQuery) return;
     const { newContent, count } = replaceMatches(displayContent, nodeQuery, replaceQuery, { all: true });
     if (count === 0) { toastError("未定位到可替换的位置"); return; }
-    await commitContent(newContent);
+    // v3.1.79：全部替换后清空「替换为」框并回到查找起点，避免 UI 残留旧替换词
+    setReplaceQuery("");
+    await commitContent(newContent, 0);
     toastSuccess(`已替换 ${count} 处`);
-  }, [selectedNode, nodeQuery, replaceQuery, displayContent]);
+  }, [selectedNode, nodeQuery, replaceQuery, displayContent, commitContent]);
 
   // 流式正文节流值：AI 逐 token 生成时合并到下一帧提交一次，喂给 StreamingBody / MarkdownViewer
   const throttledContent = useRafThrottledValue(displayContent, isGenerating);
@@ -832,7 +837,7 @@ export function CenterPanel({
                         </>
                       )}
                     </div>
-                    {nodeQuery && (
+                    {nodeQuery && matchCount > 0 && (
                       <div className="flex items-center gap-1.5 mt-2">
                         <div className="flex items-center gap-1.5 flex-1 rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] px-2 py-1">
                           <Icon name="refresh" size={13} className="text-[var(--nv-text-tertiary)] shrink-0" />
