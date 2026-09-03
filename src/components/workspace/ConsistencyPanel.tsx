@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 // A 任务（v1.6.51.3）+ B 任务（v1.6.51.4）+ Next-1（v1.6.51.5）+ Next-2（v1.6.51.6 基线人工纠错）。
 // 跨章一致性事实基线 —— 只读优先 + 冲突标红 + 修正建议 + 人工纠错（编辑/删除/手动新增）。
@@ -130,7 +131,7 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
           fetch(`/api/projects/${projectId}/consistency`),
           fetch(`/api/projects/${projectId}/consistency/conflicts?status=open`),
         ]);
-        if (!fRes.ok) throw new Error(`基线 HTTP ${fRes.status}`);
+        if (!fRes.ok) { const _f = describeHttpError(fRes.status, await fRes.json().catch(() => ({}))); throw new Error(_f.description); }
         const fJson = await fRes.json(); // { facts: ConsistencyFact[] }
         const cJson = cRes.ok ? await cRes.json() : { conflicts: [] }; // { conflicts: ConsistencyConflict[] }
         if (!cancelled) {
@@ -158,7 +159,7 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
     try {
       const res = await fetch(`/api/projects/${projectId}/consistency`, { method: "POST" });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) { const _f = describeHttpError(res.status, json); throw new Error(_f.description); }
       load();
     } catch (err) {
       setError(String(err));
@@ -220,7 +221,7 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
         body: JSON.stringify(data),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) { const _f = describeHttpError(res.status, json); throw new Error(_f.description); }
       load();
     } catch (err) {
       setError(String(err));
@@ -240,7 +241,7 @@ export function ConsistencyPanel({ projectId }: { projectId: string }) {
         body: JSON.stringify(data),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) { const _f = describeHttpError(res.status, json); throw new Error(_f.description); }
       load();
     } catch (err) {
       setError(String(err));

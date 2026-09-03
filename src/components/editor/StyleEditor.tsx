@@ -219,7 +219,8 @@ export function StyleEditor({ projectId, currentStyleId, onSaved, onClose, chapt
       });
       if (!r1.ok) {
         const d = await r1.json().catch(() => ({ error: "未知错误" }));
-        toastError("套用工坊文风失败：" + (d.error || `HTTP ${r1.status}`));
+        const failure = describeHttpError(r1.status, d);
+        toastError(`套用工坊文风失败：${failure.description}`);
         return;
       }
       // 同步更新文风卡分析模型（apply 路由写入 StyleCard，实现双向联动）

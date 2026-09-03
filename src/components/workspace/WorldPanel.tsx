@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useMemo, useState } from "react";
 import type { LorebookData } from "./types";
@@ -99,7 +100,7 @@ export function WorldPanel({
         }),
       });
       if (res.ok) { setShowCreate(false); setCreateForm({}); toastAdded(title, "世界书"); onRefresh(); }
-      else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("条目创建失败：" + (d.error || `HTTP ${res.status}`)); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, d); toastError(`条目创建失败：${_f.description}`); }
     } catch (err) { toastError("条目创建失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
@@ -110,7 +111,7 @@ export function WorldPanel({
     description: "确定删除此世界书条目？此操作不可恢复。",
     deleteFn: async (id) => {
       const res = await fetch(`/api/lorebook/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, d); throw new Error(_f.description); }
     },
     onSuccess: onRefresh,
     errorPrefix: "条目删除失败",
@@ -124,7 +125,7 @@ export function WorldPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reviewStatus: "approved" }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) { const _f = describeHttpError(res.status, await res.json().catch(() => ({}))); throw new Error(_f.description); }
       onRefresh();
       toastSuccess("已确认并入");
     } catch (err) {

@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
@@ -56,7 +57,7 @@ export function ImportDialog({
       });
       const d = await res.json();
       if (res.ok && d.id) onDone(d.id);
-      else setErr(d.error || `导入失败（HTTP ${res.status}）`);
+      else { const _f = describeHttpError(res.status, d); setErr(d.error ? `导入失败：${d.error}` : `${_f.title}　${_f.description}`); }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "文件读取失败");
       toastError("导入失败：" + (e instanceof Error ? e.message : "请重试"));

@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icons";
@@ -22,8 +23,8 @@ export function ProjectDiagnostics({ projectId }: { projectId: string }) {
     try {
       const res = await fetch(`/api/projects/${projectId}/diagnostics`);
       if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(d.error || `HTTP ${res.status}`);
+        const d = await res.json().catch(() => ({}));
+        { const _f = describeHttpError(res.status, d); throw new Error(_f.description); }
       }
       setReport(await res.json());
     } catch (e) {

@@ -6,6 +6,7 @@
  */
 
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StatusDot, Icon, type IconName } from "@/components/ui/icons";
@@ -126,7 +127,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
       try {
         setLoading(true);
         const res = await fetch(`/api/foreshadowing/list?projectId=${projectId}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) { const _f = describeHttpError(res.status, await res.json().catch(() => ({}))); throw new Error(_f.description); }
         const json = await res.json();
         if (!cancelled) {
           setData(json);
@@ -261,7 +262,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
         body: JSON.stringify({ id: item.id, projectId, regenerateHint: true }),
       });
       const json = await res.json();
-      if (!res.ok || !json.developmentHint) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!res.ok || !json.developmentHint) { const _f = describeHttpError(res.status, json); throw new Error(_f.description); }
       patchItem(item.id, { developmentHint: json.developmentHint });
       setEditHints((p) => {
         const next = { ...p };
@@ -286,7 +287,7 @@ export function ForeshadowingPanel({ projectId }: { projectId: string }) {
         body: JSON.stringify({ projectId }),
       });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (!res.ok || !json.ok) { const _f = describeHttpError(res.status, json); throw new Error(_f.description); }
       showToast("已刷新收尾进度");
     } catch (err) {
       showToast(`整理失败：${String(err)}`);

@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icons";
@@ -45,7 +46,7 @@ export function PreGenConfirm({
           ? `/api/generate/pre-write-cards?projectId=${projectId}&nodeId=${nodeId}`
           : `/api/generate/pre-write-cards?projectId=${projectId}`;
         const res = await fetch(url, { signal: ctrl.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) { const _f = describeHttpError(res.status, await res.json().catch(() => ({}))); throw new Error(_f.description); }
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         setCards(data.scheduledCards || []);

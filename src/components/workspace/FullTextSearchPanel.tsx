@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 /**
  * FullTextSearchPanel — 写作台「全文检索」子面板（v3.1.75 · GLOBAL-SEARCH）
@@ -70,7 +71,7 @@ export function FullTextSearchPanel({ projectId, onJump }: FullTextSearchPanelPr
     setError("");
     fetch(`/api/story/search?projectId=${encodeURIComponent(projectId)}&q=${encodeURIComponent(term)}`)
       .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) { const _f = describeHttpError(res.status, await res.json().catch(() => ({}))); throw new Error(_f.description); }
         return res.json();
       })
       .then((json: SearchSummary) => {

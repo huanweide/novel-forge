@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
@@ -251,7 +252,7 @@ export function CenterPanel({
         }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      if (!res.ok) { const _f = describeHttpError(res.status, data); throw new Error(_f.description); }
       toastSuccess("正文已保存");
       setInlineEditing(false);
       setInlineDraft("");
@@ -418,7 +419,7 @@ export function CenterPanel({
         }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      if (!res.ok) { const _f = describeHttpError(res.status, data); throw new Error(_f.description); }
       if (selectedNode) clearDraftLocal(selectedNode.id);
       if (loadProject) await loadProject();
       // v3.1.79：替换当前处后保持光标位置（原第 K+1 处前移为第 K 处，自动指向下一处）；

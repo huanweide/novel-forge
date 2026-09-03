@@ -1,5 +1,13 @@
 ﻿# Novel Smith 更新公告
 
+## v3.1.83 — 2026-09-03
+
+### 失败提示全站收尾——扫清剩余约 18 个组件 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP）
+
+- **收尾（承接 v3.1.82）**：上一棒已修根因（describeHttpError 新增 isRawHttpStatusText 识别裸状态码）+ 直改 6 处高频页，本棒把散落的其余约 18 个组件的同类裸状态码漏点一次性扫清（workspace 主页、CenterPanel、AIChatBar、ConflictPanel、ConsistencyPanel、DigestPanel、DrawCards、ForeshadowingPanel、FullTextSearchPanel、HumanizePanel、ImportDialog、LeftPanel、PreGenConfirm、ProjectDiagnostics、RulesPanel、StorylineWorkbench、StorylineList、Toolbar、WorldPanel）。
+- **改动**：所有 `error || HTTP 状态码` 裸串拼接全部改为走 describeHttpError，翻译成人话（「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」等）。
+- **达成效果**：全站失败提示彻底不再出现「HTTP 500」这类黑话，非技术用户（靠小说赚钱的创作者）一眼能懂哪坏了、下一步干啥。
+- **质量门禁**：类型检查 0 错误、vitest 1363 全绿、生产构建通过；零新逻辑、零数据层改动，helper 已在 v3.1.82 修好，本棒只接剩余调用点。个人 IP 仍归瑞宝宝。
 ## v3.1.82 — 2026-09-03
 
 ### 失败提示全站说人话——根治 HTTP 裸状态码甩脸（HTTP-STATUS-DEHUMANIZE）

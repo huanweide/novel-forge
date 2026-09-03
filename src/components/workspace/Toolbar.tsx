@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -53,7 +54,7 @@ export function Toolbar({
     setExportMenuOpen(false);
     try {
       const res = await fetch(`/api/projects/${projectId}/export?format=markdown`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) { const _f = describeHttpError(res.status, await res.json().catch(() => ({}))); throw new Error(_f.description); }
       const text = await res.text();
       await navigator.clipboard.writeText(text);
       setCopyTip("已复制全文 Markdown ✓");

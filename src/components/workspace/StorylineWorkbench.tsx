@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Modal } from "@/components/ui/Modal";
@@ -266,7 +267,7 @@ export function StorylineWorkbench({
         setSelectedId((prev) => prev ?? data[0]?.id ?? null);
       } else {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        setError((d as { error?: string }).error || `加载失败（HTTP ${res.status}）`);
+        { const _f = describeHttpError(res.status, d); setError((d as { error?: string }).error ? `加载失败：${(d as { error?: string }).error}` : `${_f.title}　${_f.description}`); }
       }
     } catch (err) {
       setError("加载故事线失败：" + (err instanceof Error ? err.message : "网络错误"));
@@ -326,7 +327,7 @@ export function StorylineWorkbench({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        toastError("状态更新失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`状态更新失败：${_f.description}`);
         return;
       }
       toastSuccess(next === "completed" ? `「${s.title}」已完结 ✓` : `「${s.title}」已重新开启`);
@@ -373,7 +374,7 @@ export function StorylineWorkbench({
       });
       const data = await res.json();
       if (!res.ok) {
-        toastError("保存失败：" + ((data as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, data); toastError(`保存失败：${_f.description}`);
         return;
       }
       toastCreated("故事线");
@@ -451,7 +452,7 @@ export function StorylineWorkbench({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        toastError("保存失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`保存失败：${_f.description}`);
         return;
       }
       setEditing(false);
@@ -474,7 +475,7 @@ export function StorylineWorkbench({
         const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
         if (!res.ok) {
           const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-          throw new Error((d as { error?: string }).error || `HTTP ${res.status}`);
+          const _f = describeHttpError(res.status, d); throw new Error(_f.description);
         }
       }
       toastSuccess(`已清理 ${ids.length} 条废弃故事线`);
@@ -495,7 +496,7 @@ export function StorylineWorkbench({
       const res = await fetch(`/api/storylines/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        throw new Error((d as { error?: string }).error || `HTTP ${res.status}`);
+        const _f = describeHttpError(res.status, d); throw new Error(_f.description);
       }
     },
     onSuccess: () => {
@@ -522,7 +523,7 @@ export function StorylineWorkbench({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        toastError("新增线索失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`新增线索失败：${_f.description}`);
         return;
       }
       setNewClueTag("");
@@ -541,7 +542,7 @@ export function StorylineWorkbench({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        toastError("更新线索失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`更新线索失败：${_f.description}`);
         return;
       }
       void load();
@@ -554,7 +555,7 @@ export function StorylineWorkbench({
       const res = await fetch(`/api/storyline-events/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        toastError("删除线索失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`删除线索失败：${_f.description}`);
         return;
       }
       void load();
@@ -588,7 +589,7 @@ export function StorylineWorkbench({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        toastError("保存失败：" + ((d as { error?: string }).error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`保存失败：${_f.description}`);
         return;
       }
       void load();

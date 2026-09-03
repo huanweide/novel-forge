@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState } from "react";
 import { useProjectStore } from "@/store";
@@ -46,7 +47,7 @@ export function DigestPanel({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: "未知错误" }));
-        throw new Error(d.error || `HTTP ${res.status}`);
+        { const _f = describeHttpError(res.status, d); throw new Error(_f.description); }
       }
       onRefresh(); // 刷新 store，panel 自动显示新大纲
     } catch (e) {

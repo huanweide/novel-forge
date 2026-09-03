@@ -612,7 +612,8 @@ export default function WorkspacePage() {
       } else if (projRes.status === 404) {
         router.push("/");
       } else {
-        setLoadError(`加载项目失败（HTTP ${projRes.status}），请检查后端服务是否已启动并连接数据库。`);
+        const _f = describeHttpError(projRes.status, {});
+        setLoadError(`加载项目失败：${_f.description}`);
       }
     } catch (err) {
       console.error("加载项目失败:", err);
@@ -672,7 +673,7 @@ export default function WorkspacePage() {
     const { chapterCount, customPrompt } = outlineGenConfig;
     try {
       const res = await fetch("/api/generate/outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, chapterCount, customPrompt: customPrompt || undefined, confirmedCardIds: cards, cardNotes: notes, newCharacterRequests: newChars }) });
-      if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); setOutlineError(err.error || `HTTP ${res.status}`); return; }
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, err); setOutlineError(err.error ? `大纲提取失败：${err.error}` : `${_f.title}　${_f.description}`); return; }
       const data = await res.json();
       const chapters = data.chapters || [];
       if (chapters.length === 0) { setOutlineError("未生成任何章节，请检查角色和世界书是否有内容"); return; }
@@ -983,7 +984,7 @@ export default function WorkspacePage() {
     try {
       const res = await fetch("/api/story/nodes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, parentId, type: parentId ? "section" : "chapter", title, order: project.storyNodes.length }) });
       if (res.ok) { await loadProject(); toastSuccess(`已新建「${title}」`); }
-      else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("新建节点失败：" + (d.error || `HTTP ${res.status}`)); }
+      else { const d = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, d); toastError(`新建节点失败：${_f.description}`); }
     } catch (err) { console.error("创建节点失败:", err); toastError("新建节点失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };
 
@@ -995,7 +996,7 @@ export default function WorkspacePage() {
     },
     deleteFn: async (nodeId) => {
       const res = await fetch(`/api/story/nodes/${nodeId}`, { method: "DELETE" });
-      if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(err.error || `HTTP ${res.status}`); }
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, err); throw new Error(_f.description); }
     },
     onSuccess: (nodeId) => {
       if (selectedNode?.id === nodeId) { setSelectedNode(null); useWriterStore.getState().resetStream(); setReviewResult(null); }
@@ -1233,7 +1234,7 @@ export default function WorkspacePage() {
               try {
                 const res = await fetch("/api/generate/chapter-outline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, nodeId: selectedNode.id, prompt: flashPrompt || undefined, authorNote: authorNote || undefined }) });
                 const data = await res.json();
-                if (!res.ok || data.error) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); toastError(`章纲生成失败：${data.error || `HTTP ${res.status}`}`); return; }
+                if (!res.ok || data.error) { setChapterOutlineStatus("error"); setTimeout(() => setChapterOutlineStatus(""), 4000); const _f = describeHttpError(res.status, data); toastError(`章纲生成失败：${_f.description}`); return; }
                 if (data.outline) {
                   setChapterOutlineStatus("done"); setTimeout(() => setChapterOutlineStatus(""), 4000);
                   setSelectedNode({ ...selectedNode, outline: data.outline });

@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 /**
  * 本地过审自检面板 —— 把 src/core/humanize 的规则引擎结果可视化。
@@ -193,7 +194,7 @@ export function HumanizePanel({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d?.error || `HTTP ${res.status}`);
+        { const _f = describeHttpError(res.status, d); throw new Error(_f.description); }
       }
       const d = await res.json();
       useProjectStore.getState().updateNode(nodeId, {

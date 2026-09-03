@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useEffect, useCallback } from "react";
 import { Modal } from "@/components/ui/Modal";
@@ -61,7 +62,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         if (!editing) toastAdded(form.name, "规则");
         setForm({ name: "", content: "", category: "writing", priority: 0, scope: "all" });
         loadRules(); onRefresh?.();
-      } else { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("规则保存失败：" + (d.error || `HTTP ${res.status}`)); }
+      } else { const d = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, d); toastError(`规则保存失败：${_f.description}`); }
     } catch (err) { toastError("规则保存失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
     finally { setSaving(false); }
   };
@@ -71,7 +72,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
     description: "确定删除这条规则？此操作不可恢复。",
     deleteFn: async (id) => {
       const res = await fetch(`/api/rules/${id}`, { method: "DELETE" });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); throw new Error(d.error || `HTTP ${res.status}`); }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, d); throw new Error(_f.description); }
     },
     onSuccess: () => { loadRules(); onRefresh?.(); },
     errorPrefix: "规则删除失败",
@@ -84,7 +85,7 @@ export function RulesPanel({ projectId, onRefresh }: { projectId: string; onRefr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !rule.enabled }),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); toastError("规则开关失败：" + (d.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, d); toastError(`规则开关失败：${_f.description}`); return; }
       loadRules();
     } catch (err) { toastError("规则开关失败（网络错误）：" + (err instanceof Error ? err.message : "请重试")); }
   };

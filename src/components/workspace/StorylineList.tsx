@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "@/components/ui/icons";
@@ -60,7 +61,7 @@ export function StorylineList({ projectId, onRefresh, onWriteChapter }: { projec
       if (res.ok) setStorylines(await res.json());
       else {
         const d = await res.json().catch(() => ({ error: UNKNOWN_ERROR }));
-        setLoadError((d as { error?: string }).error || `加载失败（HTTP ${res.status}）`);
+        { const _f = describeHttpError(res.status, d); setLoadError((d as { error?: string }).error ? `加载失败：${(d as { error?: string }).error}` : `${_f.title}　${_f.description}`); }
       }
     } catch (err) {
       setLoadError("加载故事线失败：" + (err instanceof Error ? err.message : "网络错误，请稍后重试"));

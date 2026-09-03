@@ -8,6 +8,7 @@
  */
 
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toastError } from "@/components/ui/toast";
@@ -72,7 +73,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
     if (!d.characterId) return;
     try {
       const res = await fetch(`/api/characters/${d.characterId}`, { method: "GET" });
-      if (!res.ok) { const e = await res.json().catch(() => ({ error: "未知错误" })); setError("采纳失败：" + (e.error || `HTTP ${res.status}`)); return; }
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: "未知错误" })); const _f = describeHttpError(res.status, e); setError(`采纳失败：${_f.description}`); return; }
       const charData = await res.json();
       const card = charData.character || charData;
 
@@ -133,7 +134,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
         );
       } else {
         const e = await putRes.json().catch(() => ({ error: "未知错误" }));
-        setError("采纳失败：" + (e.error || `HTTP ${putRes.status}`));
+        { const _f = describeHttpError(putRes.status, e); setError(`采纳失败：${_f.description}`); }
       }
     } catch (err) {
       setError("采纳失败：" + (err instanceof Error ? err.message : "请重试"));
@@ -272,7 +273,7 @@ export function AIChatBar({ projectId, chapterContent, selectedText, className =
                 signal: controller.signal,
               });
               const syncData = await syncRes.json();
-              if (!syncRes.ok) throw new Error(syncData.error || `同步失败（HTTP ${syncRes.status}）`);
+              if (!syncRes.ok) { const _f = describeHttpError(syncRes.status, syncData); throw new Error(_f.description); }
               if (!controller.signal.aborted) {
                 const created = syncData.created || 0;
                 const updated = syncData.updated || 0;

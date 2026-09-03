@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,7 @@ export function DrawCards({
       const data = await res.json();
       // 只有未被取消的请求才更新 UI（防 StrictMode 竞态）
       if (abortRef.current !== controller) return;
-      if (!res.ok || data.error) { setError(data.error || `HTTP ${res.status}`); return; }
+      if (!res.ok || data.error) { const _f = describeHttpError(res.status, data); setError(data.error ? `抽卡失败：${data.error}` : `${_f.title}　${_f.description}`); return; }
       setCards(data.cards || []);
       setCharDetails(data.characterDetails || []);
       setTotalChars(data.totalCharacters || 0);

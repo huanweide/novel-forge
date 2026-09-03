@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.82";
+export const LATEST_VERSION = "v3.1.83";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.83 失败提示全站收尾——扫清剩余约 18 个组件的 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP · 不把「HTTP 500」再丢给用户）：①承接 v3.1.82——上一棒已修根因（isRawHttpStatusText 识别裸码）+ 直改 6 处高频页，本棒把散落的其余约 18 个组件同类漏点一次性扫清（workspace 主页、CenterPanel、AIChatBar、ConflictPanel、ConsistencyPanel、DigestPanel、DrawCards、ForeshadowingPanel、FullTextSearchPanel、HumanizePanel、ImportDialog、LeftPanel、PreGenConfirm、ProjectDiagnostics、RulesPanel、StorylineWorkbench、StorylineList、Toolbar、WorldPanel）。②统一改走 describeHttpError——所有 error || HTTP 状态码 这类裸串拼接全部替换为 helper 翻译的人话（「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」等）。③纯机械收口——零新逻辑、零数据层改动，helper 已在 v3.1.82 修好，本棒只是把剩余调用点接上。④质量门禁——类型检查 0 错误、vitest 1363 全绿、生产构建通过；个人 IP 仍归瑞宝宝。",
   "v3.1.82 失败提示全站说人话——根治 HTTP 裸状态码甩脸（HTTP-STATUS-DEHUMANIZE · 不再把「（HTTP 500）」丢给用户）：①修复真实系统性缺陷——项目虽有 describeHttpError 翻译层，但客户端兜底常把 error：HTTP 500 当真实消息塞进去，helper 照单全收原样显示；且 helper 的 default 分支自己还在甩「服务返回了异常状态（HTTP 500）」。②根因修复：describeHttpError 新增 isRawHttpStatusText 识别 HTTP 500 这类裸码，一律不当「服务端说清了」处理、改交给状态码分支翻译成人话；default 分支改写为纯人话。③这一处修复连带中和所有走 helper 的漏点（CharacterList / ImportWizard / explore 等约 7 处），它们不再显示裸状态码。④高频页面直改 6 处——StyleEditor（加载 / 套用 / 保存文风 3 处）、dissect/[id]（轮询加载 1 处）、dissect（列表加载 + 删除 2 处）全部改为走 describeHttpError，用户看到的是「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」这类能懂的话。⑤新增 2 条单测覆盖裸状态码翻译；质量门禁——类型检查 0 错误、测试全绿（新增 2 条，全量 1363）、生产构建通过。⑥说明——散落其余约 15 个组件的同类裸状态码漏点体量较大，留作下一棒专项清扫，本棒先修根因 + 最高频页面。个人 IP 仍归瑞宝宝。",
 
   "v3.1.81 切章重置章内查找/替换状态（RESET-ON-NODE-SWITCH · 杜绝跨章误替换）：①修复真实 bug——selectedNode 是父组件传入的 prop，切章时 CenterPanel 不卸载只换 prop，而 nodeQuery/matchIdx/replaceQuery 三个查找/替换状态没有随切章重置，旧章的查找词/替换词会带进新章；用户切到 B 章后误点「替换全部」，会用旧替换词改写 B 章正文（不可逆）。②加一个依赖 [selectedNode?.id] 的 effect，切章时清空 nodeQuery/replaceQuery/matchIdx。③零数据层改动：只改 CenterPanel.tsx 一处新增 effect。④质量门禁——类型检查 0 错误、测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
@@ -251,6 +252,35 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.83",
+    date: "2026-09-03",
+    title: "失败提示全站收尾——扫清剩余约 18 个组件 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP）",
+    sections: [
+      {
+        label: "收尾：扫清剩余裸状态码漏点",
+        items: [
+          "承接 v3.1.82 根因修复（isRawHttpStatusText）+ 6 处高频页，本棒把散落其余约 18 个组件的同类漏点一次性扫清",
+          "覆盖 workspace 主页、CenterPanel、AIChatBar、ConflictPanel、ConsistencyPanel、DigestPanel、DrawCards、ForeshadowingPanel、FullTextSearchPanel、HumanizePanel、ImportDialog、LeftPanel、PreGenConfirm、ProjectDiagnostics、RulesPanel、StorylineWorkbench、StorylineList、Toolbar、WorldPanel",
+        ],
+      },
+      {
+        label: "统一改走 describeHttpError",
+        items: [
+          "所有 error || HTTP 状态码 裸串拼接全部替换为 helper 翻译的人话（接口密钥无效 / 服务暂时不可用 / 请检查本地服务 等）",
+          "纯机械收口——零新逻辑、零数据层改动，helper 已在 v3.1.82 修好，本棒只把剩余调用点接上",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错误",
+          "vitest 全绿（全量 1363）",
+          "生产构建通过",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.82",
     date: "2026-09-03",

@@ -1,4 +1,5 @@
 "use client";
+import { describeHttpError } from "@/lib/stream-error";
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
@@ -89,7 +90,7 @@ export function ConflictPanel({
         onApplied?.();
       } else {
         const d = await res.json().catch(() => ({ error: "未知错误" }));
-        toastError("应用失败：" + (d.error || `HTTP ${res.status}`));
+        const _f = describeHttpError(res.status, d); toastError(`应用失败：${_f.description}`);
       }
     } catch {
       toastError("应用失败，请检查网络后重试");
