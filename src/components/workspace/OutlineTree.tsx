@@ -210,37 +210,157 @@ export function OutlineTree({
   const { childrenMap, volumeIds } = useMemo(() => buildIndex(nodes), [nodes]);
   const selectedId = selectedNode?.id ?? null;
 
+  // v3.1.72：大纲搜索（长篇高频刚需 · OUTLINE-SEARCH）
+  // 模糊匹配 title + content 前 200 字符 + 状态文字；命中节点保留祖先链（确保上下文完整）
+  const [searchTerm, setSearchTerm] = useState("");
+  const filteredNodes = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return { list: nodes, total: nodes.length, matched: nodes.length };
+    const matched = new Set<string>();
+    const parentById = new Map<string, string>();
+    for (const n of nodes) if (n.parentId) parentById.set(n.id, n.parentId);
+    // 状态文字映射（与 StatusBadge 文案一致，方便用户用「草稿」「已确认」等中文搜）
+    const STATUS_LABELS: Record<string, string> = {
+      planned: "未开始", generating: "生成中", drafted: "草稿",
+      reviewing: "审核中", confirmed: "已确认", humanizing: "去AI味",
+      quality_pass: "质量通过", quality_fail: "质量待修",
+      archived: "已归档", approved: "已通过",
+    };
+    for (const n of nodes) {
+      const title = (n.title ?? "").toLowerCase();
+      const snippet = (n.content ?? "").slice(0, 200).toLowerCase();
+      const statusText = (STATUS_LABELS[n.status as string] ?? (n.status as string) ?? "").toLowerCase();
+      if (title.includes(q) || snippet.includes(q) || statusText.includes(q)) {
+        matched.add(n.id);
+        // 沿 parentId 上溯，保留祖先链（搜「第 5 章」也要看到它所属的卷）
+        let cur: string | undefined = parentById.get(n.id);
+        while (cur) {
+          if (matched.has(cur)) break;
+          matched.add(cur);
+          cur = parentById.get(cur);
+        }
+      }
+    }
+    const filteredList = nodes.filter((n) => matched.has(n.id));
+    return { list: filteredList, total: nodes.length, matched: matched.size };
+  }, [nodes, searchTerm]);
+  const displayNodes = filteredNodes.list;
+
+  // v3.1.72：搜索框 UI（始终显示，长篇刚需）
+  const searchBox = (
+    <div className="px-1.5 pt-1 pb-1.5">
+      <div className="relative">
+        <Icon name="search" size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--nv-text-tertiary)] pointer-events-none" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="搜索章节名 / 内容 / 状态"
+          aria-label="搜索大纲"
+          className="w-full pl-7 pr-7 h-7 text-xs rounded-md border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] text-[var(--nv-text-primary)] placeholder:text-[var(--nv-text-tertiary)] focus:outline-none focus:border-[var(--nv-primary)]/60 focus:ring-1 focus:ring-[var(--nv-primary)]/30"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm("")}
+            aria-label="清空搜索"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 inline-flex items-center justify-center text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-primary)] rounded">
+            <Icon name="x" size={10} />
+          </button>
+        )}
+      </div>
+      {searchTerm && (
+        <div className="mt-1 px-0.5 text-[10px] text-[var(--nv-text-tertiary)]">
+          匹配 {filteredNodes.matched} / {filteredNodes.total} 个节点（含 {filteredNodes.matched - displayNodes.filter((n) => n.type === "chapter" || n.type === "section").length} 个祖先卷/分卷）
+        </div>
+      )}
+    </div>
+  );
+
   if (nodes.length === 0) {
     return (
-      <div className="px-2 py-10 text-center">
-        <div className="mb-3 text-xs text-[var(--nv-text-tertiary)]">还没有章节大纲，先有个开头吧：</div>
-        {onLoadSample && (
-          <button onClick={onLoadSample} className="btn-primary h-7 px-3 mb-3 text-xs">看示例（载入示范小说）</button>
-        )}
-        <div>
-          <button onClick={() => onAddSection(null)} className="text-xs text-[var(--nv-primary)] hover:underline">+ 手动添加章节</button>
+      <>
+        {searchBox}
+        <div className="px-2 py-10 text-center">
+          <div className="mb-3 text-xs text-[var(--nv-text-tertiary)]">还没有章节大纲，先有个开头吧：</div>
+          {onLoadSample && (
+            <button onClick={onLoadSample} className="btn-primary h-7 px-3 mb-3 text-xs">看示例（载入示范小说）</button>
+          )}
+          <div>
+            <button onClick={() => onAddSection(null)} className="text-xs text-[var(--nv-primary)] hover:underline">+ 手动添加章节</button>
+          </div>
+          <div className="mt-2">
+            <button onClick={() => { if (typeof window !== "undefined") window.location.href = "/"; }} className="text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">或去首页「按题材开局」</button>
+          </div>
         </div>
-        <div className="mt-2">
-          <button onClick={() => { if (typeof window !== "undefined") window.location.href = "/"; }} className="text-[10px] text-[var(--nv-text-muted)] hover:text-[var(--nv-text-secondary)]">或去首页「按题材开局」</button>
-        </div>
-      </div>
+      </>
     );
   }
-  const volumeNodes = nodes.filter((n) => n.type === "volume");
-  const nonVolumeRoots = nodes.filter((n) => !n.parentId && n.type !== "volume");
+
+  // v3.1.72：搜索无结果独立分支（与「没有章节」区分开，给清除按钮）
+  if (displayNodes.length === 0) {
+    return (
+      <>
+        {searchBox}
+        <div className="px-2 py-10 text-center">
+          <div className="mb-3 text-xs text-[var(--nv-text-tertiary)]">没有匹配「{searchTerm}」的章节</div>
+          <button onClick={() => setSearchTerm("")} className="text-xs text-[var(--nv-primary)] hover:underline">清空搜索</button>
+        </div>
+      </>
+    );
+  }
+
+  const volumeNodes = displayNodes.filter((n) => n.type === "volume");
+  const nonVolumeRoots = displayNodes.filter((n) => !n.parentId && n.type !== "volume");
 
   if (viewMode === "volume" && volumeNodes.length > 0) {
     return (
+      <>
+        {searchBox}
+        <div className="space-y-0.5">
+          {volumeNodes.map((vol) => {
+            const volChildren = childrenMap.get(vol.id) ?? EMPTY_NODES;
+            return <VolumeGroup key={vol.id} volume={vol} children={volChildren} childrenMap={childrenMap}
+              selectedId={selectedId} onSelectNode={onSelectNode} onAddSection={onAddSection}
+              batchMode={batchMode} selectedChapterIds={selectedChapterIds}
+              onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
+              projectId={projectId} />;
+          })}
+          {nonVolumeRoots.map((root) => (
+            <NodeTreeItem key={root.id} node={root} childrenMap={childrenMap} selectedId={selectedId}
+              onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
+              batchMode={batchMode} selectedChapterIds={selectedChapterIds}
+              onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
+              projectId={projectId} />
+          ))}
+          <button onClick={() => onAddSection(null)}
+            className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节/分卷</button>
+        </div>
+      </>
+    );
+  }
+
+  // v1.6.0：时间线视图删除（世界时间已删除，三视图冗余），直接走平铺。
+  // 用预建的 volumeIds 判断父是否为卷，消除原 nodes.find(...) 嵌套造成的 O(n²)。
+  const flatNodes = displayNodes.filter((n) => n.type !== "volume" && !(n.parentId && volumeIds.has(n.parentId)));
+  const roots = flatNodes.filter((n) => !n.parentId);
+
+  if (roots.length === 0) {
+    return (
+      <>
+        {searchBox}
+        <div className="text-center text-[var(--nv-text-tertiary)] text-xs py-8">
+          还没有章节大纲<br />
+          <button onClick={() => onAddSection(null)} className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70 mt-2 block mx-auto">+ 手动添加章节</button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {searchBox}
       <div className="space-y-0.5">
-        {volumeNodes.map((vol) => {
-          const volChildren = childrenMap.get(vol.id) ?? EMPTY_NODES;
-          return <VolumeGroup key={vol.id} volume={vol} children={volChildren} childrenMap={childrenMap}
-            selectedId={selectedId} onSelectNode={onSelectNode} onAddSection={onAddSection}
-            batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-            onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
-            projectId={projectId} />;
-        })}
-        {nonVolumeRoots.map((root) => (
+        {roots.map((root) => (
           <NodeTreeItem key={root.id} node={root} childrenMap={childrenMap} selectedId={selectedId}
             onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
             batchMode={batchMode} selectedChapterIds={selectedChapterIds}
@@ -248,36 +368,8 @@ export function OutlineTree({
             projectId={projectId} />
         ))}
         <button onClick={() => onAddSection(null)}
-          className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节/分卷</button>
+          className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节</button>
       </div>
-    );
-  }
-
-  // v1.6.0：时间线视图删除（世界时间已删除，三视图冗余），直接走平铺。
-  // 用预建的 volumeIds 判断父是否为卷，消除原 nodes.find(...) 嵌套造成的 O(n²)。
-  const flatNodes = nodes.filter((n) => n.type !== "volume" && !(n.parentId && volumeIds.has(n.parentId)));
-  const roots = flatNodes.filter((n) => !n.parentId);
-
-  if (roots.length === 0) {
-    return (
-      <div className="text-center text-[var(--nv-text-tertiary)] text-xs py-8">
-        还没有章节大纲<br />
-        <button onClick={() => onAddSection(null)} className="text-[var(--nv-primary)] hover:text-[var(--nv-primary)]/70 mt-2 block mx-auto">+ 手动添加章节</button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-0.5">
-      {roots.map((root) => (
-        <NodeTreeItem key={root.id} node={root} childrenMap={childrenMap} selectedId={selectedId}
-          onSelectNode={onSelectNode} onAddSection={onAddSection} depth={0}
-          batchMode={batchMode} selectedChapterIds={selectedChapterIds}
-          onToggleChapterSelect={onToggleChapterSelect} onDeleteNode={onDeleteNode} deletingId={deletingId}
-          projectId={projectId} />
-      ))}
-      <button onClick={() => onAddSection(null)}
-        className="w-full text-left text-xs text-[var(--nv-text-tertiary)] hover:text-[var(--nv-text-secondary)] py-1 px-2 mt-2">+ 添加章节</button>
-    </div>
+    </>
   );
 }
