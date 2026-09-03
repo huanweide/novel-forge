@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { getTemplate } from "@/core/templates";
@@ -21,11 +22,30 @@ export function Toolbar({
   const [copying, setCopying] = useState(false);
   const [copyTip, setCopyTip] = useState<string | null>(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
 
+  const router = useRouter();
   const activeStyle = getTemplate(styleTemplateId || "");
   const activeStyleLabel = activeStyle ? `${activeStyle.icon} ${activeStyle.name}` : "自定义文风";
 
-  const closeMenus = () => { setExportMenuOpen(false); };
+  const closeMenus = () => { setExportMenuOpen(false); setProjectMenuOpen(false); };
+
+  // 多项目快捷切换：下拉列出全部项目，选中即跳转到对应写作台，不必回首页再选
+  const loadProjects = async () => {
+    if (projectsLoaded) return;
+    try {
+      const res = await fetch("/api/projects");
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data?.projects ?? []);
+      setProjects(Array.isArray(list) ? list.slice(0, 50) : []);
+      setProjectsLoaded(true);
+    } catch {
+      // 静默失败：下拉不可用，但不阻塞写作台
+    }
+  };
 
   const handleCopyMarkdown = async () => {
     setCopying(true);
@@ -53,6 +73,52 @@ export function Toolbar({
         </button>
         <span className="shrink-0 text-[var(--nv-border-3)]">|</span>
         <span className="truncate text-sm font-medium">{projectName}</span>
+        {/* 多项目快捷切换：下拉列出全部项目，选中即跳转，不必回首页再选 */}
+        <div className="relative z-50">
+          <button
+            onClick={() => { setProjectMenuOpen((o) => !o); loadProjects(); }}
+            title="切换项目"
+            aria-label="切换项目"
+            className="flex h-6 items-center rounded px-1 text-[var(--nv-text-tertiary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+          >
+            <span className="text-[10px] opacity-70">▾</span>
+          </button>
+          {projectMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={closeMenus} aria-hidden />
+              <div className="absolute left-0 top-full z-50 mt-1 max-h-80 w-64 overflow-y-auto rounded-lg border border-[var(--nv-border-2)] bg-[var(--nv-surface-1)] py-1 shadow-xl">
+                {projects.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-[var(--nv-text-muted)]">{projectsLoaded ? "暂无其他项目" : "加载中…"}</div>
+                )}
+                {projects.map((p) => {
+                  const isCurrent = p.id === projectId;
+                  return (
+                    <button
+                      key={p.id}
+                      disabled={isCurrent}
+                      onClick={() => { closeMenus(); if (!isCurrent) router.push(`/workspace/${p.id}`); }}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs transition-colors ${isCurrent ? "cursor-default text-[var(--nv-text-muted)]" : "text-[var(--nv-text-secondary)] hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"}`}
+                    >
+                      <span className="truncate">{p.name}</span>
+                      {isCurrent ? (
+                        <span className="shrink-0 text-[10px] text-[var(--nv-text-muted)]">当前</span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] text-[var(--nv-accent)]">打开</span>
+                      )}
+                    </button>
+                  );
+                })}
+                <div className="my-1 border-t border-[var(--nv-border-2)]" />
+                <button
+                  onClick={() => { closeMenus(); router.push("/"); }}
+                  className="w-full px-3 py-1.5 text-left text-xs text-[var(--nv-text-secondary)] transition-colors hover:bg-[var(--nv-surface-2)] hover:text-[var(--nv-text-primary)]"
+                >
+                  全部项目 / 新建…
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-1.5">
         {/* 文风与质量控制 */}
