@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.69 |
+| 包名 / 版本 | `novel-smith` v3.1.70 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.69 写作台顶部多项目快捷切换（切项目不再回首页）`（2026-09-03，Latest） |
+| 最新 Release | `v3.1.70 生成失败不再闷声（失败时说人话、告诉你下一步）`（2026-09-03，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -99,6 +99,13 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ---
 
 ## 五、版本更新记录（最新在上）
+
+### v3.1.70 — 2026-09-03 — 生成失败不再闷声（失败时说人话、告诉你下一步 · GEN-FAIL-VISIBLE）
+
+- **问题（真实缺陷，非文档待办）**：写作台生成主链路 `streamSSE` 有两条「沉默失败」路径——① 不检查 `res.ok`，服务端返回 500 的错误响应被当流读掉、逐行跳过（`!trimmed.startsWith("data: ")` 全 continue），用户零反馈；② 网络层异常只 `console.error` 打进控制台，界面毫无提示。两者共同后果：按钮恢复可点、正文没变、不说为什么，用户以为没点上而反复点击 = 重复计费。
+- **修法**：新增 `src/lib/stream-error.ts` 翻译层（`describeStreamError` 处理网络异常 / `describeHttpError` 处理 HTTP 非 2xx，优先转述服务端 `jsonError` 已写好的 `{error, hint}`），在 `!res.ok` 与外层 catch 两处接入 `toastError(描述, 标题)`。写测试时发现并确认：`describeStreamError` 对 AbortError 返回 null，保持「用户主动停止」安静不打扰。
+- **范围验证（重要）**：全库 12 处 `getReader()` 流式点逐一复查，**仅写作台这一处缺 `res.ok` 检查**，explore / game / ImitationPanel / ImportWizard 等 11 处均已有检查——本棒精准命中唯一漏洞，未扩大改动面。
+- 门禁：tsc 0 错、vitest 1306 全绿（新增 17 条 stream-error 测试）、build EXIT=0。
 
 ### v3.1.69 — 2026-09-03 — 写作台顶部多项目快捷切换（切项目不再回首页 · PROJECT-SWITCHER）
 

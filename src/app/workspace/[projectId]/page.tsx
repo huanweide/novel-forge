@@ -22,6 +22,7 @@ import { DrawCards } from "@/components/workspace/DrawCards";
 import { OnboardingModal } from "@/components/workspace/OnboardingModal";
 import type { ProjectData, CharacterData, LorebookData, StoryNodeData, ReviewIssue, SSEEvent } from "@/components/workspace/types";
 import { confirmDialog, promptDialog, toastError, toastSuccess, toastInfo, toastWarning } from "@/components/ui/toast";
+import { describeStreamError, describeHttpError } from "@/lib/stream-error";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useConfirmDelete } from "@/components/workspace/useConfirmDelete";
 import { RefineDiffModal } from "@/components/workspace/RefineDiffModal";
@@ -758,6 +759,16 @@ export default function WorkspacePage() {
     setRecallMemories([]); // 新一轮生成重置宝宝流记忆面板
     try {
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: controller.signal });
+      // 生成接口返回非 2xx（如 API Key 无效、模型报错、数据库异常）时，响应体不是 SSE 流，
+      // 直接去读会逐行跳过、用户零反馈。这里先取服务端 jsonError 已经写好的中文提示。
+      if (!res.ok) {
+        let payload: unknown = null;
+        try { payload = await res.json(); } catch { /* 非 JSON 响应（纯文本 / 空体）按状态码兜底 */ }
+        const failure = describeHttpError(res.status, payload);
+        setGenStep("error");
+        toastError(failure.description, failure.title);
+        return;
+      }
       const reader = res.body?.getReader();
       if (!reader) throw new Error("无法获取响应流");
       const decoder = new TextDecoder();
@@ -884,7 +895,17 @@ export default function WorkspacePage() {
           } catch { /* 忽略解析失败 */ }
         }
       }
-    } catch (err: unknown) { if (err instanceof Error && err.name !== "AbortError") { setGenStep("error"); console.error("生成失败:", err); } }
+    } catch (err: unknown) {
+      // 网络层失败（服务没起 / 断网 / 超时）此前只打控制台、界面零反馈，
+      // 用户会以为「还在生成」而反复点击——重复生成、重复花钱。这里统一给出人话提示。
+      // describeStreamError 对「用户主动中止」返回 null，此时保持安静、不打扰。
+      const failure = describeStreamError(err);
+      if (failure) {
+        setGenStep("error");
+        console.error("生成失败:", err);
+        toastError(failure.description, failure.title);
+      }
+    }
     finally { abortRef.current = null; }
   };
 
