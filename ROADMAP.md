@@ -61,9 +61,9 @@
 1. ~~**humanize 段落级颜色评分**~~ **【已交付 · 侦察纠正】**：2026-09-03 侦察 `src/components/workspace/HumanizePanel.tsx` 确认——段落级颜色评分**早已实现**（`heatColor` 把每段分数映射绿/黄/红：≥60 危险 / ≥35 警告 / ≥15 提示 / 其余正常；逐段渲染色条+分数+命中高亮+「只看中/高严重度」筛选）。这**不是缺口**，无需重做。真正缺口是「把它做成首页卖点」——已并入下方第 2 点的 README/SEO 部分。
 2. **获取 Star 专项（当前最大缺口，2026-09-04 推进中）**：
    - ~~README 卖点化（humanize 过审自检上首屏 + 关键词铺 SEO）~~ **【已交付 2026-09-04】**：README 顶部标签行 / 核心亮点表 / 功能全景树已补 humanize 过审自检行，版本号升 v3.1.84；GitHub 描述重写带 humanize/隐私关键词、Topics 重排（删 5 个纯技术栈、加 humanize/ai-detection/ai-content-detection/privacy/writing-assistant）已 `gh repo view` 验证生效。
-   - README 加 60 秒 GIF 动图（探讨→填表→写作→过审），视频转化率约纯文字 3–5 倍 —— **未做，待补**。
+   - ~~README 60 秒 GIF 动图（探讨→填表→写作→过审）~~ **【已交付 2026-09-04】**：用真实截图（首页/探讨模式）+ 程序化补足「自动填表」「本地过审」两帧，合成循环演示动图 `docs/screenshots/demo.gif`（单轮约 14s 循环），已嵌入 README「60 秒看懂工作流」节；受沙箱限制为流程图演示而非真实录屏，已诚实标注。
    - 中文圈 SEO：关键词已在描述/Topics/README 铺到位（「AI 写作去 AI 味 / AI 味检测 / 本地写作 / 隐私」）。
-   - GitHub Discussion 当轻量「模板市集」雏形（大纲模板 / 风格卡 / 角色卡预设可分享）—— **未做，待补**。
+   - 模板市集雏形 **【已交付 2026-09-04 · 替代方案】**：仓库未启用 GitHub Discussions（HTTP 410），故落地为本地 `templates/` 目录（大纲模板 / 风格卡模板 / 角色卡预设 3 个示例）+ README「模板市集」一节；可在仓库开启 Discussions 后迁移为线上分享区。
 
 ### P1 · 核心体验升级（仍为 open 痛点）
 3. **沉浸写作模式（F11 全屏）**：隐藏大纲/AI 助手/工具栏，对标 Ulysses/Scrivener。精进分析列为 P1，至今未做。
