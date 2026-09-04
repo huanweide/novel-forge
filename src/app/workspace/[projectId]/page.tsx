@@ -1257,6 +1257,7 @@ export default function WorkspacePage() {
             onEditCharacter={(id) => { const c = project.characters.find((x) => x.id === id); if (c) setEditingCharacter(c); }}
             onEditLore={(id) => { const l = project.lorebookEntries.find((x) => x.id === id); if (l) setEditingLore(l); }}
             loadProject={loadProject}
+            onConflict={setConflict}
             onExitZen={() => setZenMode(false)}
           />
 

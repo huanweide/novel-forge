@@ -170,6 +170,7 @@ export function CenterPanel({
   zen = false, onExitZen, onEnterZen,
   narrativeStage,
   locateEntityId,
+  onConflict,
 }: {
   selectedNode: StoryNodeData | null; isGenerating: boolean;
   reviewResult: { passed: boolean; issues: ReviewIssue[] } | null;
@@ -198,6 +199,12 @@ export function CenterPanel({
   narrativeStage?: NarrativeStage | null;
   /** 反向联动：从角色卡 / 世界书卡片点「定位」，正文定位并高亮该实体 */
   locateEntityId?: string | null;
+  /** v3.1.84：正文保存撞编辑冲突（409）时，交给父组件的冲突面板决定「用我的 / 用库里的 / 保留双方」 */
+  onConflict?: (c: {
+    nodeId: string;
+    mine: Record<string, unknown>;
+    server: { editVersion: number; title?: string | null; outline?: string | null; content?: string | null; notes?: string | null };
+  }) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   // v2.49：流式正文下沉到 useWriterStore，父组件（WorkspacePage）逐 token 不再重渲染，只这里局部更新
@@ -218,6 +225,15 @@ export function CenterPanel({
   // ── 三层自动保存（5.1）：手动编辑正文时实时防丢 + 状态指示 + 崩溃恢复 ──
   const [saveState, setSaveState] = useState<"idle" | "unsaved" | "saving" | "saved">("idle");
   const [pendingDraft, setPendingDraft] = useState<{ nodeId: string; content: string; savedAt: number } | null>(null);
+  // v3.1.84：乐观锁版本号基准。服务端每次成功保存都会 editVersion+1，而自动保存的 effect
+  // 依赖不含 editVersion（闭包会永久停留在进入编辑态那一刻），导致第 2 次及之后的保存必然撞
+  // 409 被静默吞掉——一次编辑会话里正文只进库第一拍。这里用 ref 维护「服务端最新版本号」，
+  // 保存成功后回写，下一拍才不会自己撞自己。
+  const editVersionRef = useRef<number | undefined>(undefined);
+  // 自动保存遇到真冲突（别的标签页 / AI 改写过这一章）时暂停后续自动请求，避免每 3s 空转失败
+  const autoSavePausedRef = useRef(false);
+  // 暂停原因只提示一次，不反复弹 toast 打断写作
+  const autoSaveWarnedRef = useRef(false);
 
   // ── 章内查找（v3.1.77）：在当前章节正文里定位词并高亮跳转（只读态用，编辑态交给浏览器原生 Ctrl+F）──
   const [nodeQuery, setNodeQuery] = useState("");
@@ -227,8 +243,21 @@ export function CenterPanel({
   const [replaceQuery, setReplaceQuery] = useState("");
   const nodeReplaceRef = useRef<HTMLInputElement>(null);
 
+  // v3.1.84：切章时重置乐观锁基准与自动保存暂停态。只认节点 id 变化——同章内父组件若回刷
+  // prop，不能把我们已经推进过的版本号覆盖回旧值（那会重新触发自己撞自己的 409）。
+  useEffect(() => {
+    editVersionRef.current = (selectedNode as any)?.editVersion;
+    autoSavePausedRef.current = false;
+    autoSaveWarnedRef.current = false;
+  }, [selectedNode?.id]);
+
   const startInlineEdit = () => {
     if (!selectedNode) return;
+    // v3.1.84：进入编辑态时把乐观锁基准同步到当前最新版本号——若这章刚被别的操作改过，
+    // 基准必须跟上，否则一上来就撞 409（用户会以为编辑器坏了）。
+    editVersionRef.current = (selectedNode as any)?.editVersion;
+    autoSavePausedRef.current = false;
+    autoSaveWarnedRef.current = false;
     setInlineDraft(displayContent);
     setInlineEditing(true);
   };
@@ -242,17 +271,34 @@ export function CenterPanel({
     const newContent = inlineRef.current.textContent ?? "";
     setSavingInline(true);
     try {
+      // v3.1.84：字段名必须是 expectedVersion（后端只读它做乐观锁），不是 editVersion
+      const body = {
+        content: newContent,
+        wordCount: newContent.length,
+        expectedVersion: editVersionRef.current ?? (selectedNode as any).editVersion,
+      };
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: newContent,
-          wordCount: newContent.length,
-          editVersion: (selectedNode as any).editVersion,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => null);
+      // v3.1.84：撞编辑冲突不再只弹一句「保存失败」——交给父组件冲突面板，
+      // 让用户看清库里那版是什么，自己决定「用我的 / 用库里的 / 保留双方」。
+      if (res.status === 409 && data?.conflict) {
+        if (data.server && onConflict) {
+          onConflict({ nodeId: selectedNode.id, mine: body as unknown as Record<string, unknown>, server: data.server });
+        } else {
+          toastError("保存冲突：这一章在别处被改过，但没能取到库里那版，请刷新后重试");
+        }
+        setSaveState("unsaved");
+        return;
+      }
       if (!res.ok) { const _f = describeHttpError(res.status, data); throw new Error(_f.description); }
+      // 服务端每次成功保存都 editVersion+1，回写基准，下一拍才不会自己撞自己
+      if (data?.editVersion != null) editVersionRef.current = data.editVersion;
+      autoSavePausedRef.current = false;
+      autoSaveWarnedRef.current = false;
       toastSuccess("正文已保存");
       setInlineEditing(false);
       setInlineDraft("");
@@ -277,23 +323,46 @@ export function CenterPanel({
 
     const flush = async () => {
       if (!selectedNode || !inlineRef.current) return;
+      // 已撞过真冲突：暂停后续自动请求，等用户在冲突面板里处理完（切章会重置）
+      if (autoSavePausedRef.current) return;
       const text = inlineRef.current.textContent ?? "";
       setSaveState("saving");
       try {
         const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
+          // v3.1.84：字段名必须是 expectedVersion——后端只读这个字段做乐观锁。此前写的是
+          // editVersion，被后端忽略，等于正文保存一直没上锁，会静默覆盖别处的改动（数据丢失）。
           body: JSON.stringify({
             content: text,
             wordCount: text.length,
-            editVersion: (selectedNode as any).editVersion,
+            expectedVersion: editVersionRef.current ?? (selectedNode as any).editVersion,
           }),
         });
+        // v3.1.84：409 是「这一章在别处被改过」的真冲突，不再是「带旧版本号撞自己」。
+        // 停掉后续自动保存，明确告诉用户去处理，而不是静默吞掉让他以为存上了。
+        if (res.status === 409) {
+          autoSavePausedRef.current = true;
+          if (!autoSaveWarnedRef.current) {
+            autoSaveWarnedRef.current = true;
+            toastError("这一章在别处被改过，自动保存已暂停。请点「完成」用冲突面板选择保留哪一版");
+          }
+          setSaveState("unsaved");
+          return;
+        }
         if (!res.ok) throw new Error("save failed");
+        const saved = await res.json().catch(() => null);
+        // 关键：服务端每次成功保存都 editVersion+1，必须回写基准，否则下一拍必然自己撞自己
+        if (saved?.editVersion != null) editVersionRef.current = saved.editVersion;
+        autoSaveWarnedRef.current = false;
         if (selectedNode) clearDraftLocal(selectedNode.id);
         setSaveState("saved");
       } catch {
-        // 落库失败仍有 localStorage 兜底，不阻塞写作
+        // 落库失败仍有 localStorage 兜底，不阻塞写作；但要让用户看见，别以为已经存进去了
+        if (!autoSaveWarnedRef.current) {
+          autoSaveWarnedRef.current = true;
+          toastError("自动保存失败，正文已暂存在本地，可点「完成」重试");
+        }
         setSaveState("unsaved");
       }
     };
@@ -409,17 +478,33 @@ export function CenterPanel({
     if (!selectedNode) return false;
     setSavingInline(true);
     try {
+      // v3.1.84：字段名必须是 expectedVersion（后端只读它做乐观锁），不是 editVersion；
+      // 取 ref 里维护的服务端最新版本号，避免带上陈旧版本号自己撞自己。
+      const body = {
+        content: newContent,
+        wordCount: newContent.length,
+        expectedVersion: editVersionRef.current ?? (selectedNode as any).editVersion,
+      };
       const res = await fetch(`/api/story/nodes/${selectedNode.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: newContent,
-          wordCount: newContent.length,
-          editVersion: (selectedNode as any).editVersion,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => null);
+      // 这一章在别处被改过：交给冲突面板，而不是静默覆盖掉别人的改动
+      if (res.status === 409 && data?.conflict) {
+        if (data.server && onConflict) {
+          onConflict({ nodeId: selectedNode.id, mine: body as unknown as Record<string, unknown>, server: data.server });
+        } else {
+          toastError("替换冲突：这一章在别处被改过，但没能取到库里那版，请刷新后重试");
+        }
+        return false;
+      }
       if (!res.ok) { const _f = describeHttpError(res.status, data); throw new Error(_f.description); }
+      // 服务端每次成功保存都 editVersion+1，回写基准，下一拍才不会自己撞自己
+      if (data?.editVersion != null) editVersionRef.current = data.editVersion;
+      autoSavePausedRef.current = false;
+      autoSaveWarnedRef.current = false;
       if (selectedNode) clearDraftLocal(selectedNode.id);
       if (loadProject) await loadProject();
       // v3.1.79：替换当前处后保持光标位置（原第 K+1 处前移为第 K 处，自动指向下一处）；
@@ -432,7 +517,7 @@ export function CenterPanel({
     } finally {
       setSavingInline(false);
     }
-  }, [selectedNode, loadProject]);
+  }, [selectedNode, loadProject, onConflict]);
 
   const replaceOne = useCallback(async () => {
     if (!selectedNode || !nodeQuery) return;

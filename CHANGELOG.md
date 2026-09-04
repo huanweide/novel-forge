@@ -1,4 +1,13 @@
 ﻿# Novel Smith 更新公告
+## v3.1.84 — 2026-09-03
+
+### 正文保存乐观锁接上 + 撞冲突交面板（AUTOSAVE-OPTIMISTIC-LOCK）
+
+- **根因**：后端 `PUT /api/story/nodes/[id]` 只读 `body.expectedVersion` 做乐观锁校验，但 `CenterPanel` 三个正文写入路径（flush 自动保存 / saveInlineEdit 手动完成 / commitContent 章内替换）传的字段名是 `editVersion`，被后端完全忽略——正文保存**从未上锁**，若另一处改过同一章会被静默覆盖（数据丢失，比保存失败更糟）。
+- **修复**：字段名 `editVersion`→`expectedVersion`，锁真正生效；成功回写新 `editVersion` 到 ref 作下次基准。
+- **撞冲突不再被吞**：返回 409 时交给已有的 `SaveConflictModal` 让用户选「用我的 / 用库里的 / 保留双方」；自动保存撞冲突时暂停自动保存、只提示一次，避免无限重试刷屏。
+- **质量门禁**：类型检查 0 错误、vitest 1363 全绿、生产构建通过；真实 API 验证三项全过（连存可存 / 陈旧版本号被拒 409 / 旧字段名对照组竟返回 200 证实旧 bug）。个人 IP 仍归瑞宝宝。
+
 
 ## v3.1.83 — 2026-09-03
 
