@@ -1,373 +1,111 @@
-# Novel Forge 改造路线图
+# Novel Smith 路线图（重标定版）
 
-> 基于 aixiaoshuojia.cn 逆向分析的增量改造计划
-> 2026-06-17 制定
-
----
-
-## 总策略
-
-**不改架构，只加模块。** 现有 4-Agent 管线（架构师→主笔→审校→摘要）保持不变，往里面插新的处理阶段。
-
-每个改造项标注：
-- 🔴 核心差距——不改就缺一条腿
-- 🟡 重要增强——显著提升质量
-- 🟢 锦上添花——有了更好
+> **本版重标定于 2026-09-03**，取代 2026-06-17 基于「逆向云笔」写出的旧路线图。
+> 旧版已失真：它假设 Postgres/Redis + 云端，而本仓库已于 v3.1.x 完成 **SQLite 本地优先** 架构切换；且 v3.1.59→v3.1.84 的实际演进走的是「健壮性 / 说人话 / 防丢稿 / 接锁」主线，与旧版功能堆完全脱节。
+> 本版综合三份输入整理为**单一真相源**：
+> - `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md`（用户视角差异化调研，保留为需求输入）
+> - `会议/2.0-plan/chair-integration.md`（董事会 2.0 共识：可靠性优先、游戏模式降级卫星）
+> - `agent.md` 版本台账（真实交付记录）
 
 ---
 
-## 阶段一：上下文记忆升级（🔴 核心）
+## 一句话定位（North Star）
 
-### 1.1 蒸馏/Segmentation 系统
+**Novel Smith 是「本地优先 + 隐私零顾虑 + 白盒可改」的中文长篇 AI 写作工坊**——它不只是一个生成器，而是从「一句话灵感 → 探讨设定 → 自动填表 → 批量写作 → 本地过审」的完整闭环，且你的未发表稿件永远不出本机。
 
-**现状：** ChapterSummary 只有一个 summary + keyEvents，AI 自己打分 impactScore。
-
-**目标：** 参考 `03-distillation-system.md`，建立 S/A/B/C 四级事件重要性评分。
-
-**改动：**
-- [ ] `prisma/schema.prisma` — ChapterSummary 增加 `eventImportances: Json` 字段（S×5, A×15, B×30, C×50 四层事件列表）
-- [ ] `src/core/agents/orchestrator.ts` — summarizeChapter() 返回结构增加 eventImportances
-- [ ] `src/core/assembly/engine.ts` — 记忆注入层从 3 层改为 4 层：S(3-5条完整事件) → A(10-15条压缩) → B(关键词索引) → C(不注入)
-- [ ] `src/app/api/generate/summarize/` — 摘要 API 返回增加分层事件
-
-**效果：** AI 不再需要从摘要里猜哪些重要——重要事件直接以 `[S-1]` `[A-3]` 标签注入 prompt。
-
-### 1.2 伏笔/承诺追踪系统
-
-**现状：** 没有伏笔追踪机制。只有 Storyline 的七要素。
-
-**目标：** 参考 `09-pending-commitments.md`，实现 5 状态机。
-
-**改动：**
-- [ ] `prisma/schema.prisma` — 新增 `PendingCommitment` 表（id, projectId, description, status 五状态, createdChapterId, detectedChapterId, fulfilledChapterId, voidedChapterId, closureConditions, statusHistory: Json, entityId, entityType, fulfillmentRatio）
-- [ ] `src/core/agents/commitment-tracker.ts` — 新文件，承诺检测+状态推进逻辑
-- [ ] `src/core/agents/orchestrator.ts` — reviewContent() 增加承诺一致性检查维度
-- [ ] `src/app/api/generate/apply-updates/` — 写后处理中增加承诺检测步骤（现有步骤：eventExtraction → breakthroughDetection → 现在加 commitmentCheck）
-
-**状态机：**
-```
-pending → detected → partially_fulfilled → fulfilled
-                                          → voided (超时或不可能完成)
-```
-
-### 1.3 规则冲突裁决引擎
-
-**现状：** Rule model 有 priority 字段但无冲突检测。`injectRules()` 只是拼接，不裁决。
-
-**目标：** 参考 `11-rules-engine-specificity.md`，实现 3 阶段冲突裁决。
-
-**改动：**
-- [ ] `prisma/schema.prisma` — Rule 增加 `specificityScore: Int`、`scopeType`（global/volume/chapter_range/event_type/character_scene/conditional）、`scopeConfig: Json`
-- [ ] `src/core/rules.ts` — 增加 `detectConflicts()` 和 `resolveConflicts()` 函数
-- [ ] 裁决逻辑：优先级→特异性（global 1分 vs conditional 6分）→创建时间
+对比一切云端竞品（NovelAI / 彩云小梦 / Sudowrite / 酒馆），我们的不可替代性在三维交集：**长篇 × 中文 × 本地 × 全流程**。这是别人追单点容易、追三层要重写架构的护城河。
 
 ---
 
-## 阶段二：写作质量闭环（🔴 核心）
+## 三大支柱（所有功能排期的依据）
 
-### 2.1 废词/句式检测引擎升级
+### 支柱一 · 本地优先与隐私（地基，不可动摇）
+- 数据、API Key、设定、未发表稿件**全在本机 SQLite**，零云端上传。
+- 任何「要上云 / 要装 Redis / 要连 Postgres」的需求，默认否决或降级为可关的可选项。
+- 这是隐私顾虑归零的承诺，是任何云端竞品永远追不上的。
 
-**现状：** `forbidden-checker.ts` 只做简单字符串匹配。
+### 支柱二 · 白盒可改（差异化引擎）
+- **本地过审自检（humanize）**：32KB 规则库、纯本地、零 LLM 调用、零成本，给段落级「AI 味」评分。这是中文写作圈的硬需求（SEO 关键词「AI 写作去 AI 味 / AI 味检测」），也是本项目的头号 Star 磁石——必须做成首页卖点。
+- **宝宝流数据库 + 13 类实体标注 + 颜色图例**：把 AI 的「乱」可视化成「可改」，普通作者也能看懂并修改。
+- 设定自动建档、实体反向联动（点卡片定位正文、点正文跳卡片）。
 
-**目标：** 增加正则模式匹配、句式检测（"不是…而是…""让/令/使"）、身体模板检测、按 500 字计算模糊词密度。
-
-**改动：**
-- [ ] `src/lib/forbidden-checker.ts` — 重构为 5 类检测器：
-  1. 精确禁用词（直接 indexOf，现有逻辑）
-  2. 句式模式（正则：`/不是.{1,20}而是/`、`/让.{1,10}(感到|觉得|想起)/`）
-  3. 身体模板（正则：`/瞳孔.*一缩|身体.*一僵|呼吸.*一滞/`）
-  4. 模糊词密度（统计"似乎/也许/大概/仿佛"每 500 字）
-  5. AI 高频特征词（"至关重要""深入探讨""充满活力"等）
-- [ ] 输出格式统一为 `ForbiddenReport { category, matches[], densityScore }`
-- [ ] SSE review_result 事件中附带 forbiddenReport
-
-### 2.2 后处理流水线标准化
-
-**现状：** 生成后只有 summarize + card-update，处理步骤散落在各个 API 路由里。
-
-**目标：** 参考 `14-postprocessing-pipeline.md`，建立标准化 8 步后处理。
-
-**改动：**
-- [ ] `src/core/pipeline/postprocessor.ts` — 新文件，Pipeline 类
-- [ ] 8 步流水线：
-  1. textPolish（润色——去 AI 味）
-  2. eventExtraction（事件提取）
-  3. breakthroughDetection（突破检测）
-  4. eventClassification（S/A/B/C 分类）
-  5. commitmentCheck（承诺检测）
-  6. characterArchive（角色状态归档）
-  7. distillation（3 层摘要生成）
-  8. foreshadowLink（伏笔关联）
-- [ ] `src/app/api/generate/write/route.ts` — 生成完成后走流水线
-
-### 2.3 审校维度扩展
-
-**现状：** 审校只有 OOC/逻辑/世界观/时间线/跨章矛盾 5 个维度。
-
-**目标：** 增加废词检测、情感一致性、节奏分析。
-
-**改动：**
-- [ ] `src/core/agents/orchestrator.ts` — SYSTEM_PROMPTS.reviewer 增加检查维度
-- [ ] 审校结果 ReviewIssue 增加 `category: "forbidden_word" | "emotion_consistency" | "pacing"`
+### 支柱三 · 可信赖（不甩脸 / 不丢稿 / 真锁）
+- **不甩脸**：失败提示说人话（v3.1.70/82/83 已落实「HTTP 500」不再丢给用户）。
+- **不丢稿**：三层自动保存（LocalStorage 500ms → 服务端 3s → 手动），崩溃可恢复（v3.1.76）。
+- **真锁**：正文保存乐观锁接上，别处改过的章不再被静默覆盖（v3.1.84）。
+- 这一支柱是「作者敢把心血托付给你」的信任底座，也是区别于玩具级工具的分水岭。
 
 ---
 
-## 阶段三：新功能——游戏模式（🔴 核心）
+## 当前已交付快照（v3.1.59 – v3.1.84，作为排期基线）
 
-### 3.1 交互式文本冒险
+| 版本区间 | 主题 | 状态 |
+|---|---|---|
+| v3.1.59 | 接线 humanize → 一键过审 | ✅ |
+| v3.1.62 | 章节首写「下一步建议」引导 | ✅ |
+| v3.1.66 | 实体面板 ↔ 写作区反向联动（LOCATE-LINK） | ✅ |
+| v3.1.70/82/83 | 生成/失败说人话、HTTP 裸状态码全站收口 | ✅ |
+| v3.1.73–75 | 世界书/伏笔/大纲/全文检索 | ✅ |
+| v3.1.76 | 三层自动保存 + 崩溃恢复 | ✅ |
+| v3.1.77–79 | 章内查找 / 替换 / 位置同步 | ✅ |
+| v3.1.80–81 | 替换失败报真 / 切章重置查找状态 | ✅ |
+| v3.1.84 | 正文保存乐观锁接上 + 撞 409 交冲突面板 | ✅ |
 
-**现状：** 只有线性生成模式。
-
-**目标：** 参考 `16-game-mode.md`，新增轮次制互动写作。
-
-**改动：**
-- [ ] `prisma/schema.prisma` — 新增 `GameSession` 表（id, projectId, currentNodeId, roundNumber, totalWords, inventory: Json, entityStates: Json, isAutoComplete, isDecompose, createdAt, updatedAt）
-- [ ] `src/core/game/game-engine.ts` — 新文件，回合循环逻辑
-- [ ] `src/app/api/generate/game/route.ts` — POST API，SSE 流式
-- [ ] `src/components/workspace/GamePanel.tsx` — 新组件，游戏界面
-  1. 每回合 AI 写出 500-800 字场景 + 停在关键时刻
-  2. 生成 4 个选项（对应不同策略维度）
-  3. 玩家选择或自定义输入
-  4. 系统追踪实体状态 `NE|角色名|状态|位置`
-  5. 3 个开关：自动完结 / 分解标注 / 本地模型
-- [ ] `src/app/workspace/[projectId]/game/page.tsx` — 新路由
-
-### 3.2 实体追踪（NER）
-
-**现状：** 没有前端 NER。
-
-**目标：** 参考 `13-writing-quality-standards.md`，实现 AC 自动机检测专有名词。
-
-**改动：**
-- [ ] `src/lib/ner-detector.ts` — 新文件，AC 自动机实现
-- [ ] `src/components/editor/EntityDetector.tsx` — 已有文件，增强为实时标注
-- [ ] 支持实体类型：角色名、地点、物品、功法、势力
+> 注：旧路线图「首屏并行化」经实测判定为 dev 模式假象（生产构建首屏 1/6 体积、预渲染秒开），**不做**。
 
 ---
 
-## 阶段四：UI/UX 增强（🟡 重要）
+## 重新排序的优先级
 
-### 4.1 文笔风格面板升级
+### P0 · 杀手锏 + 拿 Star（不动就掉队）
+1. **humanize 做成首页卖点 + 段落级颜色评分**：把「一键过审」从写作面板按钮升级为 README 首屏截图的主视觉；段落绿/黄/红编码，让作者像批改作文一样看 AI 写作（精进分析 P2 已识别，补完即可）。
+2. **获取 Star 专项（当前最大缺口）**：
+   - README 加 60 秒 GIF 动图（探讨→填表→写作→过审），视频转化率约纯文字 3–5 倍。
+   - 中文圈 SEO：在 README/Topics/描述里铺「AI 写作去 AI 味 / AI 味检测 / 本地写作 / 隐私」关键词。
+   - GitHub Topics 已 20 个封顶，按转化价值重排（保留 ai-writing / local-first / chinese-novel / novel-writing 等核心，删低相关）。
+   - 用 GitHub Discussion 当轻量「模板市集」雏形（大纲模板 / 风格卡 / 角色卡预设可分享）。
 
-**现状：** StyleEditor 有量化指标但交互简单。
+### P1 · 核心体验升级（仍为 open 痛点）
+3. **沉浸写作模式（F11 全屏）**：隐藏大纲/AI 助手/工具栏，对标 Ulysses/Scrivener。精进分析列为 P1，至今未做。
+4. **多项目快捷切换**：顶部下拉一键切项目（现为回首页再选）。
+5. **写作区视野优化**：右侧 AI 助手 + 顶部按钮占约 35% 视野，正文太挤；提供可收起/聚焦态。
 
-**目标：** 参考 `18-ui-writing-style.md`，增加 12 维度滑块 + 预览。
+### P2 · 差异化护城河
+6. **世界书冲突检测可视化**：现有冲突 API 没在 UI 显眼处呈现，点冲突直接跳到冲突段落。
+7. **写作模板市集 v0.1**：用户可分享/导入大纲模板、风格卡、角色卡预设。
+8. **中英双语文档站**（`docs.novel-smith.cn`，Next.js 自渲，SEO 友好）；当前 README/README_EN 散落。
+9. **插件 API 草案**：让社区接记忆策略 / 导出器 / UI 主题，文档化「加一个插件」最小路径。
 
-**改动：**
-- [ ] `src/components/editor/StyleEditor.tsx` — 重构：
-  1. 12 个维度滑块（词汇丰富度/句子长度/描写密度/对话比例/修辞手法/节奏速度/心理描写/环境描写/口语化/幽默感/血腥暴力/情色暧昧）
-  2. 实时预览文本框
-  3. 对比模式（左右分栏）
-  4. 10 种预设风格库（古风仙侠/现代都市/西方奇幻/轻小说/悬疑惊悚/热血战斗/文艺抒情/幽默搞笑/极简留白/厚重史诗）
-- [ ] `src/core/templates/styles.ts` — 扩充预设定义，每个风格包含 12 维度的默认值
-
-### 4.2 大纲模板系统
-
-**现状：** OutlineDialog 只支持自由结构和自定义章节数。
-
-**目标：** 参考 `20-ui-outline-editor.md`，增加 5 种结构模板。
-
-**改动：**
-- [ ] `src/components/workspace/OutlineDialog.tsx` — 增加模板选择器
-  1. 三幕式（建置25%→对抗50%→结局25%）
-  2. 起承转合（4 段式）
-  3. 英雄之旅（12 阶段）
-  4. 章回体（传统对仗标题）
-  5. 自由结构（现有逻辑）
-- [ ] `src/core/templates/outlines.ts` — 新文件，模板定义
-
-### 4.3 AI 面板 Tab 化（右下角）
-
-**现状：** 右侧面板只有上下文监控。
-
-**目标：** 增加 AI 助手对话面板（类似 aixiaoshuojia.cn 的 AI 助手 Tab）。
-
-**改动：**
-- [ ] `src/components/workspace/RightPanel.tsx` — 增加 Tab 切换：上下文监控 / AI 对话
-- [ ] `src/components/workspace/AIChatPanel.tsx` — 新组件，对话式 AI 交互
-  1. 消息列表（用户/AI 气泡）
-  2. 输入框 + 发送
-  3. 预设问题模板（"帮我梳理角色关系""检查本章节奏""生成下一章大纲"）
-
-### 4.4 统计面板增强
-
-**现状：** 右侧面板底部有基础统计。
-
-**目标：** 增加可视化图表。
-
-**改动：**
-- [ ] `src/components/workspace/StatsPanel.tsx` — 新组件
-  1. 写作进度环形图
-  2. 章节字数柱状图
-  3. 角色出场频率排行
-  4. 情感曲线（基于章末氛围字段）
+### P3 · 增长与生态（可选、不阻塞）
+10. **游戏模式**：**降级为卫星功能**（董事会 2.0 共识），入口可隐藏，不进主闭环，不自动注入生成上下文。有需求再独立迭代。
+11. **移动端响应式阅读模式**：当前主要服务桌面端。
 
 ---
 
-## 阶段五：基础设施（🟡 重要）
+## 明确砍掉 / 降级（与旧路线图决裂）
 
-### 5.1 3 层自动保存
-
-**现状：** 作者指令 1.5s 防抖保存，正文需手动存。
-
-**目标：** LocalStorage 500ms → Server 3s → 手动 Ctrl+S。
-
-**改动：**
-- [ ] `src/lib/auto-save.ts` — 新文件，自动保存管理器
-- [ ] LocalStorage 层：500ms 防抖写入 localStorage，断电不丢
-- [ ] Server 层：3s 防抖 PATCH API，跨设备同步
-- [ ] 状态指示器：💾 已保存 / 🔄 保存中 / ⚠️ 未保存
-
-### 5.2 SSE 断线续传
-
-**现状：** 生成中断只能重来。
-
-**目标：** Redis 缓存 30min + resume API。
-
-**改动：**
-- [ ] `src/lib/redis.ts` — 新文件，Redis 客户端
-- [ ] `src/app/api/generate/resume/route.ts` — GET API，从 Redis 取缓存的生成结果
-- [ ] `src/app/api/generate/write/route.ts` — 每 token 同步写 Redis
-- [ ] 前端 `streamSSE()` — 增加断线自动重连逻辑
-
-### 5.3 TTS 语音朗读
-
-**现状：** 无。
-
-**目标：** 参考 `17-complete-ui-inventory.md`，多音色朗读。
-
-**改动：**
-- [ ] `src/components/workspace/TTSPlayer.tsx` — 新组件
-  1. 音色选择器（20+ 音色，5 分类：标准普通话/方言/古风/日系/特殊）
-  2. 语速控制
-  3. 段落级朗读
-  4. Web Speech API 或 Edge TTS
-
-### 5.4 导出增强
-
-**现状：** 只支持 Markdown/TXT。
-
-**目标：** 增加 OPML/JSON/EPUB。
-
-**改动：**
-- [ ] `src/app/api/projects/[id]/export/route.ts` — 增加 format 参数
-- [ ] OPML 格式（大纲树结构，用于导入其他大纲工具）
-- [ ] JSON 格式（完整结构化导出，可用于备份）
-- [ ] EPUB 格式（使用 epub-gen 库）
+- ❌ **Postgres / Redis 假设**：本地优先 SQLite 是铁律，任何「SSE 断线续传要 Redis」「记忆要上云」一律否决或降级为内存缓存。
+- ❌ **游戏模式当「🔴核心阶段」**：旧路线图把它列为核心，董事会与实测均证明它是卫星，重标定为 P3 可选。
+- ❌ **TTS / EPUB / OPML 等导出增强当主线**：导出已有 5 种格式（TXT/MD/HTML/EPUB/DOCX），这类是锦上添花，排 P2 之后。
 
 ---
 
-## 阶段六：锦上添花（🟢）
+## 获取 Star 的衡量（90 天目标，源自精进分析）
 
-### 6.1 关系图可视化
-
-- [ ] 角色关系力导向图（D3.js / vis-network）
-- [ ] 故事线时间轴视图
-- [ ] 世界观词条关联图
-
-### 6.2 暗色/亮色主题切换
-
-### 6.3 快捷键系统
-
-- [ ] Ctrl+Enter 生成
-- [ ] Ctrl+S 手动保存
-- [ ] Ctrl+Shift+F 全局搜索（章节/角色/词条）
-
-### 6.4 导入增强
-
-- [ ] OPML 导入
-- [ ] 整本小说导入自动拆章
+| 阶段 | 核心 | 衡量 |
+|---|---|---|
+| 第 1–2 周（P0） | humanize 成卖点 + Star 专项启动 | Star 数破 10（「去 AI 味」是 SEO 关键词） |
+| 第 3–6 周（P1） | 沉浸模式 + 多项目切换 + 视野优化 | 写作流走通率从约 40% 提到 70% |
+| 第 7–10 周（P2） | 颜色化过审分 + 模板市集 v0.1 | 「一键过审」成为首页截图主视觉 |
+| 第 11–12 周（P3） | 文档站 + 插件 API 草案 | 海外 Star 渠道打开 |
 
 ---
 
-## 实施顺序建议
+## 质量纪律（不可妥协）
 
-```
-第1周：1.1 蒸馏系统 + 1.3 规则冲突引擎
-        ↓
-第2周：1.2 伏笔追踪 + 2.1 废词检测升级
-        ↓
-第3周：2.2 后处理流水线 + 2.3 审校扩展
-        ↓
-第4周：3.1 游戏模式（最大新功能）
-        ↓
-第5周：4.1 文笔面板 + 4.2 大纲模板
-        ↓
-第6周：4.3 AI 对话面板 + 4.4 统计面板
-        ↓
-第7周：5.1 自动保存 + 5.2 SSE 断线续传
-        ↓
-第8周：5.3 TTS + 5.4 导出增强
-        ↓
-后续：阶段六锦上添花
-```
+每批实质改动必须过三道门禁，再走 bump 五件套（仅产品代码需 bump；纯文档/路线图更新不 bump、不触发 Release）：
+- `CODEBUDDY_SAFE_DELETE_ENABLED=0 npx tsc --noEmit --incremental false` → 0 错
+- `npx vitest run` → 全绿（基线 129 文件 / 1363 测试）
+- `CODEBUDDY_SAFE_DELETE_ENABLED=0 npx next build` → EXIT=0
 
----
-
-## 数据库迁移汇总
-
-需要新增的表：
-1. `PendingCommitment` — 伏笔/承诺追踪
-2. `GameSession` — 游戏会话
-
-需要修改的表：
-1. `ChapterSummary` — 增加 `eventImportances: Json`
-2. `Rule` — 增加 `specificityScore: Int`, `scopeType: String`, `scopeConfig: Json`
-
----
-
-## 新增文件清单
-
-```
-src/core/
-├── agents/
-│   ├── orchestrator.ts     (修改)
-│   └── commitment-tracker.ts (新增)
-├── assembly/
-│   └── engine.ts           (修改)
-├── game/
-│   └── game-engine.ts      (新增)
-├── pipeline/
-│   └── postprocessor.ts    (新增)
-├── rules.ts                (大幅修改)
-├── templates/
-│   ├── outlines.ts         (新增)
-│   └── styles.ts           (修改)
-└── types/
-    └── index.ts            (修改)
-
-src/lib/
-├── auto-save.ts            (新增)
-├── forbidden-checker.ts   (大幅修改)
-├── ner-detector.ts         (新增)
-└── redis.ts                (新增)
-
-src/app/api/generate/
-├── game/route.ts           (新增)
-└── resume/route.ts         (新增)
-
-src/components/
-├── workspace/
-│   ├── AIChatPanel.tsx     (新增)
-│   ├── GamePanel.tsx       (新增)
-│   ├── StatsPanel.tsx      (新增)
-│   ├── TTSPlayer.tsx       (新增)
-│   ├── RightPanel.tsx      (修改)
-│   └── OutlineDialog.tsx   (修改)
-└── editor/
-    ├── StyleEditor.tsx     (修改)
-    └── EntityDetector.tsx  (修改)
-
-src/app/workspace/[projectId]/
-└── game/
-    └── page.tsx            (新增)
-```
-
----
-
-## 风险点
-
-1. **Prisma 迁移** — 务必先在开发分支操作，`prisma migrate dev` 会自动生成迁移 SQL
-2. **SSE 协议兼容** — 现有前端 `streamSSE()` 只处理 `token/done/error/review_result`，新增事件类型要确保前端能解析
-3. **游戏模式的上下文管理** — 轮次制意味着上下文会越来越长，需要独立的内存管理策略
-4. **Redis 依赖** — SSE 断线续传需要 Redis，如果用户不想装就降级为内存缓存
+> 本路线图为「活文档」：每完成一个 P0/P1 项，在 `agent.md` 版本台账登记，并视情况回填本文件的「已交付快照」。

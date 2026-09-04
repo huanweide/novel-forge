@@ -337,6 +337,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 3. Vercel 预览站改名 `novel-forge-nu.vercel.app` → 新名（需瑞宝宝授权 Vercel 项目操作）。
 4. ~~陈旧的 `master` 分支~~ **【已删除 2026-09-02】** 删除前先诊断：master 领先 main 2 个独有提交（`14c00be`/`ae4ceb9`，均为 Postgres 直连旧方向，与现 SQLite 架构冲突、属被放弃方向），已先打 `backup/master-legacy-20260902` 标签异地保护，再删 origin/ghssh 两远程 + 本地 master 分支，并 `fetch -p` 清理过期追踪引用；远程默认分支确认是 `main`，无引用、零丢失。
 5. **首屏并行化实测结论（2026-09-02，不 bump）**：生产构建首屏 JS 体积仅为开发的 1/6（工作区 1.67MB vs 9.9MB），配合预渲染 HTML 首屏立即可见，生产首屏基本秒开；开发模式 10-12s 黑屏是 dev 模式固有成本（Turbopack 实时编译未压缩 chunk），**属假象，无需做首屏并行化优化**。
+6. **ROADMAP.md 重标定（2026-09-03，仅文档、不 bump）**：废弃 2026-06-17 旧版（其 Postgres/Redis/云端假设已与 SQLite 本地优先架构冲突，且 v3.1.59→v3.1.84 实际演进是健壮性/说人话/防丢稿/接锁主线，旧版功能堆已失真）。重写为单一真相源：三大支柱（本地优先与隐私 / 白盒可改 humanize+实体标注 / 可信赖 不甩脸不丢稿真锁）+ 重新排序 P0–P3 + **获取 Star 专项**（当前最大缺口）+ 游戏模式降级卫星 + 砍 Postgres/Redis 假设。综合输入：精进分析(09-02)、董事会 2.0-plan(chair-integration)、agent.md 台账。
 
 ---
 
