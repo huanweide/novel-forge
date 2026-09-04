@@ -58,12 +58,12 @@
 ## 重新排序的优先级
 
 ### P0 · 杀手锏 + 拿 Star（不动就掉队）
-1. **humanize 做成首页卖点 + 段落级颜色评分**：把「一键过审」从写作面板按钮升级为 README 首屏截图的主视觉；段落绿/黄/红编码，让作者像批改作文一样看 AI 写作（精进分析 P2 已识别，补完即可）。
-2. **获取 Star 专项（当前最大缺口）**：
-   - README 加 60 秒 GIF 动图（探讨→填表→写作→过审），视频转化率约纯文字 3–5 倍。
-   - 中文圈 SEO：在 README/Topics/描述里铺「AI 写作去 AI 味 / AI 味检测 / 本地写作 / 隐私」关键词。
-   - GitHub Topics 已 20 个封顶，按转化价值重排（保留 ai-writing / local-first / chinese-novel / novel-writing 等核心，删低相关）。
-   - 用 GitHub Discussion 当轻量「模板市集」雏形（大纲模板 / 风格卡 / 角色卡预设可分享）。
+1. ~~**humanize 段落级颜色评分**~~ **【已交付 · 侦察纠正】**：2026-09-03 侦察 `src/components/workspace/HumanizePanel.tsx` 确认——段落级颜色评分**早已实现**（`heatColor` 把每段分数映射绿/黄/红：≥60 危险 / ≥35 警告 / ≥15 提示 / 其余正常；逐段渲染色条+分数+命中高亮+「只看中/高严重度」筛选）。这**不是缺口**，无需重做。真正缺口是「把它做成首页卖点」——已并入下方第 2 点的 README/SEO 部分。
+2. **获取 Star 专项（当前最大缺口，2026-09-04 推进中）**：
+   - ~~README 卖点化（humanize 过审自检上首屏 + 关键词铺 SEO）~~ **【已交付 2026-09-04】**：README 顶部标签行 / 核心亮点表 / 功能全景树已补 humanize 过审自检行，版本号升 v3.1.84；GitHub 描述重写带 humanize/隐私关键词、Topics 重排（删 5 个纯技术栈、加 humanize/ai-detection/ai-content-detection/privacy/writing-assistant）已 `gh repo view` 验证生效。
+   - README 加 60 秒 GIF 动图（探讨→填表→写作→过审），视频转化率约纯文字 3–5 倍 —— **未做，待补**。
+   - 中文圈 SEO：关键词已在描述/Topics/README 铺到位（「AI 写作去 AI 味 / AI 味检测 / 本地写作 / 隐私」）。
+   - GitHub Discussion 当轻量「模板市集」雏形（大纲模板 / 风格卡 / 角色卡预设可分享）—— **未做，待补**。
 
 ### P1 · 核心体验升级（仍为 open 痛点）
 3. **沉浸写作模式（F11 全屏）**：隐藏大纲/AI 助手/工具栏，对标 Ulysses/Scrivener。精进分析列为 P1，至今未做。

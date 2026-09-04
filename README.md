@@ -13,7 +13,7 @@
 > **中文**：把「写长篇」从体力活变成创意活。  
 > **English**: A local-first AI writing workshop for long-form web novels — characters, lore, outlines, and chapters, all in one place.
 
-`TypeScript` · `Local-First` · `分层记忆引擎` · `中文长篇` · `数据不出本机`
+`TypeScript` · `Local-First` · `分层记忆引擎` · `中文长篇` · `去 AI 味（本地过审）` · `数据不出本机 · 隐私零上传`
 
 [🖼 界面预览](https://novel-forge-nu.vercel.app) · [📦 快速开始](#快速开始) · [📖 English README](README_EN.md) · [⭐ 点 Star 支持](https://github.com/huanweide/novel-smith/stargazers)
 
@@ -73,6 +73,7 @@ Novel Smith 就是要把这些脏活、累活、记不住的活**交给 AI 自�
 | **零门槛开局** | 17 个示范预设、一键示例小说《山海拾遗》、8 题材开局，clone 即用 |
 | **世界卡 15 分类体系** | 命运体系/物理/公开体系等 15 类设定模块，确定性分类器自动路由填表 |
 | **故事线进度量化** | 主线/支线七要素 + 章节进展百分比，AI 写章实时感知剧情 |
+| **本地过审自检（去 AI 味）** | 写完一键跑「去 AI 味」扫描：零联网、零成本、段落级绿/黄/红评分，逐段高亮 AI 腔命中点（套话/堆砌/空洞副词），未发表稿件**全程留本机不上传**，投稿前自己先过一遍 |
 
 ---
 
@@ -115,6 +116,7 @@ Novel Smith
 │   ├── 批量写作        → 1-10 章：先生成章纲确认，再后台写正文
 │   ├── 故事线          → 主线/支线七要素 + 章节进展时间轴 + 缝合怪推进
 │   ├── 智能审阅        → AI 评分诊断 + 合格自动定稿 + 智能交付全书
+│   ├── 本地过审自检      → 去 AI 味扫描：段落级绿/黄/红评分 + 逐段命中高亮，稿件不上传
 │   └── 工具箱/统计      → 冲突推演、叙事能量曲线、写作监测
 ├── 拆书系统         → 15维度智能拆解 + 仿写引擎
 ├── 设置            → LLM 提供商 + API Key + 骨架/配置/记忆衰减
