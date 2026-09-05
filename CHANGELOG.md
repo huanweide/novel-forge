@@ -1,4 +1,13 @@
 ﻿# Novel Smith 更新公告
+## v3.1.85 — 2026-09-05
+
+### 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）
+
+- **合并**：把本地模板市集与创意工坊打通成一套「确认制」工作流——新增 src/core/presets/ 模块（plan/apply/undo/validate/from-template/llm-config），注入前先 computeApplyPlan 只读算出将要新增/覆盖哪些实体并给确认摘要，预览说几条就注入几条、预览零副作用。
+- **真撤销**：原撤销端点只对 regex/api_config 真删、其余六类仅抹追踪记录（改了白改），新设计用「双凭证」（created 新建项 + updatedBefore 覆盖前旧值快照）executeUndo 逆序还原 + 删除新建，style/character/worldview/story_progression/lorebook/regex/api_config 全可一键回退到注入前。
+- **可自配置 + 模板桥接**：/api/presets/[id] 新增 PUT 编辑（内置预设 403）、DELETE 删除（被应用时 409 先撤销），上传/编辑/自配置入口接 validatePresetContent 八类校验挡脏数据；/api/presets/import-local-templates 把 templates/*.md 解析成预设草稿落库（同名幂等），市集与工坊打通。
+- **质量门禁**：类型检查 0 错、vitest 132 文件 1405 测试全绿（新增 42 条）、生产构建通过。个人 IP 仍归瑞宝宝。
+
 ## v3.1.84 — 2026-09-03
 
 ### 正文保存乐观锁接上 + 撞冲突交面板（AUTOSAVE-OPTIMISTIC-LOCK）

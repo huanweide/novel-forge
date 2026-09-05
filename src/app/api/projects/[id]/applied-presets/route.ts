@@ -1,13 +1,14 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { executeUndo } from "@/core/presets/undo";
 
 export const maxDuration = 30;
 
 // DELETE /api/projects/[id]/applied-presets  { presetId }
-// 从 project.appliedPresets 移除记录；若记录含 ruleNames（regex 预设）则同时从
-// postProcessingRules 移除同名规则；若含 configKeys（api_config 预设）则从 llmConfig 删除对应 key。
-// 注意：style/lorebook/character/table 预设建立的实体不在此删除（仅移除追踪记录），避免误删用户内容。
+// 真撤销：按 apply 留下的凭证回退——先还原被覆盖的旧值，再删除本次新建的实体，最后移除追踪记录。
+// 覆盖全部类型：table / style / lorebook / worldview / story_progression / character / regex / api_config。
+// （旧版只对 regex、api_config 生效，其余六类仅抹追踪记录、实体残留。）
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -23,25 +24,27 @@ export async function DELETE(
     const list: any[] = Array.isArray(project.appliedPresets)
       ? (project.appliedPresets as any[])
       : [];
-    const target = list.find((p) => p.presetId === presetId);
-    const remaining = list.filter((p) => p.presetId !== presetId);
+    const target = list.find((p) => p?.presetId === presetId);
 
-    const data: any = { appliedPresets: remaining };
-    if (target?.ruleNames?.length) {
-      const rules: any[] = Array.isArray(project.postProcessingRules)
-        ? (project.postProcessingRules as any[])
-        : [];
-      const nameSet = new Set(target.ruleNames as string[]);
-      data.postProcessingRules = rules.filter((r) => !nameSet.has(r.name));
-    }
-    if (target?.configKeys?.length) {
-      const cfg: any = (project.llmConfig as Record<string, unknown>) || {};
-      for (const k of target.configKeys as string[]) delete cfg[k];
-      data.llmConfig = cfg;
+    // 兼容旧行为：未应用过也返回成功，只是 removed=0（前端刷新列表即可）
+    if (!target) {
+      return NextResponse.json({
+        ok: true,
+        removed: 0,
+        undo: { deleted: [], restored: [], skipped: [] },
+      });
     }
 
-    await prisma.project.update({ where: { id }, data });
-    return NextResponse.json({ ok: true, removed: target ? 1 : 0 });
+    const undo = await executeUndo(prisma, id, target);
+
+    // 无论撤销过程中有无单条失败，追踪记录都移除——避免"撤销了但还显示已应用"的僵尸状态
+    const remaining = list.filter((p) => p?.presetId !== presetId);
+    await prisma.project.update({
+      where: { id },
+      data: { appliedPresets: remaining as any },
+    });
+
+    return NextResponse.json({ ok: true, removed: 1, undo });
   } catch (e) {
     return jsonError(e);
   }

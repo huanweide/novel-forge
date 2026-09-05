@@ -25,10 +25,11 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.84";
+export const LATEST_VERSION = "v3.1.85";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.85 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）：①计划驱动预览——新增 src/core/presets/ 模块（plan/apply/undo/validate/from-template/llm-config），注入前先 computeApplyPlan 只读算出将要新增/覆盖哪些实体并给确认摘要，预览说几条就注入几条、预览零副作用；②六类实体真撤销——原撤销端点只对 regex/api_config 真删、其余六类仅抹追踪记录（改了白改），新设计用「双凭证」（created 新建项 + updatedBefore 覆盖前旧值快照）executeUndo 逆序还原 + 删除新建，style/character/worldview/story_progression/lorebook/regex/api_config 全可一键回退到注入前；③可自配置 + 模板桥接——/api/presets/[id] 新增 PUT 编辑（内置预设 403）、DELETE 删除（被应用时 409 先撤销）、上传/编辑/自配置入口接 validatePresetContent 八类校验挡脏数据，/api/presets/import-local-templates 把 templates/*.md 解析成预设草稿落库（同名幂等）；④质量门禁——类型检查 0 错、vitest 132 文件 1405 测试全绿（新增 42 条）、生产构建通过；后端能力就绪，前端 workshop 预览弹窗/已应用视图待下一棒补齐。个人 IP 仍归瑞宝宝。",
   "v3.1.84 正文保存乐观锁接上 + 撞冲突交面板（AUTOSAVE-OPTIMISTIC-LOCK · 别处改过的章不再被静默覆盖）：①修复真实且更隐蔽的 bug——后端 PUT /api/story/nodes/[id] 只读 body.expectedVersion 做乐观锁校验，但 CenterPanel 三个正文写入路径（flush 自动保存 / saveInlineEdit 手动完成 / commitContent 章内替换）传的字段名是 editVersion，被后端完全忽略，等于正文保存**从未上锁**，若另一处（或另一次会话）改过同一章，本地这次保存会把对方的修改静默覆盖掉（数据丢失，比保存失败更糟）。②修正字段名 editVersion→expectedVersion，让锁真正生效；成功回写新 editVersion 到 ref 作下次基准。③撞 409 冲突不再被吞——交给已有的 SaveConflictModal 让用户选「用我的 / 用库里的 / 保留双方」；自动保存撞冲突时暂停自动保存、只提示一次，避免无限重试刷屏。④质量门禁——类型检查 0 错、vitest 1363 全绿、生产构建通过；真实 API 验证三项全过（连存不撞自己可存 / 陈旧版本号被拒 409 / 旧字段名对照组竟返回 200 证实旧 bug）。个人 IP 仍归瑞宝宝。",
   "v3.1.83 失败提示全站收尾——扫清剩余约 18 个组件的 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP · 不把「HTTP 500」再丢给用户）：①承接 v3.1.82——上一棒已修根因（isRawHttpStatusText 识别裸码）+ 直改 6 处高频页，本棒把散落的其余约 18 个组件同类漏点一次性扫清（workspace 主页、CenterPanel、AIChatBar、ConflictPanel、ConsistencyPanel、DigestPanel、DrawCards、ForeshadowingPanel、FullTextSearchPanel、HumanizePanel、ImportDialog、LeftPanel、PreGenConfirm、ProjectDiagnostics、RulesPanel、StorylineWorkbench、StorylineList、Toolbar、WorldPanel）。②统一改走 describeHttpError——所有 error || HTTP 状态码 这类裸串拼接全部替换为 helper 翻译的人话（「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」等）。③纯机械收口——零新逻辑、零数据层改动，helper 已在 v3.1.82 修好，本棒只是把剩余调用点接上。④质量门禁——类型检查 0 错误、vitest 1363 全绿、生产构建通过；个人 IP 仍归瑞宝宝。",
   "v3.1.82 失败提示全站说人话——根治 HTTP 裸状态码甩脸（HTTP-STATUS-DEHUMANIZE · 不再把「（HTTP 500）」丢给用户）：①修复真实系统性缺陷——项目虽有 describeHttpError 翻译层，但客户端兜底常把 error：HTTP 500 当真实消息塞进去，helper 照单全收原样显示；且 helper 的 default 分支自己还在甩「服务返回了异常状态（HTTP 500）」。②根因修复：describeHttpError 新增 isRawHttpStatusText 识别 HTTP 500 这类裸码，一律不当「服务端说清了」处理、改交给状态码分支翻译成人话；default 分支改写为纯人话。③这一处修复连带中和所有走 helper 的漏点（CharacterList / ImportWizard / explore 等约 7 处），它们不再显示裸状态码。④高频页面直改 6 处——StyleEditor（加载 / 套用 / 保存文风 3 处）、dissect/[id]（轮询加载 1 处）、dissect（列表加载 + 删除 2 处）全部改为走 describeHttpError，用户看到的是「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」这类能懂的话。⑤新增 2 条单测覆盖裸状态码翻译；质量门禁——类型检查 0 错误、测试全绿（新增 2 条，全量 1363）、生产构建通过。⑥说明——散落其余约 15 个组件的同类裸状态码漏点体量较大，留作下一棒专项清扫，本棒先修根因 + 最高频页面。个人 IP 仍归瑞宝宝。",
@@ -253,6 +254,36 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.85",
+    date: "2026-09-05",
+    title: "创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）",
+    sections: [
+      {
+        label: "合并：模板市集与创意工坊打通为确认制工作流",
+        items: [
+          "新增 src/core/presets/ 模块（plan/apply/undo/validate/from-template/llm-config）",
+          "注入前先 computeApplyPlan 只读算出将要新增/覆盖哪些实体并给确认摘要，预览说几条就注入几条、预览零副作用",
+          "本地模板市集桥接——/api/presets/import-local-templates 把 templates/*.md（风格卡/角色卡/大纲）解析成预设草稿落库，同名幂等跳过",
+        ],
+      },
+      {
+        label: "六类实体真撤销 + 可自配置",
+        items: [
+          "原撤销端点只对 regex/api_config 真删、其余六类仅抹追踪记录（改了白改），新设计用「双凭证」（created 新建项 + updatedBefore 覆盖前旧值快照）executeUndo 逆序还原 + 删除新建",
+          "style/character/worldview/story_progression/lorebook/regex/api_config 全可一键回退到注入前",
+          "预设自配置——/api/presets/[id] PUT 编辑（内置预设 403）、DELETE 删除（被应用时 409 先撤销），上传/编辑/自配置入口接 validatePresetContent 八类结构校验挡脏数据",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错、vitest 132 文件 1405 测试全绿（新增 42 条：plan 19 / apply-undo 13 / from-template 10）、生产构建通过",
+          "真实 API 验证：预览零副作用、六类真撤销均回退成功、md 模板端到端导入成功",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.84",
     date: "2026-09-03",

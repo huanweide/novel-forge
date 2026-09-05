@@ -1,6 +1,7 @@
 import { jsonError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { validatePresetContent } from "@/core/presets/validate";
 
 // GET /api/presets?type=&tag=&q= —— 创意工坊浏览（公开预设）
 export async function GET(request: Request) {
@@ -28,6 +29,20 @@ export async function POST(request: Request) {
     const { type, title, description, content, author, tags } = body;
     if (!type || !title) {
       return NextResponse.json({ error: "缺少 type 或 title" }, { status: 400 });
+    }
+    // 上传即校验 content 结构：字段拼错在保存时就拦下，而不是等套用后才发现没效果
+    if (content !== undefined && content !== null) {
+      const v = validatePresetContent(type, content);
+      if (!v.ok) {
+        return NextResponse.json(
+          {
+            error: `预设内容不合法：${v.errors.join("；")}`,
+            errors: v.errors,
+            warnings: v.warnings,
+          },
+          { status: 400 },
+        );
+      }
     }
     const preset = await prisma.preset.create({
       data: {

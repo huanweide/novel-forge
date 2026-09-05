@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.84 |
+| 包名 / 版本 | `novel-smith` v3.1.85 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.84 正文保存乐观锁接上 + 撞冲突交面板（AUTOSAVE-OPTIMISTIC-LOCK）`（2026-09-03，Latest） |
+| 最新 Release | `v3.1.85 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）`（2026-09-05，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -101,6 +101,13 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ## 五、版本更新记录（最新在上）
 
 ### v3.1.83 — 2026-09-03 — 失败提示全站收尾——扫清剩余约 18 个组件 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP）
+### v3.1.85 — 2026-09-05 — 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）
+
+- **合并**：本地模板市集与创意工坊打通为确认制工作流，新增 src/core/presets/ 模块（plan/apply/undo/validate/from-template/llm-config），注入前 computeApplyPlan 只读预览、确认才落库。
+- **真撤销**：双凭证（created + updatedBefore 快照）executeUndo 实现六类预设实体一键回退，原仅 regex/api_config 能撤销的缺陷闭环。
+- **可自配置**：/api/presets/[id] PUT 编辑（内置预设 403）/ DELETE 删除（被应用时 409 先撤销），入口接 validatePresetContent 八类校验；import-local-templates 把 templates/*.md 桥接落库。
+- **质量门禁**：tsc 0 错、vitest 132 文件 1405 测试全绿（新增 42 条）、生产构建通过。个人 IP 仍归瑞宝宝。
+
 ### v3.1.84 — 2026-09-03 — 正文保存乐观锁接上 + 撞冲突交面板（AUTOSAVE-OPTIMISTIC-LOCK）
 
 - **根因**：后端只读 body.expectedVersion 做乐观锁，但 CenterPanel 传 editVersion 被忽略，正文保存从未上锁，别处改过的章会被静默覆盖（数据丢失）。
@@ -355,3 +362,4 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | `snap/20260902-173049-v3.1.59` | 2026-09-02 17:30 | v3.1.59 | main | 手动快照 | 31M |
 | `snap/20260902-181738-v3.1.59` | 2026-09-02 18:17 | v3.1.59 | main | 首屏并行化生产构建实测，动手前 | 31M |
 | `snap/20260902-183824-v3.1.59` | 2026-09-02 18:38 | v3.1.59 | main | 合并 dependabot 依赖升级前 | 31M |
+| `snap/20260905-112230-v3.1.84` | 2026-09-05 11:22 | v3.1.84 | main | Preset创意工坊完善-动手前(T15预览+撤销+编辑删除+桥接+测试) | 32M |
