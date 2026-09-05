@@ -20,6 +20,35 @@ interface Preset {
   content: unknown;
 }
 
+interface PlanItem {
+  kind: string;
+  action: "create" | "update" | "skip";
+  name: string;
+  detail?: string;
+}
+interface PlanSummary {
+  total: number;
+  byKind: Record<string, number>;
+  created: number;
+  updated: number;
+  skipped: number;
+}
+interface AppliedRecord {
+  presetId: string;
+  type: string;
+  title: string;
+  appliedAt: string;
+  created: { kind: string; id: string; name: string }[];
+  updatedBefore: { kind: string; id: string; name: string }[];
+}
+interface LocalTemplate {
+  file: string;
+  type: string;
+  title: string;
+  description: string;
+  tags: string[];
+}
+
 const TABS = [
   { key: "all", label: "全部" },
   { key: "table_template", label: "表格模板" },
@@ -30,6 +59,7 @@ const TABS = [
   { key: "regex", label: "正则" },
   { key: "lorebook", label: "世界书" },
   { key: "api_config", label: "API参数" },
+  { key: "applied", label: "已应用" },
 ];
 
 const TYPE_LABEL: Record<string, string> = {
@@ -99,8 +129,39 @@ export default function Workshop() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── 已应用 / 可移除视图 ──
+  const [applied, setApplied] = useState<AppliedRecord[]>([]);
+
+  // ── 应用前预览弹窗（dryRun）──
+  const [preview, setPreview] = useState<{ preset: Preset; plan: PlanItem[]; summary: PlanSummary } | null>(null);
+
+  // ── 从本地模板新建 ──
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [localTemplates, setLocalTemplates] = useState<LocalTemplate[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  // ── 自配置编辑 ──
+  const [editing, setEditing] = useState<Preset | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", tags: "", content: "" });
+  const [editBusy, setEditBusy] = useState(false);
+
+  const projectName = projects.find((p) => p.id === targetProject)?.name || "当前项目";
+
   const load = useCallback(async () => {
     setLoading(true);
+    // 已应用视图：直接拉该项目的已应用记录，不拉预设市场
+    if (tab === "applied") {
+      if (!targetProject) { setApplied([]); setLoading(false); return; }
+      try {
+        const res = await fetch(`/api/projects/${targetProject}/applied-presets`);
+        if (res.ok) setApplied((await res.json()) as AppliedRecord[]);
+        else setApplied([]);
+      } catch {
+        setApplied([]);
+      }
+      setLoading(false);
+      return;
+    }
     const params = new URLSearchParams();
     if (tab !== "all") params.set("type", tab);
     if (q) params.set("q", q);
@@ -119,7 +180,7 @@ export default function Workshop() {
       }
     }
     setLoading(false);
-  }, [tab, q]);
+  }, [tab, q, targetProject]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -134,15 +195,29 @@ export default function Workshop() {
       .catch(() => {});
   }, []);
 
+  // 应用前预览：先算 dryRun 计划，看清「会新建几条 / 覆盖几条 / 跳过几条」再确认
   const apply = async (p: Preset) => {
     if (!targetProject) { toastError("请先在右上角选择目标项目"); return; }
-    const ok = await confirmDialog({
-      title: "应用预设",
-      description: `确定将「${p.title}」应用到当前选择的项目吗？该操作将向项目写入对应的 ${TYPE_LABEL[p.type] ?? "预设"} 内容。`,
-      confirmText: "应用",
-      cancelText: "取消",
-    });
-    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/presets/${p.id}/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: targetProject, dryRun: true }),
+      });
+      const d = await res.json();
+      if (!res.ok) { toastError(d.error || "预览失败"); return; }
+      if (!d.plan || d.plan.length === 0) {
+        toastInfo("该预设对当前项目无可注入内容（可能已全部存在）");
+        return;
+      }
+      setPreview({ preset: p, plan: d.plan, summary: d.summary });
+    } finally { setBusy(false); }
+  };
+
+  // 预览弹窗「确认注入」：按同一份计划真实套用
+  const confirmApply = async (p: Preset) => {
+    if (!targetProject) { toastError("请先选择目标项目"); return; }
     setBusy(true);
     try {
       const res = await fetch(`/api/presets/${p.id}/apply`, {
@@ -151,8 +226,35 @@ export default function Workshop() {
         body: JSON.stringify({ projectId: targetProject }),
       });
       const d = await res.json();
-      if (res.ok) toastSuccess(`已应用：${d.created.map((c: any) => c.name).join("、") || "完成"}`);
-      else toastError(d.error || "应用失败");
+      if (res.ok) {
+        toastSuccess(`已应用：${d.summary?.created ?? 0} 新建 / ${d.summary?.updated ?? 0} 覆盖`);
+        setPreview(null);
+        load();
+      } else toastError(d.error || "应用失败");
+    } finally { setBusy(false); }
+  };
+
+  const removeApplied = async (presetId: string, title: string) => {
+    if (!targetProject) { toastError("请先选择目标项目"); return; }
+    const ok = await confirmDialog({
+      title: "撤销预设",
+      description: `确定撤销「${title}」吗？将还原被覆盖的旧值，并移除本次新建的内容。`,
+      confirmText: "撤销",
+      cancelText: "取消",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${targetProject}/applied-presets`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ presetId }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toastSuccess(`已撤销：${title}`);
+        setApplied((a) => a.filter((x) => x.presetId !== presetId));
+      } else toastError(d.error || "撤销失败");
     } finally { setBusy(false); }
   };
 
@@ -168,6 +270,40 @@ export default function Workshop() {
       if (res.ok) { toastAdded(p.title, "预设副本"); load(); }
       else toastError(d.error || "复刻失败");
     } finally { setBusy(false); }
+  };
+
+  // 自配置编辑：改自己上传的预设（内置示范预设需先复刻）
+  const openEdit = (p: Preset) => {
+    if (p.isBuiltin) { toastError("内置示范预设不可直接修改，请先「复刻」到名下再改"); return; }
+    setEditForm({
+      title: p.title,
+      description: p.description,
+      tags: p.tags.join(", "),
+      content: JSON.stringify(p.content, null, 2),
+    });
+    setEditing(p);
+  };
+  const saveEdit = async () => {
+    if (!editing) return;
+    let content: any;
+    try { content = JSON.parse(editForm.content || "{}"); }
+    catch { toastError("content 必须是合法 JSON"); return; }
+    setEditBusy(true);
+    try {
+      const res = await fetch(`/api/presets/${editing.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editForm.title.trim(),
+          description: editForm.description,
+          tags: editForm.tags.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+          content,
+        }),
+      });
+      const d = await res.json();
+      if (res.ok) { toastSuccess("已保存修改"); setEditing(null); load(); }
+      else toastError(d.error || "保存失败");
+    } finally { setEditBusy(false); }
   };
 
   const exportPreset = (p: Preset) => {
@@ -349,6 +485,60 @@ export default function Workshop() {
     } finally { setBusyAi(false); }
   };
 
+  // 从本地模板新建：列出仓库根 templates/*.md 可桥接的预设草稿
+  const openLocalTemplates = async () => {
+    setShowTemplates(true);
+    setLocalLoading(true);
+    try {
+      const res = await fetch(`/api/presets/import-local-templates`);
+      if (res.ok) setLocalTemplates((await res.json()) as LocalTemplate[]);
+      else setLocalTemplates([]);
+    } catch {
+      setLocalTemplates([]);
+    } finally { setLocalLoading(false); }
+  };
+  const importTemplate = async (file: string) => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/presets/import-local-templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        if (d.created > 0) toastCreated(`已加入 ${d.created} 个本地模板预设`, "创意工坊");
+        else toastInfo(d.skipped?.[0] || "该本地模板已存在，未重复加入");
+        setShowTemplates(false);
+        load();
+      } else toastError(d.error || "加入失败");
+    } finally { setBusy(false); }
+  };
+  const importAllTemplates = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/presets/import-local-templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toastCreated(`已加入 ${d.created} 个本地模板预设`, "创意工坊");
+        if (d.skipped?.length) toastInfo(`跳过：${d.skipped.join("；")}`);
+        setShowTemplates(false);
+        load();
+      } else toastError(d.error || "加入失败");
+    } finally { setBusy(false); }
+  };
+
+  const planActionMeta = (action: PlanItem["action"]) =>
+    action === "create"
+      ? { label: "新建", cls: "text-[var(--nv-success)] bg-[var(--nv-success-soft)]" }
+      : action === "update"
+      ? { label: "覆盖", cls: "text-[var(--nv-warning)] bg-[var(--nv-warning-soft)]" }
+      : { label: "跳过", cls: "text-[var(--nv-text-tertiary)] bg-[var(--nv-surface-2)]" };
+
   return (
     <div className="min-h-screen bg-[var(--nv-void)] text-[var(--nv-text-primary)]">
       <header className="border-b border-[var(--nv-border-2)] bg-[var(--nv-void)]/80 backdrop-blur-sm sticky top-0 z-10">
@@ -370,6 +560,13 @@ export default function Workshop() {
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            <button
+              onClick={openLocalTemplates}
+              disabled={busy}
+              className="btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-medium"
+            >
+              <Icon name="package" size={14} /> 从本地模板新建
+            </button>
             <button
               onClick={seedBuiltins}
               disabled={busy}
@@ -423,18 +620,57 @@ export default function Workshop() {
               {t.label}
             </button>
           ))}
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="搜索标题/描述…"
-            className="input-glass ml-auto rounded-xl px-3 py-1.5 text-xs w-48"
-          />
+          {tab !== "applied" && (
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="搜索标题/描述…"
+              className="input-glass ml-auto rounded-xl px-3 py-1.5 text-xs w-48"
+            />
+          )}
         </div>
 
         {loading ? (
           <div className="surface-elevated rounded-2xl py-16">
             <Loading label="正在加载创意工坊预设…" />
           </div>
+        ) : tab === "applied" ? (
+          applied.length === 0 ? (
+            <EmptyState
+              icon="history"
+              title="还没有已应用的预设"
+              description="在「全部」里挑一个预设点「应用到项目」，这里就会记录它，并支持一键撤销还原。"
+              className="surface-elevated border-solid border-[var(--nv-border-2)]"
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {applied.map((a) => (
+                <div key={a.presetId} className="preset-card surface-elevated rounded-2xl p-5 flex flex-col gap-3 group relative overflow-hidden animate-in" style={{ "--card-accent": presetMeta(a.type).colorVar } as React.CSSProperties}>
+                  <span className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-[var(--nv-creative)]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+                      style={{ background: `color-mix(in oklch, ${presetMeta(a.type).colorVar} 16%, transparent)`, color: presetMeta(a.type).colorVar }}
+                    >
+                      <Icon name={presetMeta(a.type).icon} size={11} /> {TYPE_LABEL[a.type] || a.type}
+                    </span>
+                    <span className="text-[11px] text-[var(--nv-text-muted)]">{new Date(a.appliedAt).toLocaleString()}</span>
+                  </div>
+                  <h3 className="font-semibold text-[var(--nv-text-primary)]">{a.title}</h3>
+                  <p className="text-xs text-[var(--nv-text-tertiary)] leading-relaxed flex-1">
+                    新建 {a.created?.length || 0} 项 · 覆盖 {a.updatedBefore?.length || 0} 项（撤销可还原）
+                  </p>
+                  <button
+                    onClick={() => removeApplied(a.presetId, a.title)}
+                    disabled={busy}
+                    className="btn-ghost text-xs py-2 rounded-xl text-[var(--nv-danger)] border border-[var(--nv-danger)]/30 hover:bg-[var(--nv-danger-soft)] disabled:opacity-50"
+                  >
+                    <Icon name="trash" size={12} /> 撤销并还原
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
         ) : presets.length === 0 ? (
           <EmptyState
             icon="package"
@@ -475,6 +711,16 @@ export default function Workshop() {
                   >
                     应用到项目
                   </button>
+                  {!p.isBuiltin && (
+                    <button
+                      disabled={busy}
+                      onClick={() => openEdit(p)}
+                      className="btn-ghost text-xs px-3 py-2 rounded-xl disabled:opacity-50"
+                      title="自配置编辑"
+                    >
+                      <Icon name="pencil" size={13} />
+                    </button>
+                  )}
                   <button
                     disabled={busy}
                     onClick={() => fork(p)}
@@ -494,6 +740,129 @@ export default function Workshop() {
           </div>
         )}
       </main>
+
+      {/* 应用前预览弹窗：看清「会新建 / 覆盖 / 跳过」几条再确认注入 */}
+      {preview && (
+        <Modal open onClose={() => setPreview(null)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto" labelledBy="preview-title">
+          <div className="p-6">
+            <h2 id="preview-title" className="text-lg font-semibold mb-1 flex items-center gap-2">
+              <Icon name="eye" size={18} className="text-[var(--nv-primary)]" /> 应用前预览
+            </h2>
+            <p className="text-xs text-[var(--nv-text-tertiary)] mb-4">
+              将把「{preview.preset.title}」注入到「{projectName}」，以下为计划：
+            </p>
+            <div className="flex gap-2 mb-4">
+              <span className="text-xs px-2 py-1 rounded bg-[var(--nv-success-soft)] text-[var(--nv-success)]">新建 {preview.summary.created}</span>
+              <span className="text-xs px-2 py-1 rounded bg-[var(--nv-warning-soft)] text-[var(--nv-warning)]">覆盖 {preview.summary.updated}</span>
+              <span className="text-xs px-2 py-1 rounded bg-[var(--nv-surface-2)] text-[var(--nv-text-tertiary)]">跳过 {preview.summary.skipped}</span>
+            </div>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+              {preview.plan.map((it, i) => {
+                const m = planActionMeta(it.action);
+                return (
+                  <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg bg-[var(--nv-surface-2)]/50">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${m.cls}`}>{m.label}</span>
+                    <span className="font-medium text-[var(--nv-text-primary)]">{it.name}</span>
+                    {it.detail && <span className="text-[var(--nv-text-tertiary)] truncate">· {it.detail}</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-[var(--nv-text-muted)] mt-3 leading-relaxed">
+              覆盖项会在注入前自动留存旧值，撤销时可精准还原——不会丢你原来的设定。
+            </p>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setPreview(null)} className="flex-1 btn-ghost rounded-xl py-2.5 text-sm">取消</button>
+              <button onClick={() => confirmApply(preview.preset)} disabled={busy} className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50">
+                {busy ? "注入中…" : "确认注入"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 从本地模板新建：把仓库根 templates/*.md 桥接成预设草稿加入市集 */}
+      {showTemplates && (
+        <Modal open onClose={() => setShowTemplates(false)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto" labelledBy="templates-title">
+          <div className="p-6">
+            <h2 id="templates-title" className="text-lg font-semibold mb-1 flex items-center gap-2">
+              <Icon name="package" size={18} className="text-[var(--nv-primary)]" /> 从本地模板新建
+            </h2>
+            <p className="text-xs text-[var(--nv-text-tertiary)] mb-4">
+              仓库里的 .md 填空模板可一键桥接成创意工坊预设，加入后即可注入、撤销、自配置。
+            </p>
+            {localLoading ? (
+              <div className="py-10"><Loading label="正在读取本地模板…" /></div>
+            ) : localTemplates.length === 0 ? (
+              <p className="text-xs text-[var(--nv-text-tertiary)] py-6 text-center">未找到可桥接的本地模板（templates/*.md）。</p>
+            ) : (
+              <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                {localTemplates.map((t) => (
+                  <div key={t.file} className="rounded-xl border border-[var(--nv-border-2)] p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: `color-mix(in oklch, ${presetMeta(t.type).colorVar} 16%, transparent)`, color: presetMeta(t.type).colorVar }}>
+                          <Icon name={presetMeta(t.type).icon} size={11} /> {TYPE_LABEL[t.type] || t.type}
+                        </span>
+                        <span className="font-medium text-[var(--nv-text-primary)] truncate">{t.title}</span>
+                      </div>
+                      <p className="text-[11px] text-[var(--nv-text-tertiary)] truncate mt-0.5">{t.description}</p>
+                    </div>
+                    <button
+                      onClick={() => importTemplate(t.file)}
+                      disabled={busy}
+                      className="btn-primary text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 shrink-0"
+                    >
+                      加入
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowTemplates(false)} className="flex-1 btn-ghost rounded-xl py-2.5 text-sm">关闭</button>
+              <button onClick={importAllTemplates} disabled={busy || localTemplates.length === 0} className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50">
+                全部加入
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 自配置编辑：改自己上传的预设（内置需先复刻） */}
+      {editing && (
+        <Modal open onClose={() => setEditing(null)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto" labelledBy="edit-title">
+          <div className="p-6">
+            <h2 id="edit-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Icon name="pencil" size={18} className="text-[var(--nv-primary)]" /> 自配置预设
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">标题</label>
+                <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">描述</label>
+                <input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">标签（逗号分隔）</label>
+                <input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--nv-text-tertiary)]">内容（JSON）</label>
+                <textarea value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} rows={10} className="input-glass w-full mt-1 rounded-xl px-3 py-2 text-xs font-mono" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setEditing(null)} className="flex-1 btn-ghost rounded-xl py-2.5 text-sm">取消</button>
+              <button onClick={saveEdit} disabled={editBusy} className="flex-1 btn-primary rounded-xl py-2.5 text-sm font-medium disabled:opacity-50">
+                {editBusy ? "保存中…" : "保存修改"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {showUpload && (
         <Modal open onClose={() => setShowUpload(false)} bare closeOnOverlay={false} panelClassName="max-w-lg max-h-[90vh] overflow-y-auto" labelledBy="upload-preset-title">

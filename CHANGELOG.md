@@ -1,4 +1,15 @@
 ﻿# Novel Smith 更新公告
+## v3.1.86 — 2026-09-04
+
+### 创意工坊前端补齐——预览弹窗/已应用视图/模板桥接/自配置全部进 UI（WORKSHOP-FRONTEND-COMPLETE）
+
+- **补齐**：v3.1.85 已落地的后端能力（计划驱动注入 / 六类实体真撤销 / 本地模板桥接 / 预设自配置）现在全部接进 workshop 前端界面，创作者不再需要碰接口或数据库就能用。
+- **应用前预览弹窗**：点「应用预设」先走 computeApplyPlan 只读预览，Modal 列出「新建 / 覆盖 / 跳过」逐项计数与明细（如「将新建 2 项、覆盖 1 项、跳过 0 项」），确认才真正注入，预览阶段零副作用、看几条打几条。
+- **已应用 / 可移除视图**：新增 `applied` 标签页调 GET applied-presets 列出已注入预设，点「移除」走双凭证真撤销 executeUndo 逆序还原 + 删除新建，一键把项目回退到注入前的状态（style/character/worldview/story_progression/lorebook/regex/api_config 全覆盖）。
+- **本地模板桥接进 UI**：新增「从本地模板新建」入口，调 GET/POST import-local-templates 把 templates/*.md 一键加入市集；随版附带 3 个示例模板——古风缠绵文笔（风格卡）、苏苏角色卡（角色卡）、新城龙陨第一章大纲（大纲），clone 下来即有可用素材。
+- **轻量自配置编辑**：预设卡片支持内联编辑（调 PUT /api/presets/[id]），内置预设先提示「先复刻再改」，避免误改官方预设；改动经 validatePresetContent 八类校验挡脏数据。
+- **质量门禁**：类型检查 0 错、vitest 133 文件 1406 测试全绿（新增 1 条桥接测试）、生产构建通过；前端改动集中在 src/app/workshop/page.tsx，零数据层改动。个人 IP 仍归瑞宝宝。
+
 ## v3.1.85 — 2026-09-05
 
 ### 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）

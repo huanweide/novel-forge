@@ -5,6 +5,26 @@ import { executeUndo } from "@/core/presets/undo";
 
 export const maxDuration = 30;
 
+// GET /api/projects/[id]/applied-presets —— 返回该项目已应用的预设列表（AppliedRecord[]），
+// 供创意工坊「已应用 / 可移除」视图渲染；每一项含 presetId / type / title / appliedAt /
+// created（新建实体）/ updatedBefore（被覆盖项的旧值快照，撤销时还原）。
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) return NextResponse.json({ error: "项目不存在" }, { status: 404 });
+    const list: any[] = Array.isArray(project.appliedPresets)
+      ? (project.appliedPresets as any[])
+      : [];
+    return NextResponse.json(list);
+  } catch (e) {
+    return jsonError(e);
+  }
+}
+
 // DELETE /api/projects/[id]/applied-presets  { presetId }
 // 真撤销：按 apply 留下的凭证回退——先还原被覆盖的旧值，再删除本次新建的实体，最后移除追踪记录。
 // 覆盖全部类型：table / style / lorebook / worldview / story_progression / character / regex / api_config。

@@ -25,7 +25,7 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.85";
+export const LATEST_VERSION = "v3.1.86";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
@@ -254,6 +254,41 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.86",
+    date: "2026-09-04",
+    title: "创意工坊前端补齐——预览弹窗/已应用视图/模板桥接/自配置全部进 UI（WORKSHOP-FRONTEND-COMPLETE）",
+    sections: [
+      {
+        label: "补齐：后端能力全部接进前端 UI",
+        items: [
+          "v3.1.85 已落地的后端能力（计划驱动注入 / 六类实体真撤销 / 本地模板桥接 / 预设自配置）现在全部接进 workshop 前端界面",
+          "创作者不再需要碰接口或数据库，点几下就能应用预设、撤销、加模板、改配置",
+        ],
+      },
+      {
+        label: "应用前预览 + 已应用/可移除视图",
+        items: [
+          "点「应用预设」先走 computeApplyPlan 只读预览，Modal 列出「新建/覆盖/跳过」逐项计数与明细，确认才真正注入、预览零副作用",
+          "新增 applied 标签页调 GET applied-presets 列出已注入预设，点移除走双凭证真撤销 executeUndo 逆序还原 + 删除新建，一键回退到注入前",
+        ],
+      },
+      {
+        label: "本地模板桥接 + 轻量自配置",
+        items: [
+          "新增「从本地模板新建」入口，调 GET/POST import-local-templates 把 templates/*.md 一键加入市集（古风缠绵文笔/苏苏角色卡/新城龙陨第一章大纲 3 个示例模板随版附带）",
+          "预设卡片支持内联编辑（PUT /api/presets/[id]），内置预设先提示先复刻再改，改动经 validatePresetContent 八类校验",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错、vitest 133 文件 1406 测试全绿（新增 1 条桥接测试）、生产构建通过",
+          "前端改动集中在 src/app/workshop/page.tsx，零数据层改动",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.85",
     date: "2026-09-05",

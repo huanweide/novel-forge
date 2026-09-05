@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.85 |
+| 包名 / 版本 | `novel-smith` v3.1.86 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -85,7 +85,7 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 | 仓库 | `huanweide/novel-smith`，**公开** |
 | Star / Fork | 1 / 0 |
 | 默认分支 | `main`（陈旧的 `master` 分支已于 2026-09-02 删除；其 2 个独有提交——Postgres 直连旧方向的 `14c00be`/`ae4ceb9`——用 `backup/master-legacy-20260902` 标签异地保护，可随时还原） |
-| 最新 Release | `v3.1.85 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）`（2026-09-05，Latest） |
+| 最新 Release | `v3.1.86 创意工坊前端补齐——预览弹窗/已应用视图/模板桥接/自配置全部进 UI（WORKSHOP-FRONTEND-COMPLETE）`（2026-09-04，Latest） |
 | 最近推送 | `0fb601d`（ci: 快照标签不触发流水线，2026-09-01） |
 | CI | 最近 5 次全部 success |
 | 今日实测（2026-09-02 全站灰度） | HTTP 11/11 页面 200、浏览器实测 8/8 主页面零 JS 错误、写作视图完整渲染、API 链路通；**未发现严重 bug**；3 个体验痛点（首屏 10-12s 黑屏、写作区视野不够、章节首写引导弱）见 `PROCESS/analysis/novel-smith-精进分析-2026-09-02.md` |
@@ -101,6 +101,14 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ## 五、版本更新记录（最新在上）
 
 ### v3.1.83 — 2026-09-03 — 失败提示全站收尾——扫清剩余约 18 个组件 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP）
+### v3.1.86 — 2026-09-04 — 创意工坊前端补齐——预览弹窗/已应用视图/模板桥接/自配置全部进 UI（WORKSHOP-FRONTEND-COMPLETE）
+
+- **补齐**：v3.1.85 后端能力（计划驱动注入/真撤销/模板桥接/自配置）全部接到 workshop 前端 UI，创作者不必再碰接口或数据库。
+- **应用前预览**：点「应用预设」先走 computeApplyPlan 只读预览，Modal 列出「新建/覆盖/跳过」逐项计数与明细，确认才真正注入，预览零副作用。
+- **已应用/可移除视图**：新增 applied 标签页调 GET applied-presets，列出已注入预设，点移除走双凭证真撤销 executeUndo 逆序还原 + 删除新建，一键回退到注入前。
+- **本地模板桥接 + 自配置**：新增「从本地模板新建」入口调 GET/POST import-local-templates，把 templates/*.md（古风缠绵文笔/苏苏角色卡/新城龙陨第一章大纲）一键加入市集；预设卡片支持轻量自配置编辑（内置预设先提示复刻再改）。
+- **质量门禁**：tsc 0 错、vitest 133 文件 1406 测试全绿（新增 1 条桥接测试）、生产构建通过。个人 IP 仍归瑞宝宝。
+
 ### v3.1.85 — 2026-09-05 — 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）
 
 - **合并**：本地模板市集与创意工坊打通为确认制工作流，新增 src/core/presets/ 模块（plan/apply/undo/validate/from-template/llm-config），注入前 computeApplyPlan 只读预览、确认才落库。
