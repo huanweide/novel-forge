@@ -25,10 +25,12 @@ export interface VersionEntry {
   }>;
 }
 
-export const LATEST_VERSION = "v3.1.86";
+export const LATEST_VERSION = "v3.1.87";
 
 /** 首页公告弹窗摘要（只列最新版本的关键项） */
 export const CHANGELOG_BRIEF = [
+  "v3.1.87 研讨驱动四大新功能落地——世界观活注入 + 平台过审预检 + 长篇一致性巡检 + 发布管线诊断（ROADMAP-M1M4）：①M1 世界观 Codex 活注入——生成正文时按本章大纲/指令/上章结尾提到的名字做相关性打分 + Top-K 截断，只把本章真用得到的角色/词条/伏笔注入上下文（用户勾选角色强制保留），长篇不再被无关角色稀释重点，生成时右侧实时展示「本次重点设定 N 项·略过 M 项」；②M2 平台级过审预检——按番茄/起点/晋江/通用四套口味加权，预判被判 AI 代写的风险分与五维度（套路句/AI词/句长机械/对话人味/段落节奏），每条命中带原文证据与改写建议，纯本地不联网；③M3 长篇一致性巡检——扫描全书抓性别代词冲突/外貌属性冲突/已故角色仍活动（排除回忆防误伤）/伏笔久未回收四类硬伤，每条带章节证据与建议；④M4 发布管线诊断——按番茄/起点/公众号/通用字数区间逐章诊断偏短/达标/偏长并给合并或断章建议，长段按句切开，导出可带署名页；⑤写作台新增「发布」Tab，一次检查同时拿到 M2+M3+M4 三份报告，全本机计算、稿件不上传；质量门禁——类型检查 0 错、vitest 138 文件 1477 测试全绿（新增 71 条）、生产构建通过。个人 IP 仍归瑞宝宝。",
+  "v3.1.86 创意工坊前端补齐——预览弹窗/已应用视图/模板桥接/自配置全部进 UI（WORKSHOP-FRONTEND-COMPLETE）：①v3.1.85 已落地的后端能力（计划驱动注入 / 六类实体真撤销 / 本地模板桥接 / 预设自配置）现在全部接进 workshop 前端界面；②点「应用预设」先走 computeApplyPlan 只读预览，Modal 列出「新建/覆盖/跳过」逐项计数，确认才真正注入、预览零副作用；③新增 applied 标签页列出已注入预设，点移除走双凭证真撤销 executeUndo 逆序还原 + 删除新建，一键回退到注入前；④新增「从本地模板新建」把 templates/*.md 一键加入市集（古风缠绵文笔/苏苏角色卡/新城龙陨第一章大纲 3 示例模板）；⑤预设卡片支持内联编辑，改动经 validatePresetContent 八类校验；质量门禁——类型检查 0 错、vitest 133 文件 1406 测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。",
   "v3.1.85 创意工坊 × 本地模板市集合并——配置后确认可注入、可撤销、可加入、可自配置（PRESET-WORKSHOP-MERGE）：①计划驱动预览——新增 src/core/presets/ 模块（plan/apply/undo/validate/from-template/llm-config），注入前先 computeApplyPlan 只读算出将要新增/覆盖哪些实体并给确认摘要，预览说几条就注入几条、预览零副作用；②六类实体真撤销——原撤销端点只对 regex/api_config 真删、其余六类仅抹追踪记录（改了白改），新设计用「双凭证」（created 新建项 + updatedBefore 覆盖前旧值快照）executeUndo 逆序还原 + 删除新建，style/character/worldview/story_progression/lorebook/regex/api_config 全可一键回退到注入前；③可自配置 + 模板桥接——/api/presets/[id] 新增 PUT 编辑（内置预设 403）、DELETE 删除（被应用时 409 先撤销）、上传/编辑/自配置入口接 validatePresetContent 八类校验挡脏数据，/api/presets/import-local-templates 把 templates/*.md 解析成预设草稿落库（同名幂等）；④质量门禁——类型检查 0 错、vitest 132 文件 1405 测试全绿（新增 42 条）、生产构建通过；后端能力就绪，前端 workshop 预览弹窗/已应用视图待下一棒补齐。个人 IP 仍归瑞宝宝。",
   "v3.1.84 正文保存乐观锁接上 + 撞冲突交面板（AUTOSAVE-OPTIMISTIC-LOCK · 别处改过的章不再被静默覆盖）：①修复真实且更隐蔽的 bug——后端 PUT /api/story/nodes/[id] 只读 body.expectedVersion 做乐观锁校验，但 CenterPanel 三个正文写入路径（flush 自动保存 / saveInlineEdit 手动完成 / commitContent 章内替换）传的字段名是 editVersion，被后端完全忽略，等于正文保存**从未上锁**，若另一处（或另一次会话）改过同一章，本地这次保存会把对方的修改静默覆盖掉（数据丢失，比保存失败更糟）。②修正字段名 editVersion→expectedVersion，让锁真正生效；成功回写新 editVersion 到 ref 作下次基准。③撞 409 冲突不再被吞——交给已有的 SaveConflictModal 让用户选「用我的 / 用库里的 / 保留双方」；自动保存撞冲突时暂停自动保存、只提示一次，避免无限重试刷屏。④质量门禁——类型检查 0 错、vitest 1363 全绿、生产构建通过；真实 API 验证三项全过（连存不撞自己可存 / 陈旧版本号被拒 409 / 旧字段名对照组竟返回 200 证实旧 bug）。个人 IP 仍归瑞宝宝。",
   "v3.1.83 失败提示全站收尾——扫清剩余约 18 个组件的 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP · 不把「HTTP 500」再丢给用户）：①承接 v3.1.82——上一棒已修根因（isRawHttpStatusText 识别裸码）+ 直改 6 处高频页，本棒把散落的其余约 18 个组件同类漏点一次性扫清（workspace 主页、CenterPanel、AIChatBar、ConflictPanel、ConsistencyPanel、DigestPanel、DrawCards、ForeshadowingPanel、FullTextSearchPanel、HumanizePanel、ImportDialog、LeftPanel、PreGenConfirm、ProjectDiagnostics、RulesPanel、StorylineWorkbench、StorylineList、Toolbar、WorldPanel）。②统一改走 describeHttpError——所有 error || HTTP 状态码 这类裸串拼接全部替换为 helper 翻译的人话（「接口密钥无效 / 服务暂时不可用 / 请检查本地服务」等）。③纯机械收口——零新逻辑、零数据层改动，helper 已在 v3.1.82 修好，本棒只是把剩余调用点接上。④质量门禁——类型检查 0 错误、vitest 1363 全绿、生产构建通过；个人 IP 仍归瑞宝宝。",
@@ -254,6 +256,48 @@ export const CHANGELOG_USER_BRIEF = [
 
 /** 完整版本历史（最新在前） */
 export const VERSIONS: VersionEntry[] = [
+  {
+    version: "v3.1.87",
+    date: "2026-09-06",
+    title: "研讨驱动四大新功能落地——世界观活注入 + 平台过审预检 + 长篇一致性巡检 + 发布管线诊断（ROADMAP-M1M4）",
+    sections: [
+      {
+        label: "M1 世界观 Codex 活注入引擎",
+        items: [
+          "生成正文时按相关性打分 + Top-K 截断，只把本章真用得到的角色/词条/伏笔注入上下文（用户勾选角色强制保留），长篇不再被无关角色稀释重点",
+          "生成时右侧实时展示「本次重点设定 N 项 · 略过 M 项」",
+        ],
+      },
+      {
+        label: "M2 平台级过审预检",
+        items: [
+          "按番茄/起点/晋江/通用四套口味加权，预判被判 AI 代写的风险分与五维度（套路句/AI词/句长机械/对话人味/段落节奏）",
+          "每条命中带原文证据与改写建议，纯本地不联网、稿件不出本机",
+        ],
+      },
+      {
+        label: "M3 长篇一致性巡检",
+        items: [
+          "抓性别代词冲突/外貌属性冲突/已故角色仍活动/伏笔久未回收四类硬伤",
+          "已故角色检测主动排除回忆/墓地语境防误伤，每条带章节证据与建议",
+        ],
+      },
+      {
+        label: "M4 发布管线诊断 + 统一检查面板",
+        items: [
+          "按番茄/起点/公众号/通用字数区间逐章诊断偏短/达标/偏长并给合并或断章建议，长段按句切开、导出可带署名页",
+          "写作台新增「发布」Tab 一次拿 M2+M3+M4 三份报告，全本机计算、稿件不上传",
+        ],
+      },
+      {
+        label: "工程与质量门禁",
+        items: [
+          "类型检查 0 错、vitest 138 文件 1477 测试全绿（新增 71 条）、生产构建通过",
+          "个人 IP 仍归瑞宝宝",
+        ],
+      },
+    ],
+  },
   {
     version: "v3.1.86",
     date: "2026-09-04",

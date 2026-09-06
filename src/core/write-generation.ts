@@ -30,6 +30,7 @@ import {
 } from "@/core/pipeline";
 import type { StoryNode } from "@/core/types";
 import { buildRecallBlock } from "@/core/babylore/loop";
+import { selectCodex, formatCodexAttentionBlock } from "@/core/pipeline/codex-selector";
 import { planChapterStoryline, applyChapterPlanToStorylines } from "@/core/pipeline/plan-chapter";
 import { applyRegexRules } from "@/core/post-process/regex";
 import { STATUS_COMPLETED, STATUS_DRAFTING, STATUS_OUTLINE_ONLY } from "@/core/story-status";
@@ -114,13 +115,41 @@ export async function runWriteGeneration(
   // 当前节点是否为最新章节（用于"跳过最近一章"的自动填表判断）
   const isLatestChapter = currentNodeIndex === data.allNodes.length - 1;
 
+  // ── 5.5 Codex 活注入：按相关性筛选「本章该注入哪些设定」（M1）──
+  // 背景：filterByConfirmedCards 在用户未勾选时返回**全部**角色，长篇写到几十个角色后
+  // 无关角色挤爆上下文、稀释「本章真正该写谁」的重点。这里做纯本地相关性打分 + Top-K 截断；
+  // 用户勾选的出场角色永不裁剪；候选 ≤ 名额时全量保留，小项目零行为变化。
+  // 检索依据与下方宝宝流召回同源（本章大纲 + 作者指令 + 出场角色名 + 前文），保证判断一致。
+  const codexQueryText = [
+    data.currentNode.outline || "",
+    authorNote?.trim() || "",
+    activeChars.map((c: any) => c.name).join("、"),
+    previousNodes.map((n: StoryNode) => n.content || n.outline || "").join("\n"),
+  ].join("\n");
+
+  const codex = selectCodex(
+    codexQueryText,
+    {
+      characters: activeChars as any,
+      lore: data.loreEntries as any,
+      commitments: data.pendingCommitments as any,
+    },
+    {
+      // 用户勾选的出场角色永不裁剪；未勾选时全部交给相关性打分
+      forcedCharacterIds: confirmedCardIds,
+      currentOrder: data.currentNode.order,
+    },
+  );
+
   // ── 6. 构建 Prompt 上下文 ──
   const promptContext = await buildGenerationContext({
     data,
-    activeCharacters: activeChars as any,
+    // M1：注入筛选后的角色（原为全量 activeChars）
+    activeCharacters: codex.characters as any,
     authorNote: finalAuthorNote,
     previousNodes,
-    pendingCommitments: data.pendingCommitments,
+    // M1：注入筛选后的伏笔（原为全量 pendingCommitments）
+    pendingCommitments: codex.commitments as any,
   });
 
   // ── 7. 撰写指令（rules 已通过 systemPrompt 注入，这里只用原始 authorNote）──
@@ -174,15 +203,18 @@ export async function runWriteGeneration(
   // ── 6.5 宝宝流记忆召回（剧情推进 = 记忆召回，与 refine/continue 共享 loop.ts） ──
   const { block: recallBlock, items: recallItems } = await buildRecallBlock({
     projectId,
-    recallText: [
-      data.currentNode.outline || "",
-      cleanAuthorNote || "",
-      activeChars.map((c: any) => c.name).join("、"),
-      previousNodes.map((n: StoryNode) => n.content || n.outline || "").join("\n"),
-    ].join("\n"),
+    // M1：与 Codex 检索同源，保证「召回的设定」与「重点设定清单」判断一致
+    recallText: codexQueryText,
     loreEntries: data.loreEntries,
   });
   if (recallBlock) writingInstruction += recallBlock;
+
+  // ── 6.7 Codex 注意力引导（M1）──
+  // 角色 / 设定的详细内容已由 buildGenerationContext 与 recallBlock 注入，这里若再重复一遍
+  // 内容只是白白翻倍 token。故本块只列「本章重点关注哪些」的清单式引导——省 token、明确重点；
+  // 并把「略过了多少项」透明告知，用户想强制注入可在生成前勾选该角色 / 设定。
+  const codexBlock = formatCodexAttentionBlock(codex);
+  if (codexBlock) writingInstruction += codexBlock;
 
   // ── 6.6 生成前剧情预设规划（回忆召回式推进剧情线，用户逻辑 1b）──
   // 在点击生成一章之前，先用 LLM 基于活跃剧情线 + 记忆召回规划本章如何推进剧情线。
@@ -217,6 +249,10 @@ export async function runWriteGeneration(
   // 推送本轮召回的记忆列表（供前端透明展示「剧情推进=记忆召回」）
   if (recallItems.length > 0) {
     send({ type: "babylore_recall", items: recallItems });
+  }
+  // M1：推送本次注入的设定清单，供前端透明展示「本章注入了哪些设定、略过了多少」
+  if (codex.items.length > 0) {
+    send({ type: "codex_injection", items: codex.items, stats: codex.stats });
   }
   // 推送生成前剧情预设规划（透明展示"回忆召回式推进剧情线"）
   if (chapterPlan?.plan) {

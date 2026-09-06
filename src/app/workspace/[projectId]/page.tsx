@@ -39,6 +39,9 @@ export default function WorkspacePage() {
   const [genStep, setGenStep] = useState<"" | "loading-cards" | "confirming" | "generating" | "reviewing" | "summarizing" | "done" | "error">("");
   // 宝宝流记忆召回面板：写章节/微调/续写时实时展示已注入写作的记忆（含当前生效人设阶段）
   const [recallMemories, setRecallMemories] = useState<any[]>([]);
+  // M1：Codex 活注入清单——本章实际注入了哪些设定（角色/世界观/伏笔）+ 略过统计
+  const [codexItems, setCodexItems] = useState<any[]>([]);
+  const [codexStats, setCodexStats] = useState<any>(null);
   const genStepLabels: Record<string, { icon: React.ReactNode; label: string }> = {
     "loading-cards": { icon: <Icon name="search" size={14} className="animate-pulse" />, label: "AI 正在分析角色调度..." },
     "confirming": { icon: <Icon name="clipboard" size={14} />, label: "等待确认角色选择" },
@@ -848,6 +851,11 @@ export default function WorkspacePage() {
               setRecallMemories(items);
               // toast 收敛（Max Loop Round6）：召回信息已展示在「宝宝流记忆召回面板」，不重复弹 toast
             }
+            else if (event.type === "codex_injection") {
+              // M1：本章注入的设定清单，透明展示在上下文预览面板，不弹 toast 打扰写作
+              setCodexItems(Array.isArray(event.items) ? event.items : []);
+              setCodexStats(event.stats ?? null);
+            }
             else if (event.type === "notice") {
               // #124：精修预算超上限提醒——明确告知用户将截断，并给出「分段精修 / 提高预算」建议
               if (event.kind === "budget_capped") {
@@ -1316,6 +1324,8 @@ export default function WorkspacePage() {
             selectedText={selectedText || undefined}
             toolboxItems={toolboxItems}
             recallMemories={recallMemories}
+            codexItems={codexItems}
+            codexStats={codexStats}
             isGenerating={isGenerating || continueLoading}
             onEditCharacter={(id) => {
               const c = project.characters.find((x) => x.id === id);

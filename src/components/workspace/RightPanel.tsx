@@ -7,6 +7,7 @@ import { ChapterWordCountChart } from "./ChapterWordCountChart";
 import { ChapterEntitiesPanel } from "./ChapterEntitiesPanel";
 import { ForeshadowingPanel } from "./ForeshadowingPanel";
 import { ConsistencyPanel } from "./ConsistencyPanel";
+import { PublishCheckPanel } from "./PublishCheckPanel";
 import { FullTextSearchPanel } from "./FullTextSearchPanel";
 import { AIChatBar } from "./AIChatBar";
 import { MonitorPanel } from "./MonitorPanel";
@@ -17,7 +18,7 @@ import type { StoryNodeData } from "./types";
 import { useProjectStore } from "@/store";
 import type { ToolboxItem } from "./ToolboxDialog";
 
-type TopTab = "ai" | "entities" | "toolbox" | "stats";
+type TopTab = "ai" | "entities" | "toolbox" | "stats" | "publish";
 type EntitySubTab = "entities" | "foreshadowing" | "relationships" | "consistency" | "search";
 
 interface RightPanelProps {
@@ -36,6 +37,10 @@ interface RightPanelProps {
   onJumpToNode?: (nodeId: string) => void;
   /** P1-3：宝宝流记忆召回，透传给 ContextPreview 合并展示 */
   recallMemories?: any[];
+  /** M1：Codex 活注入清单，透传给 ContextPreview 展示「本章注入了哪些设定」 */
+  codexItems?: any[];
+  /** M1：注入统计 { candidates, selected, dropped, byKind } */
+  codexStats?: any;
   /** P1-3：生成进行中，自动展开统计区上下文监控 */
   isGenerating?: boolean;
 }
@@ -45,6 +50,7 @@ const TOP_TABS: Array<{ key: TopTab; icon: IconName; label: string }> = [
   { key: "entities", icon: "search", label: "实体" },
   { key: "toolbox", icon: "wrench", label: "工具箱" },
   { key: "stats", icon: "chart", label: "统计" },
+  { key: "publish", icon: "rocket", label: "发布" },
 ];
 
 // 复制自 ToolboxDialog 的 CATEGORY_META（保持卡片视觉一致，避免改动 ToolboxDialog）
@@ -63,7 +69,7 @@ const MONITOR_SECTIONS = [
 ] as const;
 
 export function RightPanel(props: RightPanelProps) {
-  const { selectedNode, minimized, onMinimize, onExpand, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, onJumpToNode, recallMemories = [], isGenerating = false } = props;
+  const { selectedNode, minimized, onMinimize, onExpand, contextRefreshKey, authorNote, onEditCharacter, onEditLore, selectedText, toolboxItems, onJumpToNode, recallMemories = [], codexItems = [], codexStats = null, isGenerating = false } = props;
   // FE-8：project 数据从 store 读取，不再由父组件逐层透传 project 大对象
   const project = useProjectStore((s) => s.project);
   if (!project) return null;
@@ -299,10 +305,19 @@ export function RightPanel(props: RightPanelProps) {
                   authorNote={authorNote}
                   refreshKey={contextRefreshKey}
                   recallMemories={recallMemories}
+                  codexItems={codexItems}
+                  codexStats={codexStats}
                   isGenerating={isGenerating}
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── 发布 tab（M2+M3+M4 统一检查面板） ── */}
+        {topTab === "publish" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <PublishCheckPanel projectId={project.id} />
           </div>
         )}
       </div>

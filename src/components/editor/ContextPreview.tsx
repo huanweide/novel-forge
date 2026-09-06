@@ -52,6 +52,8 @@ export function ContextPreview({
   authorNote,
   refreshKey,
   recallMemories = [],
+  codexItems = [],
+  codexStats = null,
   isGenerating = false,
 }: {
   projectId: string;
@@ -60,6 +62,10 @@ export function ContextPreview({
   refreshKey: number;
   /** F3 宝宝流记忆召回（来自 SSE babylore_recall），合并入本单组件，生成时自动展开 */
   recallMemories?: any[];
+  /** M1 Codex 活注入清单（来自 SSE codex_injection）：本章实际注入了哪些设定 */
+  codexItems?: any[];
+  /** M1 注入统计：{ candidates, selected, dropped, byKind } */
+  codexStats?: any;
   /** 生成进行中：自动展开召回段，满足「生成时展开、平时收起」 */
   isGenerating?: boolean;
 }) {
@@ -74,6 +80,12 @@ export function ContextPreview({
   useEffect(() => {
     if (isGenerating || recallMemories.length > 0) setRecallExpanded(true);
   }, [isGenerating, recallMemories]);
+
+  // M1：Codex 活注入清单——与召回段同款交互（生成时自动展开，平时收起）
+  const [codexExpanded, setCodexExpanded] = useState(false);
+  useEffect(() => {
+    if (isGenerating || codexItems.length > 0) setCodexExpanded(true);
+  }, [isGenerating, codexItems]);
 
   // #221 重新摘要 + 摘要确认
   const [reloadTick, setReloadTick] = useState(0);
@@ -226,6 +238,52 @@ export function ContextPreview({
     </div>
   ) : null;
 
+  // M1：Codex 活注入清单——透明展示「本章注入了哪些设定、为什么注入、略过了多少」
+  const codexSection = codexItems.length > 0 ? (
+    <div className="bg-[var(--nv-surface-3)]/50 border border-[var(--nv-border-2)] rounded-lg p-3">
+      <button
+        onClick={() => setCodexExpanded(!codexExpanded)}
+        className="flex items-center justify-between w-full text-xs transition-colors hover:text-[var(--nv-text-secondary)]"
+      >
+        <span className="text-[var(--nv-text-secondary)] font-medium">
+          <Icon name="book" size={13} className="inline-block align-text-bottom shrink-0" /> 本次重点设定（已注入本轮写作）· {codexItems.length} 项
+          {codexStats?.dropped > 0 && (
+            <span className="text-[var(--nv-text-muted)] font-normal"> · 略过 {codexStats.dropped} 项</span>
+          )}
+        </span>
+        <span className="text-[var(--nv-text-muted)]">{codexExpanded ? "▾" : "▸"}</span>
+      </button>
+      {codexExpanded && (
+        <div className="mt-2 space-y-2">
+          {(["character", "lore", "commitment"] as const).map((kind) => {
+            const group = codexItems.filter((i: any) => i.kind === kind);
+            if (group.length === 0) return null;
+            const label = kind === "character" ? "出场角色" : kind === "lore" ? "相关设定" : "待回收伏笔";
+            return (
+              <div key={kind} className="text-xs">
+                <div className="text-[var(--nv-text-muted)] mb-1">{label}（{group.length}）</div>
+                <ul className="space-y-1">
+                  {group.map((item: any) => (
+                    <li key={`${kind}-${item.id}`} className="leading-relaxed">
+                      <span className="text-[var(--nv-text-secondary)] font-medium">{item.title}</span>
+                      {item.forced && (
+                        <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-[var(--nv-primary)]/20 text-[var(--nv-primary)]">强制</span>
+                      )}
+                      <span className="text-[var(--nv-text-muted)]"> · {item.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+          <p className="text-[10px] text-[var(--nv-text-muted)] pt-1 border-t border-[var(--nv-border-2)]">
+            与本章无关的设定已自动略过以节省上下文；如需强制注入，请在生成前勾选该角色 / 设定。
+          </p>
+        </div>
+      )}
+    </div>
+  ) : null;
+
   const sections = [
     { key: "systemPrompt", label: "系统指令", icon: "bot", data: breakdown.systemPrompt },
     { key: "globalMemory", label: "全局记忆", icon: "brain", data: breakdown.globalMemory },
@@ -266,6 +324,9 @@ export function ContextPreview({
 
       {/* P1-3：合并后的记忆透出（F3 召回） */}
       {recallSection}
+
+      {/* M1：Codex 活注入清单 */}
+      {codexSection}
 
       {/* 文风模板注入状态 */}
       {data.templateInjection && (
