@@ -16,7 +16,7 @@
 | GitHub 仓库 | `https://github.com/huanweide/novel-smith`（公开） |
 | 默认分支 | `main` |
 | 本地分支 | `main` |
-| 包名 / 版本 | `novel-smith` v3.1.87 |
+| 包名 / 版本 | `novel-smith` v3.1.88 |
 | 本地端口 | 3001 |
 
 **这些是冒牌货 / 旧副本，别在上面改代码：**
@@ -99,6 +99,14 @@ CI 已配 `tags-ignore: snap/*`，推快照标签不会触发流水线（否则�
 ---
 
 ## 五、版本更新记录（最新在上）
+
+### v3.1.88 — 2026-09-06 — 发布面板修复并回归「导出分章」核心（PUBLISH-EXPORT-FIRST）
+
+- **修复白屏 bug**：`PublishCheckPanel` 误读 `consistency.stats.issues` 导致 `undefined.length` 抛错；已改回 `consistency.issues.length` 并给所有后端返回数组加 `|| []` 兜底。
+- **回归导出本质**：发布 Tab 从「三份报告墙」简化为「按平台导出分好章节」；选好平台/格式/署名开关，点一下「加载并导出整书」就拿到排版好的 TXT/HTML。
+- **后端直接拼导出稿**：`publish-check` API 新增 `export.text` / `export.html`，后端用 `formatChapterTitle` / `formatForPlatform` / `buildAttributionHtml` 拼完章节标题+按句切开正文+署名页，前端只下载/复制。
+- **机械报告折叠为可选**：M2 过审预检、M3 一致性巡检默认收起，需要时再展开看。
+- **质量门禁**：tsc 0 错、vitest 138 文件 1477 测试全绿、生产构建通过。个人 IP 仍归瑞宝宝。
 
 ### v3.1.83 — 2026-09-03 — 失败提示全站收尾——扫清剩余约 18 个组件 HTTP 裸状态码漏点（HTTP-STATUS-SWEEP）
 ### v3.1.87 — 2026-09-06 — 研讨驱动四大新功能落地——世界观活注入 + 平台过审预检 + 长篇一致性巡检 + 发布管线诊断（ROADMAP-M1M4）

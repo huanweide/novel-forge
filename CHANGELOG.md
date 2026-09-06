@@ -1,4 +1,14 @@
 ﻿# Novel Smith 更新公告
+## v3.1.88 — 2026-09-06
+
+### 发布面板修复并回归「导出分章」核心（PUBLISH-EXPORT-FIRST · 少一点机械报告、多一点直接能用）
+
+- **修复白屏 bug**：`PublishCheckPanel` 把 M3 一致性 `consistency.issues` 误读成 `consistency.stats.issues`，导致面板加载后直接抛 `Cannot read properties of undefined (reading 'length')` 白屏；已改回正确路径并给 `risk.dimensions` / `risk.findings` / `consistency.issues` 全部加空数组兜底，避免后端结构微调再炸前端。
+- **回归实用本质**：发布 Tab 从「三份报告墙」简化为「按平台导出分好章节」。选好平台 + 格式（TXT/HTML）+ 是否带 novel-smith 署名页，点「加载并导出整书」就拿到已按平台规矩排版好的全本文件——番茄自动短段切、起点保留完整世界观、公众号去掉章节编号。报告不再默认霸屏。
+- **后端直接拼好导出稿**：`publish-check` API 新增 `export.text` / `export.html` 字段，后端用已有的 `formatChapterTitle` / `formatForPlatform` / `buildAttributionHtml` 把章节标题、按句切开的正文、署名页一次性拼完；前端只负责下载或复制，不再自己排版。
+- **机械报告折叠为可选**：原 M2 过审预检、M3 一致性巡检仍保留在「展开」里，作者需要时再看；默认不展开，界面不再一堆进度条和分数堆在脸上。
+- **质量门禁**：类型检查 0 错、vitest 138 文件 1477 测试全绿（publish-check 路由测试已补 `export` 字段断言）、生产构建通过。个人 IP 仍归瑞宝宝。
+
 ## v3.1.87 — 2026-09-06
 
 ### 研讨驱动四大新功能落地——世界观活注入 + 平台过审预检 + 长篇一致性巡检 + 发布管线诊断（ROADMAP-M1M4）

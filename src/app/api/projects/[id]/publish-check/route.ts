@@ -12,7 +12,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { analyzePlatformRisk, type PlatformId } from "@/core/humanize/platform-risk";
 import { auditConsistency } from "@/core/consistency/audit";
-import { buildPublishReport, type PublishPlatform } from "@/core/publish/pipeline";
+import {
+  buildPublishReport,
+  formatChapterTitle,
+  formatForPlatform,
+  buildAttributionHtml,
+  type PublishPlatform,
+} from "@/core/publish/pipeline";
 
 /** M2 支持的平台 */
 const RISK_PLATFORMS: PlatformId[] = ["fanqie", "qidian", "jjwxc", "general"];
@@ -76,10 +82,55 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   const publish = buildPublishReport(nodes, publishPlatform);
 
+  // 按目标平台排版并组合成可直接下载/粘贴的文稿
+  const activeNodes = (nodes || [])
+    .filter((n) => (n.content || "").trim())
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const exportText = activeNodes
+    .map((n) => {
+      const title = formatChapterTitle(n.title, n.order, publishPlatform);
+      const body = formatForPlatform(n.content || "", publishPlatform);
+      return `${title}\n\n${body}`;
+    })
+    .join("\n\n") +
+    "\n\n---\n\n" +
+    "本书由 novel-smith（https://github.com/huanweide/novel-smith）辅助创作。";
+
+  const escapeHtml = (s: string) =>
+    (s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const exportHtml = [
+    "<!DOCTYPE html>",
+    "<html lang=\"zh-CN\">",
+    "<head><meta charset=\"UTF-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />",
+    `<title>${escapeHtml(publish.platformLabel)} 导出稿</title>`,
+    "<style>body{font-family:ui-sans-serif,system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.8;color:#222;}h1{font-size:1.2em;margin:1.5em 0 0.6em;border-bottom:1px solid #eee;padding-bottom:0.3em;}p{margin:0.6em 0;}</style>",
+    "</head><body>",
+    activeNodes
+      .map((n) => {
+        const title = formatChapterTitle(n.title, n.order, publishPlatform);
+        const body = formatForPlatform(n.content || "", publishPlatform)
+          .split(/\n+/)
+          .filter(Boolean)
+          .map((para) => `<p>${escapeHtml(para)}</p>`)
+          .join("\n");
+        return `<h1>${escapeHtml(title)}</h1>\n${body}`;
+      })
+      .join("\n"),
+    buildAttributionHtml({ platform: publishPlatform }),
+    "</body></html>",
+  ].join("\n");
+
   return NextResponse.json({
     risk,
     consistency,
     publish,
+    export: { text: exportText, html: exportHtml },
     meta: {
       platform,
       riskPlatform,

@@ -44,12 +44,18 @@ describe("POST /api/projects/[id]/publish-check", () => {
     expect(res.status).toBe(404);
   });
 
-  it("正常返回三份报告 + meta（风险分落在 0-100）", async () => {
+  it("正常返回三份报告 + 导出稿 + meta（风险分落在 0-100）", async () => {
     const res: any = await POST(makeReq({ platform: "fanqie" }), makeParams("p1"));
     expect(res.status).toBe(200);
     expect(res.payload.risk).toBeDefined();
     expect(res.payload.consistency).toBeDefined();
     expect(res.payload.publish).toBeDefined();
+    expect(res.payload.export).toBeDefined();
+    expect(typeof res.payload.export.text).toBe("string");
+    expect(typeof res.payload.export.html).toBe("string");
+    expect(res.payload.export.text).toContain("第一章");
+    expect(res.payload.export.html).toContain("<html");
+    expect(res.payload.export.html).toContain("novel-smith");
     expect(res.payload.meta.riskPlatform).toBe("fanqie");
     expect(res.payload.meta.publishPlatform).toBe("fanqie");
     expect(res.payload.risk.riskScore).toBeGreaterThanOrEqual(0);
